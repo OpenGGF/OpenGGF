@@ -277,6 +277,21 @@ class TestCreatorUi {
         assertThrows(IllegalArgumentException.class, () -> CompactFont.width("A", 0));
     }
 
+    @Test void compactFontDrawsCommonPlayerNameSymbolsInsteadOfTheFallback() {
+        String fallback = compactRuns("?");
+        for (String symbol : new String[] {"@", "$", "#"}) {
+            assertNotEquals(fallback, compactRuns(symbol), symbol);
+        }
+        assertEquals(fallback, compactRuns("\u0394"), "unsupported glyphs still fall back to ?");
+    }
+
+    private static String compactRuns(String text) {
+        StringBuilder runs = new StringBuilder();
+        CompactFont.glyphs(text, 0, 0, 1, (x, y, w, h) -> runs.append(x).append(',').append(y)
+                .append(',').append(w).append(';'));
+        return runs.toString();
+    }
+
     @Test void compactLargeScalesKeepEveryTranslucentPixelAndMatchingMetrics() {
         String[] digit = {"11110", "00001", "00001", "01110", "00001", "00001", "11110"};
         for (int scale : new int[] {5, 8}) {

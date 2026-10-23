@@ -146,4 +146,16 @@ class TestClientRaceSession {
         session.onControl(new ControlMessage.Kick("violations"));
         assertEquals("violations", session.kickReason());
     }
+
+    @Test
+    void looksAreTrackedPerSlotClearedOnLeaveAndMalformedOnesShowStock() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.onControl(new ControlMessage.PlayerLook(2, "00E.200E"));
+        assertEquals("00E.200E", session.appearance(2).encode());
+        assertTrue(session.appearance(3).isStock());
+        session.onControl(new ControlMessage.PlayerLook(3, "not a look"));
+        assertTrue(session.appearance(3).isStock());
+        session.onControl(new ControlMessage.PlayerLeft(2));
+        assertTrue(session.appearance(2).isStock());
+    }
 }

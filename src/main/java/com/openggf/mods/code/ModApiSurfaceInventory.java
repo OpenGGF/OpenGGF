@@ -121,6 +121,8 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.code.RewindableZoneEvents",
             // Optional creator presentation helpers; static utilities need explicit roots.
             "com.openggf.mods.ui.CompactFont",
+            "com.openggf.mods.ui.NameFont",
+            "com.openggf.mods.run.CharacterLooks",
             "com.openggf.mods.ui.BitmapFont",
             "com.openggf.mods.ui.AtlasFont",
             "com.openggf.mods.ui.TextLayout",
@@ -156,6 +158,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.net.hub.TrackValidationProfileSource",
             "com.openggf.net.hub.ViolationSink",
             "com.openggf.net.identity.PlayerIdentity",
+            "com.openggf.net.identity.DisplayNames",
             "com.openggf.net.protocol.ControlJsonCodec",
             "com.openggf.net.protocol.ControlMessage",
             "com.openggf.net.protocol.GhostPackets",

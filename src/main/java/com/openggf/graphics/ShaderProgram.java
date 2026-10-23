@@ -83,8 +83,13 @@ public class ShaderProgram {
     }
 
     public void setGhostEffect(boolean enabled, float alpha) {
+        setGhostEffect(enabled, false, alpha);
+    }
+
+    /** {@code preserveColour} selects GhostMode 2: alpha only, palette colours kept. */
+    void setGhostEffect(boolean enabled, boolean preserveColour, float alpha) {
         if (ghostModeLocation >= 0) {
-            glUniform1i(ghostModeLocation, enabled ? 1 : 0);
+            glUniform1i(ghostModeLocation, GraphicsManager.ghostShaderMode(enabled, preserveColour));
         }
         if (ghostAlphaLocation >= 0) {
             glUniform1f(ghostAlphaLocation, Math.max(0.0f, Math.min(1.0f, alpha)));

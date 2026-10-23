@@ -16,6 +16,8 @@ import com.openggf.net.host.jdk.JdkRaceHostServer;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfile;
 import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
@@ -70,6 +72,8 @@ public final class RaceSession implements AutoCloseable {
     /** Storage file holding the last LAN invite this player hosted. */
     public static final String INVITE_FILE = "lan-invite.txt";
     private static final int MAX_ROOM_PLAYERS = 8;
+    // RoomDescriptor names are bounded by the master and room hosts (RoomBroker boundedField).
+    private static final int MAX_ROOM_NAME_BYTES = 64;
     private static final int DEFAULT_JOIN_WINDOW_SECONDS = 300;
     private static final long MASTER_LINK_TICK_MILLIS = 1000;
     private static final int HEARTBEAT_TICKS = 5;
@@ -111,6 +115,8 @@ public final class RaceSession implements AutoCloseable {
     private final Object identityLock = new Object();
     private final AtomicInteger connectWorkers = new AtomicInteger();
     private PlayerIdentity identity;
+    private java.util.function.BiFunction<String, String, PlayerAppearance> lookSource =
+            (gameId, character) -> PlayerAppearance.STOCK;
 
     private State state = State.IDLE;
     private String status = "";
@@ -160,6 +166,7 @@ public final class RaceSession implements AutoCloseable {
         leave();
         int port = settings.hostPort();
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Starting LAN room...", State.IDLE, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
@@ -170,13 +177,13 @@ public final class RaceSession implements AutoCloseable {
             String invite = "HOST_IP:" + server.port() + "#"
                     + DirectJoinAddress.shareCode(pin, me.fingerprint());
             RaceClient client = op.own(op.await(RaceClient.connect(
-                    URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, fingerprint,
+                    URI.create("wss://127.0.0.1:" + server.port() + "/race"), me, name, look, fingerprint,
                     pin, me.fingerprint()), RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close),
                     RaceClient::close);
             ControlMessage.RoundConfig round = roundConfigFor(setup);
             return () -> {
                 host = server;
-                enterLobby(client, true, round, setup.character(), invite);
+                enterLobby(client, true, round, setup.character(), invite, name, look);
             };
         });
     }
@@ -200,7 +207,7 @@ public final class RaceSession implements AutoCloseable {
         start("Joining LAN room...", State.IDLE, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            RaceClient client = op.own(op.await(RaceClient.connect(address.uri(), me, name, fingerprint,
+            RaceClient client = op.own(op.await(RaceClient.connect(address.uri(), me, name, "", fingerprint,
                     address.certificateSha256(), address.hostFingerprint()),
                     RaceClient.JOIN_TIMEOUT_MILLIS + 2000, RaceClient::close), RaceClient::close);
             ControlMessage.RoomDescriptor room = client.joinAccepted().room();
@@ -210,7 +217,7 @@ public final class RaceSession implements AutoCloseable {
             return () -> {
                 settings.setLastJoinAddress(trimmed);
                 boolean saved = settings.save(storage);
-                enterLobby(client, false, round, chosen, null);
+                enterLobby(client, false, round, chosen, null, name, "");
                 if (!saved) notice = "Settings active - save pending";
             };
         });
@@ -261,10 +268,11 @@ public final class RaceSession implements AutoCloseable {
         RoundSetup setup = browseSetup;
         String fingerprint = browseFingerprint;
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Joining " + room.name() + "...", State.BROWSING, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
-            RaceConnection connection = op.own(op.await(client.joinRoom(room.roomId(), me, name, fingerprint),
+            RaceConnection connection = op.own(op.await(client.joinRoom(room.roomId(), me, name, look, fingerprint),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
                     RaceConnection::close), RaceConnection::close);
             ControlMessage.RoomDescriptor joined = connection.joinAccepted().room();
@@ -274,7 +282,7 @@ public final class RaceSession implements AutoCloseable {
             return () -> {
                 masterRoomId = room.roomId();
                 startMasterLink(null);
-                enterLobby(connection, false, round, chosen, null);
+                enterLobby(connection, false, round, chosen, null, name, look);
             };
         });
     }
@@ -293,6 +301,7 @@ public final class RaceSession implements AutoCloseable {
         boolean direct = "DIRECT".equals(routing);
         int port = settings.hostPort();
         String configuredName = settings.displayName();
+        String look = lookSource.apply(setup.gameId(), setup.character()).encode();
         start("Creating room...", State.BROWSING, op -> {
             PlayerIdentity me = identity();
             String name = displayName(me, configuredName);
@@ -300,7 +309,7 @@ public final class RaceSession implements AutoCloseable {
             JdkRaceHostServer server = !direct ? null : op.own(JdkRaceHostServer.startTls(port,
                     roomConfig(name, setup, fingerprint), me, TrackValidationProfileSource.none()),
                     JdkRaceHostServer::close);
-            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(name + "'s room",
+            ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(roomName(name),
                     setup.gameId(), setup.zone(), setup.act(), setup.characterPolicy(),
                     setup.lockedCharacter(), MAX_ROOM_PLAYERS, false);
             String roomId = op.await(DirectRoomRegistration.createRoom(client, descriptor, direct ? "DIRECT" : "RELAY",
@@ -317,7 +326,7 @@ public final class RaceSession implements AutoCloseable {
                 // A failed join must not leave the browser's master socket feeding a closed host.
                 op.own(client, linked -> linked.bindHostLink(null));
             }
-            RaceConnection connection = op.own(op.await(client.joinRoom(roomId, me, name, fingerprint),
+            RaceConnection connection = op.own(op.await(client.joinRoom(roomId, me, name, look, fingerprint),
                     MasterClient.MASTER_REPLY_TIMEOUT_MILLIS + RaceClient.JOIN_TIMEOUT_MILLIS,
                     RaceConnection::close), RaceConnection::close);
             ControlMessage.RoundConfig round = roundConfigFor(setup);
@@ -325,7 +334,7 @@ public final class RaceSession implements AutoCloseable {
                 host = server;
                 masterRoomId = roomId;
                 startMasterLink(server);
-                enterLobby(connection, true, round, setup.character(), null);
+                enterLobby(connection, true, round, setup.character(), null, name, look);
             };
         });
     }
@@ -511,9 +520,16 @@ public final class RaceSession implements AutoCloseable {
     }
 
     private void enterLobby(RaceConnection connection, boolean hostingRoom, ControlMessage.RoundConfig round,
-                            String localCharacter, String invite) {
+                            String localCharacter, String invite, String joinedName, String joinedLook) {
         if (localCharacter != null) {
             connection.sendControl(new ControlMessage.SelectCharacter(localCharacter));
+        }
+        // The Hello carried the look for the character known before joining; the room's
+        // game and locked character can differ, so correct it once the lobby is known.
+        String look = lookSource.apply(round.gameId(),
+                localCharacter != null ? localCharacter : "sonic").encode();
+        if (!look.equals(joinedLook)) {
+            connection.sendControl(new ControlMessage.UpdateProfile(joinedName, look));
         }
         ClientRaceSession clientSession = new ClientRaceSession(clockMillis);
         clientSession.applyJoin(connection.joinAccepted());
@@ -641,7 +657,7 @@ public final class RaceSession implements AutoCloseable {
     void enterLobbyForTest(RaceConnection connection, boolean hostingRoom, ControlMessage.RoundConfig round,
                            String localCharacter) {
         leave();
-        enterLobby(connection, hostingRoom, round, localCharacter, null);
+        enterLobby(connection, hostingRoom, round, localCharacter, null, "Tester", "");
     }
 
     // ── Connecting operations ────────────────────────────────────────────
@@ -801,13 +817,33 @@ public final class RaceSession implements AutoCloseable {
         }
     }
 
-    /** The configured name (captured on the engine thread), or the identity prefix when blank. */
+    /** The configured name in canonical form (captured on the engine thread), or the identity prefix. */
     private static String displayName(PlayerIdentity me, String configured) {
-        return configured.isBlank() ? me.fingerprint().substring(0, 8) : configured.trim();
+        String name = DisplayNames.sanitize(configured);
+        return name.isEmpty() ? me.fingerprint().substring(0, 8) : name;
+    }
+
+    /** "NAME's room", cut at a code-point boundary to the descriptor's 64-byte limit. */
+    static String roomName(String name) {
+        String suffix = "'s room";
+        String cut = name;
+        while (cut.getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                + suffix.length() > MAX_ROOM_NAME_BYTES) {
+            cut = cut.substring(0, cut.offsetByCodePoints(cut.length(), -1)).strip();
+        }
+        return cut + suffix;
+    }
+
+    /**
+     * Supplies the look to announce for a game and character; the scene installs the player's
+     * saved choices. Called on the engine thread.
+     */
+    public void setLookSource(java.util.function.BiFunction<String, String, PlayerAppearance> source) {
+        lookSource = Objects.requireNonNull(source, "source");
     }
 
     private static RoomHostConfig roomConfig(String name, RoundSetup setup, String fingerprint) {
-        return new RoomHostConfig(name + "'s room", setup.gameId(), setup.zone(), setup.act(),
+        return new RoomHostConfig(roomName(name), setup.gameId(), setup.zone(), setup.act(),
                 setup.characterPolicy(), setup.lockedCharacter(), Protocol.MAX_PLAYERS_DIRECT, fingerprint,
                 VoteTrackPools.forGame(setup.gameId()));
     }

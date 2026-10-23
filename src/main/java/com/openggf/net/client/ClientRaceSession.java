@@ -1,12 +1,15 @@
 package com.openggf.net.client;
 
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ControlMessage;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.LongSupplier;
 
 /** Client-side room/round mirror with an NTP-lite hub-clock estimate. */
@@ -30,6 +33,7 @@ public final class ClientRaceSession {
     private long deadlineHub;
     private List<ControlMessage.StandingsRow> standings = List.of();
     private List<ControlMessage.PlayerInfo> players = List.of();
+    private final Map<Integer, PlayerAppearance> looks = new HashMap<>();
     private String kickReason;
     private List<String> voteOptions = List.of();
     private List<ControlMessage.VoteCount> voteCounts = List.of();
@@ -45,6 +49,7 @@ public final class ClientRaceSession {
         room = accepted.room();
         localSlot = accepted.playerSlot();
         players = List.of();
+        looks.clear();
         ControlMessage.RoundSnapshot snapshot = accepted.round();
         if (snapshot != null) {
             basePhase = Phase.valueOf(snapshot.phase());
@@ -66,8 +71,21 @@ public final class ClientRaceSession {
                 updated.add(upsert.player());
                 players = sortedPlayers(updated);
             }
-            case ControlMessage.PlayerLeft left -> players = players.stream()
-                    .filter(player -> player.slot() != left.slot()).toList();
+            case ControlMessage.PlayerLeft left -> {
+                players = players.stream().filter(player -> player.slot() != left.slot()).toList();
+                looks.remove(left.slot());
+            }
+            case ControlMessage.PlayerLook look -> {
+                PlayerAppearance appearance;
+                try {
+                    appearance = PlayerAppearance.decode(look.appearance());
+                } catch (IllegalArgumentException malformed) {
+                    // The host validates looks; an unreadable one is shown as the stock look.
+                    appearance = PlayerAppearance.STOCK;
+                }
+                if (appearance.isStock()) looks.remove(look.slot());
+                else looks.put(look.slot(), appearance);
+            }
             case ControlMessage.RoundStart start -> {
                 basePhase = Phase.COUNTDOWN;
                 roundConfig = start.config();
@@ -224,5 +242,10 @@ public final class ClientRaceSession {
 
     private static long midpoint(long left, long right) {
         return left + (right - left) / 2;
+    }
+
+    /** The look last announced for {@code slot}; {@link PlayerAppearance#STOCK} when none. */
+    public PlayerAppearance appearance(int slot) {
+        return looks.getOrDefault(slot, PlayerAppearance.STOCK);
     }
 }

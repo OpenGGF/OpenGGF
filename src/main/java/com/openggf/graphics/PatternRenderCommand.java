@@ -49,6 +49,7 @@ public class PatternRenderCommand implements GLCommandable {
     private boolean piecePriority; // VDP per-tile priority from PatternDesc bit 15
     private int capturedTileOcclusionPaletteMask;
     private boolean ghostEffectActive;
+    private boolean ghostColour;
     private float ghostAlpha;
     private boolean leased;
     private float x;
@@ -79,6 +80,7 @@ public class PatternRenderCommand implements GLCommandable {
     private static int lastPriorityViewportHeight = Integer.MIN_VALUE;
     private static boolean lastPriorityWaterEnabled;
     private static boolean lastGhostEffectActive;
+    private static boolean lastGhostColour;
     private static float lastGhostAlpha = Float.NaN;
     private static float lastPriorityWaterlineScreenY = Float.NaN;
     private static float lastPriorityWindowHeight = Float.NaN;
@@ -184,6 +186,7 @@ public class PatternRenderCommand implements GLCommandable {
         cmd.piecePriority = piecePriority;
         cmd.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         cmd.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        cmd.ghostColour = graphicsManager.isGhostRenderColourPreserved();
         cmd.ghostAlpha = graphicsManager.getGhostRenderAlpha();
         cmd.x = x;
         cmd.width = 8f;
@@ -234,6 +237,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.piecePriority = desc.getPriority();
         this.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         this.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        this.ghostColour = graphicsManager.isGhostRenderColourPreserved();
         this.ghostAlpha = graphicsManager.getGhostRenderAlpha();
         this.x = x;
         this.width = width;
@@ -286,6 +290,7 @@ public class PatternRenderCommand implements GLCommandable {
         lastPriorityViewportHeight = Integer.MIN_VALUE;
         lastPriorityWaterEnabled = false;
         lastGhostEffectActive = false;
+        lastGhostColour = false;
         lastGhostAlpha = Float.NaN;
         lastPriorityWaterlineScreenY = Float.NaN;
         lastPriorityWindowHeight = Float.NaN;
@@ -483,9 +488,11 @@ public class PatternRenderCommand implements GLCommandable {
             lastPaletteIndex = effectivePalette;
         }
 
-        if (ghostEffectActive != lastGhostEffectActive || ghostAlpha != lastGhostAlpha) {
-            shaderProgram.setGhostEffect(ghostEffectActive, ghostAlpha);
+        if (ghostEffectActive != lastGhostEffectActive || ghostColour != lastGhostColour
+                || ghostAlpha != lastGhostAlpha) {
+            shaderProgram.setGhostEffect(ghostEffectActive, ghostColour, ghostAlpha);
             lastGhostEffectActive = ghostEffectActive;
+            lastGhostColour = ghostColour;
             lastGhostAlpha = ghostAlpha;
         }
 

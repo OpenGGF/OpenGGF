@@ -2,6 +2,8 @@ package com.openggf.net.hub;
 
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlJsonCodec;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
@@ -39,7 +41,9 @@ public final class RoomHost {
         String fingerprint;
         String displayName;
         String character;
+        PlayerAppearance appearance = PlayerAppearance.STOCK;
         ControlMessage.PlayerInfo publishedInfo;
+        long lastProfileMillis = Long.MIN_VALUE;
         long memberSinceMillis;
         long lastChatMillis = Long.MIN_VALUE;
         long lastStandingsPageMillis = Long.MIN_VALUE;
@@ -362,6 +366,18 @@ public final class RoomHost {
         member.admitted = true;
         member.slot = slot;
         member.fingerprint = admit.fingerprint();
+        if (!admit.displayName().isEmpty() && !DisplayNames.isCanonical(admit.displayName())) {
+            rejectAdmission(member, "invalid display name");
+            return;
+        }
+        PlayerAppearance appearance;
+        try {
+            appearance = PlayerAppearance.decode(admit.appearance());
+        } catch (IllegalArgumentException invalid) {
+            rejectAdmission(member, "invalid appearance");
+            return;
+        }
+        member.appearance = appearance;
         member.displayName = admit.displayName().isEmpty()
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.character = "LOCKED".equals(config.characterPolicy())
@@ -385,6 +401,65 @@ public final class RoomHost {
         round.sendVoteState(message -> send(member, message));
         send(member, new ControlMessage.RoomState(players()));
         publishPlayerChanges(member);
+        // Looks travel per player: RoomState must keep a full roster inside one frame.
+        for (Member other : members.values()) {
+            if (other.admitted && !other.appearance.isStock()) {
+                send(member, new ControlMessage.PlayerLook(other.slot, other.appearance.encode()));
+            }
+        }
+        if (!member.appearance.isStock()) {
+            broadcastLook(member, member);
+        }
+    }
+
+    private void rejectAdmission(Member member, String reason) {
+        member.admitted = false;
+        member.connection.sendText(codec.encode(null, new ControlMessage.JoinRejected(reason)));
+        drop(member, reason);
+    }
+
+    /** Sends {@code changed}'s look to every admitted member except {@code skip}. */
+    private void broadcastLook(Member changed, Member skip) {
+        String encoded = codec.encode(null, new ControlMessage.PlayerLook(changed.slot, changed.appearance.encode()));
+        for (Member recipient : members.values()) {
+            if (recipient.admitted && recipient != skip) {
+                recipient.connection.sendText(encoded);
+            }
+        }
+    }
+
+    /** Lobby-only rename/recolour; anything invalid or too frequent is ignored, like SelectCharacter. */
+    private void handleProfileUpdate(Member member, ControlMessage.UpdateProfile update, long now) {
+        if (round.phase() != HostRoundEngine.Phase.LOBBY
+                || (member.lastProfileMillis != Long.MIN_VALUE
+                    && now - member.lastProfileMillis < Protocol.PROFILE_MIN_INTERVAL_MILLIS)
+                || !DisplayNames.isCanonical(update.displayName())
+                || !boundedLabel(update.displayName(), MAX_DISPLAY_NAME_BYTES)) {
+            return;
+        }
+        PlayerAppearance appearance;
+        try {
+            appearance = PlayerAppearance.decode(update.appearance());
+        } catch (IllegalArgumentException invalid) {
+            return;
+        }
+        member.lastProfileMillis = now;
+        String previousName = member.displayName;
+        PlayerAppearance previousLook = member.appearance;
+        member.displayName = update.displayName();
+        member.appearance = appearance;
+        if (!roomStateFits()) {
+            member.displayName = previousName;
+            member.appearance = previousLook;
+            return;
+        }
+        publishPlayerChanges(null);
+        if (!appearance.equals(previousLook)) {
+            broadcastLook(member, null);
+        }
+        if (!previousName.equals(member.displayName) && hooks.profileListener() != null) {
+            hooks.profileListener().onDisplayNameChanged(member.fingerprint, member.displayName);
+        }
     }
 
     private void dispatch(Member member, ControlMessage message) {
@@ -396,6 +471,7 @@ public final class RoomHost {
         long now = wallClockMillis.getAsLong();
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
+            case ControlMessage.UpdateProfile update -> handleProfileUpdate(member, update, now);
             case ControlMessage.Ping ping -> member.connection.sendText(codec.encode(
                     null, new ControlMessage.Pong(ping.t0ClientMillis(), now)));
             case ControlMessage.SelectCharacter select -> {

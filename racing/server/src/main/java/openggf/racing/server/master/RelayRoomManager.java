@@ -165,7 +165,8 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                                 trackKey, character, determinismFingerprint, spotCheck);
                     }
 
-                });
+                }, (fingerprint, displayName) -> brokerLoop.execute(() ->
+                        ladder.onDisplayNameClaim(fingerprint, displayName)));
         RoomHost room = new RoomHost(config, masterIdentity, clock, profiles, hooks);
         RoomRoundAccess.onPendingResultExpiry(room, result -> brokerLoop.execute(() ->
                 voidPendingRoute(entry.roomId(), result.participantId(),

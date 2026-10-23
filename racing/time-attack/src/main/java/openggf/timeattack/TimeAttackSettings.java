@@ -1,13 +1,26 @@
 package openggf.timeattack;
 
 import com.openggf.mods.ModStorage;
+import com.openggf.mods.run.CharacterLooks;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  * The Time Attack mod's own settings (the engine has no {@code timeAttack.*} keys): the port for
- * player-hosted rooms, the last LAN invite, the multiplayer display name, the master server URL
- * and its development-only trust-all switch, and the multiplayer minimap.
+ * player-hosted rooms, the last LAN invite, the multiplayer display name and look, the master
+ * server URL and its development-only trust-all switch, and the multiplayer minimap.
+ *
+ * <p>The display name is stored canonical ({@link DisplayNames#sanitize}), as hosts require. The
+ * look is a base colour ({@code lookBase}, the name and ghost colour; empty for the stock look)
+ * and, per {@code game:character}, an optional custom palette ({@code lookPalette.s3k:sonic}).
+ * Without a custom palette a character's body ramp follows the base colour
+ * ({@link CharacterLooks#withBaseColour}); see {@link #appearanceFor}.
  *
  * <p>Stored as UTF-8 {@code key=value} lines in the mod's private storage file
  * {@value #FILE_NAME}; unknown keys and unreadable values fall back to the defaults.
@@ -18,7 +31,8 @@ public final class TimeAttackSettings {
     public static final int DEFAULT_HOST_PORT = 27888;
     /** Longest accepted text value (a full IPv6 LAN invite fits in 192 characters). */
     public static final int MAX_TEXT_LENGTH = 192;
-    public static final int MAX_DISPLAY_NAME_LENGTH = 24;
+    /** Most custom palettes kept, so a hand-edited file cannot grow the settings without bound. */
+    public static final int MAX_CUSTOM_PALETTES = 64;
 
     private int retryKey = com.openggf.mods.scene.SceneKeys.R;
     private int hostPort = DEFAULT_HOST_PORT;
@@ -27,6 +41,8 @@ public final class TimeAttackSettings {
     private String masterUrl = "";
     private boolean masterTrustInsecure;
     private boolean minimap = true;
+    private int lookBase = PlayerAppearance.NO_BASE_COLOUR;
+    private final Map<String, List<PlayerAppearance.Entry>> customPalettes = new TreeMap<>();
     private static final int RETRY_TICKS = 60;
     private String publishedEncoding = encode();
     private boolean publicationConfirmed;
@@ -119,7 +135,16 @@ public final class TimeAttackSettings {
                 case "masterUrl" -> settings.setMasterUrl(value);
                 case "masterTrustInsecure" -> settings.masterTrustInsecure = "true".equalsIgnoreCase(value);
                 case "minimap" -> settings.minimap = !"false".equalsIgnoreCase(value);
-                default -> { }
+                case "lookBase" -> {
+                    try { settings.setLookBase(value.isEmpty() ? PlayerAppearance.NO_BASE_COLOUR
+                            : PlayerAppearance.decode(value).baseColour()); }
+                    catch (IllegalArgumentException ignored) { }
+                }
+                default -> {
+                    if (key.startsWith(PALETTE_PREFIX)) {
+                        settings.parsePalette(key.substring(PALETTE_PREFIX.length()), value);
+                    }
+                }
             }
         }
         settings.publishedEncoding = settings.encode();
@@ -127,16 +152,36 @@ public final class TimeAttackSettings {
         return settings;
     }
 
+    private static final String PALETTE_PREFIX = "lookPalette.";
+
+    private void parsePalette(String key, String value) {
+        if (!validKey(key) || customPalettes.size() >= MAX_CUSTOM_PALETTES) return;
+        try {
+            // Reuse the canonical wire grammar: any base colour, then the stored entries.
+            customPalettes.put(key, PlayerAppearance.decode(value.isEmpty() ? "000" : "000." + value).palette());
+        } catch (IllegalArgumentException ignored) {
+            // an unreadable palette falls back to the preset ramp
+        }
+    }
+
     /** The stored form: one {@code key=value} line per setting. */
     public String encode() {
-        return "# Time Attack settings\n"
-                + "retryKey=" + retryKey + "\n"
-                + "hostPort=" + hostPort + "\n"
-                + "lastJoinAddress=" + lastJoinAddress + "\n"
-                + "displayName=" + displayName + "\n"
-                + "masterUrl=" + masterUrl + "\n"
-                + "masterTrustInsecure=" + masterTrustInsecure + "\n"
-                + "minimap=" + minimap + "\n";
+        StringBuilder out = new StringBuilder("# Time Attack settings\n")
+                .append("retryKey=").append(retryKey).append('\n')
+                .append("hostPort=").append(hostPort).append('\n')
+                .append("lastJoinAddress=").append(lastJoinAddress).append('\n')
+                .append("displayName=").append(displayName).append('\n')
+                .append("masterUrl=").append(masterUrl).append('\n')
+                .append("masterTrustInsecure=").append(masterTrustInsecure).append('\n')
+                .append("minimap=").append(minimap).append('\n')
+                .append("lookBase=").append(lookBase == PlayerAppearance.NO_BASE_COLOUR ? ""
+                        : new PlayerAppearance(lookBase, List.of()).encode()).append('\n');
+        customPalettes.forEach((key, entries) -> {
+            String encoded = new PlayerAppearance(0, entries).encode();
+            out.append(PALETTE_PREFIX).append(key).append('=')
+                    .append(encoded.length() > 3 ? encoded.substring(4) : "").append('\n');
+        });
+        return out.toString();
     }
 
     public int retryKey() { return retryKey; }
@@ -170,8 +215,66 @@ public final class TimeAttackSettings {
         return displayName;
     }
 
+    /** Stores the canonical form of {@code name} ({@link DisplayNames#sanitize}); empty clears it. */
     public void setDisplayName(String name) {
-        displayName = singleLine(name, MAX_DISPLAY_NAME_LENGTH);
+        displayName = DisplayNames.sanitize(name);
+    }
+
+    /** The look's base colour (Mega Drive {@code 0x0BGR}), or {@link PlayerAppearance#NO_BASE_COLOUR} for the stock look. */
+    public int lookBase() {
+        return lookBase;
+    }
+
+    /** @throws IllegalArgumentException unless {@code colour} is a Mega Drive colour or NO_BASE_COLOUR */
+    public void setLookBase(int colour) {
+        if (colour != PlayerAppearance.NO_BASE_COLOUR) new PlayerAppearance(colour, List.of());
+        lookBase = colour;
+    }
+
+    /** The custom palette entries for {@code gameId}'s {@code character}, or null when it follows the base colour. */
+    public List<PlayerAppearance.Entry> customPalette(String gameId, String character) {
+        return character == null ? null : customPalettes.get(key(gameId, character));
+    }
+
+    /**
+     * Sets or (with null) clears the custom palette of {@code gameId}'s {@code character}.
+     *
+     * @param entries overridden entries, strictly ascending by index
+     */
+    public void setCustomPalette(String gameId, String character, List<PlayerAppearance.Entry> entries) {
+        String key = key(gameId, character);
+        if (!validKey(key)) throw new IllegalArgumentException("bad game/character: " + key);
+        if (entries == null) {
+            customPalettes.remove(key);
+            return;
+        }
+        List<PlayerAppearance.Entry> canonical = new PlayerAppearance(0, entries).palette();
+        if (!customPalettes.containsKey(key) && customPalettes.size() >= MAX_CUSTOM_PALETTES) {
+            throw new IllegalStateException("too many custom palettes");
+        }
+        customPalettes.put(key, canonical);
+    }
+
+    /**
+     * The canonical look to announce when racing {@code character} in {@code gameId}: stock when
+     * no base colour is set; otherwise the base colour with the character's custom palette, or
+     * with its body ramp following the base colour.
+     */
+    public PlayerAppearance appearanceFor(String gameId, String character) {
+        if (lookBase == PlayerAppearance.NO_BASE_COLOUR) return PlayerAppearance.STOCK;
+        if (gameId == null || character == null) return new PlayerAppearance(lookBase, List.of());
+        List<PlayerAppearance.Entry> custom = customPalette(gameId, character);
+        return custom != null ? new PlayerAppearance(lookBase, custom)
+                : CharacterLooks.withBaseColour(gameId, character, lookBase);
+    }
+
+    private static String key(String gameId, String character) {
+        return Objects.requireNonNull(gameId, "gameId").toLowerCase(Locale.ROOT) + ":"
+                + Objects.requireNonNull(character, "character").toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean validKey(String key) {
+        return key.length() <= 40 && key.matches("[a-z0-9]+:[a-z0-9_]+");
     }
 
     public String masterUrl() {

@@ -139,6 +139,11 @@ Input comes as named buttons and keys, never raw numbers:
   own menus: use it to move cursors.
 - `keyDown(k)` and `keyPressed(k)` read the keyboard with `SceneKeys` (`ENTER`, `ESCAPE`,
   `A`..`Z`, `DIGIT_0`..`DIGIT_9`, `F1`..`F12`, ...).
+- `typedText()` is the text typed since the previous tick: characters after the player's
+  keyboard layout is applied, plus text an input method (IME) has committed, so names and chat
+  can be written in any script. Use it for text fields instead of turning key codes into
+  letters, and read Enter, Escape and Backspace with `keyPressed`. Draw such text with
+  `com.openggf.mods.ui.NameFont`; the scene font covers ASCII only.
 - By Genesis convention **A or C (or Start) confirms and B goes back**; scenes follow it, so
   `input().menuAccept()` is A, C or Start and `input().menuBack()` is B. `input()` also has
   both players' raw state.

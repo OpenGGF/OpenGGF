@@ -2,6 +2,7 @@ package openggf.timeattack.mp;
 
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
+import com.openggf.mods.ui.NameFont;
 import com.openggf.mods.ui.TextLayout;
 import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.ui.MenuCue;
@@ -204,7 +205,8 @@ public final class ServerBrowserView {
             if (focus == Focus.ROOMS && i == selected) canvas.fill(8, y - 2, width - 16, 23, FOCUS);
             String count = room.playerCount() + "/" + room.maxPlayers();
             int countX = width - 12 - canvas.textWidth(count);
-            canvas.text(fit(canvas, room.name(), countX - 8 - 12), 12, y, VALUE);
+            // Room names carry the host's display name, in any script.
+            NameFont.draw(canvas, NameFont.fit(room.name(), countX - 8 - 12), 12, y - 2, VALUE);
             canvas.text(count, countX, y, VALUE);
             canvas.text(fit(canvas, room.routing() + " / " + (room.verified() ? "VERIFIED" : "UNVERIFIED TIMES"),
                     width - 24), 12, y + 11, room.verified() ? VERIFIED : UNVERIFIED);

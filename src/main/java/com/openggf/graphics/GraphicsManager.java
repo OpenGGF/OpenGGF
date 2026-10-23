@@ -65,6 +65,7 @@ public class GraphicsManager {
     private boolean scopedUnderwaterDirty;
     private int underwaterCompositionLines;
     private Object scopedPaletteWorld;
+    private final AppearancePalettes.Rows appearancePaletteRows = new AppearancePalettes.Rows(this);
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
 	// Last palette handed to cachePaletteTexture per line, so a palette fade change
 	// can re-upload the affected lines without asking their owners to write again.
@@ -149,6 +150,7 @@ public class GraphicsManager {
 	private boolean currentSpriteHighPriority = false;
 	private int currentSpriteTileOcclusionPaletteMask = 0xF;
 	private boolean ghostRenderEffectActive = false;
+	private boolean ghostRenderPreservesColour = false;
 	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
@@ -897,6 +899,29 @@ public class GraphicsManager {
 	private void invalidateScopedPaletteBanks() {
 		for(var lease:scopedPaletteOwners.values())RenderContext.releaseScopedPaletteBank(lease.token());
 		scopedPaletteOwners.clear();
+		appearancePaletteRows.invalidateAll();
+	}
+
+	AppearancePalettes.Rows appearancePaletteRows() { return appearancePaletteRows; }
+
+	/** The palette last handed to {@code row}, or null. */
+	PaletteView cachedPaletteLine(int row) {
+		return row >= 0 && row < lastCachedPaletteLines.length ? lastCachedPaletteLines[row] : null;
+	}
+
+	/** Uploads a composed appearance row; it fades with {@code fadeLine}, the row it mirrors. */
+	void uploadAppearanceRow(PaletteView palette, int row, int fadeLine) {
+		uploadPaletteRow(palette, row, fadeLine);
+	}
+
+	/** Appearance rows were reserved or released: draws and the water texture see new rows. */
+	void appearanceRowsChanged() {
+		PatternRenderCommand.resetFrameState();
+		scopedUnderwaterDirty = true;
+	}
+
+	void appearanceUnderwaterChanged() {
+		scopedUnderwaterDirty = true;
 	}
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
@@ -969,6 +994,12 @@ public class GraphicsManager {
 	}
 
 	private void uploadPaletteLine(PaletteView palette, int paletteId) {
+		uploadPaletteRow(palette, paletteId, paletteId);
+		// Private appearance rows mirror this row; recompose them from what it now holds.
+		appearancePaletteRows.sourceUploaded(paletteId, palette);
+	}
+
+	private void uploadPaletteRow(PaletteView palette, int paletteId, int fadeLineId) {
 		if (headlessMode) {
 			// In headless mode, just record that the palette was cached
 			paletteTextureMap.put("palette_" + paletteId, -1);
@@ -1020,7 +1051,7 @@ public class GraphicsManager {
 		paletteBuffer.clear();
 		// An active palette fade owns what CRAM receives for its lines (PalFadeIn_Alt
 		// rebuilds v_palette from v_palette_fading); the owner's palette is untouched.
-		boolean fadeLine = publishedPaletteFade.affects(paletteId);
+		boolean fadeLine = publishedPaletteFade.affects(fadeLineId);
 		for (int i = 0; i < COLORS_PER_PALETTE; i++) {
 			int r = Byte.toUnsignedInt(palette.red(i));
 			int g = Byte.toUnsignedInt(palette.green(i));
@@ -1303,18 +1334,39 @@ public class GraphicsManager {
 		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
 	}
 
+	/** Draws following sprites as a desaturated, translucent ghost. */
 	public void beginGhostRenderEffect(float alpha) {
+		beginGhostRenderEffect(alpha, false);
+	}
+
+	/**
+	 * Draws following sprites as a translucent ghost; {@code preserveColour} keeps their palette
+	 * colours (a player's chosen look) instead of desaturating them.
+	 */
+	public void beginGhostRenderEffect(float alpha, boolean preserveColour) {
 		this.ghostRenderEffectActive = true;
+		this.ghostRenderPreservesColour = preserveColour;
 		this.ghostRenderAlpha = Math.max(0.0f, Math.min(1.0f, alpha));
 	}
 
 	public void endGhostRenderEffect() {
 		this.ghostRenderEffectActive = false;
+		this.ghostRenderPreservesColour = false;
 		this.ghostRenderAlpha = 1.0f;
 	}
 
 	public boolean isGhostRenderEffectActive() {
 		return ghostRenderEffectActive;
+	}
+
+	/** Whether the active ghost effect keeps palette colours (meaningless when none is active). */
+	public boolean isGhostRenderColourPreserved() {
+		return ghostRenderEffectActive && ghostRenderPreservesColour;
+	}
+
+	/** Shader {@code GhostMode}: 0 none, 1 desaturated ghost, 2 colour-preserving ghost. */
+	static int ghostShaderMode(boolean active, boolean preserveColour) {
+		return !active ? 0 : preserveColour ? 2 : 1;
 	}
 
 	public float getGhostRenderAlpha() {
@@ -1808,7 +1860,12 @@ public class GraphicsManager {
 			byte rowCase = UNDERWATER_ROW_DIRECT;
 			if (source == null) {
 				rowCase = UNDERWATER_ROW_ABSENT;
-				if (normalLine0 != null && underwaterLine0 != null) {
+				PaletteView appearance = appearancePaletteRows.isEmpty() ? null
+						: appearancePaletteRows.underwaterRow(row, palettes, normalLine0, underwaterLine0);
+				if (appearance != null) {
+					source = appearance;
+					rowCase = UNDERWATER_ROW_DIRECT;
+				} else if (normalLine0 != null && underwaterLine0 != null) {
 					source = RenderContext.getUnderwaterPaletteForEffectiveLine(row);
 					if (source != null) {
 						rowCase = UNDERWATER_ROW_DIRECT;
@@ -1856,7 +1913,7 @@ public class GraphicsManager {
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
             boolean fadeRow = !whiteFade && sourceIndex < totalLines
-                    && paletteFadeAffects(fadeMode, fadeMask, sourceIndex);
+                    && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(sourceIndex));
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 				byte r = source.red(colorIndex);
 				byte g = source.green(colorIndex);
@@ -1931,7 +1988,7 @@ public class GraphicsManager {
 			if (rowCase == UNDERWATER_ROW_DERIVED) {
 				int normalOffset = totalLines * 16 * 3;
 				int shiftedOffset = (totalLines + 1) * 16 * 3;
-                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)
+                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))
                         ? fadeMode : PaletteFadePresentation.Mode.NONE;
 				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset,
                         rowWhiteMode, fadeSteps)) {
@@ -1951,7 +2008,7 @@ public class GraphicsManager {
 				int r = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int g = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int b = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
-                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)) {
+                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))) {
                     int faded = PaletteFadePresentation.fadeRgb(r, g, b, fadeMode, fadeSteps);
                     r = (faded >>> 16) & 255;
                     g = (faded >>> 8) & 255;

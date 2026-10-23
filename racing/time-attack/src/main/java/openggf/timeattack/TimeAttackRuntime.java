@@ -106,6 +106,8 @@ public final class TimeAttackRuntime implements RunHost {
     private Supplier<List<GhostPose>> extraGhostSupplier;
     private int levelWidth;
     private int localCentreX = -1;
+    private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
+            (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
     public TimeAttackRuntime(GhostStore store, java.nio.file.Path identityDir,
                              java.util.function.BooleanSupplier launchBlocked) {
@@ -216,6 +218,16 @@ public final class TimeAttackRuntime implements RunHost {
     /** The run handle the engine returned when it began hosting this runtime's run. */
     public void attachHandle(RunHandle handle) {
         this.handle = handle;
+        if (handle != null && launch != null) {
+            // The engine starts every run with the stock look; recolour the player's own character.
+            handle.setPlayerAppearance(lookSource.apply(launch.gameId(), launch.character()));
+        }
+    }
+
+    /** Supplies the player's saved look for a game and character (the settings own it). */
+    public void setLookSource(java.util.function.BiFunction<String, String,
+            com.openggf.net.identity.PlayerAppearance> source) {
+        lookSource = java.util.Objects.requireNonNull(source, "source");
     }
 
     /** Asks the engine to end the run and return to the host at the next safe boundary. */
