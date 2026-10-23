@@ -3032,3 +3032,23 @@ selection now lives in one production kernel used by LIVE and the test replay;
 command scheduling remains owned by the live world (WAIT/ability/object rules).
 The named fixed charge-window constant belongs to PuppetCommand and is included
 in the normalized unpublished candidate pin. No API version/status changes.
+
+
+### Route review corrections, slice 3 (2026-10-23)
+
+F4/F8 verified: the removed ±64/±128 goals narrowed reachability, and every Walk
+failure received unqualified speed advice. Direct search now gets the first
+bounded pass. Failure alone enables a separately budgeted fallback with penalised
+64/128-pixel run-up goals. Emission merges consecutive identical goals and emits
+only actual fallback steering changes; simple routes retain one destination.
+A reserved matched Run search from the original checkpoint can justify only
+“terrain near x=…: needs Run”; there is no Spindash inference or advice on
+unsupported abilities. Budgets count all passes and diagnostic ticks. Sealed-wall
+and speed-gap assertions now distinguish real supporting evidence from generic
+failure. A gap at the starting feet explicitly compares direct-only failure
+with fallback success and replays its commands using production button selection.
+
+Checkpoint: engine commits a6fa8fdcc, 461104cab; current uncommitted source is the
+detour/diagnosis slice. Build-only test-compile passed before that slice. Focused
+selection is queued (one request, one observer); no broad smoke. Version probe is
+also queued. Final ROM/frontends/mandatory S3K/guards and motion review remain.

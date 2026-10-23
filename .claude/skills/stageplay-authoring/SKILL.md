@@ -104,7 +104,10 @@ must observe both native charge and release, or fail explicitly. The MOVE_TO
 `motion` object persists settings through save, screenplay export, edits and replan.
 Use route CLI `--start`, `--travel`, `--ending`, `--facing`; inspect cap/skid/arrival
 failures rather than hiding a terrain-forced speed violation. A simple walk uses
-one destination, with penalised jumps only for terrain that needs them. Walking
+one destination, with penalised jumps only for terrain that needs them. Failed
+direct steering enables penalised 64/128-pixel run-up detours; ordinary routes
+retain no stray goals. Speed advice names the observed stall X and requires a
+successful matched Run terrain probe; budget exhaustion alone supplies no advice. Walking
 objects keep their visual mover. Multi-waypoint directing remains deferred.
 For basic player shot-entry planning, use `route --scene PATH --actor ID --frame N --x X
 --y Y --out NEW.stageplay` with supplied ROM flags. The bounded helper emits

@@ -619,9 +619,12 @@ the stroll cap, so selecting Spindash selects Run in both editors. Spindash + Wa
 is rejected by the shared document/screenplay contract before search. A saved
 unavailable start stays visible in the form until the author replaces it.
 All Walk endings reserve native ground/air acceleration headroom. Facing taps accept a
-subpixel nudge. Failed bounded Walk searches suggest Run/Spindash for possible
-speed-dependent terrain; that suggestion is not proof a different setting reaches
-through live objects/events. Only a cold successful replay receives VERIFIED.
+subpixel nudge. Direct steering is tried first; only failure enables penalised
+64/128-pixel back-up/run-up goals. Consecutive identical goals are merged.
+A failed Walk search reports terrain near the observed stall X as needing Run
+only when a matched native-terrain Run probe reaches and settles. Generic budget
+or wall failures receive no speculative speed advice; Spindash is never guessed.
+This terrain-only diagnostic is not cold verification through live objects/events. Only a cold successful replay receives VERIFIED.
 
 Search and cold qualification must both observe native charge and release.
 `Sonic_CheckSpindash` reads Duck before movement, while `Sonic_SlopeResist` skips

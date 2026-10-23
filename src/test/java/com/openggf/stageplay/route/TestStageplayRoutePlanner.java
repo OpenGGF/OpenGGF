@@ -193,7 +193,8 @@ class TestStageplayRoutePlanner {
         var walk=new StageplayRouteRequest("hero",0,512,205,300,128,20000,10000,1,null,1,RouteMotion.DEFAULT);
         try(var probe=probe(terrain.level)) {
             var initial=probe.capture();var slow=search(probe,walk);assertFalse(slow.found());
-            assertTrue(slow.message().contains("Run or Spindash"),slow.message());
+            assertTrue(slow.message().matches("(?s).*terrain near x=[0-9]+: needs Run \\(matched native-terrain probe reaches and settles\\).*"),slow.message());
+            assertFalse(slow.message().contains("Spindash"));
             probe.restore(initial);var fast=search(probe,request(512,205));assertTrue(fast.found(),fast.message());
         }
     }
@@ -234,6 +235,8 @@ class TestStageplayRoutePlanner {
             assertFalse(result.found());
             assertTrue(result.commands().isEmpty());
             assertTrue(result.message().contains("budget") || result.message().contains("bounded"));
+            assertFalse(result.message().contains("needs Run"),result.message());
+            assertFalse(result.message().contains("Spindash"),result.message());
             assertNotEquals(448, probe.sample().x());
         }
     }
@@ -340,6 +343,23 @@ class TestStageplayRoutePlanner {
                 if(ending==EndingAction.GENTLE_STOP) assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
                 if(ending==EndingAction.OVERSHOOT) assertTrue(samples.stream().anyMatch(o->o.x()>request.targetX()+12));
             }
+        }
+    }
+
+    @Test void aGapAtTheStartingFeetUsesBackupOnlyAfterDirectSteeringFails() {
+        var terrain=terrain();
+        for(int column=15;column<=27;column++) terrain.put(column,16,0);
+        var request=new StageplayRouteRequest("hero",0,512,237,500,2048,240000,60000,1,null,1,RouteMotion.NATIVE);
+        try(var probe=probe(terrain.level)) {
+            var start=probe.capture();
+            var direct=StageplayRoutePlanner.searchPass(document(),request,probe,()->false,Long.MAX_VALUE,false);
+            assertFalse(direct.found(),"Fixture must require a back-up run-up");
+            probe.restore(start);var result=search(probe,request);
+            assertTrue(result.found(),result.message());
+            assertTrue(result.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.MOVE_TO && c.x()<224),
+                    "Fallback must actually command the run-up");
+            assertEquals(512,result.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).toList().getLast().x());
+            probe.restore(start);assertNear(replay(probe,request,result.commands()).getLast(),request);
         }
     }
 

@@ -358,6 +358,55 @@ public final class StageplayRoutePlanner {
             PlayablePuppet probe,
             BooleanSupplier cancelled,
             long deadline) {
+        if (request.maxNodes() < 4 || request.maxTicks() < 4)
+            return searchPass(document, request, probe, cancelled, deadline, false);
+        var entry = probe.capture();
+        boolean walk = request.motion().travelSpeed() == TravelSpeed.WALK;
+        int reserveNodes = walk ? request.maxNodes()/4 : 0;
+        int reserveTicks = walk ? request.maxTicks()/4 : 0;
+        var direct = searchPass(document, budget(request, request.maxNodes()/3, request.maxTicks()/3,
+                request.motion()), probe, cancelled, deadline, false);
+        if (direct.found() || direct.status() == CANCELLED || direct.status() == UNSUPPORTED) return direct;
+        if (cancelled.getAsBoolean() || System.nanoTime() >= deadline) return direct;
+        probe.restore(entry);
+        var detour = searchPass(document, budget(request, request.maxNodes()-direct.nodes()-reserveNodes,
+                request.maxTicks()-direct.ticks()-reserveTicks, request.motion()), probe, cancelled, deadline, true);
+        int nodes = direct.nodes()+detour.nodes(), ticks = direct.ticks()+detour.ticks();
+        if (detour.found()) return new StageplayRouteProposal(null, detour.message(), detour.commands(),
+                detour.path(), nodes, ticks);
+        if (detour.status() == CANCELLED) return new StageplayRouteProposal(detour.status(), detour.message(),
+                List.of(), detour.path(), nodes, ticks);
+        String advice = "";
+        // Diagnose speed only with a successful matched native-terrain Run search.
+        // A wall, cancellation or tiny budget must never receive speculative speed advice.
+        if (walk && nodes < request.maxNodes() && ticks < request.maxTicks()
+                && !cancelled.getAsBoolean() && System.nanoTime() < deadline) {
+            probe.restore(entry);
+            var motion = new RouteMotion(request.motion().startingAction(), TravelSpeed.RUN,
+                    request.motion().endingAction(), request.motion().endingFacing());
+            var run = searchPass(document, budget(request, request.maxNodes()-nodes,
+                    request.maxTicks()-ticks, motion), probe, cancelled, deadline, true);
+            nodes += run.nodes(); ticks += run.ticks();
+            if (run.found() && !direct.path().isEmpty()) {
+                var stall = direct.path().getLast();
+                advice = "; terrain near x=" + Math.round(stall.x())
+                        + ": needs Run (matched native-terrain probe reaches and settles)";
+            }
+            if (run.status() == CANCELLED) return new StageplayRouteProposal(CANCELLED,
+                    "Route speed diagnosis cancelled", List.of(), detour.path(), nodes, ticks);
+        }
+        return new StageplayRouteProposal(detour.status(), detour.message()+advice,
+                List.of(), detour.path(), nodes, ticks);
+    }
+
+    private static StageplayRouteRequest budget(StageplayRouteRequest request, int nodes, int ticks, RouteMotion motion) {
+        return new StageplayRouteRequest(request.actorId(), request.startFrame(), request.targetX(), request.targetY(),
+                request.maxFrames(), Math.max(1,nodes), Math.max(1,ticks), request.maxMillis(), request.urgency(),
+                request.footprint(), request.objectSpeed(), motion);
+    }
+
+    static StageplayRouteProposal searchPass(StageplayDocument document, StageplayRouteRequest request,
+            PlayablePuppet probe, BooleanSupplier cancelled, long deadline, boolean detours) {
         var initial = probe.sample();
         if (request.motion().startingAction() == StartAction.SPINDASH &&
                 !probe.supports(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH))
@@ -441,7 +490,7 @@ public final class StageplayRoutePlanner {
                 return rejected(
                         BUDGET_EXCEEDED,
                         "Native terrain search exhausted its bounded work budget; reachability is"
-                                + " not disproved" + speedAdvice(request),
+                                + " not disproved",
                         expanded,
                         ticks, best);
             Node current = frontier.remove();
@@ -453,7 +502,9 @@ public final class StageplayRoutePlanner {
                 return proposal(document, request, current, expanded, ticks);
             int nextFrame = current.frame + 1;
             if (nextFrame >= request.startFrame() + request.maxFrames()) continue;
-            double[] goals = { request.targetX() };
+            double[] goals = detours
+                    ? new double[] {request.targetX(), initial.x()-64, initial.x()+64, initial.x()-128, initial.x()+128}
+                    : new double[] {request.targetX()};
             int[] holds = current.parent == null && request.motion().startingAction() == StartAction.JUMP
                     ? new int[] {12}
                     : current.observation.onGround() && nextFrame > current.jumpEnd + 1
@@ -478,14 +529,14 @@ public final class StageplayRoutePlanner {
                         if (ticks >= request.maxTicks() || System.nanoTime() >= deadline)
                             return rejected(
                                     BUDGET_EXCEEDED,
-                                    "Native terrain search exhausted its tick/time budget" + speedAdvice(request),
+                                    "Native terrain search exhausted its tick/time budget",
                                     expanded,
                                     ticks, best);
-                        if (request.motion().endingAction() == EndingAction.OVERSHOOT)
+                        if (goal == request.targetX() && request.motion().endingAction() == EndingAction.OVERSHOOT)
                             returning=StageplayRouteSteering.returning(Math.floor(sample.x()),goal,current.approach,returning);
                         int direction = StageplayRouteSteering.direction(Math.floor(sample.x()),sample.xSpeed(),
                                 sample.groundSpeed(),sample.runAccel(),sample.runDecel(),sample.friction(),
-                                sample.maxSpeed(),sample.slopeImpulse(),sample.airborne(),goal,request.urgency(),request.motion(),returning,current.approach);
+                                sample.maxSpeed(),sample.slopeImpulse(),sample.airborne(),goal,request.urgency(),steeringMotion(request,goal),returning,current.approach);
                         ticks++;
                         probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
                         sample = probe.sample();
@@ -504,7 +555,8 @@ public final class StageplayRoutePlanner {
                     Key key = key(sample, last < jumpEnd, jumpEnd - last, returning);
                     int elapsed = last - request.startFrame() + 1;
                     int jumpCost = current.jumpCost + (hold > 0 && request.motion().startingAction()!=StartAction.JUMP ? 2000 : 0);
-                    int cost = elapsed+jumpCost;
+                    int detourCost = current.detourCost + (goal != request.targetX() ? 600 : 0);
+                    int cost = elapsed+jumpCost+detourCost;
                     Integer previous = visited.get(key);
                     if (previous != null && previous <= cost) continue;
                     visited.put(key, cost);
@@ -519,11 +571,11 @@ public final class StageplayRoutePlanner {
                                     goal,
                                     nextFrame,
                                     elapsed,
-                                    score(sample, request, elapsed) + jumpCost,
+                                    score(sample, request, elapsed) + jumpCost + detourCost,
                                     ordinal++);
                     child.edge = List.copyOf(edge);
                     child.returning=returning; child.approach=current.approach;
-                    child.actionStart=current.actionStart; child.jumpCost=jumpCost;
+                    child.actionStart=current.actionStart; child.jumpCost=jumpCost; child.detourCost=detourCost;
                     if (distance(sample, request) < distance(best.observation, request)) best = child;
                     // Arrival is accepted only when popped: a jump may discover the goal
                     // before the cheaper, grounded route has finished.
@@ -541,7 +593,7 @@ public final class StageplayRoutePlanner {
                 SEARCH_EXHAUSTED,
                 "No route found within the bounded terrain graph"
                         + (trimmed ? " and retained-checkpoint budget" : "")
-                        + "; this does not prove the destination unreachable" + speedAdvice(request),
+                        + "; this does not prove the destination unreachable",
                 expanded,
                 ticks, best);
     }
@@ -580,12 +632,19 @@ public final class StageplayRoutePlanner {
                     request.targetX(),request.targetY(),request.urgency(),StageplayRouteSteering.CHARGE_FRAMES,request.motion()));
             moveStart+=StageplayRouteSteering.CHARGE_FRAMES+2;
         }
-        commands.add(command(ids,"route.move.",moveStart,PuppetCommandKind.MOVE_TO,
-                request.targetX(),request.targetY(),request.urgency(),0,request.motion()));
-        for(Node node:chain) {
+        double previousGoal = Double.NaN;
+        for (Node node : chain) {
+            if (node.goalX != previousGoal) {
+                commands.add(command(ids,"route.move.",Double.isNaN(previousGoal)?moveStart:node.start,
+                        PuppetCommandKind.MOVE_TO,node.goalX,request.targetY(),request.urgency(),0,
+                        steeringMotion(request,node.goalX)));
+                previousGoal = node.goalX;
+            }
             if(node.hold>0) commands.add(command(ids,"route.jump.",node.start,PuppetCommandKind.JUMP,0,0,0,node.hold,request.motion()));
             path.addAll(node.edge);
         }
+        if (chain.isEmpty()) commands.add(command(ids,"route.move.",moveStart,PuppetCommandKind.MOVE_TO,
+                request.targetX(),request.targetY(),request.urgency(),0,request.motion()));
         int terminal=Math.max(found.frame+1,moveStart+1);
         int end=request.startFrame()+request.maxFrames();
         if(terminal>=end) return rejected(BUDGET_EXCEEDED,"Route needs more frames to settle",nodes,ticks,found);
@@ -613,9 +672,9 @@ public final class StageplayRoutePlanner {
                 ObjectTarget.none(),WaitCondition.NONE,0,motion);
     }
 
-    private static String speedAdvice(StageplayRouteRequest request) {
-        return request.motion().travelSpeed()==TravelSpeed.WALK
-                ? "; speed-dependent terrain may need Run or Spindash; try Run or a Spindash start" : "";
+    private static RouteMotion steeringMotion(StageplayRouteRequest request, double goal) {
+        return goal == request.targetX() ? request.motion() : new RouteMotion(request.motion().startingAction(),
+                request.motion().travelSpeed(), EndingAction.HARD_STOP, EndingFacing.INHERIT);
     }
 
     private static StageplayDocument patch(
@@ -768,7 +827,7 @@ public final class StageplayRoutePlanner {
                             fingerprint,request,proposal.nodes(),ticks,path);
                 if (request.motion().travelSpeed()==TravelSpeed.WALK &&
                         Math.max(Math.abs(motionState.groundSpeed()),Math.abs(motionState.xSpeed()))>StageplayRouteSteering.STROLL_CAP)
-                    return failure(VERIFICATION_FAILED,"Native terrain or launch forced speed over the Walk stroll cap; choose Run",
+                    return failure(VERIFICATION_FAILED,"Walk controller exceeded the stroll cap near x=" + Math.round(pose.x()) + "; route could not be qualified",
                             fingerprint,request,proposal.nodes(),ticks,path);
                 path.add(new StageplayRoutePoint(frame, pose.x(), pose.y(), !state.airborne()));
             }
@@ -876,7 +935,7 @@ public final class StageplayRoutePlanner {
     private static final class Node {
         final Node parent;
         boolean returning;
-        int approach, actionStart, jumpCost;
+        int approach, actionStart, jumpCost, detourCost;
         List<StageplayRoutePoint> edge = List.of();
         PlayablePuppet.Snapshot snapshot;
         final PlayablePuppet.Observation observation;
