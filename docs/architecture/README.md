@@ -49,3 +49,13 @@ The [top 50 additional Chaos candidates](research/2026-10-13-chaos-effect-shortl
 rank distinct adaptations from Zolika's other published catalogues, with source
 links, Sonic behavior, severity and qualification boundaries. This shortlist
 does not automatically expand the proposed pool.
+
+## Sonic CD fourth-game proposal
+
+The [Sonic CD architecture](designs/2026-10-23-sonic-cd-fourth-game.md)
+and [implementation plan](plans/2026-10-23-sonic-cd-implementation.md)
+propose complete original Sega CD parity, USA first, followed by Japan and
+Europe. They cover release and revision identity, disc-backed assets, native
+timing, audio/video, time travel, all gameplay and non-level programs, and
+evidence required for completion. The pinned `docs/scddisasm` reference is
+available now. Runtime implementation remains future work.
