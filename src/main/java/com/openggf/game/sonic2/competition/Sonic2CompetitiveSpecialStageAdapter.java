@@ -18,6 +18,12 @@ public final class Sonic2CompetitiveSpecialStageAdapter {
         void collectedRing(int slot);
         void hitBomb(int slot);
         void checkpoint();
+        /** VSReset's six-word archive and bank clear, at the native hand/tie clock. */
+        void archivedSector(int sector, int p1Rings, int p2Rings);
+        /** A nonfinal tie advances the sector without archiving or clearing either bank. */
+        void tiedSector(int sector);
+        /** RingCheckTrigger has cleared Object_RAM/SAT after the final 70/48-tick wait. */
+        void stageComplete();
     }
     private final Sonic2CompetitionSession session;
     private final Halfpipe halfpipe;
@@ -35,6 +41,18 @@ public final class Sonic2CompetitiveSpecialStageAdapter {
         @Override public void checkpoint() {
             requireActive();
             session.finishSpecialSector();
+        }
+        @Override public void archivedSector(int sector, int p1Rings, int p2Rings) {
+            requireActive();
+            session.archiveSpecialSector(sector, p1Rings, p2Rings);
+        }
+        @Override public void tiedSector(int sector) {
+            requireActive();
+            session.tieSpecialSector(sector);
+        }
+        @Override public void stageComplete() {
+            requireActive();
+            session.completeSpecialStage();
         }
     };
     public Sonic2CompetitiveSpecialStageAdapter(Sonic2CompetitionSession session, Halfpipe halfpipe) {

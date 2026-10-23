@@ -1405,8 +1405,8 @@ public class GameLoop {
             profiler.endSection("input");
             return;
         } else if (com.openggf.game.nativemenu.NativeMenuController.handles(currentGameMode)) {
-            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
-                    com.openggf.game.nativemenu.NativeMenuController.phase(currentGameMode), this::updateNativeMenuMode);
+            GameLoopPlcLifecycle.runNativeScreen(activePlcLifecycleFrame,
+                    currentGameMode, this::updateNativeMenuMode);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {

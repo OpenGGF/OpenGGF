@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
 
 /** Registration-only code replacement: no delete, respawn mutation or onUnload. */
 final class ObjectNativeSstOverwrite {
@@ -39,6 +40,64 @@ final class ObjectNativeSstOverwrite {
         if(s.updating()&&exec<=s.currentExec())s.exec()[exec]=next;
         // Earlier/current slots wait; add() publishes later slots in the current walk.
         s.dirty().run();return next;
+    }
+
+    /** Native fixed-address write; construction succeeds before the old code owner is retired. */
+    static <T extends AbstractObjectInstance> T replaceFixed(Surface s,
+            ObjectCollisionResponseList collisions, int slot, Supplier<T> factory) {
+        if (slot < s.layout().lastDynamicSlotExclusive() || slot >= s.layout().lastProcessSlotExclusive()) {
+            throw new IllegalArgumentException("Native fixed write requires a processed fixed SST slot: " + slot);
+        }
+        java.util.Objects.requireNonNull(factory, "factory");
+        AbstractObjectInstance old = registeredOwner(s, slot);
+        T next = ObjectConstructionContext.with(s.services(), slot, factory);
+        if (next == null) throw new IllegalStateException("Native fixed writer returned no dispatch owner");
+        if (s.identities().containsKey(next)) {
+            throw new IllegalArgumentException("Native fixed writer must construct a new dispatch owner");
+        }
+        s.word2C().preserve(slot);
+        next.setSlotIndex(slot);
+        ObjectRefId identity = old == null ? null : s.identities().remove(old);
+        if (old != null) {
+            ObjectSpawn placed = s.inverse().remove(old);
+            if (placed != null) s.active().remove(placed);
+            s.dynamic().remove(old);
+            s.ownership().remove(old);
+            s.deferred().remove(old);
+            s.callbacks().unregister(old);
+            for (int i = 0; i < s.exec().length; i++) {
+                if (s.exec()[i] == old) s.exec()[i] = null;
+            }
+        }
+        if (identity != null) s.identities().put(next, identity);
+        // Preassigned fixed SSTs bypass allocation. Existing registration publishes
+        // ahead of the cursor; at/before it waits, without invoking the new routine.
+        s.add().accept(next);
+        int exec = s.execIndex().applyAsInt(slot);
+        if (s.updating() && exec <= s.currentExec()) s.exec()[exec] = next;
+        // The canonical list contains RAM addresses. Rebind its Java aliases,
+        // retaining duplicates/order/capacity and the already-captured identity.
+        // Also update restored bindings so a later late-bind cannot resurrect old.
+        if (identity != null) collisions.bindRestoredObject(identity, next);
+        collisions.refreshNativePointerOwners();
+        s.dirty().run();
+        return next;
+    }
+
+    private static AbstractObjectInstance registeredOwner(Surface s, int slot) {
+        AbstractObjectInstance found = null;
+        for (var group : List.of(s.active().values(), s.dynamic())) {
+            for (ObjectInstance instance : group) {
+                if (instance instanceof AbstractObjectInstance object
+                        && s.callbacks().call(object, object::getSlotIndex) == slot) {
+                    if (found != null && found != object) {
+                        throw new IllegalStateException("Multiple native SST dispatch owners: " + slot);
+                    }
+                    found = object;
+                }
+            }
+        }
+        return found;
     }
     static AbstractObjectInstance currentOwner(java.util.Collection<ObjectInstance> placed,
             List<ObjectInstance> dynamic,ObjectCallbackRouter callbacks,int slot) {

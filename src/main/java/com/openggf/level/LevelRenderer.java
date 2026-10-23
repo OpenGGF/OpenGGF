@@ -656,7 +656,8 @@ public final class LevelRenderer {
             bools[3] = r.pendingFgUseUnderwater_high;
             bools[4] = r.pendingBgTilePassHasWater;
             bools[5] = r.pendingBgTilePassPerLineScroll;
-            bools[6] = r.lm.foregroundPlaneWrapsVertically();
+            bools[6] = r.retainedPlane(foregroundPlaneSource(r.currentAdvancedRenderFrameState)) != null
+                    || r.lm.foregroundPlaneWrapsVertically();
             bools[7] = r.pendingFboSuppressFrontScenery;
             refs[0] = r.pendingFgAtlasId_low;
             refs[1] = r.pendingFgPaletteId_low;
@@ -1158,6 +1159,7 @@ public final class LevelRenderer {
         // native boundary words, player walls and intentional foreground rings remain.
         com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
                 && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
+                && retainedPlane(foregroundPlaneSource(currentAdvancedRenderFrameState)) == null
                 && (lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
         tilemapRenderer.setForegroundWindow(lm.zoneFeatureProvider == null
                 ? null : lm.zoneFeatureProvider.foregroundWindow());
@@ -1168,6 +1170,16 @@ public final class LevelRenderer {
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
             tilemapRenderer.enablePerLineForegroundScroll(pendingFgHScrollView);
         }
+    }
+
+    private com.openggf.game.internal.RetainedPlaneDescriptorSource.Plane retainedPlane(
+            TilemapGpuRenderer.Layer layer) {
+        if (!(lm.zoneFeatureProvider instanceof com.openggf.game.internal.RetainedPlaneDescriptorSource source)) {
+            return null;
+        }
+        var plane = layer == TilemapGpuRenderer.Layer.FOREGROUND
+                ? source.foregroundPlane() : source.backgroundPlane();
+        return plane != null && plane.revision() != 0 ? plane : null;
     }
 
     private void enableForegroundPerColumnVScroll(TilemapGpuRenderer tilemapRenderer) {
@@ -1552,6 +1564,7 @@ public final class LevelRenderer {
         float nametableBaseTile = 0.0f;
         float upperBandWrapHeightPx = 0.0f;
         float upperBandWrapWidthTiles = 0.0f;
+        boolean retainedBackground = retainedPlane(TilemapGpuRenderer.Layer.BACKGROUND) != null;
         if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
             // This pass now reads the foreground world texture. A 512px
             // background cache window would wrap camera X into unrelated
@@ -1561,6 +1574,11 @@ public final class LevelRenderer {
             shaderScrollMidpoint = 0;
             shaderExtraBuffer = 0;
             perLineScrollActive = true;
+        } else if (retainedBackground) {
+            // The complete owner-authored image is anchored at zero. Its exact
+            // period replaces ordinary layout windows and zone build heuristics;
+            // the compositor still owns native per-line HScroll/VScroll ordering.
+            shaderScrollMidpoint = 0;
         } else if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
             // Per-scanline HScroll in the tilemap shader, matching VDP behavior.
             // Each pixel computes worldX = pixelX - hScroll[scanline] directly,
@@ -1603,7 +1621,7 @@ public final class LevelRenderer {
         // avoid a visible wrap seam where slower and faster layers overlap.
         int bgPeriodCap = currentScrollPresentation == null ? lm.parallaxManager.getBgPeriodWidth()
                 : currentScrollPresentation.registers().backgroundPeriod();
-        if (!perLineScrollActive && bgPeriodWidthPixels > bgPeriodCap) {
+        if (!retainedBackground && !perLineScrollActive && bgPeriodWidthPixels > bgPeriodCap) {
             bgPeriodWidthPixels = bgPeriodCap;
         }
         // The compositor uses this width as its modulo. A wider display must

@@ -222,3 +222,97 @@ wait reported through 90s before admission). The command used Java 25, Lua 5.4,
 unset displays, explicit surfaceless EGL and both absolute S2/S3K ROM properties.
 This checks the composed palette-owner and projection seams; the synthetic split
 producer still does not certify the native arena's actual mappings or geometry.
+
+## Admitted native loop handoff
+
+The competition screen dispatch must not wrap a canonical world step in the
+ordinary menu PLC claim/prepare pair. `LevelFrameStep` already owns both edges;
+the old composition would prepare the same token again when the screen returned.
+`NativeCompetitionIterationAccess` now scopes the admitted token to the screen
+update. `NativeCompetitionWorld.step(input[, nativePlayerPass])` consumes that
+token through the same canonical executor, without adding a token argument to
+the screen interface. Explicit-token overloads remain available to production
+drivers that already own their iteration.
+
+One native loop may run per scope, including an alternate halfpipe scan with its
+own semantic phase. Foreign tokens, nested scopes and a second world step fail
+before another body runs. An idle or setup-only screen closes an ordinary wait;
+an existing blocking fade retains its prepared token. Options, selection and
+results continue through their existing menu phase wrapper. Scope state is
+removed on callback failure and never survives into drawing or a later update.
+
+On `60ebe9309` plus this handoff, the exact queued Java 25/Lua 5.4 selection
+`TestNativeCompetitionIteration,TestGameLoopNativeMenus,TestPlcVBlankOrdering,TestNativeCompetitionParticipantDispatch,TestNativeCompetitionFixedAuxiliaryDispatch,TestNativeCompetitionFixedSstAccess,TestObjectCollisionResponseList,TestModApiSignatureSurface`
+passed 63 tests with zero failures/errors/skips (92 seconds Maven execution).
+The seven new checks include the actual canonical level executor and alternate
+native scan, assert one VBlank/prepare and the ordered hardware service boundaries,
+and cover setup, fade, menu, failure and invalid-token controls. This validates
+the loop composition seam; it does not close any arena, halfpipe or title
+activation row in the acceptance matrix.
+
+## Authoritative retained plane geometry
+
+The internal `RetainedPlaneDescriptorSource` publishes nullable foreground and
+background `Plane` owners with `widthTiles()`, `heightTiles()`, `revision()` and
+`descriptorAt(pixelX, pixelY)`. A nonzero revision makes the complete plane
+authoritative. Each positive power-of-two dimension is at most 128 tiles; no
+additional cell-count restriction is imposed by this render-only contract.
+The source owns wrapping on both axes and anchors the image at zero. The tilemap
+manager validates geometry before reading descriptors, builds native pattern
+words directly, and keys the derived image by source identity, plane identity,
+revision and dimensions. Layout dimensions, camera windows and actual-art height
+scans do not participate. Rewind restores the domain owner and invalidates these
+derived keys; it does not snapshot another authoritative copy of the plane.
+
+The renderer uses the selected front plane's vertical wrap and preserves retained
+horizontal wrapping in widescreen. The background tile pass uses the exact plane
+period and height, including 128x32 and 64x64 images, while the existing compositor
+keeps native HScroll/VScroll ordering. A direct per-line tile-pass alternative was
+rejected because it would apply HScroll before compositor vertical displacement,
+potentially selecting another scanline's scroll word. Existing one-off descriptor
+overrides remain compatible, including mixed foreground/background ownership.
+This prerequisite does not certify a domain plane producer or activate competition.
+
+The isolated renderer child starts at `60ebe9309`; no uncommitted parent PLC
+iteration is included. Read-only review caught mixed ownership bypassing legacy
+foreground rewind invalidation, and art-lookup invalidation failing to publish
+without a descriptor revision. Both are covered independently of plane geometry.
+The pixel oracle's first art repeated every 64 columns and could therefore hide
+an incorrect 512px cap on a 128-column plane. Its corrected palette includes the
+high column bit, while the row oracle distinguishes rows 0/32 and 63/0. Expected
+colors are decoded from synthetic native words and asymmetric tile pixels, not
+from the renderer's packed descriptors or a second rendering of the same view.
+
+Combined affected validation on that base plus this child change used
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestRetainedPlaneDescriptors,TestRetainedPlaneRendering,TestLevelTilemapManagerRewindReset,TestLevelRendererBackgroundViewport,TestLevelRendererBucketInvalidation
+test`, Java 25, Lua 5.4, unset `DISPLAY`/`WAYLAND_DISPLAY`, and the absolute
+locked-on ROM via `-Ds3k.rom.path` (CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`). It passed 51 tests with zero
+failures, errors or skips after 115 seconds queued and 1:24 of Maven execution.
+The EGL check uses production `GameplayCaptureSession`/`HeadlessGameBoot`, verifies
+the installed `NullAudioBackend`, and draws through `NativeCompetitionRenderer`
+and `LevelRenderer`, including both-plane 128x32/64x64 boundaries, palette/flips,
+revision uploads and unchanged-view buffer/publication identity. The earlier
+unchanged incremental-window selection passed 30 checks; ordinary rewind and
+renderer regressions are included in the final command. No broad suite or native
+arena/ROM producer parity is claimed; combined S3K coverage belongs to the parent.
+
+The first commit attempt was rejected by the conservative Mod API policy detector:
+its only declaration delta was a private nested cache record inside the annotated
+tilemap manager. That representation was replaced with private source/plane/revision
+key arrays, comparing dimensions against the existing derived tilemap dimensions.
+The detector's declaration output then matched the base exactly and the unchanged
+pre-commit hook passed. Neither signature pins nor hook policy were changed.
+The exact queued assertion `maven_queue.py --lean -Dmse=off
+-Dtest=TestModApiSignatureSurface#candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface
+test` then passed 1/1 with zero failures, errors or skips on the private-field
+representation (Java 25/Lua 5.4, 1:29 Maven execution). The candidate signature
+therefore remains equal to its unchanged pin.
+
+After this representation change, the final affected selector
+`-Dtest=TestRetainedPlaneDescriptors,TestRetainedPlaneRendering,TestLevelTilemapManagerRewindReset`
+passed 24 tests with zero failures, errors or skips under the same explicit EGL,
+no-display, ROM and Java/Lua settings above (28.729 seconds Maven execution).
+The other renderer and incremental-window code was unchanged; its completed
+focused coverage was retained rather than repeated.

@@ -9,4 +9,11 @@ public final class LevelArtInternalAccess {
     public static void initializeObjectArt(LevelManager level) {
         Objects.requireNonNull(level, "level").initObjectArt();
     }
+
+    /** Install dual-camera ring cursors before the new manager's first placement reset. */
+    public static void initializeNativeCompetitionRings(LevelManager level,
+            com.openggf.level.rings.NativeCompetitionRingStreaming streaming) {
+        LevelManagerInitializationSupport.initializeNativeCompetitionRings(
+                Objects.requireNonNull(level, "level"), Objects.requireNonNull(streaming, "streaming"));
+    }
 }

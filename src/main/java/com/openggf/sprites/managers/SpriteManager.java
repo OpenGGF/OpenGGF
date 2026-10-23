@@ -1188,7 +1188,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (main != null && main.getTailsTailsController() != null) {
 			main.getTailsTailsController().update();
 		}
-		for (AbstractPlayableSprite sidekick : sidekicks) {
+		for (AbstractPlayableSprite sidekick : getRegisteredSidekicks()) {
 			if (sidekick != null && sidekick.getTailsTailsController() != null) {
 				sidekick.getTailsTailsController().update();
 			}
@@ -1214,7 +1214,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// assuming that the slot always belongs to player two.
 		AbstractPlayableSprite owner = getMainPlayable();
 		if (owner == null || owner.getTailsTailsController() == null) {
-			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+			List<AbstractPlayableSprite> registeredSidekicks = getRegisteredSidekicks();
+			owner = registeredSidekicks.isEmpty() ? null : registeredSidekicks.getFirst();
 		}
 		if (owner != null && owner.getTailsTailsController() != null) {
 			owner.getTailsTailsController().update();
@@ -1226,7 +1227,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (playerIndex == 0) {
 			owner = getMainPlayable();
 		} else if (playerIndex == 1) {
-			owner = sidekicks.isEmpty() ? null : sidekicks.getFirst();
+			List<AbstractPlayableSprite> registeredSidekicks = getRegisteredSidekicks();
+			owner = registeredSidekicks.isEmpty() ? null : registeredSidekicks.getFirst();
 		} else {
 			throw new IllegalArgumentException("fixed dust slot player index must be 0 or 1");
 		}

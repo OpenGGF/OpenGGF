@@ -153,7 +153,7 @@ public class Sonic2SpecialStagePlayer {
     private int ctrlRecordIndex;
     private static final int CTRL_RECORD_SIZE = 16;
 
-    private Sonic2SpecialStageManager swapPositionsOwner;
+    private SwapPositionsPort swapPositionsOwner;
     private int invulnerabilityCountdown;
     private Sonic2SpecialStagePlayer otherPlayer;
     private boolean spawned;
@@ -161,6 +161,10 @@ public class Sonic2SpecialStagePlayer {
 
     Sonic2SpecialStagePlayer(PlayerType type, boolean isMain,
                              Sonic2SpecialStageManager swapPositionsOwner) {
+        this(type, isMain, SwapPositionsPort.ordinary(swapPositionsOwner));
+    }
+
+    Sonic2SpecialStagePlayer(PlayerType type, boolean isMain, SwapPositionsPort swapPositionsOwner) {
         this.playerType = type;
         this.isMainCharacter = isMain;
         this.swapPositionsOwner = Objects.requireNonNull(
@@ -1070,19 +1074,19 @@ public class Sonic2SpecialStagePlayer {
     }
 
     public void setSwapPositionsFlag(boolean flag) {
-        swapPositionsOwner.setSwapPositionsFlag(flag);
+        swapPositionsOwner.set(flag);
     }
 
     public boolean getSwapPositionsFlag() {
-        return swapPositionsOwner.getSwapPositionsFlag() != 0;
+        return swapPositionsOwner.get();
     }
 
     void toggleSwapPositionsFlag() {
-        swapPositionsOwner.toggleSwapPositionsFlag();
+        swapPositionsOwner.toggle();
     }
 
     void setSwapPositionsOwner(Sonic2SpecialStageManager owner) {
-        this.swapPositionsOwner = Objects.requireNonNull(owner, "owner");
+        this.swapPositionsOwner = SwapPositionsPort.ordinary(owner);
     }
 
     public int getControlRecordEntry(int framesAgo) {

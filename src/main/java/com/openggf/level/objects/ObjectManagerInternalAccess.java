@@ -11,6 +11,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** Internal competition streaming seam; deliberately outside the creator API. */
 public final class ObjectManagerInternalAccess {
@@ -51,6 +52,51 @@ public final class ObjectManagerInternalAccess {
 
     public static void swapNativeCompetitionStreamingSlots(ObjectManager manager) {
         manager.nativeCompetitionStreaming().swapNativeCompetitionStreamingSlots();
+    }
+
+    /** Unconditional fixed-address write; does not delete, unload or allocate the previous owner. */
+    public static <T extends AbstractObjectInstance> T replaceNativeCompetitionFixedObject(
+            ObjectManager manager, int absoluteSlot, Supplier<T> factory) {
+        enableNativeCompetitionCollisionPointers(manager);
+        // Item 4 selects Breathing_bubbles directly, with no branch after its
+        // occupancy test (loc_36612, sonic3k.asm:73550-73570). The factory owns
+        // native field copying; replacement only changes the registered owner.
+        return ObjectNativeSstOverwrite.replaceFixed(manager.nativeSstSurface(),
+                manager.initialCollisionResponseList(), absoluteSlot, factory);
+    }
+
+    /**
+     * Configures native pointer reads immediately. Register before initial dispatch
+     * and restore AFTER the ordinary object adapter. Missing snapshots fail closed;
+     * normal manager reset clears both pointer lists through its canonical owner.
+     */
+    public static RewindSnapshottable<Object> nativeCompetitionCollisionPointersRewindAdapter(ObjectManager manager) {
+        enableNativeCompetitionCollisionPointers(manager);
+        return new RewindSnapshottable<>() {
+            @Override public String key() { return "native_competition_collision_pointers"; }
+            @Override public Object capture() {
+                enableNativeCompetitionCollisionPointers(manager);
+                return manager.initialCollisionResponseList().captureNativePointers();
+            }
+            @Override public void restore(Object snapshot) {
+                enableNativeCompetitionCollisionPointers(manager);
+                manager.initialCollisionResponseList().restoreNativePointers(snapshot);
+            }
+        };
+    }
+
+    /** Immutable canonical previous-player list, resolving each captured physical SST to its live code owner. */
+    public static List<ObjectInstance> previousCollisionResponseObjects(ObjectManager manager) {
+        enableNativeCompetitionCollisionPointers(manager);
+        return List.copyOf(manager.initialCollisionResponseList().playerReadView());
+    }
+
+    private static void enableNativeCompetitionCollisionPointers(ObjectManager manager) {
+        if (NativeCompetitionRoster.from(manager.services().worldSession()) == null) {
+            throw new IllegalStateException("Native collision pointers require an active explicit roster");
+        }
+        manager.initialCollisionResponseList().configureNativePointerProjection(slot ->
+                slot >= 0 && slot < manager.getLastProcessSlotExclusive() ? manager.currentNativeSstOwner(slot) : null);
     }
 
     /** Placement streaming shares the manager's live collections and private callbacks. */

@@ -1327,3 +1327,122 @@ No live Root Maven job remains. Original sources are composed in order with the
 already qualified projection correction taken early; later concrete hosts,
 physical video/H-int admission, complete arenas and routes remain open. Main,
 provider activation, paired MHZ observations and push remain closed.
+
+
+## Root ordered native loop and host prerequisites — 2026-10-23
+
+Local qualified parentd6e722311 composes the next seven originals:
+cb1130f3cab765b9bfe8fe6bb7f95eb6477f6611,
+86d40181522dcaaa38770c8b9347233b665f7fa3,
+6043283caff68cea5051cc8e49da8eb6bc2fcdd9,
+893494f91b74d2dd04d3ce6785103e8254f9bf32,
+96b7b181d74e77bc39852d3d7af5bca7221ba535,
+9288e3fea8b80f0f513353641b40013a76126830 and
+89279e080891d6bcc12057eb7d2a5fe34b1066e3. No alias, compatibility or later-host
+ancestry is pulled merely to compile. Original owned design appendices retain
+historical validation attribution; current qualification is separate.
+
+The fixed-SST receiving port uses the existing Word2C Surface collaborator and
+samples after successful factory validation but before retiring the old owner.
+Registered-owner scanning still includes destroyed-but-registered objects;
+current-owner filtering is not substituted. The existing create/streaming bodies
+and NativeObjectIndex remain intact. New pointer/fixed/rewind operations live in
+InternalAccess; a shared Surface accessor and live pointer-publication gate grow
+OM3072 to3082 against3086. Two additional controls cover literal-known typed word
+import/order and refused factory non-retirement. This does not prove native RAM
+clear/birth callers, external reserved writers or foreign LONG/WORD aliases.
+
+Native ring enable/reset/adapter orchestration lives in the existing
+LevelManagerInitializationSupport. The ordinary initializer delegates with null;
+the native stream is enabled before reset and registered after the ordinary ring
+adapter. LevelManager only exposes its existing table to its same-package
+collaborator, retaining3144/3144 lines and the exact candidate declaration surface.
+RingManager itself is byte-identical to the qualified parent. The halfpipe's single
+old typed shadow call migrates to the qualified neutral Runnable bridge; no typed
+graphics-to-level entry point or Mod API shape is reintroduced.
+
+The new iteration path is gated to the explicit native competition screen/world;
+ordinary menu phases retain their existing wrapper. Retained plane descriptors
+are supplied capabilities and leave ordinary layout paths intact. Focused checks
+therefore cover every added consumer plus the plausible shared failure surfaces:
+physical pointers/word rewind, ordinary/native admission, PLC ordering, retained
+and incremental tilemaps, ordinary special-stage state/swap, graphics projection/
+shadow and all mandated S3K keepers. Delivery-wide smoke remains separate; this
+is not activation or whole-mode acceptance. Expected Maven cost is1–3 minutes
+plus compilation/queue delay; stop on new failures and repair only the owning
+seam. The exact41-class selector is:
+
+```text
+TestNativeCompetitionFixedAuxiliaryDispatch,TestNativeCompetitionFixedSstAccess,TestNativeCompetitionIteration,TestNativeCompetitionDustArtInitialization,TestRetainedPlaneDescriptors,TestRetainedPlaneRendering,TestNativeCompetitionRingInitialization,TestCompetitiveHalfpipeCheckpoint,TestCompetitiveHalfpipeEgl,TestCompetitiveHalfpipeItems,TestCompetitiveHalfpipePalettes,TestCompetitiveHalfpipeRomData,TestCompetitiveHalfpipeSat,TestCompetitiveHalfpipeSessionEvents,TestCompetitiveHalfpipeTrack,TestSonic2CompetitiveHalfpipe,TestObjectCollisionResponseList,TestNativeSstWord2C,TestNativeObjectQueries,TestNativeObjectSlotOccupancy,TestNativeCompetitionParticipantDispatch,TestGameLoopNativeMenus,TestPlcVBlankOrdering,TestPlcFrameLifecycleCoordinator,TestLevelTilemapManagerRewindReset,TestLevelRendererBackgroundViewport,TestLevelRendererBucketInvalidation,TestIncrementalBgTilemapWindow,TestNativeCompetitionRingStreaming,TestSonic2SpecialStageRewindSnapshot,TestSonic2SpecialStagePlayerSnapshot,Sonic2SpecialStageSwapFlagTest,TestSpecialStageViewportContract,TestGraphicsProjectionScope,TestNativeShadow15Pixels,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The command reuses the explicit Java25/Lua5.4/EGL/no-display/null-audio environment
+and all three absolute ROM arguments documented above, with `maven_queue.py
+--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=<selector> test -B`.
+Source freezes through completion. Workers run no JVM/Maven/native jobs and share
+no index. Main/push, provider activation and paired MHZ observations stay closed.
+
+
+First affected session15203 exits1 with368 distinct cases:364 pass,4 assertion
+failures,0 errors/skips,41 XML files. Queue117 seconds/Maven1:27; source freeze
+585ffd222e98c35f0bd077baf6ebd1d9bbc2250f427ee0103342254aa93d25b3 matches
+again after completion. Java25.0.5, surfaceless EGL and all three absolute ROM
+properties are present. No JVM dumps; fixture FAST/NONE, missing fallback WAV
+and synthetic collision-table warnings do not qualify actual native execution.
+
+All four failures are existing TestLevelRendererBucketInvalidation identities:
+prepareAloneDetectsUntrackedPriorityMutation (expected0 hooks/actual2),
+preparedSuppressionIsStableWithinPassAndReevaluatedAcrossPasses (expected1/2),
+preparedHookPathRetainsNonPlayableSpritesAfterMinimumBucketPlayables
+(expected123/1123), and
+renderBucketPassResolvesSidekickSuppressionOnceAndPreservesLayerHookOrder
+(expected3412/131313131334121313). Their source and prepared draw method are
+unchanged from8d2548 throughd6; current SpriteManager changes only native fixed
+auxiliary participant lookup. The failures follow8d2548's explicit missing-layer
+ghost correction: an empty local bucket still exposes both remote ghost layers.
+The fixtures incorrectly treated hook calls as a local membership counter.
+Independent exact-source attribution agrees; no new native-mode behavior is
+credited as a cause.
+
+The bounded correction observes actual player.draw calls for suppression and
+priority mutation, checks both ghost layers independently, and retains the
+original3412 anchored player/ghost order while checking every empty bucket's
+layer calls. The minimum bucket still draws non-playable sprites after its
+playables, with the absent high layer explicitly represented. Public hook prose
+is updated to describe both painter and front-to-back table order; its signature
+and render implementation are unchanged. The affected check is the whole bucket
+class plus TestSatGhostLayering, TestNativeSpriteOwnershipPixels and API11,
+covering empty layers, actual EGL coverage ownership and declaration stability.
+
+
+Corrected focused25184 exits0:45 distinct cases across the four named classes,
+0 failures/errors/skips; queue12 seconds/Maven1:17. Whole bucket class15, ghost
+layers8, native ownership11 (including real EGL) and API11 all pass. The exact
+50d8ff5f70d6eace3b3855a2228aa767693a7950c367279f79cb96fc4be1798c
+source freeze matches after completion. Java25.0.5/EGL/all three absolute ROM
+properties and empty output/error/dump state were inspected. The render runtime
+is unchanged; the364 unaffected passing cases from15203 remain bounded evidence,
+not a claim that the original368-test invocation was green. Fresh affected guards
+are the six existing source/ArchUnit/native-image/rewind classes used above,
+in a separate guards JVM; no unchanged broad smoke or baseline suite is repeated.
+
+
+Fresh affected guards97175 exit0:111 distinct identities across six classes,
+0 failures/errors/skips, queue0/Maven41.541 seconds. All72 source budgets,32
+ArchUnit rules, native-image inventory and six rewind controls pass in the same
+fresh JVM. The guarded source freeze
+f4295c4df5843cbc477b9c2fc6823097546cda47f0a924e88d1c7a528f0ad451
+matches after completion. Java25.0.5/EGL/absolute three-ROM properties and no dumps
+were verified. Field-disposition output only lists existing gaps now closed; it
+is not a new failure or a reason to loosen the baseline. OM3082/3086,
+LM3144/3144, APS3235/3258 and S1Art2046/2047 pass unchanged caps.
+
+Explicit source citation inspection includes all49 changed/untracked paths:
+38 ok,11 near,202 unverifiable and42 hard/stale findings. All42 match the parent
+by exact citation identity; no new hard/stale finding is introduced. This is
+source-equivalence attribution, not a strict-clean citation claim. The seven
+original-source prerequisite cohort is boundedly qualified by the unchanged364
+passing controls from15203, corrected45-case check and fresh111 guards. Concrete
+host/palette execution binding, physical video/H-int, complete races, connected
+halfpipe/results and aggregate route parity remain open. Main and push remain
+closed; consumed raw diagnostics are removed after this evidence is recorded.

@@ -3,6 +3,7 @@ package com.openggf.level;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.internal.RetainedPlaneDescriptorSource;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
@@ -112,6 +113,13 @@ public class LevelTilemapManager {
     private int foregroundTilemapHeightTiles;
     private boolean foregroundTilemapDirty = true;
     private long foregroundDescriptorRevision;
+    // Derived images only: rewind restores the owner, then invalidates these keys.
+    private final RetainedPlaneDescriptorSource[] retainedSources = new RetainedPlaneDescriptorSource[2];
+    private final RetainedPlaneDescriptorSource.Plane[] retainedPlanes = new RetainedPlaneDescriptorSource.Plane[2];
+    private final long[] retainedRevisions = new long[2];
+    private TilemapGpuRenderer retainedForegroundRenderer;
+    private TilemapGpuRenderer retainedLookupRenderer;
+    private byte[] retainedPublishedLookup;
     // AIZ2 ship-loop persistent FG ring ($200-wide Plane A nametable analog).
     // While active, the FG tilemap is a $200-wide ring whose cells RETAIN the
     // last forest column drawn into them at the camera's leading edge, giving a
@@ -247,6 +255,9 @@ public class LevelTilemapManager {
                                             int bgCameraX,
                                             int bgCameraY,
                                             boolean verticalWrapEnabled) {
+        if (ensureRetainedPlane(zoneFeatureProvider, false)) {
+            return;
+        }
         BgTilemapUpdateMode resolvedMode = updateMode != null
                 ? updateMode : BgTilemapUpdateMode.STATIC_WINDOW;
         if (resolvedMode != lastBgTilemapUpdateMode) {
@@ -369,6 +380,9 @@ public class LevelTilemapManager {
                                             int currentZone,
                                             ParallaxManager parallaxManager,
                                             boolean verticalWrapEnabled) {
+        if (ensureRetainedPlane(zoneFeatureProvider, true)) {
+            return;
+        }
         long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundDescriptorOverride owner
                 ? owner.foregroundDescriptorRevision() : 0;
         if (descriptorRevision != foregroundDescriptorRevision) {
@@ -420,6 +434,107 @@ public class LevelTilemapManager {
             foregroundRingSeeded = true;
         }
         uploadForegroundTilemap();
+    }
+
+    /** Complete owner-authored planes bypass all layout/window/ring heuristics. */
+    private boolean ensureRetainedPlane(ZoneFeatureProvider provider, boolean foreground) {
+        int layer = foreground ? 0 : 1;
+        RetainedPlaneDescriptorSource source = provider instanceof RetainedPlaneDescriptorSource owner
+                ? owner : null;
+        RetainedPlaneDescriptorSource.Plane plane = source == null ? null
+                : foreground ? source.foregroundPlane() : source.backgroundPlane();
+        long revision = plane == null ? 0 : plane.revision();
+        if (revision == 0) {
+            if (retainedPlanes[layer] != null) {
+                clearRetainedPlaneKey(layer);
+                if (foreground) {
+                    foregroundTilemapData = null;
+                    foregroundTilemapDirty = true;
+                    foregroundRingSeeded = false;
+                } else {
+                    backgroundTilemapData = null;
+                    backgroundTilemapDirty = true;
+                    retainedBackgroundPlaneAuthoritative = false;
+                    bgLastBuildValid = false;
+                    bgWindowShiftCandidate = false;
+                }
+            }
+            return false;
+        }
+        int width = plane.widthTiles();
+        int height = plane.heightTiles();
+        if (!validPlaneDimension(width) || !validPlaneDimension(height)) {
+            throw new IllegalArgumentException("Retained plane dimensions must be positive powers of two <=128: "
+                    + width + "x" + height);
+        }
+        boolean changed = retainedSources[layer] != source || retainedPlanes[layer] != plane
+                || retainedRevisions[layer] != revision
+                || width != (foreground ? foregroundTilemapWidthTiles : backgroundTilemapWidthTiles)
+                || height != (foreground ? foregroundTilemapHeightTiles : backgroundTilemapHeightTiles);
+        if (changed) {
+            byte[] data = new byte[width * height * 4];
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    writeTilemapDescriptor(data, (y * width + x) * 4,
+                            plane.descriptorAt(x * Pattern.PATTERN_WIDTH, y * Pattern.PATTERN_HEIGHT));
+                }
+            }
+            retainedSources[layer] = source;
+            retainedPlanes[layer] = plane;
+            retainedRevisions[layer] = revision;
+            if (foreground) {
+                foregroundTilemapData = data;
+                foregroundTilemapWidthTiles = width;
+                foregroundTilemapHeightTiles = height;
+                foregroundRingSeeded = false;
+            } else {
+                backgroundTilemapData = data;
+                backgroundTilemapWidthTiles = width;
+                backgroundTilemapHeightTiles = height;
+                // Discard any ordinary camera-authored ring before returning to it.
+                persistentBgBaselineValid = false;
+                persistentBgPublishedData = null;
+                persistentBgRestoreUploadPending = false;
+            }
+        }
+        ensurePatternLookupData();
+        TilemapGpuRenderer renderer = graphicsManager.getTilemapGpuRenderer();
+        if (renderer != null && (renderer != retainedLookupRenderer || patternLookupData != retainedPublishedLookup)) {
+            // Art residency can change independently of descriptor revisions.
+            renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+            retainedLookupRenderer = renderer;
+            retainedPublishedLookup = patternLookupData;
+        }
+        if (foreground) {
+            foregroundTilemapDirty = false;
+            if (changed || renderer != retainedForegroundRenderer) {
+                uploadForegroundTilemap();
+                retainedForegroundRenderer = renderer;
+            }
+        } else {
+            backgroundTilemapDirty = false;
+            bgLastBuildValid = false;
+            bgWindowShiftCandidate = false;
+            backgroundVdpWrapHeightTiles = height;
+            if (renderer != null) {
+                if (!renderer.hasBackgroundBaseline(backgroundTilemapData, width, height)) {
+                    renderer.setTilemapData(TilemapGpuRenderer.Layer.BACKGROUND, backgroundTilemapData, width, height);
+                    renderer.setPatternLookupData(patternLookupData, patternLookupSize);
+                }
+                renderer.setBgVdpWrapHeight(height);
+            }
+        }
+        return true;
+    }
+
+    private void clearRetainedPlaneKey(int layer) {
+        retainedSources[layer] = null;
+        retainedPlanes[layer] = null;
+        retainedRevisions[layer] = 0;
+    }
+
+    private static boolean validPlaneDimension(int dimension) {
+        return dimension > 0 && dimension <= 128 && (dimension & (dimension - 1)) == 0;
     }
 
     /**
@@ -1350,9 +1465,24 @@ public class LevelTilemapManager {
      * jumps of at least the ring width degenerate to a full re-seed).
      */
     public void resetTilemapsForRewindRestore() {
-        // Retained event-owned FG cells are snapshot state, not a pure layout cache.
-        // A restored branch can reuse a revision number with different cell contents.
+        // The owner is rewind state; these images must be derived again even if
+        // a restored branch reuses the same revision number with other bytes.
+        if (retainedPlanes[0] != null) {
+            clearRetainedPlaneKey(0);
+            foregroundTilemapData = null;
+            foregroundTilemapDirty = true;
+        }
+        // Legacy event-owned FG cells can reuse a revision with restored contents,
+        // including when only the other plane uses the generic source.
         if (foregroundDescriptorRevision != 0) foregroundTilemapDirty = true;
+        if (retainedPlanes[1] != null) {
+            clearRetainedPlaneKey(1);
+            backgroundTilemapData = null;
+            resetBgIncrementalShiftBaseline();
+            persistentBgBaselineValid = false;
+            persistentBgPublishedData = null;
+            return;
+        }
         if (retainedBackgroundPlaneAuthoritative && retainedBackgroundPlaneRestoredForRewind) {
             // Zone-event reconciliation has just restored an exact native Plane-B
             // image. It is not a pure camera/layout cache and must survive the
@@ -1859,6 +1989,11 @@ public class LevelTilemapManager {
      * Clears all tilemap arrays, dirty flags, and prebuilt data.
      */
     public void resetState() {
+        clearRetainedPlaneKey(0);
+        clearRetainedPlaneKey(1);
+        retainedForegroundRenderer = null;
+        retainedLookupRenderer = null;
+        retainedPublishedLookup = null;
         backgroundTilemapData = null;
         foregroundTilemapData = null;
         patternLookupData = null;
@@ -1972,11 +2107,13 @@ public class LevelTilemapManager {
     }
 
     int getBackgroundTilemapSourceX() {
+        if (retainedPlanes[1] != null) return 0;
         return lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
                 && persistentBgBaselineValid ? persistentBgAlignedX : bgTilemapBaseX;
     }
 
     int getBackgroundTilemapSourceY() {
+        if (retainedPlanes[1] != null) return 0;
         return lastBgTilemapUpdateMode == BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32
                 && persistentBgBaselineValid
                 // Keep visible alignedBgY at logical row 2 after the leading row.

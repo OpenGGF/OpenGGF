@@ -87,15 +87,26 @@ public final class NativeCompetitionWorld {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(frame, "frame");
         Objects.requireNonNull(nativePlayerPass, "nativePlayerPass");
-        context.getSpriteManager().publishHeldInputForLevelEvents(input);
-        return LevelFrameStep.execute(LevelFrameContext.from(context), frame,
-                PlcLifecyclePhase.ORDINARY_LEVEL, context.getLevelManager(), context.getCamera(),
-                nativePlayerPass, LevelFrameStep.DIRECT_WRAPPER);
+        return NativeCompetitionIterationAccess.runLoop(frame, () -> {
+            context.getSpriteManager().publishHeldInputForLevelEvents(input);
+            return LevelFrameStep.execute(LevelFrameContext.from(context), frame,
+                    PlcLifecyclePhase.ORDINARY_LEVEL, context.getLevelManager(), context.getCamera(),
+                    nativePlayerPass, LevelFrameStep.DIRECT_WRAPPER);
+        });
     }
 
     /** S2's full-size native player objects use the canonical playable dispatcher. */
     public LevelFrameResult step(InputHandler input, PlcLifecycleFrame frame) {
         return step(input, frame, () -> context.getSpriteManager().update(input));
+    }
+
+    /** Uses the outer GameLoop's admitted token without exposing it through screen APIs. */
+    public LevelFrameResult step(InputHandler input, Runnable nativePlayerPass) {
+        return step(input, NativeCompetitionIterationAccess.currentFrame(), nativePlayerPass);
+    }
+
+    public LevelFrameResult step(InputHandler input) {
+        return step(input, NativeCompetitionIterationAccess.currentFrame());
     }
 
     private void requireCurrent() {

@@ -33,6 +33,7 @@ import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -958,6 +959,14 @@ public class ObjectManager {
     // Sprite_CheckDeleteTouch3 (loc_1B666) rejects range before Add_SpriteToCollisionResponseList.
     void publishInitialCollisionResponse(ObjectInstance instance) {
         if (initialDispatch.isActive()) {
+            // Touch publication records the physical SST, even if its routine
+            // replaced the Java code owner during this dispatch.
+            if (NativeCompetitionRoster.from(objectServices.worldSession()) != null && instance instanceof AbstractObjectInstance object) {
+                int slot = objectCallbacks.call(object, object::getSlotIndex);
+                if (!isProcessedSstSlot(slot)) return;
+                instance = currentNativeSstOwner(slot);
+                if (instance == null) return;
+            }
             collisionResponseList.addToCurrentBuild(instance);
         }
     }
@@ -1874,10 +1883,14 @@ public class ObjectManager {
 
     AbstractObjectInstance createUncheckedDynamicObject(
             java.util.function.Function<NativeSstState,AbstractObjectInstance> partialWriter) {
-        return ObjectNativeSstOverwrite.create(new ObjectNativeSstOverwrite.Surface(objectServices,
+        return ObjectNativeSstOverwrite.create(nativeSstSurface(), partialWriter);
+    }
+
+    ObjectNativeSstOverwrite.Surface nativeSstSurface() {
+        return new ObjectNativeSstOverwrite.Surface(objectServices,
                 slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
                 dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
-                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty,nativeSstWord2C),partialWriter);
+                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty,nativeSstWord2C);
     }
 
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {

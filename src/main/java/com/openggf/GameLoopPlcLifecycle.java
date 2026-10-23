@@ -23,6 +23,14 @@ final class GameLoopPlcLifecycle {
         prepare(frame, phase);
     }
 
+    static void runNativeScreen(PlcLifecycleFrame frame, com.openggf.game.GameMode mode, Runnable body) {
+        if (mode == com.openggf.game.GameMode.COMPETITION) {
+            com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame, body);
+        } else {
+            runPhase(frame, com.openggf.game.nativemenu.NativeMenuController.phase(mode), body);
+        }
+    }
+
     static void prepare(PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);

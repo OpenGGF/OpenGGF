@@ -317,7 +317,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     RingManager ringManager;
     private boolean pendingTransitionRingInitialization;
     ZoneFeatureProvider zoneFeatureProvider;
-    private TouchResponseTable touchResponseTable;
+    TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
     HudRenderManager hudRenderManager;
     private HudProfile activeHudProfile = HudProfile.stock();

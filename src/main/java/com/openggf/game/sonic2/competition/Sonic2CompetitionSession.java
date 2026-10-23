@@ -227,23 +227,41 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         ledger.set(zone * 3 + act, Sonic2CompetitionResults.compare(p1Result, p2Result));
         phase = Phase.ACT_RESULTS;
     }
-    /** Obj5A_VSReset records six words; each sector resets both independent ring counters. */
+    /** Compatibility ingress for callers that resolve a sector and its presentation together. */
     public void finishSpecialSector() { recordSpecialSector(progress[0].getRings(), progress[1].getRings()); }
     public void recordSpecialSector(int p1Rings, int p2Rings) {
-        if (phase != Phase.SPECIAL_STAGE || specialSector >= 3) throw new IllegalStateException("No competitive sector active");
+        archiveSpecialSector(specialSector, p1Rings, p2Rings);
+        if (specialSector == 3) completeSpecialStage();
+    }
+    /** Obj5A_VSReset runs at the hand's expiry, or immediately for the final tie. */
+    public void archiveSpecialSector(int sector, int p1Rings, int p2Rings) {
+        requireSpecialSector(sector);
         specialRings.set(specialSector * 2, p1Rings & 0xFFFF);
         specialRings.set(specialSector * 2 + 1, p2Rings & 0xFFFF);
         specialSector++;
         for (var state : progress) state.setRings(0);
-        if (specialSector == 3) {
-            int one = 0, two = 0;
-            for (int i = 0; i < 6; i += 2) {
-                int comparison = Integer.compare(specialRings.get(i), specialRings.get(i + 1));
-                if (comparison > 0) one++; else if (comparison < 0) two++;
-            }
-            ledger.set(zone * 3 + act, new Sonic2CompetitionResults.Wins(one, two));
-            phase = Phase.SPECIAL_ACT_RESULTS;
+    }
+    /** Retail Obj5A's nonfinal tie bypasses VSReset: its archive stays zero and rings carry. */
+    public void tieSpecialSector(int sector) {
+        requireSpecialSector(sector);
+        if (sector == 2) throw new IllegalArgumentException("Final tie must archive its rings");
+        specialSector++;
+    }
+    private void requireSpecialSector(int sector) {
+        if (phase != Phase.SPECIAL_STAGE || specialSector >= 3 || sector != specialSector)
+            throw new IllegalStateException("No matching competitive sector active: " + sector);
+    }
+    /** Publication follows RingCheckTrigger/SSClearObjs, separately from native ring archiving. */
+    public void completeSpecialStage() {
+        if (phase != Phase.SPECIAL_STAGE || specialSector != 3)
+            throw new IllegalStateException("Competitive halfpipe has not archived all sectors");
+        int one = 0, two = 0;
+        for (int i = 0; i < 6; i += 2) {
+            int comparison = Integer.compare(specialRings.get(i), specialRings.get(i + 1));
+            if (comparison > 0) one++; else if (comparison < 0) two++;
         }
+        ledger.set(zone * 3 + act, new Sonic2CompetitionResults.Wins(one, two));
+        phase = Phase.SPECIAL_ACT_RESULTS;
     }
     public int monitorContents(int levelFrameCounter, boolean teleportOnly) {
         int content = teleportOnly ? 8 : (levelFrameCounter & 7) + 1;

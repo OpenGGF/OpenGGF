@@ -8,12 +8,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 final class ObjectCollisionResponseList {
     private static final int S3K_MAX_ENTRIES = 0x7E / 2;
 
     private final List<ObjectInstance> previousObjects = new ArrayList<>();
     private final List<ObjectInstance> currentObjects = new ArrayList<>();
+    // Capture RAM addresses at publication, before Java deletion can detach an
+    // owner's slot. Empty addresses still occupy native list capacity.
+    private final List<Integer> previousSlots = new ArrayList<>();
+    private final List<Integer> currentSlots = new ArrayList<>();
+    private IntFunction<ObjectInstance> nativePointerResolver;
+    private boolean nativeSlotsAuthoritative;
     private final List<ObjectRefId> restoredPreviousOrder = new ArrayList<>();
     private final List<ObjectRefId> restoredCurrentOrder = new ArrayList<>();
     private final Map<ObjectRefId, ObjectInstance> restoredObjects = new HashMap<>();
@@ -31,7 +38,7 @@ final class ObjectCollisionResponseList {
     }
 
     List<ObjectInstance> touchResponseObjects(List<ObjectInstance> currentObjects) {
-        return usePrevious ? previousObjects : currentObjects;
+        return usePrevious ? playerReadView() : currentObjects;
     }
 
     private ObjectCallbackRouter eligibilityCallbacks;
@@ -43,6 +50,7 @@ final class ObjectCollisionResponseList {
 
     void resetCurrentBuild() {
         currentObjects.clear();
+        currentSlots.clear();
         restoredCurrentOrder.clear();
         currentBuildCursor = 0;
         buildStage = ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILD_RESET;
@@ -59,14 +67,19 @@ final class ObjectCollisionResponseList {
     }
 
     void addToCurrentBuild(ObjectInstance instance) {
-        if (isEligible(instance) && currentObjects.size() < S3K_MAX_ENTRIES) {
+        if (isEligible(instance) && currentSlots.size() < S3K_MAX_ENTRIES) {
             currentObjects.add(instance);
+            currentSlots.add(physicalSlot(instance));
             currentBuildCursor++;
             buildStage = ObjectManagerSnapshot.CollisionBuildStage.CURRENT_BUILDING;
         }
     }
 
     void captureCompletedBuild() {
+        refreshNativePointerOwners();
+        previousSlots.clear();
+        previousSlots.addAll(currentSlots);
+        nativeSlotsAuthoritative = nativePointerResolver != null;
         previousObjects.clear();
         previousObjects.addAll(currentObjects);
         restoredPreviousOrder.clear();
@@ -86,21 +99,27 @@ final class ObjectCollisionResponseList {
 
     /** Explicit transient admission before the player slot, retaining native capacity and existing relative order. */
     boolean admitBeforePlayer(ObjectInstance instance) {
-        if (!isEligible(instance) || previousObjects.size() >= S3K_MAX_ENTRIES) return false;
-        if (!previousObjects.contains(instance)) previousObjects.addFirst(instance);
+        if (!isEligible(instance) || previousSlots.size() >= S3K_MAX_ENTRIES) return false;
+        if (!playerReadView().contains(instance)) {
+            previousObjects.addFirst(instance);
+            previousSlots.addFirst(physicalSlot(instance));
+        }
         return true;
     }
 
     List<ObjectInstance> playerReadView() {
+        if (nativePointerResolver != null) project(previousSlots, previousObjects);
         return previousObjects;
     }
 
     List<ObjectInstance> currentBuildView() {
+        if (nativePointerResolver != null) project(currentSlots, currentObjects);
         return currentObjects;
     }
 
     ObjectManagerSnapshot.CollisionResponseState captureRewindState(
             Function<ObjectInstance, ObjectRefId> encoder) {
+        refreshNativePointerOwners();
         return new ObjectManagerSnapshot.CollisionResponseState(
                 encode(previousObjects, encoder),
                 encode(currentObjects, encoder),
@@ -114,6 +133,9 @@ final class ObjectCollisionResponseList {
             Function<ObjectRefId, ObjectInstance> resolver) {
         previousObjects.clear();
         currentObjects.clear();
+        previousSlots.clear();
+        currentSlots.clear();
+        nativeSlotsAuthoritative = false;
         restoredPreviousOrder.clear();
         restoredCurrentOrder.clear();
         restoredObjects.clear();
@@ -136,6 +158,10 @@ final class ObjectCollisionResponseList {
     void bindRestoredObject(ObjectRefId id, ObjectInstance object) {
         if (id == null || object == null) {
             throw new IllegalArgumentException("restored collision responder identity is required");
+        }
+        if (nativeSlotsAuthoritative && nativePointerResolver != null) {
+            refreshNativePointerOwners();
+            return;
         }
         if (restoredPreviousOrder.contains(id) || restoredCurrentOrder.contains(id)) {
             restoredObjects.put(id, object);
@@ -162,6 +188,78 @@ final class ObjectCollisionResponseList {
             eligibilityCallbacks = previousRouter;
         }
         usePrevious = selectedReadView;
+    }
+
+    void configureNativePointerProjection(IntFunction<ObjectInstance> resolver) {
+        nativePointerResolver = java.util.Objects.requireNonNull(resolver, "native pointer resolver");
+    }
+
+    void refreshNativePointerOwners() {
+        if (nativePointerResolver != null) {
+            project(previousSlots, previousObjects);
+            project(currentSlots, currentObjects);
+        }
+    }
+
+    private void project(List<Integer> slots, List<ObjectInstance> objects) {
+        objects.clear();
+        for (int slot : slots) {
+            ObjectInstance owner = slot < 0 ? null : nativePointerResolver.apply(slot);
+            if (owner != null) objects.add(owner);
+        }
+    }
+
+    private int physicalSlot(ObjectInstance instance) {
+        if (!(instance instanceof AbstractObjectInstance object)) return -1;
+        return eligibilityCallbacks != null
+                ? eligibilityCallbacks.call(instance, object::getSlotIndex) : object.getSlotIndex();
+    }
+
+    Object captureNativePointers() {
+        return new State(toArray(previousSlots), toArray(currentSlots));
+    }
+
+    void restoreNativePointers(Object snapshot) {
+        if (!(snapshot instanceof State state)) {
+            throw new IllegalArgumentException("Invalid native collision pointer snapshot");
+        }
+        if (nativePointerResolver == null) {
+            throw new IllegalStateException("Native collision pointer projection is not configured");
+        }
+        previousSlots.clear();
+        for (int slot : state.previousSlots) previousSlots.add(slot);
+        currentSlots.clear();
+        for (int slot : state.currentSlots) currentSlots.add(slot);
+        // All addresses, including unresolved/empty SSTs, are now authoritative.
+        // Later player-bound owner registration resolves by address, not old ids.
+        nativeSlotsAuthoritative = true;
+        restoredPreviousOrder.clear();
+        restoredCurrentOrder.clear();
+        restoredObjects.clear();
+        refreshNativePointerOwners();
+    }
+
+    private static int[] toArray(List<Integer> slots) {
+        return slots.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    private record State(int[] previousSlots, int[] currentSlots) {
+        private State {
+            previousSlots = checkedCopy(previousSlots);
+            currentSlots = checkedCopy(currentSlots);
+        }
+        private static int[] checkedCopy(int[] slots) {
+            java.util.Objects.requireNonNull(slots, "native collision addresses");
+            if (slots.length > S3K_MAX_ENTRIES) {
+                throw new IllegalArgumentException("Native collision pointer list exceeds capacity");
+            }
+            for (int slot : slots) {
+                if (slot < -1 || slot > 0xFFFF) {
+                    throw new IllegalArgumentException("Invalid native collision SST address");
+                }
+            }
+            return slots.clone();
+        }
     }
 
     private boolean isEligible(ObjectInstance instance) {
@@ -211,15 +309,18 @@ final class ObjectCollisionResponseList {
     private void rebuildRestoredLists() {
         previousObjects.clear();
         currentObjects.clear();
-        appendResolved(restoredPreviousOrder, previousObjects);
-        appendResolved(restoredCurrentOrder, currentObjects);
+        previousSlots.clear();
+        currentSlots.clear();
+        appendResolved(restoredPreviousOrder, previousObjects, previousSlots);
+        appendResolved(restoredCurrentOrder, currentObjects, currentSlots);
     }
 
-    private void appendResolved(List<ObjectRefId> order, List<ObjectInstance> target) {
+    private void appendResolved(List<ObjectRefId> order, List<ObjectInstance> target, List<Integer> slots) {
         for (ObjectRefId id : order) {
             ObjectInstance object = restoredObjects.get(id);
             if (object != null) {
                 target.add(object);
+                slots.add(physicalSlot(object));
             }
         }
     }
