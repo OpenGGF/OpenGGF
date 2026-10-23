@@ -31480,3 +31480,47 @@ env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
   "-Dsonic2.rom.path=$PROJECT_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
   "-Ds3k.rom.path=$PROJECT_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
 ```
+
+
+### Capture readback fixture: explicit EGL coverage (2026-10-23)
+
+Common-source smoke at `659b02c98` aborted the two real-pixel methods in
+`GlReadPixelsGrabberTest`: its fixture tried hidden GLFW initialization even
+when the invocation explicitly selected surfaceless EGL. This is an unexecuted
+coverage gap, not a passing PBO result. The fixture now uses the existing
+`PresentationOffscreenTestContext` for that explicit selection, without a display
+fallback or an assumption that hides EGL failure. It retains the other-platform
+hidden-window path, scopes context/native-buffer cleanup, requires the deferred
+PBO path, and checks GL errors after both pixel assertions. Production capture,
+frame ordering, pack-binding restoration, and renderer code are unchanged.
+
+One isolated focused invocation on the `659b02c98` test delta completed **16
+unique cases, 0 failures/errors/skips** across the four classes below, including
+both actual 32x24 EGL back-buffer checks. All four XML files, identities,
+properties, streams and source hashes were inspected: Java 25.0.5, explicit EGL,
+expected isolated cwd, no dumps. Test SHA-256 was
+`1a8284c856a8a9a7233c4de6e7a1761491101ae59aefeb684d7c730041ae4229`;
+the tested diff SHA-256 was
+`4b35bb34ce6936c5920086eab833e12aa9abfed6a1bb8a7f1c7d225a78663364`.
+Maven execution was 1:28, with an explicitly reported 363s queue wait. The
+preparation-time missing-tmpdir notice, compiler deprecation notices and four
+generic FAST/NONE bootstrap warnings were read; no native timing measurement or
+gameplay-profile qualification is inferred. The bounded test fixture has no
+production/API/POM impact, so focused checks replace another smoke run. The
+still-running common smoke remains attributed to its unchanged source.
+
+Portable command (`QUEUE` is the current workspace's queue wrapper):
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  JAVA_HOME="$JDK25" LUA_BIN="$LUA54" ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "$QUEUE" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=GlReadPixelsGrabberTest,GlPboFrameGrabberTest,CaptureViewportTest,CapturedFrameTest test -B
+```
+
+The executed invocation also unset inherited graphics/audio session variables
+and supplied an owned 0700 `XDG_RUNTIME_DIR` below its own `target/`. No ROM,
+window interaction, native capture, route or paired observation was involved.
+The useful local source remains separate from frozen common validation; Main,
+provider activation and paired observation gates remain closed.
