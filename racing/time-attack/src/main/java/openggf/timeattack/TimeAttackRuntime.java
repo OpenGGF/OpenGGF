@@ -133,6 +133,8 @@ public final class TimeAttackRuntime implements RunHost {
     private boolean holdingFrames;
     private int catchUpCounter;
     private final CountdownCues countdownCues = new CountdownCues();
+    /** The local player was in their hurt state after the latest step (the progress bar flashes them). */
+    private boolean localHurt;
     private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
             (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
@@ -483,6 +485,7 @@ public final class TimeAttackRuntime implements RunHost {
         clearHeldFrames();
         restartCountdownFrames = 0;
         countdownCues.reset();
+        localHurt = false;
         restartLeadIn = start.deathRestart();
         leadInSteps = 0;
         holdInputThisStep = false;
@@ -497,6 +500,11 @@ public final class TimeAttackRuntime implements RunHost {
         if (companion != null) {
             companion.levelReady(start);
         }
+    }
+
+    /** True while the local player is in their hurt state, as of the latest step. */
+    public boolean isLocalHurt() {
+        return localHurt;
     }
 
     /** Plays the game's countdown sounds by driver ID; unset, the countdowns are silent. */
@@ -570,7 +578,8 @@ public final class TimeAttackRuntime implements RunHost {
         localCentreX = pose.centreX();
         tickForTest(step.heldMask(), step.startHeld(), step.actComplete(), step.checkpointIndex(),
                 new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(), pose.hFlip(),
-                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+                        pose.vFlip(), false, pose.priorityBucket(), pose.highPriority(), pose.hurt()));
+        localHurt = pose.hurt();
         if (restartLeadIn) {
             leadInSteps++;
         }
@@ -636,7 +645,7 @@ public final class TimeAttackRuntime implements RunHost {
     /** A recorded ghost frame as the engine's presentation pose. */
     public static PlayerPose poseOf(GhostFrame frame) {
         return new PlayerPose(frame.x(), frame.y(), frame.mappingFrame(), frame.hFlip(), frame.vFlip(),
-                frame.priorityBucket(), frame.highPriority());
+                frame.priorityBucket(), frame.highPriority(), frame.hurt());
     }
 
     List<GhostPose> activeGhostsForTest() {

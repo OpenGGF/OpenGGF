@@ -1829,6 +1829,7 @@ CONSTRUCTOR com.openggf.mods.mutators.TransportPolicy public  <init>(com.openggf
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float)
 CONSTRUCTOR com.openggf.mods.run.GhostPose public  <init>(java.lang.String,java.lang.String,com.openggf.mods.run.PlayerPose,java.lang.String,float,com.openggf.net.identity.PlayerAppearance)
 CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean)
+CONSTRUCTOR com.openggf.mods.run.PlayerPose public  <init>(int,int,int,boolean,boolean,int,boolean,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunArea public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.mods.run.RunLevelStart public  <init>(com.openggf.mods.run.RunSpec,java.lang.String,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.mods.run.RunSpec public  <init>(java.lang.String,int,int,java.lang.String,com.openggf.game.session.GameplayRunPolicy)
@@ -1884,6 +1885,7 @@ CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry public  <init>()
 CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry$FarPlayer public  <init>(int,java.lang.String,java.lang.String,int,int,int)
 CONSTRUCTOR com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public  <init>(int,java.lang.String,java.lang.String,com.openggf.net.client.RemoteGhostPlayback$RenderState)
 CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean)
+CONSTRUCTOR com.openggf.net.ghost.GhostFrame public  <init>(int,int,int,boolean,boolean,boolean,int,boolean,boolean)
 CONSTRUCTOR com.openggf.net.host.HostMasterLink public  <init>(java.util.function.Consumer<com.openggf.net.hub.HubConnection>,java.util.function.BiConsumer<com.openggf.net.hub.HubConnection,java.lang.String>,java.util.function.BiConsumer<com.openggf.net.hub.HubConnection,byte[]>,java.util.function.Consumer<com.openggf.net.hub.HubConnection>,com.openggf.net.host.HostMasterLink$MessageSink)
 CONSTRUCTOR com.openggf.net.host.jdk.JdkHostLimits public  <init>(int,int,long,long,long,long,long,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.net.hub.GhostHub public  <init>(java.util.function.LongSupplier,com.openggf.net.hub.TrackValidationProfileSource,com.openggf.net.hub.GhostHub$HubViolationRecorder)
@@ -12416,6 +12418,7 @@ METHOD com.openggf.mods.run.GhostPose public,final  int hashCode()
 METHOD com.openggf.mods.run.GhostPose public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.PlayerPose public  boolean hFlip()
 METHOD com.openggf.mods.run.PlayerPose public  boolean highPriority()
+METHOD com.openggf.mods.run.PlayerPose public  boolean hurt()
 METHOD com.openggf.mods.run.PlayerPose public  boolean vFlip()
 METHOD com.openggf.mods.run.PlayerPose public  int centreX()
 METHOD com.openggf.mods.run.PlayerPose public  int centreY()
@@ -13120,6 +13123,7 @@ METHOD com.openggf.net.client.RemoteGhostRegistry$RemoteGhost public,final  java
 METHOD com.openggf.net.ghost.GhostFrame public  boolean finished()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean hFlip()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean highPriority()
+METHOD com.openggf.net.ghost.GhostFrame public  boolean hurt()
 METHOD com.openggf.net.ghost.GhostFrame public  boolean vFlip()
 METHOD com.openggf.net.ghost.GhostFrame public  int mappingFrame()
 METHOD com.openggf.net.ghost.GhostFrame public  int priorityBucket()
@@ -18359,6 +18363,7 @@ RECORD-COMPONENT com.openggf.mods.run.PlayerPose centreX int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose centreY int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose hFlip boolean
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose highPriority boolean
+RECORD-COMPONENT com.openggf.mods.run.PlayerPose hurt boolean
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose mappingFrame int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose priorityBucket int
 RECORD-COMPONENT com.openggf.mods.run.PlayerPose vFlip boolean
@@ -18496,6 +18501,7 @@ RECORD-COMPONENT com.openggf.net.client.RemoteGhostRegistry$RemoteGhost state co
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame finished boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame hFlip boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame highPriority boolean
+RECORD-COMPONENT com.openggf.net.ghost.GhostFrame hurt boolean
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame mappingFrame int
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame priorityBucket int
 RECORD-COMPONENT com.openggf.net.ghost.GhostFrame vFlip boolean

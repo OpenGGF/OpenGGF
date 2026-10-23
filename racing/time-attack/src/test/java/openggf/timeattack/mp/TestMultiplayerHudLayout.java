@@ -180,4 +180,36 @@ class TestMultiplayerHudLayout {
                 "OPEN", List.of("s1:0:0", "s1:0:1", "s3k:0:0"),
                 List.of(new ControlMessage.VoteCount("s1:0:0", 255)), 12_000, null, rows.subList(0, 3), localRank);
     }
+
+    @Test
+    void theProgressBarSpansTheScreenAndAHurtPlayersMarkerFlashesOnTop() {
+        var players = List.of(new com.openggf.net.client.RemoteGhostRegistry.FarPlayer(3, "PEER", "tails", 50, 10, -1),
+                new com.openggf.net.client.RemoteGhostRegistry.FarPlayer(4, "HURT", "sonic", 50, 10, -1));
+        for (int width : new int[]{320, 424}) {
+            for (int tick : new int[]{0, 3}) {
+                var state = new MultiplayerHudState(true, "RUNNING", 60_000, 0, List.of(), List.of(), false, null, 3,
+                        players, "OPEN", List.of(), List.of(), 0, null, List.of(), 2,
+                        java.util.Map.of(3, 0xFF00FF00, 4, 0xFF0000FF), 0, tick, java.util.Map.of(4, 20));
+                List<int[]> fills = new ArrayList<>();
+                MultiplayerHudRenderer.drawProgress(new com.openggf.mods.ui.PixelCanvas() {
+                    public int width() { return width; }
+                    public int height() { return 224; }
+                    public void fill(int x, int y, int w, int h, int argb) { fills.add(new int[]{x, y, w, h, argb}); }
+                }, state, 6400, 1600);
+                int[] bar = fills.getFirst();
+                assertEquals(4, bar[0], "four pixels from the left edge, where the lives counter was");
+                assertEquals(width - 8, bar[2], "the whole screen width");
+                assertEquals(13, bar[3], "taller than before");
+                int peer = indexOfColour(fills, 0xFF00FF00);
+                int hurt = tick == 0 ? indexOfColour(fills, 0xFFFF3B3B) : indexOfColour(fills, 0xFF0000FF);
+                assertTrue(peer >= 0 && hurt > peer, "the hurt marker draws after its neighbour");
+                assertEquals(tick == 0, indexOfColour(fills, 0xFF0000FF) < 0, "the marker strobes red");
+            }
+        }
+    }
+
+    private static int indexOfColour(List<int[]> fills, int argb) {
+        for (int i = 0; i < fills.size(); i++) if (fills.get(i)[4] == argb) return i;
+        return -1;
+    }
 }

@@ -13,8 +13,9 @@ import java.util.List;
 
 /** Compact room panels that share the run clock's right-hand column and clear stock HUD/cards. */
 public final class MultiplayerHudRenderer {
-    private static final int PROGRESS_MAX_WIDTH = 256;
-    private static final int PROGRESS_HEIGHT = 9;
+    private static final int PROGRESS_MARGIN = 4;
+    private static final int PROGRESS_HEIGHT = 13;
+    private static final int HURT = 0xFFFF3B3B;
 
     private MultiplayerHudRenderer() { }
 
@@ -159,34 +160,71 @@ public final class MultiplayerHudRenderer {
     }
 
     /** A slim start-to-finish strip along the bottom, right of the lives counter's area (hidden in Time Attack runs); the local runner is the gold marker. */
-    private static void drawProgress(LevelOverlayCanvas canvas, MultiplayerHudState state,
-                                     int levelWidth, int localCentreX) {
-        int width = Math.min(PROGRESS_MAX_WIDTH, canvas.width() - 108);
+    /**
+     * The race along the bottom edge: the whole screen width (the lives counter is hidden in Time
+     * Attack), a marker per player in their name colour and the local player's taller one on top.
+     * A hurt player's marker strobes red and shakes for {@link MultiplayerHudState#hurtFlash}.
+     */
+    public static void drawProgress(com.openggf.mods.ui.PixelCanvas canvas, MultiplayerHudState state,
+                                    int levelWidth, int localCentreX) {
+        int width = canvas.width() - 2 * PROGRESS_MARGIN;
         if (width < 32) return;
-        int x = canvas.width() - width - 4;
+        int x = PROGRESS_MARGIN;
         int y = canvas.height() - PROGRESS_HEIGHT - 3;
         canvas.fill(x, y, width, PROGRESS_HEIGHT, HudTextLayout.FILL);
-        int left = x + 4;
-        int trackWidth = width - 12;
+        int left = x + 5;
+        int trackWidth = width - 15;
         int middle = y + PROGRESS_HEIGHT / 2;
         canvas.fill(left, middle, trackWidth, 1, 0xFF596F85);
-        canvas.fill(left, middle - 2, 1, 5, HudTextLayout.MUTED);
+        canvas.fill(left, middle - 3, 1, 7, HudTextLayout.MUTED);
         // Chequered finish flag.
-        int flag = left + trackWidth + 1;
-        canvas.fill(flag, middle - 3, 4, 6, 0xFF101010);
-        canvas.fill(flag, middle - 3, 2, 2, HudTextLayout.WHITE);
-        canvas.fill(flag + 2, middle - 1, 2, 2, HudTextLayout.WHITE);
-        canvas.fill(flag, middle + 1, 2, 2, HudTextLayout.WHITE);
-        for (var player : state.farPlayers()) {
-            if (player.status() != -1 && player.status() != 1 && player.status() != 2) continue;
-            int position = player.status() == 2 ? levelWidth : player.cellX() * 64;
-            int dot = progressX(position, levelWidth, trackWidth);
-            canvas.fill(left + dot, middle - 1, 2, 3, HudTextLayout.MUTED);
+        int flag = left + trackWidth + 2;
+        canvas.fill(flag, middle - 4, 6, 8, 0xFF101010);
+        for (int row = 0; row < 4; row++) {
+            for (int column = 0; column < 3; column++) {
+                if ((row + column) % 2 == 0) canvas.fill(flag + column * 2, middle - 4 + row * 2, 2, 2,
+                        HudTextLayout.WHITE);
+            }
+        }
+        int stock = com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb();
+        // Hurt players draw after the rest, so a flashing marker is never hidden behind a neighbour.
+        for (boolean hurtPass : new boolean[] {false, true}) {
+            for (var player : state.farPlayers()) {
+                if (player.status() != -1 && player.status() != 1 && player.status() != 2) continue;
+                if (player.slot() == state.localSlot() || (state.hurtFlash(player.slot()) > 0) != hurtPass) continue;
+                int position = player.status() == 2 ? levelWidth : player.cellX() * 64;
+                int dot = left + progressX(position, levelWidth, trackWidth);
+                marker(canvas, state, player.slot(), state.nameColour(player.slot(), stock), dot, middle - 3, 3, 7,
+                        0xFF101820);
+            }
         }
         if (localCentreX >= 0) {
-            int dot = progressX(localCentreX, levelWidth, trackWidth);
-            canvas.fill(left + dot - 1, y + 1, 3, PROGRESS_HEIGHT - 2, HudTextLayout.GOLD);
+            int dot = left + progressX(localCentreX, levelWidth, trackWidth);
+            marker(canvas, state, state.localSlot(), state.nameColour(state.localSlot(), stock), dot - 1,
+                    y + 2, 4, PROGRESS_HEIGHT - 4, HudTextLayout.WHITE);
         }
+    }
+
+    /**
+     * One player's marker with a one-pixel outline. While their hurt flash runs it grows by a pixel
+     * each side, alternates with red every three frames and shakes a pixel each way every other frame.
+     */
+    private static void marker(com.openggf.mods.ui.PixelCanvas canvas, MultiplayerHudState state, int slot, int colour,
+                               int x, int y, int width, int height, int outline) {
+        int dx = 0;
+        int dy = 0;
+        if (state.hurtFlash(slot) > 0) {
+            if ((state.tick() / 3) % 2 == 0) colour = HURT;
+            dx = (state.tick() / 2) % 2 == 0 ? -1 : 1;
+            dy = (state.tick() / 2) % 3 == 0 ? -1 : 0;
+            // A little larger while it flashes.
+            x -= 1;
+            y -= 1;
+            width += 2;
+            height += 2;
+        }
+        canvas.fill(x - 1 + dx, y - 1 + dy, width + 2, height + 2, outline);
+        canvas.fill(x + dx, y + dy, width, height, 0xFF000000 | colour);
     }
 
     private static int progressX(int position, int levelWidth, int width) {
