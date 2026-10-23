@@ -1,0 +1,2413 @@
+{
+  "base": "e633e4c8259e610e81854fc8acd35172ac592068",
+  "method": "Source-reviewed judgments; cost is static unless a measurement entry explicitly identifies a completed run. Unknown files remain unreviewed individually. Racing supplement adds nine manual validation/diagnostic judgments; two production mains are excluded from test findings.",
+  "findings": [
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/resources/TestS3kKosTimingRewindIntegration.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real ROM Kos work and before/on/after admission restoration protect readiness, claim uniqueness and ordinal continuity. Static cost: full physics and auxiliary parse is performed solely to obtain one timing edge; historical input volume is evidence, not a current timing.",
+      "opportunity": "Load TraceMetadata plus HardwareTimingStreamLoader directly. Keep the complete strict timing-stream validation and real production submission/preparation; preserve all three rewind boundaries and output comparisons. TraceData.loadMetadataOnly still loads aux events and is not the proposed fix.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/resources/TestS3kKosTimingRewindIntegration.java:33-109",
+        "src/main/java/com/openggf/trace/TraceData.java:73-98",
+        "src/main/java/com/openggf/trace/timing/HardwareTimingStreamLoader.java:42-108",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:47-56"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestRewindTraceSeekDeterminism.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Four real S2 seek/replay paths compare object state, slots, counters and dynamic graph. Static avoidable allocation/retention: each path captures 1,000+ complete world snapshots and reads a single endpoint.",
+      "opportunity": "Capture only the expected endpoint (target+1, 1081 or 1200), keeping the identical forward steps, keyframe controller, seek order and comparator. First retain a single full CompositeSnapshot to minimize semantic change; do not remove controller-owned keyframes.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestRewindTraceSeekDeterminism.java:63-179",
+        "src/test/java/com/openggf/game/rewind/TestRewindTraceSeekDeterminism.java:182-212"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestRewindTorture.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Whole-state replay determinism over fixed-adjacent and three seeded patterns; sampled reference snapshots are already demand-driven. Historic Sept12 fixed-adjacent-dominated class time 46.179s, not a present timing; audio replay dominated samples.",
+      "opportunity": "Retain frames, seeds, keyframe interval, audio and full-key comparisons. Reuse immutable movie parsing only if ownership is explicit; investigate production replay/audio only after a new matched profile. Do not propose thinning snapshots as new: that is already implemented.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestRewindTorture.java:91-183",
+        "src/test/java/com/openggf/game/rewind/TestRewindTorture.java:224-247",
+        "docs/architecture/validation/2026-09-12-suite-performance-pass.md:61-65"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestRewindParityAgainstTrace.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real 200-frame S2 advance, 100-frame divergence and many-key restoration smoke; value is snapshot correctness, not independent ROM trace parity. Static cost includes ROM boot, bounded simulation and world capture.",
+      "opportunity": "Keep this short broad registration/restore seam separate from torture. Describe the oracle as engine self-consistency; targeted mutants/observable post-restore effects are needed to expose omitted fields that both capture and diff miss.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestRewindParityAgainstTrace.java:85-106",
+        "src/test/java/com/openggf/game/rewind/TestRewindParityAgainstTrace.java:113-170"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestSozMiniboss.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "ROM-backed native touch, child allocation prefixes, owner reconstruction, results and camera release. Historic retention fixes already present: OwnedMocks and stub-only unverified collaborators; player call verification remains valuable.",
+      "opportunity": "Preserve verified player interactions including clearLogicalInputState; optimize only unverified fixture calls and repeated immutable decode if measured. Do not blanket stubOnly every player or clear global mocks.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestSozMiniboss.java:37-82",
+        "src/test/java/com/openggf/game/sonic3k/objects/TestSozMiniboss.java:175-239",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:558-566"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossHitPath.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "High-value ROM/native relative geometry through actual touch dispatch, distinct solid/touch widths and restored projectile behavior. Historical 20.86->2.59 GiB thread allocation improvement is already delivered; current frame loop uses stubOnly.",
+      "opportunity": "Use as the model for other long-loop fixtures; keep zero-invocation and fixed-stubbing assertions. Do not recommend the old per-frame-restubbing fix again.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossHitPath.java:65-119",
+        "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossHitPath.java:158-233",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:637-659"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestFbzPlaneTransition.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Independent ROM displacement/threshold assertions and real controller-to-event bridge; two 2,380-ish tick paths use ordinary mocked players without verification. Static mock invocation allocation candidate, not measured current hotspot.",
+      "opportunity": "Use owner-scoped stubOnly mocks or a small semantic player fake for unverified getters. Preserve all 2,381 dispatch positions and intermediate camera-min-X checks.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestFbzPlaneTransition.java:35-48",
+        "src/test/java/com/openggf/game/sonic3k/objects/TestFbzPlaneTransition.java:293-362"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestLiveRewindPacingFrames.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "5,000-frame ring-buffer growth/wrap/prune/branch/reset coverage plus cross-owner rejection; loop count exercises capacity, not route duration. Static cost includes repeated calls to ordinary context/level mocks and retained expected map.",
+      "opportunity": "Non-recording owned context/level stubs can remove unused invocation history; preserve wrap/growth thresholds, metadata identity, branch and owner-rejection assertions. Map pruning only after proving no later oracle uses discarded entries.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestLiveRewindPacingFrames.java:30-54",
+        "src/test/java/com/openggf/game/rewind/TestLiveRewindPacingFrames.java:74-104"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossInstance.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "ROM-free boss graph, timer and stepwise motion tests distinguish a wrong immediate snap from correct travel. @BeforeEach drives up to 600 arena-gate frames even for one-line metadata assertions; cost is static, and most long loops use real objects/null players.",
+      "opportunity": "Separate raw-construction metadata fixture from gated-fight fixture with lazy gate helper. Keep a production gate test and whole-leg intermediate-height assertions; never teleport the motion test to its terminal phase.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossInstance.java:48-96",
+        "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossInstance.java:120-155",
+        "src/test/java/com/openggf/game/sonic3k/objects/bosses/TestLrzMinibossInstance.java:566-610"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/badniks/TestDragonflyBadnikInstance.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "ROM-derived old-bit versus toggled-bit five-cycle behavior, offscreen setup and exact first movement values. The 5,000 literal is an upper guard; the reviewed loop uses one real TestablePlayableSprite, so name/loop/mock scans overstate cost.",
+      "opportunity": "Keep all five hover cycles. Reuse the same test player in short per-frame helpers where semantically equivalent; first measure before assigning high cost.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/badniks/TestDragonflyBadnikInstance.java:54-81",
+        "src/test/java/com/openggf/game/sonic3k/objects/badniks/TestDragonflyBadnikInstance.java:110-165"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestFbzCompatibilityMatrix.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Independent reload, local interaction, authority and boss-entry slices plus 11 distinct complete routes. Full-route rows are fbz-route-tagged and the representative route is slow-suite: current smoke excludes them despite stale class prose. Cost depends on lane.",
+      "opportunity": "Preserve independent slices and axis/unique route coverage; Sept12 already deduplicated 13 traversals to 11. Reconcile prose and explicit ordinary representative ownership before claiming smoke route coverage. Do not cache live route results between tests.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestFbzCompatibilityMatrix.java:55-128",
+        "src/test/java/com/openggf/tests/TestFbzCompatibilityMatrix.java:268-328",
+        "pom.xml:44",
+        "docs/architecture/validation/2026-09-12-test-efficiency-five.md:40-54"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestFbzAct1RouteHeadless.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Real plunger authority, viewport/camera, results reload and title lifecycle. One method nests seven widths x three donors x five teams plus clean native restart, i.e. 106 fresh scenario iterations; static high setup cost and failure masking risk.",
+      "opportunity": "Report 105 combinations independently, retaining all rows including custom widths. Preserve cross-case leak detection as an explicit sequence test ending native/off. Optimize immutable ROM decoding only with independent mutable sessions and mutation-isolation checks; do not delete the lifecycle product.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestFbzAct1RouteHeadless.java:265-358",
+        "src/test/java/com/openggf/tests/TestFbzAct1RouteHeadless.java:367-490"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestFbzNativeCharacterRoutes.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Eight level-select native-team act entries and three independent solo starpost-6 boss-entry paths; distinct from full Sonic/Tails traversal. Static cost is repeated production load and bounded boss approach.",
+      "opportunity": "Retain both entry axes and each solo path. Treat restored checkpoint as checkpoint-entry evidence, not cold route completion; share immutable inputs only.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestFbzNativeCharacterRoutes.java:36-125",
+        "src/test/java/com/openggf/tests/TestFbzNativeCharacterRoutes.java:158-164"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestS3kLrzCompatibilityMatrix.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Useful live roster/render-bank/art-ready and 120 idle-frame checks in both acts, but this is entry validation, not route or full interaction compatibility. Reviewed width set is 320/400; narrower than current standard.",
+      "opportunity": "Label obligations ENTRY/PRESENT accurately; add current preset and supported-donor short behavior checks where missing. Preserve act-2-specific art. Do not replace this with constants or count it as traversal coverage.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestS3kLrzCompatibilityMatrix.java:114-173",
+        "src/test/java/com/openggf/tests/TestS3kLrzCompatibilityMatrix.java:178-212",
+        "src/test/java/com/openggf/tests/TestS3kLrzCompatibilityMatrix.java:240-265"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1CompatibilityRoutes.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Full ordinary-input axis routes, explicitly property gated. Six extra rows include old custom widths and donor axes; they are not a complete current-preset product. Static full-route expense applies only when enabled.",
+      "opportunity": "Keep unique custom-width assertions separately; map current 352/528 preset obligations to actual tests. Prefer immutable input reuse and explicit lane manifests rather than another Cartesian full-route expansion.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1CompatibilityRoutes.java:19-34",
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1CompatibilityRoutes.java:50-98"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kHcz1CompatibilityRoutes.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "15 width/donor full production reload routes; slow-suite-tagged. Static expensive enabled execution. Five raw widths contain 512/640, not current 352/528 presets.",
+      "opportunity": "Retain deeper unique route obligations; audit supported preset resolution separately and avoid describing this product as complete current preset coverage. No ordinary-smoke savings from an already excluded class.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kHcz1CompatibilityRoutes.java:11-24"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1RouteRewind.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Seven independently cold-reached live spots, 90 forward frames and two restore/replays; actual tree/intro transitions and title-card pixel contents protect against default-state round trips. Static repeated-prefix cost.",
+      "opportunity": "Keep independent case outcomes and fresh sessions. Share only immutable program decoding, or introduce separately qualified local production spot fixtures while retaining representative cold composition. Never share mutable snapshots across sessions.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1RouteRewind.java:20-92",
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kAiz1RouteRewind.java:106-139"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kHcz1RouteRewind.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Ten separately reached mechanism/boss spots and five camera-admission widths with 30-frame two-cycle replay; slow-suite only. Static repeated long prefixes, but case independence is valuable.",
+      "opportunity": "Optimize shared immutable decoding; retain all spots, input latch priming, owner assertions, deaths and no-reload guards. Local production checkpoint alternatives need cold/local equivalence and cannot replace inherited cadence proof.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kHcz1RouteRewind.java:18-89"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/TestLrzWideColdRouteCapture.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "6,853-input crusher route and 25,650-input act-clear with real six hits, rebase, playable next act, timeline isolation and repeated 45-frame world replay. Native capture context adds GPU cost; sparse drawing is already present.",
+      "opportunity": "Keep short crusher case independent of full clear. Only shorten route travel with equivalence evidence for events, clocks, full-state rewind and exact production boundaries; do not skip physics or turn snapshots into external gameplay input. Keep full drawing during rewind windows.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/TestLrzWideColdRouteCapture.java:24-88",
+        "src/test/java/com/openggf/tools/TestLrzWideColdRouteCapture.java:94-184",
+        "src/test/java/com/openggf/tools/RouteFrameDrawing.java:24-44",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:1260-1308"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestS2Ehz1Headless.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real headless collision/push/sidekick/signpost group amortizes a single SharedLevel load. Static potential retention: @AfterAll disposes but never nulls the static handle; disposal does not release its final level reference.",
+      "opportunity": "Null owned static handle in finally after disposal, or define a closed SharedLevel lifecycle centrally. Preserve per-test roster, collision and powerup-spawner rebinding; do not turn SharedLevel into a shared mutable cross-class cache.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestS2Ehz1Headless.java:30-71",
+        "src/test/java/com/openggf/tests/TestS2Ehz1Headless.java:75-107",
+        "src/test/java/com/openggf/tests/SharedLevel.java:43-62",
+        "src/test/java/com/openggf/tests/SharedLevel.java:141-151"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/physics/TestSwingMotion.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Four pure ROM arithmetic vectors include both positive and negative overshoot cancellation and direction changes; no ROM boot, native or I/O cost.",
+      "opportunity": "Retain; add independently sourced exact-threshold/overflow vectors only if a behavior gap is shown. Cheap/static is not low value.",
+      "evidence": [
+        "src/test/java/com/openggf/physics/TestSwingMotion.java:8-43"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/physics/TestFrameCollisionPlan.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small plan-policy checks are coupled with production delegation, wrong-plan rejection, side-specific wall fallback and trace ordering; no full level needed.",
+      "opportunity": "Retain behavioral assertions; reflection API-shape checks alone would be weaker, so do not consolidate away delegation and rejection cases.",
+      "evidence": [
+        "src/test/java/com/openggf/physics/TestFrameCollisionPlan.java:22-129"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/sprites/TestNativePositionOps.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Short real playable-object checks protect centre-word writes and untouched subpixels, a cross-game ROM invariant. Startup is a small in-process fixture, no ROM route.",
+      "opportunity": "Retain independent expected words and sentinels; add wrap/negative cases only if absent and needed, not long routes.",
+      "evidence": [
+        "src/test/java/com/openggf/sprites/TestNativePositionOps.java:20-63"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/physics/TestCollisionSystemAirLanding.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Focused positive/negative admission and ordering checks cover exact contact, penetration, stale support, rolling, bubble shield and audio. Sampled bodies use small synthetic terrain, no cold route.",
+      "opportunity": "Retain explicit geometry and accepted-contact audio negatives. Avoid replacing many boundary cases with one long jumping route; class-wide runtime was not measured.",
+      "evidence": [
+        "src/test/java/com/openggf/physics/TestCollisionSystemAirLanding.java:59-127",
+        "src/test/java/com/openggf/physics/TestCollisionSystemAirLanding.java:157-254",
+        "src/test/java/com/openggf/physics/TestCollisionSystemAirLanding.java:336-458"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/physics/TestFbzCalcRoomInFrontBackgroundCollision.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Single translated layer-1 probe regression exercises production scanner with a deliberately distinct expected tile 7; reflection is setup, not the oracle.",
+      "opportunity": "Keep narrow collision seam; reduce direct private-method coupling only if an equally discriminating public path exists. Do not require FBZ traversal for this local regression.",
+      "evidence": [
+        "src/test/java/com/openggf/physics/TestFbzCalcRoomInFrontBackgroundCollision.java:12-32"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/objects/TestS3kFullSaveGameBoundary.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Real results tally dispatch clears all collection bits before persistence request, preserves act1 semantics and repeats after restore; also missing/no-save contexts. Small stateful fake records ordering independently.",
+      "opportunity": "Retain as high-value seam. Keep request-time mask assertions and restore cycle; serialized save tests complement rather than replace it.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/objects/TestS3kFullSaveGameBoundary.java:26-109"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/save/TestSaveManager.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Temp-file persistence recovery and durable team semantics; corrupt, hash mismatch, wrong-game and transient-I/O controls exercise distinct failure modes. Static cost mostly bounded filesystem I/O, class also has async-save cases.",
+      "opportunity": "Keep real filesystem round trips; separate pure payload validation from I/O only if duplicate setup is demonstrated. Do not replace corrupt-artifact preservation with mocked success.",
+      "evidence": [
+        "src/test/java/com/openggf/game/save/TestSaveManager.java:23-149",
+        "src/test/java/com/openggf/game/save/TestSaveManager.java:154-214"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/recording/TestUserRecordingDeterminismSmoke.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "120-frame real record/write/reload/fresh-replay core integration. It chooses one available ROM, not all games, and does not certify GameLoop/UI/transitions; two fresh boots and ZIP/JSON I/O dominate static setup.",
+      "opportunity": "Retain fresh replay isolation and real archive path. Make game-specific coverage explicit in evidence; verifier mutation controls must remain independent of clean replay.",
+      "evidence": [
+        "src/test/java/com/openggf/recording/TestUserRecordingDeterminismSmoke.java:14-33",
+        "src/test/java/com/openggf/recording/UserRecordingSmokeHarness.java:36-40",
+        "src/test/java/com/openggf/recording/UserRecordingSmokeHarness.java:50-124"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/recording/TestUserRecordingVerifier.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Tiny synthetic clean/corrupt/missing/sparse cases prove the oracle can reject mismatch and preserve first-error identity; essential complement to self-comparison smoke.",
+      "opportunity": "Retain negative controls. Do not reduce comparisons merely because the end-to-end smoke is clean.",
+      "evidence": [
+        "src/test/java/com/openggf/recording/TestUserRecordingVerifier.java:17-146"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/recording/TestUserRecordingArchiveBounds.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real hostile ZIP/count/duplicate/inflated-size boundaries protect import resource limits and research-loader independence. Static allocation/I/O outliers include 216,001 rows and an approximately 8 MiB expanded comments payload.",
+      "opportunity": "Stream repeated rows/comments into ZIP instead of retaining StringBuilder/repeated String plus encoded copies; retain at least one real production-limit test and declared-size deception paths. Keep healthy-neighbor and general BK2-loader acceptance checks.",
+      "evidence": [
+        "src/test/java/com/openggf/recording/TestUserRecordingArchiveBounds.java:43-137"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/level/TestLevelManagerRewindBoundary.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "ROM-free ownership seam proves level boundary reaches the attached owner even when another gameplay context is ambient; disconfirms accidental global lookup.",
+      "opportunity": "Retain both positive dispatch and wrong-owner negative; no need for long route or graphics context.",
+      "evidence": [
+        "src/test/java/com/openggf/level/TestLevelManagerRewindBoundary.java:27-58"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestFreshLevelBoundaryRewindHeadless.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Two real FBZ-to-SOZ load/publication variants mutate player/camera and replay deferred assembly, asserting exactly once object dispatch. Static boot/decode cost but short simulation.",
+      "opportunity": "Retain as independent boundary coverage when cold route fails. Do not cache destination scene state in place of the actual production load.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestFreshLevelBoundaryRewindHeadless.java:19-111"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestS1GhzBossGraphRewind.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Real parent/child creation, forced reconstruction, divergent child identity and exactly-once ownership distinguish stale-reference bugs; fixed $61-dispatch destruction check is independently ROM-derived. No ROM decode route.",
+      "opportunity": "Retain original-versus-restored object inequality and behavioral post-restore checks. Shared generic schema tests cannot substitute for concrete graph links.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestS1GhzBossGraphRewind.java:71-168"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestCollisionLogic.java",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Decompression liveness remains, but the 0..255 checks are guaranteed by Byte.toUnsignedInt and the nonempty int[0x300] assertion cannot fail. No collision behavior is exercised; local .kos fallback can vary input authority.",
+      "opportunity": "Replace tautologies with verified ROM identity/table length/content vectors plus a real terrain query hitting distinct shapes. Preserve relevant decompressor coverage elsewhere; do not remove solely to save negligible execution time.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestCollisionLogic.java:17-58"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/TestPhysicsProfile.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Independent fixed numeric profile vectors and water/shoes precedence protect ROM constants despite static shape. Some cross-profile equality assertions are complementary, not standalone ROM evidence.",
+      "opportunity": "Keep literal ROM-derived expectations; avoid deriving expected values from the same production profile. Couple to binding regressions already in the suite.",
+      "evidence": [
+        "src/test/java/com/openggf/game/TestPhysicsProfile.java:25-124"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/TestPhysicsProfileRegression.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Actual playable getters under water/shoes states test binding to modifiers, unlike the constants-only profile seam; fixed expected values and negative shoe/water precedence are small and useful.",
+      "opportunity": "Retain binding path and precedence cases. The fixture injects base speeds, so do not claim this alone proves character-specific ROM profile selection.",
+      "evidence": [
+        "src/test/java/com/openggf/game/TestPhysicsProfileRegression.java:26-86",
+        "src/test/java/com/openggf/game/TestPhysicsProfileRegression.java:103-139"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/sprites/managers/TestPlayableSpriteMovement.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Large ROM-free movement family; sampled dead-routine water exclusion tests actual production SpriteManager dispatch and negative collaborator call, with explicit fixed gravity. Static per-case reset and heterogeneous assertions prevent a single reliable cost rank.",
+      "opportunity": "Retain focused mutation-resistant movement boundaries and split by semantic owner if it aids focused selection; no evidence here for lowering loop counts or removing isolation.",
+      "evidence": [
+        "src/test/java/com/openggf/sprites/managers/TestPlayableSpriteMovement.java:69-157"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Sentinel mutation across playable state plus tile priority, participant-reference and controller cases; bounded in-process state setup. High coverage for codec omission, but raw self-roundtrip alone does not prove post-restore gameplay correctness.",
+      "opportunity": "Keep non-default sentinels and independent field/public behavior checks. Pair with live graph/route restoration rather than treating schema equality as complete gameplay proof.",
+      "evidence": [
+        "src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java:59-175",
+        "src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java:827-883"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Synthetic real ObjectManager tests cover dynamic IDs, recreated moving solid slots/riders, instance latch keys and deletion cleanup. Short update sequences expose errors that ordinary snapshot equality can miss.",
+      "opportunity": "Retain double recreation and post-restore movement. Use this cheap seam for new identity/slot regressions before escalating to a full route.",
+      "evidence": [
+        "src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java:272-294",
+        "src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java:420-560"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic1/objects/TestSonic1SpringObjectInstance.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "ROM-derived facing toggle, inclusive solid edge and exact 12-dispatch reset; real movement before/after spring proves hurt control recovery. Short tests do more than set/read flags.",
+      "opportunity": "Retain contact cadence and functional input checks. Local reflective helper test should remain accompanied by production-contact cases.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic1/objects/TestSonic1SpringObjectInstance.java:36-106",
+        "src/test/java/com/openggf/game/sonic1/objects/TestSonic1SpringObjectInstance.java:109-184"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic2/objects/TestOOZSpringMultiSidekick.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Four-player pressure launch, roster reorder/promotion/pruning and replacement-player rewind identities exercise breadth orthogonal to native pair routes. Few real object ticks.",
+      "opportunity": "Retain identity-sensitive cases rather than deleting them as duplicated team coverage. Add real contact-binding control only where absent; current mock standing data limits collision-integration claims.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic2/objects/TestOOZSpringMultiSidekick.java:30-130"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestDEZDeathEggRobot.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Sampled independent disassembly constants protect unusual 12 HP, priority, initial phase and facing; no ROM/OpenGL setup. Stateful remainder was only structurally sampled, not exhaustively reviewed.",
+      "opportunity": "Preserve independently derived constants and state machine checks; avoid removing static cases solely by shape. Construction reflection can be modernized only without changing tested object ownership.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestDEZDeathEggRobot.java:35-42",
+        "src/test/java/com/openggf/tests/TestDEZDeathEggRobot.java:86-150"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestWFZBoss.java",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Useful ROM numeric initial-state coverage coexists with misleading/self-fulfilling assertions: invulnerability test writes timer 0x20 then reads it, collisionActiveReturnsSix never enables collision, and defeatTimerInitializesTo239 asserts pre-defeat zero.",
+      "opportunity": "Replace those cases with real hit/phase transitions and exact countdown boundary checks. Keep initial-state constants but rename or merge duplicated inactivity checks only after actual behavior is covered.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestWFZBoss.java:56-89",
+        "src/test/java/com/openggf/tests/TestWFZBoss.java:92-160"
+      ],
+      "audit_section": "gameplay"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2BitExactScripts.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Independent pinned C per-cycle output and side logs across every script and four chip types; slow-suite/external reference lanes. Historical combined class 43.537 s is not current timing.",
+      "opportunity": "Preserve all cycles/pins. Previous loop/parsing experiment failed to improve cost; do not repeat without new evidence.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2BitExactScripts.java:20-101",
+        "docs/architecture/validation/2026-09-12-suite-performance-pass.md:57-71"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2PortSmoke.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Small bounded 4096-frame chip scripts with independent C checksums, busy-cycle behavior and copy/replay; no native process/GPU. Low relative to exhaustive FM sweep; current time unmeasured.",
+      "opportunity": "Keep in smoke; do not replace with determinism-only comparisons.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2PortSmoke.java:10-30,99-202"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2PhaseMatrix.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Independent C arithmetic hashes across 65,536 zero-PMS, 256 detune and 1,032,192 active-PMS cases. Primitive loops reuse one core, not full audio rendering.",
+      "opportunity": "Preserve arithmetic breadth; measure before tagging high-cost merely by iteration count.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/nuked/TestNukedOpn2PhaseMatrix.java:11-95"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/TestFastFmCoreTolerance.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Differential accurate/fast chip rendering plus whole-waveform bounded-lag correlation. Holds PCM chunk arrays and double copies and computes unused-for-acceptance contours. slow-suite.",
+      "opportunity": "R5: bounded primitive buffers, fewer exact-arithmetic copies, diagnostics on demand; retain same frames/digests/metrics and mutation rejection.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/TestFastFmCoreTolerance.java:149-205,312-395,403-475"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/TestFastFmWaveformAlignment.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "8192-sample synthetic positive/negative controls reject semitone and carrier changes and enforce one bounded shift. Independence is mathematical signal construction.",
+      "opportunity": "Keep as regression contract for R5; no tolerance relaxation.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/TestFastFmWaveformAlignment.java:8-54"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/smps/TestSmpsSequencerTempoMath.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Real sequencer state transitions checked against frozen legacy loop over many counters/seeds and ticks through 65535; high static CPU estimate, no current timing. Equivalence oracle, not ROM oracle.",
+      "opportunity": "R4: independently provenance-pinned old-loop vectors preserving all production inputs; keep boundary/fractional direct-loop checks.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/smps/TestSmpsSequencerTempoMath.java:17-49,77-225",
+        "src/main/java/com/openggf/audio/smps/SmpsSequencer.java:1566-1602"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/synth/TestNativeCompatiblePcmOutput.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Native-source PCM and stock-core sin fingerprints, bit/clock/filter perturbations, and per-field snapshot omissions; repeated chip runs but small eight-NTSC-frame vectors. Does not launch native generator in tests.",
+      "opportunity": "Keep conditional output-stage scope explicit; preserve native provenance and fresh snapshot mutants.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/synth/TestNativeCompatiblePcmOutput.java:30-40,57-162,206-230",
+        "src/test/resources/audio/native-compatible-pcm/v1/README.md:22-64,76-108"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/AudioRegressionTest.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Local engine-generated WAVs detect change but are not independent ROM evidence; real hybrid/sample-accurate equivalence methods have distinct value. Arrays, ROM setup and audio synthesis; some lanes optional.",
+      "opportunity": "Keep oracle authority separate; consider streaming sample comparisons and release static ROM/loader references, preserving every sample and fresh mode execution.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/AudioRegressionTest.java:36-40,70-94,102-220",
+        "docs/architecture/validation/2026-09-12-test-concurrency-public-audio.md:25-28"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/runtime/AudioFrameClockTest.java",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Peek nonmutation useful; purported fractional cases use exactly divisible 48000/60 and 44100/60 and compare related production operations.",
+      "opportunity": "Use genuine remainder state with independently expected per-step values; consolidate redundant integral repetitions.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/runtime/AudioFrameClockTest.java:9-39"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/runtime/AudioFrameClockTest.java#peekReflectsFractionalRates",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "44100/60 is exactly 735; this cannot expose fractional carry defects. Total-rate behavior is useful but name overstates coverage.",
+      "opportunity": "Replace with 44100/64 and literal per-step carry/peek expectations.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/runtime/AudioFrameClockTest.java:29-39"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/runtime/TestAudioFrameClock.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Actual nondivisible 44100/64 total and carry/restore checks plus divisible counts; compact behavior coverage.",
+      "opportunity": "Preserve total/remainder/restore obligations when consolidating with AudioFrameClockTest.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/runtime/TestAudioFrameClock.java:8-42"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/TestNativePcmCaptureLive.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real production presentation and title-to-level device continuity; 70/600/260-frame captures request no video yet still render/readback/write PNGs. Native/GPU, audio and I/O cost is static estimate.",
+      "opportunity": "R6: explicit no-image-output path preserving every renderFrame/presentation/audio event; narrow unavailable-GL skips.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/TestNativePcmCaptureLive.java:33-140",
+        "src/main/java/com/openggf/tools/GameplayCaptureTool.java:119-146,268-269,323,354",
+        "src/main/java/com/openggf/tools/GameplayCaptureSession.java:339-356"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/s3k/TestS3kOracleRequestSidecarWiring.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Native reference provenance and independent corrupted-request/frame perturbation runs prove allowed input/forbidden authority. Immutable honest-capture/reference reuse and release already delivered.",
+      "opportunity": "Retain exact-prefix reuse and independent mutants; do not propose already-delivered recapture dedup as new saving.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/parity/s3k/TestS3kOracleRequestSidecarWiring.java:43-55,153-200,459-477",
+        "docs/architecture/validation/2026-09-12-test-efficiency-five.md:23-29"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/TestS1RunWindowAudioDriverOracle.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Every discovered window asserts a pinned match or exact frontier, with 72-tick title and corruption control. Independent recorded dispatch context; not a whole-game production request proof. Repeated decompress/capture/compare in audio-reference.",
+      "opportunity": "Retain all window identities; avoid full materialization for single-byte corruption if measured useful. Do not treat MEASUREMENT_ONLY logging as lack of assertion.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/parity/TestS1RunWindowAudioDriverOracle.java:61-105,113-144"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "High-value adversarial schema/closure/input ownership tests mix reflection-existence and optional measurements. Rebuilds 750 large-state rows repeatedly; buffering already fixed. slow-suite.",
+      "opportunity": "R3: immutable fixture input reuse and sequential streamed mutations; R2 lane split; preserve independent rehashed adversarial closure.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java:48-52,242-305,342-444,470-477,531-638",
+        "src/main/java/com/openggf/tools/audio/parity/s2/S2RequestAwareOracleRawStream.java:155",
+        "docs/architecture/validation/2026-09-12-raw-stream-buffering.md:30-41"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java#requestAwareReaderExistsAsItsOwnV2Authority",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Class.forName adds no behavioral protection beyond typed production calls and compile-time linkage in this same class.",
+      "opportunity": "Retire or replace with a missing real boundary contract.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java:48-52,226-239"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java#realCandidateComparesAgainstIndependentProductionBk2Run",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Independent production run but assertion only excludes INVALID; arbitrary mismatch may still pass. Explicit performance/reference diagnostic useful for measurement, weak parity gate.",
+      "opportunity": "Use as diagnostic only or pin exact frontier; independently stronger companion already asserts request and driver MATCH.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/parity/s2/TestS2RequestAwareOracleRawStream.java:91-145"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioComparator.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Small strict semantic/identity cases and large retention/streaming cases share slow-suite; stress child enforces 434417 frames and 32 MiB heap. Original static evidence leak fixed.",
+      "opportunity": "R2 lane separation; keep size stress, terminal drain and all mutations. Do not repeat already-delivered map/root/buffer fixes.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioComparator.java:35-50,53-80,3534-3552,3640-3669,3947-3960",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:548-556,637-655"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioComparator.java#streamsMaximumCompleteRunHighEntropyFramesInSeparateThirtyTwoMiBJvm",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Two independently written high-entropy captures exceed child heap; asserts complete streaming comparison and drain. Explicit audio-stress, excluded from smoke.",
+      "opportunity": "Preserve 434417 frames, compressed/expanded floors and 32 MiB child. Reuse immutable prep only, not successful comparator result.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioComparator.java:3640-3669",
+        "docs/architecture/validation/2026-09-12-test-concurrency-public-audio.md:47"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Strong publication/strict parser/bounded-memory contracts, but some advertised golden assertions are absent. 524288-row hostile child and 20000-row child; remaining static evidence map. Whole class slow-suite.",
+      "opportunity": "R2 split small tests and repair independent goldens; R7 bound evidence factory. Preserve child caps/entropy/size.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java:31-35,102-150,415-527,607-625,661-670"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java#handAuthoredStoreCaptureVectorPinsRecordsGzipChunkAndManifest",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Literal canonical/gzip/manifest vectors are unused. Actual expected bytes call the same production serializer, so advertised independent pins are not checked; some storage consistency remains.",
+      "opportunity": "Replace stale unused literals with independently verified current-schema vectors and assert them; preserve round-trip separately.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java:459-478"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java#handAuthoredCanonicalBaselineVectorHasItsPinnedBytesAndDigest",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Canonical JSON equality and missing-field rejection valuable; digest assertion checks only fixed SHA-256 hex length, not a pinned digest.",
+      "opportunity": "Pin independently verified digest; retain current useful byte/schema assertions.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioCaptureStore.java:416-430"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Reviewed native evidence records test immutability, raw-vs-semantic projection, and invalid contradictory claims. Small inputs but static service evidence retains graphs until JVM exit.",
+      "opportunity": "R7 replace side map with complete records or invocation-owned factory with release. No measured current retained bytes.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/audio/completerun/TestCompleteRunAudioTrace.java:20-75,1208-1229"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/replay/TestTraceReplayRowPolicy.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Most phase/input/closure tests use tiny fixtures; one loads AIZ-to-HCZ full auxiliary data to classify row 290. High cost classification driven by that method and historical volume, not all cases.",
+      "opportunity": "R1 minimal structural resolve fixture plus compact real-fixture witness; retain previous/current selection and suppressed closure negatives.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/replay/TestTraceReplayRowPolicy.java:18-132",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:58-66"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/resources/TestS3kKosTimingRewindIntegration.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real ROM-backed queue admission and before/on/after rewind; full HCZ TraceData used only to select one timing edge. High input cost relative to narrow assertion; no present peak measurement.",
+      "opportunity": "R1 use strict metadata+hardware timing loader; preserve recorded edge boundary and production-owned handle/fingerprint.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/resources/TestS3kKosTimingRewindIntegration.java:33-109",
+        "src/main/java/com/openggf/trace/timing/HardwareTimingStreamLoader.java:42-58"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/TestTraceV5LoadingContract.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small negative inputs enforce sole V5 schema, opaque provenance, fixed widths and rejection of cross-profile loads. Critical comparison boundary, not low value because static.",
+      "opportunity": "Keep smoke and negative cases.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/TestTraceV5LoadingContract.java:22-99"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/TestTraceDataParsing.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Reviewed methods pin literal schema absence/order and count event reads to reject repeated scanning, plus small schema metadata fixtures. File is in tests/trace profile path; full class not cost-profiled.",
+      "opportunity": "Retain deterministic complexity assertions; lead should check profile placement of small parser cases separately from replay.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/TestTraceDataParsing.java:44-105,164-195",
+        "pom.xml:1576"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/TestTraceDataAuxSchemaPerformance.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Property-opt-in diagnostic loads largest SOZ aux trace and requests GCs. Expected schema values come from production; no performance threshold. Useful measurement, low independent correctness value.",
+      "opportunity": "Keep explicitly measurement-only; use TestTraceDataParsing read-count oracle for correctness; report real event count/GC observations if measuring later.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/TestTraceDataAuxSchemaPerformance.java:17-67"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/TestTraceReaderLifecycle.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "100 deterministic parse cycles, ordinary/special/plain/gzip reader families, explicit failure closure. Repeated I/O but small fixtures; exact ownership counters.",
+      "opportunity": "Preserve balanced-open/close paths and injected failures; no current cost data justifies reducing cycles.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/TestTraceReaderLifecycle.java:26-76,107-150"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/live/LiveTraceComparatorTest.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Reviewed tiny-fixture cases independently assert phase skips, Vblank closures, lag counters and real comparator x mismatch. Mock use is bounded.",
+      "opportunity": "Keep fail-closed comparator tests separate from long replay.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/live/LiveTraceComparatorTest.java:30-155"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/SpecialStageExpectedStateTest.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small synthetic disagreement between CSV and pass-end verifies authoritative comparison side, missing/duplicate fields and absent-player behavior.",
+      "opportunity": "Keep; not redundant with loader or gameplay because it controls oracle selection.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/SpecialStageExpectedStateTest.java:16-89"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/replay/runs/TestActiveSegmentPayload.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small actual loaders/payloads check idempotent close, access refusal, special-stage composition, and construction failure. Same-loader equivalence is scoped to composition; explicit authority/lifecycle checks add independent value.",
+      "opportunity": "Retain lifecycle and literal presence checks when optimizing payload loading.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/replay/runs/TestActiveSegmentPayload.java:22-129"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadOwnership.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real comparator/structural/art/slot consumers kept rooted while weak references prove payload collection; includes deliberately retained comparator mutant. Repeated GC costs without long ROM route.",
+      "opportunity": "Keep transitive collection controls; measure after plan return and avoid blanket clear-all APIs.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadOwnership.java:45-92,106-144"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadPerformance.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Opt-in real 67-segment plus S1/S2-special installed graph measurements with fixed caps, special binder and fd checks; historical eager baseline is labeled fixed in code.",
+      "opportunity": "R8 preserve current owner-graph caps and witnesses; distinguish requested-GC estimates from retained dominator/process RSS.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestTraceRunActivePayloadPerformance.java:49-59,124-171,187-217"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Opt-in current descriptor cap useful; eager graph warmed/recreated while newly measured eager retained bytes do not affect assertions/printed comparison. Uses fixed historical baseline.",
+      "opportunity": "R8 move full retired eager comparison to explicit experiment, preserve small equivalence and full counts; retain measured current descriptor cap.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestTraceRunDescriptorPlanningPerformance.java:29-37,54-86,89-145"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestTracePlaybackProfile.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Cheap literal ROM/reference-backed boundary and clock-mask expectations, including exceptional destination and composition; guards a semantic replay contract.",
+      "opportunity": "Retain unless owning ROM timing contract changes with evidence. Static values alone are not low-value.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestTracePlaybackProfile.java:14-90"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Independent first-handoff prefix plus continuous 67-segment end-to-end frontier via shared engine harness. Cannot infer completed current coverage from class description.",
+      "opportunity": "Keep prefix/regression and full exit criterion distinct; use current active-payload mechanism, not trace hydration or segment reset shortcuts.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestS3kKnucklesSuperEmeraldRunChain.java:9-48",
+        "src/test/java/com/openggf/tests/trace/runs/AbstractRunChainTest.java:1189-1205,1754-1758"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestS1CompleteEmeraldRunChain.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Continuous 34-segment route exercises real carry-over and special-stage boundaries; end-to-end frontier distinct from prefix pins. No current run observed.",
+      "opportunity": "Preserve continuous transitions and compared obligations; report actual reached rows/failures when eventually run.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestS1CompleteEmeraldRunChain.java:9-47"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/TestTraceFixtureMovieAlignmentGuard.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Independent recorded-controller/BK2 alignment across fixtures with offset-neighbor discrimination and coverage floor; broad decompression/I/O, no engine. Primitive input and movie caches with AfterAll cleanup already delivered.",
+      "opportunity": "Retain breadth/offset negatives; no redundant full TraceData materialization needed. Respect intentional collapsed face-button identity scope.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/TestTraceFixtureMovieAlignmentGuard.java:32-91,351-370",
+        "docs/architecture/validation/2026-09-12-test-efficiency-five.md:54-62"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/TestTraceInputColumnReader.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Fast parser independently compared with Java split/hex exception semantics, including malformed values, headers, blanks and growth. Protects optimized helper used by fixture guard.",
+      "opportunity": "Keep edge cases and exception categories.",
+      "evidence": [
+        "src/test/java/com/openggf/trace/TestTraceInputColumnReader.java:14-49"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Reviewed preparation uses a lazy class-scoped eager reference and release; sessions/cursors/consumers remain fresh. Whole class slow-suite; additional methods not exhaustively reviewed.",
+      "opportunity": "Do not re-propose already-delivered reference reuse; consider separating bounded synthetic launcher checks from installed-run loading.",
+      "evidence": [
+        "src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java:100-139",
+        "src/test/java/com/openggf/trace/replay/runs/TraceRunReferencePlanLoader.java:17-47",
+        "docs/architecture/validation/2026-09-12-suite-performance-pass.md:36-39,88-89"
+      ],
+      "audit_section": "audio-trace"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestBuildToolingGuard.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Mixed real Git/history/hook/interpreter and source-policy checks. Historic 118.514 to 33.005 seconds after fixture optimisation is not current timing; process/Git/setup cost remains statically substantial.",
+      "opportunity": "Retain compact fixtures and alternate object storage already delivered. Reuse immutable interpreter probe; separate pure policy permutations from real shell/PowerShell contracts; bound child output/time and retain standalone guard/release coverage.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:1268",
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:1827",
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:4449",
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:4838",
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:4883",
+        "docs/architecture/validation/2026-09-12-build-guard-performance.md:55"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/level/objects/TestObjectUpdateClockTerminologyGuard.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Type-resolved cross-tree override/name contract prevents naming drift but does not prove correct runtime clock values. Attributes all 8425 root Java files in a 2 GiB child; memory limit is not usage.",
+      "opportunity": "Consider compile-time analysis or proven conservative type-aware closure. Keep full-scope fallback, seed failures, inherited/nested/anonymous controls and child isolation; do not substitute regex names.",
+      "evidence": [
+        "src/test/java/com/openggf/level/objects/TestObjectUpdateClockTerminologyGuard.java:113",
+        "src/test/java/com/openggf/level/objects/TestObjectUpdateClockTerminologyGuard.java:166",
+        "src/test/java/com/openggf/level/objects/TestObjectUpdateClockTerminologyGuard.java:289"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Independent bytecode/AST/reflection/relay mutations protect trace comparison-only authority. Current whole-source reflection pass creates about 8424 parser tasks, plus fixture tasks; historical timing is not fresh.",
+      "opportunity": "Batch parse-only units with closed file managers and fresh per-unit scanner state; retain exact diagnostics/file census and all benign/adversarial controls. Avoid retaining all ASTs or narrowing to lexical tokens without proof.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java:1760",
+        "src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java:1785",
+        "src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java:1814",
+        "src/test/java/com/openggf/tests/trace/runs/TestActiveSegmentPayloadAuthorityGuard.java:1869"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestArchUnitRules.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Whole-production bytecode rules enforce service, layering, dependency and singleton boundaries. Some naming conventions have weaker marginal value. Large import/allocation is a static estimate; 32 ArchTest fields are not a measured case count.",
+      "opportunity": "Share only identical production import scopes; retain exact class inventory, each ownership rule and violating fixture coverage. Keep the fresh guards JVM.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestArchUnitRules.java:79",
+        "src/test/java/com/openggf/tests/TestArchUnitRules.java:534",
+        "src/test/java/com/openggf/tests/TestArchUnitRules.java:957",
+        "pom.xml:681"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestArchUnitTestRules.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Compiled-test dependency scan catches JUnit4 usage that can undermine intended execution. Whole test-class import for one rule has substantial static setup cost, not measured current time.",
+      "opportunity": "Share identical compiled-test graph or use a narrower independently qualified bytecode dependency scanner; preserve inner classes, annotations and indirect dependency detection.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestArchUnitTestRules.java:18"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Production ownership and adversarial bypass checks protect audio authority. Whole-project import and source analysis; class-level import reuse and per-test analysis-cache clearing already exist.",
+      "opportunity": "Coordinate identical production graph imports and explicitly release PER_CLASS graph ownership. Preserve negative fixture separation and source-snapshot identity; do not reimplement September caching.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java:56",
+        "src/test/java/com/openggf/audio/TestAudioPresentationArchitectureGuard.java:1291",
+        "docs/architecture/validation/2026-09-12-suite-performance-pass.md:85"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/session/TestSmpsSessionArchitectureGuard.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Protects physical state owner/type boundaries with production graph and controls. Already one cached full production import per class; historic 1.952 s after optimisation does not establish present cost.",
+      "opportunity": "Share compatible production graph and release it after ownership ends; keep adversarial imports and nested-owner/impostor controls.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/session/TestSmpsSessionArchitectureGuard.java:170",
+        "src/test/java/com/openggf/audio/session/TestSmpsSessionArchitectureGuard.java:175"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/TestAudioPresentationBoundary.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Finds unauthorized production callers of the presentation producer, a boundary happy-path audio tests cannot prove. Imports entire production graph for one rule; cost is static.",
+      "opportunity": "Run against the identical shared production import of other audio guards with exact caller/assignability/nested-owner semantics.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/TestAudioPresentationBoundary.java:29"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestNetIsolationRules.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Bounded production-only networking ArchUnit import enforces independent networking. Runs in ordinary because name does not match guard conventions; not silently omitted.",
+      "opportunity": "Keep bounded scope and explicit compiled-output filter; register intended lane semantically rather than assuming all ArchUnit files have guard names.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestNetIsolationRules.java:14",
+        "src/test/java/com/openggf/tests/TestNetIsolationRules.java:28"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestNetIsolationAnalysisScopeGuard.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Independent compiled class-name census checks exact imported boundary scope and rejection of test classes. High-value anti-vacuity control; filesystem plus bounded bytecode import cost.",
+      "opportunity": "Reuse its exact-set coverage model for other shared imports; avoid asserting only a count or a nonempty package.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestNetIsolationAnalysisScopeGuard.java:43",
+        "src/test/java/com/openggf/tests/TestNetIsolationAnalysisScopeGuard.java:65"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/TestModApiSignatureSurface.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Reviewed annotated classpath inventory compares independent bytecode discovery to recursive public surface and excludes host-only reconstruction internals. Full production import occurs in ordinary; other methods not exhaustively audited.",
+      "opportunity": "Retain independent inventory equality; account for this off-convention import when classifying guard cost. Share only compatible immutable scope with explicit lifecycle.",
+      "evidence": [
+        "src/test/java/com/openggf/mods/TestModApiSignatureSurface.java:95",
+        "src/test/java/com/openggf/mods/TestModApiSignatureSurface.java:112"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestNoServicesInObjectConstructors.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Constructor/pre-registration service access is a real correctness hazard; transitive/virtual closure and synthetic controls are valuable. September closure/pattern reuse already delivered; current source still scans production and silently catches some I/O failures.",
+      "opportunity": "Keep closure controls and same-name changed-source fixtures; fail required source-read errors and consider a compact shared scan index with exact diagnostics equivalence.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestNoServicesInObjectConstructors.java:25",
+        "src/test/java/com/openggf/tests/TestNoServicesInObjectConstructors.java:235",
+        "docs/architecture/validation/2026-09-12-test-efficiency-five.md:30"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/level/objects/TestNoServicesInObjectConstructors.java",
+      "value": "unknown",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Compatibility facade with private constructor and no executable tests. A source naming candidate, not duplicate test execution.",
+      "opportunity": "Exclude from runtime-test counts without deleting the compatibility type merely to reduce the source inventory.",
+      "evidence": [
+        "src/test/java/com/openggf/level/objects/TestNoServicesInObjectConstructors.java:3"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestArchitecturalSourceGuard.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Combines meaningful ownership/ROM-coordinate tripwires with line budgets and implementation-shape checks. Repeated source walks/reads and parse-only method extraction have static setup/allocation cost; no current timing inspected.",
+      "opportunity": "Build bounded per-snapshot diagnostic/method indexes only where repeated, release raw source, preserve line/identity diagnostics and benign/violating fixtures. Review arbitrary line budgets separately from correctness rules.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestArchitecturalSourceGuard.java:1635",
+        "src/test/java/com/openggf/tests/TestArchitecturalSourceGuard.java:1650",
+        "src/test/java/com/openggf/tests/TestArchitecturalSourceGuard.java:2154"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestStaleRewindCodecHelperCleanup.java",
+      "value": "low",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Obsolete API/comment phrase search has low marginal gameplay protection and scans/stores the entire 8425-file root corpus. October persistent retention fix is present; current high cost denotes transient allocation/scan breadth, not a remaining measured leak.",
+      "opportunity": "Stream all needles in one pass and retain only violations, or move wording policy to lint. Preserve intentional API bans; remove cache-identity assertion if implementation changes.",
+      "evidence": [
+        "src/test/java/com/openggf/game/rewind/TestStaleRewindCodecHelperCleanup.java:51",
+        "src/test/java/com/openggf/game/rewind/TestStaleRewindCodecHelperCleanup.java:86",
+        "src/test/java/com/openggf/game/rewind/TestStaleRewindCodecHelperCleanup.java:173",
+        "docs/architecture/research/2026-10-07-ordinary-suite-memory-cause.md:548"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/configuration/TestModifierSupportDocumentation.java",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Useful binding/read-site and documentation contract with some prose coupling. Historic scan was optimised to 0.733 s; current compact read-site index confirmed, tagged slow-suite and excluded from routine smoke.",
+      "opportunity": "Retain compact index and fresh fixture indexes; do not treat old 27-second timing as current smoke cost. Review tag policy separately with measurement.",
+      "evidence": [
+        "src/test/java/com/openggf/configuration/TestModifierSupportDocumentation.java:41",
+        "src/test/java/com/openggf/configuration/TestModifierSupportDocumentation.java:328",
+        "docs/architecture/validation/2026-09-12-config-guard-index.md:53"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/rules/TestNoAssertionFreeDiagnostics.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Useful no-oracle tripwire with scanner controls, but limited to com/openggf/tests and accepts assert/verify/expect-shaped helper names. Does not prove mutation resistance.",
+      "opportunity": "Retain cheaply within shared source lint; make scope explicit and test no-op asserter helpers, external source roots and class discovery before broadening claims.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/rules/TestNoAssertionFreeDiagnostics.java:28",
+        "src/test/java/com/openggf/tests/rules/TestNoAssertionFreeDiagnostics.java:42",
+        "src/test/java/com/openggf/tests/rules/TestNoAssertionFreeDiagnostics.java:68"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/TestS3kHczPaletteOwnershipMigrationGuard.java",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Exact forbidden snippets in three paths are easy to evade by syntax/variable changes; missing target files silently continue and helper token can be only a comment. Desired ownership contract remains valuable.",
+      "opportunity": "Replace with semantic call/write ownership plus bypass and real palette behavior tests; fail missing required targets. Cheap scan means little direct speed benefit.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/TestS3kHczPaletteOwnershipMigrationGuard.java:16",
+        "src/test/java/com/openggf/game/sonic3k/TestS3kHczPaletteOwnershipMigrationGuard.java:33"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/sonic3k/TestS3kSuperPaletteOwnershipMigrationGuard.java",
+      "value": "low",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Literal variable/method snippets and presence of helper text do not enforce palette ownership under equivalent syntax or comment-only usage.",
+      "opportunity": "Transfer invariant to bytecode/AST ownership and real mutation coverage, retaining helper bypass negatives.",
+      "evidence": [
+        "src/test/java/com/openggf/game/sonic3k/TestS3kSuperPaletteOwnershipMigrationGuard.java:15"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/widescreen/TestNoScreenWidth320Literals.java",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Explicitly partial literal tripwire scans seven files and three regex shapes; useful cheap signal, not viewport correctness evidence.",
+      "opportunity": "Keep as bounded lint or combine into shared scan; preserve real multi-width behavior checks and add false-positive/negative fixtures for stronger claims.",
+      "evidence": [
+        "src/test/java/com/openggf/widescreen/TestNoScreenWidth320Literals.java:13",
+        "src/test/java/com/openggf/widescreen/TestNoScreenWidth320Literals.java:25"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/audio/output/TestNoDeviceAudioSink.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "216000 SILENT present iterations at sampleRate=60 plus no array/Collection fields. No explicit output/nonbackpressure/growth oracle beyond completion; Map/delegate retention can evade field check. Selected as a guard by TestNo naming.",
+      "opportunity": "Use shorter independent behavior/retention assertions; keep long stress only with an explicit growth oracle. Reclassify intended lane; present runtime unknown.",
+      "evidence": [
+        "src/test/java/com/openggf/audio/output/TestNoDeviceAudioSink.java:16"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real pinned Git/shell/Python/Lua/PowerShell forwarding and symlink escape scenarios have high boundary value. Multiple process/Git startups; source-text pins are weaker subchecks.",
+      "opportunity": "Preserve exact pin/exit/symlink/missing command semantics. Fix output-drain-before-timeout and guarantee owned process cleanup; reuse only immutable fixture seed data.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java:24",
+        "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java:113",
+        "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java:216",
+        "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java:283"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestFbzVisualExporterGuard.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Executes real Lua exporter against API stubs and Python framebuffer rejection control. Tests evidence boundaries, not real emulator/ROM behavior. Two interpreter startups with bounded file logs.",
+      "opportunity": "Keep real script execution, blank/border-only negatives and timeout behavior. Do not count stubs as native visual parity.",
+      "evidence": [
+        "src/test/java/com/openggf/tests/TestFbzVisualExporterGuard.java:16",
+        "src/test/java/com/openggf/tests/TestFbzVisualExporterGuard.java:32"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/modsdk/TestPurposeStarters.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real classifier-only SDK/tool/resource loading, generated Java/test compilation, authored binaries, package validation and seven-purpose coverage. Multiple compiler tasks and I/O; no timing measured.",
+      "opportunity": "Reuse scoped compiler/file-manager setup without cross-project dependency leakage; preserve isolated classifier loading, all purpose outputs and independently compiled starter tests.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/modsdk/TestPurposeStarters.java:27",
+        "src/test/java/com/openggf/tools/modsdk/TestPurposeStarters.java:117"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/modsdk/TestProjectScaffolder.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real generated-source compilation/package checks, ID boundary variants and three child-JVM generated-test runs; important executable creator contract.",
+      "opportunity": "Share only immutable setup/compiler services with exact inputs. Keep fresh child cases where launch is contract; drain output safely during timed wait, preserve fail-if-no-tests.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/modsdk/TestProjectScaffolder.java:29",
+        "src/test/java/com/openggf/tools/modsdk/TestProjectScaffolder.java:119",
+        "src/test/java/com/openggf/tools/modsdk/TestProjectScaffolder.java:140",
+        "src/test/java/com/openggf/tools/modsdk/TestProjectScaffolder.java:173"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Nine distinct maintained mods compile/package/validate together; high-value composition and asset coverage. Separate literal guide-heading/wording method has lower marginal value.",
+      "opportunity": "Preserve nine independent input identities and combined catalog; reuse immutable compile/setup only with proof. Move wording/link checks to cheap docs lane without deleting artifact/version contracts.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java:82",
+        "src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java:133",
+        "src/test/java/com/openggf/tools/modsdk/TestSampleModsPackage.java:313"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/modsdk/TestModApiJavadocTool.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Exact exported page sets/signatures/source-file resolution protect creator docs; fragment prose assertions weaker. Several distinct generation calls and output walks, not automatically duplicate work.",
+      "opportunity": "Share generated outputs only for identical inventory/configuration; keep exact membership, generic/annotation/escaping and nonempty-output controls. Split wording from generation where useful.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/modsdk/TestModApiJavadocTool.java:22",
+        "src/test/java/com/openggf/tools/modsdk/TestModApiJavadocTool.java:107",
+        "src/test/java/com/openggf/tools/modsdk/TestModApiJavadocTool.java:135",
+        "src/test/java/com/openggf/tools/modsdk/TestModApiJavadocTool.java:181"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/TestCliArguments.java",
+      "value": "mixed",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Cheap real flag-value/error contract with thin parseInt happy/invalid checks overlapping JDK behavior. Cheapness alone is not a reason to remove it.",
+      "opportunity": "Keep missing-value flag diagnostic; consolidate trivial parser cases only if maintenance is material, no expected suite saving.",
+      "evidence": [
+        "src/test/java/com/openggf/tools/TestCliArguments.java:10"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_categories.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Fixture-driven selection and source-root coverage protect actual test inventory, ROM path identity and exclusions. No Maven execution in reviewed cases.",
+      "opportunity": "Keep exact inventory/exclusion/duplicate/symlink/dynamic-root negatives; add semantic guard discovery rather than reimplement already-supported external roots.",
+      "evidence": [
+        "tools/testing/test_run_categories.py:19",
+        "tools/testing/test_run_categories.py:241",
+        "tools/testing/run_categories.py:65"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_queue.py",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "51 test definitions combine real competing processes, Git worktrees, OS locks, cancellation and mocked capacity. Many process/setup costs; no current duration measured.",
+      "opportunity": "Keep real concurrency/descriptor/death controls. Move only redundant arithmetic permutations to pure schedule/resources tests; use reached-state handshakes and isolated fixture roots.",
+      "evidence": [
+        "tools/testing/test_run_category_queue.py:20",
+        "tools/testing/test_run_category_queue.py:47",
+        "tools/testing/test_run_category_queue.py:1040",
+        "tools/testing/test_run_category_queue.py:1053"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_activity.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real subprocess leases test measurement/build isolation and inherited activity after wrapper death; these are not mocked lock semantics.",
+      "opportunity": "Preserve real locks/descriptor inheritance and cleanup; reduce only setup with immutable seeds, retain no-foreign-process actions.",
+      "evidence": [
+        "tools/testing/test_run_category_activity.py:19",
+        "tools/testing/test_run_category_activity.py:150"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_memory_profile.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Cheap aggregation controls plus real javac and queued 128 MiB child JUnit lifecycle/dynamic/skip/retention fixture. May skip if cached JUnit console absent.",
+      "opportunity": "Keep real lifecycle probe and explicit prerequisite result; share compilation only with exact inputs, never retained JVM state.",
+      "evidence": [
+        "tools/testing/test_run_category_memory_profile.py:20",
+        "tools/testing/test_run_category_memory_profile.py:102"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_ordinary_memory.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real listener service control distinguishes retained static arrays, PER_CLASS active-plan fixtures and PER_METHOD release, plus cheap report safety. Cached JAR/JDK availability can skip it.",
+      "opportunity": "Retain fresh queued child and service-loading contract; separate prerequisite skip from passing aggregation. Do not equate GC-requested floors with all retained sizes.",
+      "evidence": [
+        "tools/testing/test_run_category_ordinary_memory.py:58",
+        "tools/testing/test_run_category_ordinary_memory.py:95"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_preparation.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Mock Maven boundary and clock but real artifact/summary/filesystem lifecycle verify compile-once preparation, no admission while building and source-change aborts.",
+      "opportunity": "Preserve ordering/fingerprint tests; keep a separate small real wrapper control for integration. Already protects delivered prepare-once design.",
+      "evidence": [
+        "tools/testing/test_run_category_preparation.py:31",
+        "tools/testing/test_run_category_preparation.py:49",
+        "tools/testing/test_run_category_preparation.py:103"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_batches.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Controlled admission/runner fixtures check exact 50/50/1 partition preservation and combined outcomes/cleanup, not engine behavior.",
+      "opportunity": "Keep exact source-list equality and ordered release/admission assertions; no engine suite needed for pure harness refactors.",
+      "evidence": [
+        "tools/testing/test_run_category_batches.py:110"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_resources.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Boundary arithmetic and lane-shape controls protect conservative memory/CPU admission and no silent heap overrides.",
+      "opportunity": "Retain exact below/at/above boundaries and unknown-input refusal; broad real-process permutations unnecessary.",
+      "evidence": [
+        "tools/testing/test_run_category_resources.py:14"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_schedule.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Pure deterministic policy tests protect waiting credit/aging/fairness independent of wall sleeps.",
+      "opportunity": "Use this layer for more policy permutations; keep separate few real scheduling handoff controls.",
+      "evidence": [
+        "tools/testing/test_run_category_schedule.py:14"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_running.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Lease/record controls ensure unknown/dead/young/inconsistent processes do not earn unsafe reservation credit; reviewed cases are bounded local state.",
+      "opportunity": "Retain identity/liveness negatives and no-credit unknown behavior; avoid global process sampling in each policy case.",
+      "evidence": [
+        "tools/testing/test_run_category_running.py:23"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_small.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Exact selectors, bounded heaps and custom-shape rejection protect automatic lean eligibility without changing selection.",
+      "opportunity": "Preserve unknown/ambiguous/custom invocation negatives; no savings from deleting cheap contract checks.",
+      "evidence": [
+        "tools/testing/test_run_category_small.py:29"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_cleanup.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Real temporary-tree safety prevents traversal/symlink deletion and preserves unknown/legacy files; mocks keep queue interaction bounded.",
+      "opportunity": "Retain path/mode/ownership and idempotence controls; validate only owned temporary fixtures.",
+      "evidence": [
+        "tools/testing/test_run_category_cleanup.py:27"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_artifacts.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "PID validation and process/log/cleanup controls protect foreign process safety and bounded diagnostics; some real subprocess scenarios.",
+      "opportunity": "Keep invalid-PID no-side-effects assertions and real termination evidence; small fakes appropriate for dangerous platform primitives.",
+      "evidence": [
+        "tools/testing/test_run_category_artifacts.py:15"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_control.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Mocked prerequisite/clock/runner interactions verify complete missing-tool reporting, no launch on failure and timeout incompleteness.",
+      "opportunity": "Pair with actual tool preflight when implementation changes; do not call mocked Java/Lua/PowerShell checks actual availability.",
+      "evidence": [
+        "tools/testing/test_run_category_control.py:26"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_builds.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Pure command-shape table prevents bypassing admission with unknown profiles/goals/overrides.",
+      "opportunity": "Preserve ambiguous/custom CLI negatives and precedence boundaries; inexpensive table is useful regression protection.",
+      "evidence": [
+        "tools/testing/test_run_category_builds.py:12"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_dashboard.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Real local records/leases and mocked clocks check accurate unknown/timing provenance and read-only dashboard behavior; has threading/HTTP-related breadth.",
+      "opportunity": "Keep byte-for-byte no-mutation and missing/legacy evidence tests; separate any server startup from pure projections if measured significant.",
+      "evidence": [
+        "tools/testing/test_run_category_dashboard.py:50"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_run_category_profiling.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Synthetic process records test PID reuse and exited-child CPU/peak preservation without running profiler workload.",
+      "opportunity": "Keep independent expected accounting; do not replace with tests only echoing raw process objects.",
+      "evidence": [
+        "tools/testing/test_run_category_profiling.py:14"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_compare_category_outcomes.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Matched negative-case identities/messages/skips prevent same-total false equivalence; cheap synthetic records plus CLI checks. Not selected by CI category wildcard.",
+      "opportunity": "Explicitly inventory this tool suite; keep changed-cause and new-skip controls, do not collapse to totals.",
+      "evidence": [
+        "tools/testing/test_compare_category_outcomes.py:21",
+        "tools/testing/test_compare_category_outcomes.py:46",
+        ".github/workflows/ci.yml:99"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_check_route_obligations.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Independent expected runtime identities, duplicates, skips and source parameter binding check actual coverage rather than equal counts. Not selected by category wildcard.",
+      "opportunity": "Keep small explicit tooling lane and method-specific parameter-source negatives; do not confuse planned obligations with all suite execution.",
+      "evidence": [
+        "tools/testing/test_check_route_obligations.py:53",
+        "tools/testing/test_check_route_obligations.py:124"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_compare_release_traces.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Synthetic complete report mutations reject changed identity/frontier/warning even at equal totals.",
+      "opportunity": "Keep full report payload equivalence and missing/new skip negatives; one execution owner if release and guard invocations consolidated.",
+      "evidence": [
+        "tools/testing/test_compare_release_traces.py:34",
+        "src/test/java/com/openggf/tests/TestBuildToolingGuard.java:1827",
+        ".github/workflows/release.yml:157"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_classify_surefire_skips.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real CLI over small XML/policy fixtures fails unknown skips and absent evidence; interpreter startup across cases, not engine execution.",
+      "opportunity": "Move most policy vectors in-process only while retaining exact CLI exit/error/serialization integration and prerequisite distinctions.",
+      "evidence": [
+        "tools/testing/test_classify_surefire_skips.py:39",
+        "tools/testing/test_classify_surefire_skips.py:56"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_release_snapshot_policy.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Pure snapshot entry rules plus real small Git history fixtures for resource/release policy. Multiple subprocess starts are a static cost.",
+      "opportunity": "Retain exact authored-fixture path/hash/mode and history negatives; share immutable seeds only, not stateful repository mutations.",
+      "evidence": [
+        "tools/testing/test_release_snapshot_policy.py:38",
+        "tools/testing/test_release_snapshot_policy.py:112"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_release_trace_collection.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Real Git/CLI fixtures and corrupt/stale/missing report scenarios protect release evidence provenance. Repeated repo/CLI setup per case.",
+      "opportunity": "Separate pure manifest permutations from bounded real collection workflows; preserve working-tree digests, freshness and failure identities.",
+      "evidence": [
+        "tools/testing/test_release_trace_collection.py:92",
+        "tools/testing/test_release_trace_collection.py:98",
+        "tools/testing/test_release_trace_collection.py:123"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_release_launchers.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Executes actual launcher with stub Java/Maven commands; verifies current artifact selection and paths with spaces without engine startup.",
+      "opportunity": "Keep real shell quoting/environment/exit tests; mocks accurately delimit launcher contract, not a packaged binary launch qualification.",
+      "evidence": [
+        "tools/testing/test_release_launchers.py:15",
+        "tools/testing/test_release_launchers.py:83"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_release_linux_package.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Extracts actual workflow shell step and executes on tiny fake native payload; catches packaging overwrite/permissions/path errors. Step-name text extraction is brittle but check is behavioral.",
+      "opportunity": "Keep workflow source-to-execution linkage and fixture behavior; use structured step lookup if workflow refactoring makes extraction fragile.",
+      "evidence": [
+        "tools/testing/test_release_linux_package.py:18"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_release_website_notification.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Executes notification path through fake API command and checks success, missing credential and error behavior without network sending.",
+      "opportunity": "Keep exact exit/error/no-secret-output controls; not evidence of remote service delivery.",
+      "evidence": [
+        "tools/testing/test_release_website_notification.py:43"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/test_trace_v5_publication_manifest.py",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Historical publication/deletion/archival hash contract is useful preservation evidence but not live gameplay correctness; reads entire protected files and exact prose table structure.",
+      "opportunity": "Make an explicit archive-integrity lane; retain byte hashes/complete archive set, avoid arbitrary heading/table wording dependency where possible.",
+      "evidence": [
+        "tools/testing/test_trace_v5_publication_manifest.py:83",
+        "tools/testing/test_trace_v5_publication_manifest.py:105"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/Test-CompareSurefireRedSet.ps1",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real child PowerShell comparator cases reject duplicate/missing/extra/skip/case changes. Also pins historical inventory counts/waves, weaker marginal current regression value.",
+      "opportunity": "Keep tool semantics; separate historical inventory integrity from active regression comparison. Reuse in-process logic tests but retain real PowerShell exit/CLI cases.",
+      "evidence": [
+        "tools/testing/Test-CompareSurefireRedSet.ps1:57",
+        "tools/testing/Test-CompareSurefireRedSet.ps1:67",
+        "tools/testing/Test-CompareSurefireRedSet.ps1:106"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/testing/Test-SurefireOutcomeInventory.ps1",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Standalone PowerShell export/comparison/partition contract with fresh child tool invocations; symlink capability can skip subchecks. Not root Maven case count.",
+      "opportunity": "Keep complete identity/error/skip payload and platform path controls; explicitly inventory command and report capability skips; avoid one child per pure-data permutation if measured expensive.",
+      "evidence": [
+        "tools/testing/Test-SurefireOutcomeInventory.ps1:66",
+        "tools/testing/Test-SurefireOutcomeInventory.ps1:79",
+        "tools/testing/README.md:955"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/modding/native-windows/test_packaging.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Fake PE/archives test tamper, path traversal, coverage and exit-code classification without native compilation.",
+      "opportunity": "Keep small negative controls; do not attribute Windows native-image build cost or binary execution qualification to this module.",
+      "evidence": [
+        "tools/modding/native-windows/test_packaging.py:1",
+        "tools/modding/native-windows/test_packaging.py:98",
+        "tools/modding/native-windows/test_packaging.py:113"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/modding/native-linux/test_packaging.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small fake ELF/archive and actual shell shortcut test covers executable modes, spaces, escaping and tamper; not native-image compilation.",
+      "opportunity": "Preserve shell invocation/argv fidelity, archive traversal and integrity; keep real native binary qualification as separate lane.",
+      "evidence": [
+        "tools/modding/native-linux/test_packaging.py:17",
+        "tools/modding/native-linux/test_packaging.py:54"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/modding/native-feasibility/NativeModMemberContractTest.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Standalone Java main synthesizes adversarial bytecode and checks exact preserved members/bytes, inherited owners, dormant callbacks and opt-in discovery. Not a JUnit source test.",
+      "opportunity": "Keep bounded ASM fixtures and omission negatives independent of full native-image compilation; track its actual builder invocation separately.",
+      "evidence": [
+        "tools/modding/native-feasibility/NativeModMemberContractTest.java:16",
+        "tools/modding/native-feasibility/NativeModMemberContractTest.java:47",
+        "tools/modding/native-feasibility/NativeModMemberContractTest.java:69"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/modding/test_creator_kit.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Template XML and actual export/resource checks protect portable creator kit; reviewed source checks and fixture inventory do not prove full generated Maven lifecycle.",
+      "opportunity": "Keep XML-profile/nonempty discovery and actual export tests; coordinate with Java starter package tests without conflating separate loading/distribution boundaries.",
+      "evidence": [
+        "tools/modding/test_creator_kit.py:18",
+        ".github/workflows/creator-kit.yml:32"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/performance/test_run_isolated.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Real worktree lock/process ownership and interference detector controls prevent unsafe benchmark overlap; mocked interference input bounds host effects.",
+      "opportunity": "Keep real lease ordering and foreign identity rejection; retain newly added GameplayInputBranchTool detector case, do not revive superseded foreign-worktree cleanup.",
+      "evidence": [
+        "tools/performance/test_run_isolated.py:19",
+        "docs/agent-workflow/briefing-trace-rounds.md:74"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/performance/test_sample_runtime.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small fdinfo fixtures independently assert device-aware deduplication and fail unknown units instead of plausible bytes.",
+      "opportunity": "Retain precise byte expectations; no GPU or workload launch required to test parser logic.",
+      "evidence": [
+        "tools/performance/test_sample_runtime.py:9"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/media/test_engine_window_capture.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Isolation and failure/cleanup controls reject missing virtual display before desktop/audio access, using safe mocked launch boundaries plus process cases.",
+      "opportunity": "Keep fail-before-launch/no ambient display contract and every-resource cleanup; do not replace with shared-desktop automation.",
+      "evidence": [
+        "tools/media/test_engine_window_capture.py:19"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/bizhawk/test_native_capture.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Controlled capture orchestration verifies plan identity, source config preservation, Lua/timeout failures and pending independent acceptance; no emulator parity proven.",
+      "opportunity": "Keep explicit evidence/acceptance semantics and negative exit paths; do not count as native rendering execution.",
+      "evidence": [
+        "tools/bizhawk/test_native_capture.py:55"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/bizhawk/test_compare_native_rgb.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "medium",
+      "reason": "Small real pixel fixtures and comparator paths catch missing/bad images, size and low-bit pixel differences without emulator startup.",
+      "opportunity": "Keep exact raw RGB and missing-file negatives; preserve independent expected pixels when refactoring.",
+      "evidence": [
+        "tools/bizhawk/test_compare_native_rgb.py:41"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/bizhawk/test_fbz_boundary_fixture.lua",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Eight stubbed boundary scenarios execute writer and enforce address allowlist, neutral input, bounded settling/failure and output; not actual ROM behavior.",
+      "opportunity": "Retain both settling/failing paths and write/clock controls; keep independent native capture qualification separate.",
+      "evidence": [
+        "tools/bizhawk/test_fbz_boundary_fixture.lua:1",
+        "tools/bizhawk/test_fbz_boundary_fixture.lua:20",
+        "tools/bizhawk/test_fbz_boundary_fixture.lua:34"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/audio/fm-core-benchmark/tests/test-jni-proof.sh",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Real C/Java JNI proof and mutation recompilation checks sample-wise comparison, fresh-handle snapshots, invalid-state preservation and close lifecycle. Compilation/native loading dominates static cost category; no timing measured.",
+      "opportunity": "Reuse immutable compilation inputs only when hashes/flags match; keep separate fresh native handles, all negative mutants and no-fidelity-overclaim fields.",
+      "evidence": [
+        "tools/audio/fm-core-benchmark/tests/test-jni-proof.sh:25",
+        "tools/audio/fm-core-benchmark/tests/test-jni-proof.sh:35",
+        "tools/audio/fm-core-benchmark/tests/test-jni-proof.sh:95"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/audio/fm-core-benchmark/tests/test-fast-capture.sh",
+      "value": "high",
+      "cost": "high",
+      "confidence": "medium",
+      "reason": "Real C++ fast capture proof with negative control and explicit non-equivalence assertions. Setup/compiler cost high statically, tiny capture length.",
+      "opportunity": "Preserve fidelity_equivalent=false and input provenance; keep malformed capture/output boundary cases; do not turn this into exact native audio certification.",
+      "evidence": [
+        "tools/audio/fm-core-benchmark/tests/test-fast-capture.sh:24",
+        "tools/audio/fm-core-benchmark/tests/test-fast-capture.sh:35",
+        "tools/audio/fm-core-benchmark/tests/test-fast-capture.sh:53"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/audio/fm-core-benchmark/tests/test-profile-tool.sh",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Prepare-only real tooling checks compiled input provenance and refuses publishing timing/profile evidence not collected; compiler startup but no workload profile.",
+      "opportunity": "Keep mode/provenance/output-boundary/invalid-input controls; share exact immutable preparation only if it remains the tested production entrypoint.",
+      "evidence": [
+        "tools/audio/fm-core-benchmark/tests/test-profile-tool.sh:14",
+        "tools/audio/fm-core-benchmark/tests/test-profile-tool.sh:21"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/audio/fm-core-benchmark/tests/test-tool.sh",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Many Python CLI calls over tiny synthetic result/lock files verify malformed/tampered inputs, checksum and nonpublishable evidence semantics.",
+      "opportunity": "Move pure result mutation vectors in-process while preserving representative real CLI/quoting/exit cases; no chip benchmark timing inferred.",
+      "evidence": [
+        "tools/audio/fm-core-benchmark/tests/test-tool.sh:17",
+        "tools/audio/fm-core-benchmark/tests/test-tool.sh:42",
+        "tools/audio/fm-core-benchmark/tests/test-tool.sh:64"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/timing/native-ledger/test_ledger_closure.py",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Small hand-constructed source-cost windows with rehashed missing/truncated/mismatched evidence reject plausible numeric closure. Requires pinned GPGX object store but no emulator/ROM workload.",
+      "opportunity": "Keep corruption controls and fail required evidence closed; cache immutable cost table within class already done. Do not classify by native-ledger directory name alone.",
+      "evidence": [
+        "tools/timing/native-ledger/test_ledger_closure.py:6",
+        "tools/timing/native-ledger/test_ledger_closure.py:33",
+        "tools/timing/native-ledger/test_ledger_closure.py:98"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/timing/m68k-closure/test_frame_closure.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Independent opcode cost vectors and interrupt/unsupported-form controls, plus some subprocess paths. Reviewed subset; no runtime observed.",
+      "opportunity": "Retain hand-derived vectors and explicit unsupported refusal; separate external-source prerequisites from pure decoder cases.",
+      "evidence": [
+        "tools/timing/m68k-closure/test_frame_closure.py:64"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/timing/s3k-instruction-ledgers/vint/nem/test_nem_decoder.py",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "ROM decoder/ledger comparisons include exhaustive Offs_PLC arts, independent row decoder, XOR/plain and carry boundaries. Class-wide prerequisite skip can hide synthetic tests too.",
+      "opportunity": "Keep full ROM lane when decoder/ledger contract changes; factor demonstrably independent synthetic controls into ungated lane. Reuse immutable ROM/cost tables, never cached pass outcomes.",
+      "evidence": [
+        "tools/timing/s3k-instruction-ledgers/vint/nem/test_nem_decoder.py:53",
+        "tools/timing/s3k-instruction-ledgers/vint/nem/test_nem_decoder.py:92",
+        "tools/timing/s3k-instruction-ledgers/vint/nem/test_nem_decoder.py:109"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "tools/timing/s3k-instruction-ledgers/deform/test_deform_cost.py",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "medium",
+      "reason": "Seeded table/scroll-state comparison across S3/SK copies plus independent cost-model equality; bounded source loops but interpreted ROM work and prerequisites.",
+      "opportunity": "Keep both copies, hand sums, synthetic bands and unsupported refusal; reuse ROM/tables only, not execution results.",
+      "evidence": [
+        "tools/timing/s3k-instruction-ledgers/deform/test_deform_cost.py:66"
+      ],
+      "audit_section": "tooling-guards"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/TestGolfTransport.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "27 independent socket/room/terminal/ownership scenarios; each currently recompiles the same engine-free source set. Assertions live in the external probes, so absence of local assert calls is not low value.",
+      "opportunity": "Compile immutable probe bytecode once per class; retain a fresh null-parent classloader and all probe invocations.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/TestGolfProtocol.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Compiles actual external model/network sources with no engine classpath, then runs protocol rejection and reconnect checks.",
+      "opportunity": "Separate compilation from fresh-loader execution so the transport family can reuse bytecode only.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/ExampleModHarness.java",
+      "value": "support",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Every build invocation recompiles Java, copies resources, runs optional generator, packages and validates before creating a new ModTestKit.",
+      "opportunity": "Future: bounded class-owned immutable packaged artifact with fresh kit, classloader, storage, registration and scene each time; keep one real package-path test.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/TestEggmansSkyScene.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Real ROM-backed scenes and lifecycle/save/cache assertions, repeatedly building the same project; some broad smoke assertions are coarse.",
+      "opportunity": "Amortize immutable build output while retaining fresh scene/session state; measure separately from procedural art generation.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/TestSlayTheRobotnikScene.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Broad real-scene fight/event traversal and fault boundary coverage; fightsWon > 40 does not prove every enumerated fight completes. The map scrolling case has precise behavior checks.",
+      "opportunity": "Build once per class; retain per-room failure diagnostics and explicit two-phase terminal obligations before shortening 260-frame waits.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/mods/code/TestSampleRomArtRemixIntegration.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Packages an actual mod, rejects bundled ROM/materialized art, checks visible ROM pixels/palette and live rewind identity.",
+      "opportunity": "Keep full end-to-end integration; use narrow art/parser cases for extra mutations rather than repeating this pipeline.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/editor/selection/TestEditorRegionOperations.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Small in-memory level exercises overlap-safe copy, native ring grouping, undo/redo identities and atomic invalid paste.",
+      "opportunity": "Preserve as a model for cheap contract tests; no engine boot needed.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/graphics/TestPatternAtlasLookup.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Headless lookup, collisions, slot reuse and range boundary tests with observable results.",
+      "opportunity": "Keep; avoid adding a GL context to pure lookup tests.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/net/protocol/TestControlCodecAdversarial.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Structured envelope mutations assert independent bounds, trailing roots and invalid field rejection.",
+      "opportunity": "Keep literal adversarial inputs and fail-closed assertions; useful fast smoke coverage.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/net/identity/TestPlayerIdentity.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Real persistent identities, tamper rejection and synchronized first-use race across aliases; mixed filesystem and concurrency cost.",
+      "opportunity": "Keep deterministic barriers and per-case owned files; avoid replacing signature checks with mocks.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/stageplay/runtime/TestStageplayRenderer.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Recorded command checks, ROM identity rejection, path escape negatives and transition layering; small deterministic witnesses without full routes.",
+      "opportunity": "Preserve command/pixel distinction; add full GPU tests only for actual GPU behavior.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/graphics/TestBackgroundScrollWrapPixels.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Real shader/FBO integer-scroll coverage across essentially signed-word range and all 800x224 pixels, 293 render/readback iterations; potential native prerequisite abort.",
+      "opportunity": "Measure first; consider batch readback or mathematically justified distinct equivalence cases only with exact sign/wrap/boundary witnesses.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/TestObjectManagerExecLoopParity.java",
+      "value": "low",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Loads EHZ1 and idles 180 frames with only assertDoesNotThrow. Protects crashing but asserts no execution order, spawn/unload witness or ROM parity.",
+      "opportunity": "Replace/strengthen with explicit observed spawn/unload/order outcomes; do not call it parity evidence or remove without a mapped crash-control replacement.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/configuration/TestYamlDependencyAvailable.java",
+      "value": "low",
+      "cost": "low",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Parses a tiny document via a third-party YAML mapper; real configuration round-trip tests already exercise its presence.",
+      "opportunity": "Merge its dependency/packaging obligation into actual config integration if desired; negligible likely performance return.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/physics/TestTerrainCollisionManagerReset.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Null-only assertions check an actual populated pool becoming entirely cleared; a naive null-assertion classifier would be wrong.",
+      "opportunity": "Keep this lifecycle negative.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/tests/trace/s1/TestS1Mz1SlotLayoutRegression.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "assertDoesNotThrow wrappers delegate to a harness with actual native-recorded slot and routine assertions; meaningful oracle despite wrapper shape.",
+      "opportunity": "Review reused immutable input prefixes, preserving independently fresh gameplay and every slot assertion.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/catalog/TraceCatalogHangTest.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Timeout is the real assertion; scanning ambient checkout size makes its mutation sensitivity and cost host-dependent.",
+      "opportunity": "Use an owned constructed deep directory and assert bounded traversal behavior; retain an explicit opt-in real-tree latency diagnostic.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/game/rewind/TestS3kRewindAllocationProbe.java",
+      "value": "low",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Explicitly property-gated measurement, no automated regression assertion; useful diagnostic rather than correctness coverage.",
+      "opportunity": "Keep opt-in; report allocation with live owner/reference constraints and do not count a run as parity validation.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/tools/audio/parity/s3k/DebugS3kDacRuns.java",
+      "value": "low",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Property-gated reference/engine capture and printing; no mismatch acceptance assertion. Diagnostic value can be high although regression value is low.",
+      "opportunity": "Keep explicit diagnostic selection; no need to delete investigative tooling.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "src/test/java/com/openggf/trace/live/TestLiveTraceComparatorObserver.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "source-reviewed; current cost unmeasured",
+      "reason": "Phase/lifecycle and publication negatives; one case loads all LBZ trace data solely for its metadata before constructing synthetic rows.",
+      "opportunity": "Load the exact same metadata.json directly; leave all synthetic rows, CPU events and comparator assertions unchanged.",
+      "evidence": "Pinned e633e4c8259e610e81854fc8acd35172ac592068; source inspected by lead",
+      "audit_section": "root-findings"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Standalone deployment integration witness, not a JUnit class. prepare only creates an isolated trusted-account fixture; replay checks real input-only S1 GHZ1 completion, positive time and consistent frame counts; run additionally requires the verified relay room, matching published ghost hash and recording request, same-origin HTTPS upload returning 204, and a VERIFIED standing for the local slot with exactly the replayed time. Disconnects, kicks and bounded event timeouts fail. Cost is static: ROM/BK2 parsing and replay, retention of every output pose, real-time 60 Hz publication, network waits and a separately running master/verifier. No fresh timing was measured.",
+      "opportunity": "Retain as explicit deployment validation and record the invoked mode: prepare/replay success is not remote verification success. Preserve the independently produced remote verdict and exact hashes/timing; do not replace this with the health probe or synthetic socket workload. Keep large route/deployment execution out of routine wrapper checks; bounded argument/origin tests already exist separately.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java:49-64",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java:87-113",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java:116-195",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java:199-215",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingDeploymentSmokeTool.java:279-317"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/GhostLoadTestTool.java",
+      "value": "mixed",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Standalone in-process hub diagnostic whose CLI has no outcome-count or performance rejection oracle: run returns tick mean/p99, maximum emitted packet bytes, finish count and sanction count, and main only prints them. Argument/setup failures still throw. The separate TestGhostLoadTest supplies the actual 32 normal finishes / 5 sanctions plus 11 healthy finishes assertions. Synthetic time advances 50 ms per tick without wall-clock sleeping; only room.tick is timed, excluding publishTick ingress work. Default 32 bots and five simulated seconds are bounded and ROM/graphics/socket-free, but up to 256 bots and one simulated hour are accepted. BotClient discards binary payloads after recording their length; no network throughput or queue pressure is measured.",
+      "opportunity": "Classify the CLI as a report-producing diagnostic, not an automatic CPU or correctness gate. If a gate is required later, add explicit expected finish/sanction outcome checks or consume the existing JUnit assertions; do not invent hardware-sensitive latency thresholds. Keep CPU timing scope explicit and avoid calling five simulated seconds five elapsed seconds. Retain adversarial behavior breadth.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/GhostLoadTestTool.java:36-101",
+        "racing/server/src/main/java/openggf/racing/server/tools/GhostLoadTestTool.java:104-122",
+        "racing/server/src/main/java/openggf/racing/server/tools/BotClient.java:46-81",
+        "racing/server/src/main/java/openggf/racing/server/tools/BotClient.java:122-138",
+        "racing/server/src/test/java/openggf/racing/server/tools/TestGhostLoadTest.java:15-29"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java",
+      "value": "high",
+      "cost": "mixed",
+      "confidence": "high",
+      "reason": "Standalone real-loopback integration/stress tool with an explicit CLI rejection oracle: unsuccessful reports throw. It checks room membership and unique sessions, overflow rejection, mixed-mode sanction/isolation/recovery, decoded remote poses, accepted finish timing/identity, complete unique standings pages, next-round reconnect, room removal and server shutdown. Report success additionally requires exact completed-cycle/lifecycle totals and positive ghost/ping observations. Default is four players, one traffic second and one cycle; opt-in limits reach transport capacity, 600 seconds and 100 cycles. Real countdowns, authentication, sockets/proxy and cleanup contribute cost beyond the traffic window. CPU/heap/GC cover the colocated server plus clients/proxy; no absolute timing threshold. Synthetic poses and NONE verification state do not validate engine replay.",
+      "opportunity": "Keep the existing bounded JUnit transport matrix and explicit larger CLI stress runs distinct. Retain per-player pose and complete-standings checks when tuning overhead. Reuse source-matched runs rather than duplicating the same matrix, and never interpret whole-process metrics as server-only capacity or a successful run as a latency budget pass.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:66-82",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:240-276",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:372-424",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:471-568",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:580-594",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:719-725",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingSocketStressTool.java:889-959",
+        "racing/server/src/test/java/openggf/racing/server/tools/TestRacingSocketStress.java:97-129"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java",
+      "value": "high",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Standalone ROM-free multi-process relay measurement with a correctness/lifecycle oracle, not a speed threshold. Parent requires successful child reports and exits, all expected room tick observations, zero remaining rooms, released listener and successful owned-process/file cleanup; main throws on an unsuccessful report. Load children check measured ghost/browser/admission/ping activity, per-frame synthetic pose equality and cross-room ownership, accepted timed standings and lifecycle recovery. Static cost: one server JVM plus one load/proxy JVM per 1/2/4 rooms, identity provisioning, real admission/countdown/warmup/measurement windows and JFR; each child uses a 1 GiB maximum heap. Default traffic window is ten seconds plus two seconds warmup, excluding setup/cleanup; no measured duration is claimed.",
+      "opportunity": "Retain process separation because it gives server-versus-generator attribution absent from socket-stress. Keep capacity cells explicit and isolated; the existing small two-room JUnit scenario is already bounded. Do not turn reported CPU, sampled memory or reservoir latency values into correctness thresholds, or merge server and generator costs without disclosing host contention. Preserve cross-room pose/standing and cleanup checks.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java:28-48",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java:69-74",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java:95-198",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java:279-350",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleTool.java:353-380",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleLoad.java:216-252",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleLoad.java:398-436",
+        "racing/server/src/main/java/openggf/racing/server/tools/RacingScaleLoad.java:506-511",
+        "racing/server/src/test/java/openggf/racing/server/tools/TestRacingScaleTool.java:40-66"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Standalone rendered demonstration with meaningful bounded integration assertions, not a benchmark or image oracle. It rejects loss of participants, premature title-screen return, player death, missing natural finish, renderer ghost cap above eight, missing standing/page counts and visible-player finish; at 16+ players it also requires a mid-pack rank and visibility churn. The peer helper counts standing slots/pages and finds the visible player by name; it does not independently validate every row against expected timing/identity as socket-stress does. Encoder failure/timeout and collected cleanup failures reject process success. Static cost includes optional separate ROM-rendered route preparation, one live rendered/audio client, up to 255 protocol bots, real-time pacing, per-frame logs and ffmpeg. Cosmetic bots retime recorded poses; this is not 256 gameplay simulations.",
+      "opportunity": "Retain for targeted visual/capacity evidence and review the produced media separately. Require successful process exit plus the final cleanup=clean marker: success=true is written before close, so it alone cannot certify encoder or cleanup success. An explicitly supplied route already avoids route regeneration; reuse only with provenance matching the ROM/movie/source. Do not remove route/visibility checks or treat capture wall time as engine/server throughput.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:61-111",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:121-160",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:178-209",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:237-289",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:307-350",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackVideoPeers.java:143-164",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackVideoPeers.java:232-244"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Standalone rendered lobby walkthrough with explicit state-transition checks: requested game offered, lobby and level entered, three lobby ghosts, local readiness, menu hide/return and race/level hand-over must occur within bounds. It records screenshots, state CSV and optionally video, but has no pixel/text/look or animation comparison oracle; the Everyone ready chapter checks local readiness, not each remote readiness independently. Static cost includes ROM boot, renderer, three socket peers, 60 Hz pacing and video encoding when available. Missing ffmpeg is deliberately tolerated. close waits for/kills the encoder but never checks its exit status, so success=true is evidence of reached gameplay/UI checkpoints, not proof of a valid video.",
+      "opportunity": "Keep as an explicit manual UI/visual witness, not an ordinary JUnit test or automatic visual-parity pass. If video delivery is the requested output, inspect the artifact or later add a separate encoder-result check without breaking intentional still-only operation. Preserve the readiness/menu/transition failure checks; use a smaller semantic test for routine logic changes rather than rerendering the walkthrough.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java:80-107",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java:121-147",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java:193-195",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java:198-286",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackLobbyVideoTool.java:319-340"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackRouteTool.java",
+      "value": "mixed",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "Standalone capture prerequisite with a narrow route-completion oracle. It replays the maintained GHZ1 controller movie from frame 840 through a fresh ROM-backed, surfaceless-EGL capture session, renders every step, rejects player death and absence of natural completion, then writes bounded cosmetic poses with first-input metadata. Route parsing enforces magic, size/count and metadata bounds. There is no comparison against native/reference poses or expected completion time; bots subsequently retime this output. Static cost is a full ROM route simulation plus per-frame rendering and retained poses, not just serializing a fixture.",
+      "opportunity": "Classify as a route/visual-data generator with completion checks, not an independent parity test. Retain real-input completion provenance. For repeated captures, use the capacity tool existing recorded-route argument with a source/ROM/movie-matched artifact; do not assume the file format embeds that provenance. Do not remove rendering merely as a cost fix without checking which presentation state determines the exported poses.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackRouteTool.java:15-45",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackRouteTool.java:49-85",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:71-87",
+        "racing/server/src/main/java/openggf/racing/server/tools/TimeAttackCapacityVideoTool.java:343-348"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/tools/TrackProfileExportTool.java",
+      "value": "low",
+      "cost": "high",
+      "confidence": "high",
+      "reason": "ROM-backed validation-profile generator, not a validation test. It derives dimensions and writes output but compares neither expected geometry nor complete catalog coverage. Missing ROMs print Skipping and continue; even zero profiles are written successfully, potentially to the default resource path. Runtime/load/overflow/I/O failures can throw, which is incidental rejection rather than an independent correctness oracle. Validation value is low as a gate, while asset-generation value remains useful. Intended complete execution loads every eligible act across available S1/S2/S3K ROMs, so static cost is high; a cheap all-missing run proves nothing. The separate TestBundledProfileSource checks bundled catalog coverage.",
+      "opportunity": "Keep outside the executable-test count. Generate to a temporary destination and verify expected catalog keys before replacing the bundled table. A later explicit completeness/required-ROM mode would prevent accidental partial output; preserve any deliberately requested partial-generation use. Treat missing ROMs as absent evidence, not a successful all-game validation. No source change is proposed as already implemented.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/tools/TrackProfileExportTool.java:18-56",
+        "racing/server/src/main/java/openggf/racing/server/tools/TrackProfileExportTool.java:59-72",
+        "racing/server/src/test/java/openggf/racing/server/master/TestBundledProfileSource.java:24-34"
+      ],
+      "audit_section": "racing-roots"
+    },
+    {
+      "path": "racing/server/src/main/java/openggf/racing/server/master/MasterHealthCheckMain.java",
+      "value": "high",
+      "cost": "low",
+      "confidence": "high",
+      "reason": "Operational authenticated loopback readiness probe, not a JUnit or gameplay test. Missing/invalid config or token, HTTP errors, timeout/interruption and any status other than 204 cause status 1 and a nonzero process exit. Intended cost is one local HTTP request with a two-second connect timeout and three-second request timeout plus JVM/config startup. Its server endpoint returns 204 after authorization/method checking; it does not exercise room creation, relay data, uploads, replay verification, or an actor work round-trip. High value is scoped to this inexpensive supervisor readiness contract.",
+      "opportunity": "Retain as a small operational check and list it separately from suite coverage. Do not substitute it for deployment-smoke or count a 204 as end-to-end racing health. Existing tests exercise successful and failed health checks; no broad performance rewrite is justified by this entrypoint review.",
+      "evidence": [
+        "racing/server/src/main/java/openggf/racing/server/master/MasterHealthCheckMain.java:10-43",
+        "racing/server/src/main/java/openggf/racing/server/master/AdminEndpoint.java:64-71",
+        "racing/server/src/test/java/openggf/racing/server/master/TestMasterServer.java:103-109"
+      ],
+      "audit_section": "racing-roots"
+    }
+  ],
+  "measurement_status": "Classifications describe the pinned source. The four-file implementation and fresh focused measurements are documented separately in the companion audit."
+}

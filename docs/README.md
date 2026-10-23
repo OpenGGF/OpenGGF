@@ -40,6 +40,8 @@ Architecture artifacts are classified by the question they answer:
 - [Research](architecture/research/) — how does the system or source material
   work?
 - [Audits](architecture/audits/) — what state is the project currently in?
+  See the [test value and resource cost audit](architecture/audits/testing/2026-10-23-test-value-cost.md)
+  for test classifications, measured improvements and ranked redesigns.
 - [Validation](architecture/validation/) — did an implementation meet its
   contract?
 
