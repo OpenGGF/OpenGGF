@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestObjectManagerLifecycle {
 
@@ -44,7 +45,8 @@ public class TestObjectManagerLifecycle {
                 null, null, services);
 
         assertTrue(manager.getActiveObjects().isEmpty());
-        assertEquals("test", manager.stageplaySourceGame);
+        assertThrows(IllegalStateException.class, () -> manager.stageplayPlacementIdentity(
+                new ObjectSpawn(100, 80, 1, 0, 0, false, 80, 0)));
     }
 
     @Test

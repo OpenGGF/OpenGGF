@@ -107,7 +107,9 @@ class TestNativeHolderReleaseGuard {
         if (method.equals("setForcedInputMask")) return !args.isEmpty() && !args.getFirst().toString().equals("0");
         if (method.equals("setMovementSuppressionPreservingOwnership"))
             return args.size() == 2 && !args.get(1).toString().equals("false");
-        if (method.equals("setController2Input")) return args.stream().anyMatch(arg -> !arg.toString().equals("0"));
+        if (Set.of("setController2Input", "setLogicalInputState", "setDirectionalInputPressed", "setJumpInputPressed").contains(method))
+            return args.stream().anyMatch(arg -> !Set.of("0", "false").contains(arg.toString()));
+        if (method.equals("queueNativeEndingPoseForNextPlayerSlot")) return true;
         return false;
     }
 }

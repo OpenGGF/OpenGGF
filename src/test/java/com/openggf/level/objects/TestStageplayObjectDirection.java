@@ -94,7 +94,7 @@ class TestStageplayObjectDirection {
         assertNotSame(child, placed);
         assertSame(placed, direction.findPlaced(direction.placementIdentity(spawn)).orElseThrow());
         assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
-                new PlacementIdentity("test", 0, 1, 4, 1, 2)));
+                new PlacementIdentity("s2", 0, 1, 4, 1, 2)));
         assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
                 new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 99)));
         direction.remove(direction.placementIdentity(spawn));
@@ -1208,6 +1208,10 @@ class TestStageplayObjectDirection {
             for (int i = 0; i < 4; i++) {
                 graphics.cachePaletteTexture(new com.openggf.level.Palette(), i);
             }
+            var module = mock(com.openggf.game.GameModule.class);
+            when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
+            var world = new com.openggf.game.session.WorldSession(module);
+            when(services.worldSession()).thenReturn(world);
             when(services.graphicsManager()).thenReturn(graphics);
             when(services.solidExecutionRegistry()).thenReturn(SolidExecutionRegistry.inert());
             ObjectRegistry registry =

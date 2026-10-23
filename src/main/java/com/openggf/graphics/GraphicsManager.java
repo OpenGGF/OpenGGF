@@ -2329,7 +2329,6 @@ public class GraphicsManager {
 		return priority&&spritePriorityShaderProgram!=null?spritePriorityShaderProgram:currentShaderProgram;
 	}
 
-	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
 	PaletteView objectVisualPalette(int line) {
 		PaletteView palette =
 				line >= 0 && line < lastCachedPaletteLines.length
@@ -2338,6 +2337,7 @@ public class GraphicsManager {
 		return palette != null ? palette : getRenderContextPaletteForEffectiveLine(line);
 	}
 
+	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
 	SpritePresentation.PatternVersion scenePatternSample(int patternId) {
 		return patternAtlas == null ? null : patternAtlas.scenePatternSample(patternId);
 	}

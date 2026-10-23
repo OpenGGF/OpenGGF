@@ -146,11 +146,8 @@ public class ObjectManager {
 
     final ObjectServices objectServices;
     StageplayObjectDirection stageplayDirection;
-    private ObjectStageplayController stageplayController;
+    private final ObjectStageplayController stageplayController;
     final StageplayActivationPolicy stageplayActivation;
-    final List<ObjectSpawn> stageplaySourceSpawns;
-    final String stageplaySourceGame;
-    final int stageplaySourceZone, stageplaySourceAct;
     final ObjectCallbackRouter objectCallbacks;
     private final ObjectManagerPopulationView populationView;
     private final NativeChildReservationLedger childReservationLedger;
@@ -264,15 +261,7 @@ public class ObjectManager {
         this.stageplayActivation = objectServices == null ? null
                 : com.openggf.game.session.WorldSessionPolicyAccess.getService(
                         objectServices.worldSession(), StageplayActivationPolicy.class);
-        var nativeSource = objectServices == null || objectServices.worldSession() == null ? null
-                : objectServices.worldSession().getGameModule().getGameService(NativePlacementSource.class);
-        var nativeSpawns = nativeSource == null ? spawns : List.copyOf(nativeSource.placements());
-        this.stageplaySourceSpawns = List.copyOf(nativeSpawns);
-        var sourceWorld = objectServices == null ? null : objectServices.worldSession();
-        var sourceGame = sourceWorld == null ? null : sourceWorld.getGameModule().getGameId();
-        this.stageplaySourceGame = sourceGame == null ? "test" : sourceGame.code();
-        this.stageplaySourceZone = sourceWorld == null ? 0 : sourceWorld.getCurrentZone();
-        this.stageplaySourceAct = sourceWorld == null ? 0 : sourceWorld.getCurrentAct();
+        this.stageplayController = new ObjectStageplayController(this, spawns, objectServices);
         var directionPolicy =
                 objectServices == null
                         ? null
@@ -287,7 +276,7 @@ public class ObjectManager {
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
                 : ObjectWindowingStrategy.LEGACY;
-        this.placement = new ObjectPlacementController(nativeSpawns,
+        this.placement = new ObjectPlacementController(stageplayController.sourceSpawns(),
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setStageplayActivation(stageplayActivation);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
@@ -4746,11 +4735,7 @@ public class ObjectManager {
     }
 
     boolean isStageplayRingPlacement(ObjectSpawn spawn) {
-        // Numeric layout IDs do not identify auxiliary routines (released animals
-        // deliberately have no layout identity and may share a ring's numeric ID).
-        return spawn != null && spawn.layoutIndex() >= 0
-                && registry instanceof MutatorPlacementClassifier classifier
-                && classifier.isRingPlacement(spawn);
+        return stageplayController.isRingPlacement(spawn);
     }
 
     boolean isStageplayPlayerAttachmentOrRing(ObjectInstance object) {
@@ -4762,10 +4747,7 @@ public class ObjectManager {
     }
 
     private void noteStageplayFactorySuppression(ObjectSpawn spawn) {
-        if (stageplayActivation != null && placement.isCounterBasedRespawn()
-                && placement.getCounterForSpawn(spawn) >= 0 && !placement.isRemembered(spawn)
-                && !placement.isDestroyedInWindow(placement.getSpawnIndex(spawn)))
-            stageplayActivation.skippedFactory(placement.getSpawnIndex(spawn));
+        stageplayController.noteFactorySuppression(spawn);
     }
 
     boolean stageplayAllowsPlacement(ObjectSpawn spawn) {
@@ -4773,13 +4755,11 @@ public class ObjectManager {
     }
 
     private void activateStageplayWindows() {
-        if (stageplayActivation == null) return;
-        placement.activateStageplayWindows(stageplaySourceSpawns, activeObjects.keySet(), camera,
-                this::stageplayAllowsPlacement, this::hasFreeDynamicSlot, spawn -> {
-                    if (!tryLoadPlacementSpawn(spawn, false)) return false;
-                    bucketsDirty = activeObjectsCacheDirty = true;
-                    return true;
-                });
+        stageplayController.activateWindows(camera, this::hasFreeDynamicSlot, spawn -> {
+            if (!tryLoadPlacementSpawn(spawn, false)) return false;
+            bucketsDirty = activeObjectsCacheDirty = true;
+            return true;
+        });
     }
 
     void suspendStageplayContacts(ObjectInstance object) {
@@ -4788,25 +4768,20 @@ public class ObjectManager {
         if (touchResponses != null) touchResponses.forgetRemovedObject(object);
     }
 
-    private ObjectStageplayController stageplayController() {
-        if (stageplayController == null) stageplayController = new ObjectStageplayController(this);
-        return stageplayController;
-    }
-
     StageplayObjectDirection.PlacementIdentity stageplayPlacementIdentity(ObjectSpawn spawn) {
-        return stageplayController().identity(spawn);
+        return stageplayController.identity(spawn);
     }
 
     Optional<ObjectInstance> findStageplayPlacement(StageplayObjectDirection.PlacementIdentity identity) {
-        return stageplayController().find(identity);
+        return stageplayController.find(identity);
     }
 
-    void retireStageplayObject(ObjectInstance object) { stageplayController().retire(object); }
+    void retireStageplayObject(ObjectInstance object) { stageplayController.retire(object); }
     ObjectInstance materializeStageplayPlacement(StageplayObjectDirection.PlacementIdentity identity) {
-        return stageplayController().materialize(identity);
+        return stageplayController.materialize(identity);
     }
     ObjectInstance materializeStageplayPlacement(ObjectSpawn spawn) {
-        return stageplayController().materialize(spawn);
+        return stageplayController.materialize(spawn);
     }
 
     /**

@@ -225,6 +225,9 @@ class TestStageplayHudPictures {
                 public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) {
                     return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
                 }
+                public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame frame) {
+                    return resources.resolveFrame(document, frame);
+                }
             });
             workspace.activate();
             workspace.selectActor("hero");
@@ -264,7 +267,9 @@ class TestStageplayHudPictures {
             input.update(); input.handleKeyEvent(GLFW_KEY_F1,GLFW_RELEASE); input.update();
             input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); input.refreshLogicalSnapshot(); chrome.update(input); input.update();
             workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
-            workspace.moveCamera(8,0,2);
+            workspace.moveCamera(8,100000,2);
+            assertTrue(workspace.directorCamera().y() < 100000, "HUD must display native-bounded draft framing");
+            assertEquals(scene.camera(), workspace.controller().document().camera(), "Draft clamp cannot rewrite keys");
             surface.record(scene.width(),scene.height(),canvas -> renderer.draw(workspace.previewDocument(),workspace.previewFrame(),canvas));
             render(chrome,surface,scene,1280,720); capture("camera-720p",1280,720);
             render(chrome,surface,scene,1024,576); capture("camera-small",1024,576);

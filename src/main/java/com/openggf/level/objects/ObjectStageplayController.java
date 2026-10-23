@@ -1,16 +1,58 @@
 package com.openggf.level.objects;
 
+import com.openggf.camera.Camera;
+
 import java.util.Optional;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 /** Native placement admission and structural retirement for a directed world. */
 final class ObjectStageplayController {
     private final ObjectManager objects;
 
-    ObjectStageplayController(ObjectManager objects) { this.objects = objects; }
+    private final List<ObjectSpawn> sourceSpawns;
+    private final String sourceGame;
+    private final int sourceZone, sourceAct;
+
+    ObjectStageplayController(ObjectManager objects, List<ObjectSpawn> spawns, ObjectServices services) {
+        this.objects = objects;
+        var world = services == null ? null : services.worldSession();
+        var module = world == null ? null : world.getGameModule();
+        var nativeSource = module == null ? null : module.getGameService(NativePlacementSource.class);
+        sourceSpawns = nativeSource == null ? List.copyOf(spawns) : List.copyOf(nativeSource.placements());
+        var game = module == null ? null : module.getGameId();
+        sourceGame = game == null ? null : game.code();
+        sourceZone = world == null ? 0 : world.getCurrentZone();
+        sourceAct = world == null ? 0 : world.getCurrentAct();
+    }
+
+    List<ObjectSpawn> sourceSpawns() { return sourceSpawns; }
+
+    boolean isRingPlacement(ObjectSpawn spawn) {
+        // Auxiliary routines can share a numeric ring ID without being placements.
+        return spawn != null && spawn.layoutIndex() >= 0
+                && objects.registry instanceof MutatorPlacementClassifier classifier
+                && classifier.isRingPlacement(spawn);
+    }
+
+    void noteFactorySuppression(ObjectSpawn spawn) {
+        if (objects.stageplayActivation != null && objects.placement.isCounterBasedRespawn()
+                && objects.placement.getCounterForSpawn(spawn) >= 0 && !objects.placement.isRemembered(spawn)
+                && !objects.placement.isDestroyedInWindow(objects.placement.getSpawnIndex(spawn)))
+            objects.stageplayActivation.skippedFactory(objects.placement.getSpawnIndex(spawn));
+    }
+
+    void activateWindows(Camera camera, BooleanSupplier freeSlot, Predicate<ObjectSpawn> admit) {
+        if (objects.stageplayActivation == null) return;
+        objects.placement.activateStageplayWindows(sourceSpawns, objects.activeObjects.keySet(), camera,
+                objects::stageplayAllowsPlacement, freeSlot, admit);
+    }
 
     StageplayObjectDirection.PlacementIdentity identity(ObjectSpawn spawn) {
-        return StageplayObjectDirection.PlacementIdentity.of(objects.stageplaySourceGame,
-                objects.stageplaySourceZone, objects.stageplaySourceAct, spawn);
+        if (sourceGame == null)
+            throw new IllegalStateException("Portable object placement requires a native game identity");
+        return StageplayObjectDirection.PlacementIdentity.of(sourceGame, sourceZone, sourceAct, spawn);
     }
 
     Optional<ObjectInstance> find(StageplayObjectDirection.PlacementIdentity identity) {
@@ -20,7 +62,7 @@ final class ObjectStageplayController {
     }
 
     private ObjectSpawn canonical(StageplayObjectDirection.PlacementIdentity identity) {
-        return objects.stageplaySourceSpawns.stream()
+        return sourceSpawns.stream()
                 .filter(spawn -> spawn.layoutIndex() >= 0 && identity(spawn).equals(identity))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException(
                         "Portable object placement is absent from this set: " + identity));

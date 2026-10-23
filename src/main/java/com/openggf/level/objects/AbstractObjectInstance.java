@@ -1536,14 +1536,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         ObjectServices services = tryServices();
         if (services == null) {
             if (RENDER_MANAGER_UNAVAILABLE_WARNED.add(getClass().getName())) {
-                LOG.warning(
-                        getClass().getSimpleName()
-                                + ": getRenderManager() called with no services and no construction"
-                                + " context — returns null. If this is a constructor caching the"
-                                + " renderer, spawn via"
-                                + " spawnChild/spawnFreeChild/createDynamicObject (not raw"
-                                + " addDynamicObject), or fetch the renderer lazily in"
-                                + " appendRenderCommands().");
+                LOG.warning(getClass().getSimpleName() + ": getRenderManager() called with no services and no "
+                        + "construction context — returns null. If this is a constructor caching the renderer, "
+                        + "spawn via spawnChild/spawnFreeChild/createDynamicObject (not raw addDynamicObject), "
+                        + "or fetch the renderer lazily in appendRenderCommands().");
             }
             return null;
         }

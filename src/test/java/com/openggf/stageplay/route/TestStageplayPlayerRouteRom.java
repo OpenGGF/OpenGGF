@@ -265,7 +265,7 @@ class TestStageplayPlayerRouteRom {
         for (int x = left; x < maxX; x += 64) {
             for (int y = top; y < maxY; y += 64) {
                 try (var probe =
-                        PlayablePuppet.create(
+                        PlayablePuppet.createNativeWorldProbe(
                                 terrain,
                                 module,
                                 source.zone(),

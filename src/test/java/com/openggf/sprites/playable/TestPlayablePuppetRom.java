@@ -22,7 +22,7 @@ class TestPlayablePuppetRom {
             var terrain = library.level("s2", 0, 0);
             var art = library.characterArt("s2", "tails");
             assertNotNull(art.animationSet()); assertFalse(art.mappingFrames().isEmpty());
-            try (var puppet = PlayablePuppet.create(terrain, library.module("s2"), 0, 0,
+            try (var puppet = PlayablePuppet.createNativeWorldProbe(terrain, library.module("s2"), 0, 0,
                     library.module("s2"), "tails", art, liveX, liveY, 0, true, false)) {
                 assertEquals(liveX, puppet.sample().x());
                 boolean sawAir = false, sawTail = false, sawLanding = false;

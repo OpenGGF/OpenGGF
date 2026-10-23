@@ -65,10 +65,9 @@ class TestStageplayRoutePlanner {
     }
 
     @Test
-    void nativeWorldProbePreservesEntryAirAndControllerEdgesWithoutChangingDetachedSnap() {
+    void nativeWorldProbePreservesEntryAirAndControllerEdges() {
         var terrain = terrain().level;
-        try (var detached = probe(terrain);
-                var nativeEntry =
+        try (var nativeEntry =
                         PlayablePuppet.createNativeWorldProbe(
                                 terrain,
                                 module,
@@ -82,14 +81,10 @@ class TestStageplayRoutePlanner {
                                 0,
                                 true,
                                 false)) {
-            assertTrue(detached.sample().onGround(), "Existing detached snap behavior stays attached");
             assertTrue(
                     nativeEntry.sample().airborne(), "Native world entry leaves the airborne status set");
             var entry = nativeEntry.capture();
-            detached.tick(false, false, true, 0);
             nativeEntry.tick(false, false, true, 0);
-            assertTrue(
-                    detached.sample().airborne(), "Detached grounded entry accepts its first jump edge");
             assertTrue(
                     nativeEntry.sample().ySpeed() >= 0, "Airborne entry cannot invent an upward jump impulse");
             var first = nativeEntry.sample();
@@ -185,22 +180,10 @@ class TestStageplayRoutePlanner {
         }
         // The exact same art/layout now exposes no collision on path1.
         when(terrain.level.getChunk(1)).thenReturn(chunk(1, 0));
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        PlayablePuppet.create(
-                                terrain.level,
-                                module,
-                                0,
-                                0,
-                                module,
-                                "sonic",
-                                SpriteArtSet.EMPTY,
-                                224,
-                                237,
-                                1,
-                                true,
-                                false));
+        try (var missing = PlayablePuppet.createNativeWorldProbe(terrain.level, module, 0, 0, module,
+                "sonic", SpriteArtSet.EMPTY, 224, 237, 1, true, false)) {
+            assertTrue(missing.sample().airborne(), "Absent path collision cannot fabricate ground attachment");
+        }
     }
 
     @Test
@@ -283,7 +266,7 @@ class TestStageplayRoutePlanner {
     }
 
     private PlayablePuppet probe(Level terrain) {
-        return PlayablePuppet.create(
+        return PlayablePuppet.createNativeWorldProbe(
                 terrain, module, 0, 0, module, "sonic", SpriteArtSet.EMPTY, 224, 237, 0, true, false);
     }
 
