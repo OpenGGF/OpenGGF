@@ -1745,3 +1745,144 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+### Captured native power-up pending return — 2026-10-23
+
+This bounded correction starts at frozen parent
+`659b02c98a16da0723ef5f222acdc60ab7b0838f` on local branch
+`bugfix/ai-native-powerup-pending-return-20261023`. It changes only the existing
+binding owner, its package-private ObjectManager bridge, the private native
+power-up restore collaborator, three affected test files, this plan and the
+folded prerelease entry. The speed-word owner, player/movement/Super controller,
+profile installers, snapshot/API shapes and signature pins are outside this slice.
+Root's common smoke is neither observed nor modified.
+
+The first source edit repairs test identity context only. Registered captures
+encode `playerOwnerId` and intentionally retain no raw `playerOwner`; Super's
+lookup derives the source role from the manager's identity table, while the
+competition lookup explicitly selects `mainPlayer()` or `sidekick(0)` plus the
+concrete class. Unregistered standalone owners retain direct matching only when
+no role is present. Manual injection resolves the role against the source table,
+asserts the expected owner, then copies all nine entry fields with that prepared
+owner. The isolated stub has no roster and supplies no invented role resolution.
+Competition restoration compares the unchanged role with the fresh current human,
+while retaining bound-player, identity, fixed-slot alias, state, counter and order
+checks. No captured values are normalized.
+
+The helper-only old-source focus exited 1: 12 identities, 9 pass, 3 failures,
+0 errors/skips. Both competition methods passed. The three Super methods failed
+at their actual behavior assertions: `pendingRestoreMatchesTheCapturedOwnerAndRejectsUnsupportedSpawnerWithoutConsuming`
+returned null after releasing the occupied slot (line308);
+`capturedMonitorStarsRecreateAfterDestructiveSuperRestoreAndReplayForward`
+compared different compact captured state (line217); and
+`overriddenFactoryAndConstructionFailurePreservePendingNativeEntryWithoutFallbackMint`
+returned null after constructor retry (line348). These replace the five inherited
+raw-owner lookup errors from the task brief; this is no baseline-pass waiver.
+The source fingerprint, SHA-256 over sorted tracked `src/main`/`src/test` paths,
+NUL separator and each file's SHA-256 bytes, was
+`dc1d54a771bc8de7f16bd8aa10f9cb2cbc8e876a954e09feca2f6b27995cc1c3`.
+Queue admission waited830 seconds; Maven execution took1:27. XML confirmed
+Java25.0.5, the intended worktree, original verified S2 REV01 ROM and surfaceless
+EGL. Both stdout streams were empty; stderr contained only the existing
+FAST-to-NONE timing warnings, with no dumps. Consumed XML/logs were removed.
+
+The rejected runtime approach is generic re-enqueue after consume: admission
+intentionally survives consume to deduplicate generic recreation retries, so that
+handoff/restitution disappears. Clearing admission on consume would reopen the
+old generic retry bug. The correction retains admission and its original order
+inside `ObjectRewindPlayerBindings`. An immutable pending-return claim pins the
+exact admission instance, base type, prepared owner and captured entry/ID. Each
+return rechecks those references against the current maps; clearing/resetting the
+owner invalidates an old claim even if the exact same entry and ID are admitted
+again. Return inserts at the original pending position and is idempotent if a
+constructor failed before consuming the handoff. Distinct same-ID records, foreign
+owners, wrong types, unprepared roles and retired lifetimes fail closed.
+
+Only native occupancy refusal, stock-spawner handoff and failure restitution use
+this explicit return. Generic enqueue remains one-shot before and after consume.
+The native helper additionally verifies the restored object's actual captured ID;
+class/slot/owner alone cannot distinguish a fallback allocation. Legacy null-ID
+entries remain pending for the existing generic path. The original exception is
+retained if restitution also fails, and cleanup still removes only this attempt's
+native graph. Existing private cache publication and real-game callbacks remain
+unchanged. New controls cover duplicate-free return, queue position, all nine
+prepared entry fields, foreign/type/distinct-ID rejection and same-entry
+reset/re-admission. Original occupancy and constructor retries additionally check
+exact IDs, state, slot, bound owner and spawn counters, with no second consumption;
+destructive Super restore retains complete ID order/counter and forward replay.
+
+The bounded commands use `QUEUE=tools/testing/maven_queue.py` and caller-supplied
+`S1_ROM`, `S2_ROM`, `S3K_ROM` holding the original absolute verified ROM paths.
+Launch with Java25 selected, `LUA_BIN` selecting Lua5.4, no inherited Java launcher
+options, and no DISPLAY/WAYLAND_DISPLAY. No Lua/native/capture observation is run.
+Audio remains the existing no-device test backend.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 "$QUEUE" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dsonic2.rom.path=$S2_ROM" \
+  '-Dtest=TestSonic2SuperTransformationStartEffects,TestSonic2CompetitionPlayerBoundRestore' test -B
+```
+
+Candidate qualification and one fresh affected guard invocation follow below;
+there is no broad smoke, route, Main integration, PR, push or provider activation
+in this slice.
+
+The final implementation rejects entry-only restitution validation as insufficient:
+a later restore can reuse the same captured record. The immutable claim compares
+its original admission object by reference with the current map, and the
+same-entry/reset/re-admission control passed. The package-private bridge adds four
+effective lines, statically measured at the existing3086-line budget with no
+ratchet or packed-body workaround. Independent read-only source review found no
+material issue; it launched no validation.
+
+The sole candidate affected request exited0:37 identities,37 pass,0 failures,
+errors or skips. Actual XML counts are StartEffects10, competition restore2,
+pending shield restore13, real-game publication callbacks9 and native restore
+guards3. All five original methods, strict generic retry suppression before/after
+consume, the three new claim controls, exact identity/state/counter/order,
+occupancy-release retry, constructor-failure retry and forward replay executed.
+Both runtime and test sources were freshly compiled. Source SHA-256 remained
+`a795579608be6e79b2ea65c61759016b2b8e3539c4565e6cc6b27a3758ba549f`
+before and after execution, using the same fingerprint algorithm above. Admission
+waited928 seconds; Maven execution took1:30. Every XML stream was read: stdout
+empty, stderr only existing FAST-to-NONE timing warnings, no dumps. XML confirmed
+Java25.0.5, correct cwd, all three original verified ROM paths and EGL selection.
+Consumed candidate XML/logs were removed before fresh guards.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  -u MAVEN_OPTS python3 "$QUEUE" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestSonic2SuperTransformationStartEffects,TestSonic2CompetitionPlayerBoundRestore,TestShieldRewindPendingRestore,TestInvincibilityRewindPublicationOrder,TestNativeCompetitionPlayerBoundRestoreGuards' test -B
+```
+
+The sole fresh affected guard request exited0:120 identities,120 pass,0 failures,
+errors or skips. Actual XML counts are source guard72, ArchUnit class32 (including
+all26 ArchUnit rules and six Jupiter checks), API signature11, rewind
+architecture4 and field disposition1. The ObjectManager budget and unchanged
+candidate API surface passed. Source fingerprint remained exactly
+`a795579608be6e79b2ea65c61759016b2b8e3539c4565e6cc6b27a3758ba549f`.
+Admission waited1051 seconds; Maven execution took44.268 seconds. XML confirmed
+Java25.0.5, the intended cwd and EGL property. All stderr streams were empty;
+stdout was empty except the field-disposition guard's existing closed-gap list.
+There were no dumps. This is the fresh local result, not another branch's earlier
+guard evidence. Consumed guard XML/logs and owned temporary files are removed;
+compiled output and the useful unmerged local worktree are retained.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  -u MAVEN_OPTS python3 "$QUEUE" --normal -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  '-Dtest=TestArchitecturalSourceGuard,TestArchUnitRules,TestModApiSignatureSurface,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard' test -B
+```
+
+The authorized test budget is exhausted by exactly one helper-corrected old-source
+focus, one candidate affected focus and one fresh guard request. An intermediate
+build-only `python3 "$QUEUE" -Dmse=off test-compile -B` also passed before lifetime
+claim hardening; the candidate subsequently freshly compiled the final runtime
+and test source. All three test requests are terminal. This qualifies only the
+bounded captured-owner/pending-return correction and its listed controls; no
+common smoke, full route, native/capture/Lua observation, speed-word qualification,
+Main integration, PR, push or provider activation is claimed.

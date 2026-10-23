@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.level.objects.DefaultPowerUpSpawner;
 import com.openggf.level.objects.InvincibilityStarsObjectInstance;
@@ -98,10 +99,14 @@ class TestSonic2CompetitionPlayerBoundRestore {
                 assertEquals(playerStates[slot].playerExtra().xSpeed(), player.getXSpeed());
                 assertEquals(playerStates[slot].playerExtra().invincibleFrames(), player.getInvincibleFrames());
                 for (String type : List.of(ShieldObjectInstance.class.getName(), InvincibilityStarsObjectInstance.class.getName())) {
-                    var before = entry(source, sourcePlayers[slot], type);
-                    var after = entry(restored, player, type);
-                    assertSame(player, after.playerOwner());
-                    assertNotSame(sourcePlayers[slot], after.playerOwner());
+                    var role = slot == 0 ? PlayerRefId.mainPlayer() : PlayerRefId.sidekick(0);
+                    var before = entry(source, role, type);
+                    var after = entry(restored, role, type);
+                    assertEquals(before.playerOwnerId(), after.playerOwnerId());
+                    var resolvedOwner = f.objects.captureIdentityContext().requireIdentityTable()
+                            .resolvePlayer(after.playerOwnerId(), true);
+                    assertSame(player, resolvedOwner);
+                    assertNotSame(sourcePlayers[slot], resolvedOwner);
                     assertEquals(before.objectId(), after.objectId());
                     assertEquals(before.slotIndex(), after.slotIndex());
                     assertEquals(before.ownerModId(), after.ownerModId());
@@ -126,8 +131,8 @@ class TestSonic2CompetitionPlayerBoundRestore {
         tick(originalStars, capturedOwner, 5);
         var adapter = f.objects.rewindSnapshottable();
         var source = adapter.capture();
-        var sourceShield = entry(source, capturedOwner, ShieldObjectInstance.class.getName());
-        var sourceStars = entry(source, capturedOwner, InvincibilityStarsObjectInstance.class.getName());
+        var sourceShield = entry(source, PlayerRefId.mainPlayer(), ShieldObjectInstance.class.getName());
+        var sourceStars = entry(source, PlayerRefId.mainPlayer(), InvincibilityStarsObjectInstance.class.getName());
         f.replacePlayers();
         adapter.restore(source);
         var foreign = new Sonic(f.p1.getCode(), (short) 0x200, (short) 0x180);
@@ -150,18 +155,20 @@ class TestSonic2CompetitionPlayerBoundRestore {
         assertEquals(sourceShield.objectId(), identity(f, restoredNativeShield));
         assertEquals(sourceStars.objectId(), identity(f, restoredNativeStars));
         var restored = adapter.capture();
-        assertEquals(sourceShield.slotIndex(), entry(restored, f.p1, sourceShield.className()).slotIndex());
-        assertEquals(sourceStars.slotIndex(), entry(restored, f.p1, sourceStars.className()).slotIndex());
-        assertOrdinaryObjectState(sourceShield.state(), entry(restored, f.p1, sourceShield.className()).state());
-        assertOrdinaryObjectState(sourceStars.state(), entry(restored, f.p1, sourceStars.className()).state());
+        assertEquals(sourceShield.slotIndex(), entry(restored, PlayerRefId.mainPlayer(), sourceShield.className()).slotIndex());
+        assertEquals(sourceStars.slotIndex(), entry(restored, PlayerRefId.mainPlayer(), sourceStars.className()).slotIndex());
+        assertOrdinaryObjectState(sourceShield.state(), entry(restored, PlayerRefId.mainPlayer(), sourceShield.className()).state());
+        assertOrdinaryObjectState(sourceStars.state(), entry(restored, PlayerRefId.mainPlayer(), sourceStars.className()).state());
         assertEquals(source.dynamicObjectIdCounter() + 2, restored.dynamicObjectIdCounter());
     }
 
     private static ObjectManagerSnapshot.DynamicObjectEntry entry(ObjectManagerSnapshot snapshot,
-                                                                  PlayableEntity owner, String type) {
-        return snapshot.dynamicObjects().stream()
-                .filter(entry -> entry.playerOwner() == owner && type.equals(entry.className()))
+                                                                  PlayerRefId role, String type) {
+        var captured = snapshot.dynamicObjects().stream()
+                .filter(entry -> role.equals(entry.playerOwnerId()) && type.equals(entry.className()))
                 .findFirst().orElseThrow();
+        assertNull(captured.playerOwner(), "registered owners capture only their role");
+        return captured;
     }
 
     private static ObjectRefId identity(Sonic2CompetitionObjectFixture f, PowerUpObject object) {
