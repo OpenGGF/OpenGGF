@@ -1852,6 +1852,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     graphicsManager.cachePatternTexture(hudDigits[i], hudBaseIndex + i);
                 }
                 hudRenderManager.setDigitPatternIndex(hudBaseIndex);
+                HudProfileAccess.measureTimeSeparators(hudRenderManager, hudDigits);
 
                 int nextHudIndex = hudBaseIndex + hudDigits.length;
                 HudStaticArt staticHudArt = provider.getHudStaticArt();
