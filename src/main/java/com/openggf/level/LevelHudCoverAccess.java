@@ -18,6 +18,11 @@ public final class LevelHudCoverAccess {
         return HudProfileAccess.coveredByHost(level.hudRenderManager);
     }
 
+    /** Applies an already run-policy-filtered presentation override; null restores zone rows. */
+    public static void setRunProfile(LevelManager level, com.openggf.level.objects.HudProfile profile) {
+        HudProfileAccess.setHostProfile(level.hudRenderManager, profile);
+    }
+
     /**
      * A hosted run's own clock in the HUD's TIME ({@code frames}, or -1 for the act timer), with
      * hundredths when asked. Presentation only: the act timer, its time-over and its warning flash

@@ -35,6 +35,42 @@ import static org.mockito.Mockito.when;
 public class TestHudRenderManager {
 
     @Test
+    void hostedProfileOverridesWithoutLosingTheLatestZoneProfile() {
+        HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
+        HudProfile hosted = new HudProfile(List.of(new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                16, 8, 56, 8, 4, HudWarningPolicy.NONE)));
+        HudProfileAccess.setHostProfile(fixture.hud(), hosted);
+        fixture.hud().draw(fixture.levelState(), null);
+        assertTrue(fixture.draws().contains(new Draw(200, 56, 8)));
+        assertFalse(fixture.draws().stream().anyMatch(draw -> draw.y() == 40));
+        HudProfile zone = singleNumericRow(HudMetric.RINGS, 3);
+        HudProfileAccess.install(fixture.hud(), zone);
+        assertEquals(hosted, HudProfileAccess.current(fixture.hud()));
+        HudProfileAccess.setHostProfile(fixture.hud(), null);
+        assertEquals(zone, HudProfileAccess.current(fixture.hud()));
+    }
+
+    @Test
+    void timeReadoutMeasurementTracksPackedSeparatorsAndHostHundredths() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        assertEquals(32, fixture.hud().presentationReadouts().get(1).valueWidth());
+        HudProfileAccess.setHostTime(fixture.hud(), 60, true);
+        assertEquals(56, fixture.hud().presentationReadouts().get(1).valueWidth(),
+                "unmeasured art uses seven fixed cells");
+        fixture.hud().separatorInkLeft = 2;
+        fixture.hud().separatorInkRight = 4;
+        assertEquals(52, fixture.hud().presentationReadouts().get(1).valueWidth());
+        fixture.hud().separatorInkRight = 3;
+        assertEquals(50, fixture.hud().presentationReadouts().get(1).valueWidth(),
+                "measure the loaded art rather than assuming three ink pixels");
+        HudProfileAccess.setHostTime(fixture.hud(), -1, false);
+        fixture.hud().timeHundredths = true;
+        assertEquals(50, fixture.hud().presentationReadouts().get(1).valueWidth());
+        fixture.hud().timeHundredths = false;
+        assertEquals(32, fixture.hud().presentationReadouts().get(1).valueWidth());
+    }
+
+    @Test
     void ringDigitsReadThePublishedCounterRatherThanTheSilentGameplayWrite() {
         HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
         HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.RINGS, 3));

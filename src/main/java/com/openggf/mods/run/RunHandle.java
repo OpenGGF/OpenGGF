@@ -63,6 +63,14 @@ public interface RunHandle {
      */
     default void setHudTimeHundredths(boolean shown) { }
 
+    /**
+     * Overrides the native HUD rows for this run, surviving retries and level reloads.
+     * Null restores the current zone's profile; ending the run also restores it. The run's
+     * lives policy still applies. Presentation only: counters and timer rules are unchanged.
+     * Debug and bonus-stage HUDs retain their dedicated layouts. The default ignores it.
+     */
+    default void setHudProfile(com.openggf.level.objects.HudProfile profile) { }
+
     /** True until the run has ended. */
     boolean isActive();
 }

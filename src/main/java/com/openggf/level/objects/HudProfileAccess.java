@@ -20,6 +20,18 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").installProfile(profile);
     }
 
+    /** A run's presentation override; null reveals the current destination's profile. */
+    public static void setHostProfile(HudRenderManager hud, HudProfile profile) {
+        if (hud != null) hud.installHostProfile(profile);
+    }
+
+    /** Native HUD origin for the overlay's logical viewport, without changing HUD state. */
+    public static int nativeOriginX(GraphicsManager graphics, int width) {
+        var pipeline = graphics.getUiRenderPipeline();
+        var hud = pipeline == null ? null : pipeline.getHudRenderManager();
+        return hud == null ? Math.max(0, (width - 320) / 2) : hud.nativeOriginX(width);
+    }
+
     public static void setScreenLeftAnchorEnabled(HudRenderManager hud, boolean enabled) {
         Objects.requireNonNull(hud, "hud").setScreenLeftAnchorEnabled(enabled);
     }
