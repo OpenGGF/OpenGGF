@@ -2599,6 +2599,48 @@ public class AudioManager implements MusicRestoreSink {
         playSfx(sound, 1.0f, true);
     }
 
+    /** Native operand ingress for the secondary sound mailbox, independent of GameSound mappings. */
+    void playSecondaryNativeRequest(int nativeId) {
+        mutatorSfxIntent(nativeId);
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        BaseAudioSource source = baseAudioSource;
+        GameAudioProfile profile = source.profile();
+        AudioCommand command = null;
+        if (profile != null) {
+            ensureShadowPresentation();
+            command = commandForNativeRequest(source, nativeId);
+            if (shadowRequestService != null) {
+                requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
+                shadowRequestService.submitSecondarySound(nativeId, command);
+                return;
+            }
+        }
+        // Fallback consequences may call public controls; the raw intent already belongs
+        // to this submission and must not be observed again through those controls.
+        mutatorSubmissionDepth++;
+        try {
+            if (command instanceof AudioCommand.PlayMusic music) {
+                requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
+                admitMusicWithoutRequestService(source, music.musicId());
+                return;
+            }
+            if (profile != null && profile.handleSystemCommand(nativeId, this)) {
+                requestObserver.onRequested(AudioRequestObserver.RequestClass.COMMAND, nativeId);
+                return;
+            }
+            requestObserver.onRequested(sfxRequestClass(nativeId), nativeId);
+            if (isRingSpeakerToggleRequest(nativeId)) {
+                playRingWithoutRequestService(nativeId, 1.0f);
+                return;
+            }
+            playBaseSfx(source, nativeId, 1.0f);
+        } finally {
+            mutatorSubmissionDepth--;
+        }
+    }
+
     private void playSfx(GameSound sound, float pitch, boolean secondaryRequest) {
         Integer observedId = sound == GameSound.RING
                 ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
@@ -2625,20 +2667,24 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         if (sound == GameSound.RING) {
-            // Suppression precedes the driver's ring-speaker selection.
-            // The registry still rejects all other SFX at admission.
-            if (deferredReverseLogicalSnapshot != null
-                    ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
-                    : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
-                observeBlockedRingAdmission(rawSoundId);
-                return;
-            }
-            playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
-            ringLeft = !ringLeft;
+            playRingWithoutRequestService(rawSoundId, pitch);
             return;
         }
 
         playGameSfxResolved(sound, pitch);
+    }
+
+    private void playRingWithoutRequestService(Integer rawSoundId, float pitch) {
+        // Suppression precedes the driver's ring-speaker selection.
+        // The registry still rejects all other SFX at admission.
+        if (deferredReverseLogicalSnapshot != null
+                ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
+                : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
+            observeBlockedRingAdmission(rawSoundId);
+            return;
+        }
+        playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
+        ringLeft = !ringLeft;
     }
 
     /** Reports the caller-owned discard before ring-speaker selection mutates. */

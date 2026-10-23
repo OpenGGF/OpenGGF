@@ -3524,3 +3524,93 @@ Consumed invocation XML/text/log/runtime outputs are removed after readback;
 compiled outputs are retained. The frozen659 broad smoke and separately owned
 Slot/audio work remain distinct epochs. This pass does not waive ordinary route
 failures, establish whole-candidate smoke, activate providers or open Main/push.
+
+
+### Internal secondary native audio ingress prerequisite — 2026-10-23
+
+This isolated successor starts at `659b02c98a16da0723ef5f222acdc60ab7b0838f` on
+`bugfix/ai-secondary-native-audio-20261023`. The sole production changes are the
+unannotated, manager-injected `AudioManagerInternalAccess` bridge, its
+package-private `AudioManager.playSecondaryNativeRequest(int)` target, and an
+exact private extraction of the existing typed-ring fallback block. The ring
+block retains every statement and its order, with only indentation and wrapper
+changes. Existing public raw SFX, music and native music-mailbox ingresses are
+unchanged. No creator API signature, version, descriptor, field, caller, profile,
+clock, chip, producer or bank-domain owner changes.
+
+The new ingress reports `mutatorSfxIntent` before replay suppression; suppressed
+requests do not reach raw observation, a mailbox, dispatch or ring selection.
+Forward requests use the existing native classifier and secondary submission.
+The raw observer retains existing SFX-ingress identity exactly once; native
+`98` becomes a `PlayMusic` consequence. Without a request service, the actual
+classified `PlayMusic.musicId` enters the existing music admission helper,
+including native `91` to engine `89`. Calling public raw SFX fallback was
+rejected because it repeats intent/request observation; calling raw SFX for
+`98` would also lose music classification. Only new fallback dispatch brackets
+the existing mutator submission depth in `try/finally`: real profile callbacks
+can re-enter command mutators, but their music/SEGA/ring/SFX paths do not call
+the raw request observer. No global observer suppression is introduced.
+
+The new ROM-backed test exercises the actual S2 profile/request service and
+loader. Same-pass `98` then `B5` leaves only ring `CE`; reversed operands leave
+only Music98. Both writes are SFX1 submissions, with one SFX1/physical-slot1
+transfer. Pending snapshots restore and replay once for both operands. Further
+controls cover once-only raw observation, mutator-before-suppression, no-service
+music aliases, shared ring alternation, raw SFX, real S2 SEGA system handling,
+original thrown identity/depth restoration, and the injected manager. These are
+ingress proofs only: P1/P2 caller and bank-domain composition remains separately
+owned and unqualified.
+
+Validation is one eight-class ordinary focused request, with a second allowed
+only after a changed-source correction. Before selection, all eight exact Java
+class identities were confirmed present and nonempty; API signature coverage
+has eleven existing test methods. Actual Java25/Lua5.4/PowerShell preflight
+passes without executing tests. The original absolute S2 REV01 ROM at
+`${OPENGGF_ROM_DIR}/Sonic The Hedgehog 2 (W) (REV01) [!].gen`
+was verified as CRC32 `7B905383`, SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. No ROM files or links were changed.
+The exact focused command and terminal result follow after readback.
+
+Focused request `82330` exits 0 on the pinned base plus these owned changes:
+57 distinct identities in eight XML suites, zero failures, errors or skips.
+The class counts are `TestAudioSecondaryNativeRequest` 12,
+`TestSonic2SoundRequestService` 4, `TestSonic2NativeMailboxMusicRoutes` 3,
+`TestSonic2NativeSoundTestRequests` 4, `TestAudioManagerRawRingRequestAlternation` 5,
+`TestAudioManagerRewindSuppression` 12, `TestAudioManagerDiagnosticObserverLease` 6,
+and `TestModApiSignatureSurface` 11. The new twelve and existing API eleven
+actual testcase identities were read back, rather than inferred from selectors.
+All eight suites report Java 25.0.5, the owned worktree cwd, surfaceless EGL,
+the exact selector and all three original absolute ROM properties. No dump files
+were produced. Queue wait is 497 seconds; Maven execution is 37.905 seconds.
+Build-only `test-compile` had already passed in 1:28. There were no failed test
+requests and no corrective or second ordinary request. Existing FAST/NONE and
+synthetic fallback missing-WAV/no-config warnings do not qualify native timing.
+
+The executed command, with launcher/display variables unset, is shown below.
+`OPENGGF_ROM_DIR` denotes the verified original ROM directory; the actual run
+passed its original absolute paths directly. The documentation uses this
+variable to preserve the repository resource policy:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestAudioSecondaryNativeRequest,TestSonic2SoundRequestService,TestSonic2NativeMailboxMusicRoutes,TestSonic2NativeSoundTestRequests,TestAudioManagerRawRingRequestAlternation,TestAudioManagerRewindSuppression,TestAudioManagerDiagnosticObserverLease,TestModApiSignatureSurface' \
+  test -B
+```
+
+The frozen/tested Git blob pins remain `c3146c48ab564b915f11541365d56b37ee802638`
+(`AudioManager`), `a7b8ee9946ca0a99e36f267432490a19519343e9` (internal bridge),
+and `786124ce3b90c2e79aef7bfc77d1873a098463be` (new test). Independent read-only
+source review found no blocking issue, including actual nested callback paths
+for separate raw/mutator observation. The normal-hook local successor records
+all seven mapped trailers and the parsed final GPT-6.1-Sol co-author line. No
+prerelease note is warranted for this unused prerequisite. Consumed owned raw
+Maven/XML/text diagnostics are removed after readback; compiled outputs and the
+useful unmerged tree are retained. No push, PR, Main change, activation, broad
+smoke, structural guard loop, native capture, chip or route job was performed.
+Caller/native bank-domain and full native publication limits remain open.
