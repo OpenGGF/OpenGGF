@@ -2491,3 +2491,24 @@ The final source/record commit IDs are recorded below and in the task STATUS.
 No forward-rendering algorithm changed; the prior a605 round-2 films retain
 their original source provenance. Rewind ownership restoration is established
 by the production lifecycle matrices, not inferred from those earlier films.
+
+
+### Source and handback record
+
+First resumed repair: `0a13b84ab` (central codec/policy, null reference, source
+identity and test/guard corrections). Final production-router correction:
+`cc254dabfce972811b3d302266dbf95b39f3ee49`. The final 2,591-test focus, 15-test clean environment check and fresh
+718-test guards above exercised the same two Java source changes committed in
+that correction; only documentation was added after those checks. The earlier
+round commits remain `d8e441fbf`, `2dcd4dffa` and `a60509304`, with hook correction
+`9aec4bce0` retained. No merge, push or pull request was performed.
+
+The instruction/skill mirrors, diff whitespace, added evidence link/anchor and
+qualification recipe's Bash syntax were checked. The prerelease changelog folds
+ownership into its existing Stageplay entry; no public API, configuration key,
+format, native routine or version changed in this repair. The task worktree is
+retained for its lead's integration. Editor `7cfd3b5` and its unknown untracked
+configuration example remain untouched. Consumed category diagnostics were
+acknowledged; temporary logs/messages from the resumed commands are discarded
+after their results are recorded here. The final outside-repository STATUS
+contains the exact final HEAD and remaining limits.
