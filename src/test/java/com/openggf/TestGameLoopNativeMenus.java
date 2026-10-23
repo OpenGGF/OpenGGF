@@ -54,12 +54,38 @@ class TestGameLoopNativeMenus {
         when(modeProvider.optionsScreen()).thenReturn(options);
         var fixture = fixture(TitleScreenProvider.TitleScreenAction.OPTIONS, modeProvider);
 
+        var fade = mock(com.openggf.graphics.FadeManager.class);
+        fixture.loop.fadeManager = fade;
+
         invoke(fixture.loop, "doExitTitleScreen");
 
         assertEquals(GameMode.OPTIONS, fixture.loop.getCurrentGameMode());
         assertSame(options, fixture.loop.getNativeMenuScreen());
         verify(options).initialize();
+        verify(fixture.title).consumeExitAction();
+        verify(fade, never()).startFadeToBlack(any());
+        verify(fade, never()).startFadeFromBlack(any());
         assertNull(fixture.loop.resolveGameplayModeContext().getLevelManager().getCurrentLevel());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void unavailableOptionsReturnsToTitleWithoutLoadingLevelOrGenericFade(boolean providerPresent)
+            throws Exception {
+        var fixture = fixture(TitleScreenProvider.TitleScreenAction.OPTIONS,
+                providerPresent ? mock(NativeTitleModeProvider.class) : null);
+        var fade = mock(com.openggf.graphics.FadeManager.class);
+        fixture.loop.fadeManager = fade;
+
+        invoke(fixture.loop, "doExitTitleScreen");
+
+        assertEquals(GameMode.TITLE_SCREEN, fixture.loop.getCurrentGameMode());
+        assertNull(fixture.loop.getNativeMenuScreen());
+        verify(fixture.title).consumeExitAction();
+        verify(fixture.title).initialize();
+        assertNull(fixture.loop.resolveGameplayModeContext().getLevelManager().getCurrentLevel());
+        verify(fade, never()).startFadeToBlack(any());
+        verify(fade, never()).startFadeFromBlack(any());
     }
 
     @Test
@@ -131,7 +157,7 @@ class TestGameLoopNativeMenus {
     private static Fixture fixture(TitleScreenProvider.TitleScreenAction action,
                                     NativeTitleModeProvider provider) {
         var title = mock(TitleScreenProvider.class);
-        when(title.consumeExitAction()).thenReturn(action);
+        when(title.consumeExitAction()).thenReturn(action, TitleScreenProvider.TitleScreenAction.OTHER);
         var module = new DelegatingGameModule(new Sonic2GameModule(), "test:native-menu") {
             @Override public TitleScreenProvider getTitleScreenProvider() { return title; }
             @Override public <T> T getGameService(Class<T> type) {

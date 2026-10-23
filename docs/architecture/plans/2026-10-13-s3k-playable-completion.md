@@ -31390,3 +31390,93 @@ and any Main integration window. Subsequent develop advances are separate epochs
 from pinned d9. Maintained route failures remain open; no full-suite, native-chain,
 whole-campaign or delivery-wide green claim is made. Raw owned diagnostics are
 consumed after readback, without archives or validation receipts.
+
+
+### Common-smoke native title fixture correction — 2026-10-23
+
+Root's common659b02c98 single combined smoke reports716T/3F/0E/0S in its first
+two completed batches. All three failures are existing TestGameLoop fixtures:
+testRealSonic2TitleScreenAdvertisesOnePlayerExitAction expected ONE_PLAYER but
+received OTHER; testTitleScreenExitHandlerUsesExplicitRouteResolutionWithoutStartingSecondFade
+and testExitTitleScreenRoutesLevelWithoutGenericFade both supplied OPTIONS yet
+expected LEVEL, receiving TITLE_SCREEN instead. That smoke continues under Root's
+sole observer; this separately bounded scope does not restart or narrow it.
+
+The owning native title/router source is byte-identical between Root1d4375 and
+PR534438, so there is no union-loss attribution. S2's real manager starts/reset
+with OTHER, assigns a launch token only at active/intro-complete Start, then
+consumes back to OTHER. The test now uses exactly the existing native-control
+fixture's four ready prerequisites, exercises neutral then an actual logical
+Start edge, and asserts OTHER→ONE_PLAYER→OTHER without writing the action.
+The S1 default-action control remains unchanged.
+
+The two level-fallback fixtures are renamed testOtherTitleExitHandlerUsesExplicitLevelFallbackWithoutStartingSecondFade
+and testOtherTitleExitRoutesLevelWithoutGenericFade and explicitly supply OTHER.
+Both retain LEVEL/load(0,0)/no generic black-fade assertions, with an added spy
+check that the offered Data Select provider is never initialized. OPTIONS remains
+a real native route: the connected-provider control retains OPTIONS/initialized
+screen/no current level; absent and disconnected provider controls retain TITLE/
+no screen/no current level/no generic fade. Mock action consumption is one-shot
+and verified once. No expected-value relaxation, native-menu bypass or production
+change is justified by the source audit.
+
+NEW scope base534438 owns only TestGameLoop, TestGameLoopNativeMenus and this
+existing plan; four-class focused selection is TestGameLoop,
+TestGameLoopNativeMenus, com.openggf.game.sonic2.titlescreen.TestSonic2NativeTitleControls
+and com.openggf.game.startup.TestStartupRouteResolver. It retains the preceding
+normal queued Maven command/environment/three original ROM properties, with its
+own fresh reports/tmp/diagnostics namespace. At most two necessary requests are
+allowed; unchanged retries, broad/route/native/GPU jobs and PR/Main pushes are
+excluded. Work12:30/review-cleanup13:00/expiry13:15UTC. Results follow only after
+actual XML/properties/streams and source readback.
+
+
+The sole request68566 completed EXIT0 at12:06:49UTC: **119 distinct tests,
+0 failures, 0 errors, 0 skips**, actual XML totals TestGameLoop101,
+TestGameLoopNativeMenus7 (including both unavailable-provider iterations),
+TestSonic2NativeTitleControls3 and TestStartupRouteResolver8. All three renamed
+regressions and the connected OPTIONS control executed. Printed queue wait398s,
+Maven33.601s; individual XML suite times2.275/0.114/0.031/0.005s respectively
+(overlapping orchestration/compiler/parent durations are not inferred from these).
+4617 test sources compiled release25 inside this one lifecycle; main was up to
+date. All four XMLs report Java25.0.5, explicit surfaceless-EGL, the intended WT,
+its own test/classes classpath and all three verified original absolute ROM paths.
+All testcase identities, failures/errors/skips, properties and streams were read.
+The compiler's18 deprecation warnings, FAST-without-manifest fallback warnings
+and deliberate deferred-load/IO-failure test diagnostics remain warnings/controls,
+not native timing, missing real assets or route qualification.
+
+Both test SHA256s remained exactly695fffff77c47d2c65a7d69aaf38c7619c64dfa5493c2ac3e114509a1a077415
+and d4de4d5e0bf8ef4e86c7b1d51eb33a829f0b2cd9a074386b6796bd76647a3bdf
+before/after execution; all four owning runtime pins and the complete frozen diff
+also matched. Only this subsequent factual Plan append follows the tested source.
+No second request is necessary; its unspent allowance closes. Independent native
+source/delta review found no material finding. Production, POM, API, original ROMs
+and every other test remain unchanged. This is a bounded local test-fixture leaf,
+not a new all-smoke result or a waiver of the common run's original three reds.
+Root retains final common-source attribution and the sole combined-smoke lead;
+no new PR-head push, Main integration, route, native or passive observation opens.
+
+Exact one-request command below uses `PROJECT_ROOT` for the original checkout
+and ROM directory and `TASK_WORKTREE` for the retained PR worktree; the executed
+absolute argv is recorded in the scope registry. These variables refer to the
+existing paths, without new ROM links or copies. The owned output namespace is
+consumed after readback and is not a retained validation receipt.
+
+```bash
+OUT="$TASK_WORKTREE/target/pr223-native-title-fixture-correction-20261023/focus-1"
+cd "$TASK_WORKTREE"
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  /usr/bin/python3 "$PROJECT_ROOT/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=com.openggf.TestGameLoop,com.openggf.TestGameLoopNativeMenus,com.openggf.game.sonic2.titlescreen.TestSonic2NativeTitleControls,com.openggf.game.startup.TestStartupRouteResolver \
+  "-Dopenggf.surefire.reports=$OUT/reports" "-Dopenggf.test.tmpdir=$OUT/tmp" \
+  "-Dopenggf.test.diagnostics=$OUT/diagnostics" \
+  "-Dsonic1.rom.path=$PROJECT_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$PROJECT_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$PROJECT_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
