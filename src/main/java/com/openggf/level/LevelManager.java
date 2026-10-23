@@ -886,12 +886,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * resume.
      */
     public void restoreEditorLevelView(Level editorLevel) {
-        authoringView = true;
-        // The editor has no native V-int publication. Retire only presentation latching/fade,
-        // so its palette edits and static ROM art are visible without advancing gameplay.
-        com.openggf.graphics.PaletteUploadPresentation.release(graphicsManager);
-        graphicsManager.clearPaletteFadePresentation();
-        Level restoredLevel = editorLevel != null ? editorLevel : worldSession.getCurrentLevel();
+        Level restoredLevel = LevelEditorViewPreparation.prepare(this, editorLevel, worldSession);
         if (restoredLevel == null) {
             return;
         }

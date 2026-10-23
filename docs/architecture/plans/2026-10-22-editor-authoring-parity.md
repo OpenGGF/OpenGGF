@@ -328,8 +328,8 @@ The desktop consumer passed all 27 cases except its two explicit Stageplay
 picture opt-ins; all 29 final images were reviewed, and a fresh consumer run
 after the storage change reproduced their bytes exactly. API snapshot output
 exactly matches the merged 0.7 candidate pin; no version/descriptor change.
-The one broad smoke run remains attributed to frozen source `7fdfc9518`; its
-final totals and inherited-failure comparisons will be recorded after completion.
+The one broad smoke run is attributed to frozen source `7fdfc9518`; final
+totals and inherited-failure comparisons follow below.
 
 A final Rings viewer check found the shared scene still showed only the cursor
 for the ring brush. It now uses the existing ROM ring texture at half opacity
@@ -342,3 +342,38 @@ The Rings follow-up passed 25 focused preview/HUD/rendering cases with no skips,
 and the desktop consumer passed 27 cases with only the two explicit Stageplay
 capture skips. Packaging passed in both trees; the six new Rings images were
 viewed, with the other 23 unchanged.
+
+
+Final merged-base smoke `20261023T101040Z-1bfcc7a1` completed all 3,640
+candidates: 73 ordinary batches plus fresh guards. Ordinary results were 38,012
+tests, ten failures, six errors and 93 skips (6,521.42 execution seconds); guards
+were 722 tests, one failure and no errors/skips (257.18 seconds). All failure and
+skip records were inspected, none omitted, and diagnostics acknowledged/deleted.
+The runner session returned 143 after complete failed-run summaries; the exact
+cause is unknown. This is a completed red validation result, not a green command.
+
+Fourteen failing/errored cases belonged to this task: nine prepared-document
+reload assertions, three generic mutable-snapshot palette errors, the opaque
+checkpoint ownership error and the LevelManager source-size guard. The first
+thirteen were repaired and checked in the focused recovery above. The size gate
+found 3,147 effective lines against the existing 3,144 budget. A package-private
+`LevelEditorViewPreparation` now owns authoring-source selection and presentation
+latch/fade retirement, preserving statement order without gameplay ticks or
+retained state. The budget is unchanged. All 135 final focused cases passed with
+no errors/skips, including that exact gate, architectural rules, rendering,
+backdrop, API pins and all 60 required S3K cases. Packaging also passed.
+
+Three inherited cases reproduce exactly on merged develop `695fe0379` and the
+recovery source: HCZ native pixel verification's GLFW initialization assertion,
+and both parameterizations of `TraceCaptureBootDimensionsTest` after
+`TestSurfacelessEglContext` clears the EGL property in a reused JVM. The latter
+is the existing briefing measurement hazard. Matched selections produced the
+same identities/assertions/errors with no skips; unrelated platform helpers
+were not changed. The five older guard failures from base `8aa692b04` are fixed
+upstream: all 75 matched guard cases passed on both current and merged develop.
+
+The 93 ordinary skips cover explicit capture/measurement/soak opt-ins, unavailable
+GLFW/legacy graphics or isolated audio contexts, optional mod fixture JARs,
+InfiniteSonic act prerequisites, a CPZ spin-tube prerequisite and local audio
+references. No required primary-ROM/S3K check skipped. This is bounded smoke plus
+focused recovery, not a green rerun or release/full-suite certification.
