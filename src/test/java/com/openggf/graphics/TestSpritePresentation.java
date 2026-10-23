@@ -97,7 +97,7 @@ class TestSpritePresentation {
             assertSame(graphics, host);
             assertFalse(host.isSpriteSatCollectionActive(), "native admission finishes before the adapter runs");
             assertEquals(1, entries.size());
-            assertEquals(3, entries.getFirst().firstPatternIndex());
+            assertEquals(3, entries.getFirst().piece().firstPatternIndex());
             assertEquals("sonic", entries.getFirst().presentationSubject().id());
             calls.incrementAndGet();
             throw new IllegalStateException("adapter failed");
