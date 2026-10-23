@@ -54,6 +54,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   executes bounded line transforms over caller-owned Word RAM. Opt-in
   `TestCdStampNativeContinuations` checks complete external RAM payloads;
   scheduling and ownership remain outside the transform. Origin: 2026-10-23 CD-05.
+- [CD PCM sample device](../../src/main/java/com/openggf/game/soniccd/device/pcm/CdPcmDevice.java)
+  owns integer chip state and bounded sample work. The
+  [PCM source oracle](../../tools/soniccd/pcm_oracle_check.py) checks constructed
+  expectations against pinned integer C with delta collection; it is secondary
+  source-model evidence, not official-core audio or resampling proof. Origin: 2026-10-23 CD-06.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

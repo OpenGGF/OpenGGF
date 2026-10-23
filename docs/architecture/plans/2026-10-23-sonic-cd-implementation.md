@@ -1082,3 +1082,61 @@ owning only new stage-inventory tools and external evidence. The separate
 `sonic-cd-native-owner-ledger-20261023-r1` continues its source-built core work.
 The lead owns future compilation, validation and local commits. No branch is
 being merged or pushed.
+
+### Verified PCM sample device and owner-event handoff
+
+The pure stamp transform is committed locally as `372af0e6f`. The next PCM
+unit adds explicit register/RAM access boundaries, eight-channel integer
+sampling, source-defined loop/sign/pan/envelope/clipping behavior and deep
+immutable capture/restore. Work is bounded to 4,096 samples per request. Zero
+work does not service time. CPU synchronization, PCM driver execution, host
+volume, blip synthesis, resampling and live audio integration remain external.
+
+At `372af0e6f` plus the eight PCM files, the following focused command passed
+36 tests, zero failures, errors or skips. Maven took 1 minute 18 seconds and
+queue admission reported zero wait. Session `8220` is finished.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdPcmDevice,TestCdPcmState' test -B
+```
+
+Four Python checks passed separately, covering twenty constructed integer cases
+against fingerprint-verified pinned C with stub delta collection. That harness
+does not include resampling and is not a Java-vs-C differential run, official
+native capture or hardware proof. Fresh review
+`sonic-cd-pcm-review-20261023-r1` returned bounded PASS on all eight files,
+including the source fingerprints and meaningful literal expectations.
+The reviewed production device SHA256 is
+`cf5183e0e5243159592b9482c42e1fc8fcce6eced9ada7d9a81d77b81c4d2340`.
+New task `sonic-cd-pcm-native-fixtures-20261023-r1` owns only a new tool prefix
+and separate native builds/captures to observe real PCM blocks. Current Java
+and the completed owner-ledger tools are frozen inputs to it.
+
+The native-owner build unit returned fifteen stable tools and a separate pinned
+R3 core. It captured 103,646 USA-title events with CPU identity, native access
+width, owner commits, separate graphics start/busy-clear/final-output phases,
+and explicit reset/rebase epochs. Repeated disabled/enabled captures and
+120-frame restores matched AV and sampled public CPU/RAM views; all four
+instrumented checkpoints are byte-identical without a mask. Twenty-four Python
+tests and actual identity/layout/overflow controls passed. Fresh task
+`sonic-cd-native-owner-review-20261023-r1` is reviewing that unit read-only.
+Its final build and event artifacts remain external. No owner tool is committed
+at this checkpoint. Source-model CDD seek approximation is not physical-drive
+timing. CDC DMA completion and enabled level-3 IRQ remain unexercised.
+
+One original official cold checkpoint hash differed despite matched AV/public
+views/restore output. That earlier producer retained no raw state, so the
+differing bytes cannot be attributed. The lead performed two additional
+official-core boots using the immutable R3 compiled producer in control mode.
+Both complete 2,026,393-byte states match byte-for-byte and hash to
+`7bda4839945dfec7d9419d9a21692ada9603a10baa00d3c16845981279cc479a`.
+Their AV/views/restored continuation streams also agree, and all eight installed
+runtime pins remain unchanged. This bounded repeat did not reproduce or explain
+the historical difference. It does not retrospectively turn that pair into a
+raw-state pass or establish general cold-state determinism. The exact records
+and raw follow-up states remain in Downloads with the owner-ledger research.
+
+The stage-inventory task continues independently. No task-owned Maven or native
+diagnostic process remains active at this checkpoint; delegated work may create
+its own bounded external builds. The lead owns subsequent target writes, Git
+and validation. All commits remain local, and no playable CD module exists yet.
