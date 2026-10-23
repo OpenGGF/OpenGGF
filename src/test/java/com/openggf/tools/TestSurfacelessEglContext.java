@@ -1,6 +1,8 @@
 package com.openggf.tools;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.BufferUtils;
@@ -18,19 +20,31 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 class TestSurfacelessEglContext {
-    private String previousBackend;
+    private static String incomingBackendProperty;
+    private String previousBackendProperty;
+
+    @BeforeAll
+    static void captureIncomingBackendProperty() {
+        incomingBackendProperty = System.getProperty(SurfacelessEglContext.PROPERTY);
+    }
+
+    @AfterAll
+    static void fixtureLifecyclePreservesIncomingBackendProperty() {
+        assertEquals(incomingBackendProperty, System.getProperty(SurfacelessEglContext.PROPERTY),
+                "Fixture lifecycle must preserve the incoming headless backend selection");
+    }
 
     @BeforeEach
-    void rememberBackend() {
-        previousBackend = System.getProperty(SurfacelessEglContext.PROPERTY);
+    void capturePreviousBackendProperty() {
+        previousBackendProperty = System.getProperty(SurfacelessEglContext.PROPERTY);
     }
 
     @AfterEach
-    void restoreBackend() {
-        if (previousBackend == null) {
+    void restorePreviousBackendProperty() {
+        if (previousBackendProperty == null) {
             System.clearProperty(SurfacelessEglContext.PROPERTY);
         } else {
-            System.setProperty(SurfacelessEglContext.PROPERTY, previousBackend);
+            System.setProperty(SurfacelessEglContext.PROPERTY, previousBackendProperty);
         }
     }
 

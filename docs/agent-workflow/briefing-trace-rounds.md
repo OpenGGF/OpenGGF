@@ -152,14 +152,16 @@ after drawing. A transparent native floor-art tile can have valid collision, so
 contact oracles must distinguish missing art from a displaced rendered surface.
 
 A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
-`TestSurfacelessEglContext` clears `openggf.headless.gl`; a later
-`TraceCaptureBootDimensionsTest` in the same JVM then tries GLFW even when
+`TestSurfacelessEglContext` formerly cleared `openggf.headless.gl`; a later
+`TraceCaptureBootDimensionsTest` in the same JVM then tried GLFW even when
 JAVA_TOOL_OPTIONS selected EGL at launch. The same order reproduced both boot
 errors on the pinned baseline, while the isolated dimension check with explicit
 `-Dopenggf.headless.gl=surfaceless-egl` passed. JAVA_TOOL_OPTIONS also prepends a
 launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
 these cases with bounded matched tests and preserve their coverage limits; a
-launch setting alone does not prove which backend a later test used.
+launch setting alone does not prove which backend a later test used. The fixture
+now restores its incoming property after each test, intended to prevent this reuse
+contamination without treating the property as immutable.
 
 An inverse-affine pixel oracle can disagree with valid GPU edge ownership
 (2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
@@ -538,11 +540,13 @@ reporting a known launcher-prefix failure. See the
 [S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
 
 Reused test JVMs can lose inherited graphics properties (2026-10-14, editor smoke):
-`TestSurfacelessEglContext` clears `openggf.headless.gl` in its existing teardown.
-The later TraceCaptureBootDimensions cases then take the default GLFW path and
-fail before gameplay boot. Standalone baseline/current pairs pass; the ordered
-selection-plus-dimensions pair reproduces both errors on both commits. Check actual
-fork properties and predecessor cleanup before blaming engine changes or EGL.
+`TestSurfacelessEglContext` formerly cleared `openggf.headless.gl` in its teardown.
+The later TraceCaptureBootDimensions cases then took the default GLFW path and
+failed before gameplay boot. Standalone baseline/current pairs passed; the ordered
+selection-plus-dimensions pair reproduced both errors on both commits. The fixture
+now restores its incoming property per test to prevent this reuse contamination.
+Check actual fork properties and predecessor cleanup before blaming engine
+changes or EGL.
 See the [editor evidence](../architecture/designs/2026-10-14-editor-completion.md#combined-validation-and-baseline-attribution).
 
 Repeated Surefire goals do not imply independent test executions (2026-10-15,
