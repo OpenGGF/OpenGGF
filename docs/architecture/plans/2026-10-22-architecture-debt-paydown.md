@@ -712,3 +712,18 @@ matrices and unrelated smoke are not repeated.
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestFastDeathRestart,TestHostedRunLeadIn,TestLobbyAreaRunHeadless,TestHostedRunController,TestAbstractPlayableSpriteRewindCapture,TestGameplayRunPolicy,TestGameLoopDeferredSetupRewind,TestLiveRewindOwnerLifetime,TestLevelManagerRewindBoundary,TestModSceneActBridge,TestSatGhostLayering,TestGameLoopSpecialStageRewindGate,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' -Dsonic1.rom.path="$ROM_DIRECTORY/s1.gen" -Dsonic2.rom.path="$ROM_DIRECTORY/s2.gen" -Ds3k.rom.path="$ROM_DIRECTORY/s3k.gen" test -B
 ```
+
+At `07395aaaf125adfc8171d1ffd16b09266bf1b7e7`, all six structural/API
+classes passed 172 cases with no skips (51 seconds of admission wait, 1:58 of
+Maven time). All seventeen behavioral class files, including their nested ROM
+cases, passed 164 distinct cases with no skips (211 seconds waiting, 48.326
+seconds of Maven time). This exercises all nine fast/stock-death cases across
+S1/S2/S3K, hosted lead-in and all three lobby worlds, all seventeen owner
+controls, deferred publication, scene boundaries, movement capture and the
+required S3K loading/bootstrap checks. Every expected class and exact XML case
+was inspected; all 31 consumed suites, including empty nested containers, were
+removed. No task validation jobs remain. A fresh fetch still reports published
+develop at `06cbd7316`; the verified executable state is ready for normal
+fast-forward integration and push. Subsequent edits are evidence prose only.
+The earlier smoke's precisely inherited failures and explicit coverage limits
+remain; these focused passes do not convert it into a green combined invocation.
