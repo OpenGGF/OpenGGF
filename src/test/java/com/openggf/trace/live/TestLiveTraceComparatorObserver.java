@@ -17,6 +17,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.RuntimeStateContaminationExtension;
@@ -356,12 +357,13 @@ class TestLiveTraceComparatorObserver {
     @Test
     void playableAnimationOnlyComparisonWaitsForPostProductionPrefix()
             throws Exception {
-        TraceData source = TraceData.load(Path.of(
-                "src/test/resources/traces/s3k/lbz_completerun"));
+        // The rows and CPU events below are synthetic; only the real metadata is consumed.
+        TraceMetadata metadata = TraceMetadata.load(Path.of(
+                "src/test/resources/traces/s3k/lbz_completerun/metadata.json"));
         TraceFrame previous = TraceFrame.executionTestFrame(0, 10, 0x100, 0);
         TraceFrame current = TraceFrame.executionTestFrame(1, 11, 0x100, 0);
         TraceData trace = TraceFixtures.trace(
-                source.metadata(),
+                metadata,
                 List.of(previous, current),
                 Map.of(
                         0, List.of(cpuState(0, 0)),

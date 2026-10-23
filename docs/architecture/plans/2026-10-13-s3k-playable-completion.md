@@ -31829,3 +31829,17 @@ source/coverage attribution. No budgets, ArchUnit freezes, assertions or
 per-caller enforcement were loosened. This is a bounded merge checkpoint,
 not a combined-smoke or PR-green result. Latest-develop0b2 receipt and its
 changed-test checks follow separately before qualified head publication.
+
+The e633 reconciliation is normal-hook merge f9277fb623760c68e0c078aa16bdc330d7a01eef.
+Newdevelop0b2c3c2a then merges cleanly: exactly seven incoming paths and all
+four changed test blobs exact upstream. Actual64638 focused43T0F0E0skips,
+four XML/classes, Maven51.016s, Java25.0.5.0.2/EGL/original ROM properties and
+all identities/streams read. Final5ae6c153 code/resource/POM/tooling frame
+postmatches. Probe examples are unchanged from f9277; each probe still runs
+through its fresh classloader. No production runtime, API, queue or guard
+implementation changes in this later delta; earlier qualified runtime/guard
+checks retain their bounded source attribution. No duplicate broad, route,
+native capture or diagnostic observation ran. Final branch policy and normal
+PR-head publication follow; draft/skipped checks are not a green delivery.
+Root will prepare the updated final common smoke count/cost/stopping plan
+and wait for explicit Farrell approval before any broad or manual CI execution.
