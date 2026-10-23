@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
@@ -26,6 +27,15 @@ public final class ObjectManagerInternalAccess {
     public static void enableNativeCompetitionStreaming(ObjectManager manager,
                                                          NativeCompetitionObjectStreaming streaming) {
         manager.nativeCompetitionStreaming().enableNativeCompetitionStreaming(streaming);
+    }
+
+    /** Bind an actual native full-delete memory writer; the callback is structural, not rewind state. */
+    public static void enableNativeCompetitionStreaming(ObjectManager manager,
+            NativeCompetitionObjectStreaming streaming, IntConsumer occupiedFullDeleteWriter) {
+        Objects.requireNonNull(occupiedFullDeleteWriter, "occupied full-delete writer");
+        var collaborator = manager.nativeCompetitionStreaming();
+        collaborator.enableNativeCompetitionStreaming(streaming);
+        collaborator.occupiedFullDeleteWriter = occupiedFullDeleteWriter;
     }
 
     /** Bind before reset. One source-order pass, independent of either camera. */
@@ -131,6 +141,7 @@ public final class ObjectManagerInternalAccess {
         private final Predicate<ObjectInstance> removeDynamicObjectInstance;
         private final IntConsumer releaseSlot;
         private final Runnable invalidateCaches;
+        private IntConsumer occupiedFullDeleteWriter;
 
         Streaming(ObjectPlacementController placement, ObjectPlacementAdmission placementAdmission,
                 ObjectRegistry registry, SlotAllocator slotAllocator, ObjectSlotLayout slotLayout,
@@ -185,6 +196,7 @@ public final class ObjectManagerInternalAccess {
                 throw new IllegalStateException("Native object streaming requires an active explicit roster");
             }
             placement.configureNativeCompetitionStreaming(streaming);
+            occupiedFullDeleteWriter = null;
         }
 
         boolean upfrontActive() {
@@ -307,6 +319,10 @@ public final class ObjectManagerInternalAccess {
         }
 
         @Override public void unload(int firstSlot, int count) {
+            if (occupiedFullDeleteWriter != null) {
+                unloadOccupiedNativeSlots(firstSlot, count);
+                return;
+            }
             // ObjectsManager_2P_UnloadObjectBlock deletes actual RAM occupants,
             // even when they have moved away from their original placement column.
             List<ObjectInstance> occupants = new ArrayList<>(activeObjects.values());
@@ -327,6 +343,69 @@ public final class ObjectManagerInternalAccess {
                 } else removeDynamicObjectInstance.test(instance);
                 invalidateCaches.run();
             }
+        }
+
+        private void unloadOccupiedNativeSlots(int firstSlot, int count) {
+            int end = Math.addExact(firstSlot, count);
+            if (firstSlot < 0 || count < 0 || end > slotLayout.lastProcessSlotExclusive())
+                throw new IllegalArgumentException("Invalid native full-delete range");
+            // ObjectsManager_2P_UnloadObjectBlock .deleteBlockLoop (s2.asm:33550-33577)
+            // reads the current ID at each physical address, skips ID0 entirely,
+            // then clears respawn before the full SST clear. Never preclear holes.
+            for (int slot = firstSlot; slot < end; slot++) {
+                AbstractObjectInstance owner = currentNativeOwner(slot);
+                if (owner != null) fullDeleteNativeOwner(slot, owner);
+            }
+        }
+
+        private AbstractObjectInstance currentNativeOwner(int slot) {
+            return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(), dynamicObjects, objectCallbacks, slot);
+        }
+
+        private void requireSelectedNativeOwner(int slot, AbstractObjectInstance owner) {
+            if (currentNativeOwner(slot) != owner)
+                throw new IllegalStateException("Native full-delete owner changed at slot " + slot);
+        }
+
+        private void fullDeleteNativeOwner(int slot, AbstractObjectInstance owner) {
+            // Keep the selected receiver's router boundary active even when graph
+            // retirement unregisters it before onRemoved/onUnload callbacks.
+            objectCallbacks.run(owner, () -> {
+                requireSelectedNativeOwner(slot, owner);
+                int id = owner.getLiveObjectId();
+                requireSelectedNativeOwner(slot, owner);
+                if (id == 0) return;
+                if (id < 0 || id > 0xFF)
+                    throw new IllegalStateException("Unknown native full-delete ID at slot " + slot);
+                int respawn = owner.getRespawnStateIndex();
+                requireSelectedNativeOwner(slot, owner);
+                ObjectSpawn spawn = instanceToSpawn.get(owner);
+                if (spawn != null && activeObjects.get(spawn) != owner)
+                    throw new IllegalStateException("Native full-delete placement owner changed at slot " + slot);
+                placement.clearNativeCompetitionRespawnLatch(respawn);
+                occupiedFullDeleteWriter.accept(slot);
+                requireSelectedNativeOwner(slot, owner);
+                if (spawn != null && activeObjects.get(spawn) != owner)
+                    throw new IllegalStateException("Native full-delete placement owner changed at slot " + slot);
+                boolean detached = false;
+                try {
+                    owner.setSlotIndex(-1);
+                    detached = true;
+                    releaseSlot.accept(slot);
+                    if (spawn != null) {
+                        placement.removeFromActiveForUnload(spawn);
+                        removeActiveObject.accept(spawn);
+                    } else if (!removeDynamicObjectInstance.test(owner)) {
+                        throw new IllegalStateException("Native full-delete owner is not registered at slot " + slot);
+                    }
+                    invalidateCaches.run();
+                    owner.onUnload();
+                } finally {
+                    if (detached) objectCallbacks.unregister(owner);
+                }
+                // No slot or spawn cleanup follows notification: a callback may
+                // already have installed the next physical owner at this address.
+            });
         }
     }
 }

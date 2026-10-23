@@ -74,6 +74,59 @@ class TestSonic2NativeCompetitionHost {
     private static final LogicalInputSnapshot NEUTRAL = LogicalInputSnapshot.neutral();
 
     @Test
+    void freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer() throws Exception {
+        assertNull(System.getenv("DISPLAY"));
+        assertNull(System.getenv("WAYLAND_DISPLAY"));
+        var services = EngineServices.current();
+        var configuration = services.configuration();
+        var previous = new EnumMap<SonicConfiguration, Object>(SonicConfiguration.class);
+        for (var key : SonicConfiguration.values()) previous.put(key, configuration.getConfigValue(key));
+        try {
+            configuration.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            configuration.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            configuration.resolveDisplayAspect();
+            try (var boot = new HeadlessGameBoot(320, 224, services)) {
+                var loop = boot.boot(RomTestUtils.ensureSonic2RomAvailable().toPath().toAbsolutePath(), 0, 0);
+                assertInstanceOf(NullAudioBackend.class, services.audio().getBackend());
+                var ordinary = SessionManager.getCurrentGameplayMode().getObjectManager();
+                assertThrows(IllegalStateException.class, () -> NativeSstSlotAccess.readWord2C(ordinary, 56),
+                        "ordinary initialization must not manufacture a native clear");
+                var session = new Sonic2CompetitionSession();
+                var host = new Sonic2NativeCompetitionHost(SessionManager.getCurrentWorldSession().rootGameModule(),
+                        services, loop::setGameplayMode, new UnqualifiedViews(), new UnavailableNativeState());
+                var driver = new Driver(host, session, new CountingInput());
+                startThroughMenu(session, 0);
+                host.loadAct(session, 0, 0);
+                var objects = host.context().getObjectManager();
+                assertNotSame(ordinary, objects);
+                assertNull(NativeSstSlotAccess.currentOwner(objects, 56));
+                assertEquals(0, NativeSstSlotAccess.readWord2C(objects, 56),
+                        "actual native Level_ClrRam must clear an empty represented native bank SST");
+                NativeSstSlotAccess.writeWord2C(objects, 56, 0xFFFF);
+                var registry = host.context().getRewindRegistry();
+                var saved = registry.capture();
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56), "capture is not a clear");
+                driver.tick(NEUTRAL);
+                NativeSstSlotAccess.writeWord2C(objects, 56, 7);
+                registry.restore(saved);
+                assertSame(objects, host.context().getObjectManager());
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56),
+                        "destructive registered graph restore must preserve the cell");
+                driver.tick(NEUTRAL);
+                assertEquals(0xFFFF, NativeSstSlotAccess.readWord2C(objects, 56));
+            }
+        } finally {
+            TestEnvironment.resetAll();
+            previous.forEach(configuration::setConfigValue);
+            configuration.resolveDisplayAspect();
+        }
+    }
+
+    @Test
     void sixRealActsKeepIndependentHumansCanonicalTimersRewindAndTheActLedger() throws Exception {
         assertNull(System.getenv("DISPLAY"), "launch this EGL test with DISPLAY unset");
         assertNull(System.getenv("WAYLAND_DISPLAY"), "launch this EGL test with WAYLAND_DISPLAY unset");

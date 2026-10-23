@@ -4048,3 +4048,192 @@ pass cache or validation receipt is retained. Compiled output and useful
 unmerged source remain. The separately receiving candidate needs its own final
 change-based smoke after source joins/affected fixes; Main, push, provider
 activation and passive SOZ/MHZ observation gates remain closed.
+
+
+### S2 native object-memory lifecycle prerequisite (2026-10-23)
+
+Implementation leaf `bugfix/ai-s2-native-object-delete-20261023` starts from the
+exact committed Root composition `d7849bf4d4a05830a60cb3a57db8a102c05fa3a1`,
+received by clean fast-forward from `659b02c98`. Its T3 workspace is
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-bfb9bebc`; Root owns integration and push.
+No uncommitted Root CNZ correction was copied. Existing submodule/setup state is
+preserved and normal worktree hooks are installed.
+
+Only two production files change. The existing fresh S2 Host initializer clears
+represented WORD2C slots `[0, getLastProcessSlotExclusive())` immediately after
+`level.initObjectManager()`, before streaming binding/reset/publication. Its
+writer retains that exact context/world, level and manager. `Level_ClrRam`
+(s2.asm:4806-4808) is the positive clear owner; allocation, reset, preview,
+reconstruction, editor and seamless initialization do not imply a clear.
+
+The existing Streaming collaborator stores the optional IntConsumer. The new
+three-argument enable binds it after successful common configuration; successful
+legacy two-argument rebinding clears only that new optional field. The unchanged
+configuration routine has only a mutual-exclusion check, nonnull assignment and
+execution-order flag assignment, with no unload callback. Failed configuration
+therefore leaves the previous binding intact. The old unload tail is retained.
+There is no ObjectManager field/method growth, allocator/kernel/reset/resync/
+MarkGone/queue change, new general RAM model, API pin/cap/budget change or native
+cage/prize/caller/audio implementation.
+
+The new delete path walks physical addresses ascending. It resolves the unique
+current live owner through the existing strict owner resolver, then reads its
+native ID through the retained callback boundary. Empty/ID0 cells are untouched;
+unknown IDs and ambiguous owners fail closed. For an occupied cell it reads and
+clears respawn, executes the bound explicit WORD2C clear, revalidates current
+owner and exact placement identity, detaches the selected slot, releases its
+allocation and removes only the selected graph owner before onRemoved/onUnload.
+No slot/spawn cleanup follows notification. This follows
+`ObjectsManager_2P_UnloadObjectBlock` `.deleteBlockLoop`
+(s2.asm:33550-33577), including its ID0 skip and respawn-before-clear order.
+
+Review rejected a single pre-writer placement check: a reentrant writer can
+reload the same placement into another slot, moving the selected owner into the
+dynamic list while the captured spawn names the replacement. A second check
+after the writer now fails before retirement, retaining completed clear/respawn
+and callback effects without deleting that replacement. The focused regression
+uses the existing loader and writer callback, with no future API.
+
+The fresh clear proves zero only at that actual clear event. External/folded SST
+writers without an ObjectInstance remain undiscoverable by currentOwner and
+require their own later invalidation/projection. This slice claims no ongoing
+arbitrary physical RAM knownness, player WORD2C or fixed auxiliary WORD2C
+coverage. Future native cage addresses are the source-qualified bank56..127;
+ordinary cages remain untyped and byte-exact, and ordinary option B remains
+unqualified because arbitrary predecessors lack a proved WORD2C lifecycle.
+Typed publication, known-bit capture, residue and probe rules remain strict.
+
+Old-source request81888 compiled and ran exactly
+`TestSonic2NativeCompetitionHost#freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer`
+on unchanged d784 production. It exited1 with one test, zero assertion failures,
+one error and zero skips: `IllegalStateException: Unknown SST $2C word at slot 0`
+at the post-real-Host-load assertion (test line107); the prior actual ordinary
+UNKNOWN control passed. This is a represented-cell omission observation, not
+player physical RAM qualification. Queue wait818s, Maven1:22; terminal18:04:09Z.
+All XML identities, FES, Java25.0.5/EGL/cwd/three original absolute ROM properties,
+console warning streams and absence of dumps were inspected; consumed own XML/text
+were removed. The final test samples empty native bank56 instead. Build-only
+request86500 is separate: it stopped in test compilation after1:24 on two missing
+RewindTransient reason arguments, corrected before the affected test request;
+it is not behavioral red evidence.
+
+The complete focused selection is the new
+14-case occupied-delete class, the one actual Host method, existing Word2C,
+streaming, upfront placement, manager rewind, native-field callback controls,
+and all four mandatory S3K keepers (both fully qualified LevelLoading classes).
+A separate fresh owning source/ArchUnit/rewind/field/per-game/API selection
+follows final source. No broad/category/native/route/capture jobs are used.
+
+
+Affected request60702 completed18:35:02Z on frozen source
+`5171232400ee6ff0d90397a7c2e375ab668d0578bd167b42cf77f9f98b1d1503`:
+147 unique tests in12 XML suites, zero failures/one error/zero skips. Queue1303s,
+Maven1:27. The actual Host bank56 method passed, as did the20 Word2C,16 legacy
+streaming,12 upfront,18 manager rewind,6 native-field callback controls and all
+mandatory S3K keepers (bootstrap6/decoding3/loading36+7/AIZ8). Thirteen of the14
+new deletion cases passed. The sole error was the new writer-reentry test's
+post-failure read of a still-live untyped Actor at slot56: the strict kernel
+correctly raised UnsupportedOperationException before the test could inspect
+orphan memory. The test now requires that rejection while the owner remains
+live, checks that both owners/allocation/latch survive, then explicitly removes
+the selected dynamic owner through the canonical ordinary API (which does not
+clear WORD2C) before checking the retained prior clear. No production source
+changes follow60702. The one remaining ordinary request selects only this
+failed method; the146 unchanged passing identities remain attributed to60702.
+All147 identities, FES,12 environment/property sets, text reports, recursively
+all105 stderr streams (102189 bytes), absence of dumps and the source pin were
+inspected. Streams contain FAST/NONE, the existing collision negative control
+and deliberate callback fault fixtures. The earlier red's root-level XML stream
+check did not establish that nested testcase streams were empty; its console
+warnings/FES were observed. No empty-nested-stream claim is made.
+
+
+Repair74510 completed18:45:31Z, exit0: the entire failed writer-reentry method
+ran once with zero failures/errors/skips (queue514s; Maven32.262s). Its exact
+XML identity, property set, nested FAST/NONE stderr, text report, absence of dumps
+and final source pin
+`caf90d93d8878f8d35b6907cc00acf657e3007c9568acbebcba32d4f27589fed` were inspected;
+consumed own XML/text were removed. Reversing only this method's assertion patch
+reconstructs51712324 exactly, proving the two production files and all other
+methods/fixtures are unchanged. Bounded affected qualification is146 passing
+identities from60702 plus this repaired identity from74510; this is not a claim
+that a new147-test run was green. The three ordinary-request budget is exhausted.
+
+The command shape is reproduced by this common launch function from the task
+workspace. The actual invocations inlined the same environment/argv and the
+current absolute Root wrapper/original ROM paths. In this example,
+`OPENGGF_QUEUE_WRAPPER` denotes that current absolute wrapper and
+`OPENGGF_ROM_DIR` denotes the verified original ROM directory; variables keep
+machine-local home paths out of committed documentation.
+
+```bash
+s2_lifecycle_maven() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+    -u _JAVA_OPTIONS -u MAVEN_OPTS -u MAVEN_ARGS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+    PATH=/usr/lib/jvm/java-25-openjdk/bin:/usr/bin:/bin \
+    LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+    python3 "$OPENGGF_QUEUE_WRAPPER" \
+    --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+    "-Dsonic1.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+    "$@" test -B
+}
+#81888: old production, original slot0 omission assertion only.
+s2_lifecycle_maven '-Dtest=TestSonic2NativeCompetitionHost#freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer'
+#60702: complete affected selection, including both LevelLoading classes.
+s2_lifecycle_maven '-Dtest=TestNativeCompetitionOccupiedFullDelete,TestSonic2NativeCompetitionHost#freshNativeObjectRamClearBelongsOnlyToTheActualHostInitializer,TestNativeSstWord2C,TestNativeCompetitionObjectStreaming,TestNativeCompetitionUpfrontPlacement,TestObjectManagerRewindSnapshot,TestNativeObjectFieldCallbacks,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+#74510: test-only repair, failed method selected in full.
+s2_lifecycle_maven '-Dtest=TestNativeCompetitionOccupiedFullDelete#writerReentryCannotUseACapturedSpawnToRetireItsNewReplacement'
+#Once-final fresh owning guard JVM; no blanket guard selection.
+s2_lifecycle_maven -Pguards '-Dtest=TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget+objectManagerDelegatesPlacementLifecycleAndVerticalFiltering,TestArchUnitRules,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestPerGameRuleArchitectureGuard,TestModApiSignatureSurface'
+```
+
+All three original ROM files were independently CRC32/SHA-1 verified before
+81888 against the repository identities. No ROM links/copies/renames were made.
+Once-final guard 46669 completed 19:08:09Z, exit 0, on unchanged final caf90 source:
+53 unique tests in six XML suites, zero failures/errors/skips (source 2,
+ArchUnit 32, rewind 4, field 1, per-game 3, API 11). Queue wait 1271s and Maven 44.784s
+are separate costs. Method selection limits the two source checks only; all 32
+ArchUnit identities and the owning field scan executed. All identities, FES,
+six 69-property sets, classpaths, recursive streams, text reports and source pin
+were read; there were no dumps. XML contained one 3280-byte field-gap stdout
+listing existing gaps closed since baseline; console FAST/NONE warnings were
+also observed. The 23-row current field-gap diagnostic was inspected without
+changing its baseline. Consumed owned XML/text and that diagnostic were removed.
+
+All behavior/test edits finished before the 19:00Z source cutoff; final caf90
+stayed frozen through repair 74510 and guard 46669. Root source review found no
+material finding before the 19:20Z review cutoff. The local leaf retains the
+useful unmerged T3 worktree and installed normal hooks for Root delivery; it
+does not merge, push, open a PR, or modify another worktree. Temporary-agent
+ownership records retain the exact original returned task/thread/run/workspace
+identities and 20:00Z expiry. No pass cache, log archive or validation receipt is
+created. External/folded writers and arbitrary aliases remain unqualified.
+
+
+## PR223 common-source receipt after restart — 2026-10-23
+
+Receive qualified `04ce0edb0e696015b6e50806daa900137d743a1f` by ancestry after
+Root `618e0c3c68cf9fb435e3ade674f96ea4ea609e52`. Both runtime and both test blobs
+remain byte-exact to the qualified S2 lifecycle leaf. Only the shared Plan
+conflicts: preserve the entire receiving text plus the exact incoming11271-byte
+append. Keep the automatic folded-prerelease union. No latest-develop source
+is merged here; PR223's owner exclusively reconciles pinned e633 afterward.
+
+Evidence remains invocation-specific:60702 has146 unchanged passes and one
+new strict-untyped fixture error;74510 passes that repaired method alone;
+46669 independently passes53 owning guards. Root's FZ/scope/HUD correction
+separately passes32 affected and21 owning checks. No new147-green invocation,
+receiving-union compile, combined smoke or native/caller coverage is inferred.
+The completed659 common smoke remains red with81F/58E and five guard failures.
+All old/current route indices and first-cause UNKNOWN limits remain recorded.
+
+The restart's cancelled-background notice does not reopen actually completed
+71076/62092/31140. Their terminal result readbacks and commits are preserved;
+consumed Root diagnostics are cleaned without re-execution. This single
+committed successor is offered to the PR owner for one ancestry receipt, then
+latest-develop intent reconciliation and affected checks. Root retains the
+single final shared smoke lead. Main, provider activation, historical SOZ/MHZ
+and LRZ diagnostic gameplay gates remain closed. No PR/develop push here.
