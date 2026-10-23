@@ -2347,6 +2347,7 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_ANCHOR
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_TIME_HUNDREDTHS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SCALING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_DEFAULT_PHASE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_LIBRARY_ROOT
@@ -12445,6 +12446,8 @@ METHOD com.openggf.mods.run.RunArea public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason valueOf(java.lang.String)
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason[] values()
 METHOD com.openggf.mods.run.RunHandle public  void holdControls(boolean)
+METHOD com.openggf.mods.run.RunHandle public  void setHudTime(int)
+METHOD com.openggf.mods.run.RunHandle public  void setHudTimeHundredths(boolean)
 METHOD com.openggf.mods.run.RunHandle public  void setLevelCovered(boolean)
 METHOD com.openggf.mods.run.RunHandle public  void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance)
 METHOD com.openggf.mods.run.RunHandle public,abstract  boolean isActive()

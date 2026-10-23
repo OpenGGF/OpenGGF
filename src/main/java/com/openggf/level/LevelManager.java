@@ -1880,8 +1880,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
-            HudProfileAccess.setScreenLeftAnchorEnabled(hudRenderManager,
-                    "LEFT_EDGE".equals(configService.getString(SonicConfiguration.DISPLAY_HUD_ANCHOR)));
+            HudProfileAccess.applyDisplaySettings(hudRenderManager, configService);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
             var warningCycle = gameModule.getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
             if (warningCycle != null) {

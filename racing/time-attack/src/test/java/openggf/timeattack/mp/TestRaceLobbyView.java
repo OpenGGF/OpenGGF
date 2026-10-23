@@ -100,13 +100,32 @@ class TestRaceLobbyView {
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
             view(session, true, null).draw(canvas);
             canvas.assertFillsOnScreen();
-            assertTrue(canvas.drewName("ブラック・ノヴァ", 12, com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb()));
-            assertTrue(canvas.drewName("Nguyễn Thị Hoa", 12, guest), "the guest's name in its colour");
+            assertTrue(canvas.drewName("ブラック・ノヴァ", 19, com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb()));
+            assertTrue(canvas.drewName("Nguyễn Thị Hoa", 19, guest), "the guest's name in its colour");
             int[] runs = {0};
             com.openggf.mods.ui.NameFont.glyphs("Nguyễn Thị Hoa", 0, 0, (x, y, w, h) -> runs[0]++);
             assertTrue(canvas.fillsIn(guest).size() >= 2 * runs[0], "the chat sender is coloured too");
-            assertTrue(canvas.joined().contains("#1234 NEW"), canvas.joined());
+            String page = view(session, true, null).screen(width, 224).plain();
+            assertTrue(page.contains("[ ] Nguyễn Thị Hoa NEW TAILS"), page);
+            assertTrue(page.contains("Nguyễn Thị Hoa: xin chào"), page);
         }
+    }
+
+    @Test
+    void theDetailsPageListsEachPlayersIdentityTag() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Sid", "sonic"),
+                new ControlMessage.PlayerInfo(1, "123456", "Sid", "tails", true))));
+        RaceLobbyView lobby = view(session, true, null);
+        input.tapUp(lobby::update); // Invite/history
+        input.tapEnter(lobby::update);
+        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
+        lobby.draw(canvas);
+        assertTrue(canvas.joined().contains("PLAYERS"), canvas.joined());
+        int stock = com.openggf.net.identity.PlayerAppearance.STOCK.nameArgb();
+        assertTrue(canvas.drewName("Sid", 12, stock), "two players with one name, told apart by their tags");
+        canvas.assertFillsOnScreen();
     }
 
     @Test
@@ -227,9 +246,20 @@ class TestRaceLobbyView {
         assertEquals(List.of(new ControlMessage.TrackVote("s2:1:0")), sent);
         input.tapKey(lobby::update, SceneKeys.DIGIT_3); // no third option
         assertEquals(1, sent.size());
-        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
-        lobby.draw(canvas);
-        assertTrue(canvas.joined().contains("CHEMICAL PLANT 1"), canvas.joined());
+        String page = lobby.screen(320, 224).plain();
+        assertTrue(page.contains("2 CHEMICAL PLANT 1"), page);
+        assertTrue(page.contains("NEXT TRACK"), page);
+    }
+
+    @Test
+    void everyOfferedTrackIsShownWithItsVotes() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        session.onControl(new ControlMessage.TrackVoteOffer(List.of("s2:0:0", "s2:1:0", "s2:2:0"), 60_000));
+        session.onControl(new ControlMessage.TrackVoteTally(List.of(new ControlMessage.VoteCount("s2:1:0", 3))));
+        String page = view(session, false, null).screen(320, 224).plain();
+        assertTrue(page.contains("| 1 "), page);
+        assertTrue(page.contains("2 CHEMICAL PLANT 1 3"), page);
+        assertTrue(page.contains("| 3 "), "all three options, not just two: " + page);
     }
 
     @Test
@@ -243,8 +273,9 @@ class TestRaceLobbyView {
             RaceLobbyView lobby = view(session, true, null);
             RecordingSceneCanvas canvas = new RecordingSceneCanvas(width);
             lobby.draw(canvas);
-            assertTrue(canvas.joined().contains("TAILS"), canvas.joined());
-            assertTrue(canvas.joined().contains("#1234 NEW"), canvas.joined());
+            canvas.assertFillsOnScreen();
+            String page = lobby.screen(width, 224).plain();
+            assertTrue(page.contains("Guest NEW TAILS"), page);
         }
     }
 
@@ -276,10 +307,10 @@ class TestRaceLobbyView {
         input.tapEnter(lobby::update);
         assertFalse(sent.stream().anyMatch(ControlMessage.RoundConfigure.class::isInstance),
                 "the default rule waits for Sid");
-        RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
-        lobby.draw(canvas);
-        assertTrue(canvas.joined().contains("WAITING: Sid"), canvas.joined());
-        assertTrue(canvas.lines.contains("READY"), "a ready badge for the owner");
+        String page = lobby.screen(320, 224).plain();
+        assertTrue(page.contains("WAITING FOR | Sid"), page);
+        assertTrue(page.contains("[x] Owner"), "a ready box for the owner: " + page);
+        assertTrue(page.contains("[ ] Sid"), page);
 
         input.tapDown(lobby::update); // Ready rule
         input.tapRight(lobby::update);
@@ -302,21 +333,36 @@ class TestRaceLobbyView {
         RaceLobbyView lobby = view(session, false, null);
         RecordingSceneCanvas canvas = new RecordingSceneCanvas(320);
         lobby.draw(canvas);
-        assertTrue(canvas.joined().contains("READY: AUTO - NOBODY WAITS"), canvas.joined());
-        assertFalse(canvas.joined().contains("READY RULE"), "the rule action is the owner's");
         canvas.assertFillsOnScreen();
+        String page = lobby.screen(320, 224).plain();
+        assertTrue(page.contains("READY AUTO"), page);
+        assertTrue(page.contains("NOBODY WAITS"), page);
+        assertFalse(page.contains("RULE <"), "the rule action is the owner's: " + page);
     }
 
     @Test
-    void overTheLobbyLevelTheMenuDrawsOnADarkBackingPanelThatDimsTheLevel() {
-        RaceLobbyView lobby = view(new ClientRaceSession(() -> 0), true, null);
+    void overTheLobbyLevelOnlyTheCardsAreDrawnSoTheLevelStaysInView() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0);
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "abcdef", "Owner", "sonic"))));
+        RaceLobbyView lobby = view(session, true, null);
         RecordingSceneCanvas level = new RecordingSceneCanvas(320);
         lobby.draw(new openggf.timeattack.ui.OverLevelCanvas(level));
-        int[] backing = level.fills.getFirst();
-        assertEquals(List.of(0, 0, 320, 224), List.of(backing[0], backing[1], backing[2], backing[3]),
-                "one full-screen panel under every line of the menu");
-        assertEquals(HudTextLayout.FILL >>> 24, backing[4] >>> 24, "the multiplayer HUD panel's opacity");
-        assertTrue((backing[4] & 0xFFFFFF) == 0x101830, "the menu's own dark background colour");
-        assertTrue(level.joined().contains("RACE LOBBY"), "drawn over the level, not cleared");
+        long[] covered = new long[1];
+        for (int[] fill : level.fills) {
+            assertFalse(fill[2] >= 320 && fill[3] >= 224, "no full-screen veil over the level");
+            if ((fill[4] >>> 24) == (RaceLobbyScreen.CARD_FILL >>> 24) && fill[4] == RaceLobbyScreen.CARD_FILL) {
+                covered[0] += (long) fill[2] * fill[3];
+            }
+        }
+        assertTrue(covered[0] > 0, "the cards have their dark backing");
+        assertTrue(covered[0] < 320L * 224 * 3 / 4, "the level shows around the cards: " + covered[0]);
+        level.assertFillsOnScreen();
+
+        RecordingSceneCanvas menu = new RecordingSceneCanvas(320);
+        menu.fill(0, 0, 1, 1, 0xFFFFFFFF);
+        lobby.draw(menu);
+        assertFalse(menu.fills.stream().anyMatch(fill -> fill[4] == 0xFFFFFFFF && fill[2] == 1),
+                "without a level behind, the page clears the screen first");
     }
 }

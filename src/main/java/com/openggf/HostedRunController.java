@@ -72,6 +72,8 @@ final class HostedRunController {
     private boolean controlsHeld;
     private boolean controlsHoldApplied;
     private boolean levelCovered;
+    private int hudTimeFrames = -1;
+    private boolean hudTimeHundredths;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -100,6 +102,8 @@ final class HostedRunController {
         controlsHeld = false;
         controlsHoldApplied = false;
         levelCovered = false;
+        hudTimeFrames = -1;
+        hudTimeHundredths = false;
         return handle;
     }
 
@@ -151,7 +155,19 @@ final class HostedRunController {
     /** Hides the stock HUD while the host's scene covers the level (the flag is re-applied each frame). */
     private void applyLevelCover() {
         var level = GameServices.levelOrNull();
-        if (level != null) com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
+        if (level == null) return;
+        com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
+        com.openggf.level.LevelHudCoverAccess.setRunTime(level, hudTimeFrames, hudTimeHundredths);
+    }
+
+    /** The run's own clock for the HUD's TIME, or -1 for the act timer (tests). */
+    int hudTimeFrames() {
+        return hudTimeFrames;
+    }
+
+    /** True while the run asks for hundredths in the HUD's TIME (tests). */
+    boolean hudTimeHundredths() {
+        return hudTimeHundredths;
     }
 
     /** True while the host's scene covers the level (tests). */
@@ -428,6 +444,8 @@ final class HostedRunController {
         controlsHeld = false;
         applyControlHold();
         levelCovered = false;
+        hudTimeFrames = -1;
+        hudTimeHundredths = false;
         applyLevelCover();
         detachRenderer();
         ghostRenderer.clearSlots();
@@ -605,6 +623,22 @@ final class HostedRunController {
         public void setLevelCovered(boolean covered) {
             if (active) {
                 levelCovered = covered;
+            }
+        }
+
+        @Override
+        public void setHudTime(int frames) {
+            if (active) {
+                hudTimeFrames = Math.max(-1, frames);
+                applyLevelCover();
+            }
+        }
+
+        @Override
+        public void setHudTimeHundredths(boolean shown) {
+            if (active) {
+                hudTimeHundredths = shown;
+                applyLevelCover();
             }
         }
 

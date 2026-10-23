@@ -83,6 +83,28 @@ public final class HudProfileAccess {
     }
 
     public static boolean coveredByHost(HudRenderManager hud) { return hud != null && hud.coveredByHost; }
+
+    /** Display settings read when a level's HUD is built: the widescreen anchor and hundredths in TIME. */
+    public static void applyDisplaySettings(HudRenderManager hud,
+                                            com.openggf.configuration.SonicConfigurationService config) {
+        if (hud == null || config == null) return;
+        hud.setScreenLeftAnchorEnabled("LEFT_EDGE".equals(
+                config.getString(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_ANCHOR)));
+        hud.timeHundredths = config.getBoolean(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS);
+    }
+
+    /** See {@link com.openggf.level.LevelHudCoverAccess#setRunTime}. */
+    public static void setHostTime(HudRenderManager hud, long frames, boolean hundredths) {
+        if (hud == null) return;
+        hud.hostTimeFrames = frames;
+        hud.hostTimeHundredths = hundredths;
+    }
+
+    public static long hostTimeFrames(HudRenderManager hud) { return hud == null ? -1 : hud.hostTimeFrames; }
+
+    public static boolean timeHundredths(HudRenderManager hud) {
+        return hud != null && (hud.timeHundredths || hud.hostTimeHundredths);
+    }
     static HudPresentationRuntime runtime(GraphicsManager graphics) {
         var pipeline=graphics.getUiRenderPipeline();
         var hud=pipeline==null?null:pipeline.getHudRenderManager();

@@ -249,6 +249,18 @@ public final class TimeAttackRuntime implements RunHost {
             // The engine starts every run with the stock look; recolour the player's own character.
             handle.setPlayerAppearance(lookSource.apply(launch.gameId(), launch.character()));
         }
+        if (handle != null) {
+            // The game's own HUD shows the attempt's clock, to the hundredth (0:00.00).
+            handle.setHudTimeHundredths(true);
+            publishHudTime();
+        }
+    }
+
+    /** The attempt's clock in the stock HUD's TIME (first input to finish, as the room times it). */
+    private void publishHudTime() {
+        if (handle != null) {
+            handle.setHudTime(attempt == null ? 0 : attempt.elapsedDisplayFrames());
+        }
     }
 
     /** Supplies the player's saved look for a game and character (the settings own it). */
@@ -476,6 +488,7 @@ public final class TimeAttackRuntime implements RunHost {
         holdInputThisStep = false;
         holdingFrames = restartLeadIn;
         beginAttemptForTest(start.determinismFingerprint());
+        publishHudTime();
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
             // toggling one on mid-run, so taint immediately.
@@ -561,6 +574,7 @@ public final class TimeAttackRuntime implements RunHost {
         if (restartLeadIn) {
             leadInSteps++;
         }
+        publishHudTime();
         if (companion != null) {
             companion.afterStep();
         }

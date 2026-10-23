@@ -19,6 +19,11 @@ import java.util.function.Supplier;
 public class HudRenderManager {
     /** A hosted run's scene covers the level with its menu: the HUD is not drawn (the timer runs). */
     boolean coveredByHost;
+    /** TIME shows hundredths (0:00.00): the display setting, or a hosted run asking for it. */
+    boolean timeHundredths;
+    boolean hostTimeHundredths;
+    /** A hosted run's own clock for TIME, in frames, or -1 for the act timer. Presentation only. */
+    long hostTimeFrames = -1;
     com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =
@@ -198,7 +203,7 @@ public class HudRenderManager {
         return count;
     }
 
-    private String vblankTimeDisplay;
+    private long vblankTimerFrames = -1;
 
     /** Presentation-only projection of UpdateHUD; does not advance the gameplay timer. */
     void drawForCounterPublication(LevelState state, PlayableEntity player, boolean advanceTimer) {
@@ -208,9 +213,9 @@ public class HudRenderManager {
         // tiles. The existing level-state owner advances later in this engine
         // loop; present that same increment without a second gameplay update.
         timer.setTotalFrames(state.getTimerFrames() + (advanceTimer && !state.isTimerPaused() ? 1 : 0));
-        vblankTimeDisplay = timer.getDisplayTime();
+        vblankTimerFrames = timer.getTotalFrames();
         try { draw(state, player); }
-        finally { vblankTimeDisplay = null; }
+        finally { vblankTimerFrames = -1; }
     }
 
     public void draw(LevelState levelGamestate) {
@@ -428,8 +433,7 @@ public class HudRenderManager {
             switch (row.metric()) {
                 case SCORE -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
                         gameState.getScore(), row.maxDigits(), hudOrigin);
-                case TIME -> drawTime(row.valueRightX(), row.valueY(),
-                        vblankTimeDisplay != null ? vblankTimeDisplay : levelState.getDisplayTime(), hudOrigin);
+                case TIME -> drawTime(row.valueRightX(), row.valueY(), timeText(levelState), hudOrigin);
                 case RINGS -> drawNumberRightAligned(row.valueRightX(), row.valueY(),
                         com.openggf.game.LevelRingDisplay.value(levelState), row.maxDigits(), hudOrigin);
                 case LIVES -> drawLives(gameState.getLives(), row.valueRightX(), row.valueY(),
@@ -637,11 +641,35 @@ public class HudRenderManager {
         return Math.max(0, Math.min(value, maximum));
     }
 
+    /**
+     * TIME's text: the act timer as the game shows it, or a hosted run's own clock, with
+     * hundredths when the display setting or the run asks for them.
+     */
+    private String timeText(LevelState levelState) {
+        boolean hundredths = timeHundredths || hostTimeHundredths;
+        long frames = hostTimeFrames >= 0 ? hostTimeFrames
+                : vblankTimerFrames >= 0 ? vblankTimerFrames : -1;
+        if (frames < 0 && !hundredths) {
+            return levelState.getDisplayTime();
+        }
+        return com.openggf.game.LevelTimer.displayTime(frames >= 0 ? frames : levelState.getTimerFrames(),
+                hundredths);
+    }
+
     private void drawTime(int x, int y, String timeStr, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
         for (int i = 0; i < timeStr.length(); i++) {
             char c = timeStr.charAt(i);
+            if (c == '.') {
+                // The games' HUD art has no point, so it is the colon's lower dot. That dot
+                // straddles the colon's two tiles (rows 7-9 of 16; the upper tile also holds the
+                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of it.
+                int px = hudOrigin + x + camX + (i * 8);
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 7);
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 8);
+                continue;
+            }
             int patternIdx = (c == ':')
                     ? digitPatternIndex + 20
                     : digitPatternIndex + ((c - '0') * 2);
