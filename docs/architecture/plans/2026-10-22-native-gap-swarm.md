@@ -3901,3 +3901,98 @@ gated off; any matched diagnostic observations require a later reviewed scope.
 Consumed own XML, text and logs are removed after this evidence readback;
 compiled output and useful source checkouts remain. Main, provider activation,
 historical SOZ/MHZ observation gates and candidate-wide smoke stay separate.
+
+## Frozen common659 smoke terminal readback — 2026-10-23
+
+Root request71076/run `20261023T113630Z-441d7e8b` finishes exit1 on unchanged
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`, runner framing
+`54af4b3a6d80ed6343cb80f4a2cd03a462d840c523cdd645d13ef431efdc7fc2`.
+The preparation and final fingerprints match; tracked worktree remains clean.
+All3917 candidate classes, all10 smoke categories and the separate guard lane
+are selected. The plan's `full: true` means all smoke categories, not the
+release-only full suite. Exact command from that frozen checkout:
+
+```bash
+python3 tools/testing/run_categories.py \
+  --base 94c40570a15a11b70caf7456e9b0d0a8eec8a9b4 \
+  --headless-gl surfaceless-egl --rom-directory "$OPENGGF_ROM_DIR" \
+  --max-minutes 180 --run
+```
+
+The launch uses Java25/Lua5.4, null audio and surfaceless EGL with display/JVM
+overrides unset. All79 ordinary command records retain the reviewed smoke,
+original absolute ROM and GL arguments; guards use their separate profile.
+
+| Lane | Completed | Tests | Failures | Errors | Skips | Reports | Measured process time |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ordinary |79/79 |40688 |81 |58 |92 |3895 |7341.36s |
+| Fresh guards |1/1 |727 |5 |0 |0 |90 |490.89s |
+
+Build-only preparation takes80.42s. These are runner process intervals;
+queue delay, parallel worker intervals and total delivery elapsed time are
+separate. Aggregate queue delay is not reported here. Every failed identity
+and skip entry is inspected:139 ordinary plus5 guard failures are distinct
+within their lanes, with zero omitted failure/skip records. No fork crash,
+timeout, missing-report interruption or source drift truncates the run.
+
+The139 ordinary failures/errors have the following receiving-source map.
+Independent focused results remain attributed to their own source; none
+subtracts a failure from this frozen659 result or certifies the new candidate.
+
+| Old failing family | Identities | Qualified receiving evidence / remaining state |
+| --- | --- | --- |
+| Title route/action fixtures |3 |859dc9f6 |
+| Audio command inventory, post-load count, registered world fixtures |4 |c9435f41 |
+| SYZ spike and S1 exact graph/isolated inventories |8 |5079728e |
+| S2 Super/player-bound pending return |5 |44376a218, retained through6f54a1bf |
+| S3K powered art, Host failure and roster fixtures |5 |818ece46 |
+| Slot bonus grant/counter fixture |1 |7cb60793 |
+| Mod-zone inventory and SSZ cutscene fixture |3 |64e9e95f |
+| EggRobo16, preparation41, donor-tail8, mod-art13, ownership3, dust1 |82 |cf7e6f8a |
+| Native ring fixture |1 |0f9c427e |
+| Fixed auxiliaries5 and debug ring1 |6 |8977430a |
+| Slot prepared/publication oracle |1 |08850888;102 unchanged passes plus separately qualified whole-class6 |
+| Structural ring/render producer oracle |1 |Root281f2554;33 affected passes |
+| Maintained cold routes/campaigns |19 |CNZ fixture repaired separately; other route/frontier causes remain open |
+
+The19 route identities comprise LRZ6 (three5027/three15323), MHZ2 (26853),
+CNZ1 (null live-history controller), joined HPZ1 (5027), campaign4 (Sonic44639,
+Tails80320, pair73285, Knuckles5027), SOZ3 (parameter5=15850, Knuckles11787,
+wide Knuckles23478), and SSZ-wide2 (first replica rings46/48;
+`FIRST_FORWARD` start11640+n24/input11664 death). Root CNZ request7850 passes
+the unchanged route/replay assertions after its real live-history admission
+fixture repair; that is separate24-test candidate evidence, not a rerun of
+this lane. The matched LRZ source comparison above establishes a changed
+first-door outcome only. Other first departures/owners/native causes are
+not inferred from these terminal indices.
+
+Five guard failures are: `TestParentDependentGraphCoverageGuard` missing
+FZ/S1Eggman rows; `TestObjectPhysicsStandardizationGuard`586 raw destroys over
+582; `TestObjectUpdateClockTerminologyGuard`14 test boundary parameter names;
+`TestNoServicesInObjectConstructors` FZ visual direct construction; and
+`TestSingletonLifecycleGuard` ambient `TestHudSatProjection#setup`.
+Root b196fe0b already repairs the owned lifecycle inputs with52 affected and33
+whole owning-guard passes, retaining budgets (581 destroys/9 insertions).
+Read-only comparison confirms5079728e already supplies both missing graph
+declarations backed by actual destructive ID/slot/forward tests; leave the
+baseline unchanged. Three inputs still need bounded correction:14 leading
+test clock parameter names, the HUD fixture's real lifecycle setup, and an
+explicit restoring-services construction scope for FZ's spawn-only factory.
+The latter constructor is service-free; the scanner conservatively includes
+another constructor that reads ROM data. No new native behavior defect is
+established. No baseline, threshold, exclusion or signature pin is padded.
+
+All92 skipped identities and reasons are inspected. They include20 graphics
+assumptions (including one unavailable surfaceless-EGL fixture),32
+InfiniteSonic act-geometry assumptions,10 absent optional packaged-mod inputs,
+one CPZ spin-tube capture/release assumption, and29 opt-in/capture/reference
+conditions. No missing/wrong-ROM skip is present. These skips remain coverage
+limits; passing other EGL or ROM checks does not qualify the skipped identities.
+
+After this compact evidence is recorded, acknowledge the run with
+`python3 tools/testing/run_categories.py --acknowledge 20261023T113630Z-441d7e8b`
+and remove only its consumed Root launch log/runtime directory. No raw archive,
+pass cache or validation receipt is retained. Compiled output and useful
+unmerged source remain. The separately receiving candidate needs its own final
+change-based smoke after source joins/affected fixes; Main, push, provider
+activation and passive SOZ/MHZ observation gates remain closed.

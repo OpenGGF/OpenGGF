@@ -115347,3 +115347,23 @@ outcome is attributed to the source epochs only: first divergent production
 decision, receiver, writer and native cause remain unknown. No input, physics,
 timing or oracle adjustment and no automatic third request follow. A separate
 source/pure-unit diagnostic task has no gameplay observation authority.
+
+### 2026-10-23 Frozen common659 smoke closes red; route causes remain open
+
+Root category request71076 on `659b02c98a16da0723ef5f222acdc60ab7b0838f`
+completes all79 ordinary batches:40688T/81F/58E/92 skips, followed by separate
+fresh guards727T/5F/0E/0S. All139 ordinary and5 guard failed identities and all
+92 skip reasons are read, with zero omitted entries and matching source framing.
+This is all smoke categories, not the public-release full suite. Exact command,
+receiving-source map, timing and skips are in the
+[terminal plan entry](../architecture/plans/2026-10-22-native-gap-swarm.md#frozen-common659-smoke-terminal-readback--2026-10-23).
+
+Nineteen ordinary route/campaign failures include LRZ5027/15323, MHZ26853,
+CNZ live-history null, joined-HPZ5027, campaign Sonic44639/Tails80320/pair73285/
+Knuckles5027, SOZ15850/11787/23478 and SSZ-wide ring46/48 plus forward death11664.
+The CNZ live-history fixture has separate current24-pass evidence; the LRZ
+first-door matched outcome regression has separate historical/current evidence
+above. No other cause or native frontier is inferred from these indices.
+Held component fixes and later receiving-source passes do not rewrite this
+old run's reds/skips. Consume diagnostics through runner acknowledgment after
+readback. Final receiving-candidate smoke and delivery remain outstanding.
