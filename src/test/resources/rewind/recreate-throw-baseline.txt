@@ -10,9 +10,6 @@
 # because the player destroyed it) must NOT appear here — it returns null instead of
 # throwing, and its entry is removed. A NEW throw not listed here fails the guard.
 #
-# IczSegmentColumnObjectInstance is intentionally excluded in the guard's EXCLUDED_FILES
-# (fixed on bugfix/ai-icz-segment-column-rewind-break), so it never appears here.
-#
 # Format: <normalized source path>=<throw count in recreate scope>
 
 # Grounder zero-index child keystone: reflective (int,int,int,Grounder) constructor

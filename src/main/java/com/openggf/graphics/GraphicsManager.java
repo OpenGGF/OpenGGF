@@ -2502,11 +2502,11 @@ public class GraphicsManager {
 	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
 			int rawTileWordLow11) {
 		if (!spriteSatCollectionActive) return;
-		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, x, y,
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
-				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name()));
+				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name())));
 	}
 
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
@@ -2523,10 +2523,16 @@ public class GraphicsManager {
 		}
 		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
 				: spritePresentationBuilder.layer.name();
-		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
-				? piece
-				: piece.withDebugSource(presentationSource);
-		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket);
+		// The pinned producer type is copied only at this compatibility ingress.
+		SpritePiece admitted = new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
+				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
+				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
+				piece.startRowTile(), piece.rowCountTiles(), piece.debugSource());
+		if (presentationSource != null) {
+			admitted = admitted.withDebugSource(presentationSource);
+		}
+		SpriteSatEntry entry = new SpriteSatEntry(currentSpriteSatBucket, admitted);
 		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
 			entry = entry.withPresentationSubject(spritePresentationSubject);
 		}
@@ -2567,9 +2573,9 @@ public class GraphicsManager {
 					for (int i = processedEntries.size() - 1; i >= 0; i--) {
 						SpriteSatEntry entry = processedEntries.get(i);
 						if (entry.priorityBucket() != bucket) continue;
-						if (entry.debugSource() != null)
-							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
-						setCurrentSpriteHighPriority(entry.globalHighPriority());
+						if (entry.piece().debugSource() != null)
+							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.piece().debugSource());
+						setCurrentSpriteHighPriority(entry.piece().globalHighPriority());
 						SpritePresentation.withSubject(this, entry.presentationSubject(),
 								() -> appendBatchedReplayCommands(entry, -1));
 					}
@@ -2687,7 +2693,7 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
-		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+		entry.piece().forEachTile(
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					// CPU preparation uses this same tile decoder before any atlas lookup.
 					// A sprite-mask band can hide single scanlines of this tile.
@@ -2702,7 +2708,7 @@ public class GraphicsManager {
 							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
 						} else {
 							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
-									entry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+									entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
 						}
 						return;
 					}
@@ -2750,7 +2756,7 @@ public class GraphicsManager {
 			return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
 		}
 		return instancedPatternRenderer.addPatternRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
-				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+				satEntry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
 	}
 
 	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry,PatternAtlas.Entry atlasEntry,
@@ -2758,7 +2764,7 @@ public class GraphicsManager {
         PatternRenderCommand command=rowStart==0 && rowEnd==8
                 ?PatternRenderCommand.obtain(atlasEntry,paletteTextureId,reusableReplayDesc,drawX,drawY,this)
                 :PatternRenderCommand.obtainRows(atlasEntry,paletteTextureId,paletteIndex,pieceHFlip,pieceVFlip,
-                        satEntry.effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
+                        satEntry.piece().effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
         command.paletteReplay(satEntry.presentationSubject().paletteReplay());
         return command;
     }
@@ -2824,7 +2830,7 @@ public class GraphicsManager {
 
 	private void appendDirectReplayTiles(SpriteSatEntry entry, int paletteTextureId,
 			List<PatternRenderCommand> replayCommands) {
-		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+		entry.piece().forEachTile(
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
 					if (atlasEntry == null) {
@@ -2852,7 +2858,7 @@ public class GraphicsManager {
 	private void prepareReplayDesc(SpriteSatEntry entry, int patternIndex,
 			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex) {
 		int descIndex = patternIndex & 0x7FF;
-		if (entry.piecePriority() || entry.globalHighPriority()) {
+		if (entry.piece().effectiveHighPriority()) {
 			descIndex |= 0x8000;
 		}
 		if (pieceHFlip) {

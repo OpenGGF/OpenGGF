@@ -1,10 +1,17 @@
 package com.openggf.tests;
 
 import com.openggf.game.rules.GameRules;
+import com.sun.source.tree.CompilationUnitTree;
+import com.sun.source.tree.ClassTree;
+import com.sun.source.tree.MethodTree;
+import com.sun.source.util.JavacTask;
+import com.sun.source.util.TreePathScanner;
+import com.sun.source.util.Trees;
 
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +23,11 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,9 +102,9 @@ class TestArchitecturalSourceGuard {
     // 2026-08-26: the merged facade combines next's callback-routed ownership with
     // develop's ObjectLoopSlotBudget entry points. Freeze the exact merged inventory;
     // placement, touch-response and solid-contact logic remain in collaborators.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3086;
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3073;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
-            "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
+            "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2045,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
             // 2026-07-09: 3115 -> 3159 for drowning, speed-shoes, and fixed-skid
@@ -102,12 +114,12 @@ class TestArchitecturalSourceGuard {
             // 2026-09-08: upstream resets the reused player animation before the
             // pre-fade BuildSprites pass and removes duplicate invincibility resets:
             // net +2 effective lines over next. Freeze the combined inventory.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3258,
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3257,
             // 2026-08-26: exact merged inventory for next's mod/editor/session and
             // seamless-transition surface plus develop's bootstrap, VBlank and
             // transient oscillation/respawn handoff wiring.
             // 2026-10-09: 3145 -> 3144; the time-attack gate became a generic host-return request.
-            "com/openggf/level/LevelManager.java", 3144,
+            "com/openggf/level/LevelManager.java", 3142,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -135,19 +147,19 @@ class TestArchitecturalSourceGuard {
             // special-stage return boundary. State machines remain collaborator-owned.
             // 2026-10-09: 3381 -> 3313 after Time Attack and multiplayer moved into the
             // bundled mod; the loop keeps only generic hosted-run hooks (HostedRunController).
-            GAME_LOOP_PATH, 3313
+            GAME_LOOP_PATH, 3311
     );
-    private static final int ENGINE_MAX_LARGE_METHODS = 3;
+    private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final Map<String, Integer> ROOT_CONCRETE_SONIC_REFERENCE_BUDGETS = Map.of(
-            ENGINE_PATH, 3,
-            GAME_LOOP_PATH, 15
+            ENGINE_PATH, 2,
+            GAME_LOOP_PATH, 8
     );
     private static final int OBJECT_MANAGER_CONCRETE_SONIC_REFERENCE_BUDGET = 0;
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;
     private static final List<MethodBudget> ROOT_DISPATCH_METHOD_BUDGETS = List.of(
             new MethodBudget(ENGINE_PATH, "draw", 3),
-            new MethodBudget(ENGINE_PATH, "init", 181),
+            new MethodBudget(ENGINE_PATH, "init", 170),
             // 2026-07-02: display 206 -> 217 for the live-rewind VHS picture-search
             // pass (RewindVhsEffectPass.apply between the fade pass and the
             // PRESENTATION display-shader phase; the pass itself is a collaborator).
@@ -159,16 +171,19 @@ class TestArchitecturalSourceGuard {
             // 2026-07-04: display 221 -> 228 for the time-attack HUD render call
             // (gameLoop.renderTimeAttackHud) added by the solo-ghost-racing
             // phase-1 HUD-overlay task; not re-ratcheted at the time.
-            new MethodBudget(ENGINE_PATH, "display", 228),
+            // The profiling wrappers must not conceal growth in the actual dispatchers.
+            new MethodBudget(ENGINE_PATH, "display", 4),
+            new MethodBudget(ENGINE_PATH, "displayFrame", 229),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
-            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 235),
-            new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 142),
-            new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 105),
-            new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 95),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 277),
+            new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 113),
+            new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 9),
+            new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
-            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 66),
+            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 62),
             new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 45)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
@@ -591,24 +606,18 @@ class TestArchitecturalSourceGuard {
 
     @Test
     void engineDoesNotGainNewLargeMethods() throws IOException {
-        // Intent: Engine.java shouldn't grow uncontrollably by gaining a new
-        // large method. We deliberately do NOT enforce specific line counts on
-        // init/display/draw -- that would trip on any legitimate edit and push
-        // people toward unrelated cleanup to make room. The structural signal
-        // is just "no fourth >=100-line method appears here without review."
         SourceFile engine = SourceFile.read(SRC_MAIN.resolve(ENGINE_PATH));
-        List<MethodSpan> largeMethods = engine.methods().stream()
-                .filter(method -> method.lineCount() >= ENGINE_LARGE_METHOD_THRESHOLD)
-                .toList();
-        if (largeMethods.size() > ENGINE_MAX_LARGE_METHODS) {
-            List<String> names = largeMethods.stream()
-                    .map(method -> method.name() + " (" + method.lineCount() + " lines)")
-                    .toList();
-            fail("Engine.java now has " + largeMethods.size() + " methods at or above "
-                    + ENGINE_LARGE_METHOD_THRESHOLD + " lines; cap is " + ENGINE_MAX_LARGE_METHODS
-                    + ". Extract responsibilities into focused collaborators before adding new large methods.\n"
-                    + "  Current large methods: " + String.join(", ", names));
+        List<String> largeMethods = new ArrayList<>();
+        for (MethodSpan method : engine.methods()) {
+            if (method.lineCount() >= ENGINE_LARGE_METHOD_THRESHOLD) {
+                largeMethods.add(method.identity());
+            }
         }
+        largeMethods.sort(String::compareTo);
+        assertEquals(ENGINE_LARGE_METHOD_OWNERS, largeMethods,
+                "Engine large-method allowances identify owners, not interchangeable slots. "
+                        + "Extract new responsibilities; prune an owner once it falls below "
+                        + ENGINE_LARGE_METHOD_THRESHOLD + " lines.");
     }
 
     @Test
@@ -690,11 +699,16 @@ class TestArchitecturalSourceGuard {
                         + budget.methodName() + "; update the ratchet if it was extracted");
                 continue;
             }
-            if (method.lineCount() > budget.maxLines()) {
+            if (!budget.owns(method)) {
+                violations.add(budget.relativePath() + "#" + budget.methodName()
+                        + " moved to " + method.identity() + "; review and retarget the owner explicitly");
+                continue;
+            }
+            if (method.lineCount() != budget.maxLines()) {
                 violations.add(budget.relativePath() + "#" + budget.methodName()
                         + " is " + method.lineCount() + " lines; budget is "
                         + budget.maxLines()
-                        + ". Extract mode/render work into focused collaborators before growing this dispatcher.");
+                        + ". Extract mode/render work before growth; lower stale budgets after extraction.");
             }
         }
 
@@ -1770,6 +1784,75 @@ class TestArchitecturalSourceGuard {
         assertEquals(8, source.effectiveSourceLineCount());
     }
 
+    @Test
+    void sampleMethodScannerFindsMultilineAndSingleLineBodies() {
+        SourceFile source = SourceFile.fromText("""
+                class Example {
+                    public static <T> T multiline(
+                            T value,
+                            int count)
+                            throws IllegalArgumentException {
+                        return value;
+                    }
+                    void compact() { run(); }
+                }
+                """);
+
+        assertEquals(List.of(new MethodSpan("multiline", "Example#multiline(T,int)", 2, 7),
+                new MethodSpan("compact", "Example#compact()", 8, 8)), source.methods());
+    }
+
+    @Test
+    void sampleMethodScannerRejectsInvalidSourceInsteadOfDroppingItsBudget() {
+        SourceFile source = SourceFile.fromText("class Example { void broken() {");
+        assertThrows(IllegalArgumentException.class, source::methods);
+    }
+
+    @Test
+    void sampleMethodScannerRejectsAmbiguousBudgetTargets() {
+        SourceFile overloaded = SourceFile.fromText("""
+                class Example {
+                    void init() { }
+                    void init(int count) { run(count); }
+                }
+                """);
+        SourceFile nested = SourceFile.fromText("""
+                class Example {
+                    void init() { }
+                    static class Nested { void init() { run(); } }
+                }
+                """);
+        assertThrows(IllegalArgumentException.class, () -> overloaded.methodNamed("init"));
+        assertThrows(IllegalArgumentException.class, () -> nested.methodNamed("init"));
+        assertEquals(List.of("Example#init()", "Example#init(int)"),
+                overloaded.methods().stream().map(MethodSpan::identity).toList());
+        assertEquals(List.of("Example#init()", "Example.Nested#init()"),
+                nested.methods().stream().map(MethodSpan::identity).toList());
+        var budget = new MethodBudget("Example.java", "init", 1);
+        assertTrue(budget.owns(nested.methods().getFirst()));
+        assertFalse(budget.owns(nested.methods().get(1)));
+    }
+
+    @Test
+    void sampleMethodScannerIgnoresBracesInCommentsAndLiterals() {
+        SourceFile source = SourceFile.fromText(String.join("\n",
+                "class Example {",
+                "    private void work() {",
+                "        String quoted = \"}\";",
+                "        char marker = '{';",
+                "        /* } } */",
+                "        String block = \"\"\"",
+                "                { private void fake() {",
+                "                \"\"\";",
+                "        Runnable action = () -> { run(); };",
+                "    }",
+                "    private void following() { run(); }",
+                "}"));
+
+        assertEquals(List.of(new MethodSpan("work", "Example#work()", 2, 10),
+                new MethodSpan("following", "Example#following()", 11, 11)), source.methods());
+    }
+
     private static List<Path> productionFiles() throws IOException {
         if (!Files.isDirectory(SRC_MAIN)) {
             return List.of();
@@ -2020,6 +2103,11 @@ class TestArchitecturalSourceGuard {
     }
 
     private record MethodBudget(String relativePath, String methodName, int maxLines) {
+        boolean owns(MethodSpan method) {
+            String file = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+            String owner = file.substring(0, file.length() - ".java".length());
+            return method.identity().startsWith(owner + "#" + methodName + "(");
+        }
     }
 
     private record EmbeddedRuntimeDataBudget(
@@ -2033,11 +2121,6 @@ class TestArchitecturalSourceGuard {
     }
 
     private record SourceFile(String text, List<String> lines) {
-        private static final Pattern METHOD_START = Pattern.compile(
-                "^\\s*(?:public|private|protected)\\s+(?:static\\s+)?(?:synchronized\\s+)?"
-                        + "[\\w<>\\[\\].?, ]+\\s+(\\w+)\\s*\\([^;]*\\)"
-                        + "(?:\\s+throws\\s+[^\\{]+)?\\s*\\{\\s*$");
-
         static SourceFile read(Path path) throws IOException {
             return new SourceFile(Files.readString(path), Files.readAllLines(path));
         }
@@ -2056,53 +2139,76 @@ class TestArchitecturalSourceGuard {
 
         List<MethodSpan> methods() {
             List<MethodSpan> methods = new ArrayList<>();
-            boolean inMethod = false;
-            int startLine = 0;
-            int braceDepth = 0;
-            String methodName = "";
-
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-                if (!inMethod) {
-                    Matcher matcher = METHOD_START.matcher(line);
-                    if (matcher.matches()) {
-                        inMethod = true;
-                        startLine = i + 1;
-                        methodName = matcher.group(1);
-                        braceDepth = braceDelta(line);
-                    }
-                } else {
-                    braceDepth += braceDelta(line);
-                    if (braceDepth <= 0) {
-                        methods.add(new MethodSpan(methodName, startLine, i + 1));
-                        inMethod = false;
-                    }
+            var compiler = ToolProvider.getSystemJavaCompiler();
+            if (compiler == null) {
+                throw new IllegalStateException("Source guards require the build JDK's Java parser");
+            }
+            var diagnostics = new DiagnosticCollector<JavaFileObject>();
+            var source = new SimpleJavaFileObject(URI.create("string:///GuardSource.java"),
+                    JavaFileObject.Kind.SOURCE) {
+                @Override
+                public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+                    return text;
                 }
+            };
+            // Parse only: no type resolution, code generation or annotation processors.
+            // Java owns comments, text blocks, multiline signatures and nested braces.
+            try (var files = compiler.getStandardFileManager(diagnostics, null, StandardCharsets.UTF_8)) {
+                var task = (JavacTask) compiler.getTask(null, files, diagnostics,
+                        List.of("-proc:none"), null, List.of(source));
+                var positions = Trees.instance(task).getSourcePositions();
+                for (CompilationUnitTree unit : task.parse()) {
+                    new TreePathScanner<Void, Void>() {
+                        @Override
+                        public Void visitMethod(MethodTree method, Void ignored) {
+                            if (method.getReturnType() != null && method.getBody() != null) {
+                                long start = positions.getStartPosition(unit, method);
+                                long end = positions.getEndPosition(unit, method);
+                                var owners = new java.util.ArrayDeque<String>();
+                                for (var path = getCurrentPath(); path != null; path = path.getParentPath()) {
+                                    if (path.getLeaf() instanceof ClassTree type) {
+                                        owners.addFirst(type.getSimpleName().isEmpty()
+                                                ? "<anonymous>" : type.getSimpleName().toString());
+                                    }
+                                }
+                                String parameters = method.getParameters().stream()
+                                        .map(parameter -> parameter.getType().toString().replaceAll("\\s+", ""))
+                                        .collect(java.util.stream.Collectors.joining(","));
+                                String identity = String.join(".", owners) + "#" + method.getName()
+                                        + "(" + parameters + ")";
+                                methods.add(new MethodSpan(method.getName().toString(), identity,
+                                        (int) unit.getLineMap().getLineNumber(start),
+                                        (int) unit.getLineMap().getLineNumber(end - 1)));
+                            }
+                            // Local/anonymous-class methods belong to this enclosing body.
+                            return null;
+                        }
+                    }.scan(unit, null);
+                }
+            } catch (IOException e) {
+                throw new IllegalStateException("Cannot parse source for architecture guard", e);
+            }
+            var errors = diagnostics.getDiagnostics().stream()
+                    .filter(diagnostic -> diagnostic.getKind() == Diagnostic.Kind.ERROR)
+                    .toList();
+            if (!errors.isEmpty()) {
+                throw new IllegalArgumentException("Invalid Java source in architecture guard: " + errors);
             }
             return methods;
         }
 
         MethodSpan methodNamed(String name) {
-            return methods().stream()
-                    .filter(method -> method.name().equals(name))
-                    .findFirst()
-                    .orElse(null);
+            List<MethodSpan> matches = methods().stream()
+                    .filter(method -> method.name().equals(name)).toList();
+            if (matches.size() > 1) {
+                throw new IllegalArgumentException("Ambiguous source budget target " + name + ": " + matches);
+            }
+            return matches.isEmpty() ? null : matches.getFirst();
         }
 
-        private static int braceDelta(String line) {
-            int delta = 0;
-            for (int i = 0; i < line.length(); i++) {
-                if (line.charAt(i) == '{') {
-                    delta++;
-                } else if (line.charAt(i) == '}') {
-                    delta--;
-                }
-            }
-            return delta;
-        }
     }
 
-    private record MethodSpan(String name, int startLine, int endLine) {
+    private record MethodSpan(String name, String identity, int startLine, int endLine) {
         int lineCount() {
             return endLine - startLine + 1;
         }

@@ -549,6 +549,14 @@ Unreleased. The earlier development themes remain in
   source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
+  reject stale rewind and dependency allowances, and identify raw lifecycle calls
+  by caller rather than a shared total. Shared menu animation and execution-time
+  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics-owned geometry value and one tile-expansion implementation while
+  preserving the existing candidate Mod API submission signature. Remaining
+  migrations and exact allowance accounting live in the
+  [exception guide](docs/architecture/archunit-exceptions.md).
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

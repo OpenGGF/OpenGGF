@@ -127,7 +127,7 @@ class TestSatGhostLayering {
         SpriteSatEntry laterReal = piece(0x300, 0, 0);
         List<SpriteSatEntry> unarmed = SpriteSatMaskPostProcessor.process(
                 List.of(earlierGhost, marker, companion, laterReal), true);
-        assertEquals(List.of(0x100, 0x300), unarmed.stream().map(SpriteSatEntry::firstPatternIndex).toList());
+        assertEquals(List.of(0x100, 0x300), unarmed.stream().map(entry -> entry.piece().firstPatternIndex()).toList());
         assertTrue(unarmed.stream().allMatch(entry -> entry.visibleTopY() == SpriteSatEntry.UNCLIPPED_TOP));
 
         // A real sprite arms it: the ghost after the pair loses those lines, as a player would.
@@ -135,7 +135,7 @@ class TestSatGhostLayering {
         SpriteSatEntry laterGhost = piece(0x200, 0, 0).withGhost(style);
         List<SpriteSatEntry> armed = SpriteSatMaskPostProcessor.process(
                 List.of(earlierReal, marker, companion, laterGhost), true);
-        assertEquals(List.of(0x100), armed.stream().map(SpriteSatEntry::firstPatternIndex).toList());
+        assertEquals(List.of(0x100), armed.stream().map(entry -> entry.piece().firstPatternIndex()).toList());
     }
 
     private void submit(int pattern) {

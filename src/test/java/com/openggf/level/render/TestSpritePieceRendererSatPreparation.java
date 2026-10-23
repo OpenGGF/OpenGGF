@@ -1,5 +1,6 @@
 package com.openggf.level.render;
 
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.SpriteSatEntry;
 import com.openggf.graphics.SpriteSatMaskPostProcessor;
 import org.junit.jupiter.api.Test;
@@ -31,8 +32,14 @@ class TestSpritePieceRendererSatPreparation {
     }
 
     @Test
-    void satMaskDetection_usesRawTileWordNotAtlasPatternIndex() {
-        List<SpriteSatEntry> entries = new ArrayList<>();
+    @SuppressWarnings("unchecked")
+    void satMaskDetection_usesRawTileWordNotAtlasPatternIndex() throws Exception {
+        GraphicsManager graphics = new GraphicsManager();
+        graphics.initHeadless();
+        graphics.beginSpriteSatCollection();
+        var entriesField = GraphicsManager.class.getDeclaredField("spriteSatEntries");
+        entriesField.setAccessible(true);
+        List<SpriteSatEntry> entries = (List<SpriteSatEntry>) entriesField.get(graphics);
 
         entries.add(SpriteSatEntry.of(40, 0, 2, 2, 0x100, 0, false, false, false, false));
 
@@ -45,7 +52,7 @@ class TestSpritePieceRendererSatPreparation {
                 false,
                 false,
                 false,
-                prepared -> entries.add(SpriteSatEntry.fromPreparedPiece(prepared, 0)));
+                graphics::submitSpriteSatPiece);
 
         SpritePieceRenderer.preparePiece(
                 piece(0, 24, 2, 2, 0x25F, false, false, 0, false),
@@ -56,7 +63,7 @@ class TestSpritePieceRendererSatPreparation {
                 false,
                 false,
                 false,
-                prepared -> entries.add(SpriteSatEntry.fromPreparedPiece(prepared, 0)));
+                graphics::submitSpriteSatPiece);
 
         SpritePieceRenderer.preparePiece(
                 piece(0, 16, 4, 4, 0x200, false, false, 0, false),
@@ -67,14 +74,15 @@ class TestSpritePieceRendererSatPreparation {
                 false,
                 false,
                 false,
-                prepared -> entries.add(SpriteSatEntry.fromPreparedPiece(prepared, 0)));
+                graphics::submitSpriteSatPiece);
 
         List<SpriteSatEntry> processed = SpriteSatMaskPostProcessor.process(entries, true);
+        graphics.resetState();
 
         assertEquals(3, processed.size());
-        assertEquals(0x200, processed.get(1).rawTileWordLow11());
-        assertEquals(0, processed.get(1).startColTile());
-        assertEquals(4, processed.get(1).colCountTiles());
+        assertEquals(0x200, processed.get(1).piece().rawTileWordLow11());
+        assertEquals(0, processed.get(1).piece().startColTile());
+        assertEquals(4, processed.get(1).piece().colCountTiles());
         assertEquals(16, processed.get(1).visibleTopY());
         assertEquals(24, processed.get(1).visibleBottomY());
         assertEquals(40, processed.get(2).visibleTopY());
