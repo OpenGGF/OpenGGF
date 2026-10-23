@@ -1745,3 +1745,48 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+### CNZ viewport fixture: execute the requested EGL path (2026-10-23)
+
+Common-source smoke on `659b02c98` skipped the ordinary
+`TestCNZSlotMachineViewport.reelsStayAtGameCoordinatesAcrossViewportChanges`
+fixture at its legacy `glfwInit` assumption despite the explicit surfaceless-EGL
+launch. This supplies no viewport pixel result. The isolated test-only correction
+uses the existing `PresentationOffscreenTestContext` when explicitly requested;
+unavailable EGL fails visibly with no desktop retry or assumption skip. Other
+platforms retain the hidden OpenGL 4.1 window path.
+
+The production renderer, shader, synthetic all-one ROM art and white palette are
+unchanged. All five native, pillarbox, letterbox, fractional and return viewports
+keep their original inside/outside game-coordinate pixel assertions. The fixture
+requires actual OpenGL 4.1 and checks the GL error after each viewport; renderer,
+texture and program cleanup precede owned context disposal. No production,
+projection, native SAT, palette, allocator or API implementation changes.
+
+One focused check selects `TestCNZSlotMachineViewport`,
+`TestGraphicsProjectionScope` and `TestSurfacelessEglContext` in that worktree,
+using the current main-workspace queue wrapper with `--lean -Dmse=off`, explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, Java 25, Lua 5.4, null audio and no desktop
+or Java launcher environment variables. The bounded 960x800 synthetic readback
+fits the lean lane; no source/resource limit is overridden. The exact command
+uses `$QUEUE` for the current main-workspace wrapper path:
+
+```bash
+python3 "$QUEUE" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.game.sonic2.slotmachine.TestCNZSlotMachineViewport,com.openggf.graphics.TestGraphicsProjectionScope,com.openggf.tools.TestSurfacelessEglContext' test -B
+```
+
+Request 73314 exits 0: 13 distinct identities across three XMLs, zero
+failures/errors/skips (CNZ 1, projection 9, context 3). Queue waiting was 1459s;
+Maven build/execution time was 1:37. The CNZ body actually executed its real
+shader and all five viewport assertions. All properties and streams were read:
+Java 25.0.5, explicit EGL, the owned cwd and compiled classpath, empty test
+streams and no dumps. The exact tested two-file diff and Java bytes matched
+before this factual result append. Independent source review found no material
+mismatch in context cleanup or the unchanged original pixel assertions.
+
+This is bounded fixture coverage, not native-ROM visual parity, another
+platform's context qualification or a route claim. No additional engine or
+unchanged structural sweep was needed for this test-only change. Consumed raw
+Maven/XML/text diagnostics are removed after inspection; compiled outputs and
+the useful unmerged local worktree are retained. Root's `659` smoke attribution
+and Main/PR/observation gates are unchanged.
