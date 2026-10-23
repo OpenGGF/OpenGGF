@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.ModKeySyntax;
 import com.openggf.level.spawn.SpawnPoint;
+import com.openggf.level.objects.authored.AuthoredObjectProperties;
 
 /**
  * Immutable placement record decoded from the Sonic 2 object layout lists.
@@ -25,7 +26,8 @@ public record ObjectSpawn(
         int rawYWord,
         int layoutIndex,
         String ownerModId,
-        String objectKey) implements SpawnPoint {
+        String objectKey,
+        AuthoredObjectProperties authoredProperties) implements SpawnPoint {
 
     /** Canonical constructor – normalises fields to unsigned widths. */
     public ObjectSpawn {
@@ -45,6 +47,19 @@ public record ObjectSpawn(
                 throw new IllegalArgumentException("Object key owner does not match spawn owner");
             }
         }
+        if (authoredProperties != null) {
+            if (!authoredProperties.objectKey().equals(objectKey))
+                throw new IllegalArgumentException("Authored properties do not match the placement's object key");
+            if ((long) x + authoredProperties.width() > 0x10000L
+                    || (long) y + authoredProperties.height() > 0x1000L)
+                throw new IllegalArgumentException("Authored gizmo region exceeds native world coordinates");
+        }
+    }
+
+    /** Existing keyed placements carry no typed authored properties. */
+    public ObjectSpawn(int x, int y, int objectId, int subtype, int renderFlags,
+                       boolean respawnTracked, int rawYWord, int layoutIndex, String ownerModId, String objectKey) {
+        this(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, layoutIndex, ownerModId, objectKey, null);
     }
 
     /** Backward-compatible stock placement constructor. */
@@ -72,6 +87,6 @@ public record ObjectSpawn(
         if (newX < 0 || newX > 0xFFFF || newY < 0 || newY > 0x0FFF)
             throw new IllegalArgumentException("Placement position exceeds native coordinate range");
         return new ObjectSpawn(newX,newY,objectId,subtype,renderFlags,respawnTracked,
-                rawFlags() | newY,layoutIndex,ownerModId,objectKey);
+                rawFlags() | newY,layoutIndex,ownerModId,objectKey,authoredProperties);
     }
 }

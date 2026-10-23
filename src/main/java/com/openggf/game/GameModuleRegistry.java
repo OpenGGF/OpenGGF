@@ -62,6 +62,18 @@ public final class GameModuleRegistry {
         };
     }
 
+    /** Resolve the card's stock presentation without consulting or replacing a live session. */
+    static com.openggf.game.preview.TitlePreviewProvider createStockTitlePreview(GameId gameId) {
+        // Full modules construct live title/level-select collaborators and may register donors.
+        // Menu decoding needs only the detached capability, as with stock menu audio below.
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> new com.openggf.game.sonic1.titlescreen.Sonic1TitlePreviewProvider();
+            case S2 -> new com.openggf.game.sonic2.titlescreen.Sonic2TitlePreviewProvider();
+            case S3K -> new com.openggf.game.sonic3k.titlescreen.Sonic3kTitlePreviewProvider();
+            case STANDALONE -> com.openggf.game.preview.TitlePreviewProvider.NONE;
+        };
+    }
+
     /** Menu-only stock source; creating it never changes a gameplay or bootstrap module. */
     static StockMenuAudio createStockMenuAudio(GameId gameId) {
         return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {

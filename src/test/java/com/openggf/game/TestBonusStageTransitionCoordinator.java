@@ -165,6 +165,38 @@ class TestBonusStageTransitionCoordinator {
     }
 
     @Test
+    void returnPreparationResamplesTheManagerAfterEachOriginalWrite() {
+        var first = mock(LevelManager.class);
+        var second = mock(LevelManager.class);
+        var third = mock(LevelManager.class);
+        var current = new java.util.concurrent.atomic.AtomicReference<>(first);
+        var reads = new AtomicInteger();
+        var saved = state(0, 0, 0, 0, 0, 0, (byte) 0, (byte) 0, 0, 0, 0);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            current.set(second);
+            return null;
+        }).when(first).setBonusStageReturnCheckpointIndex(saved.savedLastStarPostHit());
+        org.mockito.Mockito.doAnswer(invocation -> {
+            current.set(third);
+            return null;
+        }).when(second).setSuppressNextMusicChange(true);
+
+        coordinator.prepareReturnLoad(() -> {
+            reads.incrementAndGet();
+            return current.get();
+        }, saved);
+
+        var order = org.mockito.Mockito.inOrder(first, second, third);
+        order.verify(first).setBonusStageReturnCheckpointIndex(saved.savedLastStarPostHit());
+        order.verify(second).setSuppressNextMusicChange(true);
+        order.verify(third).getCheckpointState();
+        order.verify(third).restorePersistentRespawnOnNextObjectReset(null);
+        verify(first, never()).getCheckpointState();
+        verify(second, never()).getCheckpointState();
+        assertEquals(3, reads.get(), "Keep the three original field reads at their original write boundaries");
+    }
+
+    @Test
     void captureInteriorExitRingCountFallsBackToSavedEntryRingsWithoutLiveGameState() {
         LevelManager level = mock(LevelManager.class);
         BonusStageState saved = state(0, 0, 0, 0, 0, 0,

@@ -94,13 +94,13 @@ public final class SpriteSatMaskPostProcessor {
         for (int i = 0; i < size; i++) {
             if (i == firstMarker) {
                 for (int j = i + 1; j < size; j++) {
-                    if (entries.get(j).maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[j]) {
+                    if (entries.get(j).piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[j]) {
                         scratch.order[ordered++] = j;
                     }
                 }
             }
             if (firstMarker >= 0 && i > firstMarker
-                    && entries.get(i).maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[i]) continue;
+                    && entries.get(i).piece().maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[i]) continue;
             scratch.order[ordered++] = i;
         }
         int total = 0;
@@ -123,10 +123,10 @@ public final class SpriteSatMaskPostProcessor {
             for (int slot = 0; slot < total; slot++) {
                 int index = scratch.order[slot];
                 SpriteSatEntry entry = entries.get(index);
-                if (line < entry.y() || line >= entry.endYExclusive()) continue;
+                if (line < entry.piece().y() || line >= entry.piece().endYExclusive()) continue;
                 if (entry.isGhost()) {
-                    if (!masked && entry.endXExclusive() > raster.x() && entry.x() < raster.x() + raster.width()) {
-                        scratch.columns[index * raster.height() + row] = entry.widthTiles();
+                    if (!masked && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
+                        scratch.columns[index * raster.height() + row] = entry.piece().widthTiles();
                     }
                     continue;
                 }
@@ -137,16 +137,16 @@ public final class SpriteSatMaskPostProcessor {
                 }
                 int rawX = scratch.xOverride[index];
                 if (rawX < 0) {
-                    int biasedX = entry.x() - raster.x() + 128;
+                    int biasedX = entry.piece().x() - raster.x() + 128;
                     // Expanded raster coordinates exceed the native nine-bit SAT field.
                     rawX = raster.width() <= 320 ? biasedX & 0x1FF : biasedX;
                 }
                 if (rawX != 0) armed = true;
                 else if (armed) masked = true;
-                int columns = Math.min(entry.widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8));
-                pixels += entry.widthTiles() * 8;
+                int columns = Math.min(entry.piece().widthTiles(), Math.max(0, (raster.hardwareWidth() - pixels) / 8));
+                pixels += entry.piece().widthTiles() * 8;
                 if (!masked && !scratch.control[index]
-                        && entry.endXExclusive() > raster.x() && entry.x() < raster.x() + raster.width()) {
+                        && entry.piece().endXExclusive() > raster.x() && entry.piece().x() < raster.x() + raster.width()) {
                     scratch.columns[index * raster.height() + row] = columns;
                 }
                 if (pixels >= raster.hardwareWidth()) {
@@ -164,8 +164,8 @@ public final class SpriteSatMaskPostProcessor {
 
     private static int maskCompanion(List<SpriteSatEntry> entries, int index) {
         SpriteSatEntry entry = entries.get(index);
-        if (entry.isGhost() || entry.tileWordLow11() != MASK_TILE_WORD || entry.hFlip() || entry.vFlip()
-                || entry.piecePriority() || (entry.paletteIndex() & 3) != 0) return -1;
+        if (entry.isGhost() || entry.piece().rawTileWordLow11() != MASK_TILE_WORD || entry.piece().hFlip() || entry.piece().vFlip()
+                || entry.piece().piecePriority() || (entry.piece().paletteIndex() & 3) != 0) return -1;
         // Ghosts do not occupy the native SAT link that selects the companion.
         for (int next = index + 1; next < entries.size(); next++) {
             if (!entries.get(next).isGhost()) return next;
@@ -174,23 +174,23 @@ public final class SpriteSatMaskPostProcessor {
     }
 
     private static void appendVisible(SpriteSatEntry entry, int index, Raster raster, Scratch scratch) {
-        int top = Math.max(Math.max(entry.y(), entry.visibleTopY()), raster.y());
-        int bottom = Math.min(Math.min(entry.endYExclusive(), entry.visibleBottomY()), raster.y() + raster.height());
+        int top = Math.max(Math.max(entry.piece().y(), entry.visibleTopY()), raster.y());
+        int bottom = Math.min(Math.min(entry.piece().endYExclusive(), entry.visibleBottomY()), raster.y() + raster.height());
         int start = top;
         while (start < bottom) {
             int columns = scratch.columns[index * raster.height() + start - raster.y()];
             int end = start + 1;
             while (end < bottom && scratch.columns[index * raster.height() + end - raster.y()] == columns) end++;
             if (columns > 0) {
-                int left = entry.hFlip() ? entry.widthTiles() - columns : 0;
-                int right = entry.hFlip() ? entry.widthTiles() : columns;
-                left = Math.max(left, entry.startColTile());
-                right = Math.min(right, entry.startColTile() + entry.colCountTiles());
+                int left = entry.piece().hFlip() ? entry.piece().widthTiles() - columns : 0;
+                int right = entry.piece().hFlip() ? entry.piece().widthTiles() : columns;
+                left = Math.max(left, entry.piece().startColTile());
+                right = Math.min(right, entry.piece().startColTile() + entry.piece().colCountTiles());
                 if (right > left) {
-                    SpriteSatEntry clipped = left == entry.startColTile() && right - left == entry.colCountTiles()
-                            ? entry : entry.clipRect(left, right - left, entry.startRowTile(), entry.rowCountTiles());
-                    if (start != Math.max(entry.y(), entry.visibleTopY())
-                            || end != Math.min(entry.endYExclusive(), entry.visibleBottomY())) {
+                    SpriteSatEntry clipped = left == entry.piece().startColTile() && right - left == entry.piece().colCountTiles()
+                            ? entry : entry.clipRect(left, right - left, entry.piece().startRowTile(), entry.piece().rowCountTiles());
+                    if (start != Math.max(entry.piece().y(), entry.visibleTopY())
+                            || end != Math.min(entry.piece().endYExclusive(), entry.visibleBottomY())) {
                         clipped = clipped.withVisibleScanlines(start, end);
                     }
                     appendReplay(clipped, scratch.processed);
@@ -205,24 +205,24 @@ public final class SpriteSatMaskPostProcessor {
             output.add(admitted);
             return;
         }
-        int left = admitted.x() + (admitted.hFlip()
-                ? admitted.widthTiles() - admitted.startColTile() - admitted.colCountTiles()
-                : admitted.startColTile()) * 8;
-        int right = left + admitted.colCountTiles() * 8;
+        int left = admitted.piece().x() + (admitted.piece().hFlip()
+                ? admitted.piece().widthTiles() - admitted.piece().startColTile() - admitted.piece().colCountTiles()
+                : admitted.piece().startColTile()) * 8;
+        int right = left + admitted.piece().colCountTiles() * 8;
         for (SpriteSatEntry fragment : admitted.replayFragments()) {
-            int firstScreenCol = Math.max(0, Math.floorDiv(left - fragment.x() + 7, 8));
-            int endScreenCol = Math.min(fragment.widthTiles(), Math.floorDiv(right - fragment.x(), 8));
-            int sourceLeft = fragment.hFlip() ? fragment.widthTiles() - endScreenCol : firstScreenCol;
-            int sourceRight = fragment.hFlip() ? fragment.widthTiles() - firstScreenCol : endScreenCol;
-            sourceLeft = Math.max(sourceLeft, fragment.startColTile());
-            sourceRight = Math.min(sourceRight, fragment.startColTile() + fragment.colCountTiles());
-            int top = Math.max(Math.max(admitted.visibleTopY(), admitted.y()),
-                    Math.max(fragment.y(), fragment.visibleTopY()));
-            int bottom = Math.min(Math.min(admitted.visibleBottomY(), admitted.endYExclusive()),
-                    Math.min(fragment.endYExclusive(), fragment.visibleBottomY()));
+            int firstScreenCol = Math.max(0, Math.floorDiv(left - fragment.piece().x() + 7, 8));
+            int endScreenCol = Math.min(fragment.piece().widthTiles(), Math.floorDiv(right - fragment.piece().x(), 8));
+            int sourceLeft = fragment.piece().hFlip() ? fragment.piece().widthTiles() - endScreenCol : firstScreenCol;
+            int sourceRight = fragment.piece().hFlip() ? fragment.piece().widthTiles() - firstScreenCol : endScreenCol;
+            sourceLeft = Math.max(sourceLeft, fragment.piece().startColTile());
+            sourceRight = Math.min(sourceRight, fragment.piece().startColTile() + fragment.piece().colCountTiles());
+            int top = Math.max(Math.max(admitted.visibleTopY(), admitted.piece().y()),
+                    Math.max(fragment.piece().y(), fragment.visibleTopY()));
+            int bottom = Math.min(Math.min(admitted.visibleBottomY(), admitted.piece().endYExclusive()),
+                    Math.min(fragment.piece().endYExclusive(), fragment.visibleBottomY()));
             if (sourceRight > sourceLeft && bottom > top) {
                 output.add(fragment.clipRect(sourceLeft, sourceRight - sourceLeft,
-                        fragment.startRowTile(), fragment.rowCountTiles()).withVisibleScanlines(top, bottom));
+                        fragment.piece().startRowTile(), fragment.piece().rowCountTiles()).withVisibleScanlines(top, bottom));
             }
         }
     }

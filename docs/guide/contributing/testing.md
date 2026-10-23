@@ -12,7 +12,7 @@ python3 tools/testing/run_categories.py --category all --run
 # Focused regression (use --lean for small checks).
 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
-python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCollisionLogic#testSlopeAngle' test
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCollisionLogic#testCollisionLogic' test
 # Public release preparation ONLY: the former complete ordinary suite.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
@@ -58,7 +58,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptracechaser-integration \
 
 | Event | What runs |
 |---|---|
-| Push to `develop` or `next` | Basic CI: the `smoke` profile (about seven minutes), once the branch has had no push for 30 minutes. |
+| Push to `develop` or `next` | Basic CI: the `smoke` profile, once the branch has had no push for 30 minutes. |
 | Non-draft pull request, any base | Routine CI: branch policy, the bounded smoke suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
 | Push to `master` | The Release workflow below: full validation, native packaging, publication. |
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
@@ -118,21 +118,21 @@ The rewind system has both ordinary regression tests and an opt-in benchmark. Se
 Run the regular rewind suite:
 
 ```bash
-mvn -Dmse=off "-Dtest=*Rewind*" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=*Rewind*" test
 ```
 
 Run the compact schema foundation tests when changing automatic rewind capture,
 field policy classification, or value codecs:
 
 ```bash
-mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
 ```
 
 Generate the runtime-owner field inventory when planning object/player rewind
 coverage work:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool"
 ```
 
@@ -155,27 +155,27 @@ entries when a migration closes them.
 Run the child/spawn graph audit when planning object family coverage:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.ChildGraphPolicyInventoryTool"
 ```
 
 Run the focused encounter validation foundation:
 
 ```bash
-mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestRewindEncounterValidation" test
 ```
 
 Run the focused presentation checks after changing reverse audio, trace rewind,
 or fade behaviour:
 
 ```bash
-mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
 ```
 
 Run the benchmark only when you need timing, footprint, or long-tail determinism data:
 
 ```bash
-mvn -Dmse=off "-Dtest=RewindBenchmark" \
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" test
 ```
 
@@ -214,11 +214,11 @@ class TestMyFeature {
 Available game values: `SonicGame.SONIC_1`, `SonicGame.SONIC_2`, `SonicGame.SONIC_3K`.
 
 The annotation system provides several benefits over manual checks:
-- **Automatic environment reset** — `TestEnvironment.resetAll()` runs before each test.
+- **Automatic environment reset** — `TestEnvironment.configureRomFixture(rom)` resets and rebuilds the gameplay context before each test.
 - **ROM caching** — ROMs are loaded once per JVM and shared across all tests via `RomCache`.
 - **Clean skip reporting** — JUnit reports skipped tests with a clear reason rather than
   silently passing.
-- **Game module setup** — `GameModuleRegistry.detectAndSetModule()` is called automatically.
+- **Game module setup** — The ROM-backed game module is configured automatically.
 
 ### `@RequiresGameModule` (No Real ROM)
 
@@ -272,9 +272,7 @@ import static com.openggf.tests.RomTestUtils.ensureRomAvailable;
 @Test
 void testEHZCollision() {
     File romFile = ensureRomAvailable();
-    if (romFile == null) {
-        return;  // Skip: ROM not present
-    }
+    org.junit.jupiter.api.Assumptions.assumeTrue(romFile != null, "ROM not available");
     // ... test logic
 }
 ```
@@ -285,15 +283,18 @@ ROM files are found automatically by filename in the working directory. You can 
 specify paths via system properties or environment variables:
 
 ```bash
-# System properties
-mvn test -Dsonic1.rom.path="path/to/sonic1.gen"
-mvn test -Dsonic2.rom.path="path/to/sonic2.gen"
-mvn test -Ds3k.rom.path=s3k.gen
+# System properties on a focused selection
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS1Ghz1TraceReplay \
+  -Dsonic1.rom.path=/absolute/s1.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestCollisionLogic \
+  -Dsonic2.rom.path=/absolute/s2.gen test
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestSonic3kLevelLoading \
+  -Ds3k.rom.path=/absolute/s3k.gen test
 
 # Environment variables
-export SONIC_1_ROM_PATH="path/to/sonic1.gen"
-export SONIC_2_ROM_PATH="path/to/sonic2.gen"
-export SONIC_3K_ROM_PATH="path/to/s3k.gen"
+export SONIC_1_ROM_PATH="/absolute/s1.gen"
+export SONIC_2_ROM_PATH="/absolute/s2.gen"
+export SONIC_3K_ROM_PATH="/absolute/s3k.gen"
 ```
 
 ## HeadlessTestFixture
@@ -308,7 +309,7 @@ frame-stepping controls.
 @Test
 void testPlayerLandsOnGround() {
     HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-            .withZoneAndAct(ZONE_EHZ, 0)
+            .withZoneAndAct(0, 0)  // EHZ Act 1
             .startPosition((short) 0x100, (short) 0x200)
             .build();
 
@@ -317,7 +318,7 @@ void testPlayerLandsOnGround() {
 
     // Assert the player landed on the ground
     AbstractPlayableSprite player = fixture.sprite();
-    assertTrue(player.isOnGround());
+    assertFalse(player.getAir());
     assertTrue(player.getY() > 0x200);  // Fell from starting position
 }
 ```
@@ -327,13 +328,13 @@ void testPlayerLandsOnGround() {
 ```java
 // Set up fixture with specific start position
 HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-        .withZoneAndAct(ZONE_HTZ, act)
+        .withZoneAndAct(4, act)  // HTZ engine index; act is zero-based
         .startPosition((short) 0x500, (short) 0x300)
         .build();
 
 // Snap camera to player
-fixture.camera().setX(0x500 - 160);
-fixture.camera().setY(0x300 - 112);
+fixture.camera().setX((short) (0x500 - 160));
+fixture.camera().setY((short) (0x300 - 112));
 fixture.camera().updatePosition(true);  // Snap (no smooth scroll)
 
 // Step frames with per-frame inspection
@@ -347,14 +348,15 @@ for (int i = 0; i < 120; i++) {
 
 ### What HeadlessTestFixture Does
 
-The fixture calls the same update sequence as the real game loop:
-1. `Camera.updatePosition()` -- Update camera before level events.
-2. `LevelEventManager.update()` -- Process dynamic boundaries, zone-specific triggers.
-3. `ParallaxManager.update()` -- Calculate scroll offsets.
-4. Object `update()` calls for all active objects.
+The fixture delegates to `HeadlessTestRunner` and the shared `RecordingFrameDriver`.
+`LevelFrameStep` owns frame-level ordering and `SpriteManager.update(...)` owns
+playable/team ordering, so tests and trace captures use the production update path.
+Do not reproduce a partial camera/event/object loop in the test itself.
 
-This means level events, camera boundaries, and object interactions all work in tests
-the same way they do in the real game.
+The snippets assume the matching `@RequiresRom` annotation and zero-based engine
+zone/act indices. `startPosition(...)` uses top-left coordinates by default; add
+`startPositionIsCentre()` when supplying ROM `x_pos` / `y_pos` coordinates and
+compare them with `getCentreX()` / `getCentreY()`.
 
 ## Test Organisation
 
@@ -388,17 +390,17 @@ the original game for specific scenarios.
 @Test
 void testRollingDownSlope() {
     HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-            .withZoneAndAct(ZONE_EHZ, 0)
+            .withZoneAndAct(0, 0)  // EHZ Act 1
             .startPosition((short) 0x800, (short) 0x340)
             .build();
 
     // Set initial speed
-    fixture.sprite().setGroundSpeed(0x200);
+    fixture.sprite().setGSpeed((short) 0x200);
 
     fixture.stepIdleFrames(30);
 
     // Player should have accelerated down the slope
-    int speed = fixture.sprite().getGroundSpeed();
+    int speed = fixture.sprite().getGSpeed();
     assertTrue(speed > 0x200, "Player should accelerate on downhill slope");
 }
 ```
@@ -409,17 +411,17 @@ void testRollingDownSlope() {
 @Test
 void testWallCollisionAtSpeed() {
     HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-            .withZoneAndAct(ZONE_EHZ, 0)
+            .withZoneAndAct(0, 0)  // EHZ Act 1
             .startPosition((short) (wallX - 100), (short) wallY)
             .build();
 
-    fixture.sprite().setGroundSpeed(0xC00);  // 12 pixels/frame
+    fixture.sprite().setGSpeed((short) 0xC00);  // 12 pixels/frame
 
     fixture.stepIdleFrames(30);
 
     // Player should stop at the wall, not pass through
     assertTrue(fixture.sprite().getX() <= wallX);
-    assertEquals(0, fixture.sprite().getGroundSpeed());
+    assertEquals(0, fixture.sprite().getGSpeed());
 }
 ```
 
@@ -437,7 +439,9 @@ Current examples:
 Run them with:
 
 ```bash
-mvn test -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay \
+  -Dsonic1.rom.path=/absolute/s1.gen test
 ```
 
 For the full workflow, including recording traces and reading divergence reports, see
@@ -473,8 +477,8 @@ state management.
 
 ## Tips
 
-- **Keep tests independent.** Tests run in parallel across multiple JVM forks. Do not
-  depend on state from another test.
+- **Keep tests independent.** The default reuses one JVM, and an optional profile
+  uses two forks. Do not depend on another test's state or execution order.
 - **Skip gracefully without ROMs.** Use `@RequiresRom` to gate ROM-dependent tests.
   Never let a test fail just because a ROM is absent.
 - **Use constants from the disassembly.** When asserting positions or velocities, use the

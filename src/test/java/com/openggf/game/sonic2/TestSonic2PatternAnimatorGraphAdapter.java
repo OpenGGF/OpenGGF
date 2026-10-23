@@ -6,6 +6,9 @@ import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.animation.ChannelContext;
 import com.openggf.game.animation.DestinationPlan;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.animation.AniPlcScriptState;
@@ -29,6 +32,67 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2PatternAnimatorGraphAdapter {
+
+    @Test
+    void productionAssemblyPrimesBeforeRegistrationAndRebindsGraphicsBetweenApplies() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        EngineContext previous = EngineServices.current();
+        AnimatedTileChannelGraph graph = GameServices.animatedTileChannelGraph();
+        graph.clear();
+        CountingGraphics installGraphics = new CountingGraphics();
+        installGraphics.beforeUpload = () -> assertTrue(graph.channels().isEmpty(),
+                "Initial art must be primed before script channels are registered");
+        try {
+            configureGraphics(previous, installGraphics);
+            Level level = GameServices.level().getCurrentLevel();
+            Sonic2PatternAnimator animator = new Sonic2PatternAnimator(GameServices.rom().getRom(), level, 0);
+            assertTrue(installGraphics.uploads > 0, "Construction must prime ROM script art");
+            assertFalse(graph.channels().isEmpty());
+            for (AniPlcScriptState script : loadScripts(animator)) {
+                assertEquals(0, script.getTimer());
+                assertEquals(0, script.getFrameIndex());
+            }
+            int primedUploads = installGraphics.uploads;
+
+            CountingGraphics currentGraphics = new CountingGraphics();
+            configureGraphics(previous, currentGraphics);
+            animator.update();
+            assertTrue(currentGraphics.uploads > 0, "First application must use the rebound owner");
+            assertEquals(primedUploads, installGraphics.uploads);
+            int firstApplyUploads = currentGraphics.uploads;
+
+            CountingGraphics nextGraphics = new CountingGraphics();
+            configureGraphics(previous, nextGraphics);
+            for (int tick = 0; tick < 320 && nextGraphics.uploads == 0; tick++) {
+                animator.update();
+            }
+            assertTrue(nextGraphics.uploads > 0, "Later applications must observe another rebind");
+            assertEquals(firstApplyUploads, currentGraphics.uploads);
+            assertEquals(primedUploads, installGraphics.uploads);
+        } finally {
+            EngineServices.configure(previous);
+        }
+    }
+
+    private static void configureGraphics(EngineContext previous, GraphicsManager graphics) {
+        EngineServices.configure(new EngineContext(
+                previous.configuration(), graphics, previous.audio(), previous.roms(), previous.profiler(),
+                previous.debugOverlay(), previous.playbackDebug(), previous.romDetection(),
+                previous.crossGameFeatures(), previous.moduleResolutionService()));
+    }
+
+    private static final class CountingGraphics extends GraphicsManager {
+        private int uploads;
+        private Runnable beforeUpload = () -> {};
+
+        @Override public boolean isGlInitialized() { return true; }
+
+        @Override
+        public void updatePatternTexture(Pattern pattern, int patternId) {
+            beforeUpload.run();
+            uploads++;
+        }
+    }
 
     @Test
     void ehzAnimatedTileStillChangesThroughGraphBackedAdapter() {
@@ -177,8 +241,11 @@ class TestSonic2PatternAnimatorGraphAdapter {
     }
 
     private static List<AniPlcScriptState> loadScripts(Object animationManager) {
+        return loadScripts(loadPatternAnimator(animationManager));
+    }
+
+    private static List<AniPlcScriptState> loadScripts(Sonic2PatternAnimator patternAnimator) {
         try {
-            Sonic2PatternAnimator patternAnimator = loadPatternAnimator(animationManager);
             Field scriptsField = patternAnimator.getClass().getDeclaredField("scripts");
             scriptsField.setAccessible(true);
             @SuppressWarnings("unchecked")

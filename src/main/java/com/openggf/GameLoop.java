@@ -19,10 +19,6 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugObjectArtViewer;
-import com.openggf.game.sonic1.Sonic1GameModule;
-import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
-import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.mode.BootScreenModeController;
@@ -1174,14 +1170,8 @@ public class GameLoop {
             return;
         }
         Runnable productionIteration = () -> {
-            lifecycleContext.plcFrameLifecycle().runLogicalIteration(
-                    frame -> {
-                        if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
-                            LevelFrameStep.dispatchGameVBlank(
-                                    LevelFrameContext.from(lifecycleContext), frame);
-                        }
-                    },
-                    continueScreen::updateFade, frame -> {
+            GameLoopPlcLifecycle.runLogicalIteration(lifecycleContext.plcFrameLifecycle(),
+                    lifecycleContext, continueScreen::updateFade, frame -> {
                         activePlcLifecycleFrame = frame;
                         try {
                             stepInternalBody();
@@ -1376,14 +1366,9 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        if (hostedRuns.isActive() && debugShortcutsEnabled
-                && DebugAssistInput.pressed(inputHandler, configService)) {
-            hostedRuns.noteDebugAssist();
-        }
-        debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled, configService);
-        if (debugShortcutsEnabled) {
-            debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
-        }
+        GameLoopDebugShortcuts.updateInput(hostedRuns,
+                debugOverlayManager, () -> inputHandler,
+                debugShortcutsEnabled, configService);
 
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
             if (currentGameMode == GameMode.SPECIAL_STAGE) {
@@ -2942,10 +2927,8 @@ public class GameLoop {
 
         try {
             // Signal bonus stage return so onInitLevel() can skip intros (ROM: Level_FromSavedGame)
-            levelManager.setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
             // Suppress auto-music: zone music starts below during the title card
-            levelManager.setSuppressNextMusicChange(true);
-            bonusStageTransitionCoordinator.prepareReturnLoad(levelManager, savedState);
+            bonusStageTransitionCoordinator.prepareReturnLoad(() -> levelManager, savedState);
             // The synchronous saved-origin load consumes this semantic return cause once.
             TraceSessionLauncher.markNextRunInteriorReturnLoad();
             levelManager.loadZoneAndAct(zone, act);

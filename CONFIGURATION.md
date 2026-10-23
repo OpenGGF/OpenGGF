@@ -1,10 +1,13 @@
 # Configuration Reference
 
-Settings live in `config.yaml` in the working directory (next to the JAR), and that file
+This reference follows the **0.7 development branch**; published 0.6 packages may
+have fewer settings and different menus.
+
+Settings live in `config.yaml` in the working directory, and that file
 holds **only the settings you have changed**. Every other setting reads its built-in
 default, so a default that changes in a later build applies to every install that never
-touched the key. The bundled `src/main/resources/config.yaml` documents every setting with
-its default and is written to **`config.yaml.example`** alongside your file on every run;
+touched the key. The bundled [reference template](src/main/resources/config.yaml) documents settings with
+their defaults and is written to **`config.yaml.example`** alongside your file on every run;
 copy a line from it into `config.yaml` to change that setting. Your own `config.yaml` is
 never overwritten by the example.
 
@@ -46,13 +49,14 @@ The `config.yaml` is organized into the following top-level sections:
 | `display` | Aspect preset, window autosize, display shader library, deadzone mode, color profile and expansion, FPS |
 | `gameplay` | Normal-play hardware load-time simulation |
 | `config` | Configuration-file persistence behavior |
-| `input` | `player1` / `player2` key bindings, `pause` key |
-| `audio` | Enabled flag, region, DAC, FM6, PSG settings |
+| `input` | `player1` / `player2` key bindings, `pause` key and controller settings |
+| `audio` | Enabled flag, hub music, region, FM core, DAC and FM6 settings |
 | `characters` | Main character, sidekick, data select combos |
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
-| `capture` | Trace video capture output dir, scale, fps, codec |
+| `capture` | Trace and live video output, codecs, encoder settings and recording shortcut |
 | `startup` | Title screen, master title, legal disclaimer flags |
-| `hub` | Last focused game |
+| `hub` | Last focused game and ignored legacy continue values |
+| `mods` | Mod-zone title-card behavior |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
 | `launch` | Per-game master-title launch profiles |
@@ -66,7 +70,9 @@ The `config.yaml` is organized into the following top-level sections:
 | `debug.keys` | All debug/developer keyboard shortcuts |
 | `debug.startup` | Level select on startup, S3K skip intros |
 | `debug.playback` | BK2 movie path and playback control keys (unbound by default) |
+| `debug.recording` | Gameplay input recording shortcut |
 | `debug.traceRewind` | Key held during Trace Test Mode to rewind engine state |
+| `debug.rewind` | Live-rewind determinism audit |
 | `debug.traceRender` | Trace Test Mode / capture visibility flags |
 | `debug.testMode` | Test mode enable flag and trace catalog directory |
 | `debug.crossGame` | Data-select image regeneration overrides and coord-log key |
@@ -84,11 +90,11 @@ The `config.yaml` is organized into the following top-level sections:
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `SCREEN_WIDTH_PIXELS` | *(derived)* | int | `320` | Logical pixel width — the Mega Drive native horizontal resolution. Derived from `display.aspect`; never stored. |
-| `SCREEN_HEIGHT_PIXELS` | *(derived)* | int | `224` | Logical pixel height — the Mega Drive native vertical resolution (224 for NTSC, 240 for PAL). Derived; never stored. |
+| `SCREEN_HEIGHT_PIXELS` | *(derived)* | int | `224` | Logical pixel height. All current aspect presets use 224, including PAL timing; derived and never stored. |
 | `SCREEN_WIDTH` | `display` / `debug.window.width` | int | `640` | Actual window width in OS pixels. Derived from aspect preset when `display.windowAutosize=true`. |
 | `SCREEN_HEIGHT` | `display` / `debug.window.height` | int | `448` | Actual window height in OS pixels. |
 | `SCALE` | `debug.window.scale` | double | `1.0` | **DEPRECATED** additional rendering scale factor. |
-| `FPS` | `display.fps` | int | `60` | Target frames per second. Affects game speed — use `60` for NTSC, `50` for PAL. |
+| `FPS` | `display.fps` | int | `60` | Target frames per second under NTSC; affects game speed. PAL region forces 50 regardless of this setting. |
 | `LOAD_TIME_SIMULATION` | `gameplay.loadTimeSimulation` | enum | `FAST` | Normal-play ROM-load timing: `NONE` completes as soon as production preparation allows; `PROFILED` uses the generator-owned measured profile data; `FAST` (default) uses the hand-tuned copy of that data (`load-time-profiles/s3k-fast-v1.json`, which also carries the S3K title-screen Sonic frame decodes taken from the original hardware capture), and warns then behaves as `NONE` for a game without a FAST manifest; `REALISTIC` is a retained reserved alias that warns when the profile is resolved and returns `PROFILED`. S1/S2 resolve through their default module factory to the supplied immediate profile; their ROM-derived PLC and dynamic-art/DPLC lifecycles remain game-owned and are not retimed by this setting. Trace replay uses its recorded hardware-timing policy and does not consume this setting; queue-state trace diagnostics are comparison-only and never alter this configuration. |
 | `CONFIG_PRESERVE_EXPLICIT_DEFAULTS` | `config.preserveExplicitDefaults` | bool | `false` | Developer override: retain explicitly listed recognized settings, including values equal to defaults, when converting an older full configuration to sparse format. |
 | `DISPLAY_COLOR_PROFILE` | `display.colorProfile` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
@@ -513,7 +519,7 @@ Allowed launch profile enums:
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `MAIN_CHARACTER_CODE` | `characters.main` | string | `"sonic"` | Identity of the player-controlled character. Currently only `"sonic"` is supported. |
+| `MAIN_CHARACTER_CODE` | `characters.main` | string | `"sonic"` | Identity of the player-controlled character for direct launches. Native choices are Sonic in S1, Sonic/Tails in S2, and Sonic/Tails/Knuckles in S3K; donors and registered character patches can change availability. Hub launches use Game Setup or Data Select instead. |
 | `SIDEKICK_CHARACTER_CODE` | `characters.sidekick` | string | `"tails"` | CPU-controlled sidekick spawned alongside the main character. Defaults to `"tails"` (Tails AI enabled). Set to `"sonic"` to clone the player, or `""` (empty) to disable the sidekick. |
 | `DATA_SELECT_EXTRA_PLAYER_COMBOS` | `characters.dataSelectExtraCombos` | string | `""` | Extra team combinations shown on the S3K Data Select screen. Format is `main,sidekick1,sidekick2;main2,sidekick1`. The first character in each group is the main character; remaining entries are sidekicks. Example: `"sonic,knuckles;sonic,tails,tails;knuckles,tails"`. This only affects Data Select team choices; normal gameplay and Level Select still use `MAIN_CHARACTER_CODE` and `SIDEKICK_CHARACTER_CODE`. |
 
@@ -797,9 +803,16 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 
 | YAML key | Default | Description |
 |----------|---------|-------------|
+| `port` | `27900` | Public TLS WebSocket and HTTPS listener for the browser, relay rooms, recordings and verifier API. |
+| `tlsCertPath` / `tlsKeyPath` | required | PEM certificate chain and private key paths. Remote deployments require normal TLS validation. |
+| `dbPath` | `master-identities.db` | Identity database path; a relative path is beneath the master's `--data` directory. |
+| `adminPort` | `27901` | HTTP administration/readiness listener, bound to loopback. Do not publish it from a container. |
+| `adminToken` | required | Literal admin bearer token. Prefer `adminTokenFile` for deployment. |
+| `adminTokenFile` | unset | Read the admin token from a UTF-8 file instead of `adminToken`. Relative file paths resolve against the YAML directory. |
 | `newIdentityCacheSize` | `10000` | Maximum entries in each of the anonymous identity-age cache and the creation-proof reconnect-stamp LRU cache. Stamp eviction requires another creation proof for identities without a durable row. |
 | `newIdentityCacheTtlMinutes` | `60` | Anonymous identity-age cache idle TTL and creation-proof reconnect-stamp lifetime from proof completion. Reconnects update stamp recency without extending its expiry. |
 | `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
+| `verifierRegistrationTokenFile` | unset | File-backed alternative to `verifierRegistrationToken`, resolved like `adminTokenFile`. |
 | `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
 | `maxRecordingStorageBytes` | `536870912` | Maximum total bytes retained in the content-addressed recording store; new uploads receive HTTP 507 when full. |
 | `recordingUploadMinIntervalMillis` | `1000` | Minimum interval between accepted recording uploads from the same player identity. |
@@ -813,6 +826,27 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 | `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |
 | `publicBaseUrl` | `""` | Absolute public HTTPS base for recording requests; blank sends a relative path that clients resolve against their master URL. |
 
+Tokens contain printable non-space ASCII characters and are limited to 16 KiB.
+File forms use UTF-8, strip surrounding whitespace, and reject empty, multiline,
+malformed or unreadable files. Do not specify both literal and file forms of one
+token. YAML token file paths resolve against the YAML directory; the verifier's
+CLI token path resolves against its working directory. Secrets are loaded at
+startup; recreate services after rotating files.
+The authenticated `GET /admin/health` endpoint returns 204 when the master's
+listeners are running. `racing-server healthcheck --config master.yaml` checks it
+with bounded HTTP timeouts, without exposing the token in its arguments.
+
+The verifier CLI takes `--master https://host:27900`, repeated `--rom /path/game.gen`,
+`--data /path/worker-identity`, and either `--registration-token-file /path/token`
+or the existing `--registration-token TOKEN`. Give every concurrent worker its
+own data directory. Continuous workers retry initial registration and subsequent
+transport failures. `--shutdown-grace-seconds` (default 30, range 1–300) stops new
+polls on shutdown and bounds the wait for an active cycle to finish; allow a longer
+container stop timeout. `--once` performs one registration/poll cycle and reports
+failure instead of retrying indefinitely. Heartbeats do not renew job leases.
+See [Docker deployment](racing/deploy/README.md) for the same configuration with
+standalone images or Compose, including TLS, mounts, restart limits and backups.
+
 ## Debug
 
 BK2 playback controls are unbound by default and must be rebound in `debug.playback`
@@ -820,8 +854,8 @@ before BK2 playback can be controlled from the keyboard.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
-| `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from title Tools. |
+| `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Enables gameplay debug shortcuts and most overlay controls. The visible debug HUD starts hidden until toggled; performance overlay, screenshot and recording controls have their own gates. |
+| `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow gameplay entry into the experimental level editor with `Shift+Tab`; project authoring is also available from Advanced → Editor projects at the hub. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
 | `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | `rewind.tapeCoastEnabled` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
@@ -832,7 +866,7 @@ before BK2 playback can be controlled from the keyboard.
 | `LIVE_REWIND_VHS_EFFECT` | `rewind.vhsEffect` | bool | `true` | Render an authentic VHS picture-search effect (scrolling noise bars, scanline jitter, chroma bleed, tape dropouts, head-switch strip) during live rewind or a controller-owned reverse-playback request. Native live rewind fades out over ~10 frames after release. Applied after the fade pass and before any user display shader. Controller requests work independently of `LIVE_REWIND_ENABLED` and are suppressed by host pause. |
 | `LIVE_REWIND_VHS_TEAR_BANDS` | `rewind.vhsTearBands` | bool | `true` | Include the scrolling tear bands in the VHS rewind effect. Set `false` to keep the rest of the effect (scanline jitter, chroma bleed, tape dropouts, head-switch strip, wobble) without the bands. Only meaningful when the VHS effect is enabled. |
 | `REWIND_HISTORY_SECONDS` | `rewind.historySeconds` | int | `60` | Seconds of live rewind keyframe and input history to retain. The effective retained window may be up to one keyframe interval longer so replay always has a complete keyframe-to-target input segment. |
-| `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
+| `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | `rewind.audioHistoryLimitType` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond retained PCM history plays silence. |
 | `REWIND_AUDIO_HISTORY_SECONDS` | `rewind.audioHistorySeconds` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | `rewind.audioHistorySizeMb` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
 | `PLAYBACK_MOVIE_PATH` | `debug.playback.moviePath` | string | `""` | Path to a BizHawk BK2 movie for playback debugging. |
@@ -871,7 +905,7 @@ left/right steps frames, Shift steps 60 frames, K sets an actor key, and F1 open
 its commands. Record directed take uses WASD; Space stops recording. Stageplay
 settings live in the scene file, and these shortcuts are currently fixed.
 
-Open **Tools → Editor projects** at the master title to create, open, or import
+Open **Advanced → Editor projects** at the master title to create, open, or import
 levels. Choose **New blank level**, then a game and ROM asset source. Entering from
 a supported gameplay layout adopts it as a project; **Clone this layout** makes
 a copy of an open document. Native collision remaps such as S1 loops cannot be
@@ -909,6 +943,13 @@ playtest. Editor key/mouse shortcuts are hardcoded and are not configurable in
 | `V` in Block view | Cycle the selected cell's collision mode |
 | `[` / `]` | Decrease / increase the selected chunk's collision-profile index |
 | Left drag in World | Paint terrain as one undoable stroke |
+| `F2` with an object selected | Named property list in HUD; desktop uses its inspector |
+| `F3` | Authored level settings: background scroll source, water height and allowed team |
+| `Shift` + left drag / `F6` at two corners | Rectangular world-cell selection |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy / cut / preview paste of region |
+| `Enter` / `Escape` with paste preview | Commit / cancel paste |
+| Middle drag / `Ctrl+arrows` | Pan canvas independently of cursor |
+| Mouse wheel / `Ctrl+=` / `Ctrl+-` / `Ctrl+0` | Integer zoom 1×–8× / reset |
 
 Bindings live in `EditorInputHandler` and are independent of gameplay Key
 Bindings. Library sheets, project forms, and the editor menu own their input
@@ -939,11 +980,14 @@ wheel and `1`–`0` choose a hotbar slot; the other keys above are unchanged.
 | View (hold) | Tools wheel; steer and release, or use the D-pad and South |
 | Menu | Save, playtest, export, project commands and every editor command |
 | L3 / R3 | Toggle FG/BG layer / collision overlay |
+| Hold LB+RB, left stick / D-pad up/down | Pan canvas / zoom 1×–8× |
+| Object properties: up/down / left/right | Choose named field / change value |
+| Level palette: LB/RB, up/down, left/right | Choose color, RGB channel, native value |
 
 #### Projects, playtests, and export
 
 **Save project as** creates a complete `.ogfproject`; `Ctrl+S` saves to that path.
-Projects retain art, palettes, collision profiles, both layouts, placements and ring
+Projects retain environment/team settings, campaign order, imported-art reservations, art, palettes, collision profiles, both layouts, typed gizmo placements and ring
 groups, game/source identity, and launch properties. They are independent of
 stock gameplay saves and legacy sidecars. Failed saves preserve the preceding
 project. Missing object keys remain in the document and block playtest until
@@ -1004,7 +1048,8 @@ Invalid key names log a warning and fall back to the default binding for that ke
   `+` is tolerated, so `"Shift + O"` and `"shift+o"` are the same value.
 - **Canonical order is `CTRL, SHIFT, ALT, META`.** That is the spelling the
   engine writes back when it saves the config, whatever order you typed.
-- **Matching is exact.** A binding fires only when its declared modifiers are
+- **Chord-aware matching is exact.** A binding listed as honouring chords below
+  fires only when its declared modifiers are
   held *and* the others are released, so a plain `"O"` does not fire while any
   modifier is down.
 - **Binding the plus key:** `+` is the separator, so write `EQUAL` (or `KP_ADD`
@@ -1031,7 +1076,7 @@ states, and the third is invisible from the config file:
 
 | State | Meaning | Bindings |
 |-------|---------|----------|
-| Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
+| Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY`, `SUPER_SONIC_DEBUG_KEY`, `GIVE_EMERALDS_KEY`, `HYPER_FORM_DEBUG_KEY`, `GIVE_SUPER_EMERALDS_KEY` |
 | Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
 | Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` |
 
@@ -1138,7 +1183,7 @@ is suppressed while a movie owns the controller rows.
 |-----|-----------|---------|----------|-------------|
 | `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
 | `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
-| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it, unconditionally (not remappable). |
+| `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it when debug tools are enabled (not remappable). |
 | `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Reload at the furthest-right checkpoint, initializing destination events without losing a life. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
 | `TEST` | `debug.keys.test` | `84` | T | Generic test button used during development. |
@@ -1154,7 +1199,10 @@ is suppressed while a movie owns the controller rows.
 
 ### Special Stage Debug
 
-These keys are only active while a Special Stage is running.
+These shortcuts require debug tools. Tab enters or exits a Special Stage; the
+other shortcuts apply while one is running. Sprite and plane diagnostics are
+provided by Sonic 2 only. See the [controls reference](docs/guide/playing/controls.md#special-stage-debug)
+for the game-specific tools.
 
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
@@ -1208,212 +1256,35 @@ like any other mod's.
 
 ## Test-only system properties
 
-These properties are read by JVM system property lookups (`-D<name>=<value>` on
-the `mvn` or `java` command line) rather than `config.yaml`. They exist for
-diagnostic test runs only and must remain unset in CI.
-
-| Property | Type | Purpose |
-| --- | --- | --- |
-| `oggf.trace.hydrate` | Boolean (default `false`) | Diagnostic hydrate switch for trace replay tests. When `true` AND the trace's `metadata.json` declares a recorder version at or above `9.2-s2` (see `TraceMetadata.nativePreludeMode()`), the test harness snaps engine state to the recorded ROM frame-0 snapshot (player position-record buffer, sidekick CPU state, per-slot SST values) BEFORE the per-frame comparison loop begins. A run with this enabled is **NOT a valid green replay**: the switch masks the very divergences trace replay is designed to surface. Use only to isolate prelude bugs from gameplay-loop bugs. A `WARN`-level log line emits when the switch fires; `TestTraceHydrateSwitchDefault` is the CI guard that asserts the property is unset on master. |
+JVM properties are supplied as `-D<name>=<value>`, separately from `config.yaml`.
+The historical `oggf.trace.hydrate` switch no longer has an implementation in the
+committed replay path. Leave it unset: `TestTraceHydrateSwitchDefault` rejects it
+in test runs. Trace rows remain comparison-only; recorder version metadata does
+not enable gameplay hydration. See the [trace replay guide](docs/guide/contributing/trace-replay.md)
+for the current replay workflow.
 
 ---
 
 ## Example `config.yaml`
 
-The following is the bundled default `src/main/resources/config.yaml`:
+A user file contains overrides, not a second copy of every default. For example:
 
 ```yaml
-# OpenGGF configuration — grouped and documented.
-# Indentation is significant (YAML). This file is rewritten cleanly on save.
-
-# ── Display ──
+configFormat: 2
 display:
-  aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
-  windowMode: "WINDOWED"   # WINDOWED, BORDERLESS desktop fullscreen, or exclusive FULLSCREEN
-  scaling: "INTEGER"   # Whole-number square pixels; FIT permits fractional proportional scaling
-  windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
-  shaderLibraryRoot: shaders   # Root directory scanned for user display shaders
-  shaderSelection: "OFF"   # Last selected display shader: OFF or a root-relative forward-slash path
-  shaderNextKey: RIGHT_BRACKET   # Runtime key to advance to the next display shader
-  shaderPreviousKey: LEFT_BRACKET   # Runtime key to move to the previous display shader
-  shaderPickerKey: BACKSLASH   # Runtime key to open the searchable display shader picker
-  shaderDefaultPhase: PRESENTATION   # Fallback render phase for standalone display shaders
-  deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
-  colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
-  colorExpansion: "FULL"   # Independent Full (255) or Limited (238) palette RGB output range
-  colorProfileToggleKey: V   # Runtime key to cycle the display color profile
-  fps: 60   # Frames per second to render (changes game speed)
-
-# ── Input ──
-input:
-  pause: ENTER   # Toggle pause
-  controller:
-    enabled: true   # Enable gamepad/controller input
-    deadzone: 0.35   # Analog controller deadzone
-    player1: "auto"   # Controller assignment for Player 1
-    player2: "auto"   # Controller assignment for Player 2
-  player1:
-    up: UP   # Player 1: look up
-    down: DOWN   # Player 1: crouch/roll
-    left: LEFT   # Player 1: move left
-    right: RIGHT   # Player 1: move right
-    a: SPACE   # Player 1: action button A
-    b: ""   # Player 1: action button B
-    c: ""   # Player 1: action button C
-    start: BACKSPACE   # Player 1: start (in-game pause)
-  player2:
-    up: I   # Player 2: look up
-    down: K   # Player 2: crouch/roll
-    left: J   # Player 2: move left
-    right: L   # Player 2: move right
-    a: RIGHT_SHIFT   # Player 2: action button A
-    b: ""   # Player 2: action button B
-    c: ""   # Player 2: action button C
-    start: RIGHT_CONTROL   # Player 2: start
-
-# ── Audio ──
-audio:
-  enabled: true   # Enable music and SFX
-  region: "NTSC"   # Region for audio timing
-  dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
-  fmCore: fast   # FM core: accurate (cycle-exact Nuked-OPN2) or fast (register-level clean-room core)
-  internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
-
-# ── Characters ──
-characters:
-  main: "sonic"   # Sprite code of the main playable character
-  sidekick: "tails"   # Sprite code of the CPU sidekick; empty string disables the sidekick
-  dataSelectExtraCombos: ""   # Semicolon-separated extra player combos for the data select screen
-
-# ── ROMs ──
-roms:
-  sonic1: "s1.gen"   # Filename of the Sonic 1 ROM
-  sonic2: "s2.gen"   # Filename of the Sonic 2 ROM
-  sonic3k: "s3k.gen"   # Filename of the Sonic 3&K ROM
-  default: "s2"   # Which game to load by default
-
-# ── Startup ──
-startup:
-  titleScreen: true   # Show the title screen on startup
-  masterTitleScreen: true   # Show the master (game-selection) title screen on startup
-  legalDisclaimer: true   # Show the legal disclaimer screen before the master title screen
-
-# ── Rewind (live) ──
+  aspect: "WIDE_16_9"
 rewind:
-  liveEnabled: false   # Enable held-key rewind during ordinary live play
-  liveKey: R   # Key held to rewind during live play
-  liveHalfSpeedKey: LEFT_CONTROL   # Modifier held with the rewind key for half-speed rewind
-  liveDoubleSpeedKey: LEFT_SHIFT   # Modifier held with the rewind key for double-speed rewind
-  tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
-  tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held
-  tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
-  tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
-  tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
-  vhsEffect: true   # VHS picture-search effect while live rewind is active
-  vhsTearBands: true   # Include the scrolling tear bands in the VHS rewind effect
-  historySeconds: 60   # Seconds of live rewind keyframe and input history to retain
-  audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
-  audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
-  audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
-
-# ── Cross-Game ──
-crossGame:
-  enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
-  source: "s2"   # Donor game for cross-game features
-
-# ── Launch Profiles ──
-# Per-game launch defaults edited from the master title screen.
+  liveEnabled: true
 launch:
   s1:
-    rewind: false   # Default Sonic 1 launch profile: enable live rewind
-    crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
-    aspect: "global"   # Default Sonic 1 launch profile: display aspect override
-    mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
-    sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
-  s2:
-    rewind: false   # Default Sonic 2 launch profile: enable live rewind
-    crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
-    aspect: "global"   # Default Sonic 2 launch profile: display aspect override
-    mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
-    sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
-  s3k:
-    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
-    crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
-    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
-    aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
-    mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
-    sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character
-
-# ── Discord Rich Presence ──
-discord:
-  enabled: false   # Enable Discord Rich Presence updates
-  showTimer: true   # Show the level timer in Rich Presence
-  showZone: true   # Show the zone and act in Rich Presence
-
-# ════════════════════════════════════════════
-#  DEBUG  (developer tooling — safe to ignore for normal play)
-# ════════════════════════════════════════════
-debug:
-  flags:
-    debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
-    editor: false   # Allow entering the level editor from gameplay
-  keys:
-    test: T   # Debug-only test button
-    nextAct: PAGE_UP   # Advance to the next act
-    nextZone: PAGE_DOWN   # Advance to the next zone
-    debugMode: D   # Toggle debug movement mode
-    frameStep: Q   # Step forward one frame while paused
-    lastCheckpoint: C   # Reload at the furthest-right checkpoint
-    levelSelect: F9   # Open the level select screen
-    superSonic: U   # Toggle Super Sonic debug mode
-    giveEmeralds: E   # Give all chaos emeralds
-    hyperForm: SHIFT+U   # Toggle Hyper Sonic, Super Tails, or Hyper Knuckles
-    giveSuperEmeralds: SHIFT+E   # Give all super emeralds
-    specialStage: TAB   # Toggle special stage mode
-    specialStageComplete: END   # Complete the special stage with an emerald
-    specialStageFail: DELETE   # Fail the special stage
-    specialStageSpriteDebug: F12   # Toggle the special stage sprite debug viewer
-    specialStagePlaneDebug: F3   # Cycle special stage plane visibility debug modes
-  startup:
-    levelSelectOnStartup: false   # Open Level Select on startup instead of loading the first zone
-    s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
-  playback:
-    moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
-    toggleKey: ""   # Toggle playback mode
-    loadKey: ""   # Load/reload the BK2 movie
-    playPauseKey: ""   # Toggle playback play/pause
-    stepBackKey: ""   # Step the cursor back one frame
-    stepForwardKey: ""   # Step the cursor forward one frame
-    jumpBackKey: ""   # Jump the cursor back by a larger interval
-    jumpForwardKey: ""   # Jump the cursor forward by a larger interval
-    fastRateKey: ""   # Cycle playback rate (1x/2x/4x/8x)
-    resetToStartKey: ""   # Reset the cursor to the start offset
-    startOffsetFrame: 0   # Starting frame offset for BK2 playback
-  recording:
-    recordKey: F9   # Shift+key starts/opens recordings; key alone stops active recording
-  traceRewind:
-    key: R   # Key held in Trace Test Mode to rewind deterministic engine state
-  rewind:
-    determinismAudit: false   # Re-simulate each completed live-rewind keyframe segment and log the first divergence
-  traceRender:
-    showDesyncGhosts: true   # Render desync ghosts in Trace Test Mode and trace capture
-    showGameHud: true   # Render the game HUD during trace replay/capture
-    showDebugHud: false   # Render the debug HUD during trace replay/capture
-  testMode:
-    enabled: false   # Replace the master title with the trace picker (dev-only)
-    catalogDir: "src/test/resources/traces"   # Directory scanned for traces when test mode is enabled
-  crossGame:
-    s1DataSelectImageGenOverride: false   # Force regeneration of the S1 data-select image cache
-    s2DataSelectImageGenOverride: false   # Force regeneration of the S2 data-select image cache
-    s1DataSelectImageCoordLogKey: APOSTROPHE   # Log the current camera position as an S1 data-select preview override
-  window:
-    width: 640   # DEPRECATED manual window width; used only when display.windowAutosize=false
-    height: 448   # DEPRECATED manual window height; used only when display.windowAutosize=false
-    scale: 1.0   # DEPRECATED AWT debug-viewer scale factor
+    rewind: "off"
+    debugTools: "on"
 ```
+
+Omit an override to follow the built-in default. Launch-profile `rewind` and
+`debugTools` accept `"global"`, `"on"` or `"off"`; `"global"` is their default.
+The [bundled template](src/main/resources/config.yaml), also written to
+`config.yaml.example` on startup, is the maintained reference for the full example.
 
 ## Prepared mutator settings
 

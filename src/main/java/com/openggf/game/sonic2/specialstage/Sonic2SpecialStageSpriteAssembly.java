@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.graphics.SpriteMaskReplayRole;
+import com.openggf.graphics.SpritePiece;
 import com.openggf.graphics.SpriteSatEntry;
 import com.openggf.level.render.SpritePieceRenderer.PreparedPiece;
 
@@ -212,9 +214,10 @@ final class Sonic2SpecialStageSpriteAssembly {
     private static SpriteSatEntry entry(Sonic2SpecialStageSlotPool.RenderState state, int x, int y,
                                         int width, int height, int pattern, int rawTile, int palette,
                                         boolean hFlip, boolean vFlip, boolean priority) {
-        return SpriteSatEntry.fromPreparedPiece(new PreparedPiece(x, y, width, height,
-                Math.max(0, pattern), rawTile & 0x7FF, palette, hFlip, vFlip, priority, false, 0, height),
-                state.identity().priorityBucket());
+        return new SpriteSatEntry(state.identity().priorityBucket(),
+                new SpritePiece(x, y, width, height, Math.max(0, pattern), rawTile & 0x7FF,
+                        palette, hFlip, vFlip, priority, false, SpriteMaskReplayRole.NORMAL,
+                        0, width, 0, height, null));
     }
 
     private static PreparedPiece prepared(int x, int y, int pattern, int rawTile, int palette,

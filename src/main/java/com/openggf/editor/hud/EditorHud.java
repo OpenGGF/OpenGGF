@@ -35,7 +35,7 @@ import static org.lwjgl.glfw.GLFW.*;
  */
 public final class EditorHud {
     public enum LibraryKind { BLOCK, CHUNK, PATTERN, OBJECT, NONE }
-    enum Modal { NONE, LIBRARY, WHEEL, MENU }
+    enum Modal { NONE, LIBRARY, WHEEL, MENU, PROPERTIES, PALETTE, SETTINGS }
 
     /** Which control a prompt names; drawn as a pad glyph or a keyboard keycap. */
     enum Glyph { SOUTH, EAST, WEST, NORTH, LB, RB, LT, RT, VIEW, MENU, DPAD, LSTICK, BUMPERS }
@@ -70,6 +70,30 @@ public final class EditorHud {
     // Library sheet
     LibraryKind libraryKind = LibraryKind.NONE;
     int libraryCursor;
+    boolean showInternalObjects;
+    java.util.List<Integer> objectLibrary;
+    void setObjectLibrary(java.util.List<Integer> indices) {
+        boolean first = objectLibrary == null;
+        objectLibrary = java.util.List.copyOf(indices);
+        if (first && controller.currentLevel() != null) {
+            seedObjectHotbar(controller.currentLevel());
+            hotbar.adopt(LibraryKind.OBJECT, currentBrush(LibraryKind.OBJECT));
+        }
+    }
+    private void seedObjectHotbar(MutableLevel level) {
+        if (controller.objectPaletteOrNull() == null) return;
+        int count = controller.objectPalette().entries().size();
+        int[] use = new int[count];
+        for (ObjectSpawn spawn : level.getObjects()) if (spawn.objectKey() == null) use[spawn.objectId()]++;
+        var indices = objectLibrary == null ? java.util.stream.IntStream.range(0, count).boxed().toList() : objectLibrary;
+        int[] ranked = indices.stream().sorted(java.util.Comparator.<Integer>comparingInt(id -> -use[id]).thenComparingInt(id -> id))
+                .limit(EditorHudHotbar.SLOTS).mapToInt(Integer::intValue).toArray();
+        hotbar.seed(LibraryKind.OBJECT, ranked);
+    }
+    int libraryValue(LibraryKind kind, int index) {
+        return kind == LibraryKind.OBJECT && objectLibrary != null && index >= 0 && index < objectLibrary.size()
+                ? objectLibrary.get(index) : index;
+    }
     float libraryScroll;
     int libraryColumns = 8;
     int libraryVisibleRows = 4;
@@ -81,6 +105,9 @@ public final class EditorHud {
     // Menu
     List<MenuItem> menuItems = List.of();
     int menuIndex;
+    int propertyIndex;
+    int settingsIndex;
+    int paletteCell = 16, paletteComponent;
     float menuScroll;
     // Status toast
     String toast;
@@ -130,12 +157,17 @@ public final class EditorHud {
             pointerX = input.getMouseX() * pointerUnits;
             pointerY = input.getMouseY() * pointerUnits;
         }
+        if (modal == Modal.NONE && input.isKeyPressed(GLFW_KEY_F3)) { openSettings(); return true; }
+        if (modal == Modal.NONE && input.isKeyPressed(GLFW_KEY_F2)) { openProperties(); return true; }
         boolean click = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         boolean rightClick = input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
         return switch (modal) {
             case LIBRARY -> { updateLibrary(input, click); yield true; }
             case WHEEL -> { updateWheel(input, click); yield true; }
             case MENU -> { updateMenu(input, click); yield true; }
+            case PROPERTIES -> { updateProperties(input); yield true; }
+            case PALETTE -> { updatePalette(input); yield true; }
+            case SETTINGS -> { updateSettings(input); yield true; }
             case NONE -> updateCanvas(input, level, click, rightClick);
         };
     }
@@ -158,6 +190,21 @@ public final class EditorHud {
     // ------------------------------------------------------------------ canvas
 
     private boolean updateCanvas(InputHandler input, MutableLevel level, boolean click, boolean rightClick) {
+        if (controller.isPastePreviewActive()) {
+            if (pad.pressed(EAST) || MenuInput.back(input)) { controller.cancelPastePreview(); pad.consumeHeld(); return true; }
+            if (pad.pressed(SOUTH) || input.isKeyPressed(GLFW_KEY_ENTER)) {
+                try { controller.commitPastePreview(); contentChanged = true; }
+                catch (RuntimeException error) { controller.setStatus(error.getMessage()); }
+                pad.consumeHeld(); return true;
+            }
+        }
+        if (controller.depth() == EditorHierarchyDepth.WORLD && pad.held(LB) && pad.held(RB)) {
+            float[] pan = pad.leftStick();
+            controller.canvasView().panBy(pan[0] * 14, pan[1] * 14);
+            if (pad.repeated(DPAD_UP)) controller.canvasView().zoomIn();
+            if (pad.repeated(DPAD_DOWN)) controller.canvasView().zoomOut();
+            return true;
+        }
         if (click || rightClick) {
             Hit hit = hitAt(Modal.NONE);
             if (hit != null && hit.kind() == HIT_HOTBAR) {
@@ -327,12 +374,19 @@ public final class EditorHud {
         }
         libraryKind = kind;
         int current = currentBrush(kind);
+        if (kind == LibraryKind.OBJECT && objectLibrary != null) current = objectLibrary.indexOf(current);
         libraryCursor = Math.max(0, Math.min(libraryCount(kind) - 1, current < 0 ? 0 : current));
         notePointer();
         modal = Modal.LIBRARY;
     }
 
     private void updateLibrary(InputHandler input, boolean click) {
+        if (libraryKind == LibraryKind.OBJECT && (pad.pressed(WEST) || input.isKeyPressed(GLFW_KEY_X))) {
+            showInternalObjects = !showInternalObjects;
+            libraryCursor = 0;
+            libraryScroll = 0;
+            return;
+        }
         int count = libraryCount(libraryKind);
         if (count == 0) { closeModal(); return; }
         int dx = pad.navX(), dy = pad.navY();
@@ -350,8 +404,9 @@ public final class EditorHud {
         if (click && hit != null && hit.kind() == HIT_LIBRARY) libraryCursor = hit.index();
         boolean choose = pad.pressed(SOUTH) || MenuInput.accept(input) || (click && hit != null && hit.kind() == HIT_LIBRARY);
         if (choose) {
-            hotbar.put(libraryKind, libraryCursor);
-            applyBrush(libraryKind, libraryCursor);
+            int value = libraryValue(libraryKind, libraryCursor);
+            hotbar.put(libraryKind, value);
+            applyBrush(libraryKind, value);
             closeModal();
             return;
         }
@@ -368,7 +423,7 @@ public final class EditorHud {
             case BLOCK -> Math.min(256, level.getBlockCount());
             case CHUNK -> Math.min(1024, level.getChunkCount());
             case PATTERN -> Math.min(0x800, level.getPatternCount());
-            case OBJECT -> controller.objectPaletteOrNull() == null ? 0 : controller.objectPaletteOrNull().entries().size();
+            case OBJECT -> controller.objectPaletteOrNull() == null ? 0 : objectLibrary == null ? controller.objectPaletteOrNull().entries().size() : objectLibrary.size();
             case NONE -> 0;
         };
     }
@@ -422,6 +477,7 @@ public final class EditorHud {
         List<WheelItem> items = new ArrayList<>(8);
         items.add(new WheelItem("Undo", "Last edit", () -> act(Action.UNDO)));
         items.add(new WheelItem("Redo", "", () -> act(Action.REDO)));
+        if (controller.selectedObjectSpawn() != null) items.add(new WheelItem("Properties", "Named fields", this::openProperties));
         if (controller.depth() == EditorHierarchyDepth.BLOCK) {
             items.add(new WheelItem("Flip H", "This cell", () -> act(Action.TOGGLE_H_FLIP)));
             items.add(new WheelItem("Flip V", "This cell", () -> act(Action.TOGGLE_V_FLIP)));
@@ -485,12 +541,90 @@ public final class EditorHud {
 
     private static String onOff(boolean on) { return on ? "On > Off" : "Off > On"; }
 
+    void openSettings() {
+        if (controller.projects() == null || controller.projects().document() == null) {
+            controller.setStatus("Open or create an authored project to edit level settings"); return;
+        }
+        finishPendingEdits(); settingsIndex = 0; modal = Modal.SETTINGS; pad.consumeHeld();
+    }
+    private void updateSettings(InputHandler input) {
+        var workspace = controller.projects();
+        if (workspace == null || workspace.document() == null) { closeModal(); return; }
+        int dy = pad.navY() + (MenuInput.down(input) ? 1 : 0) - (MenuInput.up(input) ? 1 : 0);
+        int dx = pad.navX() + (MenuInput.right(input) ? 1 : 0) - (MenuInput.left(input) ? 1 : 0);
+        settingsIndex = Math.floorMod(settingsIndex + Integer.signum(dy), workspace.settingsRows().size());
+        if (dx != 0) {
+            try { workspace.stepSetting(settingsIndex, Integer.signum(dx)); contentChanged = true; }
+            catch (RuntimeException error) { controller.setStatus(error.getMessage()); }
+        }
+        if (pad.pressed(EAST) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F3)) closeModal();
+    }
+
+    void openPalette() { finishPendingEdits(); modal = Modal.PALETTE; pad.consumeHeld(); }
+    private void updatePalette(InputHandler input) {
+        int dy = pad.navY(), dx = pad.navX();
+        if (MenuInput.up(input)) dy--;
+        if (MenuInput.down(input)) dy++;
+        if (MenuInput.left(input)) dx--;
+        if (MenuInput.right(input)) dx++;
+        paletteComponent = Math.floorMod(paletteComponent + dy, 3);
+        if (pad.repeated(LB) || input.isKeyPressed(GLFW_KEY_PAGE_UP)) paletteCell = Math.floorMod(paletteCell - 1, 64);
+        if (pad.repeated(RB) || input.isKeyPressed(GLFW_KEY_PAGE_DOWN)) paletteCell = (paletteCell + 1) % 64;
+        if (dx != 0) {
+            int line = paletteCell / 16, color = paletteCell % 16;
+            var rgb = controller.currentLevel().getPalette(line).getColor(color);
+            int[] steps = {(Byte.toUnsignedInt(rgb.r) * 7 + 127) / 255, (Byte.toUnsignedInt(rgb.g) * 7 + 127) / 255,
+                    (Byte.toUnsignedInt(rgb.b) * 7 + 127) / 255};
+            steps[paletteComponent] = Math.floorMod(steps[paletteComponent] + Integer.signum(dx), 8);
+            try { controller.editPaletteColor(line, color, steps[0], steps[1], steps[2]); contentChanged = true; }
+            catch (IllegalArgumentException invalid) { controller.setStatus(invalid.getMessage()); }
+        }
+        if (pad.pressed(EAST) || MenuInput.back(input)) closeModal();
+    }
+
+    void openProperties() {
+        finishPendingEdits();
+        if (controller.selectedObjectSpawn() == null) { controller.setStatus("Pick an object before opening properties"); return; }
+        propertyIndex = 0;
+        modal = Modal.PROPERTIES;
+        pad.consumeHeld();
+    }
+
+    private void updateProperties(InputHandler input) {
+        if (controller.selectedObjectSpawn() == null) { closeModal(); return; }
+        var fields = controller.selectedObjectProperties().editableFields();
+        var gizmoFields = controller.selectedGizmoFields();
+        int dy = pad.navY(), dx = pad.navX();
+        if (MenuInput.up(input)) dy--;
+        if (MenuInput.down(input)) dy++;
+        if (MenuInput.left(input)) dx--;
+        if (MenuInput.right(input)) dx++;
+        propertyIndex = Math.floorMod(propertyIndex + dy, gizmoFields.isEmpty() ? fields.size() : gizmoFields.size());
+        try {
+            if (!gizmoFields.isEmpty() && (dx != 0 || pad.pressed(SOUTH) || MenuInput.accept(input))) {
+                controller.stepSelectedGizmoProperty(propertyIndex, dx == 0 ? 1 : Integer.signum(dx)); contentChanged = true;
+            } else if (dx != 0) { controller.stepSelectedObjectProperty(propertyIndex, Integer.signum(dx)); contentChanged = true; }
+        } catch (RuntimeException failure) { controller.setStatus(failure.getMessage()); }
+        if (pad.pressed(EAST) || MenuInput.back(input) || input.isKeyPressed(GLFW_KEY_F2)) closeModal();
+    }
+
     // ------------------------------------------------------------------ menu
 
     void openMenu() {
         List<MenuItem> items = new ArrayList<>();
         items.add(new MenuItem("Editor", "", null));
         items.add(new MenuItem("Resume", "", () -> { }));
+        items.add(new MenuItem("Object properties", "F2", this::openProperties));
+        items.add(new MenuItem("Level settings", "F3", this::openSettings));
+        items.add(new MenuItem("Level palette (Genesis colors)", "", this::openPalette));
+        items.add(new MenuItem("Region: set corner / finish", "F6", controller::toggleRegionCorner));
+        items.add(new MenuItem("Copy region", "Ctrl+C", () -> act(Action.COPY_REGION)));
+        items.add(new MenuItem("Cut region", "Ctrl+X", () -> act(Action.CUT_REGION)));
+        items.add(new MenuItem("Paste region preview", "Ctrl+V", () -> act(Action.PASTE_REGION)));
+        items.add(new MenuItem("Delete region", "", () -> act(Action.DELETE_REGION)));
+        items.add(new MenuItem("Fill rectangle", "", () -> act(Action.FILL_REGION)));
+        items.add(new MenuItem("Flood fill at cursor", "", () -> act(Action.FLOOD_FILL)));
+        items.add(new MenuItem("Clear region / cancel paste", "", () -> act(Action.CLEAR_REGION)));
         items.add(new MenuItem("Save project", "Ctrl+S", () -> act(Action.SAVE)));
         Map<String, Runnable> extra = new LinkedHashMap<>();
         for (EditorCommandPalette.HostCommand command : allHostCommands()) extra.put(command.label(), command.action());
@@ -648,16 +782,7 @@ public final class EditorHud {
                     if (pattern >= 0 && pattern < patterns) patternUse[pattern]++;
                 }
         hotbar.seed(LibraryKind.PATTERN, ranked(patternUse));
-        EditorStockObjectPalette palette = controller.objectPaletteOrNull();
-        if (palette != null) {
-            int[] objectUse = new int[palette.entries().size()];
-            for (ObjectSpawn spawn : level.getObjects()) {
-                if (spawn.objectKey() == null && spawn.objectId() >= 0 && spawn.objectId() < objectUse.length) {
-                    objectUse[spawn.objectId()]++;
-                }
-            }
-            hotbar.seed(LibraryKind.OBJECT, ranked(objectUse));
-        }
+        seedObjectHotbar(level);
         // The brush already in hand stays highlighted without pushing out a most-used entry.
         for (LibraryKind kind : LibraryKind.values()) {
             if (kind != LibraryKind.NONE) hotbar.adopt(kind, currentBrush(kind));
@@ -732,6 +857,17 @@ public final class EditorHud {
                 prompts.add(new Prompt(Glyph.LSTICK, "Arrows", "Choose"));
                 prompts.add(new Prompt(Glyph.SOUTH, "Enter", "Apply"));
                 prompts.add(new Prompt(Glyph.EAST, "Esc", "Cancel"));
+            }
+            case PALETTE -> {
+                prompts.add(new Prompt(Glyph.BUMPERS, "PgUp/PgDn", "Color"));
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "RGB channel"));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
+            }
+            case PROPERTIES, SETTINGS -> {
+                prompts.add(new Prompt(Glyph.DPAD, "Up/Down", "Field"));
+                prompts.add(new Prompt(Glyph.DPAD, "Left/Right", "Value"));
+                prompts.add(new Prompt(Glyph.EAST, "Esc", "Close"));
             }
             case MENU -> {
                 prompts.add(new Prompt(Glyph.DPAD, "Arrows", "Select"));

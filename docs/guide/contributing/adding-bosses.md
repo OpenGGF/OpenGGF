@@ -2,7 +2,9 @@
 
 Boss fights follow the same object implementation pattern described in the
 [tutorial](tutorial-implement-object.md), but with additional complexity. This page covers
-the boss-specific patterns.
+the boss-specific patterns. The examples illustrate structure; constants, clocks and
+phase ordering must come from the matching ROM routine. Consult the game-specific
+[implementation reference](../../architecture/object-implementation-reference.md).
 
 ## State Machine
 
@@ -28,7 +30,7 @@ Each state has its own update logic. A typical `update()` dispatches on the curr
 
 ```java
 @Override
-public void update(int frameCounter, PlayableEntity player) {
+public void update(int vIntRunCount, PlayableEntity player) {
     switch (state) {
         case INIT -> updateInit();
         case APPROACH -> updateApproach();
@@ -67,18 +69,11 @@ public void onHit() {
 }
 ```
 
-The boss flashes during the invincibility period. This is typically done by toggling
-rendering on alternate frames:
-
-```java
-@Override
-public void appendRenderCommands(List<GLCommand> commands) {
-    if (invincibilityTimer > 0 && (invincibilityTimer & 1) != 0) {
-        return;  // skip rendering on odd frames (flash effect)
-    }
-    // normal rendering
-}
-```
+Use the boss's ROM hit handler to choose the flash implementation and timer order.
+`AbstractBossInstance` supplies shared hit handling and palette flashing; its default
+Sonic 2 path alternates palette entries rather than hiding the sprite. Bosses with
+custom hit windows or palette ownership override the appropriate hooks. Do not
+substitute sprite flicker for a palette effect without ROM evidence.
 
 ## Child Objects
 
@@ -105,8 +100,8 @@ values (like the ArrowShooter). In the engine, each child type is its own class.
 
 ## Camera Lock and Arena Setup
 
-Boss encounters typically lock the camera to create an arena. This is handled by the
-**level event system**, not by the boss object itself.
+Boss encounters typically lock the camera to create an arena. Arena entry is commonly owned by the **level event system**. Later camera
+changes may belong to a boss routine; preserve the ownership in the disassembly.
 
 The level event for a zone detects when the player crosses a trigger X position and:
 1. Changes the camera's right boundary to create a locked screen.
@@ -116,17 +111,17 @@ The level event for a zone detects when the player crosses a trigger X position 
 In the engine, this is implemented in the zone's level event class:
 
 ```java
-// In Sonic2EHZLevelEvent.java (simplified)
+// Illustrative arena-entry logic; inspect the matching zone event class.
 if (act == 1 && camera.getX() >= BOSS_TRIGGER_X) {
-    camera.setRightBound(BOSS_ARENA_RIGHT);
-    camera.setLeftBound(BOSS_ARENA_LEFT);
-    services().playMusic(MusicId.BOSS);
-    spawnBoss();
+    camera.setMaxX((short) BOSS_ARENA_RIGHT);
+    camera.setMinX((short) BOSS_ARENA_LEFT);
+    // Queue the ROM-owned boss music/PLC request and spawn at the owning event phase.
 }
 ```
 
-The boss object itself handles its own behavior within the arena but does not manage
-camera boundaries.
+For example, `Sonic2EHZBossInstance` expands the camera maximum during its
+flee sequence. Avoid moving a camera write between the event and boss owners if
+that changes its ROM update order.
 
 If the boss targets, grabs, carries, or damages players, choose an explicit
 `ObjectPlayerParticipationPolicy` and query participants through `ObjectPlayerQuery`.
@@ -172,18 +167,19 @@ Direct lifecycle mutation is acceptable only as a documented legacy bridge.
 ## Example: EHZ Boss Structure
 
 The EHZ boss (`Sonic2EHZBossInstance`) is a good reference for a straightforward boss.
-Its state machine:
+It extends `AbstractBossInstance` and follows the ROM's secondary routines:
 
-| State | What happens |
-|-------|-------------|
-| INIT | Set up art, position, create cockpit child |
-| APPROACH | Fly in from the right side of the screen |
-| IDLE | Hover, wait before attacking |
-| ATTACK | Drill descend toward player |
-| RETREAT | Rise back up after attack |
-| HIT_RECOIL | Flash and bounce after being hit |
-| DEFEATED | Explosion chain, then delete |
-| FLED | Robotnik escapes right (egg prison spawns) |
+| Secondary routine | What happens |
+|---|---|
+| `0x00` | Diagonal approach to the arena |
+| `0x02` | Vertical descent and a 60-frame wait |
+| `0x04` | Drill-car battle, moving between horizontal boundaries |
+| `0x06` | Defeated fall with explosions |
+| `0x08` | 12-frame wait after the fall |
+| `0x0A` | Flying-off sequence and camera release |
+
+Its children include the vehicle top, ground vehicle, propeller, wheels and spike.
+Hit flashing is handled alongside this machine, not by a generic `HIT_RECOIL` state.
 
 Files:
 - `src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2EHZBossInstance.java`
@@ -193,7 +189,8 @@ Files:
 
 1. Read the boss object in the disassembly. Map out all routines and child objects.
 2. Read the zone's level event code to understand camera lock triggers.
-3. Create the boss class extending `AbstractObjectInstance`.
+3. Reuse `AbstractBossInstance` where its hit, palette and child contracts match;
+   use the game-specific boss implementation reference for exceptions.
 4. Pick the relevant `com.openggf.game.profiles.*` behavior profiles and compatibility
    wrappers before writing local conditionals.
 5. Declare player participation with `ObjectPlayerQuery` /

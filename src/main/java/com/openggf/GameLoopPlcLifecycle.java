@@ -6,15 +6,30 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
 import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.internal.LevelPaletteFadeOwner;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 
+import java.util.function.Function;
+
 /** Bridges GameLoop-owned modes and fades to the session PLC lifecycle. */
 final class GameLoopPlcLifecycle {
     private GameLoopPlcLifecycle() {
+    }
+
+    /** Palette-fade rows publish VBlank work before the fade and iteration body. */
+    static void runLogicalIteration(PlcFrameLifecycleCoordinator lifecycle,
+                                    GameplayModeContext context, Runnable updateFade,
+                                    Function<PlcLifecycleFrame, Void> body) {
+        lifecycle.runLogicalIteration(
+                frame -> {
+                    if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
+                        LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+                    }
+                }, updateFade, body);
     }
 
     static void runPhase(PlcLifecycleFrame frame, PlcLifecyclePhase phase, Runnable body) {

@@ -26,7 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>New gap keys fail the guard: give the field a disposition (a central
  * policy entry in {@link DefaultObjectRewindPolicies} is preferred over
  * annotations) or make the class compact-reachable. Only intentionally
- * deferred debt belongs in the baseline. The current audit result is also
+ * deferred debt belongs in the baseline. Resolved keys must be removed so a
+ * recurrence cannot inherit an old exemption. The current audit result is also
  * written to the session diagnostics rewind namespace to make
  * baseline tightening mechanical.
  */
@@ -53,6 +54,10 @@ class TestRewindFieldDispositionGuard {
         baseline.removeIf(String::isBlank);
         baseline.removeIf(line -> line.startsWith("#"));
 
+        assertBaselineMatches(current, baseline);
+    }
+
+    static void assertBaselineMatches(Map<String, String> current, Set<String> baseline) {
         Set<String> regressions = new TreeSet<>(current.keySet());
         regressions.removeAll(baseline);
         assertTrue(regressions.isEmpty(),
@@ -67,9 +72,8 @@ class TestRewindFieldDispositionGuard {
 
         Set<String> closed = new TreeSet<>(baseline);
         closed.removeAll(current.keySet());
-        if (!closed.isEmpty()) {
-            System.out.println("[rewind-field-disposition] gaps closed since baseline (tighten baseline):\n  "
-                    + String.join("\n  ", closed));
-        }
+        assertTrue(closed.isEmpty(),
+                "Stale rewind field-disposition baseline entries (resolved gaps must no longer exempt recurrences):\n  "
+                        + String.join("\n  ", closed) + "\nRemove these keys from " + BASELINE + ".");
     }
 }

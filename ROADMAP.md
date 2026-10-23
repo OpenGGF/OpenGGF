@@ -1,9 +1,9 @@
 # OpenGGF Roadmap
 
 Current release planning is owned by the [0.7 campaign roadmap](docs/project/v0.7-roadmap.md)
-and [0.8 feature roadmap](docs/project/v0.8-roadmap.md). After the September 12
-rollover, master retains 0.6.20260911, develop carries 0.7.prerelease, and next
-carries 0.8.prerelease. Implemented additions remain on develop with explicit
+and [0.8 feature roadmap](docs/project/v0.8-roadmap.md). Master retains
+0.6.20260911; develop and next currently share the 0.7.prerelease candidate line.
+0.8 remains future scope, reserved by the release-policy descriptor. Implemented additions remain on develop with explicit
 experimental/support limits; 0.8 graduation does not require removing them
 from 0.7. See the [availability matrix](docs/project/v0.7-roadmap.md#feature-availability-during-07).
 
@@ -264,7 +264,7 @@ under regression coverage. Group each route's content, transitions, saves/rewind
 audio handoffs, ending and chain evidence so lifecycle defects surface early.
 
 Continue screens, fast/accurate FM selection, AIZ2 background level/art/tilemap
-preparation, native packaging and direct Maven already landed through 0.6.
+preparation and native packaging already landed through 0.6.
 Retain them; do not schedule their invention again. Widescreen, modding, racing,
 editor and team work have substantial implementations promoted from next into
 develop, with candidate/experimental boundaries and remaining release validation.
@@ -279,9 +279,9 @@ distinguishes inherited work, next additions and outstanding scope.
 
 The [detailed 0.8 roadmap](docs/project/v0.8-roadmap.md) owns these workstreams:
 
-- Finalize typed policies and extract Time Attack/multiplayer into a bundled mod
-  together with generic menu, lifecycle, overlay and recording hooks. Resolve
-  native code-mod packaging and validate samples/SDK before publishing the API.
+- Finalize typed policies and qualify the delivered bundled Time Attack/multiplayer
+  mod and its menu, lifecycle, overlay and recording hooks. Preserve its current
+  JVM-only availability and validate samples/SDK before publishing the API.
 - [Extend asynchronous ROM loading](docs/project/v0.8-roadmap.md#milestone-3--extend-asynchronous-rom-loading)
   at measured remaining art/queue bottlenecks, reusing delivered preparation and
   ROM-readiness owners; preserve partial uploads, cancellation and rewind.
@@ -290,12 +290,11 @@ The [detailed 0.8 roadmap](docs/project/v0.8-roadmap.md) owns these workstreams:
   register-history reconstruction remain hypotheses to validate, not guarantees.
 - Qualify delivered modding, editor, widescreen, team and racing support against
   completed routes and declared native/JVM/service boundaries.
-- Preserve scheduled base-game streamed SFX and S1 mod-zone commitments; the
-  bounded S3K format-v2 adapter is already delivered. Native Knuckles-in-Sonic-2
-  remains a separate ROM lock-on follow-on, not implied by S3K character donation;
-  its full-fidelity tier depends on
-  [ROM image normalisation](docs/architecture/designs/2026-09-13-rom-image-normalisation-design.md),
-  which lets any mix of standalone and lock-on images boot each game.
+- Complete scheduled base-game streamed SFX overrides; the bounded S1 v1 and
+  S3K v2 mod-zone adapters are implemented. Native Knuckles-in-Sonic-2 and
+  [ROM image normalisation](docs/architecture/designs/2026-09-13-rom-image-normalisation-design.md)
+  are also implemented in the candidate. Qualify their documented limits and
+  lock-on input tiers; S3K character donation alone does not prove KiS2 parity.
 - Continue observed SMPS/chip-parity and listening work with explicit scope and
   evidence. Optional creator/editor expansion remains demand-driven.
 

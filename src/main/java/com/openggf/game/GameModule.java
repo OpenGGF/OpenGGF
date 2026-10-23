@@ -95,6 +95,11 @@ public interface GameModule {
         return EMPTY_MOD_ZONE_ADAPTER;
     }
 
+    /** Host-owned stock deformation catalogue and authored water resources. */
+    default com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return com.openggf.game.modzone.ModLevelSettingsProvider.UNSUPPORTED;
+    }
+
     /** Returns destination-scoped policies contributed to this resolved module. */
     default GameplayPolicyProvider getGameplayPolicyProvider() {
         return GameplayPolicyProvider.EMPTY;
@@ -443,6 +448,11 @@ public interface GameModule {
      */
     default TitleScreenProvider getTitleScreenProvider() {
         return NoOpTitleScreenProvider.INSTANCE;
+    }
+
+    /** Detached CPU-only preview art; does not initialize the live title screen. */
+    default com.openggf.game.preview.TitlePreviewProvider getTitlePreviewProvider() {
+        return com.openggf.game.preview.TitlePreviewProvider.NONE;
     }
 
     /**

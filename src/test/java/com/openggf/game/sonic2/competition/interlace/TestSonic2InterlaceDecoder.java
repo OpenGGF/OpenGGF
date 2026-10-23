@@ -61,13 +61,13 @@ class TestSonic2InterlaceDecoder {
                 assertEquals(1, prepared.sprites().size());
                 var piece = prepared.sprites().getFirst();
                 assertEquals(sprite, piece.nativeSprite());
-                assertEquals(3, piece.geometry().widthTiles()); assertEquals(4, piece.geometry().heightTiles());
+                assertEquals(3, piece.geometry().piece().widthTiles()); assertEquals(4, piece.geometry().piece().heightTiles());
                 assertEquals(64, sprite.heightPixels());
                 assertEquals(12, piece.fragments().size());
-                assertEquals(0x3FA, piece.geometry().rawTileWordLow11());
-                assertTrue(piece.geometry().piecePriority()); assertEquals(3, piece.geometry().paletteIndex());
-                assertEquals(field.projectY(top), piece.geometry().y());
-                assertEquals(h, piece.geometry().hFlip()); assertEquals(v, piece.geometry().vFlip());
+                assertEquals(0x3FA, piece.geometry().piece().rawTileWordLow11());
+                assertTrue(piece.geometry().piece().piecePriority()); assertEquals(3, piece.geometry().piece().paletteIndex());
+                assertEquals(field.projectY(top), piece.geometry().piece().y());
+                assertEquals(h, piece.geometry().piece().hFlip()); assertEquals(v, piece.geometry().piece().vFlip());
                 assertThrows(UnsupportedOperationException.class, () -> piece.fragments().clear());
                 for (var fragment : piece.fragments()) {
                     SpritePieceRenderer.renderPreparedPiece(fragment, (id, hf, vf, pal, x, y) -> {
@@ -135,7 +135,7 @@ class TestSonic2InterlaceDecoder {
         assertEquals(224, entries.getLast().y());
         var producer = new Sonic2InterlaceProducer(0, 2048);
         assertEquals(112, producer.prepareSprites(new Input(new Sonic2InterlaceVram(bytes), Field.EVEN,
-                List.of(entries.getLast()))).sprites().getFirst().geometry().y());
+                List.of(entries.getLast()))).sprites().getFirst().geometry().piece().y());
         bytes[0xD018 + 3] = 3;
         assertEquals(80, readSat(new Sonic2InterlaceVram(bytes), 0xD000, true).size());
         assertEquals(64, readSat(new Sonic2InterlaceVram(bytes), 0xD000, false).size());

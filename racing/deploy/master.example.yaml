@@ -1,0 +1,17 @@
+# Copy outside the source checkout and mount at /config/master.yaml.
+port: 27900
+tlsCertPath: /config/fullchain.pem
+tlsKeyPath: /run/secrets/tls_key
+plaintextForTest: false
+dbPath: master-identities.db
+adminPort: 27901
+adminTokenFile: /run/secrets/admin_token
+verifierRegistrationTokenFile: /run/secrets/verifier_registration_token
+
+# Blank means clients resolve recording upload paths against their master URL.
+# If overridden, use a public HTTPS URL reachable by players, never a Docker name.
+publicBaseUrl: ""
+verifierStaleSeconds: 120
+verifierLeaseSeconds: 300
+maxRecordingStorageBytes: 536870912
+recordingRetentionDays: 3

@@ -52,11 +52,11 @@ class TestSonic2SpecialStageSpriteAssembly {
         assertTrue(groups.stream().allMatch(g -> g.geometry().size() == 1),
                 "overlapping pieces must never borrow the neighbouring piece's art fragments");
         var body = groups.subList(1, 4);
-        assertEquals(List.of(4, 3, 1), body.stream().map(g -> g.geometry().getFirst().widthTiles()).toList());
-        assertEquals(List.of(4, 3, 2), body.stream().map(g -> g.geometry().getFirst().heightTiles()).toList());
+        assertEquals(List.of(4, 3, 1), body.stream().map(g -> g.geometry().getFirst().piece().widthTiles()).toList());
+        assertEquals(List.of(4, 3, 2), body.stream().map(g -> g.geometry().getFirst().piece().heightTiles()).toList());
         assertEquals(List.of(16, 9, 2), body.stream().map(g -> g.fragments().size()).toList());
         for (var group : groups) {
-            var shape = group.geometry().getFirst();
+            var shape = group.geometry().getFirst().piece();
             assertEquals(shape.widthTiles() * shape.heightTiles(), group.fragments().size());
             assertTrue(group.fragments().stream().allMatch(f -> f.x() >= shape.x() && f.y() >= shape.y()
                     && f.endXExclusive() <= shape.endXExclusive() && f.endYExclusive() <= shape.endYExclusive()));
@@ -68,8 +68,8 @@ class TestSonic2SpecialStageSpriteAssembly {
         var nativeState = state(0, Kind.SONIC, 3, 100, 100, 0, ArtRole.SONIC);
         var flipped = new RenderState(nativeState.identity(), 100, 100, 0, true, true, true, ArtRole.SONIC);
         var groups = assembly(32).assemble(List.of(flipped), TEAM, List.of(), 0, 0);
-        assertEquals(List.of(116, 124, 116), groups.stream().map(g -> g.geometry().getFirst().x()).toList());
-        assertEquals(List.of(96, 72, 80), groups.stream().map(g -> g.geometry().getFirst().y()).toList());
+        assertEquals(List.of(116, 124, 116), groups.stream().map(g -> g.geometry().getFirst().piece().x()).toList());
+        assertEquals(List.of(96, 72, 80), groups.stream().map(g -> g.geometry().getFirst().piece().y()).toList());
         assertEquals(140, groups.getFirst().fragments().getFirst().x());
         assertEquals(120, groups.getFirst().fragments().getFirst().y());
         assertEquals(140, groups.get(1).fragments().getFirst().x());
@@ -92,13 +92,13 @@ class TestSonic2SpecialStageSpriteAssembly {
         assertEquals(14, groups.size());
         assertEquals(10, groups.stream().filter(g -> g.owner().slot() == 2).count());
         assertEquals(List.of(0x44, 0xDC), groups.stream().filter(g -> g.owner().slot() == 4)
-                .map(g -> g.geometry().getFirst().x()).toList());
+                .map(g -> g.geometry().getFirst().piece().x()).toList());
         assertEquals(List.of(ART.hud() + 0x24, ART.hud() + 0x12), groups.stream()
                 .filter(g -> g.owner().slot() == 4).map(g -> g.fragments().getFirst().firstPatternIndex()).toList());
         assertEquals(ART.tailsText(), groups.get(4).fragments().getFirst().firstPatternIndex(),
                 "native HUD frame2's $5AA offset addresses TAILS art at $7A4");
-        assertEquals(4, groups.get(8).geometry().getFirst().widthTiles());
-        assertEquals(4, groups.get(8).geometry().getFirst().heightTiles());
+        assertEquals(4, groups.get(8).geometry().getFirst().piece().widthTiles());
+        assertEquals(4, groups.get(8).geometry().getFirst().piece().heightTiles());
         assertTrue(assembly(0).assemble(List.of(fixed), TEAM,
                 List.of(new Sonic2SpecialStageIntro.NativeCounterPayload(fixed.identity().handle(), false,
                         outputs.getFirst().digits())), 0, 0).isEmpty(), "init has no DisplaySprite");
@@ -108,7 +108,7 @@ class TestSonic2SpecialStageSpriteAssembly {
     void retail101BcdUsesUnitsFirstAndNativeOutOfTableSignedCountSkip() {
         var number = state(8, Kind.RINGS_TO_GO_NUMBER, 0, 0, 0, -1, ArtRole.NUMBER);
         var groups = assembly(0).assemble(List.of(number), TEAM, List.of(), 0x02F7, 3);
-        assertEquals(List.of(0x56, 0x46), groups.stream().map(g -> g.geometry().getFirst().x()).toList());
+        assertEquals(List.of(0x56, 0x46), groups.stream().map(g -> g.geometry().getFirst().piece().x()).toList());
         assertEquals(List.of(ART.hud() + 0x20, ART.hud() + 0x16), groups.stream()
                 .map(g -> g.fragments().getFirst().firstPatternIndex()).toList());
         var invalidDigit = loader.getNativeSpriteFrame(Sonic2SpecialStageRomMappings.Family.DIGITS, 15);
@@ -130,7 +130,7 @@ class TestSonic2SpecialStageSpriteAssembly {
             }
             var pixelLimited = admit(assembly(origin).assemble(bombs, TEAM, List.of(), 0, 0), origin);
             assertEquals(7, pixelLimited.size(), "offscreen32 pixels consume the eighth fetched piece");
-            assertEquals(224, pixelLimited.stream().mapToInt(e -> e.widthTiles() * 8).sum());
+            assertEquals(224, pixelLimited.stream().mapToInt(e -> e.piece().widthTiles() * 8).sum());
             List<RenderState> table = new ArrayList<>();
             for (int slot = 8; slot < 73; slot++) table.add(state(slot, Kind.RING, 3, 100,
                     slot == 72 ? 100 : -40, 0, ArtRole.RING));
@@ -151,7 +151,7 @@ class TestSonic2SpecialStageSpriteAssembly {
         assertFalse(groups.stream().anyMatch(g -> g.owner().slot() == 71),
                 "the64th owner was rejected by DisplaySprite, before the H32 table was built");
         assertEquals(72, groups.getLast().owner().slot());
-        assertTrue(admit(groups, 0).stream().anyMatch(piece -> piece.y() == 96),
+        assertTrue(admit(groups, 0).stream().anyMatch(piece -> piece.piece().y() == 96),
                 "the next bucket's owner occupies the remaining64th hardware entry");
     }
 
@@ -164,9 +164,9 @@ class TestSonic2SpecialStageSpriteAssembly {
         assertEquals(List.of(20, 20, 20, 20, 30), groups.stream().map(g -> g.owner().slot()).toList());
         var effect = groups.getLast();
         assertTrue(effect.shadow());
-        assertEquals(4, effect.geometry().getFirst().widthTiles());
-        assertEquals(4, effect.geometry().getFirst().heightTiles());
-        assertEquals(3, effect.geometry().getFirst().paletteIndex());
+        assertEquals(4, effect.geometry().getFirst().piece().widthTiles());
+        assertEquals(4, effect.geometry().getFirst().piece().heightTiles());
+        assertEquals(3, effect.geometry().getFirst().piece().paletteIndex());
         assertEquals(ART.shadowDiag() + 0x2A, effect.fragments().getFirst().firstPatternIndex());
         assertTrue(effect.fragments().stream().allMatch(f -> f.paletteIndex() == 3 && f.piecePriority()));
     }

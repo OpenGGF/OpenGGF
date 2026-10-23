@@ -4,7 +4,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -33,6 +37,51 @@ class TestVerifierMain {
     void restore() {
         LOOP_LOG.setUseParentHandlers(parentHandlers);
         Thread.interrupted();
+    }
+
+    @Test
+    void tokenFileIsReadAndLiteralTokensRemainSupported(@TempDir Path dir) throws Exception {
+        Path token = dir.resolve("registration.secret");
+        Files.writeString(token, "worker-secret\n");
+        VerifierMain.Arguments file = VerifierMain.Arguments.parse(new String[] {
+                "--master", "https://race.example/", "--registration-token-file", token.toString(),
+                "--rom", "game.gen", "--shutdown-grace-seconds", "60"});
+        assertEquals("worker-secret", file.registrationToken());
+        assertEquals("https://race.example", file.master());
+        assertEquals(60, file.shutdownGraceSeconds());
+        assertEquals("literal", VerifierMain.Arguments.parse(new String[] {
+                "--master", "https://race.example", "--registration-token", "literal",
+                "--rom", "game.gen"}).registrationToken());
+    }
+
+    @Test
+    void ambiguousOrMissingSecretsAndUnboundedShutdownAreRejected(@TempDir Path dir)
+            throws Exception {
+        String[] base = {"--master", "https://race.example", "--rom", "game.gen"};
+        assertThrows(IllegalArgumentException.class, () -> VerifierMain.Arguments.parse(base));
+        assertThrows(IllegalArgumentException.class, () -> VerifierMain.Arguments.parse(
+                append(base, "--registration-token", "literal", "--registration-token-file", "absent")));
+        assertThrows(IOException.class, () -> VerifierMain.Arguments.parse(
+                append(base, "--registration-token-file", dir.resolve("absent").toString())));
+        for (String grace : List.of("0", "301")) {
+            assertThrows(IllegalArgumentException.class, () -> VerifierMain.Arguments.parse(
+                    append(base, "--registration-token", "literal", "--shutdown-grace-seconds", grace)));
+        }
+    }
+
+    @Test
+    void stoppingDuringRegistrationPreventsLeasingAJob() {
+        boolean[] stopping = {false};
+        VerifierLoop.Cycle cycle = VerifierMain.registeringCycle(() -> stopping[0] = true,
+                () -> { fail("shutdown must not acquire a new lease"); return false; },
+                () -> stopping[0]);
+        org.junit.jupiter.api.Assertions.assertFalse(cycle.pollOnce());
+    }
+
+    private static String[] append(String[] base, String... options) {
+        List<String> args = new ArrayList<>(List.of(base));
+        args.addAll(List.of(options));
+        return args.toArray(String[]::new);
     }
 
     @Test

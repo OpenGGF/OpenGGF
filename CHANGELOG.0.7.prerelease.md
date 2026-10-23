@@ -128,6 +128,11 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Separate master/relay and verifier Docker images support individual containers
+  or a single-host Compose deployment, with TLS, file-backed secrets, persistent
+  identities, master readiness and verifier startup retries and bounded shutdown.
+  The same verifier image can run on another machine; its engine build must match
+  the clients it verifies. See the [deployment guide](racing/deploy/README.md).
   Time Attack opens directly from a fresh boot, retains its lobby and connections
   while launching a level, and resumes its owning scene after a run or load failure.
   Every visible multiplayer ghost shows its player name above the sprite,
@@ -336,13 +341,31 @@ Unreleased. The earlier development themes remain in
   Atomic saves retain placements and missing dependency records; close and quit
   protect unsaved work. Start/cursor
   playtests use fresh native runtime snapshots and return to the authored
-  document with selection and undo history. Host-validated exports support
-  S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
+  level with selection and undo history, including native in-place editing without
+  automatically publishing gameplay sidecars. Host-validated exports support
+  S1/S2 v1 and S3K v2, including a host-owned native results goal in every game. Title Tools and
   the editor menu expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
-  and spawn inspection complete layout authoring. A controller-first HUD drawn at
+  and spawn inspection complete layout authoring. 52 named hazard, checkpoint, badnik, spring, monitor and
+  platform schemas share lossless subtype schemas between desktop inspectors
+  and a controller-navigable HUD property list; other IDs retain raw-byte editing.
+  World-cell regions copy terrain and native spawn groups, with undoable cut/paste,
+  translucent destination previews, delete and rectangle/flood fill. Independent
+  mouse, keyboard and controller canvas pan and integer 1×–8× magnification keep
+  hit tests aligned. Creator-owned palette cells use exact Genesis RGB values and
+  preserve colors through undo, project saves and existing exports. Provider-backed
+  background scrolling, fixed water height and required teams persist into native
+  playtests and packages. Typed camera/music regions, paired warps and blocking
+  public-API Stageplay triggers support runtime rewind. Ordered saved projects
+  export data-only playable campaigns; project-contained PNG/sheet imports install
+  native art and optional palettes in one undo step. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
-  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  of ROM-art thumbnails, native sprite placements and translucent brush previews.
+  Picture-based object browsing hides internal IDs by default, while compact gizmo
+  labels and a dock-fitted desktop canvas keep the level readable. Native editing
+  retains ROM collision semantics, with explicit compatible-layout cloning and
+  save/cancel/discard protection before replacing unsaved work. A tools wheel,
+  block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
@@ -838,6 +861,18 @@ Unreleased. The earlier development themes remain in
   source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
+  reject stale rewind and dependency allowances, and identify raw lifecycle calls
+  by caller rather than a shared total. Shared menu animation and execution-time
+  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics-owned geometry value and one tile-expansion implementation while
+  preserving the existing candidate Mod API submission signature. Captured sprites
+  keep their palette masks, coloured ghost style and constrained shadow effect
+  when a scene is copied. Stock title
+  previews use detached game-owned providers, preserving animated pixels and
+  catalogue ROM views without consulting a suspended game's live services. Remaining
+  migrations and exact allowance accounting live in the
+  [exception guide](docs/architecture/archunit-exceptions.md).
 
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It

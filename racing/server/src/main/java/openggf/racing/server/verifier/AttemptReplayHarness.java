@@ -13,6 +13,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.StockGameDataSources;
+import com.openggf.net.ghost.GhostFrame;
 import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -30,6 +31,8 @@ import com.openggf.version.AppVersion;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Deterministic, input-only replay used by trusted verifier workers. */
 public final class AttemptReplayHarness {
@@ -43,6 +46,14 @@ public final class AttemptReplayHarness {
 
     public static synchronized Result replay(AttemptInputRecording recording,
                                              Path romPath) {
+        return replay(recording, romPath, ignored -> { });
+    }
+
+    /** Observes immutable replay output for deployment probes; never supplies simulation state. */
+    public static synchronized Result replay(AttemptInputRecording recording,
+                                             Path romPath,
+                                             Consumer<GhostFrame> frames) {
+        Objects.requireNonNull(frames, "frames");
         disableExternalContentForDeterminism();
         Rom rom = new Rom();
         SonicConfigurationService configuration = null;
@@ -121,11 +132,13 @@ public final class AttemptReplayHarness {
                 int checkpointIndex = checkpoint == null ? -1
                         : checkpoint.getLastCheckpointIndex();
                 attempt.onFrame(mask, endOfLevel, checkpointIndex);
-                GhostFrameCodec.encode(new com.openggf.net.ghost.GhostFrame(player.getCentreX(),
+                GhostFrame ghostFrame = new GhostFrame(player.getCentreX(),
                         player.getCentreY(), player.getMappingFrame(), player.getRenderHFlip(),
                         player.getRenderVFlip(), false, player.getPriorityBucket(),
-                        player.isHighPriority()), encodedFrame, 0);
+                        player.isHighPriority());
+                GhostFrameCodec.encode(ghostFrame, encodedFrame, 0);
                 ghostHash.update(encodedFrame);
+                frames.accept(ghostFrame);
                 simulated++;
                 if (attempt.phase() == TimeAttackAttempt.Phase.FINISHED
                         || attempt.phase() == TimeAttackAttempt.Phase.VOID) {

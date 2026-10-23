@@ -91,8 +91,8 @@ Then a conditional branch:
 | `bcs` / `blo` | Carry set / lower | Unsigned < |
 | `bhi` | Higher | Unsigned > |
 | `bls` | Lower or same | Unsigned <= |
-| `bpl` | Plus | Result positive (bit 15/7 clear) |
-| `bmi` | Minus | Result negative (bit 15/7 set) |
+| `bpl` | Plus | Negative flag clear (includes zero) |
+| `bmi` | Minus | Negative flag set |
 | `bge` | Greater or equal | Signed >= |
 | `blt` | Less than | Signed < |
 
@@ -103,7 +103,7 @@ function call), and `rts` returns from it.
 
 | Instruction | What it does |
 |-------------|-------------|
-| `jmp addr` | Jump to address (unconditional, absolute) |
+| `jmp addr` | Jump to the effective address (including indirect/indexed modes) |
 | `jsr addr` | Jump to subroutine (pushes return address onto stack) |
 | `rts` | Return from subroutine |
 | `bra label` | Branch always (relative, short jump) |
@@ -113,7 +113,7 @@ function call), and `rts` returns from it.
 
 | Instruction | What it does |
 |-------------|-------------|
-| `dbf dN, label` | Decrement dN; if dN != -1, branch to label (loop counter) |
+| `dbf dN, label` | Decrement the low word of dN; branch if it is not $FFFF (loop counter) |
 
 ## Object Field Access
 
@@ -172,24 +172,29 @@ byte_detect: dc.b $03, 1, 2, $FF          ; delay=$03, frames 1,2, then loop
 byte_fire:   dc.b $07, 3, 4, $FC, 4, 3, 1, $FD, 0  ; complex sequence
 ```
 
-The first byte is the frame delay (how many game frames each animation frame is shown).
-Then a sequence of mapping frame indices, terminated by a command byte:
+For this ordinary `AnimateSprite` script, the first byte reloads the animation
+timer. Because it decrements and advances when negative, a delay of 3 holds a
+normal frame for four updates. Then come mapping frame indices and command bytes.
+Player-specific animation routines can give the leading byte other meanings.
 
 | Byte | Command | Meaning |
 |------|---------|---------|
 | `$FF` | Loop | Restart the animation from the beginning |
-| `$FE` | Reset | Change to a different animation (next byte is the animation ID) |
-| `$FD` | Routine increment | Advance the object's `routine` by 2 (change state), next byte is the animation to switch to |
-| `$FC` | Change animation | Switch to a different animation (next byte is the animation ID), without resetting routine |
+| `$FE` | Loop back | Move back by the number of script entries in the next byte |
+| `$FD` | Change animation | Set the animation ID from the next byte |
+| `$FC` | Routine increment | Advance `routine` by 2, clear the timer and advance past this command |
 
-In the firing animation above: frames 3, 4 are shown, then `$FC` loops back to
-animation index in the next byte, then frames 4, 3, 1 are shown, then `$FD` increments
-the routine (triggering the arrow spawn state) and sets animation to 0.
+In the firing animation above, frames 3 and 4 are shown, then `$FC` advances to
+the arrow-spawn routine for the next object dispatch. Animation continues through
+frames 4, 3 and 1, then `$FD,0` selects animation 0. See
+`Anim_End_FE`, `Anim_End_FD` and `Anim_End_FC (s2.asm:30465-30488)`.
 
 ## Fixed-Point Numbers
 
-Velocities and sub-pixel positions use **8.8 fixed-point** format: the high byte is the
-integer part (pixels) and the low byte is the fractional part (sub-pixels).
+The usual velocity fields use signed **8.8 fixed-point**: divide the word by 256
+to obtain pixels per update. Position accumulators commonly use **16.16 fixed-point**;
+their integer word is what `x_pos`/`y_pos` reads. Do not treat the two layouts as
+interchangeable.
 
 | Hex value | Decimal | Meaning |
 |-----------|---------|---------|

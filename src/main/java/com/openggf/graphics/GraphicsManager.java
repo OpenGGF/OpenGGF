@@ -2542,16 +2542,9 @@ public class GraphicsManager {
     }
 
     private void validateShadowEntry(SpriteSatEntry entry) {
-        // Clipped columns/rows name source tiles; flips move those tiles on screen,
-        // without changing their column-major source pattern addresses.
-        for (int ty = 0; ty < entry.rowCountTiles(); ty++) {
-            int row = entry.startRowTile() + ty;
-            for (int tx = 0; tx < entry.colCountTiles(); tx++) {
-                int col = entry.startColTile() + tx;
-                validateShadowPattern(entry.firstPatternIndex() + col * entry.heightTiles() + row,
-                        entry.paletteIndex());
-            }
-        }
+        // Canonical expansion retains clipped source addresses under every flip.
+        entry.piece().forEachTile((pattern, hFlip, vFlip, palette, x, y) ->
+                validateShadowPattern(pattern, palette));
     }
 
     /** Published native operators retain the same immutable source row crop and final quad. */
@@ -2565,7 +2558,7 @@ public class GraphicsManager {
                     tile.hFlip(), tile.vFlip(), tile.priority(), tile.x() + cameraX - builder.cameraX,
                     tile.y() + cameraY - builder.cameraY, tile.width(), tile.height(), tile.priorityShader(),
                     tile.occlusionMask(), tile.ghost(), tile.ghostAlpha(), tile.rowStart(), tile.rowEnd(),
-                    tile.subject(), tile.pixelOperation()));
+                    tile.subject(), tile.ghostColour(), tile.pixelOperation()));
             SpritePresentation.bindPatternVersion(this, tile.patternId(), scenePatternSample(tile.patternId()));
             return;
         }
@@ -2718,11 +2711,11 @@ public class GraphicsManager {
 	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
 			int rawTileWordLow11) {
 		if (!spriteSatCollectionActive) return;
-		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, x, y,
+		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
-				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name()));
+				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name())));
 	}
 
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
@@ -2739,20 +2732,27 @@ public class GraphicsManager {
 		}
 		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
 				: spritePresentationBuilder.layer.name();
-		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
-				? piece
-				: piece.withDebugSource(presentationSource);
-		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket)
+		// The pinned producer type is copied only at this compatibility ingress.
+		SpritePiece admitted = new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+				piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
+				piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
+				piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
+				piece.startRowTile(), piece.rowCountTiles(), piece.debugSource());
+		if (presentationSource != null) {
+			admitted = admitted.withDebugSource(presentationSource);
+		}
+		SpriteSatEntry entry = new SpriteSatEntry(currentSpriteSatBucket, admitted)
                 .withTileOcclusionPaletteMask(getCurrentSpriteTileOcclusionPaletteMask())
                 .withPixelOperation(currentSpritePixelOperation);
         if (entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) validateShadowEntry(entry);
-        if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
-            entry = entry.withPresentationSubject(spritePresentationSubject);
-        }
-        if (ghostRenderEffectActive) {
-            entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
-        }
-        (spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(entry);
+		if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
+			entry = entry.withPresentationSubject(spritePresentationSubject);
+		}
+		if (ghostRenderEffectActive) {
+			// The SAT replay runs after the ghost renderer has ended its effect; carry it.
+			entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
+		}
+		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(entry);
 	}
 
     /**
@@ -2805,9 +2805,9 @@ public class GraphicsManager {
 					for (int i = processedEntries.size() - 1; i >= 0; i--) {
 						SpriteSatEntry entry = processedEntries.get(i);
 						if (entry.priorityBucket() != bucket) continue;
-						if (entry.debugSource() != null)
-							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
-						setCurrentSpriteHighPriority(entry.globalHighPriority());
+						if (entry.piece().debugSource() != null)
+							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.piece().debugSource());
+						setCurrentSpriteHighPriority(entry.piece().globalHighPriority());
                         setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
 						SpritePresentation.withSubject(this, entry.presentationSubject(),
 								() -> appendBatchedReplayCommands(entry, -1));
@@ -2974,7 +2974,7 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
-		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+		entry.piece().forEachTile(
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					// CPU preparation uses this same tile decoder before any atlas lookup.
 					// A sprite-mask band can hide single scanlines of this tile.
@@ -2989,7 +2989,7 @@ public class GraphicsManager {
 							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
 						} else {
 							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
-									entry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+									entry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
 						}
 						return;
 					}
@@ -3038,19 +3038,19 @@ public class GraphicsManager {
 			return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
 		}
 		return instancedPatternRenderer.addPatternRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
-				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+				satEntry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
 	}
 
 	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry,PatternAtlas.Entry atlasEntry,
             int paletteTextureId,int paletteIndex,boolean pieceHFlip,boolean pieceVFlip,int drawX,int drawY,int rowStart,int rowEnd) {
         if (satEntry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) {
             return PatternRenderCommand.obtainNativeShadowRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
-                    satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd, this);
+                    satEntry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd, this);
         }
         PatternRenderCommand command=rowStart==0 && rowEnd==8
                 ?PatternRenderCommand.obtain(atlasEntry,paletteTextureId,reusableReplayDesc,drawX,drawY,this)
                 :PatternRenderCommand.obtainRows(atlasEntry,paletteTextureId,paletteIndex,pieceHFlip,pieceVFlip,
-                        satEntry.effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
+                        satEntry.piece().effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
         command.paletteReplay(satEntry.presentationSubject().paletteReplay());
         return command;
     }
@@ -3115,7 +3115,7 @@ public class GraphicsManager {
 
 	private void appendDirectReplayTiles(SpriteSatEntry entry, int paletteTextureId,
 			List<PatternRenderCommand> replayCommands) {
-		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+		entry.piece().forEachTile(
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
 					if (atlasEntry == null) {
@@ -3143,7 +3143,7 @@ public class GraphicsManager {
 	private void prepareReplayDesc(SpriteSatEntry entry, int patternIndex,
 			boolean pieceHFlip, boolean pieceVFlip, int paletteIndex) {
 		int descIndex = patternIndex & 0x7FF;
-		if (entry.piecePriority() || entry.globalHighPriority()) {
+		if (entry.piece().effectiveHighPriority()) {
 			descIndex |= 0x8000;
 		}
 		if (pieceHFlip) {

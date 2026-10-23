@@ -515,7 +515,7 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
-        fixedSstObjects.installConfiguredObjects();
+        ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
@@ -4026,7 +4026,7 @@ public class ObjectManager {
                     }
                 }
 
-                long[] bits = captureOwnedUsedSlotBits();
+                long[] bits = populationView.captureOwnedUsedSlotBits();
                 com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState solidContactState =
                         solidContacts.captureRewindState(rewindContext);
 
@@ -4488,27 +4488,6 @@ public class ObjectManager {
         return ObjectRewindTypeSafety.isSafe(type);
     }
 
-    private long[] captureOwnedUsedSlotBits() {
-        BitSet owned = new BitSet(slotLayout.dynamicSlotCount());
-        for (ObjectInstance inst : activeObjects.values()) {
-            markOwnedSlot(owned, inst);
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            markOwnedSlot(owned, inst);
-        }
-        for (int[] slots : reservedChildSlots.values()) {
-            if (slots == null) {
-                continue;
-            }
-            for (int slot : slots) {
-                if (isManagedDynamicSlot(slot)) {
-                    owned.set(slotLayout.toExecIndex(slot));
-                }
-            }
-        }
-        return owned.toLongArray();
-    }
-
     void inheritRetainedSstContacts(ObjectManager previous, List<ObjectInstance> carried) {
         solidContacts.inheritRetainedSstContacts(previous.solidContacts, carried);
     }
@@ -4604,13 +4583,6 @@ public class ObjectManager {
                 continue;
             }
             table.registerPlayer(sidekick, com.openggf.game.rewind.identity.PlayerRefId.sidekick(i));
-        }
-    }
-
-    private void markOwnedSlot(BitSet owned, ObjectInstance inst) {
-        if (inst instanceof AbstractObjectInstance aoi) {
-            int slot = objectCallbacks.call(inst, aoi::getSlotIndex);
-            if (isManagedDynamicSlot(slot)) owned.set(slotLayout.toExecIndex(slot));
         }
     }
 

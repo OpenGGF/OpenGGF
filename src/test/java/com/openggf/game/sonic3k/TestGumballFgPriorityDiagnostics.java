@@ -211,7 +211,7 @@ class TestGumballFgPriorityDiagnostics {
         dumpRelevantEntries("Processed", processed, minX, maxX, minY, maxY);
 
         assertTrue(maskRequested, "Gumball startup scene should request a sprite mask");
-        assertTrue(collected.stream().anyMatch(entry -> entry.rawTileWordLow11() == 0x7C0),
+        assertTrue(collected.stream().anyMatch(entry -> entry.piece().rawTileWordLow11() == 0x7C0),
                 "Collected SAT entries should include the 0x7C0 mask helper");
     }
 
@@ -220,25 +220,25 @@ class TestGumballFgPriorityDiagnostics {
         System.out.println(label + " SAT entries near machine:");
         for (int i = 0; i < entries.size(); i++) {
             SpriteSatEntry entry = entries.get(i);
-            if (entry.endXExclusive() <= minX || entry.x() >= maxX
-                    || entry.endYExclusive() <= minY || entry.y() >= maxY) {
+            if (entry.piece().endXExclusive() <= minX || entry.piece().x() >= maxX
+                    || entry.piece().endYExclusive() <= minY || entry.piece().y() >= maxY) {
                 continue;
             }
             System.out.printf(
                     "  %s[%02d] raw=0x%03X tile=0x%03X pri=%s glob=%s x=[0x%04X..0x%04X] y=[0x%04X..0x%04X] rows=%d+%d src=%s%n",
                     label.charAt(0) == 'C' ? "C" : "P",
                     i,
-                    entry.rawTileWordLow11(),
-                    entry.firstPatternIndex(),
-                    entry.piecePriority(),
-                    entry.globalHighPriority(),
-                    entry.x(),
-                    entry.endXExclusive() - 1,
-                    entry.y(),
-                    entry.endYExclusive() - 1,
-                    entry.startRowTile(),
-                    entry.rowCountTiles(),
-                    entry.debugSource());
+                    entry.piece().rawTileWordLow11(),
+                    entry.piece().firstPatternIndex(),
+                    entry.piece().piecePriority(),
+                    entry.piece().globalHighPriority(),
+                    entry.piece().x(),
+                    entry.piece().endXExclusive() - 1,
+                    entry.piece().y(),
+                    entry.piece().endYExclusive() - 1,
+                    entry.piece().startRowTile(),
+                    entry.piece().rowCountTiles(),
+                    entry.piece().debugSource());
         }
     }
 }

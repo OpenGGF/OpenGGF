@@ -62,7 +62,7 @@ class TestSonic2InterlaceCpuDisplay {
             assertEquals(field, projected.input().field());
             assertTrue(projected.sprites().size() > 2);
             for (var sprite : projected.sprites()) {
-                assertEquals(field.projectY(sprite.nativeSprite().y()), sprite.geometry().y());
+                assertEquals(field.projectY(sprite.nativeSprite().y()), sprite.geometry().piece().y());
                 assertEquals(sprite.nativeSprite().widthCells() * sprite.nativeSprite().heightCells(),
                         sprite.fragments().size());
             }

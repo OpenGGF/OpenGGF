@@ -153,8 +153,8 @@ class TestCompetitiveHalfpipeEgl {
                         int operators = 0, holes = 0;
                         for (SpriteSatEntry shadow : geometry) {
                             if (shadow.pixelOperation() != SpriteSatEntry.PixelOperation.SHADOW_15) continue;
-                            for (int y = shadow.y(); y < shadow.y() + shadow.heightTiles() * 8; y++) {
-                                for (int x = shadow.x(); x < shadow.x() + shadow.widthTiles() * 8; x++) {
+                            for (int y = shadow.piece().y(); y < shadow.piece().y() + shadow.piece().heightTiles() * 8; y++) {
+                                for (int x = shadow.piece().x(); x < shadow.piece().x() + shadow.piece().widthTiles() * 8; x++) {
                                     if (x < 32 || x >= 288 || y < 0 || y >= 224) continue;
                                     final int px = x, py = y;
                                     if (geometry.stream().anyMatch(entry -> entry.pixelOperation() == SpriteSatEntry.PixelOperation.NORMAL
@@ -403,15 +403,15 @@ class TestCompetitiveHalfpipeEgl {
         int compared = 0;
         for (int part = 0; part < sonicPieces.size(); part++) {
             var piece = sonicPieces.get(part); int ordinal = geometry.indexOf(piece);
-            assertTrue(ordinal >= 0); assertEquals(2, piece.paletteIndex()); assertTrue(piece.piecePriority());
-            for (int y = Math.max(0, piece.y()); y < Math.min(224, piece.y() + piece.heightTiles() * 8); y++) {
-                for (int x = Math.max(32, piece.x()); x < Math.min(288, piece.x() + piece.widthTiles() * 8); x++) {
+            assertTrue(ordinal >= 0); assertEquals(2, piece.piece().paletteIndex()); assertTrue(piece.piece().piecePriority());
+            for (int y = Math.max(0, piece.piece().y()); y < Math.min(224, piece.piece().y() + piece.piece().heightTiles() * 8); y++) {
+                for (int x = Math.max(32, piece.piece().x()); x < Math.min(288, piece.piece().x() + piece.piece().widthTiles() * 8); x++) {
                     final int px = x, py = y;
                     if (geometry.subList(0, ordinal).stream().anyMatch(front -> inside(front, px, py))) continue;
-                    int localX = x - piece.x(), localY = y - piece.y();
-                    if (piece.hFlip()) localX = piece.widthTiles() * 8 - 1 - localX;
-                    if (piece.vFlip()) localY = piece.heightTiles() * 8 - 1 - localY;
-                    int color = art[sourcePieces[part].tileIndex + localX / 8 * piece.heightTiles() + localY / 8]
+                    int localX = x - piece.piece().x(), localY = y - piece.piece().y();
+                    if (piece.piece().hFlip()) localX = piece.piece().widthTiles() * 8 - 1 - localX;
+                    if (piece.piece().vFlip()) localY = piece.piece().heightTiles() * 8 - 1 - localY;
+                    int color = art[sourcePieces[part].tileIndex + localX / 8 * piece.piece().heightTiles() + localY / 8]
                             .getPixel(localX & 7, localY & 7);
                     if (color == 0) continue;
                     Palette.Color from = source[1].colors[color], to = source[2].colors[color];
@@ -443,7 +443,7 @@ class TestCompetitiveHalfpipeEgl {
         List<SpriteSatEntry> geometry = renderer.nativeSatEntries(pair.players(), frame);
         List<CompetitiveHalfpipeRenderFrame.Draw> particles = frame.draws().stream()
                 .filter(event -> event.type() == CompetitiveHalfpipeRenderFrame.Type.SPILL).toList();
-        List<SpriteSatEntry> pieces = geometry.stream().filter(entry -> "spill".equals(entry.debugSource())).toList();
+        List<SpriteSatEntry> pieces = geometry.stream().filter(entry -> "spill".equals(entry.piece().debugSource())).toList();
         assertEquals(2, particles.size()); assertEquals(2, pieces.size());
         Pattern[] art = data.ringPatterns();
         int compared = 0;
@@ -454,20 +454,20 @@ class TestCompetitiveHalfpipeEgl {
             int size = data.rom().readU8(nativeMap + 3);
             int nativeTile = (0x322 + data.rom().readU16BE(nativeMap + 4)) & 0x7FF;
             assertEquals(0x322, event.nativeArt()); assertEquals(3, event.palette());
-            assertEquals(nativeTile, piece.rawTileWordLow11());
-            assertEquals((size >>> 2 & 3) + 1, piece.widthTiles());
-            assertEquals((size & 3) + 1, piece.heightTiles());
+            assertEquals(nativeTile, piece.piece().rawTileWordLow11());
+            assertEquals((size >>> 2 & 3) + 1, piece.piece().widthTiles());
+            assertEquals((size & 3) + 1, piece.piece().heightTiles());
             assertEquals(event.bucket(), piece.priorityBucket());
             assertEquals(SpriteSatEntry.PixelOperation.NORMAL, piece.pixelOperation());
             int ordinal = geometry.indexOf(piece);
-            for (int y = Math.max(0, piece.y()); y < Math.min(224, piece.y() + piece.heightTiles() * 8); y++) {
-                for (int x = Math.max(32, piece.x()); x < Math.min(288, piece.x() + piece.widthTiles() * 8); x++) {
+            for (int y = Math.max(0, piece.piece().y()); y < Math.min(224, piece.piece().y() + piece.piece().heightTiles() * 8); y++) {
+                for (int x = Math.max(32, piece.piece().x()); x < Math.min(288, piece.piece().x() + piece.piece().widthTiles() * 8); x++) {
                     final int px = x, py = y;
                     if (geometry.subList(0, ordinal).stream().anyMatch(front -> inside(front, px, py))) continue;
-                    int localX = x - piece.x(), localY = y - piece.y();
-                    if (piece.hFlip()) localX = piece.widthTiles() * 8 - 1 - localX;
-                    if (piece.vFlip()) localY = piece.heightTiles() * 8 - 1 - localY;
-                    int color = art[nativeTile - 0x322 + localX / 8 * piece.heightTiles() + localY / 8]
+                    int localX = x - piece.piece().x(), localY = y - piece.piece().y();
+                    if (piece.piece().hFlip()) localX = piece.piece().widthTiles() * 8 - 1 - localX;
+                    if (piece.piece().vFlip()) localY = piece.piece().heightTiles() * 8 - 1 - localY;
+                    int color = art[nativeTile - 0x322 + localX / 8 * piece.piece().heightTiles() + localY / 8]
                             .getPixel(localX & 7, localY & 7);
                     if (color == 0) continue;
                     Palette.Color expected = source[3].colors[color];
@@ -493,18 +493,18 @@ class TestCompetitiveHalfpipeEgl {
         return result;
     }
     private static boolean inside(SpriteSatEntry entry, int x, int y) {
-        return x >= entry.x() && x < entry.x() + entry.widthTiles() * 8
-                && y >= entry.y() && y < entry.y() + entry.heightTiles() * 8;
+        return x >= entry.piece().x() && x < entry.piece().x() + entry.piece().widthTiles() * 8
+                && y >= entry.piece().y() && y < entry.piece().y() + entry.piece().heightTiles() * 8;
     }
     private static int shadowColor(CompetitiveHalfpipeRomData data, SpriteSatEntry entry, int x, int y) {
-        int nativeTile = entry.rawTileWordLow11();
+        int nativeTile = entry.piece().rawTileWordLow11();
         int base = nativeTile >= 0x29C ? 0x29C : nativeTile >= 0x262 ? 0x262 : 0x23C;
         Pattern[] art = base == 0x23C ? data.shadowHorizPatterns()
                 : base == 0x262 ? data.shadowDiagPatterns() : data.shadowVertPatterns();
-        int localX = x - entry.x(), localY = y - entry.y();
-        if (entry.hFlip()) localX = entry.widthTiles() * 8 - 1 - localX;
-        if (entry.vFlip()) localY = entry.heightTiles() * 8 - 1 - localY;
-        return art[nativeTile - base + localX / 8 * entry.heightTiles() + localY / 8].getPixel(localX & 7, localY & 7);
+        int localX = x - entry.piece().x(), localY = y - entry.piece().y();
+        if (entry.piece().hFlip()) localX = entry.piece().widthTiles() * 8 - 1 - localX;
+        if (entry.piece().vFlip()) localY = entry.piece().heightTiles() * 8 - 1 - localY;
+        return art[nativeTile - base + localX / 8 * entry.piece().heightTiles() + localY / 8].getPixel(localX & 7, localY & 7);
     }
     private static int rgb(byte[] rgba, int x, int y) {
         int index = ((223 - y) * 320 + x) * 4;

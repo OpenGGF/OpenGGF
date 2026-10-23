@@ -330,11 +330,12 @@ public ArrowShooterObjectInstance(ObjectSpawn spawn, String name) {
 
 ### update() (Maps to Routine 2: Main)
 
-This is called every frame. It replaces the `Obj22_Main` routine:
+This runs on each object dispatch and replaces `Obj22_Main`. The counter argument
+is ROM `V_int_run_count`, not an executed-frame or level-frame counter:
 
 ```java
 @Override
-public void update(int frameCounter, PlayableEntity playerEntity) {
+public void update(int vIntRunCount, PlayableEntity playerEntity) {
     AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
     if (currentAnim != ANIM_FIRING) {
         updateDetection(player);
@@ -404,7 +405,7 @@ public void appendRenderCommands(List<GLCommand> commands) {
 
 @Override
 public int getPriorityBucket() {
-    return RenderPriority.clamp(PRIORITY);  // priority 3 from init
+    return RenderPriority.bucket(PRIORITY);  // priority 3 from init
 }
 ```
 
@@ -466,7 +467,7 @@ public ArrowProjectileInstance(ObjectSpawn parentSpawn,
 
 ```java
 @Override
-public void update(int frameCounter, PlayableEntity playerEntity) {
+public void update(int vIntRunCount, PlayableEntity playerEntity) {
     if (!initialized) {
         services().playSfx(Sonic2Sfx.ARROW_FIRING.id);  // SndID_ArrowFiring
         initialized = true;
@@ -564,7 +565,7 @@ you will need to add the art to the PLC registry. The pattern is:
 
 ### Manual Testing
 
-1. Build: `mvn package`
+1. Build: `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package`
 2. Run the engine and select Sonic 2.
 3. Navigate to Aquatic Ruin Zone (use Page Down/Page Up to cycle zones/acts, or set
    `debug.startup.levelSelectOnStartup` to `true` in `config.yaml`).
@@ -581,17 +582,16 @@ you will need to add the art to the PLC registry. The pattern is:
 For a more rigorous check, write a `HeadlessTestFixture` test:
 
 ```java
+@RequiresRom(SonicGame.SONIC_2)
 @Test
 void testArrowShooterDetection() {
     HeadlessTestFixture fixture = HeadlessTestFixture.builder()
-            .game(GameId.SONIC_2)
-            .zone(ZoneId.ARZ)
-            .act(0)
+            .withZoneAndAct(2, 0)  // ARZ Act 1: engine zone index, not ROM zone ID
+            .startPosition((short) 0x500, (short) 0x300)
+            .startPositionIsCentre()
             .build();
 
-    // Place player near an ArrowShooter position
-    fixture.teleportPlayer(0x500, 0x300);
-    fixture.stepFrames(30);
+    fixture.stepIdleFrames(30);
 
     // Verify the shooter entered detecting state
     // (specific assertions depend on your object's exposed state)

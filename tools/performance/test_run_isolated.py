@@ -61,6 +61,35 @@ raise SystemExit(runner.main())
             'com.openggf.tools.RuntimeEngineBenchmarkTool']))
         self.assertFalse(module.interfering_command([]))
 
+    def test_standalone_gameplay_input_branch_probe_is_interference(self):
+        self.assertTrue(module.interfering_command([
+            'java', '-Xmx1g', '-XX:ActiveProcessorCount=2',
+            '-Dopenggf.headless.gl=surfaceless-egl', '-cp',
+            '/tmp/immutable-openggf-runtime.jar:/tmp/lwjgl.jar',
+            'com.openggf.tools.GameplayInputBranchTool', '/tmp/rom.gen',
+            's3k', 'lrz', '1', '320', 'sonic', 'tails', '/tmp/route.bk2']))
+        self.assertTrue(module.interfering_command([
+            'java', '--class-path=/tmp/openggf.jar', '--add-opens',
+            'java.base/java.lang=ALL-UNNAMED',
+            'com.openggf.tools.GameplayInputBranchTool']))
+        self.assertFalse(module.interfering_command([
+            'java', '-cp', '/tmp/com.openggf.tools.GameplayInputBranchTool.jar',
+            'com.openggf.tools.RuntimeEngineBenchmarkTool']))
+        for command in [
+                ['java', '-cp', 'com.openggf.tools.GameplayInputBranchTool',
+                 'com.example.OtherMain'],
+                ['java', '-cp', '/tmp/openggf.jar', 'com.example.OtherMain',
+                 'com.openggf.tools.GameplayInputBranchTool'],
+                ['java', '-jar', '/tmp/tool.jar',
+                 'com.openggf.tools.GameplayInputBranchTool'],
+                ['java', '@launcher.args',
+                 'com.openggf.tools.GameplayInputBranchTool'],
+                ['java', '--source', '25',
+                 'com.openggf.tools.GameplayInputBranchTool'],
+                ['java', '--class-path']]:
+            with self.subTest(command=command):
+                self.assertFalse(module.interfering_command(command))
+
     def test_direct_compiler_and_real_test_launchers_are_detected(self):
         for command in [['/usr/bin/javac', 'Probe.java'],
                         ['java', 'org.codehaus.plexus.classworlds.launcher.Launcher', 'compile'],

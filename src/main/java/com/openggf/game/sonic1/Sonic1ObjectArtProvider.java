@@ -848,31 +848,15 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
         // Hud_Base_Score initializes E______0. Hud_Score writes only six
         // variable digits; Map_Got/Map_SSR and both bonuses reuse the fixed
         // trailing zero at $6F0-$6F1.
-        copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
+        Sonic1HudStaticArtFactory.copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
         for (int pair = 1; pair < RESULTS_SCORE_DIGIT_PAIR_COUNT - 1; pair++) {
             dest[startIndex + pair * 2].copyFrom(new Pattern());
             dest[startIndex + pair * 2 + 1].copyFrom(new Pattern());
         }
         int trailingPairIndex = startIndex + ((RESULTS_SCORE_DIGIT_PAIR_COUNT - 1) * 2);
-        copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
+        Sonic1HudStaticArtFactory.copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
     }
 
-    private void copyPatternPair(Pattern[] dest, int destIndex, Pattern[] src, int srcIndex) {
-        if (src == null || srcIndex < 0 || srcIndex + 1 >= src.length) {
-            return;
-        }
-        if (destIndex < 0 || destIndex + 1 >= dest.length) {
-            return;
-        }
-        if (dest[destIndex] == null) {
-            dest[destIndex] = new Pattern();
-        }
-        if (dest[destIndex + 1] == null) {
-            dest[destIndex + 1] = new Pattern();
-        }
-        dest[destIndex].copyFrom(src[srcIndex]);
-        dest[destIndex + 1].copyFrom(src[srcIndex + 1]);
-    }
 
     /**
      * Loads spring art (Nem_HSpring + Nem_VSpring) and creates sprite sheets and animations.

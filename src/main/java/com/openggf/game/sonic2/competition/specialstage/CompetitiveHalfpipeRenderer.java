@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.graphics.SpritePiece;
 import com.openggf.graphics.SpriteSatEntry;
 import com.openggf.graphics.SpriteSatInternalAccess;
 import com.openggf.graphics.SpriteSatMaskPostProcessor;
@@ -347,9 +348,17 @@ public final class CompetitiveHalfpipeRenderer {
 
     private static List<SpriteSatEntry> entries(List<Sprite> sprites) {
         return sprites.stream()
-                .map(sprite -> SpriteSatEntry.fromPreparedPiece(sprite.piece(), sprite.bucket())
-                        .withPixelOperation(sprite.shadow() ? SpriteSatEntry.PixelOperation.SHADOW_15
-                                : SpriteSatEntry.PixelOperation.NORMAL)).toList();
+                .map(sprite -> {
+                    var piece = sprite.piece();
+                    var geometry = new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+                            piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
+                            piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
+                            piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
+                            piece.startRowTile(), piece.rowCountTiles(), piece.debugSource());
+                    return new SpriteSatEntry(sprite.bucket(), geometry)
+                            .withPixelOperation(sprite.shadow() ? SpriteSatEntry.PixelOperation.SHADOW_15
+                                    : SpriteSatEntry.PixelOperation.NORMAL);
+                }).toList();
     }
 
     private List<Sprite> prepareNativeSprites(List<Sonic2SpecialStagePlayer> players,

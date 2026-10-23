@@ -8,6 +8,8 @@ import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.function.Supplier;
+
 /**
  * Captures and restores the level-owned state that crosses a bonus-stage
  * boundary. Loading, provider lifecycle, presentation, audio, and game-mode
@@ -98,6 +100,13 @@ public final class BonusStageTransitionCoordinator {
             return levelState.getRings();
         }
         return savedState != null ? savedState.savedRingCount() : 0;
+    }
+
+    /** Arms the return load, sampling its manager again after each preparation write. */
+    public void prepareReturnLoad(Supplier<LevelManager> levelManager, BonusStageState savedState) {
+        levelManager.get().setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
+        levelManager.get().setSuppressNextMusicChange(true);
+        prepareReturnLoad(levelManager.get(), savedState);
     }
 
     /**

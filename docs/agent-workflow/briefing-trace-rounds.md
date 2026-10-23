@@ -130,6 +130,18 @@ ObjectManager increments after this callback, although native VBlank_Exit has
 already incremented before LZWaterFeatures. See the
 [water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
 
+Standalone route authoring can boot a real engine from an immutable JAR while
+bypassing build/test admission. `GameplayInputBranchTool` is measurement
+interference even when its classes and output directory are isolated; an
+immutable artifact prevents target races, not CPU or memory contention. Match
+the explicit Java main-class argument, excluding classpath values and application
+arguments; JAR, module, source-file and argument-file launches need separate
+identification. This detector
+gap was identified in the 2026-10-14 runtime performance series (`da6330ae6328`)
+and recovered during the 2026-10-23 branch reconciliation. Keep the current
+own-tree, test-admission and exclusive build-activity lease ordering; the old
+foreign-worktree removal retry (`808d9eead4e2`) belongs to its superseded design.
+
 Different virtual pattern IDs do not imply different physical atlas pages
 (2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
 separate commands for two IDs that the allocator placed on the same page. Use

@@ -1,7 +1,8 @@
 # OpenGGF - The Open-Source Java-Based Speedy Erinaceidae Engine
 
-> This project is a work in progress. For the current state, please see the latest version in the
-> Releases section of this document.
+> OpenGGF is in active development. This branch documents `0.7.prerelease`;
+> the published release remains `0.6.20260911`. See [Releases](#releases) and
+> [game status](docs/guide/playing/game-status.md) for their scope and limitations.
 
 ## Introduction
 
@@ -16,8 +17,8 @@ this repository; a legally obtained ROM is required to run the engine.
 The engine also aims to provide modern tooling such as a level editor and an open framework for
 modding and customisation. The experimental [level editor](docs/guide/creating/level-editor.md)
 authors playable levels for all three games with safe projects, isolated playtests
-and host-validated exports. Open it from title Tools; gameplay entry uses the editor debug flag. The `develop`
-branch carries the unpublished Mod API candidate promoted from `next`, documented in the
+and host-validated exports. Open it from the hub’s Advanced menu (More at narrow widths); gameplay entry uses the editor debug flag. The `develop`
+and `next` branches share the 0.7 development line and its unpublished Mod API candidate, documented in the
 [creator handbook](docs/modding/index.md); it is outside the 0.6 release scope.
 
 > **Disclaimer:** OpenGGF is a community-made fan project. It is not affiliated with, sponsored by,
@@ -34,6 +35,7 @@ branch carries the unpublished Mod API candidate promoted from `next`, documente
 A comprehensive user guide is available in [`docs/guide/`](docs/guide/index.md), covering:
 
 - **Players:** [Getting started](docs/guide/playing/getting-started.md), [controls](docs/guide/playing/controls.md), [configuration](docs/guide/playing/configuration.md), [game status](docs/guide/playing/game-status.md), and [troubleshooting](docs/guide/playing/troubleshooting.md).
+- **Creators:** [Level editor](docs/guide/creating/level-editor.md), [Stageplay](docs/guide/creating/stageplay.md), and the [mod creator handbook](docs/modding/index.md).
 - **Contributors:** [Dev setup](docs/guide/contributing/dev-setup.md), [architecture overview](docs/guide/contributing/architecture.md), [adding zones](docs/guide/contributing/adding-zones.md), [adding bosses](docs/guide/contributing/adding-bosses.md), [audio system](docs/guide/contributing/audio-system.md), [testing](docs/guide/contributing/testing.md), and [trace replay testing](docs/guide/contributing/trace-replay.md).
 - **Cross-referencers:** [68000 primer](docs/guide/cross-referencing/68000-primer.md), [mapping exercises](docs/guide/cross-referencing/mapping-exercises.md), [per-game notes](docs/guide/cross-referencing/per-game-notes.md), and [tooling](docs/guide/cross-referencing/tooling.md).
 
@@ -41,7 +43,8 @@ Contributor tests are JUnit 5 / Jupiter only. Do not add JUnit 4 tests, rules, r
 
 ## Configuration
 
-The engine reads runtime settings from `config.yaml` in the working directory. A legacy
+The engine reads runtime settings from `config.yaml` in the working directory and saves only
+your overrides; omitted settings use the current built-in defaults. A legacy
 `config.json` is migrated automatically on first run. Key bindings can be written either as GLFW
 integer codes or as human-readable names such as `SPACE`, `Q`, or `F9`. See
 [`CONFIGURATION.md`](CONFIGURATION.md) and the player guide for the full reference.
@@ -70,6 +73,9 @@ template still use the engine defaults until added explicitly.
 
 ### Debug Controls
 
+Enable **Debug tools** in Settings/Game Setup (`debug.flags.debugView`, off by
+default) to use these shortcuts.
+
 | Key | Action |
 |-----|--------|
 | F1 | Show/Hide Debug Overlay (text and bounding boxes) |
@@ -80,15 +86,16 @@ template still use the engine defaults until added explicitly.
 | F6 | Show/Hide Camera Bounds |
 | F7 | Show/Hide Player Bounds |
 | F8 | Show/Hide Object Points |
-| F9 | Show/Hide Ring Bounds |
+| K | Show/Hide Ring Bounds |
 | F10 | Show/Hide Plane Switchers |
 | F11 | Show/Hide Touch Response |
 | F12 | Show/Hide Art Viewer |
 | Page Up | Cycle Acts (`debug.keys.nextAct`) |
 | Page Down | Cycle Zones (`debug.keys.nextZone`) |
 
-`F9` is also the default level-select shortcut (`debug.keys.levelSelect`), so it
-can both open level select and toggle ring bounds while debug overlays are enabled.
+`F9` opens level select (`debug.keys.levelSelect`). See the
+[controls guide](docs/guide/playing/controls.md) for controller bindings, rewind,
+ROM debug controls, and configurable shortcuts.
 
 ### Editor Controls
 
@@ -97,7 +104,7 @@ can both open level select and toggle ring bounds while debug overlays are enabl
 | Shift+Tab | Enter from stock gameplay with `debug.flags.editor=true`, or return from an editor playtest |
 | F5 | Start a fresh playtest from the project's authored start while editing |
 
-Title **Tools → Editor projects** provides New/Open/Import. See the
+Hub **Advanced → Editor projects** provides New/Open/Import. See the
 [level editor guide](docs/guide/creating/level-editor.md) for editing, saving and exporting.
 
 ## FAQ
@@ -113,9 +120,11 @@ from scratch. It does not emulate the Mega Drive CPU or VDP. Instead, it reads d
 layouts, art, music) from original ROM images and runs its own implementation of the game rules.
 The implementation is developed and verified against the community-maintained disassemblies
 ([s1disasm], [s2disasm], [skdisasm]) to achieve pixel-accurate behaviour. The audio engine is a
-partial exception: it features software emulation of the YM2612 FM synthesiser and SN76489 PSG
-chips (based on [libvgm] and [Genesis Plus GX] reference cores) driven by a reimplemented SMPS
-sound driver.
+partial exception: it emulates the YM2612 FM synthesiser and SN76489 PSG chips,
+driven by a reimplemented SMPS sound driver. FM synthesis has fast and accurate
+cores, including a Java port of Nuked OPN2; the PSG is a clean-room implementation.
+[Credits](CREDITS.md) records the implementation and reference sources, including
+[libvgm] and [Genesis Plus GX].
 
 [libvgm]: https://github.com/ValleyBell/libvgm
 [Genesis Plus GX]: https://github.com/ekeeke/Genesis-Plus-GX
@@ -128,26 +137,32 @@ sound driver.
 
 | Game | Status |
 |------|--------|
-| Sonic the Hedgehog (S1) | Broadest end-to-end coverage: all zones, bosses, special stages, title screen, ending, credits, and demo playback. |
-| Sonic the Hedgehog 2 (S2) | Most complete module by object coverage (122/122 checklist objects) and trace parity. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including shipped-ROM collision handling for the AIZ2 end boss, but this is not full parity: route/trace validation remains outstanding for the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children, Knuckles' placed Launch Base boss entry, Big Arm carrier handoff and native ending are implemented, while cold Launch Base traversal and broader native presentation remain unqualified. |
+| Sonic the Hedgehog (S1) | Broad end-to-end implementation, including zones, bosses, special stages, ending, credits and demos; remaining parity gaps are tracked. |
+| Sonic the Hedgehog 2 (S2) | All zones and bosses, special stages, Tails AI, ending and credits are implemented; trace and presentation frontiers remain. |
+| Sonic 3 & Knuckles (S3K) | Substantial campaign implementation across both halves, with character-specific routes, bosses and finales. Complete route and ROM-parity qualification remains in progress. |
 
-Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
+These are development-branch summaries, not a claim that every route matches the ROM.
+See [game status](docs/guide/playing/game-status.md) for current boundaries and
+[the changelog index](CHANGELOG.md) for release history.
 
 ### Where do I get ROMs?
 
 We do not supply ROM images. You must provide your own legally obtained copies. The engine expects
-these specific revisions, placed in the working directory:
+the reference revisions below. Their default filenames are hints; the engine can also
+discover recognized images in `roms.directory` (the working directory by default):
 
-| Game | Expected filename | Expected revision and hash |
+| Game | Default filename | Reference revision and hash |
 |------|-------------------|----------------------------|
 | Sonic 1 | `s1.gen` | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
 | Sonic 2 | `s2.gen` | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | `s3k.gen` | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 Other revisions (REV00, etc.) are untested and will likely produce incorrect results, as
-ROM addresses are verified against these specific builds. ROM filenames are configurable via
-`config.yaml` (see `roms.sonic1`, `roms.sonic2`, and `roms.sonic3k`).
+ROM addresses are verified against these specific builds. Set explicit paths with
+`roms.sonic1`, `roms.sonic2`, and `roms.sonic3k`, or configure the scan directory.
+The development engine also resolves logical ROMs from lock-on dumps and can
+combine separate Sonic & Knuckles and Sonic 3 images in memory. See
+[ROM configuration](CONFIGURATION.md#rom-files) for precedence and supported inputs.
 
 ### What is cross-game feature donation?
 
@@ -190,9 +205,9 @@ Anywhere Java 25 and LWJGL run: Windows, macOS, and Linux. The engine uses OpenG
 (chosen for macOS compatibility). A GraalVM native image build is also supported for ahead-of-time compiled
 binaries for Windows x64, Linux x64, and macOS Apple Silicon. Intel macOS uses the JVM
 build; GraalVM 25 does not supply a macOS x64 native-image toolchain. Source builds use
-JDK 25 exactly. Third-party libraries (LWJGL, and Jackson for `config.yaml` and save files) are kept on
-advisory-free versions: a Dependabot advisory against `master` is replicated onto `develop` and
-`next` as an aligned bump rather than merged into the released line.
+JDK 25 exactly. Address dependency advisories (including LWJGL and Jackson) with aligned
+updates on `develop` and `next`, rather than merging dependency bumps into the released
+`master` line. A release snapshot is not a guarantee that its dependencies remain free of advisories.
 
 ### Did you use AI to write this? / This is AI slop!
 
@@ -219,8 +234,9 @@ the present, including the audio engine slowly un-mangling itself.
 ### How can I contribute?
 
 The project is open source. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), then check the issue
-tracker, OBJECT_CHECKLIST.md for unimplemented game objects, and CHANGELOG.md for the current state
-of each game. The codebase uses a provider-based architecture that makes it relatively
+tracker, the [game status guide](docs/guide/playing/game-status.md), and the
+[coverage backlog](docs/status/level-test-coverage.md) for current gaps. Per-game object
+checklists record registry coverage; they do not certify complete routes or parity. The codebase uses a provider-based architecture that makes it relatively
 straightforward to add new objects, zones, and game-specific behaviour.
 ## Licensing
 
@@ -255,7 +271,8 @@ complete campaigns before the feature/API publication gates in 0.8.
 See the [0.7 changelog](CHANGELOG.0.7.prerelease.md),
 [development summary](docs/changelog/v0.7-release-summary.md), and
 [trace scope](docs/status/trace-scope-release-7.md).
-`next` is now `0.8.prerelease`; the published 0.6 snapshot is retained on
+`develop` and `next` currently share the `0.7.prerelease` line; 0.8 remains future
+roadmap scope. The published 0.6 snapshot is retained on
 `master`, tag `v0.6.20260911`, and branch `release/0.6.20260911`.
 
 
@@ -317,7 +334,7 @@ in [the 0.6 changelog](CHANGELOG.0.6.md).
   presentation pipeline and can emit DNxHR SQ video with lossless 24-bit PCM
   for DaVinci Resolve on Linux.
 
-- **Development and validation tools:** all-game level projects and native playtesting, ROM offset
+- **Development and validation tools:** experimental editor foundations, ROM offset
   and compression tools, headless gameplay tests, trace replay, visual/audio
   regression checks, and release/architecture guards. Trace recording, probing
   and publication live in [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser),
@@ -334,140 +351,16 @@ in [the 0.6 changelog](CHANGELOG.0.6.md).
 
 #### Published 0.6 release status
 
-A push to `master` automatically tags and publishes the 0.6 release after
-GitHub validation and native/JAR builds succeed. Recorded validation and
-remaining limitations are maintained in the
-[release summary](docs/changelog/v0.6-release-summary.md).
+The published snapshot is `v0.6.20260911`. Its
+[release summary](docs/changelog/v0.6-release-summary.md),
+[trace scope](docs/status/trace-scope-release-6.md), and linked validation records
+preserve the tested commits, known failures and release limitations. Those
+historical results do not certify the current development tree.
 
-Level loads no longer intermittently fail or detect the wrong game. The ROM is
-read from two threads during a load, and the header readers and the Sonic 3 &
-Knuckles art loaders were seeking the shared file handle without the lock every
-other reader holds, so a background read could move the position out from under
-them.
-
-Angel Island Act 1 no longer fails to load when its intro tilemap pre-build
-cannot read the ROM; the pre-build is a cache warm the terrain-swap frame
-already knows how to do without.
-
-Routine development and CI use the bounded `smoke` suite, excluding exhaustive
-oracle sweeps. Plain Maven and local category runs use it by default; pull requests
-and manual CI pair it with separate structural guards. Integration pushes retain
-the 30-minute quiet period. The full suite is reserved for preparing new public
-releases and is selected explicitly by the Release workflow. Known-red Sonic 2 CPZ2 and
-Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
-finishing those parity campaigns is deferred to the next release. A frontier
-still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
-gameplay defect.
-
-Fast FM is now integrated for 0.6. New configurations select `fast`, while
-explicit `accurate` choices and physical-reference captures retain the accurate
-core. All 178 supported chip scripts pass. Post-merge verification passes
-16,970 ordinary tests and 610 guards, with unchanged pinned trace evidence
-and successful universal-JAR smoke checks. Candidate benchmarks retain matching
-gameplay digests; native-platform execution and full-game listening sign-off
-remain release tasks. See the
-[FM delivery record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
-A follow-up performance pass makes the fast core about 12 % cheaper on real
-music (S1 GHZ1 0.173 to 0.151 ms per frame, S3K AIZ 0.164 to 0.147) with every
-oracle output sample and gameplay digest unchanged; the
-[performance review](docs/architecture/validation/performance/2026-09-06-fast-fm-perf-review.md)
-and the
-[listening-test plan](docs/architecture/validation/audio/2026-09-06-fast-fm-listening-test.md)
-record it.
-
-Rewind checkpoints no longer re-clone every spent hardware-timing job. In S3K
-AIZ1 after the intro, a checkpoint capture falls from about 287 KB to 33 KB and
-a restore from 315 KB to 30 KB, so the steady rewind allocation and the burst on
-engaging rewind both shrink by roughly an order of magnitude with no timing
-decision changed. Only claimed jobs are memoized, so a coordinator that still
-holds an unclaimed preparation is always re-captured. Focused rewind, timing
-and S3K suites pass (2,860 tests post-merge); a further verification follows
-the claimed-only correction.
-
-S3K AIZ1 no longer stutters at its two runtime hand-offs. The intro terrain
-swap at camera X $1400 swaps in tilemaps pre-built during level load instead of
-rebuilding both full-level tilemaps on the frame (about 25 ms headless to under
-1 ms), and pattern-only art writes such as the $2E00 fire overlay now refresh
-the pattern atlas lookup rather than rebuilding tilemaps. The fire curtain's
-act 2 reload installs a level built on a preparer thread across the fire
-event's own wait; the reload always joins that build, and a regression test
-confirms the reload frame, positions, tilemap bytes and registered art match a
-synchronous reload (reload frame about 43 ms to 9 ms at 60 fps pacing). Related
-S3K, Kos, level and transition suites pass except two AIZ trace replays that
-fail identically on the pre-merge develop; guards pass (610). Measured through
-the real renderer at 60 fps pacing, that reload frame is now about 11 ms:
-in-game progression saves encode their snapshot on the frame but write the file
-on a save-writer thread (flushed before slot reads and at shutdown), the fire
-hand-off decodes its act 2 collision tables off the frame, and GPU sprite sheets
-whose pixels are unchanged across the act reload are kept rather than re-uploaded.
-
-Special-stage entry now plays the ROM's transition in normal play: in Sonic 2
-the level freezes and fades to white over 22 frames while the entry sound and
-the music fade run, the screen stays white through the stage's startup waits,
-and the stage music starts with the fade from white; Sonic 1 and Sonic 3 &
-Knuckles keep the level on screen through their own fade-to-white the same way,
-and every stage now loads its palette after that fade rather than during it.
-`gameplay.loadTimeSimulation: FAST` is a real mode and the default, resolving
-to a hand-tunable copy of the measured S3K load-time profile that also paces
-the title screen's Sonic frames 8 to A from the original hardware capture.
-Special-stage unit, headless and replay suites pass across the three games,
-the ordinary suite and guards pass, and every run-chain failure is identical
-to the pre-merge develop.
-
-`config.yaml` now holds only the settings you changed. Defaults live in the
-program and are documented by `config.yaml.example`, so a default that changes
-in a later build reaches every install that never set the key, with no
-migration or version bump; changing one is three edits and a guard test keeps
-the example honest. Files written by older builds are converted once on load,
-keeping your changes and dropping materialised defaults, including the former
-`loadTimeSimulation: NONE`. The ordinary suite (16994) and guards (610) pass.
-
-The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)
-identified release skip-classification and trace-policy mismatches. The
-[remediation record](docs/architecture/validation/2026-09-06-release-gates.md)
-tracks their replacement with explicit capability checks and a fresh, pinned
-trace comparison. A frozen candidate still needs complete platform evidence and
-human gameplay/listening sign-off. Post-integration verification passed 16,687 ordinary
-tests and 610 guards, with its known trace failures and reports unchanged against
-a fresh baseline. Its universal JAR passed packaging smoke checks. Hosted validation also requires a configured `release-fixtures` runner.
-
-Known limitations: some Game Over timing details remain documented in
-`docs/status/known-bugs.md`; the Mod API remains outside the 0.6 release scope,
-the level editor is a dormant prototype, and complete SMPS audio parity remains unfinished.
-The September 4 audio handover supersedes the August 28 withdrawal statement:
-audio corrections and comparison tooling have landed, not complete parity or
-release listening approval. The release summary carries commit-stamped
-validation numbers, the guard and trace policy statements match
-`docs/status/trace-scope-release-6.md`, and
-`RELEASE_NOTES_v0.6.20260911.md` is a pointer to the summary.
-Contributor and player guides were corrected on August 28 (hook installation,
-config defaults, player-2 bindings, dead links), and the skill mirrors were
-resynchronised.
-Repository hygiene followed: IDE/scratch files and two native libraries were
-untracked, root plans and launcher scripts moved to `docs/architecture/` and
-`scripts/`, saved third-party web pages replaced with provenance stubs, and
-`CREDITS.md` now attributes every runtime library, test tool, and chip core.
-The object checklists were regenerated from the registries (S2 122/122, S3K
-173/303), S3K object `$4F` is now gated by zone set so DEZ no longer spawns
-MGZ sinking mud, and the stale S2/S3K bug lists were folded into
-`docs/status/known-bugs.md`.
-Runtime decompressors moved from `tools/` to `com.openggf.data.compression`,
-power-up visuals now come from per-game `GameModule` factories instead of a
-shared spawner naming S3K classes, and four unreferenced classes were removed.
-The GAME OVER / TIME OVER card now runs in all three games from ROM art and
-mappings: a time over restarts the act, a game over fades to the title screen;
-ROM-backed Continue screens now follow Game Over when continues remain.
-The SN76489 PSG core was rewritten clean-room from public hardware documentation
-(`docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md`), removing
-the Genesis Plus GX-derived `psg.c` code; behaviour was verified against a pinned GPGX
-harness (`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md`).
-The FM:PSG mix balance was restored to its pre-rewrite ratio (PSG preamp 38 % in the mixer),
-recorded as uncalibrated against hardware in `docs/status/known-discrepancies.md`
-(`docs/architecture/validation/2026-08-29-audio-mix-calibration.md`).
-
-The current S3K release priority is the AIZ → HCZ playable route. Knuckles
-routes, later-zone completeness, and some bonus/special-stage paths remain
-outside the primary release slice or are still under active development.
+0.6 focused on the AIZ → HCZ playable slice and broad Sonic 1/2 gameplay.
+Later S3K routes and full audio/trace parity remained open, and the Mod API was
+outside its scope. Follow the current [game status guide](docs/guide/playing/game-status.md)
+and [0.7 roadmap](docs/project/v0.7-roadmap.md) for development beyond that snapshot.
 
 #### Release documentation
 
@@ -481,9 +374,10 @@ outside the primary release slice or are still under active development.
 - [Known discrepancies](docs/status/known-discrepancies.md)
 - [Release-readiness roadmap](docs/project/release-readiness-roadmap.md)
 
-### Development roadmaps: 0.7 / develop and 0.8 / next
+### Development roadmaps: 0.7 campaigns and future 0.8 features
 
-The `develop` branch carries the 0.7 cycle, while `next` stages 0.8 work.
+`develop` and `next` share the 0.7 candidate line. The 0.8 roadmap records future
+qualification and API-publication goals, not a separate current branch version.
 The published 0.6 release scope remains unchanged. The [0.7 roadmap](docs/project/v0.7-roadmap.md) completes and
 validates the stock games, with locked-on Sonic, Tails and Knuckles campaigns,
 ROM-authored finales/outros and continuous terminal replay chains as the main
@@ -495,8 +389,8 @@ final policy/API design, qualification of the bundled Time Attack mod and shared
 multiplayer services, measured extensions to the already-delivered background loading, live FM
 switching, and feature/platform qualification. API publication follows those
 consumers; the current Mod API remains an unpublished candidate. Native builds
-currently reject code mods, so bundled racing's native availability needs an
-explicit packaging decision. These roadmaps describe future release gates;
+currently reject code mods and omit bundled racing; its current availability
+is JVM-only. These roadmaps describe future release gates;
 the 0.6 snapshot and its release evidence remain authoritative for 0.6.
 
 ### Previous releases

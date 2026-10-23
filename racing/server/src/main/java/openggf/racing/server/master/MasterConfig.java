@@ -1,8 +1,13 @@
 package openggf.racing.server.master;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import openggf.racing.server.config.SecretFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,6 +56,10 @@ public record MasterConfig(
         dbPath = blankToDefault(dbPath, "master-identities.db");
         adminPort = adminPort == null ? 27_901 : adminPort;
         adminToken = adminToken == null ? "" : adminToken;
+        if (!adminToken.isEmpty()) SecretFile.requireToken(adminToken);
+        if (verifierRegistrationToken != null && !verifierRegistrationToken.isEmpty()) {
+            SecretFile.requireToken(verifierRegistrationToken);
+        }
         establishedAgeHours = establishedAgeHours <= 0 ? 48 : establishedAgeHours;
         establishedCleanRounds = establishedCleanRounds <= 0 ? 10 : establishedCleanRounds;
         trustedAgeDays = trustedAgeDays <= 0 ? 14 : trustedAgeDays;
@@ -115,7 +124,38 @@ public record MasterConfig(
     public static MasterConfig load(Path yamlFile) throws IOException {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory())
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        return mapper.readValue(Files.readAllBytes(yamlFile), MasterConfig.class);
+        JsonNode root;
+        try {
+            root = mapper.readTree(Files.readAllBytes(yamlFile));
+        } catch (JsonProcessingException malformed) {
+            // YAML errors include source snippets (and sometimes nested parser snippets).
+            // Keep coordinates, but never retain a cause that can echo literal credentials.
+            JsonLocation location = malformed.getLocation();
+            String position = location == null ? "" : " at line " + location.getLineNr()
+                    + ", column " + location.getColumnNr();
+            throw new IOException("invalid master YAML" + position);
+        }
+        if (!(root instanceof ObjectNode config)) {
+            throw new IOException("master configuration must be a YAML mapping");
+        }
+        resolveSecretFile(config, "adminToken", yamlFile);
+        resolveSecretFile(config, "verifierRegistrationToken", yamlFile);
+        return mapper.treeToValue(config, MasterConfig.class);
+    }
+
+    private static void resolveSecretFile(ObjectNode config, String name, Path yamlFile)
+            throws IOException {
+        String fileName = name + "File";
+        JsonNode file = config.remove(fileName);
+        if (file == null) return;
+        if (config.has(name)) {
+            throw new IOException("configure either " + name + " or " + fileName + ", not both");
+        }
+        if (!file.isTextual() || file.asText().isBlank()) {
+            throw new IOException(fileName + " must be a nonempty path");
+        }
+        Path secret = yamlFile.toAbsolutePath().getParent().resolve(file.asText());
+        config.put(name, SecretFile.read(secret));
     }
 
     public TrustLadder.Thresholds thresholds() {

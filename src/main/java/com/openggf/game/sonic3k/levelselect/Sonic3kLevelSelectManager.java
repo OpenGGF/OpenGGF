@@ -5,7 +5,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelSelectProvider;
-import com.openggf.game.sonic2.menu.MenuBackgroundAnimator;
+import com.openggf.game.menu.MenuBackgroundAnimator;
 
 import com.openggf.game.sonic3k.S3kFrontendPaletteUploader;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;

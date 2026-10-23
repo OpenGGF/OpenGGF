@@ -7,6 +7,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageGenerator;
+import com.openggf.debug.DebugOverlayManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.camera.Camera;
@@ -43,6 +44,20 @@ final class GameLoopDebugShortcuts {
         this.currentMode = currentMode;
         this.specialStageProvider = specialStageProvider;
         this.enterResults = enterResults;
+    }
+
+    /** Report assist keys before overlay toggles and debug-only art-viewer navigation. */
+    static void updateInput(HostedRunController hostedRuns, DebugOverlayManager overlay,
+                            Supplier<InputHandler> input, boolean debugShortcutsEnabled,
+                            SonicConfigurationService config) {
+        if (hostedRuns.isActive() && debugShortcutsEnabled
+                && DebugAssistInput.pressed(input.get(), config)) {
+            hostedRuns.noteDebugAssist();
+        }
+        overlay.updateInput(input.get(), debugShortcutsEnabled, config);
+        if (debugShortcutsEnabled) {
+            overlay.getObjectArtViewer().updateInput(input.get());
+        }
     }
 
     static BonusStageType resolveBonusStageDebugShortcut(InputHandler inputHandler) {

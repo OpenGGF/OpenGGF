@@ -7,7 +7,7 @@ changes from failing branch policy or losing institutional knowledge.
 This checklist is enforced, not advisory: the commit-trailer gate lives in
 `.githooks/validate-policy.ps1` (Windows) / `.githooks/validate-policy.sh`
 (macOS/Linux), dispatched by `.githooks/run-policy`. CI mirrors the same rules on
-PRs into `develop`. Install hooks explicitly once per worktree with
+non-draft pull requests, including the shared `develop`/`next` destinations. Install hooks explicitly once per worktree with
 `tools/testing/install-hooks.sh` (PowerShell: `.ps1`). Maven does not change
 Git configuration during `validate`.
 
@@ -59,7 +59,8 @@ its root Unreleased section through [release rollover](../project/release-rollov
 - **`CHANGELOG.<develop version>.md`** — every change, at the detail a user or
   maintainer would want. This is the per-version record and the default
   destination. Historical changelog files change only for factual corrections.
-- **`CHANGELOG.md`** — the release index and `next`'s Unreleased section.
+- **`CHANGELOG.md`** — the release index and current shared-line pointer; an
+  independent `next` line uses its Unreleased section after a deliberate split.
 - **`README.md` release section** — a **very high-level summary** of the
   version: a handful of themes a reader skims to learn what this version is
   about. It is not a change log, and there is no expectation that a given
@@ -120,12 +121,15 @@ supporting artifacts with the task. Do not create loose planning documents.
 ### 3. Changelog — `CHANGELOG.md`  →  trailer `Changelog`
 
 - **REQUIRED** for release-worthy engine changes: use the per-version changelog
-  selected under “Which version am I writing for?” above. Refine its existing
-  themes when the change belongs to unreleased work; keep commit hashes, frame
-  numbers and test tallies in engineering evidence. Historical release files are
-  changed only for factual corrections. The root `CHANGELOG.md` is the release
-  index; update it only when the index changes. Its exact path owns the hook
-  trailer: when only the selected per-version file changes, use
+  selected under “Which version am I writing for?” above (currently
+  `CHANGELOG.0.7.prerelease.md`). Keep the existing thematic structure: add a
+  `- **Lead:** ...` bullet under the matching `###`/`####` area section, or refine
+  an existing bullet when the change belongs to unreleased work. Do not add a
+  dated entry at the top. Keep commit hashes, frame numbers and test tallies in
+  engineering evidence. Historical changelog files change only for factual
+  corrections. The root `CHANGELOG.md` is the release index; update it only when
+  the index changes. Its exact path owns the hook trailer: when only the selected
+  versioned file changes, use
   `Changelog: n/a: release note recorded in <actual per-version changelog path>`.
 - **JUSTIFIED SKIP** — special rule: on a `feat`/`fix`/`perf` commit that touches
   `src/main/`, a **bare** `Changelog: n/a` is **rejected**
@@ -238,20 +242,20 @@ an amended commit's full diff. Prefer a follow-up commit when correcting deliver
 work. Inspect the hook's actual comparison base before rewriting local history;
 do not reset a working tree just to satisfy a documentation trailer.
 
-**A merge commit is measured against its second parent.** `commit_parent_or_empty_tree`
-prefers `^2` for a merge, so `commit_candidates` diffs the merge against the *merged
-branch*, not against the integration branch. A file counts as staged by the merge only
-if the merge changed it **relative to the branch**. In practice:
+**Merge commits skip documentation-trailer validation.** Resource/content checks
+still apply. Local staged-content checks compare a pending merge with `MERGE_HEAD`;
+CI's `commit_candidates` examines paths changed relative to **both** parents, so
+content inherited unchanged from either side is not attributed as new merge content.
+The incoming non-merge commits still require accurate trailers. Do not invent merge
+trailer obligations from the second-parent helper; run the validator on the actual
+range, including conflict resolutions.
 
-- If the branch already wrote the `CHANGELOG.md` entry and it merged cleanly, the merge
-  contributes nothing there — the honest trailer is `Changelog: n/a: <reason>`, not
-  `updated`. A bare `n/a` is rejected; the reason is required.
-- If the branch predates other work on the integration branch, the merge *does* carry
-  that side's edits to those files, and the trailer must say `updated` even though this
-  round changed nothing in them.
-- Whether `CHANGELOG.md` conflicted therefore decides which answer is correct. The same
-  merge procedure can pass or fail depending on that alone, which is why the validator
-  must be run rather than reasoned about.
+**AI co-authors are the final block.** Every AI-assisted commit records each
+contributing model's name and version. Put documentation/policy trailers before
+the co-author block, separated by one blank line, and leave no text after it.
+For Codex use `noreply@openai.com`. Pass the exact message through
+`git interpret-trailers --parse <message-file>` before committing and confirm all
+intended co-author lines are present.
 
 ## Quick decision summary
 

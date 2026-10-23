@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.game.preview.TitlePreviewProvider.Image;
+import com.openggf.game.preview.TitlePreviewProvider.Sequence;
+
 import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
@@ -248,9 +251,9 @@ public class MasterTitleScreen {
 
     /** The game suspended with a held Escape: first on the shelf until it is resumed or ended. */
     private MasterTitleEntry.Suspended suspended;
-    private MasterTitleRomPreview.Image suspendedImage;
+    private Image suspendedImage;
     private int suspendedTextureId;
-    private MasterTitleRomPreview.Image suspendFrame;
+    private Image suspendFrame;
     private int suspendFrameTextureId;
     static final int SUSPEND_ZOOM_TICKS = 32;
     private int suspendZoomTicks = SUSPEND_ZOOM_TICKS;
@@ -269,7 +272,7 @@ public class MasterTitleScreen {
         int width;
         int height;
         int frameToken = Integer.MIN_VALUE;
-        MasterTitleRomPreview.PreviewSequence sequence;
+        Sequence sequence;
     }
 
     public MasterTitleScreen() {
@@ -1851,7 +1854,7 @@ public class MasterTitleScreen {
         // Remember even a failed decode: unrelated Apply must not retry disk work.
         previewSources.put(game, source);
         Optional<Path> wholeImage = resolution.wholeImagePath();
-        Optional<MasterTitleRomPreview.PreviewSequence> decoded;
+        Optional<Sequence> decoded;
         if (wholeImage.isPresent()) {
             decoded = MasterTitleRomPreview.loadSequenceFor(game, wholeImage.get());
         } else {
@@ -1868,7 +1871,7 @@ public class MasterTitleScreen {
         decoded.ifPresent(sequence -> {
             RomPreviewState preview = new RomPreviewState();
             preview.sequence = sequence;
-            MasterTitleRomPreview.Image firstFrame = sequence.imageAt(0);
+            Image firstFrame = sequence.imageAt(0);
             preview.textureId = MasterTitleRomPreview.uploadTexture(firstFrame);
             preview.width = firstFrame.width();
             preview.height = firstFrame.height();
@@ -1881,7 +1884,7 @@ public class MasterTitleScreen {
         if (preview == null) return;
         int token = preview.sequence.frameTokenAt(previewAnimationFrame);
         if (preview.frameToken == token) return;
-        MasterTitleRomPreview.Image frame = preview.sequence.imageAt(previewAnimationFrame);
+        Image frame = preview.sequence.imageAt(previewAnimationFrame);
         MasterTitleRomPreview.updateTexture(preview.textureId, frame);
         preview.frameToken = token;
     }
@@ -2120,7 +2123,7 @@ public class MasterTitleScreen {
     public void setSuspendedGame(MasterTitleEntry.Suspended card, int width, int height, byte[] rgba) {
         suspended = Objects.requireNonNull(card, "card");
         releaseSuspendFrame();
-        suspendFrame = rgba == null ? null : new MasterTitleRomPreview.Image(width, height, rgba);
+        suspendFrame = rgba == null ? null : new Image(width, height, rgba);
         suspendedImage = suspendFrame == null ? null : fitThumbnail(suspendFrame, CARD_W - 6, CARD_H - 6);
         deleteSuspendedTexture();
         entries = withSuspendedFirst(entries);
@@ -2276,7 +2279,7 @@ public class MasterTitleScreen {
     }
 
     /** Area-averages the frame down to the card so the shelf shows a clean miniature. */
-    static MasterTitleRomPreview.Image fitThumbnail(MasterTitleRomPreview.Image source, int maxWidth, int maxHeight) {
+    static Image fitThumbnail(Image source, int maxWidth, int maxHeight) {
         double scale = Math.min(1.0, Math.min((double) maxWidth / source.width(), (double) maxHeight / source.height()));
         int width = Math.max(1, (int) Math.floor(source.width() * scale));
         int height = Math.max(1, (int) Math.floor(source.height() * scale));
@@ -2299,7 +2302,7 @@ public class MasterTitleScreen {
                 for (int c = 0; c < 4; c++) out[o + c] = (byte) (sum[c] / count);
             }
         }
-        return new MasterTitleRomPreview.Image(width, height, out);
+        return new Image(width, height, out);
     }
 
     public void setModManagerOpenHandler(Runnable handler) {

@@ -30,6 +30,7 @@ public final class ModLevelExportStagingValidator implements LevelExportStagingV
     public void validateHostData(com.openggf.game.modzone.ModZoneLevelData data) throws IOException {
         if (destination == null) return;
         destination.getModZoneAdapter().validate("editor", data);
+        com.openggf.game.modzone.ModLevelSettingsValidation.validate(destination, data.settings());
         var registry = destination.createObjectRegistry();
         for (var object : data.objects()) {
             if (object.objectKey() != null && !registry.hasObjectKey(object.objectKey()))

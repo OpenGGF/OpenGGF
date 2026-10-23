@@ -389,7 +389,7 @@ public final class ObjectManagerInternalAccess {
                     throw new IllegalStateException("Native full-delete placement owner changed at slot " + slot);
                 boolean detached = false;
                 try {
-                    owner.setSlotIndex(-1);
+                    ObjectLifetimeOps.clearPreviousManagerSlot(owner);
                     detached = true;
                     releaseSlot.accept(slot);
                     if (spawn != null) {

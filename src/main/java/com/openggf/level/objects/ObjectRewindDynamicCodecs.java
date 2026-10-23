@@ -235,7 +235,10 @@ public final class ObjectRewindDynamicCodecs {
             Class<? extends AbstractObjectInstance> cls,
             ObjectManagerSnapshot.DynamicObjectEntry entry,
             DynamicObjectRecreateContext ctx) {
-        ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+        // Keep typed configuration for spawn-based probes; coordinate-only effects can have no placement.
+        ObjectSpawn spawn = SpawnRewindRecreatable.class.isAssignableFrom(cls) && entry.spawn() != null
+                ? entry.spawn()
+                : new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
 
         if (entry.playerOwner() instanceof AbstractPlayableSprite player) {
             Constructor<? extends AbstractObjectInstance> playerCtor =

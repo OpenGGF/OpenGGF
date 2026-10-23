@@ -35,6 +35,23 @@ public final class Sonic1HudStaticArtFactory {
         return override;
     }
 
+    static void copyPatternPair(Pattern[] dest, int destIndex, Pattern[] src, int srcIndex) {
+        if (src == null || srcIndex < 0 || srcIndex + 1 >= src.length) {
+            return;
+        }
+        if (destIndex < 0 || destIndex + 1 >= dest.length) {
+            return;
+        }
+        if (dest[destIndex] == null) {
+            dest[destIndex] = new Pattern();
+        }
+        if (dest[destIndex + 1] == null) {
+            dest[destIndex + 1] = new Pattern();
+        }
+        dest[destIndex].copyFrom(src[srcIndex]);
+        dest[destIndex + 1].copyFrom(src[srcIndex + 1]);
+    }
+
     private static void setColor(Palette palette, int index, int r, int g, int b) {
         Palette.Color color = palette.getColor(index);
         color.r = (byte) r;

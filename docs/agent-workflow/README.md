@@ -2,6 +2,7 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
   reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly
   scoped protocol-load measurements (2026-10-21 racing stress task).
@@ -408,3 +409,5 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
 support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
+
+- `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).

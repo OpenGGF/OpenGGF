@@ -269,13 +269,13 @@ testing and very responsive debugging, but it spends more history memory.
 Run the normal rewind suite:
 
 ```bash
-mvn -Dmse=off "-Dtest=*Rewind*" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=*Rewind*" test
 ```
 
 Generate the full runtime-owner field inventory as a tool, not as a JUnit test:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool"
 ```
 
@@ -286,7 +286,7 @@ To list concrete object classes currently covered by default subclass scalar
 capture:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool" \
   "-Dexec.args=--object-rollout-candidates"
 ```
@@ -299,7 +299,7 @@ lifecycle, or state that requires a custom value record.
 To audit annotation density and redundant transient annotations:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool" \
   "-Dexec.args=--annotation-density"
 ```
@@ -308,21 +308,21 @@ To identify child/spawn graph hotspots that still need an explicit parent-owned,
 independent, deterministic, or cosmetic policy decision:
 
 ```bash
-mvn -Dmse=off -DskipTests test-compile exec:java \
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile exec:java \
   "-Dexec.mainClass=com.openggf.tools.rewind.ChildGraphPolicyInventoryTool"
 ```
 
 `RewindBenchmark` is opt-in so default test runs stay fast:
 
 ```bash
-mvn -Dmse=off "-Dtest=RewindBenchmark" \
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" test
 ```
 
 To compare keyframe intervals:
 
 ```bash
-mvn -Dmse=off "-Dtest=RewindBenchmark" \
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" \
   "-Dopenggf.rewind.benchmark.keyframeInterval=30" test
 ```
@@ -341,7 +341,7 @@ The benchmark writes `target/rewind-benchmark-results.json` and prints:
 Audio budget gates are disabled unless explicitly opted in:
 
 ```bash
-mvn -Dmse=off "-Dtest=RewindBenchmark" \
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" \
   "-Dopenggf.rewind.benchmark.audioBudgets=true" test
 ```
@@ -452,25 +452,28 @@ shape repeats. Add per-object annotations or rewind overrides only for genuinely
 bespoke state, identity links, or child lifecycle that cannot be represented by the
 generic scalar path.
 
-Before considering a new subsystem covered, run:
+Choose focused checks for the behavior changed. For example, schema/codec work
+uses the first selection below; encounter validation uses the second. These are
+alternatives to select as needed, not a requirement to repeat unchanged coverage:
 
 ```bash
-mvn -Dmse=off "-Dtest=*Rewind*" test
-mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
-mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
-mvn -Dmse=off "-Dtest=RewindBenchmark" \
-  "-Dopenggf.rewind.benchmark.run=true" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestRewindEncounterValidation" test
 ```
 
 When touching audio/fade presentation specifically, also run the focused
 presentation suite:
 
 ```bash
-mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
 ```
 
-If the benchmark reports a divergent key, treat it as a real coverage gap unless the
-diff comparator itself is demonstrably wrong.
+Run `RewindBenchmark` only for a timing, footprint or long-tail determinism task,
+not as a routine subsystem coverage gate. Timing evidence must follow the
+[testing guide's measurement isolation policy](../../../tools/testing/README.md),
+including prebuilt commands and `tools/performance/run_isolated.py` for isolated
+measurements. If a benchmark reports a divergent key, investigate it as a coverage
+gap unless the comparator itself is demonstrably wrong.
 
 ### Performance attribution
 

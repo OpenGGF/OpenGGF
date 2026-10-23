@@ -143,6 +143,8 @@ class TestRewindInPlaceObjectRestore {
             "com.openggf.game.sonic3k.objects.FloatingPlatformObjectInstance$ZoneConfig",
             "com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance$ZoneConfig",
             "com.openggf.level.objects.SolidObjectParams",
+            // Sealed placement records contain only scalars, enums, strings and immutable music references.
+            "com.openggf.level.objects.authored.AuthoredObjectProperties",
             // Shared runtime-owned managers/controllers/workspaces: both paths
             // resolve the same live instance (a == b short-circuit applies).
             "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController",

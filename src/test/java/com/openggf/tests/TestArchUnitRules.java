@@ -169,7 +169,6 @@ class TestArchUnitRules {
             "debug -> camera",
             "debug -> configuration",
             "debug -> control",
-            "debug -> data",
             "debug -> game",
             "debug -> graphics",
             "debug -> level",
@@ -186,6 +185,9 @@ class TestArchUnitRules {
             // keeps these two edges closed to general creator execution/registration.
             "editor -> io",
             "editor -> mods",
+            // Reuse the canonical art converter and no-clobber package publisher;
+            // the editor data owner guard permits only those two tool contracts.
+            "editor -> tools",
             // Authoring consumes the shared directing values/controller; its menus stay in editor.
             // stageplay_boundaries_have_explicit_owners keeps these new edges narrow and rejects
             // any runtime dependency back on editor or the offline capture tool.
@@ -193,7 +195,6 @@ class TestArchUnitRules {
             "tools -> stageplay",
             "stageplay -> audio",
             "stageplay -> camera",
-            "stageplay -> configuration",
             "stageplay -> physics",
             "stageplay -> control",
             "stageplay -> data",
@@ -301,7 +302,6 @@ class TestArchUnitRules {
             "sprites -> control",
             "sprites -> data",
             "sprites -> game",
-            "sprites -> ghost",
             "sprites -> graphics",
             "sprites -> level",
             "sprites -> physics",
@@ -319,7 +319,6 @@ class TestArchUnitRules {
             "testmode -> sprites",
             "testmode -> trace",
             "timer -> audio",
-            "timer -> camera",
             "timer -> game",
             "timer -> level",
             "timer -> sprites",
@@ -331,14 +330,12 @@ class TestArchUnitRules {
             "tools -> data",
             "tools -> debug",
             "tools -> game",
-            "tools -> ghost",
             "tools -> graphics",
             // Mod-support Phase 2 Task 16 keeps the SDK validator thin by reusing
             // the engine's bounded asset-root and canonical mod validation contracts.
             "tools -> io",
             "tools -> level",
             "tools -> mods",
-            "tools -> net",
             "tools -> sprites",
             "tools -> trace",
             // Offline capture provenance consumes the leaf build-identity package;
@@ -353,8 +350,7 @@ class TestArchUnitRules {
             "trace -> sprites",
             "util -> data",
             "util -> game",
-            "util -> level",
-            "util -> tools");
+            "util -> level");
     private static final String[] RUNTIME_MANAGER_SINGLETONS = {
             Camera.class.getName(),
             LevelManager.class.getName(),
@@ -562,7 +558,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("configuration"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("control"))
-                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("graphics"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("level"))
@@ -645,7 +640,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("trace"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("audio"))
-                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("level"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("sprites"))
@@ -671,7 +665,10 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("level"))
-                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("tools"))
+                            // Public player registration is an intentional callback composition:
+                            // only the authored scene adapter can enter Playback/Control. The
+                            // Stageplay owner guard rejects its runtime implementation dependencies.
+                            .ignoreDependency(authoredStageplayServiceOwner(), authoredStageplayPublicTargets())
                             // @ModApi is compatibility metadata, not runtime collaboration.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             // Release tooling reads the inventory but is not runtime orchestration.
@@ -689,10 +686,40 @@ class TestArchUnitRules {
                 "core-runtime top-level dependency edges grew; route new dependencies through "
                         + "provider/service boundaries or consciously update the ratchet:\n  "
                         + String.join("\n  ", unexpectedEdges));
+
+        Set<String> staleEdges = new TreeSet<>(CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES);
+        staleEdges.removeAll(currentEdges);
+        assertTrue(staleEdges.isEmpty(),
+                "core-runtime dependency permissions no longer used; prune the measured stale edges:\n  "
+                        + String.join("\n  ", staleEdges));
+    }
+
+    private static DescribedPredicate<JavaClass> authoredStageplayServiceOwner() {
+        return new DescribedPredicate<>("the authored scene registration composition adapter") {
+            @Override public boolean test(JavaClass input) {
+                return typeOrNested(input.getName(), "com.openggf.mods.code.AuthoredStageplayServices");
+            }
+        };
+    }
+
+    private static boolean authoredStageplayPublicTarget(String target) {
+        return target.equals("com.openggf.stageplay.StageplayPlayback")
+                || typeOrNested(target, "com.openggf.stageplay.StageplayControl");
+    }
+
+    private static DescribedPredicate<JavaClass> authoredStageplayPublicTargets() {
+        return new DescribedPredicate<>("the public Stageplay player registration and control contracts") {
+            @Override public boolean test(JavaClass input) {
+                if (input.isArray()) input = input.getBaseComponentType();
+                return authoredStageplayPublicTarget(input.getName());
+            }
+        };
     }
 
     private static boolean approvedEditorHostDataDependency(String origin, String target) {
-        return switch (origin) {
+        // Nested records/callbacks belong to the same explicitly named bridge owner.
+        String owner = origin.contains("$") ? origin.substring(0, origin.indexOf('$')) : origin;
+        return switch (owner) {
             case "com.openggf.editor.project.EditorProjectWorkspace" -> Set.of(
                     "com.openggf.io.DirectoryAccess", "com.openggf.io.ModAssetRoot",
                     "com.openggf.io.ModInputLimits", "com.openggf.mods.TrackKey",
@@ -700,8 +727,21 @@ class TestArchUnitRules {
                     "com.openggf.mods.code.ModLevelDefinitionParser", "com.openggf.mods.code.ModZoneLoader",
                     "com.openggf.mods.code.ModLevelExportStagingValidator").contains(target)
                     || target.startsWith("com.openggf.mods.code.ModLevelDefinition$");
-            case "com.openggf.editor.project.EditorProjectRuntimeModule" ->
-                    target.equals("com.openggf.mods.code.ModLevelExportStagingValidator");
+            case "com.openggf.editor.assets.EditorArtImport" -> Set.of(
+                    "com.openggf.io.DirectoryAccess", "com.openggf.io.ModAssetRoot", "com.openggf.io.ModInputLimits",
+                    "com.openggf.tools.modsdk.ArtConverter", "com.openggf.tools.modsdk.ArtConverter$Result").contains(target);
+            case "com.openggf.editor.project.EditorCampaign" -> Set.of(
+                    "com.openggf.io.ModAssetRoot", "com.openggf.mods.code.ModCampaignDefinition").contains(target);
+            case "com.openggf.editor.project.EditorCampaignResources" -> Set.of(
+                    "com.openggf.io.DirectoryAccess", "com.openggf.io.ModAssetRoot", "com.openggf.io.ModInputLimits").contains(target);
+            case "com.openggf.editor.project.EditorCampaignExportService" -> Set.of(
+                    "com.openggf.io.ModInputLimits", "com.openggf.mods.ModApiVersion", "com.openggf.mods.SemanticVersion",
+                    "com.openggf.mods.code.ModCampaignDefinition", "com.openggf.mods.code.ModLevelExportStagingValidator",
+                    "com.openggf.tools.modsdk.JarPackager").contains(target);
+            case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
+                    "com.openggf.mods.code.ModLevelExportStagingValidator",
+                    "com.openggf.mods.code.AuthoredStageplayServices",
+                    "com.openggf.mods.code.AuthoredStageplayServices$Prepared").contains(target);
             case "com.openggf.editor.persistence.FullLevelExporter" ->
                     target.equals("com.openggf.mods.code.ModLevelDefinitionParser");
             default -> false;
@@ -718,6 +758,12 @@ class TestArchUnitRules {
     }
 
     private static boolean approvedStageplayConsumer(String origin, String target) {
+        if (typeOrNested(origin, "com.openggf.mods.code.AuthoredStageplayServices"))
+            return authoredStageplayPublicTarget(target);
+        if (typeOrNested(origin, "com.openggf.editor.project.EditorCampaignResources"))
+            return typeOrNested(target, "com.openggf.stageplay.StageplayDocument")
+                    || target.equals("com.openggf.stageplay.StageplayStore")
+                    || target.equals("com.openggf.stageplay.runtime.StageplayAssets");
         if (typeOrNested(origin, "com.openggf.editor.stageplay.StageplayWorkspace"))
             return stageplayCoreType(target) && !typeOrNested(target, "com.openggf.stageplay.StageplayControl");
         if (typeOrNested(origin, "com.openggf.editor.hud.StageplayHud"))
@@ -765,11 +811,24 @@ class TestArchUnitRules {
 
     @ArchTest
     static void stageplay_boundaries_have_explicit_owners(JavaClasses classes) {
+        assertTrue(authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.AuthoredStageplayServices")));
+        assertTrue(!authoredStageplayServiceOwner().test(classes.get("com.openggf.mods.code.ModRuntime")));
+        assertTrue(!authoredStageplayPublicTarget("com.openggf.stageplay.StageplayPlayback$State"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.LevelEditorController",
                 "com.openggf.stageplay.StageplayPlayback"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
                 "com.openggf.stageplay.runtime.StageplayAudio"));
         assertTrue(!approvedStageplayConsumer("com.openggf.editor.stageplay.StageplayWorkspace",
+                "com.openggf.stageplay.runtime.StageplayAssets"));
+        assertTrue(approvedStageplayConsumer("com.openggf.mods.code.AuthoredStageplayServices$Router",
+                "com.openggf.stageplay.StageplayControl$Status"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.mods.code.AuthoredStageplayServices",
+                "com.openggf.stageplay.runtime.StageplayAssets"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.mods.code.ModRuntime",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignResources",
+                "com.openggf.stageplay.StageplayPlayback"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.editor.project.EditorCampaignExportService",
                 "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplayPlayback", "editor"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.editor.StageplayEditorSession", "tools"));
@@ -809,19 +868,29 @@ class TestArchUnitRules {
                 "com.openggf.editor.LevelEditorController", "com.openggf.io.ModAssetRoot"));
         assertTrue(!approvedEditorHostDataDependency(
                 "com.openggf.editor.project.EditorProjectWorkspace", "com.openggf.mods.code.ModRuntime"));
+        assertTrue(approvedEditorHostDataDependency(
+                "com.openggf.editor.assets.EditorArtImport", "com.openggf.tools.modsdk.ArtConverter$Result"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.assets.EditorArtImport", "com.openggf.tools.modsdk.JarPackager"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.project.EditorCampaignExportService$Request", "com.openggf.mods.code.ModRuntime"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.LevelEditorController", "com.openggf.tools.modsdk.ArtConverter"));
         Set<String> violations = new TreeSet<>();
         for (JavaClass origin : classes) {
             if (!"editor".equals(topLevelSlice(origin))) continue;
             for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
-                String targetSlice = topLevelSlice(dependency.getTargetClass());
-                if (("io".equals(targetSlice) || "mods".equals(targetSlice))
-                        && !approvedEditorHostDataDependency(origin.getName(), dependency.getTargetClass().getName())) {
+                JavaClass target = dependency.getTargetClass();
+                if (target.isArray()) target = target.getBaseComponentType();
+                String targetSlice = topLevelSlice(target);
+                if (("io".equals(targetSlice) || "mods".equals(targetSlice) || "tools".equals(targetSlice))
+                        && !approvedEditorHostDataDependency(origin.getName(), target.getName())) {
                     violations.add(dependency.getDescription());
                 }
             }
         }
         assertTrue(violations.isEmpty(),
-                "editor creator-data edges are restricted to bounded baked-level import, validation and staging:\n  "
+                "editor asset/tool edges are restricted to bounded art/level import, campaign packaging, validation and staging:\n  "
                         + String.join("\n  ", violations));
     }
 

@@ -167,8 +167,8 @@ class TestSszEggRoboArtPriority {
         ManagedPicture sat = managed(scene, true);
         assertEquals(referenceSat(scene), sat.sat(),
                 "complete SAT preserves per-piece/global flags, mapping, flips, palette and slot order");
-        assertTrue(sat.sat().stream().anyMatch(entry -> entry.piecePriority() && entry.globalHighPriority()));
-        assertTrue(sat.sat().stream().anyMatch(entry -> !entry.piecePriority() && !entry.globalHighPriority()));
+        assertTrue(sat.sat().stream().anyMatch(entry -> entry.piece().piecePriority() && entry.piece().globalHighPriority()));
+        assertTrue(sat.sat().stream().anyMatch(entry -> !entry.piece().piecePriority() && !entry.piece().globalHighPriority()));
 
         raiseBody(low.body());
         assertPriority(scene, low.body(), true, true);

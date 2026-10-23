@@ -206,7 +206,7 @@ class TestEditorRenderingSmoke {
     }
 
     @Test
-    void worldOverlayRenderer_queuesOnePositionedLabelBatchFromControllerBackedSession() throws Exception {
+    void worldOverlayRenderer_leavesPlacementSpritesAndLabelsToWindowChrome() throws Exception {
         PreviewLevel source = new PreviewLevel();
         source.setSpawns(List.of(
                         new ObjectSpawn(120, 80, 0x2A, 0x0F, 0, true, 0, 7),
@@ -230,12 +230,8 @@ class TestEditorRenderingSmoke {
 
         renderer.render();
 
-        assertEquals(2, graphicsCommandQueueSize(), "one line group plus one label batch");
-        queuedGraphicsCommand(1).execute(32, 16, 320, 224);
-        assertEquals(List.of(
-                        new DrawCall("2A:0F", 96, 59, DebugColor.WHITE),
-                        new DrawCall("04:B0", 136, 75, DebugColor.WHITE)),
-                pixelFont.calls);
+        assertEquals(0, graphicsCommandQueueSize(), "No ROM-font labels or debug crosses in the world pass");
+        assertTrue(pixelFont.calls.isEmpty());
     }
 
     private static final class InspectableTextRenderer extends EditorTextRenderer {

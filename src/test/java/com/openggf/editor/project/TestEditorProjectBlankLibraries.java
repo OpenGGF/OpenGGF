@@ -4,6 +4,7 @@ import com.openggf.game.GameId;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
+import com.openggf.level.Level;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -30,11 +31,11 @@ class TestEditorProjectBlankLibraries {
     }
 
     @Test
-    void unavailableArtDropsOnlyDependentDefinitionsAndRemapsFlagsWithoutPaddingPatterns() {
+    void unavailableArtDropsDependentDefinitionsBeforeAddingBlankImportSlots() {
         var source = partialLibrary();
         assertThrows(IllegalArgumentException.class, () -> EditorProjectLevel.copyOf(source));
         var blank = EditorProjectLevel.blank(source, 2, 2);
-        assertEquals(source.getPatternCount(), blank.getPatternCount(), "missing native art must not be invented");
+        assertBlankImportSlots(source, blank);
         assertEquals(1, blank.omittedNativeChunkCount());
         assertEquals(1, blank.omittedNativeBlockCount());
         assertTrue(blank.blankLibraryNotice().contains("Choose another asset library"));
@@ -55,7 +56,7 @@ class TestEditorProjectBlankLibraries {
         }};
         var blank = EditorProjectLevel.blank(source, 2, 1);
         assertEquals(2, blank.omittedNativeChunkCount()); assertEquals(2, blank.omittedNativeBlockCount());
-        assertEquals(source.getPatternCount(), blank.getPatternCount());
+        assertBlankImportSlots(source, blank);
         int block = Byte.toUnsignedInt(blank.getMap().getValue(0, 0, 0));
         var descriptor = blank.getBlock(block).getChunkDesc(0, 0);
         assertFalse(descriptor.hasPrimarySolidity()); assertFalse(descriptor.hasSecondarySolidity());
@@ -70,6 +71,15 @@ class TestEditorProjectBlankLibraries {
         malformed.getPattern(1).setPixel(0, 0, (byte) 16);
         assertThrows(IllegalArgumentException.class, () -> EditorProjectLevel.blank(malformed, 2, 1));
         assertThrows(IllegalArgumentException.class, () -> EditorProjectState.capture(partialLibrary()));
+    }
+
+    private static void assertBlankImportSlots(Level source, Level blank) {
+        assertTrue(blank.getPatternCount() >= source.getPatternCount(), "native art must be retained");
+        assertTrue(blank.getPatternCount() <= 2048, "spare slots must fit native terrain descriptors");
+        for (int i = 0; i < blank.getPatternCount(); i++)
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
+                assertEquals(i < source.getPatternCount() ? source.getPattern(i).getPixel(x, y) : 0,
+                        blank.getPattern(i).getPixel(x, y), "spares cannot invent missing native art");
     }
 
     private static TestEditorProjects.Fixture partialLibrary() {

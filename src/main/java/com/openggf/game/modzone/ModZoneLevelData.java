@@ -10,6 +10,7 @@ import java.util.Optional;
 /** Immutable game-owned view of one fully validated additive-zone payload. */
 @ModApi
 public final class ModZoneLevelData {
+    private final ModLevelSettings settings;
     private final int formatVersion;
     private final int zoneIndex;
     private final int blockGridSide;
@@ -48,6 +49,20 @@ public final class ModZoneLevelData {
                             List<ModPaletteClaim> paletteClaims, List<ObjectSpawn> objects,
                             List<RingSpawn> rings, int patternCount, int chunkCount,
                             int blockCount) {
+        this(formatVersion, zoneIndex, blockGridSide, width, height, minX, maxX, minY, maxY, patterns, chunks, blocks, foregroundMap, backgroundMap, solidHeights, solidWidths, solidAngles, primaryCollision, secondaryCollision, paletteLines, hostMetadata, paletteClaims, objects, rings, patternCount, chunkCount, blockCount, ModLevelSettings.DEFAULT);
+    }
+
+    public ModZoneLevelData(int formatVersion, int zoneIndex, int blockGridSide,
+                            int width, int height, int minX, int maxX, int minY, int maxY,
+                            byte[] patterns, byte[] chunks, byte[] blocks,
+                            byte[] foregroundMap, byte[] backgroundMap,
+                            byte[] solidHeights, byte[] solidWidths, byte[] solidAngles,
+                            int[] primaryCollision, int[] secondaryCollision,
+                            byte[][] paletteLines, Optional<ModZoneHostMetadata> hostMetadata,
+                            List<ModPaletteClaim> paletteClaims, List<ObjectSpawn> objects,
+                            List<RingSpawn> rings, int patternCount, int chunkCount,
+                            int blockCount, ModLevelSettings settings) {
+        this.settings = java.util.Objects.requireNonNull(settings, "settings");
         this.formatVersion = formatVersion;
         this.zoneIndex = zoneIndex;
         this.blockGridSide = blockGridSide;
@@ -77,6 +92,7 @@ public final class ModZoneLevelData {
         this.blockCount = blockCount;
     }
 
+    public ModLevelSettings settings() { return settings; }
     public int formatVersion() { return formatVersion; }
     public int zoneIndex() { return zoneIndex; }
     public int blockGridSide() { return blockGridSide; }

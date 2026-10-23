@@ -37,8 +37,9 @@ may differ. `python3 tools/disasm/disasm_citations.py check <paths>` verifies th
 
 ## Porting details
 
-S2/S3K mapping frames have a word piece count and 6-byte pieces (signed word X).
-Y offsets are signed bytes. Decode the size byte and flags using the existing
+Standard S3K mapping frames have a word piece count and 6-byte pieces (signed word X).
+Stock S2 uses 8-byte pieces with an extra 2P tile word. Y offsets are signed bytes.
+Decode the size byte and flags using the existing
 mapping loader; sprite tiles are column-major. Do not reuse a parser for a
 different mapping format solely because the art looks similar.
 

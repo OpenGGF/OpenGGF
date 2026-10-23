@@ -31524,3 +31524,308 @@ and supplied an owned 0700 `XDG_RUNTIME_DIR` below its own `target/`. No ROM,
 window interaction, native capture, route or paired observation was involved.
 The useful local source remains separate from frozen common validation; Main,
 provider activation and paired observation gates remain closed.
+
+
+### PR223 until-green receiving source and develop reconciliation — 2026-10-23
+
+The renewed request targets PR223. Its attached reference has no actual finding;
+GitHub read-only review found no review threads/requested reviewers. Six old
+checks were intentionally SKIPPED for draft/manual selection, not executed green
+validation. The PR was CONFLICTING/DIRTY against pinned develop
+ e633e4c8259e610e81854fc8acd35172ac592068.
+
+Root corrected the receiving boundary:659 was only the completed smoke source.
+Its79/79 ordinary batches reported40688T/81F/58E/92skips;90 guard reports727T/5F/0E/0skips.
+Root inspected144 failed identities and92skips and acknowledged the run. Focused
+repairs never subtract from that epoch. Exact cohort mapping and matched-route
+evidence stay in the existing native-gap Plan. Nineteen cold-family failures
+include a changed LRZ first-door outcome and unattributed MHZ/SOZ/campaign
+frontiers. No route/native waiver is inferred.
+
+Local4823 received old659 ancestry; the first e633 attempt was aborted after
+both workers confirmed ZERO writes. Correct successor6b137183f03aee079b700add821d96c9a2dd220c
+was received ONCE as33a2c95c76e15a30ffb1af862f1c089fd0f45657, with an exact tree match,
+retaining859 and04ce through ancestry. No Mode leaves were replayed. The final
+11 conflicts separate canonical geometry/native admission from native/editor
+art providers/signpost, plus prose and the lifecycle guard.
+
+SpritePiece remains sole geometry/expansion owner, retaining native FIFO/budgets,
+overflow/grouping, immutable fragments, selective masks, SHADOW_15, coloured
+ghosts, subjects and scanline clips. All17 PreparedPiece components are copied
+once at the compatibility ingress. Four PR producers and five test consumers
+migrate removed accessors; no facade is restored. Four accessor-only fixtures
+retain229 assertion/assumption calls and expected values. New controls cover
+clipped metadata, null/empty fragments and full translated shadow republishing.
+A direct copy defect is corrected by passing the captured ghostColour bit;
+no pixel algorithm is changed. Independent actual review caught10 invalid
+Raster.piece() substitutions before any JVM submission; parent restored only
+Raster.x/y accessors, retaining SAT entry.piece access. No other material finding
+was reported in that scope; this is static review, not compiler/runtime evidence.
+
+Art providers retain both native HUD and detached preview interfaces; physical
+KosM publication/rewind state remains separate from editor reads. Authored
+signposts skip native competition lookup in initialization/update/post-player;
+numeric countdown/arrival/act rules remain. The existing authored-goal test now
+fails on a native-world query in those paths, retaining all original assertions
+and recreated keys. Incoming caller/operation lifecycle auditing replaces unused
+aggregate constants without broadening its baseline. Both hazard histories and
+branch-selected changelog/theme instructions are retained. Separate Engine/LM/OM/
+module/API auto-merge review reported NMF with explicit runtime limits.
+
+The planned46-class ordinary focus below covers changed geometry/art/editor,
+preview/API/ownership, both signpost semantics, and four S3K keepers (both loading
+classes included). Fresh owning guards follow. This is not another broad/route/
+native/passive observation or unchanged five-arena GPU sweep. Root retains the
+single final common-smoke lead and will inspect its updated class count/cost/
+stopping rule. Main remains closed. Later manual CI may validate the final PR
+ref while retaining draft; no duplicate broad lane opens during local smoke.
+Results follow only after actual XML/properties/streams/source readback.
+
+Focused selectors (46):
+
+```text
+com.openggf.graphics.TestGraphicsManagerSpriteSatReplay
+com.openggf.graphics.TestSpritePiece
+com.openggf.graphics.TestSpriteSatLimits
+com.openggf.graphics.TestSpriteSatMaskPostProcessor
+com.openggf.level.render.TestSpritePieceRendererSatPreparation
+com.openggf.graphics.TestPresentationPatternBatching
+com.openggf.level.render.TestSpritePreparationHeadComposition
+com.openggf.graphics.TestNativeSpriteOwnershipPixels
+com.openggf.graphics.TestNativeShadow15Pixels
+com.openggf.level.TestSatGhostLayering
+com.openggf.graphics.TestSpriteSatReplayPixels
+com.openggf.game.competition.TestNativeMenuRaster
+com.openggf.game.sonic2.competition.specialstage.TestCompetitiveHalfpipeSat
+com.openggf.game.sonic2.specialstage.TestSonic2SpecialStageSpriteAssembly
+com.openggf.game.sonic2.competition.interlace.TestSonic2InterlaceDecoder
+com.openggf.game.sonic2.competition.interlace.TestSonic2InterlaceCpuDisplay
+com.openggf.game.internal.TestHudSatLayoutRom
+com.openggf.level.TestLevelObjectArt
+com.openggf.editor.project.TestEditorProjectLifecycle
+com.openggf.game.sonic3k.TestSonic3kPlcArtRewindSnapshot
+com.openggf.game.sonic2.objects.TestSonic2AuthoredGoal
+com.openggf.game.sonic2.competition.TestSonic2CompetitionSession
+com.openggf.game.TestTitlePreviewCapabilities
+com.openggf.game.TestMasterTitleRomPreview
+com.openggf.game.TestTitlePreviewPixels
+com.openggf.game.sonic1.titlescreen.TestSonic1TitlePreviewProvider
+com.openggf.game.sonic2.titlescreen.TestSonic2TitlePreviewProvider
+com.openggf.game.sonic3k.titlescreen.TestSonic3kTitlePreviewProvider
+com.openggf.editor.TestEditorToggleIntegration
+com.openggf.level.objects.authored.TestAuthoredGizmos
+com.openggf.level.objects.TestHostObjectKeys
+com.openggf.level.objects.TestObjectManagerFixedSstInitialization
+com.openggf.mods.code.TestNativeRewindAdapterPublication
+com.openggf.game.session.TestS3kWorldNemesisPhysicalRestore
+com.openggf.game.patch.TestDelegatingGameModuleCoversInterface
+com.openggf.mods.TestModApiSignatureSurface
+com.openggf.mods.TestModApiPinPolicy
+com.openggf.mods.TestModApiReleasePolicy
+com.openggf.tests.TestS3kAiz1SkipHeadless
+com.openggf.game.sonic3k.TestSonic3kLevelLoading
+com.openggf.tests.TestSonic3kLevelLoading
+com.openggf.game.sonic3k.TestSonic3kBootstrapResolver
+com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+com.openggf.level.objects.TestObjectLifecycleCallAudit
+com.openggf.game.sonic2.objects.TestSonic2SignpostFinishSignal
+com.openggf.game.sonic2.objects.TestSonic2CompetitionSignpostConsumer
+```
+
+
+Affected request72200 EXIT1: main4461 and test4668 source compilation release25;
+main completed, testCompile failed56 symbols across exactly
+TestCompetitiveHalfpipeEgl and TestSszEggRoboArtPriority. ZERO tests executed,
+reports empty, queue0s/reported Maven1:19. The full11515-path frame12d7d686…
+matched after terminal; this is an actual failed qualification, not a pass.
+The remaining test-only SAT callers are now migrated through piece() at the
+56 compiler-reported access sites. In-memory reversal restores exact prior
+source and assertion/assumption counts are unchanged. Production remains the
+same compiled source. The necessary next affected selection is initial46 plus
+these two changed classes (48total), with the same isolated environment and
+fresh output namespace. No compatibility facade, expectation, pixel oracle or
+fixture count is relaxed. Final broad/category/manual-CI smoke now requires
+Farrell's explicit approval of Root's concrete updated plan; it is not launched.
+
+
+Necessary corrected request44905 EXIT0:439 distinct tests/48 selected base
+classes/49 XMLs (the PLC composite parent has0 and nested class25),0F/0E/0skips.
+All48 selected base classes executed. Exact Java runtime25.0.5.0.2, own WT/test
+classpath, explicit surfaceless EGL and all three original absolute ROM properties
+were inspected; the older literal25.0.5 was not substituted for this result.
+Queue0s/Maven47.716s;4668 test sources recompiled, main up to date. All four real
+halfpipe EGL methods,11 constrained-shadow and11 native-ownership cases ran,
+including default shadow/spill/failure/readback and published-frame controls.
+New full-Tile copy, clipped metadata and null/empty admission controls passed;
+new authored-world lookup rejection and retained numeric/native signpost cases
+passed. API signature/pin/release and all S3K keepers passed. No PNG or dump
+artifacts were emitted; pixel assertions/readback are the observed evidence.
+The complete ec29c1f3…11515-path source frame matched after terminal. The original
+72200 remains failed before tests; no counts are moved between epochs.
+
+XML streams retain FAST/NONE fallbacks, two current unmeasured KOS fingerprints,
+preview/mapping warnings and intentional negative-control diagnostics; these are
+not native timing/asset/campaign certificates. Historical14 warning identities
+remain UNKNOWN. All original659 ordinary/guard failures and route limits remain
+recorded at that source. Fresh owning guards on the same executable source are
+next; final broad/CI remains subject to explicit user approval of Root's plan.
+
+
+Fresh35285 on unchanged ec29 EXIT1:268distinct/6XML/6failures/0errors/0skips,
+queue0s/reportedMaven4:43;BuildTooling123PASS took241.701s. All six exact failures
+and streams/properties were read. Source remained ec29. Failures are RootLoop
+concrete dependencies9/8; dispatch64/58,282/277,115/113; OM3086/3073; S1art2046/2045;
+InternalAccess directslotwrite;25 strict per-caller baseline mismatches. No
+budget/assertion/baseline was raised or waived to report a pass.
+
+New bounded corrections preserve used owners: real PLC/debug responsibilities
+move to existing helpers; Suppliers keep original repeated input/manager reads,
+including a new three-manager reentry control. A used non-ModApi internal results
+capability dispatches through the existing native proof and selected callback
+proxy without early context lookup; concrete Root reference falls9→8. Existing
+native proof/direct preparation bodies remain exact. S1's pure pattern-pair copy
+moves verbatim to existing HUDfactory with two callers and complete inverse proof.
+OM moves only owned-slot bit projection to existing PopulationView, no fields or
+snapshot shape; original placed/child capture/sort stays exact. The existing
+clearPreviousManagerSlot primitive replaces one setter at the same position,
+not the whole delete method: same nonnull receiver/-1once, same callbackscope,
+late mutablewriter read, detached/release/unload/firstfault ordering. There is no
+new allocator/Word2C/owner-selection/lifetime behavior.
+
+Root's independent25-key source audit distinguishes actual removed debt,
+separate native terminal callers and only genuine bubble caller moves; it does
+not fund new callers from a global total. The count3 S1visual key stays UNKNOWN
+until new ROM-free engineering fallback controls actually pass. Those controls
+check ownerless/already-destroyed disposal with unchanged respawnability/slot,
+not native parent/escape behavior. Productionvisual update remains unchanged.
+Baseline resource is still incoming e633 pending that result/disposition.
+
+Next necessary ordinary correction focus27classes follows. The prior439PASS
+remains its ec29 epoch; unchanged geometry/preview checks are not repeated as a
+ceremony. All final broad/category/manualCI waits for Root's concrete plan and
+explicit Farrell approval. No Main, native or diagnostic observation opens.
+
+```text
+com.openggf.TestGameLoop
+com.openggf.TestGameLoopTraceRunPostIteration
+com.openggf.game.resources.TestPlcLifecycleDriverParity
+com.openggf.TestGameLoopDebugShortcuts
+com.openggf.game.TestBonusStageTransitionCoordinator
+com.openggf.TestGameLoopSpecialStageResultsHandoff
+com.openggf.mods.code.TestS3kNativeWorldCallbackDispatch
+com.openggf.game.session.TestS3kWorldNemesisLateRom
+com.openggf.level.objects.TestObjectLifetimeOps
+com.openggf.level.objects.TestNativeCompetitionOccupiedFullDelete
+com.openggf.level.objects.TestObjectManagerRewindSnapshot
+com.openggf.level.objects.TestObjectManagerRewindDynamicClassification
+com.openggf.level.objects.TestNativeObjectSlotOccupancy
+com.openggf.level.objects.TestNativeSstWord2C
+com.openggf.level.objects.TestNativeCompetitionObjectStreaming
+com.openggf.game.sonic1.specialstage.TestSonic1ResultsNumberPatterns
+com.openggf.game.sonic1.TestSonic1ResultsRomMappings
+com.openggf.game.sonic1.TestSonic1LivesHudDonation
+com.openggf.game.internal.TestHudSatLayoutRom
+com.openggf.game.sonic1.objects.bosses.TestS1EggmanVisualFallback
+com.openggf.game.sonic1.objects.bosses.TestS1EggmanNativeComponents
+com.openggf.mods.TestModApiSignatureSurface
+com.openggf.mods.TestModApiPinPolicy
+com.openggf.mods.TestModApiReleasePolicy
+com.openggf.editor.TestEditorToggleIntegration
+com.openggf.mods.code.TestNativeRewindAdapterPublication
+com.openggf.game.session.TestS3kWorldNemesisPhysicalRestore
+```
+
+Actual correction64497 completed318distinct/27XML,2F0E0skips at d608d976,
+postframe identical; reported Maven1:33. The316other cases pass, including
+actual authenticated callback/world-late-ROM, Supplier reentry ordering,
+occupied full-delete receiver/fault/restore, OM/Word2C, S1pattern pairs and API
+checks with explicit destination develop. Both failures are the new fallback
+fixture comparing spawn reference identity. Its unchanged production getter
+rebuilds an ObjectSpawn value; independent source review and actual failures
+agree. After terminal readback, change only assertSame to assertEquals and
+run the entire three-case fallback class once. This preserves complete metadata
+equality plus every slot/respawnability and forbidden-query control. The raw
+true-versus-false-then-true distinction is unchanged; no gameplay fix is inferred.
+Java25.0.5.0.2, EGL, original absolute three-ROM properties and all streams/skips
+were inspected. Existing FAST/NONE, current unmeasured KOS and mapping/fixture
+warnings remain limits, not native timing or route evidence.
+
+Fresh fallback23942 EXIT0: all three actual identities PASS,0errors/0skips,
+reportedMaven28.809s; ee8ec7b9 source postframe exact. Only fixture change is
+assertSame→assertEquals for the rebuilt ObjectSpawn value; full metadata and
+slot/respawnability assertions remain. Both ownerless false/true cases plus
+already-destroyed bound-parent no-interaction case executed. Productionvisual
+SHA25654a270663150cf6cc1b088d88e9eeb12fd447bedd4acaba928f5115bbb1bdb25
+remains exact6b. This is engineering fallback qualification, not new native
+parent/escape evidence. The earlier318/2F result stays separately attributed.
+
+Root source review accepted the final fallback SHA7ac96072 and its actual
+three-case result, with the explicit mixed engineering/native count3 rationale.
+Apply only the25 individually audited lifecycle keys:13 removals, nine new
+count1 terminal/moved callers, the mixed count3 visual caller, Bubble update3→1,
+and Animal update1→2. All498 unrelated rows remain byte-exact, as does the
+strict audit implementation/header. Only Bubble generator and render-tail
+pairs are true caller moves; removed S1 conversion shells do not fund their
+new independent terminal owners. Raw true retains destroyedRespawnable while
+false-then-true wrappers clear it, so no mechanical helper migration is made.
+Per-row reasons preserve native labels and the engineering fallback distinction.
+Root's read-only references are pinned S1 28872a46, S2 34fc7f13 and S3K 8b2cf3c4;
+this is inventory reconciliation, not new native execution or route proof.
+Fresh five affected owning guards follow; unchanged BuildTooling123 actual PASS
+is reused with its original source/tooling attribution, not rerun for ceremony.
+
+Actual84363 fresh-five guards on61282f4d:145T2F0E0skips, Maven42.148s;
+all77 source-budget rules and32 physics/caller rules pass, as do rewind guards.
+Only two ArchUnit checks fail because the new internal results dispatcher
+called a mod-host bridge, creating a forbidden game→mods dependency/cycle.
+Do not extend a freeze or exempt the new edge. Replace only that bridge call
+with its existing immediately delegated S3K game-owned native-operation proof;
+capability check, metadata authentication, selected-proxy invocation/fallback
+and context timing remain the same. This avoids introducing mod-host ownership
+into the game slice. The prior143 passes remain attributed to61282, not a
+fictional145-green run. Actual callback/late-ROM/handoff consumers and affected
+ArchUnit/source guards are checked on the corrected source separately.
+
+A later remote read found develop0b2c3c2a (one test-cost commit aftere633),
+seven paths: four test classes, two source-audit documents and docs index.
+It removes unused trace-row loading and shares immutable compiled probe bytes
+while keeping fresh runtime classloaders and assertions. No production Java
+changes. Keep the activee633 source frozen, finish its qualified merge boundary,
+then receive0b2 as a separate source epoch and check its four changed consumers.
+
+Corrected native-proof94548 actual8T0F0E0skips, three selected classes,
+source3ae2629f postframe exact, reportedMaven1:24. Actual owned results proxy
+and its fault boundary, custom subclass/unknown proxy refusal, world-specific
+ROM/late binding and loop fade handoff execute. Independent bounded source
+review finds no authentication bypass, recursive creation or early context
+query. API signatures and callback selection remain unchanged. The earlier
+145/2F dependency result remains historical. Affected ArchUnit/source rules
+run fresh on this exact corrected source; unrelated physics/rewind rules and
+BuildTooling are not repeated without changed coverage.
+
+The second dependency attempt is also rejected:96334 actual109T1F0E0skips,
+Maven38.163s. The77source rules pass; direct shared-layer→S3K proof violates
+the existing shared-game boundary. No ArchUnit freeze/exception is changed.
+Restore the original S3K helper and exact results dispatch, delete the new
+internal capability entirely, and remove four genuinely unused concrete imports
+from GameLoop (each name occurs only in its import). Root references fall9→5
+without altering the original native proof, selected callback, arguments,
+short-circuit or context timing. Existing PLC/debug/bonus and OM/art ownership
+extractions remain. Both failed capability designs stay documented as rejected,
+rather than surviving as unused scaffolding. The bounded original-dispatch
+consumers and two affected guards are rechecked on this final correction.
+
+Final original-dispatch80334 actual8T0F0E0skips, three classes, Maven1:24,
+bb33249b source postframe exact. The removed capability is absent from source
+and compiled output. Native callback/authentication, world-ROM refusal and
+fade-handoff controls remain intact. This validates the smaller correction,
+not either rejected internal-capability source epoch. Fresh two owning
+architecture guards follow on the same bb332 source.
+
+Final guard34921 EXIT0:109distinct/2XML (ArchUnit32 + Source77),0F0E0skips,
+Maven38.490s, bb33249b postframe exact. Strict lifecycle32+rewind4 actual PASS
+on61282 and unchanged BuildTooling123 on ec29 are retained with their own
+source/coverage attribution. No budgets, ArchUnit freezes, assertions or
+per-caller enforcement were loosened. This is a bounded merge checkpoint,
+not a combined-smoke or PR-green result. Latest-develop0b2 receipt and its
+changed-test checks follow separately before qualified head publication.

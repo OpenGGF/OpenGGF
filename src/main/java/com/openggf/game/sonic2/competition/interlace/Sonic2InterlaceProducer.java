@@ -98,9 +98,10 @@ public final class Sonic2InterlaceProducer {
                     int srcRow = name.vFlip() ? sprite.heightCells() - 1 - row : row;
                     int index = (name.patternIndex() + srcCol * sprite.heightCells() + srcRow) & 0x3FF;
                     int id = fieldPatternId(index, localParity, name.vFlip());
-                    fragments.add(SpriteSatEntry.of(sprite.x() + col * 8, y + row * 8, 1, 1,
+                    fragments.add(new SpritePieceRenderer.PreparedPiece(
+                            sprite.x() + col * 8, y + row * 8, 1, 1,
                             id, name.value() & 0x7FF, name.palette(), name.hFlip(), name.vFlip(),
-                            name.priority(), false).toPreparedPiece());
+                            name.priority(), false, 0, 1));
                 }
             }
             result.add(new PreparedSprite(sprite, geometry, fragments));

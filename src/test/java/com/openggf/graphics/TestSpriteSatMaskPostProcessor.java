@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.level.render.SpritePieceRenderer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -96,7 +95,7 @@ class TestSpriteSatMaskPostProcessor {
 
         assertSame(first, second);
         assertEquals(1, first.size());
-        assertEquals(0x300, first.get(0).firstPatternIndex());
+        assertEquals(0x300, first.get(0).piece().firstPatternIndex());
     }
 
     @Test
@@ -115,10 +114,10 @@ class TestSpriteSatMaskPostProcessor {
 
         assertEquals(3, processed.size());
         assertSame(earlierPiece, processed.get(0), "entries before the mask are untouched");
-        assertEquals(0x200, processed.get(1).firstPatternIndex());
+        assertEquals(0x200, processed.get(1).piece().firstPatternIndex());
         assertEquals(16, processed.get(1).visibleTopY());
         assertEquals(24, processed.get(1).visibleBottomY());
-        assertEquals(0x200, processed.get(2).firstPatternIndex());
+        assertEquals(0x200, processed.get(2).piece().firstPatternIndex());
         assertEquals(40, processed.get(2).visibleTopY());
         assertEquals(48, processed.get(2).visibleBottomY());
         assertEquals(rows(16, 24, 40, 48), visibleScanlines(processed.subList(1, 3)).keySet());
@@ -254,8 +253,8 @@ class TestSpriteSatMaskPostProcessor {
 
         assertEquals(2, processed.size());
         assertEquals(rows(16, 24, 40, 48), visibleScanlines(processed).keySet());
-        assertEquals(0x220, processed.get(0).firstPatternIndex());
-        assertEquals(0x220, processed.get(1).firstPatternIndex());
+        assertEquals(0x220, processed.get(0).piece().firstPatternIndex());
+        assertEquals(0x220, processed.get(1).piece().firstPatternIndex());
     }
 
     @Test
@@ -270,8 +269,8 @@ class TestSpriteSatMaskPostProcessor {
         List<SpriteSatEntry> processed = SpriteSatMaskPostProcessor.process(
                 List.of(maskMarker, maskCompanion, laterPiece), true);
 
-        assertFalse(processed.stream().anyMatch(entry -> entry.rawTileWordLow11() == 0x7C0));
-        assertFalse(processed.stream().anyMatch(entry -> entry.rawTileWordLow11() == 0x25F));
+        assertFalse(processed.stream().anyMatch(entry -> entry.piece().rawTileWordLow11() == 0x7C0));
+        assertFalse(processed.stream().anyMatch(entry -> entry.piece().rawTileWordLow11() == 0x25F));
     }
 
     @Test
@@ -289,10 +288,10 @@ class TestSpriteSatMaskPostProcessor {
                 List.of(maskMarker, maskCompanion, frontGlass, pile), true);
 
         assertEquals(3, processed.size());
-        assertEquals(0x180, processed.get(0).firstPatternIndex());
-        assertEquals(0x200, processed.get(1).firstPatternIndex());
+        assertEquals(0x180, processed.get(0).piece().firstPatternIndex());
+        assertEquals(0x200, processed.get(1).piece().firstPatternIndex());
         assertEquals(24, processed.get(1).visibleBottomY());
-        assertEquals(0x200, processed.get(2).firstPatternIndex());
+        assertEquals(0x200, processed.get(2).piece().firstPatternIndex());
         assertEquals(40, processed.get(2).visibleTopY());
     }
 
@@ -300,9 +299,9 @@ class TestSpriteSatMaskPostProcessor {
     static Map<Integer, Integer> visibleScanlines(List<SpriteSatEntry> entries) {
         Map<Integer, Integer> lines = new TreeMap<>();
         for (SpriteSatEntry entry : entries) {
-            SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+            entry.piece().forEachTile(
                     (patternIndex, hFlip, vFlip, paletteIndex, drawX, drawY) -> {
-                        if (drawX != entry.x()) {
+                        if (drawX != entry.piece().x()) {
                             return;
                         }
                         for (int row = entry.visibleTileRowStart(drawY); row < entry.visibleTileRowEnd(drawY); row++) {

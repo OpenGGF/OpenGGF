@@ -8,7 +8,6 @@ import com.openggf.graphics.color.DisplayColorConverter;
 import com.openggf.graphics.color.DisplayColorExpansion;
 import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.Pattern;
-import com.openggf.level.render.SpritePieceRenderer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -118,7 +117,7 @@ public final class NativeMenuRaster {
         var admitted = SpriteSatMaskPostProcessor.process(List.copyOf(entries), false,
                 SpriteSatMaskPostProcessor.Raster.h40(0, 0, HEIGHT));
         for (var entry : admitted) {
-            SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+            entry.piece().forEachTile(
                     (pattern, hFlip, vFlip, palette, drawX, drawY) -> {
                         int top = entry.visibleTileRowStart(drawY), end = entry.visibleTileRowEnd(drawY);
                         for (int row = top; row < end; row++) for (int col = 0; col < 8; col++) {
@@ -128,7 +127,7 @@ public final class NativeMenuRaster {
                             if (result[at] >= 0) continue;
                             int color = patternPixel(patterns, pattern & 0x7FF, col, row, hFlip, vFlip);
                             if (color != 0) result[at] = color | (palette & 3) * 16
-                                    | (entry.effectiveHighPriority() ? 0x80 : 0);
+                                    | (entry.piece().effectiveHighPriority() ? 0x80 : 0);
                         }
                     });
         }

@@ -124,6 +124,9 @@ public final class FullLevelExporter {
             requireGenesisColor(c.r); requireGenesisColor(c.g); requireGenesisColor(c.b);
         }
         java.util.List<ObjectSpawn> objects = exportedObjects(level);
+        com.openggf.level.objects.authored.AuthoredGizmos.validatePlacements(objects);
+        com.openggf.level.objects.authored.AuthoredGizmos.validateBounds(objects,
+                level.getMap().getWidth() * level.getBlockPixelSize(), level.getMap().getHeight() * level.getBlockPixelSize());
         if (objects.size() > 65_535 || level.getRings().size() > 65_535)
             throw new IllegalArgumentException("spawn count exceeds ModLevelDefinition v1 limits");
         Set<Integer> objectIds = new HashSet<>();
@@ -177,7 +180,7 @@ public final class FullLevelExporter {
                 raw(profiles(level,true),12),raw(profiles(level,false),12),raw(angles(level),12),primary,secondary,
                 lines,s3k?Optional.of(new ModZoneHostMetadata(request.objectZoneSet())):Optional.empty(),
                 s3k?paletteClaims(level):List.of(),canonicalObjects(level),level.getRings(),
-                level.getPatternCount(),count,level.getBlockCount());
+                level.getPatternCount(),count,level.getBlockCount(),request.settings());
         if(request.gameId()!=null) {
             ModZoneAdapter adapter = com.openggf.game.GameModuleRegistry
                     .createStockModule(request.gameId()).getModZoneAdapter();
@@ -261,6 +264,8 @@ public final class FullLevelExporter {
 
     private ObjectNode metadata(MutableLevel level, ExportRequest r) {
         ObjectNode root = JSON.createObjectNode();
+        if (!r.settings().equals(ModLevelSettings.DEFAULT))
+            root.set("settings", ModLevelSettingsJson.toJson(r.settings()));
         root.put("formatVersion", r.gameId()==GameId.S3K ? 2 : 1); root.put("zoneName", r.zoneName());
         root.put("zoneIndex", r.zoneIndex()); root.put("levelIndex", r.levelIndex());
         root.put("blockGridSide", level.getChunksPerBlockSide());
@@ -293,6 +298,8 @@ public final class FullLevelExporter {
             if (spawn.objectKey() == null) node.put("stockObjectId", spawn.objectId()); else node.put("objectKey", spawn.objectKey());
             node.put("subtype", spawn.subtype()); node.put("renderFlags", spawn.renderFlags());
             node.put("respawnTracked", spawn.respawnTracked()); node.put("rawYWord", spawn.rawYWord());
+            if (spawn.authoredProperties() != null) node.set("authoredProperties",
+                    com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.toJson(spawn.authoredProperties()));
         }
         ArrayNode rings = root.putArray("rings"); level.getRings().forEach(ring -> {
             ObjectNode node = rings.addObject(); node.put("placementId", ring.placementId()); node.put("x", ring.x()); node.put("y", ring.y()); });
@@ -340,13 +347,18 @@ public final class FullLevelExporter {
 
     public record ExportRequest(Path outputDirectory, String zoneName, int zoneIndex, int levelIndex,
                                 int startX, int startY, ExportMusic music,
-                                GameId gameId, ModObjectZoneSet objectZoneSet) {
+                                GameId gameId, ModObjectZoneSet objectZoneSet, ModLevelSettings settings) {
+        public ExportRequest(Path outputDirectory, String zoneName, int zoneIndex, int levelIndex,
+                int startX, int startY, ExportMusic music, GameId gameId, ModObjectZoneSet objectZoneSet) {
+            this(outputDirectory, zoneName, zoneIndex, levelIndex, startX, startY, music, gameId, objectZoneSet, ModLevelSettings.DEFAULT);
+        }
         /** Legacy generic v1 export; new editor projects always select an explicit host. */
         public ExportRequest(Path outputDirectory,String zoneName,int zoneIndex,int levelIndex,
                              int startX,int startY,ExportMusic music) {
             this(outputDirectory,zoneName,zoneIndex,levelIndex,startX,startY,music,null,ModObjectZoneSet.S3KL);
         }
         public ExportRequest {
+            Objects.requireNonNull(settings);
             Objects.requireNonNull(outputDirectory); Objects.requireNonNull(zoneName); Objects.requireNonNull(music);
             if (gameId == GameId.S3K) Objects.requireNonNull(objectZoneSet, "S3K object family");
             if(zoneName.isBlank() || zoneIndex<0x40 || levelIndex<0x400)
