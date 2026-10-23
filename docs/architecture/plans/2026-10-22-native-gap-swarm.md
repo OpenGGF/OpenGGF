@@ -2594,3 +2594,101 @@ unchanged structural sweep was needed for this test-only change. Consumed raw
 Maven/XML/text diagnostics are removed after inspection; compiled outputs and
 the useful unmerged local worktree are retained. Root's `659` smoke attribution
 and Main/PR/observation gates are unchanged.
+
+### Bounded S3K smoke fixture receiving corrections — 2026-10-23
+
+Use isolated `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-1eb348b9`, branch
+`bugfix/ai-s3k-smoke-fixture-ports-20261023`, from fixed parent
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`. This leaf owns only
+`TestSonic3kPoweredPatternBanks`, `TestS3kCompetitionNativeHost`,
+`TestS3kCompetitionRosterRestore` and this record. Root's common-source smoke
+remains separately owned; no common-source or Main integration is qualified here.
+
+The first focused request, command session `80672`, kept the original pattern
+geometry: isolated `(0,0)`, combined `(i*64,0)`. Its test diff SHA-256 was
+`0d2f2cc92912e00312c92fcef4744f9d55bf91eaf397c42afd5741bc55433ae2`
+against the parent. All 98 distinct XML cases completed: two failures, zero
+errors/skips. Both failures were full-map comparisons at `deferred=true`,
+`reversed=false`. Sonic had 69 expected/38 actual keys, 31 missing; Knuckles had
+66/33, 33 missing. Both had zero extra keys and zero changed shared values.
+Frame bounds extended above/left of the origins: main Sonic `(-20,-20)..(19,19)`,
+main Knuckles `(-21,-20)..(18,19)`, powered frame 2 `(-20,-27)..(19,20)` and
+powered frame 3 `(-20,-26)..(11,21)`. This discriminated missing geometry from
+shared-pixel corruption on the first failing branch. Deferred reverse and the
+later rewind/reactivation arms were not reached in that diagnostic invocation.
+The actual Host's 24 cases, roster restore's 13, and the 59 adjacent PLC,
+parallax and SAT controls all passed separately within the same red invocation.
+Queue waiting was 992 seconds; Maven execution reported 1:23.
+
+The pattern fixture now derives each origin from `getFrameBounds`: left/top
+margin 8, `originX=8-minX`, `originY=nextTop-minY`, then advance `nextTop` by
+height plus 8. Isolated and combined paths use the identical origins, with
+vertically disjoint complete frames checked inside the unchanged 320×224 raster.
+Independent ROM mapping pieces, selected by the actual character/form, must match
+those bounds and fit the original 80-entry table, 20 entries per scanline and
+strictly less than 320 declared pixels per scanline. The latter also excludes
+pixel-budget carry. Each isolated frame must emit every ROM mapping tile; every
+combined pass retains the full source tile count and unclipped rows. The complete
+PatternVersion-map equality, both submission orders, deferred/immediate paths,
+full powered banks, native main bank, rewind, revert and reactivation remain.
+No key intersection/filter, allocator, DPLC, Graphics or SAT change was made.
+
+The Host fixture now owns its outer iteration through canonical
+`runLogicalIteration`. Only a failed fixture iteration is explicitly abandoned
+with `reset()` before rethrowing the same primary exception. Both failure cases
+assert the one suppressed `missing PLC preparation for ORDINARY_LEVEL` guard and
+immediate completion callback execution, proving the failed consumed token no
+longer owns callbacks. Their original identity/message, partial-work, page,
+prefix-reset, genuine registry restore and two forward recovery checks remain.
+The matching screen helper uses the same fixture owner. Production finish
+semantics, including the held-pattern test that finishes the same token later,
+are unchanged. Roster restore compares the initial native scroll with the
+current-zone handler's semantic snapshot, perturbs the actual scroll with
+`advance` at the current camera pair, and then checks complete ParallaxSnapshot
+and full-registry equality after the existing destructive roster restore.
+Native/campaign shoe clocks, actor IDs/counters and 17-frame replay stay intact;
+there is no private-wrapper reflection, unwrapping or expected-state normalization.
+
+Both requests used the following command shape from this checkout, with the
+original three ROMs verified by the repository's CRC32/SHA-1 identities. The
+Git-derived variable below resolves the original Main directory used in both
+requests without recording a machine-local user-home path:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "${rom_root}/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${rom_root}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${rom_root}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${rom_root}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  -Dopenggf.surefire.reports=target/s3k-fixture-focusN/reports \
+  -Dopenggf.test.tmpdir=target/s3k-fixture-focusN/tmp \
+  -Dopenggf.test.diagnostics=target/s3k-fixture-focusN/diagnostics \
+  '-Dtest=<selection>' test -B
+```
+
+Request 1 used `N=1` and selection
+`TestSonic3kPoweredPatternBanks,TestS3kCompetitionNativeHost,TestS3kCompetitionRosterRestore,TestPlcFrameLifecycleCoordinator,TestParallaxRewindSnapshot,TestSpriteSatMaskPostProcessor`.
+The second and final focus, command session `5716`, used `N=2` and selection
+`TestSonic3kPoweredPatternBanks,TestS3kCompetitionNativeHost,TestS3kCompetitionRosterRestore`.
+It completed at the frozen test diff SHA-256
+`bff06390171e5a56830b2bd2ed867f2eb9f483263b38651fa9df977cafafa002`:
+39 distinct cases across three XML suites, zero failures/errors/skips, exit 0.
+Both pattern methods completed all reverse/deferred and rewind/reactivation
+arms with the complete pixel and geometry assertions. Queue waiting was 955
+seconds; Maven reported 32.497 seconds. These are two distinct invocations,
+not an additive 137-case or single all-green 98-case run.
+
+All nine XML property sets and all output streams were inspected: Java 25.0.5,
+EGL, the actual checkout and all three absolute ROM properties matched; Lua was
+5.4.9. There were no dumps. Existing FAST/NONE and synthetic competition-map
+warnings retain their limited meanings. Production sources, fields, API pins,
+POM and guard policy are unchanged, so no unrelated fresh structural guard was
+submitted. This is bounded CPU fixture/lifecycle/restore qualification, not
+native timing, GPU, complete mode/route or common-smoke qualification. Keep the
+local unmerged leaf and compiled outputs; consume only its own raw diagnostics.

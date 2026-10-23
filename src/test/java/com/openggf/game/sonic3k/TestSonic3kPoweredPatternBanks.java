@@ -90,16 +90,62 @@ class TestSonic3kPoweredPatternBanks {
         }
     }
 
-    private void assertPublishedPixels(AbstractPlayableSprite... players) {
+    private void assertPublishedPixels(AbstractPlayableSprite... players) throws Exception {
         var graphics = GameServices.graphics();
+        assertEquals(320, graphics.getProjectionWidth());
+        assertEquals(224, graphics.getConfiguredScreenHeightPx());
+        int[][] origins = new int[players.length][2];
+        int[] lineEntries = new int[224];
+        int[] linePixels = new int[224];
+        int nextTop = 8;
+        int tableEntries = 0;
+        int expectedTiles = 0;
+        var romArt = new Sonic3kPlayerArt(reader);
         var expected = new java.util.HashMap<Integer, com.openggf.graphics.SpritePresentation.PatternVersion>();
         for (int i = 0; i < players.length; i++) {
             int frame = i + 1;
             var renderer = players[i].getSpriteRenderer();
+            var bounds = renderer.getFrameBounds(frame, false, false);
+            assertTrue(bounds.width() > 0 && bounds.height() > 0, "the ROM frame must have geometry");
+            int originX = 8 - bounds.minX();
+            int originY = nextTop - bounds.minY();
+            origins[i][0] = originX;
+            origins[i][1] = originY;
+            assertTrue(originX + bounds.minX() >= 0 && originX + bounds.maxX() < 320);
+            assertTrue(originY + bounds.minY() >= 0 && originY + bounds.maxY() < 224,
+                    "all nonoverlapping ROM frames must fit the original native raster");
+            nextTop += bounds.height() + 8;
+
+            // Count the unprocessed ROM pieces, independently of SAT admission.
+            // Strictly less than 320 pixels also prevents next-line mask carry.
+            var tier = players[i].getSuperStateController() instanceof Sonic3kSuperStateController form
+                    ? form.getActiveFormTier() : S3kFormTier.NORMAL;
+            var mapping = romArt.loadFormArtSet(players[i] instanceof Knuckles ? "knuckles" : "sonic", tier)
+                    .mappingFrames().get(frame);
+            assertEquals(bounds, com.openggf.level.render.SpritePieceRenderer.computeFrameBounds(
+                    mapping.pieces(), false, false));
+            tableEntries += mapping.pieces().size();
+            int frameTiles = 0;
+            for (var piece : mapping.pieces()) {
+                assertTrue(piece.widthTiles() > 0 && piece.heightTiles() > 0);
+                frameTiles += piece.widthTiles() * piece.heightTiles();
+                int top = originY + piece.yOffset();
+                for (int y = top; y < top + piece.heightTiles() * 8; y++) {
+                    lineEntries[y]++;
+                    linePixels[y] += piece.widthTiles() * 8;
+                }
+            }
             var isolated = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0,
-                    () -> renderer.drawFrame(frame, 0, 0, false, false));
+                    () -> renderer.drawFrame(frame, originX, originY, false, false));
+            assertEquals(frameTiles, isolated.tiles().size(), "the isolated source contains every ROM mapping tile");
             assertFalse(isolated.patternVersions().isEmpty());
+            expectedTiles += frameTiles;
             expected.putAll(isolated.patternVersions());
+        }
+        assertTrue(tableEntries <= 80, "unprocessed ROM pieces fit the native H40 SAT table");
+        for (int y = 0; y < 224; y++) {
+            assertTrue(lineEntries[y] <= 20, "unprocessed ROM pieces fit the native scanline entry budget");
+            assertTrue(linePixels[y] < 320, "unprocessed ROM pieces cannot clip or arm pixel-budget carry");
         }
         for (boolean deferred : new boolean[]{false, true}) {
             for (boolean reversed : new boolean[]{false, true}) {
@@ -107,13 +153,61 @@ class TestSonic3kPoweredPatternBanks {
                     if (deferred) graphics.beginSpriteSatCollection();
                     for (int j = 0; j < players.length; j++) {
                         int i = reversed ? players.length - 1 - j : j;
-                        players[i].getSpriteRenderer().drawFrame(i + 1, i * 64, 0, false, false);
+                        players[i].getSpriteRenderer().drawFrame(i + 1, origins[i][0], origins[i][1], false, false);
                     }
                     if (deferred) graphics.endSpriteSatCollectionAndReplay();
                 });
-                assertEquals(expected, combined.patternVersions(), "each owner must retain its isolated ROM pixels");
+                assertEquals(expected, combined.patternVersions(), () -> patternDifference(
+                        expected, combined.patternVersions(), deferred, reversed, players));
+                assertEquals(expectedTiles, combined.tiles().size(), "the combined pass retains every source tile");
+                for (var tile : combined.tiles()) assertFalse(tile.rowClipped(), "the native raster clips no source row");
             }
         }
+    }
+
+    private String patternDifference(
+            java.util.Map<Integer, com.openggf.graphics.SpritePresentation.PatternVersion> expected,
+            java.util.Map<Integer, com.openggf.graphics.SpritePresentation.PatternVersion> actual,
+            boolean deferred, boolean reversed, AbstractPlayableSprite[] players) {
+        var missing = new java.util.TreeSet<>(expected.keySet());
+        missing.removeAll(actual.keySet());
+        var extra = new java.util.TreeSet<>(actual.keySet());
+        extra.removeAll(expected.keySet());
+        var changed = new java.util.TreeSet<Integer>();
+        for (int id : expected.keySet()) {
+            if (actual.containsKey(id) && !expected.get(id).equals(actual.get(id))) changed.add(id);
+        }
+        var message = new StringBuilder("each owner must retain its isolated ROM pixels; deferred=")
+                .append(deferred).append(" reversed=").append(reversed)
+                .append(" expectedKeys=").append(expected.size()).append(" actualKeys=").append(actual.size());
+        for (int i = 0; i < players.length; i++) {
+            var renderer = players[i].getSpriteRenderer();
+            message.append("; owner=").append(i).append(" code=").append(players[i].getCode())
+                    .append(" base=0x").append(Integer.toHexString(renderer.patternBankBase()))
+                    .append(" cap=").append(renderer.patternBankCapacity()).append(" frame=").append(i + 1)
+                    .append(" bounds=").append(renderer.getFrameBounds(i + 1, false, false));
+        }
+        message.append("; missing=").append(missing.size()).append(patternIds(missing, players))
+                .append(" extra=").append(extra.size()).append(patternIds(extra, players))
+                .append(" sharedDifferent=").append(changed.size()).append(patternIds(changed, players));
+        if (!changed.isEmpty()) {
+            int id = changed.first();
+            message.append(" firstChangedExpected=").append(expected.get(id))
+                    .append(" firstChangedActual=").append(actual.get(id));
+        }
+        return message.toString();
+    }
+
+    private String patternIds(java.util.Set<Integer> ids, AbstractPlayableSprite[] players) {
+        return ids.stream().limit(8).map(id -> {
+            for (int i = 0; i < players.length; i++) {
+                var renderer = players[i].getSpriteRenderer();
+                int offset = id - renderer.patternBankBase();
+                if (offset >= 0 && offset < renderer.patternBankCapacity())
+                    return "0x%X(owner=%d,+0x%X)".formatted(id, i, offset);
+            }
+            return "0x%X(unowned)".formatted(id);
+        }).toList().toString();
     }
 
     private Sonic secondary(SpriteArtSet art, String name) {

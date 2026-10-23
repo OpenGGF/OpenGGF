@@ -167,8 +167,10 @@ class TestS3kCompetitionRosterRestore {
         open(List.of(SONIC,KNUCKLES));
         var context=host.world().context();
         var initialScroll=host.scroll().capture();
+        var parallax=context.getParallaxManager();
+        var initialParallax=parallax.capture();
         assertEquals(3,initialScroll.waveCounter()); assertEquals(0x1000,initialScroll.cloudDrift());
-        assertEquals(initialScroll,context.getParallaxManager().capture().handlerRewindState(),
+        assertEquals(initialScroll,parallax.getHandler(context.getLevelManager().getCurrentZone()).captureRewindState(),
                 "the initialized native handler is already published at LF0 without another scroll pass");
         host.session().applyImmediateItem(0,0);
         host.session().applyImmediateItem(1,1);
@@ -180,10 +182,15 @@ class TestS3kCompetitionRosterRestore {
             assertNull(player.sprite().currentTimerManager().getTimerForCode("SpeedShoes-"+player.sprite().getCode()));
         }
         var before=context.getRewindRegistry().capture();
+        host.scroll().advance(new S3kCompetitionScroll.CameraPair(
+                host.scroll().view(0).camera(),host.scroll().view(1).camera()));
+        assertNotEquals(initialScroll,host.scroll().capture(),"the native scroll restore control must change state");
+        assertNotEquals(initialParallax,parallax.capture());
         context.getSpriteManager().removeSprite(host.player(0).getCode());
         context.getSpriteManager().removeSprite(host.player(1).getCode());
         context.getRewindRegistry().restore(before);
         assertEquals(initialScroll,host.scroll().capture());
+        assertEquals(initialParallax,parallax.capture(),"registry restore retains the complete parallax snapshot");
         assertFullRegistry(before,context.getRewindRegistry().capture());
         host.player(0).currentTimerManager().update();
         for (var player:host.players()) {
