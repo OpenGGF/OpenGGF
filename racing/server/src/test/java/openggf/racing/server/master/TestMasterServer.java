@@ -15,12 +15,14 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(60)
@@ -74,6 +76,37 @@ public class TestMasterServer {
             }
         }
         throw new AssertionError("timed out waiting for " + type.getSimpleName());
+    }
+
+    @Test
+    void healthIsAuthenticatedReadOnlyAndRejectsMutatingMethods(@TempDir Path dir)
+            throws Exception {
+        server = MasterServer.start(testConfig(), dir);
+        URI health = URI.create("http://127.0.0.1:" + server.adminPort() + "/admin/health");
+        try (HttpClient client = HttpClient.newHttpClient()) {
+            assertEquals(401, client.send(HttpRequest.newBuilder(health).GET().build(),
+                    HttpResponse.BodyHandlers.discarding()).statusCode());
+            HttpRequest.Builder authorized = HttpRequest.newBuilder(health)
+                    .header("Authorization", "Bearer secret-admin-token");
+            assertEquals(204, client.send(authorized.GET().build(),
+                    HttpResponse.BodyHandlers.discarding()).statusCode());
+            assertEquals(405, client.send(authorized.POST(HttpRequest.BodyPublishers.noBody()).build(),
+                    HttpResponse.BodyHandlers.discarding()).statusCode());
+        }
+        assertFalse(Files.exists(dir.resolve("admin-audit.jsonl")),
+                "readiness must not add audit records on every probe");
+        Path config = dir.resolve("health.yaml");
+        Path token = dir.resolve("admin.secret");
+        Files.writeString(config, "adminPort: " + server.adminPort()
+                + "\nadminTokenFile: admin.secret\n");
+        Files.writeString(token, "secret-admin-token\n");
+        assertEquals(0, MasterHealthCheckMain.check(new String[] {"--config", config.toString()}));
+        Files.writeString(token, "wrong-token\n");
+        assertEquals(1, MasterHealthCheckMain.check(new String[] {"--config", config.toString()}));
+        Files.writeString(token, "secret-admin-token\n");
+        server.close();
+        assertEquals(1, MasterHealthCheckMain.check(new String[] {"--config", config.toString()}));
+        assertEquals(1, MasterHealthCheckMain.check(new String[] {}));
     }
 
     @Test

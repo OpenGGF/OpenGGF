@@ -2,6 +2,7 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
   reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly
   scoped protocol-load measurements (2026-10-21 racing stress task).

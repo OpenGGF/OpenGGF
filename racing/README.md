@@ -192,6 +192,13 @@ The verifier embeds the engine to replay attempts, so build it from the same eng
 clients it verifies. Master settings are documented in
 [CONFIGURATION.md](../CONFIGURATION.md#racing-server-master-verifier-settings).
 
+For Linux servers, [Docker deployment](deploy/README.md) provides separate
+master/relay and verifier images, standalone `docker run` commands and an optional
+single-host Compose setup. Both deployment styles use the same images, TLS and
+file-backed secrets. Verifiers can move to separate machines without changing the
+service protocol. Source and packaging remain here because verification shares the
+client engine build identity.
+
 Anonymous creation-proof reconnect stamps share the configured new-identity cache
 size and TTL limits (`newIdentityCacheSize`, `newIdentityCacheTtlMinutes`). Reconnects
 refresh LRU order but cannot extend the proof's expiry. Pending room attachments

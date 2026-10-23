@@ -2,6 +2,7 @@ package openggf.racing.server.verifier;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import openggf.racing.server.config.SecretFile;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -40,7 +41,7 @@ final class HttpMasterApi implements VerifierWorker.MasterApi {
 
     HttpMasterApi(String base, String registrationToken, boolean trustInsecure) {
         this.base = base;
-        this.registrationToken = registrationToken;
+        this.registrationToken = SecretFile.requireToken(registrationToken);
         HttpClient.Builder builder = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10));
         if (trustInsecure) builder.sslContext(insecureSslContext());
@@ -57,12 +58,13 @@ final class HttpMasterApi implements VerifierWorker.MasterApi {
                             URI.create(base + "/verifier/register"))
                     .header("Authorization", "Bearer " + registrationToken)
                     .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build(),
                     HttpResponse.BodyHandlers.ofString());
             requireStatus(response.statusCode(), OK);
             JsonNode json = JSON.readTree(response.body());
             credentials = new Credentials(json.get("workerId").asText(),
-                    json.get("workerToken").asText());
+                    SecretFile.requireToken(json.get("workerToken").asText()));
             registration = new Registration(publicKeyEncoded.clone(), Set.copyOf(fingerprints));
             credentialsRejected = false;
             return credentials.workerToken();

@@ -5,12 +5,17 @@ import openggf.timeattack.AttemptInputRecording;
 import openggf.timeattack.TimeAttackLaunchRequest;
 
 import openggf.racing.server.verifier.AttemptReplayHarness;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HexFormat;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -19,18 +24,27 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class TestAttemptReplayHarness {
 
     @Test
-    void replayIsDeterministicAndDoctoredInputsDiverge() {
+    void replayIsDeterministicAndDoctoredInputsDiverge() throws Exception {
         Path rom = s3kRom();
         String fingerprint = AttemptReplayHarness.fingerprintForRom(rom);
         AttemptInputRecording original = recording(fingerprint, false);
         AttemptInputRecording doctored = recording(fingerprint, true);
 
         AttemptReplayHarness.Result first = AttemptReplayHarness.replay(original, rom);
-        AttemptReplayHarness.Result second = AttemptReplayHarness.replay(original, rom);
+        var observed = new ArrayList<GhostFrame>();
+        AttemptReplayHarness.Result second = AttemptReplayHarness.replay(original, rom, observed::add);
         AttemptReplayHarness.Result altered = AttemptReplayHarness.replay(doctored, rom);
         assertNull(first.failureReason());
         assertEquals(first, second);
         assertEquals(original.frameCount(), first.framesSimulated());
+        assertEquals(first.framesSimulated(), observed.size());
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encoded = new byte[GhostFrameCodec.BYTES];
+        for (GhostFrame frame : observed) {
+            GhostFrameCodec.encode(frame, encoded, 0);
+            digest.update(encoded);
+        }
+        assertEquals(first.ghostStreamHashHex(), HexFormat.of().formatHex(digest.digest()));
         assertNotEquals(first.ghostStreamHashHex(), altered.ghostStreamHashHex());
     }
 
