@@ -2082,3 +2082,115 @@ in this existing plan; the changelog combines retry identity with literal speed
 word behavior in the same existing entry. No local compatibility fix is added.
 The accepted final request remains the original29 whole classes plus
 TestLevelLoadAttempt, followed by one fresh seven-class owning guard.
+
+### S2 native speed-word final bounded qualification — 2026-10-23
+
+Both final invocations completed on merge
+`8f2f3fb949b0a77fc2a052ad77a89505c0e6f58d`, with31-Java fingerprint
+`b4fbcb9418651160a45423714f1bfac4778834684ba4c9223656415f58944821` unchanged
+through each terminal result. The source was frozen at14:08Z, before14:30Z.
+The scheduler admitted fresh guard55761 **before** ordinary42271; submission
+order is not reported as execution order. Each invocation's XML was matched
+against its exact `test` property and class selection independently.
+
+| Invocation | Matched XML suites / unique test identities | Failures / errors / skips | Queue / Maven |
+|---|---:|---:|---|
+| Ordinary42271 |30 /540, no duplicate identities |0 /0 /0 |447s /44.746s |
+| Fresh guard55761 |7 /114, no duplicate identities |0 /0 /0 |157s /1:32 |
+
+Every ordinary XML reports Java25.0.5, this worktree's cwd, surfaceless EGL and
+all three identity-verified original root ROM paths. Guard XML reports Java25.0.5
+and this cwd. Both command sessions exited0, with no JVM dumps. The18 ordinary
+and26 guard compiler warnings concern deprecated APIs in unchanged files;
+there are no other Maven warning/error lines. These are focused/component and
+fresh structural results, not a full-suite, Root common-smoke or route result.
+
+Exact invocation-specific XML suite identities and test counts (all0 failures,
+errors and skips):
+
+| Ordinary XML suite | Tests |
+|---|---:|
+| `com.openggf.game.TestCrossGameSuperSonic` |3 |
+| `com.openggf.game.TestPhysicsProfileEditing` |3 |
+| `com.openggf.game.TestPhysicsProfileRegression` |18 |
+| `com.openggf.game.mutators.TestMotionMutatorConsumers` |33 |
+| `com.openggf.game.sonic2.TestSonic2DonorSuperStateRewind` |4 |
+| `com.openggf.game.sonic2.TestSonic2LevelInitProfile` |10 |
+| `com.openggf.game.sonic2.TestSonic2SuperBalance` |33 |
+| `com.openggf.game.sonic2.TestSonic2SuperGlobalPalettePhase` |4 |
+| `com.openggf.game.sonic2.TestSonic2SuperReversionAnimation` |3 |
+| `com.openggf.game.sonic2.TestSonic2SuperSpeedConstantOwnership` |3 |
+| `com.openggf.game.sonic2.TestSonic2SuperTransformationStartEffects` |10 |
+| `com.openggf.game.sonic2.competition.TestSonic2CompetitionRosterRestore` |3 |
+| `com.openggf.game.sonic2.competition.TestSonic2NativeCompetitionHost` |1 |
+| `com.openggf.game.sonic2.objects.TestTornadoObjectInstance` |45 |
+| `com.openggf.game.sonic3k.TestSonic3kBootstrapResolver` |6 |
+| `com.openggf.game.sonic3k.TestSonic3kDecodingUtils` |3 |
+| `com.openggf.game.sonic3k.TestSonic3kLevelLoading` |36 |
+| `com.openggf.game.sonic3k.TestSonic3kSuperStateRewind` |20 |
+| `com.openggf.level.TestLevelLoadAttempt` |11 |
+| `com.openggf.mods.TestModApiSignatureSurface` |11 |
+| `com.openggf.sprites.managers.TestPlayableSpriteMovement` |188 |
+| `com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture` |14 |
+| `com.openggf.sprites.playable.TestInvincibilityRewindPublicationOrder` |9 |
+| `com.openggf.sprites.playable.TestNativePlayerSpeedWords` |19 |
+| `com.openggf.sprites.playable.TestPlayableSubclassRewind` |4 |
+| `com.openggf.sprites.playable.TestShieldRewindRestore` |16 |
+| `com.openggf.sprites.playable.TestSuperStateController` |7 |
+| `com.openggf.tests.TestS3kAiz1SkipHeadless` |8 |
+| `com.openggf.tests.TestSonic3kLevelLoading` |7 |
+| `com.openggf.timer.timers.TestSpeedShoesTimer` |8 |
+
+| Fresh guard XML suite | Tests |
+|---|---:|
+| `com.openggf.game.rewind.TestRewindArchitectureGuard` |4 |
+| `com.openggf.game.rewind.coverage.TestRewindCoverageGuard` |1 |
+| `com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard` |1 |
+| `com.openggf.tests.TestArchUnitRules` |32 |
+| `com.openggf.tests.TestArchitecturalSourceGuard` |72 |
+| `com.openggf.tests.TestNativeImageResourceGuard` |1 |
+| `com.openggf.tests.game.TestPerGameRuleArchitectureGuard` |3 |
+
+The19 native-bank cases include immediate raw UNKNOWN on unbound restore,
+unsigned zero/full-word values, changed-owner invalidation, explicit live owner
+binding without initialization, independent current-global module controls,
+actual CPU routine-2 respawn retaining knownC00/18/80, wet/Super shoes writers,
+local-fluid/custom/donor/provider negatives, and real pending-insta payloads in
+all three games. The Host's six-act case checks raw initialization in all six
+acts; its EHZ1/2 branches complete destructive registered recreation and full
+snapshot-content forward comparison through water/shoes writer edges, plus an
+explicitly Host-bound non-roster rejection. Entire Super
+start-effects and publication controls pass with the qualified pending-return
+source, preserving the original object identities and retry behavior.
+
+Portable actual command shapes (executed from this isolated cwd):
+
+```bash
+task_main_ws=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+task_tests='TestNativePlayerSpeedWords,TestSonic2SuperSpeedConstantOwnership,TestSonic2SuperTransformationStartEffects,TestSonic2SuperGlobalPalettePhase,TestSonic2SuperReversionAnimation,TestSonic2SuperBalance,TestSonic2DonorSuperStateRewind,TestSonic2LevelInitProfile,TestSonic2NativeCompetitionHost,TestSonic2CompetitionRosterRestore,TestTornadoObjectInstance,TestShieldRewindRestore,TestAbstractPlayableSpriteRewindCapture,TestPlayableSubclassRewind,TestInvincibilityRewindPublicationOrder,TestPlayableSpriteMovement,TestMotionMutatorConsumers,TestPhysicsProfileRegression,TestPhysicsProfileEditing,TestSuperStateController,TestSonic3kSuperStateRewind,TestCrossGameSuperSonic,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSpeedShoesTimer,TestLevelLoadAttempt'
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 "$task_main_ws/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$task_main_ws/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$task_main_ws/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$task_main_ws/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$task_tests" test -B
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_OPTS -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 "$task_main_ws/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=TestArchUnitRules,TestArchitecturalSourceGuard,TestNativeImageResourceGuard,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestRewindCoverageGuard,TestPerGameRuleArchitectureGuard' test -B
+```
+
+The expanded changed-file citation comparison against659b02c98 finds no new
+hard or stale citations at pinned S2 reference34fc7f. Its96 stale/two missing-file/
+one out-of-range inherited findings are unchanged; the earlier26-file count
+covered a narrower file set. No source budget, inventory baseline, exported
+rewind/API shape or signature pin changed. No additional request is needed.
+
+Pre-init RAM-clear residue remains UNKNOWN, ordinary initialization remains
+explicitly coalesced rather than exact routine-0/first-dispatch timing, and
+production teleport/full swap ownership remains OPEN. ARZ2 and other route
+frontiers are unresolved. Root retains common smoke and delivery. Consumed
+invocation XML/text, temporary logs and the own field-audit diagnostic are
+removed after inspection; useful unmerged commits/worktree remain retained.

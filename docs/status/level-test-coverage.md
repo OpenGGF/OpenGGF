@@ -8,7 +8,9 @@ non-S2/custom/donor/local-fluid negatives. This is a shared-player contract
 increment, not a level or route certificate. Ordinary initialization is explicitly
 coalesced at participant assembly; pre-init RAM clear, exact first-dispatch timing,
 full teleport swap and all unresolved ARZ2/other trace frontiers remain open.
-Validation results are recorded in the linked task record.
+Final bounded qualification:540 affected tests and114 fresh owning guards pass
+with zero failures/errors/skips; exact source, XML identities and open limits
+are recorded in the linked task record.
 
 
 SSZ rotating post/carrier support (2026-10-21): the [ID76 component increment](../architecture/validation/levels/s3k-ssz-act1.md#r16-positive-control-rotating-solid-component-contract--2026-10-21)
