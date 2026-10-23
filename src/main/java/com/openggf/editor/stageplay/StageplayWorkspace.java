@@ -1412,7 +1412,7 @@ public final class StageplayWorkspace {
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
             routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
         }));
-        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Select a motion row to cycle its choices. Airborne actors land first.");
+        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Cycle motion choices. Airborne actors land first.");
         status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
     }
 

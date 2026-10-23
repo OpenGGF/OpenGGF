@@ -90,7 +90,13 @@
             "kind": "MOVE_TO",
             "x": 1960,
             "y": 1960,
-            "urgency": 0.25
+            "urgency": 0.25,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 1,
@@ -113,7 +119,13 @@
             "kind": "MOVE_TO",
             "x": 2200,
             "y": 2360,
-            "urgency": 0.4
+            "urgency": 0.4,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 126,
@@ -137,7 +149,13 @@
             "kind": "MOVE_TO",
             "x": 1960,
             "y": 1960,
-            "urgency": 0.25
+            "urgency": 0.25,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 1,
@@ -160,7 +178,13 @@
             "kind": "MOVE_TO",
             "x": 2200,
             "y": 2360,
-            "urgency": 0.4
+            "urgency": 0.4,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 126,

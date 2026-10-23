@@ -71,11 +71,11 @@ class TestStageplayRouteOverlayPictures {
                 assertTrue(chrome.setActive(true));
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
-                for(int i=0;i<60;i++){
+                for(int i=0;i<120;i++){
                     draw(chrome,session,workspace);
                     glViewport(0,0,WIDTH,HEIGHT);
                     int menuWidth=Math.round(WIDTH*224f/HEIGHT);
-                    modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,menuWidth,224,0).get(new float[16]),menuWidth);
+                    modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,menuWidth,0,224).get(new float[16]),menuWidth);
                     video.frame(i==0?output.resolve("engine-motion-settings.png"):null);
                 }
                 workspace.menu().close();
@@ -145,7 +145,7 @@ class TestStageplayRouteOverlayPictures {
                 assertEquals(path,workspace.routeOverlay().path());
                 assertEquals(GL_NO_ERROR,glGetError());
                 System.out.println("ROUTE_EVIDENCE success samples="+success.path().size()+" commands="+success.commands().size()
-                        +" failure="+failed.status()+" failureSamples="+failed.path().size()+" frames=540");
+                        +" failure="+failed.status()+" failureSamples="+failed.path().size()+" frames=600");
             }
         }
     }
