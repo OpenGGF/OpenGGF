@@ -3479,3 +3479,48 @@ continues independently, with actual failures preserved. The separate Slot
 publication/order correction and absent secondary native-audio prerequisite
 remain active in their own worktrees. Main, push, activation, full routes and
 passive SOZ/MHZ execution remain closed.
+
+
+## Shared SAT producer render-order fixture — 2026-10-23
+
+Frozen659 common batch71 failed the structural RenderOrderTest assertion that
+expected three duplicated drawStageRingsForBucket call sites and found one.
+The owning test and LevelRenderer runtime were byte-identical at659 and receiving
+b196fe0b0. The existing renderer routes regular, filtered, capture and published
+consumers through one authoritative SAT producer. Its legacy ring call remains
+inside the ascending priority loop before the zone tail/replay, with placed rings
+before lost rings and the native typed-profile path guarded against duplication.
+No runtime defect was established by the obsolete source-count assertion.
+
+Only RenderOrderTest changes: bind those actual consumer/producer boundaries and
+retain the original default priority/RingManager controls; add native ring-list
+before-bucket and physical attracted-slot producer discrimination. No production,
+POM, graphics, mask, queue, API or timing behavior changes. An independent exact
+source review found no material defect; these are structural/source controls,
+not new pixel or per-frame publication qualification.
+
+Root request35365 onb196fe0b0 plus this one-file patch passes33 unique identities
+in3 XML suites,0 failures/errors/skips: RenderOrder21, SAT ghost layering8 and ring
+draw emission4. Queue207s; Maven34.343s. Every XML's exact selectors, own cwd,
+Java25.0.5, surfaceless-EGL and original three absolute ROM properties match.
+All streams were read; only inherited FAST-without-manifest fallback warnings
+occurred and no dumps exist. Source/pom/tool framing SHA256 remains
+9e3030fcfc665725516d3b1edc37d91ba9a1020721892970701b47f4f2f3abee through terminal.
+
+Reproduction uses the existing reviewed Java25/Lua5.4/null-audio/EGL environment,
+unsets launcher/display variables and resolves OPENGGF_MAIN/OPENGGF_ROM_DIR to
+the actual main checkout and existing ROM directory:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=RenderOrderTest,TestSatGhostLayering,TestRingDrawEmission' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Consumed invocation XML/text/log/runtime outputs are removed after readback;
+compiled outputs are retained. The frozen659 broad smoke and separately owned
+Slot/audio work remain distinct epochs. This pass does not waive ordinary route
+failures, establish whole-candidate smoke, activate providers or open Main/push.
