@@ -43,6 +43,9 @@ Unreleased. The earlier development themes remain in
   their own dispatch through late global animation and rewind. Native object-word
   snapshots synchronize only proven words, leaving unrelated fixed-slot shield
   helpers outside that memory projection while rejecting ambiguous native access.
+  Fresh S2 competition initialization owns its explicit object-memory clear;
+  bank eviction clears current live native owners in physical order while
+  preserving empty-slot residue and replacements created during notification.
 
 - **Native terrain rendering:** Retained plane images keep their original width,
   height and wrap independently of ordinary level layouts. Camera movement
