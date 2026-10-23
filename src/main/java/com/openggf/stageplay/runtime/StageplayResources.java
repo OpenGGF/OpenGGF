@@ -254,6 +254,13 @@ public final class StageplayResources implements AutoCloseable {
                             && !capabilities.tailsFlightEnabled()) throw new IllegalArgumentException("Donor module does not support native flight: " + actor.id());
                     if (command.kind() == StageplayDocument.PuppetCommandKind.GLIDE_TO && !capabilities.glideAttacksEnabled())
                         throw new IllegalArgumentException("Donor module does not support native glide: " + actor.id());
+                    if (command.kind() == StageplayDocument.PuppetCommandKind.SPINDASH) {
+                        var donor = library.module(actor.gameId());
+                        if (!donor.getPlayableCharacterRegistry().movementAbilities(
+                                com.openggf.game.CharacterKey.parsePersisted(actor.character()), donor)
+                                .contains(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH))
+                            throw new IllegalArgumentException("Actor does not declare native spindash: " + actor.id());
+                    }
                     var target = command.target();
                     if (target.layoutIndex() >= 0 && !source.levelProject().isEmpty() && terrain(source).getObjects().stream().noneMatch(o -> o.layoutIndex() == target.layoutIndex()
                             && o.objectId() == target.objectId() && o.subtype() == target.subtype()))

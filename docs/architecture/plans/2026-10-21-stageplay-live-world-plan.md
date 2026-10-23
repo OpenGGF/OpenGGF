@@ -2799,3 +2799,22 @@ Actor movement-ability declarations are intersected with donor native support;
 creator definitions can declare or decline moves independently of character names.
 The unpublished canonical command format changes directly; no migration is added.
 Implementation and native-input verification continue in the following slices.
+
+
+Schema/ability slice: `7e780144d`. Stable compile and the focused schema/compiler/
+decompiler/API selection passed: 36 tests, zero failures/errors/skips. The release
+policy descriptor remains unchanged because API version/status are unchanged;
+the hook rejects descriptor edits for ordinary candidate-pin regeneration.
+
+Controller/search decisions: the same input-only steering policy serves the
+private terrain probe and LIVE playback. Gentle predicts coasting from live
+friction, Hard countersteers using native deceleration, Overshoot captures its
+return phase in control rewind state. Grounded starts and spindash are replayed
+as ordinary controller edges. The chosen initial stroll policy is `$180` (1.5 px
+per tick), one quarter of normal `$600` native top speed; using the animation
+threshold alone was rejected because almost-top-speed travel still reads as Run.
+The search retains one authored destination, penalises each non-Jump-start jump
+by 2000 score units and accepts arrival only when popped from the priority queue.
+Immediate acceptance of a generated jumping child was rejected because a cheaper
+grounded path may still be pending. Per-edge MOVE_TO emission and +64/+128 goals
+are removed. Final film/motion qualification is recorded after focused checks.

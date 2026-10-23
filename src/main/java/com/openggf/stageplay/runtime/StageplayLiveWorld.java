@@ -311,7 +311,8 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 p.wait = command; p.deadline = frame + command.timeoutFrames(); p.waitRings = p.sprite.getRingCount();
                 p.status = PuppetStatus.WAITING;
             } else {
-                p.goal = command; p.goalStart = frame; p.best = Double.POSITIVE_INFINITY; p.lastProgress = frame;
+                p.goal = command; p.goalStart = frame;
+                p.routeApproach = command.x() < p.sprite.getCentreX() ? -1 : 1; p.routeReturning = false; p.best = Double.POSITIVE_INFINITY; p.lastProgress = frame;
                 p.status = PuppetStatus.IDLE;
                 if (command.kind() == PuppetCommandKind.RELEASE) p.jumpEnd = frame;
                 p.hoverY = p.sprite.getCentreY();
@@ -324,7 +325,27 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var kind = goal.kind();
             boolean move = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO || kind == PuppetCommandKind.GLIDE_TO;
             double[] target = move ? target(p, goal) : new double[]{p.sprite.getCentreX(),p.sprite.getCentreY()};
-            int direction = steer(p.sprite, move ? target[0] : p.sprite.getCentreX(), move ? goal.urgency() : 0);
+            if (move && goal.motion().endingAction() == EndingAction.OVERSHOOT)
+                p.routeReturning = com.openggf.stageplay.route.StageplayRouteSteering.returning(
+                        p.sprite.getCentreX(), target[0], p.routeApproach, p.routeReturning);
+            int direction = move ? com.openggf.stageplay.route.StageplayRouteSteering.direction(
+                    p.sprite.getCentreX(), p.sprite.getXSpeed(), p.sprite.getGSpeed(),
+                    p.sprite.getRunAccel(), p.sprite.getRolling() ? p.sprite.getRollDecel() : p.sprite.getRunDecel(), p.sprite.getFriction(), p.sprite.getMax(),
+                    p.sprite.getAir(), target[0], goal.urgency(), goal.motion(), p.routeReturning, p.routeApproach)
+                    : kind == PuppetCommandKind.STOP && goal.motion().endingAction() == EndingAction.GENTLE_STOP
+                            ? 0 : steer(p.sprite, p.sprite.getCentreX(), 0);
+            if (kind == PuppetCommandKind.SPINDASH) {
+                int elapsed = frame - p.goalStart;
+                direction = com.openggf.stageplay.route.StageplayRouteSteering.chargeDirection(p.sprite.getCentreX(),goal.x(),elapsed);
+                if (com.openggf.stageplay.route.StageplayRouteSteering.chargeDown(elapsed)) held |= AbstractPlayableSprite.INPUT_DOWN;
+                jump = com.openggf.stageplay.route.StageplayRouteSteering.chargeJump(elapsed);
+                if (elapsed > com.openggf.stageplay.route.StageplayRouteSteering.CHARGE_FRAMES) { p.goal = null; held = 0; }
+            }
+            if (kind == PuppetCommandKind.RELEASE) direction = 0;
+            if (kind == PuppetCommandKind.FACE_LEFT || kind == PuppetCommandKind.FACE_RIGHT) {
+                direction = kind == PuppetCommandKind.FACE_LEFT ? -1 : 1;
+                p.goal = null; // exactly one native tap; subsequent ticks coast the subpixel nudge
+            }
             if (direction < 0) held |= AbstractPlayableSprite.INPUT_LEFT;
             if (direction > 0) held |= AbstractPlayableSprite.INPUT_RIGHT;
             if (kind == PuppetCommandKind.CROUCH || kind == PuppetCommandKind.ROLL) held |= AbstractPlayableSprite.INPUT_DOWN;
@@ -591,7 +612,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
 
     private Saved capture() {
         return new Saved(owned.getRewindRegistry().capture(), director, cast.stream().map(p -> new Control(p.index, p.previousHeld,
-                p.jumpEnd, p.goalStart, p.deadline, p.waitRings, p.lastProgress, p.rings, p.ringDelta, p.best, p.hoverY,
+                p.jumpEnd, p.goalStart, p.routeApproach, p.routeReturning, p.deadline, p.waitRings, p.lastProgress, p.rings, p.ringDelta, p.best, p.hoverY,
                 p.goal, p.wait, p.command, p.status, p.arrived, p.targetStatus, p.hurt, p.onObject, p.abilityState, Set.copyOf(p.seenTargets))).toList(), List.copyOf(events), objectCast == null ? null : objectCast.capture());
     }
     private void restore(Saved saved) {
@@ -600,23 +621,32 @@ public final class StageplayLiveWorld implements AutoCloseable {
         events.clear(); events.addAll(saved.events());
         for (int i = 0; i < cast.size(); i++) {
             var p = cast.get(i); var s = saved.cast().get(i);
-            p.index=s.index(); p.previousHeld=s.previousHeld(); p.jumpEnd=s.jumpEnd(); p.goalStart=s.goalStart();
+            p.index=s.index(); p.previousHeld=s.previousHeld(); p.jumpEnd=s.jumpEnd(); p.goalStart=s.goalStart(); p.routeApproach=s.routeApproach(); p.routeReturning=s.routeReturning();
             p.deadline=s.deadline(); p.waitRings=s.waitRings(); p.lastProgress=s.lastProgress(); p.rings=s.rings(); p.ringDelta=s.ringDelta();
             p.best=s.best(); p.hoverY=s.hoverY(); p.goal=s.goal(); p.wait=s.waiting(); p.command=s.command(); p.status=s.status(); p.arrived=s.arrived(); p.targetStatus=s.targetStatus(); p.hurt=s.hurt(); p.onObject=s.onObject(); p.abilityState=s.abilityState(); p.seenTargets.clear(); p.seenTargets.addAll(s.seenTargets());
         }
     }
     private record Saved(CompositeSnapshot world, CameraPose camera, List<Control> cast, List<LiveEvent> events, StageplayObjectCast.Snapshot objects) { }
-    private record Control(int index, int previousHeld, int jumpEnd, int goalStart, int deadline, int waitRings,
+    private record Control(int index, int previousHeld, int jumpEnd, int goalStart, int routeApproach, boolean routeReturning, int deadline, int waitRings,
                            int lastProgress, int rings, int ringDelta, double best, double hoverY, PuppetCommand goal,
                            PuppetCommand waiting, PuppetCommand command, PuppetStatus status, boolean arrived, String targetStatus, boolean hurt, boolean onObject, int abilityState, Set<Integer> seenTargets) { }
     private static final class Performer {
         final Actor actor; final PuppetTrack track; final ActorKey anchor; AbstractPlayableSprite sprite;
         final Set<Integer> seenTargets = new HashSet<>();
-        int index, previousHeld, jumpEnd, goalStart, deadline, waitRings, lastProgress, rings, ringDelta;
-        double best = Double.POSITIVE_INFINITY, hoverY; boolean arrived, hurt, onObject; int abilityState;
+        int index, previousHeld, jumpEnd, goalStart, routeApproach, deadline, waitRings, lastProgress, rings, ringDelta;
+        double best = Double.POSITIVE_INFINITY, hoverY; boolean arrived, hurt, onObject, routeReturning; int abilityState;
         PuppetCommand goal, wait, command; PuppetStatus status = PuppetStatus.IDLE; String targetStatus = "NONE";
         Performer(Actor actor, PuppetTrack track, ActorKey anchor) { this.actor=actor; this.track=track; this.anchor=anchor; }
     }
+    /** Read-only diagnostics for native route qualification and focused authoring checks. */
+    public record MotionState(int groundSpeed, int xSpeed, int maxSpeed, boolean skidding,
+                              boolean spindash, boolean facingLeft) { }
+    public MotionState routeMotionState(String actorId) {
+        var sprite=cast.stream().filter(p->p.actor.id().equals(actorId)).findFirst().orElseThrow().sprite;
+        return new MotionState(sprite.getGSpeed(),sprite.getXSpeed(),sprite.getMax(),sprite.getSkidding(),
+                sprite.getSpindash(),sprite.getDirection()==Direction.LEFT);
+    }
+
     /** Exact directed-object centre for isolated route qualification, never a native position write. */
     public com.openggf.stageplay.route.StageplayRoutePoint routeObjectPosition(String actorId) {
         return objectCast == null ? null : objectCast.routePosition(actorId, cursor);

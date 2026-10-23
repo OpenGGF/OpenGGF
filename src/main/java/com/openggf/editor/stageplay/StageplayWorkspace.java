@@ -46,6 +46,9 @@ public final class StageplayWorkspace {
         }
         default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
+        default java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor, Path root) throws IOException {
+            return java.util.Set.of();
+        }
         default void startRoute(StageplayDocument document, Path root, StageplayRouteRequest request) throws IOException {
             throw new IOException("Route helper is unavailable in this host");
         }
@@ -854,7 +857,7 @@ public final class StageplayWorkspace {
                     move?decimal(v,"urgency"):0,hold?integer(v,"hold"):0,
                     target?new ObjectTarget(integer(v,"layout"),integer(v,"object"),integer(v,"subtype"),decimal(v,"offsetX"),decimal(v,"offsetY")):ObjectTarget.none(),
                     kind==PuppetCommandKind.WAIT?WaitCondition.valueOf(v.get("condition").toUpperCase(java.util.Locale.ROOT)):WaitCondition.NONE,
-                    integer(v,"timeout")));
+                    integer(v,"timeout"),command==null?RouteMotion.NATIVE:command.motion()));
             commands.sort(Comparator.comparingInt(PuppetCommand::frame));
             return replacePuppet(d,new PuppetTrack(actor.id(),track.snapToFloor(),track.collisionPath(),commands));
         }));
@@ -1365,21 +1368,42 @@ public final class StageplayWorkspace {
         else if (actor.isEmpty()) actor = document.puppets().isEmpty()
                 ? document.objectActors().stream().findFirst().map(ObjectActor::id).orElse("") : document.puppets().getFirst().actorId();
         var view = StageplayTimeline.sample(document,frame);
-        menu.showForm("Route attempts (object AI off)",List.of(
-                text("actor","Puppet actor / object ID",actor), number("x","Destination centre X",view.camera().x()+160),
-                number("y","Destination centre Y",view.camera().y()+112),
+        String selected=actor;
+        boolean objectRoute=document.objectActors().stream().anyMatch(a->a.id().equals(selected));
+        var previous=document.puppets().stream().filter(t->t.actorId().equals(selected))
+                .flatMap(t->t.commands().stream()).filter(c->c.frame()>=frame && c.frame()<shotEnd(document,frame) && c.kind()==PuppetCommandKind.MOVE_TO).findFirst().orElse(null);
+        RouteMotion motion=previous==null?RouteMotion.DEFAULT:previous.motion();
+        var routeFields=new ArrayList<>(List.of(
+                text("actor","Puppet actor / object ID",actor), number("x","Destination centre X",previous==null?view.camera().x()+160:previous.x()),
+                number("y","Destination centre Y",previous==null?view.camera().y()+112:previous.y()),
                 number("frames","Attempt frames",Math.min(300,shotEnd(document,frame)-frame)),
                 number("nodes","Maximum search nodes",1024),number("ticks","Maximum probe ticks",120000),
                 number("millis","Search time budget (ms)",60000),number("urgency","Player urgency (0..1)",1),
                 number("speed","Visual object speed",1),number("halfWidth","Object half-width",8),
                 number("height","Object clearance height",16),number("footOffset","Object centre-to-foot Y",8),
-                number("collisionPath","Object collision path 0/1",0)),"Plan in isolated worker",values -> io(() -> {
+                number("collisionPath","Object collision path 0/1",0)));
+        if(!objectRoute) {
+            var nativeActor=document.actors().stream().filter(a->a.id().equals(selected)).findFirst().orElseThrow();
+            var starts=new ArrayList<>(List.of("Walk","Jump"));
+            try {
+                if(host.movementAbilities(nativeActor,assetRoot).contains(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH)) starts.add("Spindash");
+            } catch(IOException failure) { report(failure); }
+            routeFields.add(4,new EditorProjectMenu.Field("startingAction","Starting action",display(motion.startingAction()),starts));
+            routeFields.add(5,new EditorProjectMenu.Field("travelSpeed","Travel speed",display(motion.travelSpeed()),List.of("Walk","Run")));
+            routeFields.add(6,new EditorProjectMenu.Field("endingAction","Ending action",display(motion.endingAction()),List.of("Gentle Stop","Hard Stop","Overshoot")));
+            routeFields.add(7,new EditorProjectMenu.Field("endingFacing","Ending facing",display(motion.endingFacing()),List.of("Inherit","Left","Right")));
+            routeFields.removeIf(f->List.of("urgency","speed","halfWidth","height","footOffset","collisionPath").contains(f.key()));
+        }
+        menu.showForm(objectRoute?"Walking object route":"Plan playable route",routeFields,"Plan in isolated worker",values -> io(() -> {
             String id = values.get("actor");
             boolean object = document.objectActors().stream().anyMatch(a -> a.id().equals(id));
             var footprint = object ? new StageplayRouteFootprint(integer(values,"halfWidth"),integer(values,"height"),
                     integer(values,"footOffset"),integer(values,"collisionPath")) : null;
             var request = new StageplayRouteRequest(id,frame,decimal(values,"x"),decimal(values,"y"),integer(values,"frames"),
-                    integer(values,"nodes"),integer(values,"ticks"),integer(values,"millis"),decimal(values,"urgency"),footprint,decimal(values,"speed"));
+                    integer(values,"nodes"),integer(values,"ticks"),integer(values,"millis"),1,footprint,object?decimal(values,"speed"):1,
+                    object?RouteMotion.DEFAULT:new RouteMotion(StartAction.valueOf(enumValue(values,"startingAction")),
+                            TravelSpeed.valueOf(enumValue(values,"travelSpeed")),EndingAction.valueOf(enumValue(values,"endingAction")),
+                            EndingFacing.valueOf(enumValue(values,"endingFacing"))));
             String unavailable=StageplayRouteContract.unavailableReason(document,request);
             if(!unavailable.isEmpty()) throw new IOException(unavailable);
             host.startRoute(document,assetRoot,request);
@@ -1387,8 +1411,16 @@ public final class StageplayWorkspace {
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
             routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
         }));
-        menu.setSubtitle("Objects: visual FG only. Players: native replay.");
+        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Select a motion row to cycle its choices. Airborne actors land first.");
         status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
+    }
+
+    private static String display(Enum<?> value) {
+        return java.util.Arrays.stream(value.name().split("_")).map(word->word.charAt(0)+word.substring(1).toLowerCase(java.util.Locale.ROOT))
+                .collect(java.util.stream.Collectors.joining(" "));
+    }
+    private static String enumValue(Map<String,String> values,String key) {
+        return values.get(key).toUpperCase(java.util.Locale.ROOT).replace(' ','_');
     }
 
     private void pollRoute() {

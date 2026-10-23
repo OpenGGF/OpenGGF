@@ -28,7 +28,8 @@ Unreleased. The earlier development themes remain in
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
   resource discovery, validation, lossless canonical-to-screenplay round trips and
   offline filmmaking; both editors import/export the same screenplay. A bounded
-  route helper preserves per-route starting action, travel speed, ending action and facing,
+  route helper preserves per-route starting action, a slow stroll or live native Run speed,
+  gentle/hard/overshoot endings and final facing,
   and emits native movement/jump intents over actual collision terrain
   with cold LIVE verification, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,

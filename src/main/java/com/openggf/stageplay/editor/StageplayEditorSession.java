@@ -131,6 +131,14 @@ public final class StageplayEditorSession implements AutoCloseable {
     }
     public String pollExport() { return export.poll(); }
 
+    public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(
+            StageplayDocument.Actor actor, Path root) throws IOException {
+        ensure(root);
+        var donor=library.module(actor.gameId());
+        return donor.getPlayableCharacterRegistry().movementAbilities(
+                com.openggf.game.CharacterKey.parsePersisted(actor.character()),donor);
+    }
+
     /** Independent input snapshots: never ensure/release or advance the editor's preview session. */
     public void startRoute(StageplayDocument document, Path root, com.openggf.stageplay.route.StageplayRouteRequest request) throws IOException {
         route.start(document,root,request);

@@ -48,7 +48,12 @@ public final class StageplayRouteTool {
             }
             var request = new StageplayRouteRequest(actor,frame,Double.parseDouble(required(flags,"x")),Double.parseDouble(required(flags,"y")),
                     integer(flags,"frames",Math.min(300,end-frame)),integer(flags,"nodes",1024),integer(flags,"ticks",120000),integer(flags,"millis",60000),
-                    decimal(flags,"urgency",1),footprint,decimal(flags,"speed",1));
+                    decimal(flags,"urgency",1),footprint,decimal(flags,"speed",1),
+                    new com.openggf.stageplay.StageplayDocument.RouteMotion(
+                            com.openggf.stageplay.StageplayDocument.StartAction.valueOf(flags.getOrDefault("start","WALK").toUpperCase(Locale.ROOT)),
+                            com.openggf.stageplay.StageplayDocument.TravelSpeed.valueOf(flags.getOrDefault("travel","WALK").toUpperCase(Locale.ROOT)),
+                            com.openggf.stageplay.StageplayDocument.EndingAction.valueOf(flags.getOrDefault("ending","GENTLE_STOP").toUpperCase(Locale.ROOT)),
+                            com.openggf.stageplay.StageplayDocument.EndingFacing.valueOf(flags.getOrDefault("facing","INHERIT").toUpperCase(Locale.ROOT))));
             String unavailable=StageplayRouteContract.unavailableReason(document,request);
             if(!unavailable.isEmpty()) {
                 var unsupported=StageplayRouteResult.failure(StageplayRouteResult.Status.UNSUPPORTED,unavailable,"0".repeat(64),request,0,0);
@@ -132,7 +137,7 @@ public final class StageplayRouteTool {
         }
     }
     private static Map<String,String> flags(String[] args) throws IOException {
-        Set<String> allowed = Set.of("scene","actor","frame","x","y","out","s1-rom","s2-rom","s3k-rom","frames","nodes","ticks","millis","urgency","speed","half-width","height","foot-offset","collision-path");
+        Set<String> allowed = Set.of("start","travel","ending","facing","scene","actor","frame","x","y","out","s1-rom","s2-rom","s3k-rom","frames","nodes","ticks","millis","urgency","speed","half-width","height","foot-offset","collision-path");
         var result = new LinkedHashMap<String,String>();
         for(int i=0;i<args.length;i+=2) {
             if(i+1==args.length || !args[i].startsWith("--") || !allowed.contains(args[i].substring(2))

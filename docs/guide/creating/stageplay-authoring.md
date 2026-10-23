@@ -590,3 +590,31 @@ Ordinary action defaults retain native-speed, hard-stop steering. Actor-declared
 movement abilities are intersected with donor support; unsupported spindash must
 be rejected rather than simulated by a pose or velocity write. These unpublished
 formats change directly, without a migration path.
+
+
+CLI route options are `--start WALK|JUMP|SPINDASH`, `--travel WALK|RUN`,
+`--ending GENTLE_STOP|HARD_STOP|OVERSHOOT` and `--facing INHERIT|LEFT|RIGHT`.
+For example, add `--travel RUN --ending HARD_STOP --facing LEFT` to `route`.
+The four-field canonical/screenplay object is:
+
+```json
+"motion":{"startingAction":"WALK","travelSpeed":"WALK",
+          "endingAction":"GENTLE_STOP","endingFacing":"INHERIT"}
+```
+
+Walk's `$180` (1.5 px/tick) cap is an authoring choice: one quarter of normal
+native top speed. Simply staying below `$600` would still look fast, since
+`SAnim_WalkRun` (s2.asm:38449-38487) changes to the run cycle only at `$600`,
+also initialized as normal `Sonic_top_speed` (s2.asm:36187). Native acceleration,
+friction, slope response and live top speed stay authoritative. Gentle steering
+predicts coasting distance from current friction and releases without an opposite
+button at speed; Hard Stop uses live native deceleration. Overshoot targets a
+24-pixel pass before returning. SPINDASH holds down for 24 ticks after a facing
+tap and pulses jump on alternate ticks, then releases down; native charge decay
+and launch tables own the resulting speed (`Sonic_CheckSpindash` /
+`Sonic_UpdateSpindash`, s2.asm:37555-37688). No constant replaces native launch
+velocity, and shipped `fixBugs=0` behavior stays active. A Spindash launch can exceed
+the stroll cap; use Run when that native burst is required. Facing taps accept a
+subpixel nudge. Failed bounded Walk searches suggest Run/Spindash for possible
+speed-dependent terrain; that suggestion is not proof a different setting reaches
+through live objects/events. Only a cold successful replay receives VERIFIED.

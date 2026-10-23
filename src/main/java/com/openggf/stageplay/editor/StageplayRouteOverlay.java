@@ -61,6 +61,12 @@ public final class StageplayRouteOverlay {
         var matcher = java.util.regex.Pattern.compile("\\b[A-Z][A-Z_]{2,}\\b").matcher(message);
         return matcher.replaceAll(match -> match.group().replace('_', ' ').toLowerCase(java.util.Locale.ROOT));
     }
+    public String motionSummary() {
+        if (result.request().footprint()!=null) return "Visual walking object";
+        var m=result.request().motion();
+        return readable(m.startingAction().name()) + " / " + readable(m.travelSpeed().name())
+                + " / " + readable(m.endingAction().name()) + " / " + readable(m.endingFacing().name());
+    }
     public String reason() { return reason; }
 
     public static float screenX(double world, StageplayTimeline.CameraPose camera,

@@ -252,6 +252,51 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void defaultWalkUsesOneDestinationWithoutJumpingAndKeepsItsStrollCap() {
+        var request=new StageplayRouteRequest("hero",0,448,237,300);
+        try(var probe=probe(terrain().level)) {
+            var start=probe.capture();var plan=search(probe,request);
+            assertTrue(plan.found(),plan.message());
+            assertEquals(1,plan.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).count());
+            assertTrue(plan.commands().stream().noneMatch(c->c.kind()==PuppetCommandKind.JUMP));
+            assertTrue(plan.commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).allMatch(c->c.x()==448));
+            probe.restore(start);var samples=replay(probe,request,plan.commands());
+            assertNear(samples.getLast(),request);
+            assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
+            assertTrue(samples.stream().allMatch(o->Math.abs(o.groundSpeed())<=StageplayRouteSteering.STROLL_CAP));
+        }
+    }
+
+    @Test void startingActionsLandFirstAndSpindashActuallyCharges() {
+        for(var action:List.of(StartAction.JUMP,StartAction.SPINDASH)) {
+            var motion=new RouteMotion(action,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
+            var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
+            try(var probe=probe(terrain().level)) {
+                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),action+": "+plan.message());
+                assertEquals(PuppetCommandKind.RELEASE,plan.commands().getFirst().kind(),"Falling entry lands before starting action");
+                probe.restore(start);var samples=replay(probe,request,plan.commands());
+                if(action==StartAction.JUMP) assertTrue(samples.stream().anyMatch(o->o.ySpeed()<0));
+                else assertTrue(samples.stream().anyMatch(PlayablePuppet.Observation::spindash));
+                assertNear(samples.getLast(),request);
+            }
+        }
+    }
+
+    @Test void endingActionsAndSingleFacingTapsSettleThroughNativeInputs() {
+        for(var ending:EndingAction.values()) for(var facing:List.of(EndingFacing.LEFT,EndingFacing.RIGHT)) {
+            var motion=new RouteMotion(StartAction.WALK,TravelSpeed.RUN,ending,facing);
+            var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
+            try(var probe=probe(terrain().level)) {
+                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),ending+": "+plan.message());
+                probe.restore(start);var samples=replay(probe,request,plan.commands());
+                assertNear(samples.getLast(),request);
+                assertEquals(facing==EndingFacing.LEFT,samples.getLast().flipX());
+                if(ending==EndingAction.GENTLE_STOP) assertTrue(samples.stream().noneMatch(PlayablePuppet.Observation::skidding));
+                if(ending==EndingAction.OVERSHOOT) assertTrue(samples.stream().anyMatch(o->o.x()>request.targetX()+12));
+            }
+        }
+    }
+
     private StageplayRouteProposal search(PlayablePuppet probe, StageplayRouteRequest request) {
         return StageplayRoutePlanner.search(
                 document(),
@@ -262,7 +307,7 @@ class TestStageplayRoutePlanner {
     }
 
     private static StageplayRouteRequest request(double x, double y) {
-        return new StageplayRouteRequest("hero", 0, x, y, 240);
+        return new StageplayRouteRequest("hero", 0, x, y, 240,1024,120000,60000,1,null,1,RouteMotion.NATIVE);
     }
 
     private PlayablePuppet probe(Level terrain) {
@@ -287,26 +332,33 @@ class TestStageplayRoutePlanner {
         List<PlayablePuppet.Observation> result = new ArrayList<>();
         int index = 0, jumpEnd = -1;
         PuppetCommand goal = null;
+        int goalStart=0,approach=1; boolean returning=false;
         for (int frame = request.startFrame();
                 frame < request.startFrame() + request.maxFrames();
                 frame++) {
             while (index < commands.size() && commands.get(index).frame() <= frame) {
                 var command = commands.get(index++);
                 if (command.kind() == PuppetCommandKind.JUMP) jumpEnd = frame + command.holdFrames();
-                else goal = command;
+                else {goal = command; goalStart=frame;approach=command.x()<probe.sample().x()?-1:1;returning=false;}
             }
             var before = probe.sample();
-            int direction =
-                    StageplayMovementIntent.direction(
-                            Math.floor(before.x()),
-                            before.xSpeed(),
-                            before.runAccel(),
-                            before.runDecel(),
-                            before.maxSpeed(),
-                            before.airborne(),
-                            goal != null && goal.kind() == PuppetCommandKind.MOVE_TO ? goal.x() : before.x(),
-                            goal != null && goal.kind() == PuppetCommandKind.MOVE_TO ? goal.urgency() : 0);
-            probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
+            boolean moving=goal!=null && goal.kind()==PuppetCommandKind.MOVE_TO;
+            if(moving && goal.motion().endingAction()==EndingAction.OVERSHOOT)
+                returning=StageplayRouteSteering.returning(Math.floor(before.x()),goal.x(),approach,returning);
+            int direction=moving?StageplayRouteSteering.direction(Math.floor(before.x()),before.xSpeed(),before.groundSpeed(),
+                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
+                    :goal!=null && goal.kind()==PuppetCommandKind.STOP && goal.motion().endingAction()!=EndingAction.GENTLE_STOP
+                            ?StageplayMovementIntent.direction(Math.floor(before.x()),before.xSpeed(),before.runAccel(),before.runDecel(),before.maxSpeed(),before.airborne(),before.x(),0):0;
+            boolean down=false,jump=frame<jumpEnd;
+            if(goal!=null && goal.kind()==PuppetCommandKind.SPINDASH) {
+                int elapsed=frame-goalStart;
+                direction=StageplayRouteSteering.chargeDirection(before.x(),goal.x(),elapsed);
+                down=StageplayRouteSteering.chargeDown(elapsed);jump=StageplayRouteSteering.chargeJump(elapsed);
+            }
+            if(goal!=null && (goal.kind()==PuppetCommandKind.FACE_LEFT || goal.kind()==PuppetCommandKind.FACE_RIGHT)) {
+                direction=goal.kind()==PuppetCommandKind.FACE_LEFT?-1:1;goal=null;
+            }
+            probe.tick(direction < 0, direction > 0, down,jump, frame);
             result.add(probe.sample());
         }
         return result;

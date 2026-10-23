@@ -267,7 +267,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         }
         List<Row> rows = rows();
         var route = workspace.routeOverlay();
-        var routeLines = route == null ? List.<String>of() : wrapRouteText(route.reason(), panel.w() - 28);
+        var routeLines = route == null ? List.<String>of() : wrapRouteText(route.motionSummary()+". "+route.reason(), panel.w() - 28);
         float routeHeight = route == null ? 0 : 68 + routeLines.size() * 11;
         visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / 27));
         selected = rows.isEmpty() ? 0 : Math.clamp(selected, 0, rows.size() - 1);

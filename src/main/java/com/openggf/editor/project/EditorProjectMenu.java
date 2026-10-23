@@ -20,11 +20,19 @@ public final class EditorProjectMenu {
     public record Action(String label, Runnable callback) {
         public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
     }
-    public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
+    public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength, List<String> choices) {
+        public Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
+            this(key,label,value,mode,maxLength,List.of());
+        }
+        public Field(String key, String label, String value, List<String> choices) {
+            this(key,label,value,MenuTextEditor.Mode.TEXT,256,choices);
+        }
         public Field(String key, String label, String value, MenuTextEditor.Mode mode) {
             this(key, label, value, mode, mode == MenuTextEditor.Mode.PATH ? 4096 : 256);
         }
         public Field {
+            choices = List.copyOf(choices);
+            if (!choices.isEmpty() && !choices.contains(value)) throw new IllegalArgumentException("Choice default is unavailable");
             Objects.requireNonNull(key); Objects.requireNonNull(label);
             Objects.requireNonNull(value); Objects.requireNonNull(mode);
             if (maxLength < 1 || maxLength > 8192) throw new IllegalArgumentException("Field length must be 1..8192");
@@ -132,6 +140,12 @@ public final class EditorProjectMenu {
     private void activate() {
         if (submit != null && selected < fields.size()) {
             Field field = fields.get(selected);
+            if (!field.choices().isEmpty()) {
+                int next = (field.choices().indexOf(values.get(field.key()))+1)%field.choices().size();
+                values.put(field.key(),field.choices().get(next));
+                MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+                return;
+            }
             editingKey = field.key();
             textEditor = new MenuTextEditor(field.label(), values.get(field.key()),
                     field.maxLength(), null, field.mode());

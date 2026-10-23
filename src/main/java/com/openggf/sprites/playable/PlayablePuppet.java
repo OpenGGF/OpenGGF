@@ -109,7 +109,16 @@ public final class PlayablePuppet implements AutoCloseable {
         }
     }
 
+    public boolean supports(com.openggf.game.CharacterDefinition.MovementAbility ability) {
+        var module = context.module;
+        return module.getPlayableCharacterRegistry().movementAbilities(actor.characterKey(), module).contains(ability);
+    }
+
     public void tick(boolean left, boolean right, boolean jump, int frame) {
+        tick(left, right, false, jump, frame);
+    }
+
+    public void tick(boolean left, boolean right, boolean down, boolean jump, int frame) {
         requireOpen();
         if (frame < 0) throw new IllegalArgumentException("Negative puppet frame");
         context.sprites.setFrameCounter(frame);
@@ -117,10 +126,10 @@ public final class PlayablePuppet implements AutoCloseable {
         // Poll_Controller publishes held and pressed bytes before the playable
         // control routine. A held boolean alone cannot initiate a native jump.
         actor.setJumpInputPressed(jump);
-        actor.setDirectionalInputPressed(false, false, left, right);
-        actor.setLogicalInputState(false, false, left, right, jump);
+        actor.setDirectionalInputPressed(false, down, left, right);
+        actor.setLogicalInputState(false, down, left, right, jump);
         context.timers.update();
-        SpriteManager.tickPlayablePhysics(actor, false, false, left, right, jump,
+        SpriteManager.tickPlayablePhysics(actor, false, down, left, right, jump,
                 false, false, false, context.level, frame);
         var tails = actor.getTailsTailsController();
         if (tails != null) tails.update();
@@ -130,7 +139,7 @@ public final class PlayablePuppet implements AutoCloseable {
     public record Observation(double x, double y, int xSpeed, int ySpeed, int groundSpeed,
             int angle, int animation, int mappingFrame, boolean flipX, boolean flipY,
             boolean airborne, boolean onGround, int maxSpeed, int xRadius, int yRadius,
-            Tail tail, int runAccel, int runDecel, int friction) { }
+            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash) { }
 
     public record Tail(int mappingFrame, boolean flipX, boolean flipY) { }
 
@@ -144,7 +153,8 @@ public final class PlayablePuppet implements AutoCloseable {
                 actor.getAnimationId(), actor.getMappingFrame(), actor.getRenderHFlip(), actor.getRenderVFlip(),
                 actor.getAir(), !actor.getAir(), actor.getMax(), actor.getXRadius(), actor.getYRadius(),
                 tail == null ? null : new Tail(tail.mappingFrame(), tail.flipX(), tail.flipY()),
-                actor.getRunAccel(), actor.getRunDecel(), actor.getFriction());
+                actor.getRunAccel(), actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel(),
+                actor.getFriction(), actor.getSkidding(), actor.getSpindash());
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */

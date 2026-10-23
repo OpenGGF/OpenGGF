@@ -91,6 +91,16 @@ through a promo whose story depends on their interaction.
 Place a physical spawn centre near the floor; floor snapping defaults on at spawn,
 then native terrain collision controls contact during movement. A MOVE_TO destination
 is an attempt, and `BLOCKED` must be inspected rather than hidden with a teleport.
+For player route motion, choose starting action Walk/Jump/Spindash (capability-gated),
+travel Walk/Run, ending Gentle Stop/Hard Stop/Overshoot and facing Inherit/Left/Right.
+Planned defaults stroll at 1.5 px/tick and coast without a skid; Run reads native
+live top speed. Falling starts land first, spindash uses native down/jump/release
+buttons with a fixed charge, and final facing uses one native tap. The MOVE_TO
+`motion` object persists settings through save, screenplay export, edits and replan.
+Use route CLI `--start`, `--travel`, `--ending`, `--facing`; inspect cap/skid/arrival
+failures rather than hiding a terrain-forced speed violation. A simple walk uses
+one destination, with penalised jumps only for terrain that needs them. Walking
+objects keep their visual mover. Multi-waypoint directing remains deferred.
 For basic player shot-entry planning, use `route --scene PATH --actor ID --frame N --x X
 --y Y --out NEW.stageplay` with supplied ROM flags. The bounded helper emits
 existing movement/jump/wait intents and requires cold LIVE replay before VERIFIED;

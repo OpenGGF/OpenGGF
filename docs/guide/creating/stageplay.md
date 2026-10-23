@@ -315,18 +315,37 @@ for exact fields and the coverage-report command.
 
 ## Plan a basic route
 
-Choose **Route helper** in either editor, select a Puppet actor and a destination
+Choose **Plan collision route** in either editor, select a Puppet actor and a destination
 centre. Player routes start at shot entry; object routes may also start at an
 existing visible Puppet key after a Free initialization lead-in. Planning runs in its own disposable process;
 Cancel retires that work. Review the result before applying it as one undoable edit.
 A changed scene, actor/frame, ROM or project invalidates the result. Planning never
 moves the interactive player or replaces the current preview.
 
-For playable characters, the helper searches actual native physics and collision
+For playable characters, choose **Starting action**, **Travel speed**, **Ending action**
+and **Ending facing** in the route form. Select a setting row to cycle its choices.
+Walk / Walk / Gentle Stop / Inherit are the defaults. Walk starts without a jump;
+terrain-required jumps remain available with a strong search penalty. Jump starts
+with a native jump after landing; Spindash appears only for an actor whose declared
+abilities and native donor both support it, and uses a fixed 24-tick charge. Any
+falling start lands first.
+
+Walk holds a deliberately slow 1.5-pixel-per-tick stroll cap through controller
+inputs, including braking on downhills. Run reads the actor's current native top
+speed, including underwater/super changes. Gentle Stop releases early to coast
+within a small arrival tolerance without skidding; Hard Stop countersteers; Overshoot
+passes the point by a small distance, turns back and settles. Left or Right adds
+one native directional tap after stopping; Inherit keeps the resulting facing.
+A native launch or terrain that forces the Walk cap over must fail qualification
+and suggest Run. Settings stay on the saved route and survive screenplay export,
+replanning and action edits. A simple grounded route emits one MOVE_TO and a stop,
+with no intermediate destination. Multi-waypoint routes remain deferred.
+
+The helper searches actual native physics and collision
 with bounded movement/jump attempts, then cold-replays the emitted commands in a
 fresh LIVE world. `VERIFIED` means that replay reached the destination grounded
 and stable without hurt, death or a wait timeout. The result uses existing
-`MOVE_TO`, `JUMP` and `STOP` intents; `WAIT` remains available for authored
+`MOVE_TO`, `JUMP`, `SPINDASH`, `STOP` and facing-tap intents; `WAIT` remains available for authored
 synchronization. There is no route opcode or teleport.
 Runtime moves remain attempts if the scene is changed afterward.
 
