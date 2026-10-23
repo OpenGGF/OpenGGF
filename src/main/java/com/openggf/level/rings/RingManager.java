@@ -614,6 +614,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void updateLostRingPhysics(int frameCounter) {
         lostRings.tickSpillAnimation();
+        updateLostRingHousekeeping();
+    }
+
+    void updateLostRingHousekeeping() {
         lostRings.retireEntriesWhoseObjectTwinIsGone(
                 levelManager != null ? levelManager.getObjectManager() : null);
     }

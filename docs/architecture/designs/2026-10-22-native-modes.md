@@ -316,3 +316,71 @@ passed 24 tests with zero failures, errors or skips under the same explicit EGL,
 no-display, ROM and Java/Lua settings above (28.729 seconds Maven execution).
 The other renderer and incremental-window code was unchanged; its completed
 focused coverage was retained rather than repeated.
+
+## Competition menu intensity and pause waits
+
+`NativeMenuRaster` composes detached ROM nametables and resolved mapping pieces
+at native 320x224. Whole sprite footprints pass through the existing shared H40
+SAT evaluator. The first opaque admitted sprite wins before terrain priority;
+a later high-priority sprite cannot replace an earlier hidden low-priority one.
+Plane A/B priorities select intensity even when their pixel is transparent.
+Low-priority sprite colors $0E/$1E/$2E force normal intensity. Plane palette-three
+$E/$F pixels remain ordinary CRAM colors. The domain's complete competition-menu
+ROM inventory found no active sprite $3E/$3F operator pixels; this bounded port
+rejects those operators rather than approximating them. The native merge is
+corroborated by Genesis Plus GX `make_lut_bg_ste` and `make_lut_bgobj_ste`, revision
+`49c584764893b0505ac7f768a754f97330fa4392`.
+
+An all-shadow backdrop was rejected: the competition menu initializes transparent
+high-priority Plane A words ($8000), then clears its card windows. Those words
+raise the underlying low-priority background to normal intensity despite having
+no opaque pixels. Halving final RGB was also rejected. The indexed result first
+applies native CRAM fade, then normal/shadow DAC conversion and the configured
+display profile/output expansion. The S3K adapter consumes domain scene data;
+it does not transcribe menu object tables or supply fallback art.
+
+`S3kCompetitionMenuRenderer` queues one detached image after earlier pattern
+work. It owns its texture/FBO and restores incoming framebuffer, unpack, texture
+and scissor state at its command boundary. Unpack state is normalized before
+first texture allocation as well as uploads. Closing invalidates previously
+queued commands, preventing them from recreating retired GL resources.
+
+`NativeCompetitionWorld.pauseVBlank` services a NORMAL_PAUSE token without
+publishing controller input or running actors, cameras or level state. The mode's
+captured native planner owns the previous-sample entry test, current-sample pause
+loop, and resume/Time-Attack-exit continuation. A resume observed after the pause
+wait still returns PAUSED; a distinct admitted iteration runs the ordinary wait
+and body. A boolean wrapper that resumed immediately in the pause row was
+rejected because native competition returns to `loc_6678` and waits again before
+its final body and game-mode check. No generic campaign pause behavior changes.
+
+These consumers remain behind native-mode activation gates. Menu transport and
+pause-boundary checks do not certify the actual split arena producer, hardware
+page publication, complete title/session/result route, or native emulator parity.
+
+On `a2e7ce453` plus this slice, the focused six-selector command
+`-Dtest=TestNativeMenuRaster,TestS3kCompetitionMenuPixels,TestNativeCompetitionIteration,TestRetainedPlaneRendering,TestNativeCompetitionRingInitialization,TestModApiSignatureSurface`
+compiled after an inaccessible palette-helper call was corrected. Seven raster
+cases, unchanged iteration cases, retained-plane EGL, ring-init and eleven API
+checks passed; the two new fixtures then exposed nested Mockito construction and
+a missing PNG directory. Subsequent affected checks isolated a record-array
+identity assertion and an unfocused test camera. Those fixture corrections do not
+change native physics. The final exact `TestNativeCompetitionIteration` selection
+passed 8/8 without failures, errors or skips (29.798s Maven), exercising the public
+world pause method, preserved actor/camera/input/game-state contents, and the next
+ordinary token's actual world body. The unchanged menu EGL case passed 1/1
+(33.127s Maven for that two-class invocation, whose then-unfixed pause fixture
+still errored). Thirty distinct final-state cases passed across these affected
+runs, without claiming a single combined green invocation.
+
+All checks used the queue, Java 25.0.5 and Lua 5.4. Rendering used unset display
+environment variables, explicit surfaceless EGL and the original absolute S3K ROM
+property. Its five ROM menu phases were inspected as temporary PNGs and every
+uploaded framebuffer pixel matched the indexed compositor's display conversion.
+The independent raster tests establish priority/intensity and budget controls;
+the upload comparison alone is not an independent emulator oracle. The hostile
+unpack fixture seeds/checks state at the renderer command boundary and retires
+its own PBO before unrelated outer cleanup. A prior fixture left that foreign
+PBO active during outer cleanup and produced GL_INVALID_OPERATION despite correct
+menu pixels; narrowing its lifetime retained the allocation/restore control.
+No GraphicsManager, shader, shared SAT or public API source was changed.

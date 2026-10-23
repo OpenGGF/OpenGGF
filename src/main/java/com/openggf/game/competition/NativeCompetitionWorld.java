@@ -109,6 +109,23 @@ public final class NativeCompetitionWorld {
         return step(input, NativeCompetitionIterationAccess.currentFrame());
     }
 
+    /**
+     * Services one native pause wait without touching actors or the mode's
+     * captured controller/continuation planner. A resume observed by this wait
+     * still returns PAUSED; the following ordinary wait belongs to step().
+     */
+    public LevelFrameResult pauseVBlank(PlcLifecycleFrame frame) {
+        requireCurrent();
+        return NativeCompetitionIterationAccess.runLoop(frame, () -> {
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(context), frame, PlcLifecyclePhase.NORMAL_PAUSE);
+            return LevelFrameResult.PAUSED;
+        });
+    }
+
+    public LevelFrameResult pauseVBlank() {
+        return pauseVBlank(NativeCompetitionIterationAccess.currentFrame());
+    }
+
     private void requireCurrent() {
         if (SessionManager.getCurrentGameplayMode() != context) {
             throw new IllegalStateException("Native competition world has been retired");

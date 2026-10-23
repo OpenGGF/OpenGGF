@@ -183,6 +183,7 @@ class TestNativeCompetitionDustArtInitialization {
         if (!soloTails) sprites.addSprite(tails, "tails");
         sprites.addSprite(main);
         var level = mock(LevelManager.class);
+        when(level.resolveMainCharacterCode()).thenReturn(main.getCode());
         level.game = new Sonic2(rom);
         level.gameModule = module;
         when(level.activeGameModule()).thenReturn(module);

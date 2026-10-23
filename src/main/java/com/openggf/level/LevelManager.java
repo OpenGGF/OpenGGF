@@ -44,7 +44,6 @@ import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
-import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayRunRouting;
@@ -323,6 +322,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
     LevelAnimationInternalAccess.Binding nativePatternBinding;
+    LevelAnimationInternalAccess.Binding nativePaletteBinding;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
     final LevelContributedZoneRuntime contributedZoneRuntime;
@@ -1022,7 +1022,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link ObjectManager} into the main player and all sidekicks.
      */
     String resolveMainCharacterCode() {
-        return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+        return LevelPlayableArtInitializer.resolveMainCharacterCode(this, configService);
     }
 
     /**
@@ -1641,7 +1641,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // Per-ring spilled-ring physics now runs in the object exec loop
             // (LostRingObjectInstance); this only advances the shared decelerating
             // spin once per frame (ROM ChangeRingFrame / Ring_spill_anim_*).
-            ringManager.updateLostRingPhysics(frameCounter + 1);
+            frameRuntimeUpdater.updateSharedSpillAnimation();
         }
         // Water movement — ROM order: MoveWater (move toward target) runs BEFORE
         // DynWaterHeight (zone features set new target for next frame).
@@ -1995,7 +1995,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void initAnimatedPalettes() {
-        animatedPaletteManager = null;
+        LevelAnimationInternalAccess.clearAnimatedPaletteOwner(this);
         if (activeModZoneRuntimeProfile != null
                 && !activeModZoneRuntimeProfile.animatedTiles()) {
             return;
@@ -4602,9 +4602,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeModZoneRuntimeProfile = null;
         contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
-        LevelAnimationInternalAccess.clearNativePatternOwner(this);
-        animatedPatternManager = null;
-        animatedPaletteManager = null;
+        LevelAnimationInternalAccess.clearAnimatedOwners(this);
         checkpointCoordinator.resetState();
         levelGamestate = null;
         if (tilemapManager != null) {

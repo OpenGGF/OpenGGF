@@ -1446,3 +1446,137 @@ passing controls from15203, corrected45-case check and fresh111 guards. Concrete
 host/palette execution binding, physical video/H-int, complete races, connected
 halfpipe/results and aggregate route parity remain open. Main and push remain
 closed; consumed raw diagnostics are removed after this evidence is recorded.
+
+
+## Root menu, ring and palette prerequisites — 2026-10-23
+
+Qualified local parentf4b3f5ddd composes only the next six originals:
+b0c2c6ae2685fb7973234cfa726843a691c89969,
+ee58d8d5b83fa0903e518a0afe4726bc27d7c12a,
+2c5782c16e7893baadf31a52e80440d543b32a2c,
+d08a9776f1816b39d977629bc130443d87c58c8c,
+44305b28fc7a54ddd34321a8512322ea6a2da38b and
+e3ccf20401e28930e7ce8505cd0ae89ae69be5c4. No later Host, compatibility,
+provider activation or other-lane ancestry is imported to satisfy compilation.
+Original source evidence remains historical; receiving composition is tested
+separately below.
+
+Native P1 art resolution lives in the existing playable-art collaborator and
+uses the supplied level world's roster before preserving the existing campaign/
+config fallback. The LevelManager wrapper keeps its declaration. Palette cleanup
+moves to two focused helpers in the existing animation bridge; registry key
+admission remains before mutation. The spill capability is read in the existing
+runtime updater at the same ring phase: default true ticks the shared clock,
+false only retires stale mirrors. Every RingManager byte outside that original
+method split remains the qualified parent's code, preserving dead guards,
+frame copies, drawing, motion, collectors and awards. Facade counts remain
+OM3082/3086, LM3142/3144 and APS3235/3258; no caps change.
+
+Palette-only pointer replacement does not stop palette/fade work inside a real
+combined pattern owner. The new actual S3K one-frame characterization explicitly
+checks retained owner/key, original fade timer/ring clock and the independent
+replacement tick. It proves this lifecycle limit rather than claiming exclusive
+CRAM execution. Future concrete binding must select compatible owners; no silent
+suppression is added here. A separate repeat-initialization regression uses the
+actual session registry to prove ring adapter replacement restores the new act's
+cursor owner while leaving the retired owner unchanged.
+
+Menu controls cover actual five ROM pages, all pixels, intensity, PBO/scissor/FBO
+state and close-before-queued-execution. Sprite operator colors$3E/$3F remain
+outside this menu raster contract. Native CNZ preserves raw six-byte row adjacency,
+per-human cursor pairs, native touch/return order and cursor-only swapping; no
+Host binding is inferred. The same-fork projection controls follow the real menu
+consumer, guarding fixture teardown. All mandated S3K keepers and relevant
+ordinary ring/palette/team/CNZ consumers are included. Expected execution is1–3
+minutes plus queue/compilation; stop on actual failures and correct only the
+owning seam. This is a26-class affected focus, not a broad smoke or complete mode
+qualification. Exact selector:
+
+```text
+TestNativeCompetitionIteration,TestNativeMenuRaster,TestS3kCompetitionMenuPixels,TestNativeCompetitionDustArtInitialization,TestNativePaletteOwnerReplacement,TestCNZNativeBumperRom,TestSonic2NativeCNZBumpers,TestSharedSpillAnimationPolicy,TestS3kLevelPaletteFadeOwner,TestNativeCompetitionRingInitialization,TestActiveGameplayTeamResolver,TestNativePatternOwnerReplacement,TestAppearancePalettes,TestRingManagerRewindSnapshot,TestNativeParticipantLostRingOwnership,TestCNZBumperManager,TestLostRingRenderState,TestRingManager,TestGraphicsProjectionScope,TestNativeShadow15Pixels,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Command: `maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<selector> test -B`, with the same
+explicit Java25/Lua5.4/unset display/unset JAVA_TOOL_OPTIONS/null-audio/EGL
+setting and three absolute ROM paths recorded above. Source freezes through the
+terminal result. Fresh owning source/architecture/resource/rewind guards follow
+qualification; Main, push, SOZ/MHZ observations and provider activation stay closed.
+
+
+First affected38699 exits1:263 distinct identities across26 XMLs,262 pass,
+0 assertion failures,1 setup error,0 skips. Queue624 seconds/Maven1:25; source
+1516a0db1e9edcb16f5f7275854de3876eb87a7867d26d531bfd3260b2c02861
+matches after completion. Java25.0.5/surfaceless EGL/cwd/all absolute ROM paths
+and no dumps were inspected. Fixture FAST/NONE, unmeasured Kos deterministic
+estimates, missing WAV fallbacks and synthetic collision-table warnings remain
+limits, not native timing or audio qualification.
+
+The sole error is the added repeat-initialization fixture: attachManagers rejects
+its unstubbed roster.gameState(0) as `native P1 game state`, before either adapter
+initialization. The fixture now supplies a real GameStateManager for its P1 bank,
+matching the native session attachment contract; production is unchanged. Only
+the three-case ring-initialization class is repeated. The other262 passing cases
+remain valid for unchanged source. All five actual menu PNGs were viewed after
+the pixel/PBO/scissor/FBO/queued-close assertions passed; the pictures contain the
+ROM menu art and text. This is CPU-contract-to-EGL pixel coverage, not an emulator
+RGB oracle or complete native product claim.
+
+
+The three-case fixture-only check85094 exits1 with2 pass,1 setup error,0
+failures/skips; queue8 seconds/Maven29.117. Java25.0.5/EGL and exact source
+840789e88d7d859ce59263a14d3827c50b6af7210d492e11dff11d8b3e5e9ed6
+were inspected. Attachment next rejects the mock policy's absent rewindAdapter
+before the test reaches either ring load. The complete attachment path was then
+reviewed: this fixture now supplies both its required P1 game state and an inert,
+explicitly keyed policy adapter. No production path, assertions, ring bank or
+adapter policy is changed. The three-case class is the sole necessary follow-up;
+all262 unaffected passing identities and the original failures remain attributed
+separately.
+
+
+Final ring-initialization71216 exits0:3 distinct cases,0 failures/errors/skips,
+queue0/Maven29.174 seconds. This reaches the actual session registry and both
+ring loads, then restores the new owner's cursor state without touching the
+retired owner. Java25.0.5/EGL/three absolute ROM properties, exact corrected
+edf68fa8301d5a5bb1f27c7d0afed3f3a0916c33bd0438124496728fab717d29
+source freeze and no dumps were inspected. Existing fixture FAST/NONE warnings
+are not native timing qualification. Production remained unchanged throughout
+both fixture corrections; the262 unchanged passing identities are reused
+boundedly. The fresh six-class owning structural guard selection follows in a
+separate JVM. No current-runtime whole-mode, full-suite, route or activation
+qualification is inferred.
+
+
+Fresh owning guards75660 exit0:111 distinct cases across six classes,0
+failures/errors/skips, queue0/Maven39.349 seconds. Source freeze
+b527d4867690d1fc19fde39082ad8828e1b179285d9df046c03e1f221435c16d
+matches after completion. All72 source rules,32 ArchUnit rules, resource inventory
+and six rewind controls pass. Java25.0.5/EGL/all absolute ROM arguments and no
+dumps were inspected; field-disposition output lists only existing closed gaps.
+The explicit27-path citation scan reports27 ok,11 near,81 unverifiable,1
+unresolved and11 hard/stale findings, all11 exactly inherited by citation
+identity; no new finding. It is not a strict-clean citation claim.
+
+Final evidence reuses the262 unchanged passing controls from38699 plus the
+three final ring controls and111 fresh guards. The first263-case invocation
+and the intermediate ring fixture errors remain recorded; this is not one green
+263-case invocation. All production source was complete before07:45 and remains
+unchanged from its first affected submission. No live Root Maven job remains.
+The ordered six-leaf milestone is committed locally with its concrete host,
+physical video, native audio pause, exclusive palette execution, full race and
+route limits retained. Main/push/activation stay closed. Consumed raw XML/logs,
+menu screenshots and command temporary files are removed; compiled output stays.
+
+Parallel S1 source review identifies a deferred terminal comparison reading the
+mutable latest art publication after headless boundary handling. A later empty
+publication can change the frame stamp without edges; source-only evidence does
+not establish that the measured giant-ring passes did only that. Deferral also
+retains genuine terminal DMA callbacks. The proposed outside-repo component
+patch is retained as design input only: its red assertion assumes the comparator
+must select an earlier row even when the structural owner leaves its window open
+through another token. That is not an established owner contract and is not
+accepted as grounds to change the comparator. No frame offset, early snapshot
+freeze, runtime service, harness, route or oracle edit is made. Any future fix
+must establish the actual closing boundary while preserving legitimate terminal
+completion and unfiltered gap journal ownership.

@@ -894,6 +894,14 @@ final class LevelPlayableArtInitializer {
     }
 
     private String resolveMainCharacterCode() {
+        return levelManager.resolveMainCharacterCode();
+    }
+
+    static String resolveMainCharacterCode(LevelManager levelManager, SonicConfigurationService configService) {
+        var roster = NativeCompetitionRoster.from(levelManager.getWorldSession());
+        if (roster != null && roster.player(0) != null) {
+            return roster.player(0).getCode();
+        }
         return com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 

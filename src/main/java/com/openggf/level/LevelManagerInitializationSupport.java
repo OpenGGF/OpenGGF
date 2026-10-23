@@ -153,8 +153,11 @@ final class LevelManagerInitializationSupport {
         var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.registerRingAdapter(rings);
-            if (streaming != null) gameplayMode.getRewindRegistry().register(
-                    com.openggf.level.rings.RingManagerInternalAccess.nativeCompetitionStreamingRewindAdapter(rings));
+            if (streaming != null) {
+                var nativeAdapter = com.openggf.level.rings.RingManagerInternalAccess.nativeCompetitionStreamingRewindAdapter(rings);
+                gameplayMode.getRewindRegistry().deregister(nativeAdapter.key());
+                gameplayMode.getRewindRegistry().register(nativeAdapter);
+            }
         }
         return rings;
     }

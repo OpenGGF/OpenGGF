@@ -18,6 +18,74 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestNativeCompetitionIteration {
+    @Test void nativePauseWaitIncludingResumePrecedesTheNextOrdinaryWaitAndWorldBody() throws Exception {
+        var calls = new ArrayList<String>();
+        var coordinator = new PlcFrameLifecycleCoordinator(new PlcLifecycleService() {
+            @Override public void serviceVBlank(PlcLifecyclePhase phase) { calls.add("service:" + phase); }
+            @Override public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return phase != PlcLifecyclePhase.NORMAL_PAUSE;
+            }
+            @Override public void prepareAfterLoop(PlcLifecyclePhase phase) { calls.add("prepare:" + phase); }
+        });
+        var module = mock(GameModule.class);
+        var mode = mock(com.openggf.game.session.GameplayModeContext.class);
+        var level = mock(LevelManager.class);
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
+        var gameState = new com.openggf.game.GameStateManager();
+        var camera = new Camera();
+        var player = new com.openggf.game.sonic3k.competition.S3kCompetitionPlayer(0,
+                com.openggf.game.sonic3k.competition.S3kCompetitionPlayer.Character.SONIC, 100, 200);
+        var actor = player.sprite();
+        camera.setFocusedSprite(actor);
+        var beforePlayer = player.capture();
+        var beforeCamera = camera.capture();
+        var beforeGame = gameState.capture();
+        var session = new com.openggf.game.session.WorldSession(module);
+        when(mode.getWorldSession()).thenReturn(session);
+        when(mode.getLevelManager()).thenReturn(level);
+        when(mode.getSpriteManager()).thenReturn(sprites);
+        when(mode.getGameStateManager()).thenReturn(gameState);
+        when(mode.getCamera()).thenReturn(camera);
+        when(mode.hardwareTiming()).thenReturn(new HardwareTimingService());
+        when(mode.hardwareTimingBoundaryObserver()).thenReturn(boundary -> calls.add(boundary.name()));
+        var roster = mock(com.openggf.game.competition.NativeCompetitionRoster.class);
+        when(roster.player(0)).thenReturn(actor);
+        // The factory is independently covered by the participant/bootstrap tests.
+        // Inject its already-attached context to isolate the public world's pause consumer.
+        var constructor = com.openggf.game.competition.NativeCompetitionWorld.class.getDeclaredConstructor(
+                com.openggf.game.session.GameplayModeContext.class,
+                com.openggf.game.competition.NativeCompetitionRoster.class);
+        constructor.setAccessible(true);
+        var world = constructor.newInstance(mode, roster);
+        var input = new com.openggf.control.InputHandler();
+        var beforeInput = input.logical();
+        try (var sessions = mockStatic(com.openggf.game.session.SessionManager.class)) {
+            sessions.when(com.openggf.game.session.SessionManager::getCurrentGameplayMode).thenReturn(mode);
+            for (int wait = 0; wait < 2; wait++) {
+                var frame = coordinator.latchBeforeFadeUpdate();
+                GameLoopPlcLifecycle.runNativeScreen(frame, GameMode.COMPETITION, () ->
+                        assertEquals(LevelFrameResult.PAUSED, world.pauseVBlank(frame)));
+                frame.finish();
+            }
+            verifyNoInteractions(level, sprites);
+            assertEquals(beforePlayer, player.capture());
+            assertEquals(beforeCamera, camera.capture());
+            assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey("game-state", beforeGame, gameState.capture()));
+            assertSame(beforeInput, input.logical());
+            var ordinary = coordinator.latchBeforeFadeUpdate();
+            GameLoopPlcLifecycle.runNativeScreen(ordinary, GameMode.COMPETITION, () ->
+                    assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
+                            world.step(input, ordinary, () -> calls.add("players"))));
+            ordinary.finish();
+        }
+        verify(level).advanceLevelFrameCounter();
+        verify(level).update();
+        verify(sprites).publishHeldInputForLevelEvents(input);
+        assertEquals(List.of("service:NORMAL_PAUSE", "VINT_SERVICE", "service:NORMAL_PAUSE", "VINT_SERVICE",
+                "service:ORDINARY_LEVEL", "VINT_SERVICE", "players", "POST_OBJECTS", "PRE_MAIN_LOOP",
+                "prepare:ORDINARY_LEVEL"), calls);
+    }
+
     @Test void canonicalWorldOwnsOneVblankAndOnePreparationThroughScreenDispatch() {
         var calls = new ArrayList<String>();
         var coordinator = coordinator(calls);

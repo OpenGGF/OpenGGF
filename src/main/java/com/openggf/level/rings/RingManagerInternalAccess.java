@@ -6,6 +6,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public final class RingManagerInternalAccess {
     private RingManagerInternalAccess() { }
 
+    /** Retires stale mirrors without advancing a loop's undispatched shared animation clock. */
+    public static void updateLostRingHousekeeping(RingManager manager) {
+        manager.updateLostRingHousekeeping();
+    }
+
     /** Bind before reset(); native Init seeds both cursor pairs from the first camera. */
     public static void enableNativeCompetitionStreaming(RingManager manager,
                                                          NativeCompetitionRingStreaming streaming) {

@@ -1,6 +1,8 @@
 package com.openggf.level;
 
 import com.openggf.game.OscillationManager;
+import com.openggf.level.animation.StageRingAnimationFrameProvider;
+import com.openggf.level.rings.RingManagerInternalAccess;
 
 /**
  * Advances level-owned runtime state that must tick during logic frames, even
@@ -85,6 +87,15 @@ final class LevelFrameRuntimeUpdater {
             levelManager.camera.setShakeOffsets(
                     levelManager.parallaxManager.getShakeOffsetX(),
                     levelManager.parallaxManager.getShakeOffsetY());
+        }
+    }
+
+    void updateSharedSpillAnimation() {
+        if (levelManager.animatedPatternManager instanceof StageRingAnimationFrameProvider provider
+                && !provider.advancesSharedSpillAnimation()) {
+            RingManagerInternalAccess.updateLostRingHousekeeping(levelManager.ringManager);
+        } else {
+            levelManager.ringManager.updateLostRingPhysics(levelManager.frameCounter + 1);
         }
     }
 
