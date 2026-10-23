@@ -98,7 +98,7 @@ this campaign. October's merged remediation (`4a26a651e`) is not reopened.
   the actual launch environment. State candidate count, expected execution cost
   and stopping rule before one required combined smoke/guard selection. Focused
   checks do not certify the complete campaign. No routine full-suite run.
-- [ ] Attribute disputed failures with matched baseline/current failing identities
+- [x] Attribute disputed failures with matched baseline/current failing identities
   and assertions. Fix introduced regressions narrowly. Inspect skips and retain
   honest coverage limits; do not repair unrelated systems to force green output.
 - [ ] Inspect and acknowledge consumed category diagnostics. Integrate into the
@@ -613,3 +613,42 @@ identities and skips were inspected, consumed reports removed, and no child
 validation jobs remain. Local commit, final composition, integration, push and
 accounted cleanup are the remaining delivery actions. The two matched inherited
 graphics/launcher failures and explicit smoke skips remain coverage limits.
+
+The final child committed `ec9e5d99283bd3664deddf29285f19f16abd3987` through
+normal hooks, with all seven policy trailers and final co-author verified. The
+coordinator composed it and confirmed executable source, tests, hooks and tooling
+matched the tested child exactly before upstream reconciliation.
+
+While focused jobs waited, published develop advanced fifteen commits to
+`f1869d0696e21ddf4d6b803a5cdadd6cfea2fbdd` for Time Attack names and player
+appearance. Main fast-forwarded to that commit without switching branches or
+changing its four dirty submodules/five unrelated untracked paths. Reconciliation
+commit `cf290d8913461d0a67a9918e5f0a292988bbd6ca` merged cleanly. The only
+direct changed-file intersection is `CHANGELOG.0.7.prerelease.md`; all eighty
+campaign executable/test/hook/tool paths retain the child's exact blobs,
+including deleted adapters. Published API pins and the names/appearance
+implementation remain intact.
+
+The updated change-based plan against the original base selects all ten smoke
+categories and 3,600 candidate classes. Repeating broad coverage is disproportionate:
+the completed campaign smoke and final focused fixes cover unchanged campaign
+code, and the upstream delivery records its own complete smoke plus affected
+guard, renderer, API and network corrections in the existing names/appearance
+plan. Its unmatched transient network timeout remains its stated limit; this
+campaign does not reclassify it. No broad rerun or additional review round is
+introduced here.
+
+Instead, final reconciliation verification selects twelve exact classes, six
+structural/API classes in a fresh guard JVM and six affected consumers:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestModApiHookPolicy,TestModApiSignatureSurface,TestArchUnitRules,TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestRewindArchitectureGuard' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestHostedRunController,TestAudioManagerResetState,TestS3kDataSelectPresentation,TestSelectedSlotPreviewLoader,TestDataSelectPayloadValidators,TestLiveRewindOwnerLifetime' test -B
+```
+
+Use the existing absolute main-checkout ROM properties if a consumer needs them.
+Expected execution is a few minutes plus unknown queue delay. Stop at any new
+failure, inspect exact cases/skips and resolve only the implicated integration
+contract. These checks address newly combined API/policy/architecture and
+hosted/audio/preview/owner dependencies; prior unrelated route matrices are not
+repeated. Integration and push wait for these results.
