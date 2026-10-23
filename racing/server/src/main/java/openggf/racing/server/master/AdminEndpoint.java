@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** Loopback-only operator endpoint for sanctions, attack mode, and audit access. */
+/** Loopback-only operator endpoint for readiness, sanctions, attack mode, and audit access. */
 final class AdminEndpoint implements AutoCloseable {
     private static final int MAX_BODY_BYTES = 64 * 1024;
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -51,6 +51,7 @@ final class AdminEndpoint implements AutoCloseable {
         http.createContext("/admin/sanction", endpoint::sanction);
         http.createContext("/admin/attack-mode", endpoint::attackMode);
         http.createContext("/admin/audit", endpoint::audit);
+        http.createContext("/admin/health", endpoint::health);
         http.setExecutor(executor);
         http.start();
         return endpoint;
@@ -58,6 +59,16 @@ final class AdminEndpoint implements AutoCloseable {
 
     int port() {
         return server.getAddress().getPort();
+    }
+
+    private void health(HttpExchange exchange) throws IOException {
+        if (!authorize(exchange) || !requireMethod(exchange, "GET")) {
+            return;
+        }
+        // MasterServer starts this endpoint only after binding its public listener.
+        // No identity, audit or job state is changed by frequent container probes.
+        exchange.sendResponseHeaders(204, -1);
+        exchange.close();
     }
 
     private void sanction(HttpExchange exchange) throws IOException {

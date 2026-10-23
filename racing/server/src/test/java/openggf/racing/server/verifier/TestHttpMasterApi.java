@@ -71,6 +71,47 @@ class TestHttpMasterApi {
     }
 
     @Test
+    void malformedRegistrationCredentialsFailWithoutLeakingTheirValue() {
+        for (String suffix : List.of("\uFEFF", "\u00A0", "\u0001", "\u007F", " ")) {
+            String invalidToken = "credential-marker" + suffix + "suffix";
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> new HttpMasterApi("http://127.0.0.1:1", invalidToken, false));
+            assertFalse(failure.getMessage().contains("credential-marker"));
+        }
+        assertTrue(requests.isEmpty(), "invalid configuration must not start a registration request");
+    }
+
+    @Test
+    void malformedWorkerTokenFailsBeforeItCanBeCopiedToAHeader() throws Exception {
+        script("/verifier/register", registered("credential-marker\\u0001suffix"));
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> api.register(new byte[] {1}, Set.of("fp")));
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            assertFalse(cause.getMessage().contains("credential-marker"));
+        }
+    }
+
+    @Test
+    void initialRegistrationFailureIsRetriedBeforePollingAndNotRepeatedAfterSuccess() {
+        script("/verifier/register", Reply.empty(503), registered("t1"));
+        script("/verifier/jobs", Reply.empty(204));
+        int[] pauses = {0};
+        try {
+            VerifierMain.serve(false, VerifierMain.registeringCycle(
+                    () -> api.register(new byte[] {1}, Set.of("fp")),
+                    () -> api.pollJobJson().isPresent(), () -> false), millis -> {
+                if (++pauses[0] == 3) Thread.currentThread().interrupt();
+            });
+        } finally {
+            Thread.interrupted();
+        }
+        assertEquals(List.of("/verifier/register", "/verifier/register",
+                        "/verifier/jobs", "/verifier/jobs"),
+                requests.stream().map(Request::path).toList());
+        assertEquals("Bearer t1", requests.getLast().authorization());
+    }
+
+    @Test
     void conflictingVerdictIsReportedAsRefusedInsteadOfThrown() throws Exception {
         api.register(new byte[] {1}, Set.of("fp"));
         script("/verifier/verdicts", Reply.empty(409), Reply.empty(204));

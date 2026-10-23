@@ -803,9 +803,16 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 
 | YAML key | Default | Description |
 |----------|---------|-------------|
+| `port` | `27900` | Public TLS WebSocket and HTTPS listener for the browser, relay rooms, recordings and verifier API. |
+| `tlsCertPath` / `tlsKeyPath` | required | PEM certificate chain and private key paths. Remote deployments require normal TLS validation. |
+| `dbPath` | `master-identities.db` | Identity database path; a relative path is beneath the master's `--data` directory. |
+| `adminPort` | `27901` | HTTP administration/readiness listener, bound to loopback. Do not publish it from a container. |
+| `adminToken` | required | Literal admin bearer token. Prefer `adminTokenFile` for deployment. |
+| `adminTokenFile` | unset | Read the admin token from a UTF-8 file instead of `adminToken`. Relative file paths resolve against the YAML directory. |
 | `newIdentityCacheSize` | `10000` | Maximum entries in each of the anonymous identity-age cache and the creation-proof reconnect-stamp LRU cache. Stamp eviction requires another creation proof for identities without a durable row. |
 | `newIdentityCacheTtlMinutes` | `60` | Anonymous identity-age cache idle TTL and creation-proof reconnect-stamp lifetime from proof completion. Reconnects update stamp recency without extending its expiry. |
 | `verifierRegistrationToken` | disabled | Shared bootstrap token required by `openggf-verifier` workers. Keep it secret and rotate it if disclosed. |
+| `verifierRegistrationTokenFile` | unset | File-backed alternative to `verifierRegistrationToken`, resolved like `adminTokenFile`. |
 | `maxRecordingBytes` | `65536` | Maximum accepted input-only attempt recording size. |
 | `maxRecordingStorageBytes` | `536870912` | Maximum total bytes retained in the content-addressed recording store; new uploads receive HTTP 507 when full. |
 | `recordingUploadMinIntervalMillis` | `1000` | Minimum interval between accepted recording uploads from the same player identity. |
@@ -818,6 +825,27 @@ These keys belong in the racing server's master YAML (`MasterServerMain
 | `verifierStaleSeconds` | `120` | Worker heartbeat/registration age after which it is unavailable; minimum 120 seconds leaves the 30-second worker heartbeat time to recover from one timed-out request. |
 | `verifierLeaseSeconds` | `300` | Job lease duration before requeue. |
 | `publicBaseUrl` | `""` | Absolute public HTTPS base for recording requests; blank sends a relative path that clients resolve against their master URL. |
+
+Tokens contain printable non-space ASCII characters and are limited to 16 KiB.
+File forms use UTF-8, strip surrounding whitespace, and reject empty, multiline,
+malformed or unreadable files. Do not specify both literal and file forms of one
+token. YAML token file paths resolve against the YAML directory; the verifier's
+CLI token path resolves against its working directory. Secrets are loaded at
+startup; recreate services after rotating files.
+The authenticated `GET /admin/health` endpoint returns 204 when the master's
+listeners are running. `racing-server healthcheck --config master.yaml` checks it
+with bounded HTTP timeouts, without exposing the token in its arguments.
+
+The verifier CLI takes `--master https://host:27900`, repeated `--rom /path/game.gen`,
+`--data /path/worker-identity`, and either `--registration-token-file /path/token`
+or the existing `--registration-token TOKEN`. Give every concurrent worker its
+own data directory. Continuous workers retry initial registration and subsequent
+transport failures. `--shutdown-grace-seconds` (default 30, range 1–300) stops new
+polls on shutdown and bounds the wait for an active cycle to finish; allow a longer
+container stop timeout. `--once` performs one registration/poll cycle and reports
+failure instead of retrying indefinitely. Heartbeats do not renew job leases.
+See [Docker deployment](racing/deploy/README.md) for the same configuration with
+standalone images or Compose, including TLS, mounts, restart limits and backups.
 
 ## Debug
 

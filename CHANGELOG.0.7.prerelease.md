@@ -41,6 +41,11 @@ Unreleased. The earlier development themes remain in
   including recording uploads. Master challenge solving is serial, cancellable and
   limited to 24 bits and 30 seconds, with one coalesced pending proof write under
   transport backpressure.
+  Separate master/relay and verifier Docker images support individual containers
+  or a single-host Compose deployment, with TLS, file-backed secrets, persistent
+  identities, master readiness and verifier startup retries and bounded shutdown.
+  The same verifier image can run on another machine; its engine build must match
+  the clients it verifies. See the [deployment guide](racing/deploy/README.md).
   Time Attack opens directly from a fresh boot, retains its lobby and connections
   while launching a level, and resumes its owning scene after a run or load failure.
   Every visible multiplayer ghost shows its player name above the sprite,
