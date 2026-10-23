@@ -58,6 +58,9 @@ public final class ConfigCatalog {
         put(DISPLAY_SCALING, ofEnum("display", "scaling",
                 "Square-pixel scaling: INTEGER uses whole-number multiples; FIT fills the available area proportionally",
                 Set.of("INTEGER", "FIT")));
+        put(DISPLAY_HUD_TIME_HUNDREDTHS, of("display", "hudTimeHundredths", BOOL,
+                "Show hundredths of a second in the HUD's TIME (0:00.00), as Sonic CD does; "
+                + "the original three games show whole seconds"));
         put(DISPLAY_WINDOW_AUTOSIZE, of("display", "windowAutosize", BOOL,
                 "Derive the window size from the aspect preset at the 2x baseline"));
         put(DISPLAY_SHADER_LIBRARY_ROOT, of("display", "shaderLibraryRoot", STRING,

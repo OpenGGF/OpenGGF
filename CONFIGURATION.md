@@ -106,6 +106,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `DISPLAY_SHADER_DEFAULT_PHASE` | `display.shaderDefaultPhase` | enum | `"PRESENTATION"` | Fallback render phase for standalone display shaders. Accepted values: `"SCENE"`, `"PRESENTATION"`, `"FINAL"`. |
 | `WIDESCREEN_DEADZONE_MODE` | `display.deadzoneMode` | string | `"PROPORTIONAL"` | Camera horizontal deadzone behaviour on wide screens: `"CENTER_SCALED"` keeps the native 16px deadzone band; `"PROPORTIONAL"` scales the band width with the screen width. **EXPERIMENTAL** — takes effect only when a widescreen preset is active. |
 | `DISPLAY_HUD_ANCHOR` | `display.hudAnchor` | string | `"DEFAULT"` | Horizontal position of the score/time/rings/lives HUD on widescreen profiles: `"DEFAULT"` keeps the centered native-frame position; `"LEFT_EDGE"` anchors it to the screen's left edge. Both settings produce the same position at native 4:3. |
+| `DISPLAY_HUD_TIME_HUNDREDTHS` | `display.hudTimeHundredths` | bool | `false` | Show hundredths of a second in the HUD's TIME (`0:00.00`), as Sonic CD does, in each game's own HUD digits (the point is the lower dot of the game's colon). The original three games show whole seconds. Read when a level starts. Mods can also ask for it during a run (`RunHandle.setHudTimeHundredths`). |
 
 ### Display shader library
 
