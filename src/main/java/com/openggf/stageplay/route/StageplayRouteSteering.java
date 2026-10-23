@@ -45,8 +45,9 @@ public final class StageplayRouteSteering {
      * Sonic_CheckSpindash / Sonic_UpdateSpindash (s2.asm:37555-37688) own crouch,
      * pressed jump edges, charge decay and release speed. Shipped fixBugs=0 is unchanged.
      */
+    // One press selects the native minimum charge; repeated revs overdrive short acting routes.
     public static boolean chargeDown(int elapsed) { return elapsed > 0 && elapsed <= CHARGE_FRAMES; }
-    public static boolean chargeJump(int elapsed) { return elapsed >= 2 && elapsed <= CHARGE_FRAMES && elapsed % 2 == 0; }
+    public static boolean chargeJump(int elapsed) { return elapsed == 4; }
     public static int chargeDirection(double x, double targetX, int elapsed) {
         return elapsed == 0 ? (targetX < x ? -1 : 1) : 0;
     }

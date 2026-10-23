@@ -303,19 +303,18 @@ class TestStageplayRoutePlanner {
         }
     }
 
-    @Test void startingActionsLandFirstAndSpindashActuallyCharges() {
-        for(var action:List.of(StartAction.JUMP,StartAction.SPINDASH)) {
-            var motion=new RouteMotion(action,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
-            var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
-            try(var probe=probe(terrain().level)) {
-                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),action+": "+plan.message());
-                assertTrue(plan.commands().getFirst().frame()>0,"Falling entry lands before starting action");
-                probe.restore(start);var samples=replay(probe,request,plan.commands());
-                if(action==StartAction.JUMP) assertTrue(samples.stream().anyMatch(o->o.ySpeed()<0));
-                else assertTrue(samples.stream().anyMatch(PlayablePuppet.Observation::spindash));
-                assertNear(samples.getLast(),request);
-            }
+    @Test void jumpStartingActionLandsFirst() {
+        var motion=new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
+        var request=new StageplayRouteRequest("hero",0,600,237,600,1024,120000,60000,1,null,1,motion);
+        try(var probe=probe(terrain().level)) {
+            var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),plan.message());
+            assertTrue(plan.commands().getFirst().frame()>0,"Falling entry lands before starting action");
+            probe.restore(start);var samples=replay(probe,request,plan.commands());
+            assertTrue(samples.stream().anyMatch(o->o.ySpeed()<0));assertNear(samples.getLast(),request);
         }
+        // Native spindash requires the ROM animation profile's Duck state. The EMPTY
+        // art sentinel deliberately has no profile; actual charge/release is covered
+        // by TestStageplayRouteMotionRom, never by inventing a crouch pose here.
     }
 
     @Test void endingActionsAndSingleFacingTapsSettleThroughNativeInputs() {

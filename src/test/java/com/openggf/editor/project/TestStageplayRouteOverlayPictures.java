@@ -44,7 +44,7 @@ class TestStageplayRouteOverlayPictures {
             boot.setBootToTitle(true); boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
             GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_2_ROM,System.getProperty("sonic2.rom.path"));
             try (var session=new StageplayEditorSession(GameServices::module,RomManager.getInstance(),AudioManager.getInstance());
-                 var chrome=new EditorHudRuntime(); var video=new Video(output.resolve("engine-route-overlay.mp4"))) {
+                 var chrome=new EditorHudRuntime(); var modal=new com.openggf.editor.project.EditorProjectMenuRenderer(); var video=new Video(output.resolve("engine-route-overlay.mp4"))) {
                 var workspace=new StageplayWorkspace(new StageplayWorkspace.Host() {
                     public StageplayDocument initialDocument(){return source;}
                     public Path initialAssetRoot(){return output;}
@@ -71,7 +71,13 @@ class TestStageplayRouteOverlayPictures {
                 assertTrue(chrome.setActive(true));
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
-                for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-motion-settings.png"):null);}
+                for(int i=0;i<60;i++){
+                    draw(chrome,session,workspace);
+                    glViewport(0,0,WIDTH,HEIGHT);
+                    int menuWidth=Math.round(WIDTH*224f/HEIGHT);
+                    modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,menuWidth,224,0).get(new float[16]),menuWidth);
+                    video.frame(i==0?output.resolve("engine-motion-settings.png"):null);
+                }
                 workspace.menu().close();
                 plan(workspace,"400","624","1024");
                 await(workspace,session,StageplayRouteJob.Phase.READY);

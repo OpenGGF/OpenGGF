@@ -1397,6 +1397,7 @@ public final class StageplayWorkspace {
         menu.showForm(objectRoute?"Walking object route":"Plan playable route",routeFields,"Plan in isolated worker",values -> io(() -> {
             String id = values.get("actor");
             boolean object = document.objectActors().stream().anyMatch(a -> a.id().equals(id));
+            if (!object && !entry) throw new IOException("Player routes start at a shot-entry frame");
             var footprint = object ? new StageplayRouteFootprint(integer(values,"halfWidth"),integer(values,"height"),
                     integer(values,"footOffset"),integer(values,"collisionPath")) : null;
             var request = new StageplayRouteRequest(id,frame,decimal(values,"x"),decimal(values,"y"),integer(values,"frames"),

@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
+native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
+so down input cannot establish the Duck animation that native spindash reads.
+Use supplied-ROM art and observe the native charge flag and launch; a command,
+pose or fast arrival is insufficient. After a facing tap, allow native friction
+and crouch selection before the fresh jump edge. The first two-tick pulse caused
+an ordinary jump; the corrected warmup is verified in cold LIVE replay.
+
+
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again

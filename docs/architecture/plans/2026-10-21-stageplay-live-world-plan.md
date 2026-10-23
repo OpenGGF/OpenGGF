@@ -2841,3 +2841,27 @@ nodes / 1340 ticks, with exactly MOVE_TO (frame 34) and STOP (282), no JUMP, fin
 centre x397.80078125 / y624.61328125 for goal 400/624. The search never changed
 native physics or adopted a fitted speed. Build-only package passed; focused
 Maven coverage remains queued at this checkpoint.
+
+
+Native warmup recheck: all eight EHZ variants passed cold replay, cap/no-skid,
+settle/facing and backward-seek/forward replay assertions. Spindash needed three
+down ticks after its facing tap before the first fresh jump pulse; an earlier
+pulse initiated an ordinary jump before crouch selection. The remaining synthetic
+spindash assertion was rejected as an invalid oracle: `SpriteArtSet.EMPTY` has no
+animation profile and cannot enter native Duck. Actual spindash charge/release
+is asserted with supplied-ROM art instead. A changed actor ID in the interior
+object-route form now receives the correct shot-entry rejection before parsing
+playable-only settings. S3K mandatory four passed 60 tests, HUD/picture 12 and
+desktop picture/chrome 18, all with zero skips. Final modal-picture refresh uses
+the actual engine-owned menu renderer; drawing chrome alone omitted that layer.
+
+
+The repeated-rev default was then rejected: native charge reached `$C00` and a
+short Spindash/Hard Stop route passed the point by 174 pixels before returning.
+That behavior belongs to Overshoot, not Hard Stop. The fixed 24-tick default now
+uses one fresh press after crouch warmup, selecting the native minimum charge;
+no launch speed is written by the director. Cold qualification rejects a
+non-Overshoot route that passes the goal beyond tolerance, with advice to choose
+Walk start or move the destination farther away. The final ROM selection adds
+the reverse EHZ downhill route and asserts no unintended pass for every other
+ending. Its new result is pending at this checkpoint.

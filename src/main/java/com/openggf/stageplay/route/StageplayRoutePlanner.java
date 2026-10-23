@@ -744,6 +744,12 @@ public final class StageplayRoutePlanner {
                             request,
                             proposal.nodes(),
                             ticks, path);
+                int approach=path.isEmpty()? (request.targetX()<pose.x()?-1:1)
+                        : request.targetX()<path.getFirst().x()?-1:1;
+                if(request.motion().endingAction()!=EndingAction.OVERSHOOT &&
+                        (pose.x()-request.targetX())*approach>6)
+                    return failure(VERIFICATION_FAILED,"Native motion cannot stop before the point with this start; choose Walk start or a farther destination",
+                            fingerprint,request,proposal.nodes(),ticks,path);
                 var motionState=world.routeMotionState(request.actorId());
                 if (request.motion().endingAction()==EndingAction.GENTLE_STOP && motionState.skidding())
                     return failure(VERIFICATION_FAILED,"Native terrain forced a skid; Gentle Stop cannot be qualified here",

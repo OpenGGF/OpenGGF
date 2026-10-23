@@ -27,12 +27,16 @@ class TestStageplayRouteMotionRom {
         motions.put("run-overshoot",new RouteMotion(StartAction.WALK,TravelSpeed.RUN,EndingAction.OVERSHOOT,EndingFacing.INHERIT));
         motions.put("jump",new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("spindash",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
+        motions.put("walk-downhill",RouteMotion.DEFAULT);
         motions.put("face-left",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.LEFT));
         motions.put("face-right",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.RIGHT));
         try(var library=SceneRomLibrary.open(Map.of("s2",Path.of(System.getProperty("sonic2.rom.path")))) ) {
             for(var entry:motions.entrySet()) {
                 var motion=entry.getValue();var source=scene(entry.getKey());
-                var request=new StageplayRouteRequest("hero",0,400,624,420,1024,120000,60000,1,null,1,motion);
+                boolean downhill=entry.getKey().equals("walk-downhill");
+                if(downhill) source=source.withActors(List.of(new Actor("hero","Sonic","s2","sonic",
+                        List.of(new ActorKey(0,400,624,0,-1,true,true,1,Interpolation.HOLD)))));
+                var request=new StageplayRouteRequest("hero",0,downhill?100:400,downhill?656:624,420,1024,120000,60000,1,null,1,motion);
                 StageplayRouteResult result;
                 try(var resources=new StageplayResources(library,false)) {
                     result=StageplayRoutePlanner.plan(resources,library,source,request,"0".repeat(64),()->false);
@@ -46,7 +50,7 @@ class TestStageplayRouteMotionRom {
                             result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).findFirst().orElseThrow().frame());
                 var candidate=StageplayStore.decode(StageplayStore.encode(result.candidate()));
                 assertEquals(motion,candidate.puppets().getFirst().commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).findFirst().orElseThrow().motion());
-                boolean charged=false,skidded=false;double farthest=0;
+                boolean charged=false,skidded=false;double farthest=0,least=Double.POSITIVE_INFINITY;
                 var states=new StringBuilder();
                 try(var resources=new StageplayResources(library,false);var world=StageplayLiveWorld.openOffline(library)) {
                     resources.setLiveWorld(world);StageplayTimeline.Frame last=null;
@@ -54,18 +58,20 @@ class TestStageplayRouteMotionRom {
                         last=resources.resolveFrame(candidate,StageplayTimeline.sample(candidate,frame));
                         var nativeState=world.routeMotionState("hero");
                         charged|=nativeState.spindash();skidded|=nativeState.skidding();
-                        farthest=Math.max(farthest,last.actors().getFirst().x());
+                        farthest=Math.max(farthest,last.actors().getFirst().x());least=Math.min(least,last.actors().getFirst().x());
                         if(motion.travelSpeed()==TravelSpeed.WALK)
                             assertTrue(Math.max(Math.abs(nativeState.groundSpeed()),Math.abs(nativeState.xSpeed()))<=StageplayRouteSteering.STROLL_CAP,entry.getKey()+" frame "+frame);
                         states.append(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(Map.of("frame",frame,"pose",last.actors().getFirst(),"puppet",last.puppets().getFirst(),"native",nativeState))).append('\n');
                     }
-                    assertTrue(Math.abs(last.actors().getFirst().x()-400)<=6);
+                    assertTrue(Math.abs(last.actors().getFirst().x()-request.targetX())<=6);
                     assertTrue(Math.abs(last.puppets().getFirst().groundSpeed())<=.25);
                     if(motion.endingFacing()!=EndingFacing.INHERIT)
                         assertEquals(motion.endingFacing()==EndingFacing.LEFT,world.routeMotionState("hero").facingLeft());
                     if(motion.endingAction()==EndingAction.GENTLE_STOP) assertFalse(skidded,entry.getKey());
                     if(motion.startingAction()==StartAction.SPINDASH) assertTrue(charged);
                     if(motion.endingAction()==EndingAction.OVERSHOOT) assertTrue(farthest>=412);
+                    else if(downhill) assertTrue(least>=request.targetX()-6,"Gentle downhill stop must not pass the goal");
+                    else assertTrue(farthest<=request.targetX()+6,"A non-Overshoot ending must not pass the goal: "+entry.getKey());
                     resources.resolveFrame(candidate,StageplayTimeline.sample(candidate,20));
                     assertEquals(last,resources.resolveFrame(candidate,StageplayTimeline.sample(candidate,419)),"Controller phase rewinds with native world");
                 }
