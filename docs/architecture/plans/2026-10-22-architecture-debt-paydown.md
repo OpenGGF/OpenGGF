@@ -676,3 +676,39 @@ suite or a wholly green combined invocation. Push only integrated develop, then
 remove the eight inspected task worktrees and ten merged local refs, preserving
 main's unrelated contents. Final delivery/cleanup status is recorded in the task
 checkpoint and completion report.
+
+The first integrated-main commit was `a57a5873b6a6f9a96cddf4d6c8ca7a3655a0b584`;
+its entire tree matched the verified candidate. The normal push was rejected
+because published develop advanced again, to
+`06cbd7316c95df29c85f2e5b5517d8de18be0e79`, during integration. Nothing was
+force-pushed. The new Time Attack fast-restart/lobby/vote-pool/SAT-ghost delivery
+changes actual reload, run-policy, movement capture and renderer dependencies.
+Its plan lists verification scope but does not provide exact commands, tested
+SHA, case counts or skips, so those statements are not reused as independently
+observed passing runs.
+
+The coordinator retained the local main integration as an ancestor and merged
+the published changes in `091cbabd6fd4b887fb96ec3d40c2f699429c43b4`. GameLoop,
+LevelManager, prerelease prose and the low-level freeze store merged cleanly.
+The store overlap only renames the two upstream graphics replay helpers; the
+audio tuple's exact identities remain, with 187 records and no new allowance.
+The new fast-restart path uses the existing full death-load boundary; stock
+death, completed PLC publication, explicit bootstrap and owner retirement remain
+verification obligations. The new elapsed-death counter is captured movement
+state, so its existing snapshot control is included.
+
+The updated dry plan selects all ten smoke categories and 3,613 classes. No
+broad rerun or new review round is introduced. New shared changes instead receive
+six structural/API classes from the preceding command and seventeen affected
+behavioral classes: actual S1/S2/S3K fast/stock deaths, hosted lead-in, fenced
+lobby reloads, hosted teardown, movement capture, run policy, completed assembly,
+owner lifetime, level boundaries, scene ownership, SAT layering, special-stage
+admission and the required S3K bootstrap/loading checks. The duplicate simple
+`TestSonic3kLevelLoading` name intentionally selects both existing packages.
+Expected execution is roughly 3–6 minutes plus unknown queue delay. New failures
+block the push and receive bounded attribution/correction; unchanged route
+matrices and unrelated smoke are not repeated.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestFastDeathRestart,TestHostedRunLeadIn,TestLobbyAreaRunHeadless,TestHostedRunController,TestAbstractPlayableSpriteRewindCapture,TestGameplayRunPolicy,TestGameLoopDeferredSetupRewind,TestLiveRewindOwnerLifetime,TestLevelManagerRewindBoundary,TestModSceneActBridge,TestSatGhostLayering,TestGameLoopSpecialStageRewindGate,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' -Dsonic1.rom.path="$ROM_DIRECTORY/s1.gen" -Dsonic2.rom.path="$ROM_DIRECTORY/s2.gen" -Ds3k.rom.path="$ROM_DIRECTORY/s3k.gen" test -B
+```
