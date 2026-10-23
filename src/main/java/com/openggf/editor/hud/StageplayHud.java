@@ -294,7 +294,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         if (route != null) {
             float x = panel.x() + 10, y = bottom - routeHeight - 10;
             c.rect(x - 2, y - 5, panel.w() - 16, 1, LINE, 1);
-            c.text(route.title(), x, y, Size.SMALL, route.result().success() ? GOOD : WARN, 1);
+            c.text(route.title(), x, y, Size.SMALL, route.successful() ? GOOD : WARN, 1);
             c.text("Cyan: walk", x, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND, 1);
             c.text("Gold: air / takeoff", x + 85, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.AIR, 1);
             c.text("Square: start   Diamond: goal", x, y + 26, Size.SMALL, TEXT_DIM, 1);

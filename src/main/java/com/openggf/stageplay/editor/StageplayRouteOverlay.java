@@ -45,6 +45,7 @@ public final class StageplayRouteOverlay {
     public StageplayRouteResult result() { return result; }
     public List<StageplayRoutePoint> path() { return result.path(); }
     public boolean applied() { return applied; }
+    public boolean successful() { return result.success(); }
     public String title() { return title; }
     public String statusText() {
         return result.success() ? title + "." : switch (result.status()) {

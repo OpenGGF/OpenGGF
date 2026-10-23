@@ -2776,3 +2776,13 @@ four success/failure path arrays and protocol messages compare equal. This polis
 changes presentation only; the before/after route observations are unchanged.
 Desktop polish is committed as `32ec954`; engine polish is committed with this
 qualification update.
+
+The polish's once-only guards run executed 720 tests with five failures and no
+errors/skips. Four match the previously attributed MenuAudioProbeTool singleton
+and HubMusicController provider/package failures above. The owned fifth exposed
+a HUD dependency on `StageplayRouteResult.success()` for status colour. Routing
+that query through the overlay's `successful()` accessor preserves the explicit
+frontend boundary. The affected picture/model/workspace/HUD plus ArchUnit recheck
+executes 57 tests: 55 pass, with only the two inherited HubMusicController failures
+and no errors/skips; the Stageplay ownership rule passes. The full guards selection
+was not repeated. The additive accessor changes neither geometry nor UI output.

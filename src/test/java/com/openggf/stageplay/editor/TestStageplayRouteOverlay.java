@@ -61,6 +61,7 @@ class TestStageplayRouteOverlay {
             var result = new StageplayRouteResult(status, "BLOCKED_SWEEP: no floor", "0".repeat(64), request,
                     success ? scene : null, List.of(), List.of(), path, 1, 6, status == StageplayRouteResult.Status.VERIFIED);
             var overlay = new StageplayRouteOverlay(result, false);
+            assertEquals(success, overlay.successful());
             assertFalse((overlay.title() + overlay.reason() + overlay.statusText()).matches("(?s).*[A-Z]{2,}_[A-Z_]+.*"));
             if (status == StageplayRouteResult.Status.BUDGET_EXCEEDED) {
                 assertTrue(overlay.reason().contains("Reachability is still unknown"));
