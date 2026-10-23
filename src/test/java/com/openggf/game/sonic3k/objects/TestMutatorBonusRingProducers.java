@@ -47,8 +47,8 @@ class TestMutatorBonusRingProducers {
     @Test void activeSlotInteriorPreservesNativeGrantAndPendingCountTiming() {
         var services = new Services(BonusStageType.SLOT_MACHINE);
         services.policy(NO_RINGS);
-        var controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
-                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
+        var controller = spy(new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources())));
         controller.bootstrap();
         controller.onRewardSpawned();
         var reward = new S3kSlotRingRewardObjectInstance(spawn(0),controller);
@@ -63,9 +63,21 @@ class TestMutatorBonusRingProducers {
         verify(player).addRings(1);
         assertEquals(1,services.savedRings);
         assertEquals(1,services.sounds);
-        for (int frame=0x1A;frame<40;frame++) reward.tickSlotRuntime(frame,player);
+        // loc_1AA02 retains the spin cursor/timer when it falls into sparkle;
+        // Animate_Sprite consumes $FC on pass 44, then loc_1AA62 deletes on pass 45.
+        for (int frame=0x1A;frame<44;frame++) {
+            reward.tickSlotRuntime(frame,player);
+            assertFalse(reward.isDestroyed(), "reward must remain alive through pass " + (frame + 1));
+        }
+        reward.tickSlotRuntime(44,player);
         assertEquals(0,controller.activeRewardObjects());
         assertTrue(reward.isDestroyed());
+        // The pending counter clamps at zero, so verify the decrement callback as well.
+        verify(controller,times(1)).onRewardExpired();
+        assertEquals(1,controller.rewardCount());
+        verify(player,times(1)).addRings(1);
+        assertEquals(1,services.savedRings);
+        assertEquals(1,services.sounds);
     }
 
     @Test void deniedGumballTouchDoesNotConsumeThenReenablingAwardsNativeSavedAndHudAmounts() {

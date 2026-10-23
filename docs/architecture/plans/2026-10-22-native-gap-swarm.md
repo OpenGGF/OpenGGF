@@ -2692,3 +2692,127 @@ POM and guard policy are unchanged, so no unrelated fresh structural guard was
 submitted. This is bounded CPU fixture/lifecycle/restore qualification, not
 native timing, GPU, complete mode/route or common-smoke qualification. Keep the
 local unmerged leaf and compiled outputs; consume only its own raw diagnostics.
+
+
+### Test-only slot lifetime and Data Select EGL fixtures — 2026-10-23
+
+This isolated correction starts at `659b02c98a16da0723ef5f222acdc60ab7b0838f`
+on `bugfix/ai-s3k-slot-dataselect-fixtures-20261023`. Root-supplied frozen
+smoke71076 evidence remains red at
+`TestMutatorBonusRingProducers.activeSlotInteriorPreservesNativeGrantAndPendingCountTiming`
+(line 68: expected destroyed after only 40 object passes), and skipped at
+`TestS3kDataSelectPresentation.visualCapture_selectedSaveSlotShowsRightBodyRail`
+(the ambient GLFW availability assumption under explicit EGL). This task does
+not inspect that job, change its source, or qualify the rest of its selection.
+
+The slot runtime/scripts changed in `5167dc34578003b27bd3c0ee872cceca94b08a56`
+while the mutator test blob remained unchanged. Reference pin
+`8b2cf3c4178f2382f844da67798de4befc50c5e0` has spin bytes
+`1,0,1,2,3,FF` and sparkle bytes `5,4,5,6,7,FC`.
+`loc_1AA02` (sonic3k.asm:35919-35926) animates spin, decrements the 26-pass
+timer, retires the pending count and grants, then falls through to sparkle
+without resetting the animation cursor/timer (sonic3k.asm:35928-35931).
+`Animate_Sprite` (sonic3k.asm:36254-36260) consumes FC on pass 44;
+`loc_1AA62` (sonic3k.asm:35934-35935) deletes on pass 45. The existing owning
+slot-reward test already distinguishes these passes. The corrected mutator
+fixture keeps its original grant/saved-ring/sound/pending assertions, checks
+alive through pass 44 and dead on pass 45, then checks no duplicate reward,
+saved-ring write, sound or pending decrement. No fitted runtime lifetime is added.
+
+The Data Select test bypasses only the legacy GLFW availability assumption when
+`PresentationOffscreenTestContext.requested()` selects explicit EGL. The capture
+utility then opens the existing 320 by 224 null-platform/EGL pbuffer owner and
+initializes the existing graphics/shader projection, viewport and blending.
+Fixed-function matrices remain only in the legacy manual hidden-window branch;
+requested EGL creation errors propagate without a desktop fallback or skip.
+Graphics resources are released while the context is current, before its close.
+The four capture scenarios, save fixtures, geometry and original two rail pixel
+assertions, ROM property restoration and existing configuration use are retained.
+Production presentation, renderer, state, assets, API, masks, SAT, palette and
+backend defaults are unchanged. No helper-context modification is needed.
+
+Before focus, the exact three changed test blobs are `6a5da9bf6ab75d83073df1f2388e2668210aba7f`
+(mutator), `61d08749e3057bed3ee85b9dbef1e593aeaede94` (presentation), and
+`79047c075296665f57fac5ce5e7fa0d168b811f6` (capture utility).
+Unchanged slot runtime/resources are `30af21a64f315da79ff0b68b211c0742d0912815`
+and `88a5f3c396c73bfd6c191b3e47ddf06fa0507126`; the existing context is
+`c1932ef97dc0d4b19fcebccb946ba7c0570fd19a` and slot-reward test is
+`7e040d31be2f5f71b40d99ad31ff33c187e355b7`.
+
+One normal focused request selects the entire three owning classes below, using
+the current queue wrapper with this isolated worktree as cwd and its own target.
+`JDK25`, `LUA54`, `CURRENT_MAVEN_QUEUE` and the three ROM variables name existing
+host installations/original files; ROM CRC32/SHA-1 match the repository table.
+No broad, route, native or paired observation is authorized. Only a changed-source
+repair focus is permitted after this request; no third request.
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME="$JDK25" PATH="$JDK25/bin:$PATH" LUA_BIN="$LUA54" \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "$CURRENT_MAVEN_QUEUE" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestMutatorBonusRingProducers,TestS3kSlotRingRewardObjectInstance,TestS3kDataSelectPresentation' \
+  "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" \
+  test -B
+```
+
+Independent actual-diff review found no blocking issue in the three initial
+published test blobs. The initial normal focused request exits 0:
+87 unique test identities across three XML reports (75 Data Select, seven
+mutator producer, five slot reward), zero failures/errors/skips. Both the
+formerly red mutator test and formerly skipped visual test execute successfully.
+Queue wait is 6 seconds; Maven reports 1:20, while wrapper wall time is
+87.961 seconds. These intervals are separate and the Maven value is rounded.
+No unchanged guard/broad run was submitted.
+
+All XML identities, properties, skip/failure/error nodes, stdout/stderr and text
+reports were inspected. Java is 25.0.5; the explicit EGL property, exact selector,
+original absolute ROM properties and isolated cwd/target are present in all
+three XMLs. There are no JVM/Surefire dumps. Existing compiler deprecation
+warnings, the initial missing temporary-directory launcher warning and FAST
+load-time-without-manifest warnings remain observed output; they do not establish
+native timing. All seven published source pins and the configuration checksum
+match through terminal completion.
+
+All four fresh PNGs were viewed and are distinct nonblank 320 by 224 Data Select
+pictures: empty slots, seeded occupied/clear saves, the eighth-slot selection,
+and the clear-slot selection. The occupied-save picture passes the original
+left/right body-rail pixel assertions at (113,89) and (173,89). This qualifies
+the bounded test fixtures and explicit EGL capture path only; it is not native
+RGB parity, another-platform coverage, route, full-game or combined-smoke closure.
+Frozen smoke71076 retains its original red/skip evidence. The three test changes
+and this existing plan are committed locally only for later ancestry receipt;
+Root/Main, production code, API/pins/ratchets and push remain outside this task.
+Consumed logs, XML/text reports, images, generated save fixtures and invocation
+temporary output are removed after inspection; compiled output and the useful
+unmerged task worktree are retained.
+
+The implementer then checked the pending-counter owner and found that
+`S3kSlotStageState.decrementActiveRewardObjects()` clamps at zero. A final zero
+alone cannot reject a duplicate expiration callback. The permitted changed-source
+repair wraps only this test's real controller in a spy and verifies exactly one
+`onRewardExpired()` call after pass 45; all original pending and grant assertions
+remain. Mutator blob `e34045c4b9fbaaecb36b59feb1c9633b6c68921e` supersedes the
+initial `6a5da9bf6ab75d83073df1f2388e2668210aba7f`. The two EGL fixture blobs,
+runtime/resources, context and existing slot-reward test are unchanged. This
+small final test assertion follows the single independent review; no additional
+review or observer is created. Consumed initial XML/log/capture diagnostics are
+removed before the second request. The second and final normal request uses the
+same entire three-class selector and launch environment above; no third request.
+
+The final repair request exits 0 with the same 87 unique identities (75/7/5),
+zero failures/errors/skips, including the exact single-expiration assertion.
+These repeat the same selection and are not 174 distinct tests. Queue wait is
+535 seconds, Maven execution is 32.035 seconds and wrapper wall time is
+567.779 seconds. All final seven source pins match through terminal; combined
+SHA-256 is `37ad837bc70a8eb2ae55b24aa8574840128c0a6d34f98e565b262d3dff4c2a88`.
+All three XMLs' complete method identities match the owning source methods;
+properties, streams, text summaries and absence of dumps were inspected again.
+Java 25.0.5, explicit EGL, exact selector and original three ROM paths are
+present, and the configuration checksum plus original ROM CRC32/SHA-1 remain
+unchanged. All four fresh captures match the previously viewed PNGs byte for
+byte; the occupied-save rail pixels are RGBA (255,255,0,255) at both original
+assertion coordinates. The final local candidate retains the bounded limits
+above. Both allowed focus requests are consumed; no third request was submitted.
