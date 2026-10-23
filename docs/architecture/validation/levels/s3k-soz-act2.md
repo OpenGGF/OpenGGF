@@ -914,3 +914,38 @@ The [query/allocation audit](../../audits/performance/2026-10-22-native-object-q
 and its companion implementation records own exact tested states, commands and
 remaining delivery checks. These local checks do not close inherited viewport,
 donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.
+
+
+## Current reconciled-source Knuckles negatives (2026-10-23)
+
+One separately authorized queued request at clean local merge
+`68662f644613ef94f978bd47721ac1835d7712b4` selected only the two maintained
+Knuckles Act2 methods, with unchanged controller inputs, setup, assertions and
+48 selected replay windows per width. Actual result: **2T/2F/0E/0S**.
+
+| Current method in TestSozColdRouteCapture | Width | First reported assertion |
+| --- | --- | --- |
+| knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef |320| cold death at11787, test188 |
+| knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef |800| cold death at23478, test188 |
+
+These are current delivery blockers. The older fbeb962 stops12288/24051 remain
+historical and are not substituted. No first differing production owner, damage
+receiver, writer, death cause or current terminal position was recorded. Earlier
+indices alone do not attribute a regression to one change. Complete48-window,
+boss/capsule/results and playable LRZ qualification was not reached; no earlier
+rewind mismatch was reported before the death assertion.
+
+Source hash `0c1ca516…` matched after the run; the worktree remained clean.
+Original BK2 hashes remain `8ee03087629c35f43abb02db24e4e2aa6dd453511e65d0b3e40b903129f300e8`
+(35315 inputs) and `21b57f734145320c1b99a5551dd0ccfc24fcd759b6e4fdbcb942c47a60bfabb9`
+(35412 inputs), with neutral P2. Java25.0.5, surfaceless EGL, intended cwd and the
+original absolute verified locked-on ROM property were inspected. Maven printed
+39.695s, suite9.709s, cases4.178/5.147s; no queue wait was printed. Individual
+compiler/parent times are unknown.
+
+The one-request scope stopped at terminal. No companion, retry, controller
+retiming, runtime fix, native capture, Main integration or push followed. Exact
+command/environment and the current-vs-historical distinction are recorded in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md); owned raw
+diagnostics were consumed after readback. A fresh source-only comparison may
+propose later observation, but grants no new execution authority.

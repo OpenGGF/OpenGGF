@@ -31125,3 +31125,46 @@ delivery-blocking; the callback correction and these components do not waive it.
 The two SOZ2 deaths12288/24051 and other existing route/parity/coverage limits stay
 open. Historical passive-source packages and their execution-false gates remain
 unchanged. The goal is active, and neither complete parity nor delivery is claimed.
+
+
+### One current SOZ2 Knuckles request after reconciliation
+
+After dedup confirmed no Root SOZ worker or selected job, a NEW one-request scope
+selected only the two ordinary methods at exact clean68662f644. Historical
+fbeb962 death12288/24051 was not a current baseline. Settings remain native solo
+Knuckles, donoroff, width320/800 by224, zone8/act1, no optional position/ring/
+emerald/clock seeds, explicit S3K_SKIP_INTROS=false and production initial
+ProcessSprites consumption/assertion. The seven-argument capture settings retain
+their existing showTitleCard=false behavior. Controller resources and every
+maintained semantic/history/drawing predicate remain unchanged.
+
+Portable exact selection (same original absolute wrapper, environment and three
+verified ROM properties as the preceding focus; NS is the owned current target):
+```text
+python3 $ROOT/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef+knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef' -Dopenggf.surefire.reports=$NS/reports -Dopenggf.test.tmpdir=$NS/tmp -Dopenggf.test.diagnostics=$NS/diagnostics -Dsonic1.rom.path="$S1_ROM" -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" test -B
+```
+
+Session91247/wrapper2641414 is terminalexit1: **2T/2F/0E/0S**. Exact ordinary
+identities are the two methods above; both fail at unchanged test188's cold-death
+assertion. Width320 stops11787 and800 stops23478. No earlier rewind mismatch was
+reported, but the complete48 windows and destination are unqualified. Current
+positions/first departure/receiver/writer/cause remain UNKNOWN; no inference from
+an endpoint or from an older engine capture. Whole source `0c1ca516…` rehashed
+unchanged and Git stayed clean. Actual XML confirms Java25.0.5, EGL, cwd and the
+absolute locked-on ROM; original ROM SHA1 and both BK2 hashes/counts were checked
+before submission. Maven39.695s/suite9.709s/cases4.178 and5.147s are distinct;
+no queue wait was printed and compiler/parent elapsed is unknown.
+
+Current stderr includes synthetic FAST-without-game-manifest warnings and ONE
+current KOS_DECOMPRESSION_QUEUE unmeasured `s3k-kos-v1` fingerprint
+`66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, using a
+deterministic estimate. It is a current lead only: ordinal/ROM spans/epoch/exact
+service context and causality were not captured. It cannot reconstruct the
+historical14 unknown warning identities or certify authentic costs/timing.
+
+The scope stops here with budget0/no live job. No retry, ordinary companion,
+retiming, recorder/runtime change, native/MHZ observation, Main integration or
+push is authorized. Raw logs/XML/TXT and extracted libraries in the exact owned
+namespace are consumed after readback; useful source, compiled outputs and
+worktree remain. Current negatives keep delivery blocked. Any next source-only
+comparison is a separately registered scope, not revival of this execution budget.
