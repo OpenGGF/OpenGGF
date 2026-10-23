@@ -725,9 +725,9 @@ class TestArchUnitRules {
     // Each adapter owns a bounded service boundary. Values remain independent and no runtime
     // owner is admitted to editor/tools; new adapters must be named here rather than frozen away.
     private static final java.util.Map<String, Set<String>> STAGEPLAY_CONSUMERS = java.util.Map.ofEntries(
-            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult")),
+            java.util.Map.entry("com.openggf.editor.stageplay.StageplayWorkspace", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.runtime.StageplayObjectInspection", "com.openggf.stageplay.editor.StageplayRouteJob", "com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.route.StageplayRouteContract", "com.openggf.stageplay.route.StageplayRouteFootprint", "com.openggf.stageplay.route.StageplayRouteProtocol", "com.openggf.stageplay.route.StageplayRouteRequest", "com.openggf.stageplay.route.StageplayRouteResult")),
             java.util.Map.entry("com.openggf.editor.stageplay.StageplayObjectAuthoring", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.StageplayObjectCatalog", "com.openggf.stageplay.runtime.StageplayObjectInspection")),
-            java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
+            java.util.Map.entry("com.openggf.editor.hud.StageplayHud", Set.of("com.openggf.stageplay.editor.StageplayRouteOverlay", "com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayController", "com.openggf.stageplay.StageplayDialogue", "com.openggf.stageplay.StageplayTimeline$CameraPose")),
             java.util.Map.entry("com.openggf.tools.StageplayTool", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline", "com.openggf.stageplay.runtime.StageplayResources", "com.openggf.stageplay.runtime.StageplayLiveWorld")),
             java.util.Map.entry("com.openggf.tools.StageplayScriptCompiler", Set.of("com.openggf.stageplay.StageplayDocument", "com.openggf.stageplay.StageplayStore", "com.openggf.stageplay.StageplayTimeline")),
             java.util.Map.entry("com.openggf.tools.StageplayScriptDecompiler", Set.of("com.openggf.stageplay.StageplayDocument")),
@@ -785,6 +785,10 @@ class TestArchUnitRules {
                 "com.openggf.stageplay.runtime.StageplayAssets"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.StageplayPlayback", "editor"));
         assertTrue(!approvedStageplayRuntimeDependency("com.openggf.stageplay.editor.StageplayEditorSession", "tools"));
+        assertTrue(approvedStageplayConsumer("com.openggf.editor.hud.StageplayHud",
+                "com.openggf.stageplay.editor.StageplayRouteOverlay$Painter"));
+        assertTrue(!approvedStageplayConsumer("com.openggf.stageplay.runtime.StageplayRenderer",
+                "com.openggf.stageplay.editor.StageplayRouteOverlay"));
         Set<String> violations = new TreeSet<>();
         for (JavaClass origin : classes) {
             String originSlice = topLevelSlice(origin);
@@ -795,6 +799,12 @@ class TestArchUnitRules {
                 if (target.isArray()) target = target.getBaseComponentType();
                 String targetSlice = topLevelSlice(target);
                 if (targetSlice == null || target.getName().equals(ModApi.class.getName())) continue;
+                // This transient authoring model must never enter runtime playback or export.
+                if (typeOrNested(target.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
+                        && !typeOrNested(origin.getName(), "com.openggf.stageplay.editor.StageplayRouteOverlay")
+                        && !approvedStageplayConsumer(origin.getName(), target.getName())) {
+                    violations.add(dependency.getDescription());
+                }
                 if ("editor".equals(originSlice) && "tools".equals(targetSlice)
                         && !(typeOrNested(origin.getName(), "com.openggf.editor.stageplay.StageplayWorkspace")
                                 && (typeOrNested(target.getName(), "com.openggf.tools.StageplayScriptCompiler")

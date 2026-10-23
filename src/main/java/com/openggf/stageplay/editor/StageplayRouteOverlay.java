@@ -30,8 +30,9 @@ public final class StageplayRouteOverlay {
         this.result = Objects.requireNonNull(result);
         if (applied && !result.success()) throw new IllegalArgumentException("Cannot apply a failed route overlay");
         this.applied = applied;
-        legend = (applied ? "APPLIED" : result.success() ? "PROPOSED" : "STOPPED")
-                + " / " + result.request().actorId() + " / cyan ground / gold air";
+        legend = (applied ? "APPLIED" : result.success() ? "PROPOSED"
+                : result.status() == StageplayRouteResult.Status.BUDGET_EXCEEDED ? "BUDGET" : "STOPPED")
+                + " " + result.request().actorId() + " / cyan walk + gold air";
         reason = result.success() ? "Square start / diamond goal" : result.message();
     }
 

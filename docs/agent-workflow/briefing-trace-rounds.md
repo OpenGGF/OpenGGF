@@ -76,7 +76,10 @@ outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again
 hid the airborne cast. Compare resolved centres with the picture and actual native
 body pixels in each distinct camera regime. A platform-only pixel check or a
-complete lossless decode does not establish airborne framing.
+complete lossless decode does not establish airborne framing. For editor route
+overlays, an endpoint inside the viewport bounds can still hide behind the fixed
+legend. Check its visible marker and clearance in the final zoomed framing, not
+only its projected coordinates.
 
 Grounded telemetry and visible actors do not prove floor alignment (2026-10-22,
 Stageplay ring-spill review). Sprites used director Y while foreground scroll

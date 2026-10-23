@@ -125,6 +125,36 @@ class TestStageplayRouteWorkspace {
         workspace.deactivate(); assertNull(workspace.routeOverlay());
     }
 
+    @Test void walkingObjectUsesTheSameProposedAndAppliedOverlayModel() {
+        var actor=new ObjectActor("walker","Walker","s2",0,0,65,0,-1,List.of(
+                new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+        var document=StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120).withObjectActors(List.of(actor));
+        var update=new java.util.concurrent.atomic.AtomicReference<StageplayRouteJob.Update>();
+        var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
+            public StageplayDocument initialDocument(){return document;}
+            public Path initialAssetRoot(){return root;}
+            public void startRoute(StageplayDocument d,Path root,StageplayRouteRequest request){
+                var commands=List.of(new ObjectCommand("move",0,ObjectCommandKind.MOVE_TO,150,200,1),
+                        new ObjectCommand("stop",29,ObjectCommandKind.STOP,0,0,0));
+                var candidate=d.withObjectActors(List.of(new ObjectActor(actor.id(),actor.name(),actor.gameId(),actor.zone(),actor.act(),
+                        actor.objectId(),actor.subtype(),actor.layoutIndex(),actor.keys(),commands)));
+                var result=new StageplayRouteResult(StageplayRouteResult.Status.VISUAL_TERRAIN,"Visual terrain", "0".repeat(64),request,
+                        candidate,List.of(),commands,List.of(new StageplayRoutePoint(0,100,200,true),new StageplayRoutePoint(1,101,200,true)),2,30,false);
+                update.set(new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.READY,"ready",result));
+            }
+            public StageplayRouteJob.Update pollRoute(){return update.get();}
+        });
+        workspace.activate(); workspace.selectActor("walker"); workspace.invoke(ROUTE_HELPER);
+        workspace.menu().setValue("x","150");workspace.menu().setValue("y","200");workspace.menu().setValue("frames","30");workspace.menu().submit();
+        assertNull(workspace.menu().error());workspace.tick(new InputHandler());
+        assertEquals("walker",workspace.controller().selectedActorId());assertNotNull(workspace.routeOverlay());
+        var result=update.get().result();update.set(new StageplayRouteJob.Update(1,StageplayRouteJob.Phase.APPLY_READY,"fresh",result));
+        workspace.tick(new InputHandler());workspace.seek(20);assertTrue(workspace.routeOverlay().applied());
+        assertEquals(result.path(),workspace.routeOverlay().path());
+        workspace.controller().edit(d->d.withObjectActors(List.of()));assertEquals("",workspace.controller().selectedActorId());
+        assertNull(workspace.routeOverlay());
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

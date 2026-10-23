@@ -2657,3 +2657,81 @@ disassembly citations and moves no reference pins; those unrelated citations wer
 not rewritten. Changed-document whitespace, skill mirrors and API signature checks
 pass. No category run directory was created (preflight only); consumed task Maven
 diagnostics are removed before handback.
+
+## Stageplay route viewport overlay qualification (2026-10-23)
+
+Engine base `657bbae86`, implementation `e4e4023d1`; desktop base `01bf8ae`,
+implementation `4c4ec6d`. The engine qualification changes are committed with this
+entry. Both task branches are local `feature/ai-stageplay-route-overlay` worktrees;
+no integration, push or PR was authorized. The lead owns combined smoke coverage.
+
+`StageplayRouteOverlay` is an unannotated, transient authoring model, consumed by
+`StageplayWorkspace`, the engine HUD and the desktop ImGui viewport. Shared geometry
+uses the evaluated camera and fitted film rectangle. Ground/air colours, takeoff
+chevrons, start square, separate goal diamond and failed endpoint cross keep constant
+UI sizes. Applied plans stay visible for the selected performer in the same shot;
+player playback adds a white actual-centre cross. Changes to the accepted document
+or asset root hide the old plan. Reopening a scene does not restore overlays.
+Walking objects use this same model and are selectable in both cast lists.
+
+Successful lines use cold replay samples. Failed native searches retain an observed
+best branch with every tick, while visual object failures simulate only the checked
+prefix through the existing movement kernel. Cold qualification failures retain
+observations up to rejection. Missing frames break the line. Rejected approaches:
+connecting sparse search-node endpoints, drawing a destination chord, fitting an
+arc, persisting route data in a scene, advancing preview from painting, or treating
+budget exhaustion as proof of an obstruction. A failure before observations has no
+invented start/stop. No gameplay values are hydrated from these comparison samples.
+
+Focused queued checks (all zero errors/skips):
+
+- Initial model/workspace/controller/player-search/object-search/protocol selection:
+  36 tests passed. Final overlay/workspace/explicit engine-picture selection:
+  13 passed, including walking-object proposal/apply/selection lifetime.
+- Final engine and desktop picture refreshes: one test each passed. Initial desktop
+  picture plus chrome selection: 18 passed. Both picture tests use the production
+  route worker, real native preview, real frontend drawing and an opaque film redraw
+  assertion proving that frontend route pixels cannot enter the film surface.
+- Mandatory S3K selector (`TestS3kAiz1SkipHeadless`, both matching
+  `TestSonic3kLevelLoading` classes, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`): 60 passed against implementation `e4e4023d1` plus
+  the initial picture fixture. Later production edits only shorten overlay text.
+- Once-only `-Pguards test -B`: 720 tests, five failures, no errors/skips. One was
+  owned: the explicit Stageplay-consumer registry needed the new model. It now
+  names the two frontend owners and prohibits runtime/export dependencies on the
+  overlay. The bounded `TestArchUnitRules` recheck executes 32 tests with two
+  unchanged HubMusicController failures; Stageplay ownership passes.
+- Baseline attribution: the two singleton source checks reproduce exactly against
+  archived `657bbae86` production sources (`MenuAudioProbeTool.java:41`). A separate
+  compilation of all 4,252 original baseline production classes under this tree's
+  temporary target directory, with the same current ArchUnit assertions, reproduces
+  the two HubMusicController rules exactly: three provider constructors at line 118
+  and nine provider/music dependencies at lines 118/120. Current and baseline
+  assertion messages and test identities match. These four inherited failures are
+  preserved; the guard suite is not described as green. No broad rerun was made.
+
+Preflight passes with Java 25, `LUA_BIN=/usr/bin/lua5.4` and PowerShell. The default
+Lua resolves to an older version and was rejected before tests. Supplied absolute
+S1/S2/S3K ROM CRC32/SHA-1 identities match the repository table. Both engine packages
+built with tests skipped; the desktop private dependency repository contains this
+worktree's final engine jar. Main checkouts and the lead's smoke tree were untouched.
+
+Evidence lives in the external task directory (`$STAGEPLAY_ROUTE_OVERLAY_EVIDENCE`):
+`engine-route-overlay.mp4`, `desktop-route-overlay.mp4`, and each frontend's
+`*-proposed.png`, `*-failed.png`, `*-applied-jump.png`, `*-applied-arrived.png`,
+`*-pan-zoom.png`. Each silent clip is H.264, 1280x720, 60 fps, 480 frames/eight seconds;
+FFprobe and complete `ffmpeg -xerror` decoding pass. Both final clips played to the
+end at 1x in an isolated browser, with sequential observations of native jump,
+landing, arrival, failure and camera pan/zoom. Each proposal has 300 actual replay
+samples and 12 commands, including jumps; each failed budget attempt has 49 samples.
+The first capture's final zoom placed its failure marker under the legend; it was
+rejected and reframed with a visible-header-clearance assertion. The final clips
+keep the cross clear and the route legible over busy ROM art. Browser/server and
+worker cleanup completed. Commands, exact final commits and limits are in external
+`STATUS.md`; temporary baseline sources/builds and consumed diagnostics are removed.
+
+Limits: this is bounded editor/model/ROM evidence, not broad smoke or release
+validation. Object paths retain visual walking limits with native AI suspended;
+only players get an actual-centre marker, not a second recorded movement trail.
+A retained applied line references the accepted attempt; external ROM/assets still
+require replanning, and it is not a certification of arbitrary future world changes.
