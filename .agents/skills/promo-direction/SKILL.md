@@ -375,6 +375,13 @@ panel is appropriate and does not need to fly on and off with each speaking turn
 - Keep editorial graphics off the native HUD. A header tab cutting through
   `TIME`, or a split label beside two stacked HUDs, reads as an accident. Place
   the labels on the side away from the HUD, or crop the HUD out deliberately.
+- **The film's voice must not look like the game's UI.** Captions, headers, counters and labels
+  that the film says to the viewer need a treatment the game never shows during play. A Time
+  Attack draft set every caption in the feature's own name font on the HUD's dark plates, and the
+  user could not tell "if the promo is talking to me, or the game displays that text in normal
+  play". The fix used the display face with stroke and hard shadow for lines and pills for labels,
+  and kept the game's font only for player names and captured footage. A ROM title-card font is
+  still a good title face: it is the game's presentation type, not its in-play UI.
 - **Native UI is already type.** Multiplayer footage carries a HUD, a room panel and a
   nameplate on every racer. Count them before adding anything. One A/B film opened with
   its tagline wedged into the `TIME`/`RINGS` corner, beside the room panel, six
