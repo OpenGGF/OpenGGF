@@ -1281,3 +1281,41 @@ startup/channel-stop blocks and are under fresh read-only review
 `sonic-cd-pcm-native-review-20261023-r1`. Gameplay-active PCM and active-PCM
 checkpoint restoration remain missing. The lead owns their test-only Java
 consumer. No native fixture or comparison row becomes runtime game input.
+
+### Native PCM startup fixture handoff
+
+Stage inventory is committed locally as `5c0f2eae2`. The native PCM unit
+returned eleven stable tool/test files and eight source-native startup/stop
+blocks, with complete RAM, channel fields, selectors and integer samples/deltas.
+They contain 3,160 samples, 3,107 nonzero samples and three loop events. Seven
+active blocks use channel 3; the final block is channel stop with the chip
+still enabled, not chip disable. No clipping limit was reached.
+
+All nineteen Python tests passed with zero skips. Nine fresh native controls
+cover two official, two unaltered-source, two disabled, two enabled and one
+overflow run on the same 3,000-call authored-input route. Each has 120 forward
+calls plus restoration/replay. AV, pictures and public CPU/RAM views agree;
+unmasked raw states agree within each binary. Both enabled payload sets match.
+Fresh review `sonic-cd-pcm-native-review-20261023-r1` returned bounded PASS on
+the eleven files and checked additional corruptions, typed ABI, source/build
+identity, `.invis` storage and before-volume integer hook phases. Native cycles
+and unity host volume are separately validated metadata, not hidden chip fields.
+The manifest SHA256 is
+`0236df320dcb3322a21263b2b771f108269a779bb6712445e75ba36a309141b4`.
+
+The post-3,000 restore interval has no active PCM; active-PCM native restoration
+is not established. Nor are active multichannel mixing, clipping, resampling,
+physical timing, sound-driver or in-level audio parity. Normal PP jumps did
+not activate PCM in this bounded route. New task
+`sonic-cd-pcm-soundtest-route-20261023-r1` owns a separate route tool prefix and
+fresh captures, using native source-derived menu/controller inputs to seek
+broader natural music coverage. The completed core/tools and captures are frozen.
+
+The lead authored a test-only binary admission helper and opt-in Java
+comparisons for all eight original blocks. These tests are pending compilation;
+their source is separate from the verified tool unit. The `level` asset-loader
+and `service.graphics` writers are still active, so no Maven command is started
+against partially authored Java. The pending comparison checks every represented
+chip scalar, all wave RAM, every sample/delta and Java capture/restore, without
+claiming a native active-PCM restoration interval. Commercial payloads remain
+outside Git and are never a runtime data source.
