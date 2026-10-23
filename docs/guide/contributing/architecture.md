@@ -108,7 +108,8 @@ behavior for a specific game, you implement or extend the relevant provider in t
 game's module directory.
 
 **Example:** When the engine needs to know the water height for the current zone, it
-calls `gameModule.getWaterDataProvider().getWaterHeight(zone, act)`. Sonic 2's module
+calls `gameModule.getWaterDataProvider().getStartingWaterLevel(zone, act)`
+for the initial level; the water system and dynamic handler own subsequent changes. Sonic 2's module
 returns water heights for ARZ and CPZ; Sonic 1's returns heights for LZ and SBZ3;
 Sonic 3&K's returns heights for HCZ and LBZ. The engine does not know or care which
 zones have water -- it just asks the provider.
@@ -156,9 +157,9 @@ game-state updates, and object-manager-backed helpers. New runtime child objects
 should be spawned through `spawnChild(...)`, `spawnFreeChild(...)`, or an existing
 `level.objects` lifecycle wrapper rather than direct manager calls.
 
-The separation exists because the planned level editor will have multiple simultaneous
-level contexts. Process services stay shared; object services are backed by the active
-gameplay context.
+The experimental editor and gameplay modes share process services while owning
+different mode contexts. Object services resolve against their injected gameplay
+context; world state survives the supported editor/gameplay mode swaps.
 
 ### Object Service Access Contract
 
@@ -300,25 +301,15 @@ Use this migration order when cleaning up a boundary:
 Each game defines a `LevelInitProfile`: a declarative sequence of initialization steps
 that run when a level loads. This replaced a monolithic `loadLevel()` method.
 
-The steps (13 in total, defined by the `InitStep` record) include:
+`levelLoadSteps(LevelLoadContext)` returns ordered `InitStep` groups; each game's
+profile transcribes its own ROM entry sequence. Do not assume a fixed shared count
+or reorder steps as a generic dependency graph. The same contract also declares
+full teardown, per-test reset steps and post-teardown static fixups.
 
-1. Load level layout data
-2. Decompress tile art
-3. Load chunk and block mappings
-4. Set up collision arrays
-5. Load object placement list
-6. Configure palettes
-7. Set up water (if applicable)
-8. Initialize camera and scroll boundaries
-9. Register zone-specific objects
-10. Load PLCs (sprite art)
-11. Configure level events
-12. Set player start position
-13. Initialize audio (zone music)
-
-Each game's profile specifies which steps to run and in what order. Some steps are
-shared across games; others are game-specific. The profile is defined in the game
-module (e.g., `Sonic2LevelInitProfile`).
+The profiles coordinate level data, art/PLCs, collision, palettes, water, camera,
+objects, player setup and music through the existing owners. Read the matching
+`Sonic1LevelInitProfile`, `Sonic2LevelInitProfile` or `Sonic3kLevelInitProfile` before
+changing ordering, including omitted presentation frames or VBlank-serviced work.
 
 ## Object Lifecycle
 
@@ -341,7 +332,9 @@ whose X position falls within the spawn window are created:
 
 ### Update Loop
 
-Every frame, the engine calls `update(frameCounter, player)` on each active object.
+On each object dispatch, the engine calls `update(vIntRunCount, player)` on active
+objects. The argument is ROM `V_int_run_count`, not the executed-frame count or
+`Level_frame_counter`.
 This is the equivalent of the 68000 jumping to the object's routine entry point. The
 object reads its state, makes decisions, updates its position, and prepares render
 commands.
@@ -385,7 +378,9 @@ objects or zones rarely need to interact with it directly.
   `getRenderer(artKey)` to get a renderer for your object's art, then
   `drawFrameIndex(frame, x, y, hFlip, vFlip)` to draw a mapping frame.
 - **Priority buckets:** Objects specify a priority via `getPriorityBucket()`. Lower
-  numbers draw behind higher numbers. This matches the VDP's priority system.
+  numbers draw in front of higher numbers; bucket 0 is front-most. Use
+  `RenderPriority.bucket(...)` for S1/S2 literals and `fromS3kWord(...)` for S3K
+  priority words. Sprite-versus-plane priority is a separate `isHighPriority()` bit.
 - **Debug rendering:** Override `appendDebugRenderCommands(ctx)` to draw bounding boxes,
   sensor lines, or labels when the debug overlay is active.
 

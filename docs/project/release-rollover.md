@@ -59,8 +59,9 @@ Worked below as "0.6 ships", which promotes master 0.5 → 0.6, develop 0.6 →
 
 ### 1. Gate
 
-Do not start until `develop` satisfies the release gates: explicit `mvn -Dmse=off -Pfull-suite test -B`,
-`mvn -Dmse=off -Pguards test -B` separately, the trace no-regression policy in
+Do not start until `develop` satisfies the release gates: explicit
+`python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B` separately, the trace no-regression policy in
 `docs/status/trace-scope-release-<n>.md`, and the human end-to-end gameplay and
 audio QA that automated gates cannot cover. Record the evidence in
 `docs/changelog/v0.6-release-summary.md`.
@@ -148,9 +149,11 @@ the ones that needed it last time.
 
 ## Verification
 
-- `mvn package` on each promoted branch, and confirm `AppVersion` reports the
-  new version rather than a stale filtered resource — `mvn clean` first, since
-  incremental builds keep the old `version.properties`.
+- After the required release checks, run
+  `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests clean package`
+  in each promoted branch's own worktree and confirm `AppVersion` reports the new
+  version. Cleaning prevents stale filtered `version.properties`; skipping tests
+  avoids repeating unchanged validation during packaging.
 - `git show <branch>:pom.xml | grep -m1 '<version>'` for all three branches:
   independent lines have different versions; intentionally shared development
   refs have the same version and an explicit candidate alias. Verify policy checks

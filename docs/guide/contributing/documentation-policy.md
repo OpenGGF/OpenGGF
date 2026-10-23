@@ -6,7 +6,9 @@ source of truth.
 
 ## Branch Names
 
-Use focused branches from `develop`:
+Normal contributions use focused branches from `develop`. For delegated work in an
+existing checkout, use its current branch as the base unless another is specified.
+Create task branches in separate worktrees; never switch the main workspace branch:
 
 - `feature/ai-...` for new features.
 - `bugfix/ai-...` for fixes.
@@ -51,7 +53,7 @@ Each value must start with `updated` or `n/a`.
 
 | Trailer | File or directory | Use `updated` when |
 | --- | --- | --- |
-| `Changelog` | `CHANGELOG.md` | Engine behavior changed in a way users or contributors should know about. |
+| `Changelog` | `CHANGELOG.md` | The root release index or development-line pointer changed. Per-version notes alone use `n/a` with their destination as the reason. |
 | `Guide` | `docs/guide/` | Player or contributor guide content changed. |
 | `Known-Discrepancies` | `docs/status/known-discrepancies.md` | A cross-game or non-S3K intentional divergence was added, changed, or resolved. |
 | `S3K-Known-Discrepancies` | `docs/S3K_KNOWN_DISCREPANCIES.md` | An S3K-specific intentional divergence was added, changed, or resolved. |
@@ -81,6 +83,36 @@ Changelog: n/a: test-only helper
 
 A bare `Changelog: n/a` is rejected for `feat`, `fix`, and `perf` commits that touch
 `src/main/`.
+
+## Release Note Destination
+
+`pom.xml` selects the engine release line. `develop` and `next` currently share
+`0.7.prerelease`, so new notes go in `CHANGELOG.0.7.prerelease.md`; earlier themes
+remain in `CHANGELOG.0.7.md`. The root `CHANGELOG.md` holds the release index and
+current-line pointer. For an engine change whose note is in the versioned file:
+
+```text
+Changelog: n/a: release note recorded in CHANGELOG.0.7.prerelease.md
+```
+
+Fold fixes to an unreleased feature into its existing entry. Keep commit hashes,
+frame numbers and detailed validation in the appropriate engineering record.
+The [documentation checklist](../../agent-workflow/documentation-obligation-checklist.md)
+and [release rollover](../../project/release-rollover.md) describe the destinations.
+
+## AI-Assisted Commits
+
+End the message with a `Co-authored-by` trailer for each contributing model,
+including its name and version. Put documentation trailers before that final
+block, separated by one blank line; keep multiple co-author lines contiguous.
+For example:
+
+```text
+Co-authored-by: OpenAI Codex GPT-6 <noreply@openai.com>
+```
+
+Before committing, run `git interpret-trailers --parse <message-file>` on the
+exact prepared message and verify that every intended co-author appears.
 
 ## Trace Frontier Log
 

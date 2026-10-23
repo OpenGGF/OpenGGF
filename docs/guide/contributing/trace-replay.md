@@ -31,7 +31,7 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 each frame, the engine has not been verified — it has been masked. Honest tests force honest
 engine fixes.
 
-## Current Trace Coverage
+## Representative Trace Fixtures
 
 | Game | Test class | Trace directory |
 | --- | --- | --- |
@@ -41,6 +41,10 @@ engine fixes.
 | Sonic 2 | `TestS2Ehz1TraceReplay` | `src/test/resources/traces/s2/ehz1_fullrun/` |
 | Sonic 3&K | `TestS3kAizTraceReplay` | `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` |
 | Sonic 3&K | `TestS3kCnzTraceReplay` | `src/test/resources/traces/s3k/cnz/` |
+
+This table is a starting set, not an inventory or a passing-status claim. Complete
+runs and later-zone fixtures also live under `src/test/resources/traces`; consult the
+[trace frontier log](../../status/trace-frontier-log.md) for dated replay evidence.
 
 The Sonic 1 credits demos use the ROM's built-in ending replays as the input source and do not
 require BK2 movies (the ROM owns the input stream).
@@ -52,8 +56,8 @@ Each trace directory contains:
 - `aux_state.jsonl` (or `aux_state.jsonl.gz`) — richer diagnostic events
 - a `.bk2` movie used to drive the engine replay (except credits-demo traces)
 
-Larger traces are stored gzip-compressed (`.gz`). The Java parser and the test harness load
-both forms transparently. See [Compressing trace payloads](#compressing-trace-payloads) below
+Committed trace payloads are gzip-compressed (`.gz`). The Java parser and the test harness
+also read plain files in scratch candidates. See [Compressing trace payloads](#compressing-trace-payloads) below
 for the workflow.
 
 Replay phase is derived from recorded ROM counters:
@@ -84,33 +88,31 @@ Trace replay tests require:
 - the `.bk2` file to be present in the trace directory (except for ROM-driven credits demo
   traces)
 
-Run all trace tests:
+Select the affected fixtures for the change. A complete trace sweep is a separate,
+explicit validation task, not the routine development default. A small cross-game
+selection, when shared physics/timing changes require it, is:
 
 ```bash
-mvn test -Dtest='*TraceReplay'
-```
-
-Run cross-game baseline set (the canonical "did I regress anything?" check):
-
-```bash
-mvn test -Dtest='TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay'
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay,TestS3kCnzTraceReplay' \
+  -Dsonic1.rom.path=/absolute/s1.gen -Dsonic2.rom.path=/absolute/s2.gen \
+  -Ds3k.rom.path=/absolute/s3k.gen test
 ```
 
 Run one trace:
 
 ```bash
-mvn test -Dtest=TestS1Mz1TraceReplay
+python3 tools/testing/maven_queue.py -Dmse=off test -Dtest=TestS1Mz1TraceReplay
 ```
 
-> **Note on `-Dtest=` filtering.** In some configurations the surefire `-Dtest=` filter does not
-> restrict the run (the full test suite executes regardless). If you observe `passed=N` where
-> `N > 100` for a focused selection, that's the signal. Currently a known followup; track via
-> `target/surefire-reports/TEST-*.xml` for actual focused results.
+Check the selected test identities, skips and actual replay reports. A successful
+Maven invocation with missing ROMs does not establish parity. Use absolute paths
+in worktrees and inspect `target/surefire-reports/TEST-*.xml` when attribution is unclear.
 
 Useful optional override while tuning S1 oscillation alignment:
 
 ```bash
-mvn test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
+python3 tools/testing/maven_queue.py -Dmse=off test -Dtest=TestS1Mz1TraceReplay -Dosc.override=0
 ```
 
 Reports use the owner-keyed physical layout
@@ -181,12 +183,17 @@ Prerequisites:
 
 - BizHawk 2.11 installed at `tools/tracechaser/.dependencies/BizHawk-2.11-linux-x64`, or set `BIZHAWK_HOME`
 - the matching game ROM for the recorder you are using
-- a BK2 movie for the act you want to record
+- a BK2 movie for BK2-owned profiles; credits demos use ROM-owned input
+- initialize the pinned submodule with `git submodule update --init --recursive tools/tracechaser`
+  and check it with `tools/tracechaser-bootstrap.sh --check`
 
 Examples:
 
 ```bash
-tools/tracechaser/bizhawk-headless/run.sh --mode trace \
+tools/tracechaser/bizhawk-headless/run.sh \
+  --tracechaser-root "$PWD/tools/tracechaser" \
+  --input-repository-root "$PWD" \
+  --fixture-root "$PWD/src/test/resources/traces" --mode trace \
   --rom "$S3K_ROM_PATH" --movie /absolute/movie.bk2 \
   --output /absent/scratch/candidate --trace-profile aiz_end_to_end
 ```
@@ -287,13 +294,13 @@ loader follows the existing trace-file policy and prefers the plain file.
 Compression changes storage only; strict v5 event and timing authority checks
 still apply to the decoded stream.
 
-Larger `aux_state.jsonl` and `physics.csv` files are stored gzip-compressed in the repo to keep
-under GitHub's 100 MB hard limit (50 MB recommended max). The Java parser
+Commit `aux_state.jsonl` and `physics.csv` payloads only in gzip-compressed form. The Java parser
 ([`TraceData.load`](../../../src/main/java/com/openggf/trace/TraceData.java)) loads either form
-transparently. Use the helper script after regenerating a large trace:
+transparently. If a scratch producer emitted plain payloads, compress them before
+freezing the publication candidate:
 
 ```powershell
-powershell -File tools/tracechaser/traces/compress-traces.ps1 -Path tools/tracechaser/bizhawk/trace_output -Recurse
+powershell -File tools/tracechaser/traces/compress-traces.ps1 -Path /absolute/scratch/candidate -Recurse -ThresholdBytes 0
 ```
 
 The script:
@@ -303,133 +310,67 @@ The script:
 - Compresses to `<file>.gz`, verifies the round-trip via SHA-256, and removes the uncompressed
   source unless `-KeepOriginal` is set.
 
-After regenerating a trace, copy the resulting `.gz` files (alongside `metadata.json`) into the
-test resources tree. **Never commit the uncompressed `aux_state.jsonl` or `physics.csv` for
-the larger zones** — GitHub will reject the push.
+Complete [candidate validation and exact-byte publication](trace-v5-publication.md)
+before installing the frozen compressed files. Compression is part of that candidate;
+do not recompress approved bytes while installing them.
 
 ## Recording The S3K End-To-End Fixture
 
-Use the `aiz_end_to_end` profile when refreshing the full AIZ intro through HCZ handoff trace.
-That profile starts at BK2 frame `0` and augments `aux_state.jsonl` with:
+Use the native `aiz_end_to_end` profile to refresh the AIZ intro through HCZ handoff.
+The profile records semantic `checkpoint` and `zone_act_state` events; metadata owns
+the actual `bk2_frame_offset`, so do not assume recording begins at movie frame zero.
 
-- edge-triggered `zone_act_state` events whenever actual zone/act, apparent act, or game mode changes
-- one-shot semantic `checkpoint` events for `intro_begin`, `gameplay_start`,
-  `aiz1_fire_transition_begin`, `aiz2_reload_resume`, `aiz2_main_gameplay`,
-  `hcz_handoff_begin`, and `hcz_handoff_complete`
+From the OpenGGF root, with `S3K_ROM_PATH` pointing to the verified locked-on ROM:
 
-Workflow:
-
-1. Keep the locked-on ROM at the repo root.
-2. Run:
-
-```bat
-tools\bizhawk\record_s3k_trace.bat ^
-  "s3k.gen" ^
-  "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" ^
-  aiz_end_to_end
+```bash
+tools/tracechaser/bizhawk-headless/run.sh \
+  --tracechaser-root "$PWD/tools/tracechaser" \
+  --input-repository-root "$PWD" \
+  --fixture-root "$PWD/src/test/resources/traces" \
+  --mode trace --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/s3k-aiz1-aiz2-sonictails.bk2" \
+  --trace-profile aiz_end_to_end --output /absolute/scratch/aiz-v5-candidate
 ```
 
-3. Run the fixture sanity gate against the **uncompressed** `tools\bizhawk\trace_output\aux_state.jsonl` (do this BEFORE compressing):
-
-```powershell
-$events = Get-Content tools/tracechaser/bizhawk/trace_output/aux_state.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
-$required = 'intro_begin','gameplay_start','aiz1_fire_transition_begin','aiz2_reload_resume','aiz2_main_gameplay','hcz_handoff_begin','hcz_handoff_complete'
-$frames = $events | Select-Object -ExpandProperty frame
-
-if (($events | Where-Object event -eq 'checkpoint' | Where-Object name -eq 'intro_begin').Count -ne 1) { throw 'intro_begin count != 1' }
-if ((($frames | Sort-Object) -join ',') -ne ($frames -join ',')) { throw 'frame order regressed' }
-foreach ($name in $required) {
-  if (($events | Where-Object event -eq 'checkpoint' | Where-Object name -eq $name).Count -ne 1) {
-    throw "required checkpoint missing or duplicated: $name"
-  }
-}
-for ($i = 1; $i -lt $events.Count; $i++) {
-  if ($events[$i].frame -eq $events[$i-1].frame -and $events[$i].event -eq 'zone_act_state' -and $events[$i-1].event -eq 'checkpoint') {
-    throw "zone_act_state emitted after checkpoint on frame $($events[$i].frame)"
-  }
-}
-```
-
-Expected result: no output and no exception.
-
-4. Compress the large payloads:
-
-```powershell
-powershell -File tools\traces\compress-traces.ps1 -Path tools\bizhawk\trace_output -Recurse
-```
-
-5. Copy `tools\bizhawk\trace_output\metadata.json`, `physics.csv.gz`, and
-   `aux_state.jsonl.gz` into `src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\`.
+The output directory must not exist. Apply the native gates and validator/comparator
+from [Trace v5 capture and publication](trace-v5-publication.md), including required
+checkpoint order and candidate-root replay, before approving and installing a fixture.
 
 ## Recording Sonic 1 Credits Demo Traces
 
-Use the dedicated credits recorder when you want the ROM's ending replays rather than a human-played
-BK2 route. This path forces `GM_Credits` from the title screen, waits for each demo to become active,
-and records each replay into its own trace directory under `tools/tracechaser/bizhawk/trace_output/credits_demos/`.
+The native harness captures all eight ROM-owned ending demos without a BK2. It
+enters the ROM's credits flow, then clears external input; the ROM chooses the demos
+and controls the replay input. From the OpenGGF root:
 
-Command:
-
-```bat
-tools\bizhawk\record_s1_credits_traces.bat ^
-  "s1.gen" ^
-  all
+```bash
+tools/tracechaser/bizhawk-headless/run.sh \
+  --tracechaser-root "$PWD/tools/tracechaser" \
+  --input-repository-root "$PWD" \
+  --fixture-root "$PWD/src/test/resources/traces" \
+  --mode trace --rom "$S1_ROM_PATH" \
+  --trace-profile credits_demo --credits-target all \
+  --output /absolute/scratch/credits-v5-candidate
 ```
 
-Record one replay only:
+`--credits-target` also accepts `0` through `7` for diagnostics. Publication uses all
+eight fixtures atomically in a new external candidate root. This profile rejects
+`--movie`, run/segment selectors and compression overrides, and forces compression.
+Follow [Trace v5 capture and publication](trace-v5-publication.md) for raw-host
+evidence and exact-byte publication. The removed `record_s1_credits_traces.bat`
+launcher is not a supported capture path.
 
-```bat
-tools\bizhawk\record_s1_credits_traces.bat ^
-  "s1.gen" ^
-  3
-```
-
-Supported replay indices:
-
-- `0` = `ghz1_credits_demo_1`
-- `1` = `mz2_credits_demo`
-- `2` = `syz3_credits_demo`
-- `3` = `lz3_credits_demo`
-- `4` = `slz3_credits_demo`
-- `5` = `sbz1_credits_demo`
-- `6` = `sbz2_credits_demo`
-- `7` = `ghz1_credits_demo_2`
-
-Output layout:
-
-- `tools/tracechaser/bizhawk/trace_output/credits_demos/manifest.json`
-- `tools/tracechaser/bizhawk/trace_output/credits_demos/00_ghz1_credits_demo_1/`
-- `tools/tracechaser/bizhawk/trace_output/credits_demos/01_mz2_credits_demo/`
-- `...`
-
-Each replay directory contains the same core files as a normal trace capture:
-
-- `metadata.json`
-- `physics.csv`
-- `aux_state.jsonl`
-
-Credits-demo metadata adds a few fields that are useful for future trace-framework work:
-
-- `trace_type = "credits_demo"`
-- `input_source = "rom_ending_demo"`
-- `credits_demo_index`
-- `credits_demo_slug`
-- `emu_frame_start`
-
-Notes:
-
-- No `.bk2` is produced or required for this workflow.
-- The script exits after the last gameplay replay finishes; it does not wait through the final
-  text-only "PRESENTED BY SEGA" card or the `TRY AGAIN / END` screen.
-- The capture format is intentionally aligned with the existing S1 `physics.csv` / `aux_state.jsonl`
-  schema so the replay-side test harness can be extended later without inventing a parallel parser.
+The demo indices are `0` GHZ1, `1` MZ2, `2` SYZ3, `3` LZ3, `4` SLZ3, `5` SBZ1,
+`6` SBZ2, and `7` GHZ1 again. Credits metadata includes `trace_type: credits_demo`,
+`input_source: rom_ending_demo`, `credits_demo_index`, `credits_demo_slug`, and
+`emu_frame_start`, alongside the current v5 contract.
 
 ## Adding A New Trace Test
 
 1. Create a new directory under `src/test/resources/traces/<game>/<name>/` (e.g.
    `src/test/resources/traces/s3k/mgz/`).
-2. Record (see [Recording Or Refreshing A Trace](#recording-or-refreshing-a-trace)) and run
-   `tools/tracechaser/traces/compress-traces.ps1` if your payload sizes warrant it. Copy
-   `metadata.json`, `physics.csv` (or `.csv.gz`), `aux_state.jsonl` (or `.jsonl.gz`), and
+2. Record to a new external candidate (see [Recording Or Refreshing A Trace](#recording-or-refreshing-a-trace)).
+   Validate, compare and approve the exact candidate using [the publication workflow](trace-v5-publication.md)
+   before installing `metadata.json`, compressed payloads, required timing data and
    the `.bk2` movie into the target directory.
 3. Add a test class under `src/test/java/com/openggf/tests/trace/<game>/` extending
    `AbstractTraceReplayTest`.
@@ -446,7 +387,7 @@ public class TestS3kMgzTraceReplay extends AbstractTraceReplayTest {
     protected SonicGame game() { return SonicGame.SONIC_3K; }
 
     @Override
-    protected int zone() { return 7; }   // engine zone index, not raw ROM v_zone
+    protected int zone() { return 2; }   // engine zone index, not raw ROM v_zone
 
     @Override
     protected int act() { return 0; }
@@ -577,15 +518,13 @@ Parser (production code, used by tests + diagnostics):
 - [`TraceBinder.java`](../../../src/main/java/com/openggf/trace/TraceBinder.java)
 - [`DivergenceReport.java`](../../../src/main/java/com/openggf/trace/DivergenceReport.java)
 
-Recorders + launchers:
+Current recorder:
 
-- [`s1_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s1_trace_recorder.lua)
-- [`s2_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s2_trace_recorder.lua)
-- [`s3k_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s3k_trace_recorder.lua)
-- [`s1_credits_trace_recorder.py`](../../../tools/tracechaser/retro/s1_credits_trace_recorder.py) (stable-retro; the BizHawk Lua credits recorder was removed)
-- [`record_trace.bat`](../../../tools/tracechaser/bizhawk/record_trace.bat)
-- [`record_s2_trace.bat`](../../../tools/tracechaser/bizhawk/record_s2_trace.bat)
-- [`record_s3k_trace.bat`](../../../tools/tracechaser/bizhawk/record_s3k_trace.bat)
+- [`Native headless harness`](../../../tools/tracechaser/bizhawk-headless/README.md)
+- [Trace v5 capture and publication](trace-v5-publication.md)
+
+Historical Lua and stable-retro implementations are described in the
+[framework reference](trace-framework-reference.md); they are not publication paths.
 
 Trace payload tooling:
 
@@ -595,7 +534,7 @@ Skills:
 
 - [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/SKILL.md) — the
   canonical workflow for any `*TraceReplay` test failure.
-- [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 trace recording
+- [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 replay
   specifics.
 - **`bizhawk-headless-trace`** — canonical native capture and publication,
   including S1 credits demos; the maintained protocol is

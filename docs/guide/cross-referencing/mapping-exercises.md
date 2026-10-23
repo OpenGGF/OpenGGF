@@ -14,7 +14,7 @@ If you are not comfortable reading 68000 assembly, start with the
 [68000 Primer](68000-primer.md) first.
 
 **A note on games:** These exercises use Sonic 2 and its disassembly (s2disasm) because
-S2 is the engine's most complete module. The *methods* apply to all three games, but the
+they provide one consistent set of examples. The *methods* apply to all three games, but the
 disassembly structure differs significantly between s1disasm, s2disasm, and skdisasm --
 different directory layouts, different label conventions, different object code
 organisation. See [How the Engine Reads ROMs](how-the-engine-reads-roms.md) for a
@@ -28,8 +28,7 @@ comparison table, and [Per-Game Notes](per-game-notes.md) for the specifics of e
 
 ### Step 1: Find It in the Disassembly
 
-Open `s2.asm` and search for `Off_Level`. You will find a level loading function near
-line 20100:
+Open `s2.asm` and search for the code that loads `Off_Level`:
 
 ```asm
     lea     (Off_Level).l,a0       ; a0 = pointer to the level offset table
@@ -45,8 +44,8 @@ This tells us:
 - The zone/act combination is converted into a table index via bit manipulation.
 - The data is decompressed into `Level_Layout` RAM.
 
-The `Off_Level` table itself is a `BINCLUDE` directive pointing to binary data. You can
-find the label in the disassembly to see where it is defined.
+`Off_Level` is a `zoneOrderedOffsetTable`; its entries point to layout labels such
+as `Level_EHZ1`, whose `BINCLUDE` reads `level/layout/EHZ_1.kos`.
 
 ### Step 2: Find It in the Engine
 
@@ -60,21 +59,25 @@ LEVEL_LAYOUT_DIR_ADDR_LOC = 0xE46E
 ```
 
 The first value is the default location of the `Off_Level` table in the ROM. The second
-is the address of the instruction that *references* the table (used for cross-validation).
+is the ROM location of the pointer operand that the engine reads to resolve the table.
 
-The engine loads level layouts through a resource plan. The loading path is:
+The level loader resolves the layout separately from the terrain resource plan:
 
-1. `Sonic2Constants` provides the table address.
-2. `Sonic2.java` reads the table to find the offset for the requested zone/act.
+1. `Sonic2Constants` provides the operand address and the documented default table location.
+2. `Sonic2.getLevelLayoutAddr()` reads that pointer, then the relative word offset for the requested zone/act.
 3. The compressed data at that offset is decompressed using Kosinski decompression.
 4. The resulting layout grid is passed to `LevelManager` for rendering.
 
 ### Step 3: Verify
 
-You can use the RomOffsetFinder tool to confirm the address:
+With Java 25 and the optional S2 disassembly initialized, use RomOffsetFinder.
+Replace the example with your existing ROM path; see [Tooling](tooling.md) for
+setup and the distinction between byte verification and calculated labels:
 
 ```
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Drom.path="/absolute/path/to/your-existing-s2.gen" \
     -Dexec.args="search Level" -q
 ```
 
@@ -99,7 +102,7 @@ engine compared to the disassembly?
 
 ### Step 1: Find It in the Disassembly
 
-Search `s2.asm` for `Obj22`. You will find it around line 51034:
+Search `s2.asm` for `Obj22` (`Obj22 (s2.asm:51515-51527)`):
 
 ```asm
 Obj22:
@@ -222,7 +225,7 @@ For any object:
 1. Find `Obj__` in the disassembly and read the routine dispatch table.
 2. Search the game's `ObjectRegistry` for the hex ID to find the engine class.
 3. Map each ASM routine to the corresponding engine method or state.
-4. Compare constants (distances, velocities, collision flags, SFX IDs) to verify accuracy.
+4. Compare constants (distances, velocities, collision flags, SFX IDs), then test dispatch timing and behavior against the owning routines.
 
 The biggest structural difference you will encounter is the engine splitting one
 disassembly object into multiple classes when the original uses different routines for
@@ -280,13 +283,17 @@ The engine's art loading goes through several layers:
 
 Use RomOffsetFinder to confirm the art address:
 ```
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Drom.path="/absolute/path/to/your-existing-s2.gen" \
     -Dexec.args="search ArrowAndShooter" -q
 ```
 
 You can also use the `plc` command to inspect which PLC entry loads this art:
 ```
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Drom.path="/absolute/path/to/your-existing-s2.gen" \
     -Dexec.args="plc ARZ" -q
 ```
 
@@ -296,7 +303,7 @@ For any object's art:
 1. Find the `art_tile` assignment in the object's init routine to identify the art label.
 2. Find the PLC entry that loads that art (search for the art label in PLC tables).
 3. In the engine, search `*PlcArtRegistry` or `*ObjectArtKeys` for the corresponding key.
-4. Use RomOffsetFinder's `search` and `plc` commands to verify addresses.
+4. Use RomOffsetFinder's `search`, `verify` and `plc` commands, observing their byte-comparison and calculated-label limits.
 
 ---
 
@@ -345,7 +352,9 @@ Use `search-rom` to find the SFX pointer table pattern in the ROM, or search the
 constants file for the pointer table address:
 
 ```
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py -Dmse=off compile exec:java \
+    -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+    -Drom.path="/absolute/path/to/your-existing-s2.gen" \
     -Dexec.args="search SndPtr" -q
 ```
 
@@ -392,20 +401,25 @@ Use the methods from the previous exercises:
 
 ### Step 3: Run the Engine with Debug Overlays
 
-Launch the engine and navigate to the area where you see the discrepancy. Use the
-debug keys to get more information:
+For manual inspection, enable `debug.flags.debugView`, launch the engine and
+navigate to the discrepancy. These are gameplay shortcuts; editor/Stageplay and
+special-stage modes have their own controls. Automated investigations use
+[headless tests](../contributing/headless-testing.md) or offscreen captures instead
+of sending input to the shared desktop.
 
 | Key | What it shows |
 |-----|---------------|
 | F1 | Debug text overlay: positions, speeds, state values |
+| F3 | Player panel within the enabled overlay |
 | F4 | Sensor labels: collision sensor ray positions |
 | F5 | Object labels: object names and positions |
 | F6 | Camera bounds: current camera boundary rectangle |
 | F7 | Player bounds: collision bounding box |
-| D | Free-fly debug mode: move the camera freely |
+| D | Toggle free movement of the player; the camera follows |
 
-The debug overlay (F1) shows the player's position, velocity, and ground angle, which
-you can compare frame-by-frame against expected values from the disassembly.
+The player panel (F3, with the F1 overlay enabled) shows position, velocity and
+ground angle. HUD `Pos:` is the sprite's top-left; ROM `x_pos`/`y_pos` correspond
+to `getCentreX()`/`getCentreY()`. Compare the same coordinate convention.
 
 ### Step 4: Write or Run a Test
 
@@ -422,12 +436,13 @@ See [Testing](../contributing/testing.md) for details on the test framework.
 
 Once you have confirmed a difference:
 
-- **Known issues:** Check `docs/status/known-bugs.md` or `docs/S3K_KNOWN_DISCREPANCIES.md` to
+- **Known issues:** Check [known discrepancies](../../status/known-discrepancies.md) or
+  [S3K discrepancies](../../S3K_KNOWN_DISCREPANCIES.md) to
   see if it is already documented.
 - **New issue:** Open a GitHub issue describing the discrepancy, which game and zone
   it affects, the expected behavior (from the disassembly), and the observed behavior
   (from the engine). Include the disassembly line numbers and the engine source file
-  if possible.
+  with the owning routine label and the pinned disassembly revision.
 
 ---
 

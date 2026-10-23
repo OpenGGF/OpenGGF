@@ -22,10 +22,9 @@ level data and collision, and incrementally improved from there.
 ## Current S3K Priority
 
 For Sonic 3 & Knuckles, prefer playable vertical slices over checklist-only zone work.
-AIZ -> HCZ remains the primary release slice, but CNZ, MGZ, ICZ, MHZ, and LBZ now
-have enough coverage that new S3K work should be selected from route blockers,
-complete-run trace frontiers, and release-readiness gaps rather than first-pass zone
-bring-up. A slice should be judged by whether a player can traverse it with coherent
+Keep AIZ -> HCZ stable and select later-zone work from current route blockers,
+complete-run trace frontiers and the [coverage backlog](../../status/level-test-coverage.md).
+A zone's presence in the registry or a loading test is not evidence of route completion. A slice should be judged by whether a player can traverse it with coherent
 events, camera bounds, scroll/parallax, animated tiles, palette/PLC state, required
 objects, bosses or transitions, and known trace or visual parity blockers addressed
 or documented.
@@ -46,7 +45,7 @@ Find the level data addresses:
 
 ```bash
 # Search for the zone's resources
-mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
+python3 tools/testing/maven_queue.py exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" \
     -Dexec.args="search OOZ" -q
 ```
 
@@ -174,7 +173,7 @@ In the engine:
 
 ```java
 if (camera.getX() >= 0x2A00) {
-    camera.setRightBound(0x2F60);
+    camera.setMaxX((short) 0x2F60);
 }
 ```
 
@@ -198,6 +197,15 @@ integration points with the zone:
 - The boss is spawned by the level event when the player reaches the trigger position.
 - The level event manages camera lock/unlock around the boss arena.
 - The boss's defeat triggers end-of-act flow (signpost or egg prison).
+
+## Required route and rewind coverage
+
+Follow the [zone and act testing standard](level-test-standard.md) for each new
+zone or substantial route. Link a per-act/character-route matrix from the
+[coverage backlog](../../status/level-test-coverage.md), exercise supported
+viewport/donor/team breadth, and verify rewind capture/restore plus forward replay
+at events, interactions, bosses and load/respawn boundaries. Record inherited gaps
+when extending existing levels. A loadable level is only an initial milestone.
 
 ## Incremental Bring-Up
 
