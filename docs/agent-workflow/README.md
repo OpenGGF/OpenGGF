@@ -66,6 +66,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   ABI/storage identity; [analysis](../../tools/soniccd/native_owner_analyze.py)
   rejects incomplete event evidence. Origin and bounded USA title coverage are
   recorded in the [local plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#verified-owner-ledger-r4).
+- [CD stage inventory](../../tools/soniccd/stage_inventory.py) binds supplied
+  regional MMDs to pinned source/table/consumer evidence and writes external
+  metadata. R11A has bounded semantic views; other stages are header-only.
+  Encoding and consumed reads require checked consumers, not filename suffixes.
+  Origin: 2026-10-23 CD-01/CD-04/CD-10.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

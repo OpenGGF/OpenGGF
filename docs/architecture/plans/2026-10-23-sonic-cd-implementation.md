@@ -1235,3 +1235,49 @@ The generated native patch retains exact upstream context, including CRLF and
 whitespace-only context lines. Its single path joins the existing native-patch
 whitespace attribute policy; the patch bytes and tested source fingerprint are
 unchanged. Ordinary source whitespace checks still apply to all other new files.
+
+The owner unit is committed locally as `c6607c15c`, with its patch exported to
+Downloads. New task `sonic-cd-stamp-service-20261023-r1` owns only the new
+`service.graphics` package and tests for bounded source-derived graphics
+service arithmetic, readbacks and restore. It must keep contention/alignment
+approximations explicit and preserve the existing transform and owner evidence
+as frozen inputs. The stage-encoding fix and PCM-native fixture task continue
+on separate tool prefixes. No Maven job is active; parent compilation waits
+for stable Java handoff.
+
+### Verified R11A source and consumer inventory
+
+The encoding fix returned two stable tools and a separate schema-v2 R2 JSON.
+The lead reviewed the source/consumer classification delta and checked its
+current producer binding plus all five raw consumer records for each region.
+All five ShieldArtIndex entries copy 1,024 actual media bytes, with exact
+adjacent-blob attribution where needed. The complete pointer table and 80-byte
+native copy/DMA routine are matched, including macro expansion. The following
+1,152-byte RAM upload records its unknown 128-byte resident tail separately.
+No padding, guessed encoding or extra file read is supplied.
+
+Genuine Nemesis declarations now require checked PLC/block entry/header
+consumers; unlisted uses remain unverified. Per region, the 69 source blobs
+have 36 Nemesis, five raw and 28 unknown encoding summaries. Ten `.nem`-named
+blobs lost filename-only certification. R2 has 30 tables including the new
+ShieldArtIndex. Decoder execution/read cursors and final decompressed output
+remain outside this inventory proof.
+
+All 61 Python tests passed. All 45 actual-media mutations rejected, and two
+three-region CLI runs produced identical R2 metadata. Original JSON and exact
+R1 tool/test snapshots remain preserved as superseded evidence. Current R2
+metadata SHA256 is
+`f7eedea40b127a09b31441134ff26c361beb787c346d903834133db4e1460cbf`.
+The original review's other bounds still hold: all 210 regional stage headers,
+one-based chunk addressing, pointer tags, source-pinned R11A views and the
+actual Sonic art alignment byte. Non-R11A layouts are still header-only.
+
+New task `sonic-cd-r11a-assets-20261023-r1` owns only the new `level` package
+and tests for actual media-backed R11A decoding, using the corrected R2 evidence.
+It has no GameModule, GameId, shared engine or creator API changes. The existing
+graphics-service task owns a separate Java package; the lead will compile only
+after stable handoff from Java writers. Native PCM fixtures returned eight
+startup/channel-stop blocks and are under fresh read-only review
+`sonic-cd-pcm-native-review-20261023-r1`. Gameplay-active PCM and active-PCM
+checkpoint restoration remain missing. The lead owns their test-only Java
+consumer. No native fixture or comparison row becomes runtime game input.

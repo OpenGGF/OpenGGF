@@ -35,6 +35,16 @@ returns before relocation, interrupt changes and ownership flags. The
 [local implementation evidence](plans/2026-10-23-sonic-cd-implementation.md#asset-and-device-observation-checkpoint)
 records the bounded component checks.
 
+**Asset filenames do not establish compression or consumed extent.** Sonic CD's
+`LoadShieldArt` (`scddisasm/src/Level/_Objects/Powerup/Main.asm:157-176`) copies
+1,024 raw bytes even for Game Over and Time Over files named `.nem`. Some reads
+continue into the next blob. Its 1,152-byte DMA then reads a further 128 bytes
+from resident animated-art RAM, not the file. Conversely, Sonic DPLCs consume
+one verified alignment byte beyond the raw Sonic art blob. Bind encoding and
+read bounds to the owning consumer and actual media; keep source blobs, file
+reads and resident RAM separate. See the
+[stage-inventory correction](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-source-and-consumer-inventory).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot
