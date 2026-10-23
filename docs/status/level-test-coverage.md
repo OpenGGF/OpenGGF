@@ -1867,3 +1867,23 @@ also preserves native cleared-frame initialization and replays after forced
 recreation. [Exact selection and limitations](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
 retain the remaining PLC, later-route, queue and API pin obligations; this does
 not certify a complete act matrix or complete emerald chain.
+
+
+### DEZ native tube/Chainspike component follow-up — 2026-10-23
+
+The [DEZ2 matrix](../architecture/validation/levels/s3k-dez-act2.md#native-tube-ownership-and-chainspike-probe-correction--2026-10-23)
+records a bounded successor to frozen `659b02c98`: a gravity-tube owner-transfer guard,
+native pre-resize centre correction, distinct horizontal/vertical mount-helper
+order, and Chainspike's zero floor-probe radius separate from its 128-pixel
+render bound. Short native Sonic 320/off tests add destructive owner/child
+recreation and forward replay. The original four checks are observed red on
+unchanged runtime; helper-order and reverse-gravity controls are final-only.
+Final focused validation passes 99/99 with 0 failures/errors/skips; fresh owning
+guards pass 51/52 with one inherited lifecycle source-ratchet failure (586 raw
+destruction calls against budget 582), no errors/skips. A matched static audit
+against frozen `659b02c98` finds identical offending source; baseline JUnit was not
+rerun. Native P2 dirty-d6/status aliasing in the FixBugs=0 vertical dispatch
+remains unmodelled by independent RiderState entries; no whole two-player tube
+fidelity or FixBugs=1 adoption is claimed. No long route,
+broad smoke, native capture, rendering or new act/character/roster/donor/width
+certification is claimed; inherited matrix obligations remain open.
