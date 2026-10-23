@@ -1,5 +1,14 @@
 # Level test coverage backlog
 
+S1 native exit-owner follow-up (2026-10-23): the [owner component evidence](../architecture/plans/2026-10-22-native-gap-swarm.md)
+records 90 focused and 109 structural checks without failures/errors/skips.
+Actual GHZ Results restart and special-entry controls preserve the published
+player-art prefix and full closing DMA journal, with refused-entry, stale-world,
+non-exit, SBZ2 and standalone-host controls. Special-stage startup handler/clear
+lifetime, carried-buffer terminal forwarding, historical route stamp/tail causes
+and complete per-act/roster/viewport/donor matrices remain open. No route or
+native capture was run for this bounded ownership correction.
+
 S2 effective speed words (2026-10-23): the
 [native-gap implementation record](../architecture/plans/2026-10-22-native-gap-swarm.md#s2-effective-speed-words--isolated-implementation-scope-2026-10-23)
 tracks stock Sonic/Tails water, shoes, Super and WFZ writer controls, raw
