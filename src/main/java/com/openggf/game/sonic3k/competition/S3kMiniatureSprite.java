@@ -76,7 +76,6 @@ public final class S3kMiniatureSprite extends AbstractPlayableSprite implements 
         moveLockTimer=player.moveLock(); doubleJumpFlag=player.doubleJumpFlag();
         doubleJumpProperty=(byte)player.doubleJumpProperty(); spindash=player.spinDashFlag()!=0;
         spindashCounter=(short)player.spinDashCounter(); invulnerableFrames=player.invulnerabilityTimer();
-        speedShoes=(player.statusSecondary()&4)!=0;
         objectControlled=(player.objectControl()&1)!=0;
         objectControlAllowsCpu=(player.objectControl()&0x80)==0;
         setDirection(player.facingLeft()?Direction.LEFT:Direction.RIGHT);
@@ -87,6 +86,12 @@ public final class S3kMiniatureSprite extends AbstractPlayableSprite implements 
         setFlipsRemaining(player.flipsRemaining()); setFlipSpeed(player.flipSpeed());
         runAccel=(short)player.speeds().acceleration(); runDecel=(short)player.speeds().deceleration();
         friction=runAccel; max=(short)player.speeds().maxSpeed();
+    }
+
+    // The native session owns status_secondary and its byte timer. The base
+    // speedShoes field admits the campaign TimerManager lifecycle on restore.
+    @Override public boolean hasSpeedShoes() {
+        return player!=null && (player.statusSecondary()&4)!=0;
     }
 
     /**

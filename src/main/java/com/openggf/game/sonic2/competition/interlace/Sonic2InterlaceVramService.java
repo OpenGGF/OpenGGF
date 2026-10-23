@@ -81,6 +81,40 @@ public final class Sonic2InterlaceVramService implements RuntimeArtCoordinator,
     public PlcLifecycleService plcLifecycle() { return lifecycleView; }
     public Sonic2InterlaceVram current() { return vram; }
 
+    /** Actual CPU VDP data-port words, with the unsigned VDP register-15 increment. */
+    public record CpuWordWrite(int address, int autoIncrement, List<Integer> words) {
+        public CpuWordWrite {
+            Sonic2InterlaceWorldInputs.word(address);
+            Sonic2InterlaceWorldInputs.octet(autoIncrement);
+            words = List.copyOf(words);
+            for (int word : words) Sonic2InterlaceWorldInputs.word(word);
+        }
+    }
+
+    /**
+     * Publish an ordered, fully validated CPU-write transaction to the SAME VRAM.
+     * No ROM queue, PLC service, timing owner or diagnostic projection is consulted.
+     * Odd A0 swaps lanes within the aligned pair, including address FFFF; it does
+     * not make a word straddle FFFF/0000. Canonical big-endian form of the primary
+     * Genesis Plus GX vdp_ctrl.c vdp_bus_w Mode 5 VRAM path, revision
+     * b3dc64502be220daec3f4175201503bd45fce068, lines 2201-2242, 2340-2341:
+     * https://github.com/ekeeke/Genesis-Plus-GX/blob/b3dc64502be220daec3f4175201503bd45fce068/core/vdp_ctrl.c
+     */
+    public Sonic2InterlaceVram publishCpuWordWrites(List<CpuWordWrite> writes) {
+        var transaction = List.copyOf(writes); // validates every command before any publication
+        byte[] physical = vram.bytes();
+        for (var command : transaction) {
+            int address = command.address();
+            for (int word : command.words()) {
+                physical[address] = (byte) (word >>> 8);
+                physical[address ^ 1] = (byte) word;
+                address = (address + command.autoIncrement()) & 0xFFFF;
+            }
+        }
+        vram = new Sonic2InterlaceVram(physical);
+        return vram;
+    }
+
     /** Exact native actors; a ghost, preview or donor copy cannot submit native body DMA. */
     public void bindPlayers(AbstractPlayableSprite sonic, AbstractPlayableSprite tails) {
         if (sonic == null || tails == null || sonic == tails)

@@ -1440,23 +1440,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * the ROM's ReactToItem timing within ExecuteObjects.
      */
     public void applyTouchResponses(PlayableEntity player) {
-        if (objectManager != null) {
-            objectManager.runTouchResponsesForPlayer(
-                    player,
-                    frameCounter,
-                    objectsExecuteAfterPlayerPhysics());
-        }
-        if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
-            ringManager.collectAttractedRing(playable, frameCounter);
-            ringManager.attractStageRings(playable);
-            if (!ringManager.usesObjectTouchCollection()) {
-                ringManager.collectStageRings(playable, frameCounter);
-            }
-            // Lost (spilled) ring collection now runs through the unified slot-ordered touch
-            // loop in ObjectManager.runTouchResponsesForPlayer (above) via the type-keyed
-            // LostRingObjectInstance branch — see ObjectManager Touch_ChkValue lost-ring gate.
-            // The legacy RingManager.checkLostRingCollection scan has been removed.
-        }
+        frameRuntimeUpdater.applyTouchResponses(player);
     }
 
     /**

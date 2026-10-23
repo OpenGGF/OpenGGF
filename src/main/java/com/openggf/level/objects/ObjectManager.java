@@ -4696,6 +4696,7 @@ public class ObjectManager {
 
     private ObjectInstance recreateDynamicObject(
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+        entry = NativeCompetitionPlayerBoundRestore.rebind(this, objectServices, entry);
         DynamicObjectRecreateContext context = new DynamicObjectRecreateContext(this, rewindClassResolver);
         // Phase-2 generic recreate: only classes that explicitly implement
         // RewindRecreatable opt into dynamic restore. Unsupported dynamic classes

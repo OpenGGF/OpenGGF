@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.OscillationManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.level.animation.StageRingAnimationFrameProvider;
 import com.openggf.level.rings.RingManagerInternalAccess;
 
@@ -13,6 +14,37 @@ final class LevelFrameRuntimeUpdater {
 
     LevelFrameRuntimeUpdater(LevelManager levelManager) {
         this.levelManager = levelManager;
+    }
+
+    void applyTouchResponses(PlayableEntity player) {
+        var nativeOrder = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                levelManager.getWorldSession(), com.openggf.game.competition.NativeTouchResponseOrder.class);
+        boolean nativePlayer = nativeOrder != null && nativeOrder.owns(player);
+        if (nativePlayer) {
+            collectRingsForTouchResponse(player);
+            nativeOrder.afterRings(player);
+        }
+        if (levelManager.objectManager != null) {
+            levelManager.objectManager.runTouchResponsesForPlayer(
+                    player,
+                    levelManager.frameCounter,
+                    levelManager.objectsExecuteAfterPlayerPhysics());
+        }
+        if (!nativePlayer) collectRingsForTouchResponse(player);
+    }
+
+    private void collectRingsForTouchResponse(PlayableEntity player) {
+        if (levelManager.ringManager != null && player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable && !playable.getDead()) {
+            levelManager.ringManager.collectAttractedRing(playable, levelManager.frameCounter);
+            levelManager.ringManager.attractStageRings(playable);
+            if (!levelManager.ringManager.usesObjectTouchCollection()) {
+                levelManager.ringManager.collectStageRings(playable, levelManager.frameCounter);
+            }
+            // Lost (spilled) ring collection now runs through the unified slot-ordered touch
+            // loop in ObjectManager.runTouchResponsesForPlayer via the type-keyed
+            // LostRingObjectInstance branch — see ObjectManager Touch_ChkValue lost-ring gate.
+            // The legacy RingManager.checkLostRingCollection scan has been removed.
+        }
     }
 
     void advanceGlobalOscillation() {

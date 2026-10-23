@@ -708,6 +708,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
+		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(sprite);
+		if (nativeDeath != null && nativeDeath.runDeathPass(sprite)) {
+			sprite.updateSensors(originalX, originalY);
+			return;
+		}
+
 		if (sprite.getDead()) {
 			SidekickCpuController cpu = sprite.getCpuController();
 			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {

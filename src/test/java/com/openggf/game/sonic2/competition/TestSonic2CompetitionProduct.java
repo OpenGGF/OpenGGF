@@ -24,6 +24,89 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_2)
 @ExtendWith(SingletonResetExtension.class)
 class TestSonic2CompetitionProduct {
+    @Test void pauseTitleExitFollowsTwoPausedTokensAndOneOrdinaryBodyAndIsConsumedOnce() throws Exception {
+        var session = new Sonic2CompetitionSession();
+        var host = new Host();
+        var screen = new Sonic2CompetitionScreen(session, host, null, TestEnvironment.currentRom());
+        var menus = new com.openggf.game.nativemenu.NativeMenuController();
+        menus.open(screen);
+        session.updateMenu(input(0, 0, true).logical(), true);
+        var phases = new java.util.ArrayList<com.openggf.game.resources.PlcLifecyclePhase>();
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                new com.openggf.game.resources.PlcLifecycleService() {
+                    @Override public void serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase phase) {
+                        phases.add(phase);
+                    }
+                    @Override public boolean hasPreparationBoundary(com.openggf.game.resources.PlcLifecyclePhase phase) {
+                        return false;
+                    }
+                    @Override public void prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase phase) { }
+                });
+        int[] calls = {0}, bodies = {0}, samples = {0};
+        var input = new InputHandler() {
+            @Override public void update() { samples[0]++; super.update(); }
+        };
+        host.onStep = () -> {
+            int ordinal = ++calls[0];
+            var frame = com.openggf.game.competition.NativeCompetitionIterationAccess.currentFrame();
+            com.openggf.game.competition.NativeCompetitionIterationAccess.runLoop(frame, () -> {
+                frame.claim(ordinal < 3
+                        ? com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE
+                        : com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL);
+                assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE, screen.consumeExit(),
+                        "the screen cannot exit while the host is still executing its token");
+                if (ordinal == 3) {
+                    bodies[0]++;
+                    host.pendingTitleExit = true;
+                }
+                return null;
+            });
+        };
+        for (int row = 0; row < 3; row++) {
+            var result = lifecycle.runLogicalIteration(() -> { }, frame -> {
+                var exit = new com.openggf.game.nativemenu.NativeMenuScreen.Exit[1];
+                com.openggf.game.competition.NativeCompetitionIterationAccess.runAdmitted(frame,
+                        () -> exit[0] = menus.update(input, false));
+                return exit[0];
+            });
+            if (row < 2) {
+                assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE, result);
+                assertEquals(0, bodies[0]);
+            } else assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Destination.TITLE_SCREEN,
+                    result.destination());
+            menus.completeFrame();
+        }
+        assertEquals(java.util.List.of(
+                com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE,
+                com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE,
+                com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL), phases);
+        assertEquals(1, bodies[0]);
+        assertEquals(3, samples[0], "only the actual outer controller advances each input row");
+        assertFalse(host.consumePendingTitleExit());
+        assertNull(host.loaded, "a title exit must not stage an act load in afterFrame");
+        menus.close();
+        assertFalse(menus.completeFrame());
+        assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE, screen.consumeExit());
+    }
+
+    @Test void resetAndInitializeClearPublishedPauseTitleExits() throws Exception {
+        var session = new Sonic2CompetitionSession();
+        var host = new Host();
+        var screen = new Sonic2CompetitionScreen(session, host, null, TestEnvironment.currentRom());
+        screen.initialize();
+        for (boolean initialize : new boolean[]{false, true}) {
+            session.updateMenu(input(0, 0, true).logical(), true);
+            host.pendingTitleExit = true;
+            screen.update(input(0, 0, false));
+            assertFalse(host.pendingTitleExit);
+            if (initialize) screen.initialize(); else screen.reset();
+            assertEquals(com.openggf.game.nativemenu.NativeMenuScreen.Exit.NONE, screen.consumeExit());
+            screen.afterFrame();
+            assertNull(host.loaded);
+            if (!initialize) screen.initialize();
+        }
+    }
+
     @Test void nativeScreenRoutesBothControllersActOneAndActTwoWithPlcGate() throws Exception {
         var session = new Sonic2CompetitionSession();
         var host = new Host(); var halfpipe = new Halfpipe();
@@ -245,10 +328,14 @@ class TestSonic2CompetitionProduct {
     }
     private static final class Host implements Sonic2CompetitionHost {
         String loaded; boolean available = true, swap; int frozen;
-        Runnable onLoad = () -> { };
+        Runnable onLoad = () -> { }, onStep = () -> { };
+        boolean pendingTitleExit;
         @Override public boolean supportsZone(int zone) { return available && (zone == 0 || zone == 11 || zone == 12); }
         @Override public void loadAct(Sonic2CompetitionSession s, int zone, int act) { onLoad.run(); loaded = zone + ":" + act; }
-        @Override public void step(Sonic2CompetitionSession s, InputHandler input) { }
+        @Override public void step(Sonic2CompetitionSession s, InputHandler input) { onStep.run(); }
+        @Override public boolean consumePendingTitleExit() {
+            boolean result = pendingTitleExit; pendingTitleExit = false; return result;
+        }
         @Override public void draw(Sonic2CompetitionSession s) { }
         @Override public void freezeObjects(int ticks) { frozen = ticks; }
         @Override public boolean swapNativeActorWorldState() { return swap; }

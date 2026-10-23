@@ -534,3 +534,93 @@ with0 failures/errors/skips, after112s queue waiting and87s Maven execution
 leaf; no other production source changed. Citation checks report11 valid,0 stale
 and3 unresolvable bare anchors. Actual GPU/view/scroll qualification remains
 parent-owned.
+
+
+## Missing native humans at canonical restore
+
+The original shared reconstruction prerequisite is
+`cb6bbece6e3b89f7cb9cc06cacc7ad72be2cdcd7`. This child consumes its
+source-equivalent shared subset as `b97a3dc2a`: the roster identity hook,
+pre-overlay SpriteManager call and immediate camera rebinding, player-bound
+object owner remapping, the one-line ObjectManager call, and the self-contained
+ordinary-path guard. The S2 domain is absent here; its session modification and
+two domain-dependent tests are intentionally omitted. The parent has the full
+original dependency and owns its S2/lifecycle qualification.
+
+S3K implements the hook on its existing injected Host roster. Only a missing
+captured stable human code is constructed, using the current session's slot and
+character, neutral coordinates, ROM base speeds, the miniature constructor's
+sensors and the existing ROM animator. The hook does not read captured values,
+copy retired actor RAM, reset the arena/session/banks, invoke a CPU factory or
+write configuration. Existing humans remain in place. Canonical per-sprite
+restore then overlays RAM, and the existing session bind relinks those exact
+models and current native dust callbacks before object reconstruction. Body art
+continues to resolve through the immutable competition art bank; tail/dust SSTs
+restore through their existing independent object owners. Ordinary playable art
+initialization would install inappropriate campaign resources and is not used.
+
+The existing S3K fixture has no shield/stars spawner or dedicated native SAT
+producer for those effects. This bounded reconstruction leaf does not introduce
+or claim that separate behavior. The applicable native body, animation, tail and
+dust resources are covered, with full-registry object identities, allocator
+counter, collision pointers and physical/uploaded sprite pages retained. Host
+Views and SpritePages contracts remain unchanged; actual destructive framebuffer
+qualification belongs to the parent.
+
+
+The new actual-ROM regression removes only P2 or both humans for Sonic/Tails,
+Tails/Knuckles, Sonic/Sonic and Tails/Tails. It restores through the canonical
+registry without pre-adding actors, compares every registry key, object ID,
+slot inventory and dynamic allocator counter, then compares seventeen real
+native frames against the retained forward result. It independently checks body
+ROM nibbles/mappings, current model/bank/camera identities, fixed tail/dust
+resources and fresh spin-charge writes through current dust callbacks. Direct
+controls prove neutral construction rather than retired-state copying, no
+uncaptured or second-human invention, and rejection of a foreign world.
+
+Those stronger checks exposed three existing omissions rather than requiring
+expected-state normalization:
+
+- R19 failed all eight removal cases because `synchronizeFromModel` copied the
+  native shoe bit into the base sprite's campaign timer-activation field. Generic
+  restore consequently admitted a new `SpeedShoes-s3k-competition-p2` timer.
+  Miniature presentation now reports the native effect through the existing
+  `hasSpeedShoes` query while leaving campaign timer activation inactive. The
+  native byte, speeds and eight-tick clock remain session-owned. No timer is
+  deleted after restore and no captured values are rewritten. The new clock
+  control proves both speed/slow effects survive reconstruction, ignore the
+  ordinary timer phase, expire on the native boundary and restore ROM speeds.
+- R20 then exposed P2 HUD spawn subtypes changing from1 to0 at slots13/15/18.
+  Generic reconstruction invokes the hook on a neutral probe; reading its kind
+  and player slot manufactured a different spawn. The HUD constructor now keeps
+  the complete supplied spawn and recreation consumes `context.spawn()`, before
+  canonical scalar overlay. A separate nondefault-spawn control retains every
+  metadata field before and after overlay, without reminting IDs or slots.
+- The immediate LF0 clock control also exposed a missing parallax snapshot:
+  the native owner was initialized but the generic manager's current zone was
+  still-1. The Host now calls existing `ParallaxManager.initZone` at its camera
+  initialization boundary. Native handler init is inert, so this publishes the
+  existing owner without advancing camera, history, background or animation.
+  LF0 captures and restores retain exact native state, including ALZ wave3 and
+  cloud accumulator$1000.
+
+R19 completed40 cases with8 failures,0 errors/skips after774s queue waiting and
+82s Maven execution. R20 completed41 with9 failures,0 errors/skips after51s
+waiting and84s Maven execution; the timer mismatch was resolved and the next two
+omissions remained visible. The eight original full-registry comparisons were
+kept unchanged throughout. Final R21 passed66 cases with0 failures/errors/skips
+after397s queue waiting and83s Maven execution: new reconstruction13, Host23,
+binding3, HUD14, scroll provider10 and original shared guard3. Its command is shown below with `S3K_ROM` denoting the supplied absolute
+locked-on ROM path (CRC32 `63522553`, SHA1
+`CFBF98C36C776677290A872547AC47C53D2761D6`):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kCompetitionRosterRestore,TestS3kCompetitionNativeHost,TestS3kCompetitionBinding,TestNativeCompetitionPlayerBoundRestoreGuards,TestS3kCompetitionHud,TestS3kCompetitionScrollProvider' "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+The tested state is `b97a3dc2a` plus this S3K-only leaf. No shared implementation
+is recopied into the domain commit. The source-equivalent dependency subset has
+no S2-domain test claim; the parent owns the full original cb6 stack. No GPU
+consumer source, Host Views or SpritePages API changed, and no arena route was
+activated. Actual destructive framebuffer qualification and inherited native
+audio/effect/route gaps remain with the parent acceptance matrix.

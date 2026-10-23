@@ -4,6 +4,16 @@ import com.openggf.level.objects.ObjectInstance;
 
 /** Engine-only cross-package access to playable controller internals. */
 public final class PlayableSpriteInternalAccess {
+    /** Raw native 2/4 dispatch only; leave animation, hurt effects and frame ownership attached. */
+    public static void applyCapturedControlRoutineByte(AbstractPlayableSprite player, int raw) {
+        if (raw != 2 && raw != 4) throw new IllegalArgumentException("Native control routine " + raw);
+        player.hurt = raw == 4;
+        player.setObjectRoutineOverride(null);
+    }
+    /** Native non-recording routines still use the canonical end-of-tick cleanup. */
+    public static void markFollowerHistoryHandledWithoutWrite(AbstractPlayableSprite player) {
+        player.markFollowerHistoryHandledWithoutWrite();
+    }
     private PlayableSpriteInternalAccess() {
     }
 

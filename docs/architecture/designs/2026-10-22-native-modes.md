@@ -448,3 +448,391 @@ the reset discards those calls. The domain correction must preserve the actual
 calls across that boundary. Reconstructing bodies inside Views was rejected
 because it would bypass native admission, blink, and call order. The pixel check
 and activation gates remain unresolved until that correction is composed.
+
+
+## S2 native human world and ROM terrain child
+
+This child starts at `893494f91` in the isolated `s2-native-competition-host`
+worktree. Approved rendering prerequisites were picked in order as
+`85ea932b0` (source `c49b0360b`) and `9c4127d05` (source `323239a13`);
+the sole conflict retained the incoming native-sprite changelog bullet and
+unrelated existing prose. The pre-reset ring composition bridge is separately
+committed as `9288e3fea`. It validates native roster/stream authority before
+allocation, shares the ordinary constructor/reset/status/cache path, enables
+streaming before its first reset, registers ordinary rewind before native
+cursors, and retains native ring-slot binding.
+The authorized ring dispatch/latched-animation repair `287c79e7` was later
+picked cleanly as `b3f7d5eb0`. Native adapter replacement across act loads is
+separate commit `ee58d8d5b`; the injected primary identity and private art
+resolver delegation, with its affected dust fixture, are `2c5782c16`.
+
+`Sonic2NativeCompetitionHost` supplies fresh distinct human Sonic P1 and Tails
+P2, binds their banks/cameras before opening `NativeCompetitionWorld`, and
+retains the same world across act loads so retiring a policy cannot erase the
+competition ledger. Its load profile replaces campaign progress reset, player
+spawn, co-op and title assembly. The real ROM geometry/collision/placements,
+production object/ring managers and admitted canonical world step remain the
+execution owners. Native CNZ placements use `$1802A` / `$18492`. Both actors'
+fresh-act velocity words and angle are cleared explicitly; `resetState()` alone
+preserves those values. ROM player scripts and dust/tail owners use the existing
+playable-art initializer; its ordinary renderer/cache does **not** establish
+native interlace VRAM publication or pixel correctness.
+
+The native terrain decoder intentionally avoids `Sonic2Level`'s ordinary
+fixed-length animated-map patch. `LoadLevelBlocks_2P` (`s2.asm:86878-86898`)
+overwrites its DBF counter on every source word when `fixBugs=0`: copying stops
+after writing the first word whose halved tile index is zero. The verified
+REV01 EHZ source `$40372` writes 119 words despite its declared 60, from
+`Block_Table+$1788` through `$1874`; CNZ `$406BE` writes 127 despite declared
+80, from `+$1760` through `$185C`. Both spill into deformation scratch beyond
+`Block_Table+$1800`; MCZ is a zero-header no-op. The bounded 64 KiB terrain RAM
+image preserves these writes and fails on out-of-ROM/out-of-RAM execution. It
+is a terrain-load image, not a fabricated snapshot of unrelated live RAM.
+An attempted `Sonic2Level.inMemoryBuilder` decode was rejected by the actual
+six-act test when CNZ's native tile 936 exceeded the initial ordinary art
+cache. The native decoder now extends `AbstractLevel` directly and preserves
+the raw descriptors, ROM collision profiles and geometry. PLC/animated VRAM
+references are valid independently of the initial zone-art cache; padding
+that cache or deleting the native references would hide the ownership error.
+
+`Sonic2CompetitionLevelEvents` retains the native Act 1 no-event branch and
+Act 2's repeated right-boundary writes for both cameras: EHZ `$2920`, MCZ
+`$2100`, CNZ `$26A0`. It never enters ordinary boss event routines. P2 scroll
+runs before these writes; both camera render copies remain independent. The
+loop-tail signpost threshold keeps the shipped P1-success early return and P2
+fallthrough, signed word comparison, timer gates and debug suppression. CNZ's
+existing slot-machine owner is not dispatched twice.
+
+The first bounded selection on `9c4127d05` plus the bridge/new domain sources
+passed 62 tests, zero failures/errors/skips. Exact selectors were
+`TestNativeCompetitionRingInitialization,TestNativeCompetitionRingStreaming,TestRingNativeSlotDispatch,TestSonic2CompetitionNativeArt,TestSonic2CompetitionLevelEvents,TestModApiSignatureSurface`.
+The command used `env -u DISPLAY -u WAYLAND_DISPLAY`, Java 25, Lua 5.4,
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, the absolute
+verified S2 ROM property, and `test -B`. Queue wait was 4 seconds and Maven
+execution 31.469 seconds. This is focused validation, not a broad suite.
+
+The first actual-world EGL check on `9288e3fea` plus uncommitted host sources
+failed at the first saved-Tails EHZ load: the independent playable-art resolver
+still selected persistent configuration, leaving native P1's ROM animation/aux
+resources absent. It ran one test with one error and no skips (16 seconds queue,
+79 seconds Maven). The requested narrow correction delegates that private
+resolver to LevelManager's injected native-roster-first authority. No campaign
+configuration write is used to hide the ownership problem.
+
+The corrected actual-world check, queued as `TestSonic2NativeCompetitionHost`
+on `b3f7d5eb0` plus the authorized resolver/adapter repairs and owned new
+sources, passed one test with zero failures/errors/skips. Queue wait was 14
+seconds; Maven execution was 79 seconds. It booted real `HeadlessGameBoot`
+with surfaceless EGL, unset display variables and no-device audio, loaded
+all six profiles, exercised P2 control and once-only timers, actual ROM ring
+collection, positioned real signposts in both finish orders across zones,
+same-world act transitions/ledger retention, EHZ registry restore/forward
+replay and actual CNZ2 timeout kills without fabricated Obj39 completion.
+Saved Tails/Knuckles remained untouched; a final ordinary saved-Tails boot
+still selected Tails. Five affected dust-fixture checks passed separately
+in the preceding six-test invocation (its host check still failed the
+subsequently corrected terrain validation). No native field was drawn.
+
+Strengthening that regression to restore both physical finish orders in
+every act exposed an actual Act 2 failure: the generic primary camera
+restore consulted the saved campaign character before object and solid
+identity reconstruction. With saved Tails, Tails became ID 1 and was then
+skipped as the duplicate sidekick, leaving required player ID 2 unresolved.
+Repairing references only in a final post-restore callback was too late.
+The approved native-only adapter replacement restores P1 explicitly after
+sprite restoration and before object/solid restoration, preserving the
+ordinary camera path. The original regression remains intact; independent
+saved-Tails/Knuckles checks force actor replacement and object recreation.
+
+The shipped entry owner is now composed after `world.load` returns, where
+the inherited VInt clock will no longer be overwritten by load completion.
+Its first RunObjects has no VBlank; the existing title object's five left,
+eleven bottom and nine background passes own the next 25 waits. Each pass
+runs the normal two-human movement/history/animation and the existing SST
+0..127 object/solid/queue owner while level and sprite cadence stay zero.
+Placement, oscillators and progress timers do not run in this loop. A strict
+same-thread scope excludes only these exact humans' fixed dust controllers;
+ordinary and extension dust behavior remains unchanged. The existing title
+state predicate owns the single BackgroundOutInit deformation callback.
+The shared hooks have independent passing controls: the neutral playable pass
+and strict dust scope (`66efa39c5`, five), title leave state (`73fa7ee78`, four),
+object/solid/queue pass (`d53a5968c`, five), primary camera replacement
+(`f504dd1e2`, three saved-Tails/Knuckles/ordinary cases), and non-idle Flipper
+cold recreation (`e8fdfb61c`, four). The central Flipper change captures only
+its existing animation state; no reinitialization or object timing was changed.
+The whole actual host remains a separate, stronger regression.
+
+The native touch seam (`59153e47c34b1f38f2dc87c102d0c76eb1410d0a`)
+keeps the ordinary object-then-ring order and admits only the injected native
+humans to ring-then-bumper-then-object touch. Its nine controls include mixed
+real ring/bumper/monitor/enemy interactions. Native attacker score authority
+(`80549b8e3411142164b26c96d09dadffebbdb919`) changes only the bank selected
+by DestructionEffects; three real kill/independent chain/ordinary fallback
+controls pass. The native feature bridge
+(`52f90e2d2eda68fd871c18b9cd5b4488d90996f3`) retains the one world reel
+machine and all ordinary initialization, but suppresses construction of the
+ordinary bumper model; two independent feature controls pass.
+
+The terrain/RAM producer is committed as
+`8e29f2a824d9323cde72cc05132d81b6cf4bbb02`. Host/load/runtime composition is
+`1d9087477fade7f21d93bea74ebde4880bcf3c42`. The latter includes five passing
+art-binding checks and 21 level-event controls. These checkpoints expose the
+real load data to the root render worker without claiming a completed product.
+
+Qualified VRAM originals `95f480cbacf9fada79802e140caeee0184d0b4fa` then
+`b23bce6740e03fb04af622351f9d3df809d87f55` are composed locally as
+`20ffa863a` / `0120d194e`. Every createGame selects its actual fresh PLC owner;
+one stable RuntimeArtCoordinator/DPLC sink forwards to that act's physical
+VRAM service. Initial drain and runtime service use its lifecycle view, and
+LoadZoneTiles patches only its own span after initial drain. The raw PLC adapter
+is omitted; the binding adapter selects the retained act owner before canonical
+actor reconstruction, then Policy.bindRoster binds that owner to the repaired
+human identities. Explicit CtrlDMA publication services queued DMA only,
+including LAG; it does not repeat normal PLC or loop-tail work. NativeArt.vram
+still means initial zone art. Live consumers obtain the current image from the
+injected Sonic2InterlaceVramService. The five art-binding controls cover the
+pre-entry null owner, per-act replacement, retained-owner restore/rebinding,
+delegate diagnostics/registration, and actual ROM DMA at the explicit boundary.
+
+Actual Host job 7800 used ArtRuntime/Host/LevelEvents: 27 tests, one failure,
+zero errors/skips (271 seconds admission, 28.243 seconds Maven). Art five and
+events 21 passed. The real EHZ1 badnik kill, earned 2:2 overall tie, both goal
+orders, destructive restore/forward and actual screen/controller afterFrame
+Act2 entry passed before the EHZ2 ring test found no ring in its initial P2
+window. REV01 EHZ2's first ring X is 416, versus EHZ1's 292; this was not ring
+status carryover. The corrected setup walks canonical P2 camera columns to the
+nearest real uncollected placement and verifies both banks remain unchanged
+until its actual pickup.
+
+The affected Host-only job 41027 then reached CNZ1 after EHZ1/2 and MCZ1/2,
+but failed its strict triangle-bumper +$A00 assertion with $9CE (one failure,
+zero errors/skips; 729 seconds admission, 29.690 seconds Maven). $9CE matches
+the native oblique cosine branch at angle $88. The probe had positioned the
+body exactly at the pre-physics eight-pixel branch threshold. Its correction
+uses the outer valid contact pixel derived from native half-widths, retains
+exact +$A00 and the axis-side/flag assertions, and adds actual body/cursor
+state diagnostics. This is not a production bumper adjustment. Review also
+corrected goal setup to advance each camera independently by at most one
+native column; copying P1's camera to P2 could silently skip P2 loader columns.
+The affected six-act check remains pending after these changes.
+
+The exact parent post-frame transition source `d916bc11d7728cbc5b2626ad85e60e512465a927`
+was consumed only for NativeMenuScreen/Controller and S2Screen, plus their two
+focused test classes (`b0237085f`, 15 passing). The old-base GameLoop was not
+selectively guessed. The actual host regression uses the real controller and
+outgoing claimed result token: input advances once, setup remains staged until
+that token finishes, and afterFrame then performs 26 sequential entry walks on
+the retained context. Full outer GameLoop integration remains the parent's
+complete d916 composition.
+
+Native pause is a separate bounded continuation owner. The approved hook-only
+4d9 original is `b784a23c6` locally (51 Python safety cases pass in 40.778 seconds),
+and qualified audio original `06f7a13838bc0010e2833c54b12463507d90ce0a` is
+`5e5d1cc97`; only the audio evidence conflict was reconciled, retaining existing
+prose plus the incoming pause checkpoint. The exact b0c world pauseVBlank/test
+subset is `a028b0f63`. No audio alias, ancestral S1 prose or parent plan was
+imported. The NEW S2 pause planner captures both native controller words,
+Game_paused and its wait/body continuation independently of finish timer flags.
+It requires an explicit final native entry-wait sample, never a zero/$8000 seed.
+NativeWaitInput reads a logical sample from the injected actual wait owner;
+it neither advances InputHandler nor admits a physical field. Slow_motion_flag
+also requires an explicit injected owner. Missing owners reject before load.
+
+The Host binds AudioNativePauseAccess to its injected AudioManager. Entry writes
+FE once, repeated polls write nothing, and every accepted ORDINARY_WAIT pause
+continuation writes FF, including B/C frame advance while paused remains true.
+The resume row still returns PAUSED; the following token owns one ordinary wait
+and body. Restore/reset emit no audio operation. The pending title flag becomes
+consumable only after that body, is captured with the planner, and the narrow
+Screen hook consumes it once before staging another load. Simultaneous actual
+world-transition/title priority is explicitly unqualified and rejects instead
+of inventing precedence. The separate Screen leaf is
+`3c25a05379f6bc2eee5cad3be44dd4740d77777a`; pause/planner caller checkpoint is
+`5d8031a0c2b83d988b8946144d128d8ff1546d7f`. Job 45284 completed 53 tests with
+one Host assertion failure, zero errors/skips (279 seconds admission,
+34.978 seconds Maven): Pause 24, Product 9, Iteration 8 and API 11 passed. The
+actual Host also passed pause polling, P2 resume, B/C single-body stepping,
+following-body title exit, view-prepare failure continuation, restore/forward,
+EHZ1/2 and MCZ1/2 before reaching the first CNZ1 bumper assertion. These are
+bounded checkpoints, not six-act or combined audio qualification. Parent
+retains combined audio source/receipt qualification.
+
+The failed CNZ expectation was traced through actual terrain and ROM angle
+selection. A zero-X airborne Tails still runs ObjectMoveAndFall followed by
+Tails_DoLevelCollision; the native left-wall probe moved its centre ten pixels
+before TouchResponse. At the real id-$A bumper, this selects the oblique
+surface angle `$88`; ROM Sine_Data gives sine -49 and cosine -251, producing
+exact velocity words `(2510,490)`. The earlier proposed outer-pixel axis
+expectation was rejected after this evidence. The corrected test retains
+actual terrain collision, requires the oblique contact geometry and verifies
+both words against the ROM table, rather than fitting or altering production
+bumper behavior. The final affected actual-world run below passed those strict
+checks in both CNZ acts.
+
+Qualified lifecycle originals `cb6bbece6e3b89f7cb9cc06cacc7ad72be2cdcd7`,
+`9fed541ac058d2f3536cc274fb8bf870f3b47f96` and
+`11ba32e397f8ac1c78f1e388b321d5f6ee6d4f81` are composed as `7f872459c`,
+`01e37f3a8` and `d6ca0c2e2`. Prefix backend original
+`25afa09cdece7ee9e901223cfcbbcdaad0a8f0dc` is `f95698339`. These peer sources
+retain their original qualified coverage (134 tests across 17 classes for the
+lifecycle stack; 52 focused for the prefix backend); this child has not repeated
+those unchanged selections. Host now creates participants with the Session's
+canonical factory, publishes the same lifecycle for NativePlayerDeathPass and
+its concrete service, registers its adapter, and initializes it after actual
+players/cameras/art exist. Real death dispatch remains in the canonical actor
+world. CardSink delegates to the injected S2 provider and real prefix slots
+2/3; no fixture card or artificial finish is supplied.
+
+Camera displacement samples bracket only actual camera work through the
+existing native LevelEvents pre-camera/fixed-object callbacks for P1 and the
+owned P2 update directly. Signed integer deltas become native WORDs with
+`(short)((new-old)<<8)`; a completed stationary pass publishes zero, while a
+proven frozen call preserves its previous words. Samples are consumed before
+callbacks and cleared at load, failure, reset and roster rebind. Active teleport
+rejects before camera sampling/motion: the ordinary integer camera does not
+supply ScrollHoriz's Teleport_flag skip semantics. Fractions, fullswap and
+other raw-camera writers remain root qualification gates. The leading
+RunObjects now also publishes its own Views.prepare boundary before the 25
+waits; this is CPU/build-source visibility, not physical-field admission.
+
+Obj79 P1 environment is explicitly injected and remains unavailable until the
+root supplies the live native owner for dynamic resize, all foreground/background
+camera banks and water words. Host never derives that bank from initial terrain
+RAM, a fresh scroll provider, dry-zone constants or ordinary parallax. An unbound
+P1 checkpoint throws, and supportsZone additionally requires that binding. P2's
+initial checkpoint has no primary environment by the original branch.
+
+### Remaining native qualification obligations
+
+All `supportsZone` results remain false unless the root supplies operational
+native state and explicitly qualifies the complete view/special/results route.
+The narrow `Views.prepare(context, session, profile, art)` / `Views.draw` port
+supplies native terrain RAM and initial zone-art VRAM to that owner; its default
+qualification is false. No title/provider activation belongs to this child.
+
+- S2's initial leading RunObjects and 25 title-leave object passes use the
+  native entry owner above; the current six-act regression additionally includes the
+  corrected native loader setup and pause integration. The common `LOAD_THEN_PROCESS_ONCE` coordinator is
+  specifically S3K's absolute slot 3 / managed 4..93 / fixed 94+ walk; an actual
+  S2 attempt failed its slot-3 invariant because S2 starts managed SST at 16.
+  Reusing that coordinator was rejected and the invalid request removed.
+  The load profile submits the actual primary/Std2/2P-life PLCs after
+  InitGameModule creates its fresh service, drains their omitted title PLC
+  boundaries, then appends secondary after geometry. The real entry owner
+  services the leave iterations. An injected overseas flag selects cue 8 versus domestic 6;
+  CNZ's initial 15 descriptors must retire before its secondary six are appended.
+- The committed native VRAM service and stable art binding now own full-size
+  playable/DPLC, object PLC and animated-art uploads into actual raw VRAM at
+  production boundaries. This is CPU/art publication evidence, not native field
+  drawing. The root still owns live RAM composition, shared metadata, native
+  per-player ring snapshots and exact Build/VInt/HInt event authority. Ordinary
+  8x8 cache population cannot qualify native 8x16 pixels or page composition.
+- The ROM `$12C52` `teleport_swap_table` (`s2.asm:26169-26190`) lists 18 scoped
+  exchanges, including actor bytes `$08..$3F`, speed banks, complete position
+  history, cameras/background/copies/flags/differences, object cursors/block
+  ownership, ring cursor pairs and bumper cursor pairs. Human identities and
+  progress banks remain in place. The surrounding swap code additionally fixes
+  character art/radii/standing owners and certain live-object per-player fields.
+  An arbitrary whole-actor snapshot or a positions-only swap is rejected.
+- Teleport already arms `$40`; its current session decrement still needs the
+  native VInt owner. `Vint_Level` (`s2.asm:702-713`) decrements before the body
+  and holds on pause. `RunObjects` (`s2.asm:29805-29807`) suppresses both actors,
+  fixed and dynamic objects while the flag is set; horizontal scroll separately
+  stops. Rings, bumpers, vertical scroll, art/PLC, oscillation and placement keep
+  executing. Skipping the entire world for 64 ticks would be incorrect.
+- Obj39's actual dismissed-card boundary now publishes the saved owning slot
+  and time-over status through the consumed peer lifecycle/card implementation.
+  The actual CNZ2 timeout check reaches real prefix slots 2/3, the P1 `$B000`
+  parent, native routine 8 and the 720-frame card timer; real P2 B input then
+  dismisses the surviving left card into ACT_RESULTS. Capture/restore and a
+  second real dismissal reproduce the result. Consuming a time-over request
+  alone never fabricates a finish. Full traversed timeout/death routes remain
+  distinct from this bounded interaction. See Obj39_Check2PMode
+  (`s2.asm:27753-27772`).
+- The committed native CNZ three-block service (`44305b28fc7a54ddd34321a8512322ea6a2da38b`,
+  local `2a60f6db0`) is consumed directly. It owns raw ROM table order, both
+  cursor banks, initial P1 seeding, later P1/P2 walks, per-human collision after
+  rings, rewind and cursor-pair-only swap. Source lists are 324 bytes each at
+  `$1781A` / `$1795E`, including terminators. Actual Host endpoint/restore checks
+  passed in both CNZ acts in the final affected run; no duplicate bumper model exists.
+- CNZ's reel machine is world-global in the ROM; its two-human branch changes
+  DMA placement. That does not establish native cage behavior: current
+  PointPokey retains one captured-player state, whereas ObjD6 dispatches P1
+  `$30` then P2 `$34` independently. Its simple P2 score reward also currently
+  targets the primary bank. These are reported qualification gaps outside this
+  host child's object ownership; no ordinary CPU equivalence is assumed. The
+  streaming worker also owns the missing all-fields slot-machine rewind codec;
+  this Host must consume its committed accessor once available, not invent one.
+- The outer native-world module decorator currently hides nominal
+  `SpriteTableBuildProfile` checks in existing ring/lost-ring/render consumers.
+  Restoring only the inner module's interface cannot qualify those paths.
+- Full physical routes, native split-field drawing, P1 checkpoint globals and
+  actual post activation, teleport, exhaustive CNZ dual-bumper lifetime,
+  competitive special stages and connected act/zone/game result pages remain
+  separate acceptance obligations. No native nonzero frozen-camera WORD or
+  fractional/raw-camera qualification is inferred from the integer motion port.
+
+### Final bounded Host matrix
+
+On `f9569833965810ca1fb6f2bd2c8e42e7a6521bfb` plus the owned Host,
+RuntimeModule, LevelEvents and two test files, queued job 60404 passed **32 tests,
+zero failures/errors/skips**: the single actual six-act Host regression and 31
+camera-event cases. Admission took 457 seconds; Maven (including Java 25
+production/test compilation) took 1 minute 24 seconds. The invocation used
+the following flags/selector; `$S2_ROM` denotes the supplied absolute original
+ROM path, passed literally in the actual run:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  '-Dtest=TestSonic2NativeCompetitionHost,TestSonic2CompetitionLevelEvents' test -B
+```
+
+HeadlessGameBoot supplied actual EGL and no-device audio. ROM identity was
+reverified as CRC32 `7B905383`, SHA1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. No native field was drawn. Every
+row below loads the original ROM, uses the originally fresh two-human roster
+with independent banks/cameras, executes the leading object pass plus 25 title
+waits, collects an actual placed ring, and restores/replays both physical signpost finish orders.
+Act 2 loads retain the exact context, art forwarder and competition ledger.
+These are positioned interaction checks, not complete traversed routes.
+
+| Native act | Bounded interaction and replay evidence | Remaining route/view qualification |
+| --- | --- | --- |
+| EHZ1 | Human movement and once-only timers; saved-Tails authority; real badnik score and earned overall 2:2 tie; registry object restore/forward; pause/frame-step/title continuation; actual P2 death 6→A→2 with initial checkpoint, independent life/ring banks and camera settle/replay | Full traversal; actual star-post activation/P1 globals; native fields; fullswap |
+| EHZ2 | Actual native load, movement, ring pickup and both goal orders with destructive restore/forward; Act 1 ledger retained | Full traversal and independent route events; native fields; fullswap |
+| MCZ1 | Saved-Knuckles authority, native terrain/object/ring banks and both goal orders with destructive restore/forward | Full traversal and zone interactions; native fields; fullswap |
+| MCZ2 | Same retained world and ledger, actual act-specific load and both goal orders with destructive restore/forward | Full traversal and zone interactions; native fields; fullswap |
+| CNZ1 | Saved-Tails authority; raw-order three-block cursors; actual P2 triangle-bumper contact with exact ROM velocity words, independent P1 bank and rewind; both goal orders | Full traversal; both-human cage/prize and slot-machine rewind integration; native fields; fullswap |
+| CNZ2 | Act-specific bumper table and strict contact/replay; both goal orders; real timer expiry, dead fall, Obj39 prefix ownership/PLC/wait/P2-input dismissal and results restore/forward | Same CNZ interaction gaps; full traversal; native fields; fullswap |
+
+All six support gates remain false. The root owns actual A/B/C metadata and
+field admission, connected native views/results/special stages and atomic
+teleport. The caller still needs a qualified production NativeWaitInput and
+Slow_motion_flag owner; this regression injects a logical wait source and does
+not claim hardware input or field authority. The P1 environment supplier is
+unbound and throws; P2's real star-post activation is not covered by the initial
+respawn-bank check. No broad suite, source-cap ratchet, provider/title activation,
+main-workspace mutation, push or merge was performed by this child.
+
+
+The two affected rewind guards ran in a separate JVM as job 61908 on the same
+unchanged production/test source: **5 tests, zero failures/errors/skips** (4
+architecture and 1 field-disposition), 165 seconds admission and 28.327 seconds
+Maven. Exact selector was `TestRewindArchitectureGuard,TestRewindFieldDispositionGuard`
+with `-Dmse=off -Pguards test -B` through the same queued Java 25/Lua 5.4
+launcher and unset display variables/JAVA_TOOL_OPTIONS. The field guard reported
+already-closed baseline gaps; this child changed no baseline or source cap.
+This is affected guard coverage, not the complete guards profile or smoke suite.
+
+
+Scoped disassembly citation checking against pinned S2 `34fc7f130a96` reports
+17 exact/7 near-routine anchors and no unresolved or unverifiable entries.
+After runtime readback, only citation-comment placement and this evidence prose
+changed; executable production/test statements remained unchanged. Whitespace
+and staged-path review passed. The native child workers finished with no owned
+Maven process left; registry expiry remains 2026-10-23 08:46 UTC and its shared
+file was read without modification.

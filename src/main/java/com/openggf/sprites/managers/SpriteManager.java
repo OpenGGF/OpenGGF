@@ -2206,13 +2206,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// that enters death during its own boundary checks still finishes the
 		// already-selected control routine in the ROM.
 		boolean deadAtTickStart = playable.getDead();
+		var nativeDeath = com.openggf.game.competition.NativePlayerDeathPass.from(playable);
+		boolean nativeDeathDispatch = nativeDeath != null && nativeDeath.ownsDispatch(playable);
 		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
 		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
 		// so only the post-movement pass is ROM-accurate. Running both creates
 		// double-correction artifacts.
 		// For S2/S3K: solid contacts now resolve inline during the object exec loop
 		// after movement, so the old pre-movement batched pass must be skipped.
-		if (!isUnified && !usesInlineSolidResolution) {
+		if (!nativeDeathDispatch && !isUnified && !usesInlineSolidResolution) {
 			applySolidContacts(levelManager, playable, false, false);
 		}
 		// ROM Obj01_Modes dispatches the movement mode BEFORE the move itself
@@ -2224,7 +2226,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// the end of this tick read the value this frame's move had just
 		// produced, firing the same predicate one frame early.
 		var superStateBeforeMove = playable.getSuperStateController();
-		if (superStateBeforeMove != null) {
+		if (superStateBeforeMove != null && !nativeDeathDispatch) {
 			superStateBeforeMove.checkTransformationBeforeMove();
 		}
 		if (playable instanceof CustomPlayablePhysics customPhysics) {
@@ -2232,6 +2234,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 					levelManager, frameCounter);
 		} else {
 			playable.getMovementManager().handleMovement(up, down, left, right, jump, test, speedUp, slowDown);
+		}
+		if (nativeDeathDispatch) {
+			// Native 6/8/A own no control tail; the dispatch selected before
+			// movement remains authoritative even when 6 -> A or A -> 2.
+			if (nativeDeath.animatesThisPass(playable)) playable.getAnimationManager().update(frameCounter);
+			playable.endOfTick();
+			return;
 		}
 		applyScreenYWrapValueAfterControl(playable);
 		SidekickCpuController cpuController = playable.getCpuController();
@@ -2537,6 +2546,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
 					snapshotCodes.add(entry.code());
 				}
+				var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+				var nativeRoster = gameplay != null && gameplay.getSpriteManager() == SpriteManager.this
+						? com.openggf.game.competition.NativeCompetitionRoster.from(gameplay.getWorldSession()) : null;
+				if (nativeRoster != null) nativeRoster.prepareRestore(gameplay, Set.copyOf(snapshotCodes));
 				restoreRetiredSidekickRoster(snapshotCodes);
 				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
 					if (!snapshotCodes.contains(sidekick.getCode())) {
@@ -2578,9 +2591,17 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 					}
 				}
-				var gameplay = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
 				if (gameplay != null && gameplay.getSpriteManager() == SpriteManager.this) {
 					com.openggf.game.session.WorldSessionPolicyAccess.bindRoster(gameplay.getWorldSession(), SpriteManager.this);
+					if (nativeRoster != null) {
+						// Object reconstruction resolves participants through both native cameras.
+						// Repair references now, retaining the exact restored camera RAM; the
+						// final camera callback still reconciles after all adapters complete.
+						for (int slot = 0; slot < 2; slot++) {
+							var actor = nativeRoster.player(slot);
+							if (actor != null) nativeRoster.camera(slot).restore(nativeRoster.camera(slot).capture(), actor);
+						}
+					}
 				}
 			}
 		};
