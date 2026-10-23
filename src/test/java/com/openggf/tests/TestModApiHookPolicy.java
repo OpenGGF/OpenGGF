@@ -62,7 +62,7 @@ class TestModApiHookPolicy {
                         public static class InvisibleExport { }
                     }
                     private static class InlineHelper { public void internal() { } }
-                    static final class PackageHelper
+                    private static final class MultiLineHelper
                             implements Runnable {
                         public void run() { String braces = "{ }"; }
                         private static class Deeper { }
