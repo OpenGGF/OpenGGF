@@ -20,6 +20,22 @@ class TestModApiJavadocTool {
     @TempDir Path temp;
 
     @Test
+    void titlePreviewContractsDocumentDetachedRomLifetime() throws Exception {
+        Path output = temp.resolve("title-preview-docs");
+        List<Class<?>> exact = List.of(
+                com.openggf.game.preview.TitlePreviewProvider.class,
+                com.openggf.game.preview.TitlePreviewProvider.Image.class,
+                com.openggf.game.preview.TitlePreviewProvider.Sequence.class);
+        ModApiJavadocTool.generate(Path.of("src/main/java"), output, exact);
+        assertEquals(expectedTypePages(exact), generatedTypePages(output));
+        String provider = Files.readString(output.resolve("com/openggf/game/preview/TitlePreviewProvider.html"));
+        assertTrue(provider.contains("before returning"));
+        assertTrue(provider.contains("may close it immediately"));
+        String sequence = Files.readString(output.resolve("com/openggf/game/preview/TitlePreviewProvider.Sequence.html"));
+        assertTrue(sequence.contains("read-only"));
+    }
+
+    @Test
     void sceneMusicJobsGenerateExactSdkPagesWithTheirBoundedSemantics() throws Exception {
         Path output = temp.resolve("music-job-docs");
         List<Class<?>> exact = List.of(

@@ -43,6 +43,20 @@ class TestArchitecturalSourceGuard {
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
     @Test
+    void titlePreviewOrchestrationDoesNotHideConcreteGameDependenciesInConstants() throws IOException {
+        List<Path> paths = new ArrayList<>();
+        paths.add(SRC_MAIN.resolve("com/openggf/game/MasterTitleRomPreview.java"));
+        try (Stream<Path> files = Files.walk(SRC_MAIN.resolve("com/openggf/game/preview"))) {
+            paths.addAll(files.filter(path -> path.toString().endsWith(".java")).toList());
+        }
+        Pattern concrete = Pattern.compile("com\\.openggf\\.game\\.sonic(?:1|2|3k)\\b|\\bSONIC_(?:1|2|3K)\\b");
+        for (Path path : paths) {
+            assertFalse(concrete.matcher(stripCommentsAndStrings(Files.readString(path))).find(),
+                    () -> path + " must use the preview capability, including inlined constants");
+        }
+    }
+
+    @Test
     void engineLiveCaptureOrderingStaysAtThePresentationBoundary() throws IOException {
         String source = Files.readString(SRC_MAIN.resolve(ENGINE_PATH));
         assertOrdered(source, "applyDisplayShaderPhase(ShaderPhase.FINAL)",

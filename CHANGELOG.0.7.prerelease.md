@@ -554,7 +554,9 @@ Unreleased. The earlier development themes remain in
   by caller rather than a shared total. Shared menu animation and execution-time
   graphics injection close the remaining menu/framework seams. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
-  preserving the existing candidate Mod API submission signature. Remaining
+  preserving the existing candidate Mod API submission signature. Stock title
+  previews use detached game-owned providers, preserving animated pixels and
+  catalogue ROM views without consulting a suspended game's live services. Remaining
   migrations and exact allowance accounting live in the
   [exception guide](docs/architecture/archunit-exceptions.md).
 
