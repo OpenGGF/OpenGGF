@@ -3614,3 +3614,56 @@ Maven/XML/text diagnostics are removed after readback; compiled outputs and the
 useful unmerged tree are retained. No push, PR, Main change, activation, broad
 smoke, structural guard loop, native capture, chip or route job was performed.
 Caller/native bank-domain and full native publication limits remain open.
+
+
+## CNZ2 cold handoff observes the admitted live-history floor — 2026-10-23
+
+Frozen659 common batch73 reached the actual CNZ2→ICZ1 load but failed the fixture's
+immediate nonnull-controller assertion. GameLoop, LiveRewindManager and the whole
+owning test are byte-identical at659 and receivingd7849bf4d. Current binding clears
+live rewind in the non-rewindable title-card/entry window; an inactive level cannot
+supply a history floor. Its actual controller is installed at admitted level play,
+as separately enforced by TestLiveRewindOwnerLifetime. Requiring a controller at
+the pending full load encoded the older lifecycle rather than current ownership.
+
+Only TestS3kCnz2KnucklesColdRouteCapture changes. It asserts the absent controller
+at pending entry, keeps the live-history request until the first admitted ICZ
+controller, verifies LEVEL/active ownership, outgoing-history retirement and a
+zero earliest floor there, then disables the optional live-history request.
+All original inputs, roles, event rows, positions, lives, normal drawing, full
+registry comparisons and21 two-cycle45-input windows remain unchanged. No load,
+controller, timing or gameplay production source changes and no oracle retiming.
+
+Root request7850 passes24 unique identities in3 XML suites,0 failures/errors/
+skips: the complete maintained CNZ class2, owner lifetime17 and boundary policy5.
+Actual cold7164 reaches admission4732, button5444, results5510, completion6047,
+beam6663, hide6813, load6870, assembly6987 and release7050. Every one of21 named
+windows compares all63 current registry keys twice; outgoing history is33 frames;
+9,999 draws/0 skipped, no death or life loss. The162 hurt-state samples remain
+samples rather than a hit count. This is the direct native320/off/solo edge only.
+
+Queue483s; Maven1:38; Java25.0.5, own cwd, exact three-class selector, explicit
+surfaceless EGL and all three independently CRC/SHA1-verified original absolute
+ROM properties match every XML. Source/pom/tool framing SHA256 remains
+7ec48cf6ed9b5007560ba825646a0e7986d623d5ec190badcaaf56d87e4cdd45 through terminal.
+All streams were inspected:53 FAST→NONE warnings,14 unmeasured KOS fingerprints
+using deterministic estimates, one existing unbound EggPrisonAnimal renderer
+warning, and five intentional reverse-release fault-control warnings. No dumps.
+These observations do not establish native load cost, timing-profile completeness,
+other routes/rosters/widths, full acts or whole-candidate smoke qualification.
+
+Reproduction uses the same reviewed Java25/Lua5.4/null-audio/EGL environment,
+unset ambient launcher/display variables and original existing ROM directory:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kCnz2KnucklesColdRouteCapture,TestLiveRewindOwnerLifetime,TestLiveRewindBoundaryPolicy' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The old659 null-controller failure remains attributed to that unchanged epoch.
+Consumed own XML/text/log/runtime outputs are removed; compiled output remains.
+Main/push/provider activation and passive SOZ/MHZ execution remain closed.
