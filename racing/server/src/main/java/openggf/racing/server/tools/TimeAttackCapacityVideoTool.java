@@ -252,6 +252,9 @@ public final class TimeAttackCapacityVideoTool {
         capture.png("06b-last-lobby-page.png");
         peers.startRound(window);
         chapter("Round countdown");
+        // The room's lobby is itself a level (S1: the start of Green Hill 1), so a LEVEL game
+        // mode no longer means the race: drive the movie only once the race run has launched.
+        await(() -> state().equals("RACING"), 1200, "the race launch");
         driving = true;
         await(() -> capture.engine().getCurrentGameMode() == GameMode.LEVEL, 1200, "ROM level");
         chapter("Green Hill Act 1");
