@@ -1916,3 +1916,8 @@ Build-only request87216 completed `test-compile` successfully in1:15; no tests
 ran. A read-only review of the ten affected production files found no further
 concrete ownership/restore issue. Final behavior/guard qualification is still
 pending and cannot be inferred from this compile or the earlier guard pin.
+
+After binding became explicit, the Host outsider negative was strengthened to
+bind the genuine Host world before attempting a known-zero write. This makes
+the control reject actual non-roster ownership rather than pass merely because
+the probe is unbound. It changes no production behavior or final selection.

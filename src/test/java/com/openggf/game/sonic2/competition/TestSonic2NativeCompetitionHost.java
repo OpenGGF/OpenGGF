@@ -613,6 +613,7 @@ class TestSonic2NativeCompetitionHost {
         var original = registry.capture();
         try {
             var outsider = new com.openggf.sprites.playable.Sonic("probe", (short) 100, (short) 200);
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNativeSpeedOwner(outsider, mode.getWorldSession());
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.publishNativeSpeedWords(outsider, 0, 0, 0);
             assertEquals(-1, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(outsider),
                     "a non-roster actor cannot acquire this Host's authority");
