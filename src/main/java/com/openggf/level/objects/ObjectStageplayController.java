@@ -30,7 +30,8 @@ final class ObjectStageplayController {
         objects.suspendStageplayContacts(object);
         ObjectSpawn placementSpawn = objects.instanceToSpawn.get(object);
         objects.releaseSlotIfManaged(object);
-        if (object instanceof AbstractObjectInstance nativeObject) nativeObject.setSlotIndex(-1);
+        if (object instanceof AbstractObjectInstance nativeObject)
+            ObjectLifetimeOps.clearPreviousManagerSlot(nativeObject);
         if (placementSpawn != null) {
             objects.freeAllReservedChildSlots(placementSpawn);
             objects.placement.removeFromActive(placementSpawn);

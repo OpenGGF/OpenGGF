@@ -42,7 +42,7 @@ import java.util.List;
  */
 public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in RewindExtra")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
 
@@ -72,8 +72,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
 
     private record RewindExtra(boolean exitRequested, ObjectRefId teleporterId, boolean ending,
                                int[] stage, int[] playerTimer, int sequence, int sequenceTimer,
-                               int shake,
-                               java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
+                               int shake)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HpzTeleporterRouteHelperObjectInstance(ObjectSpawn spawn,
@@ -316,7 +315,7 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
                 .map(table -> table.encodeObject(teleporter)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(exitRequested, teleporterId, ending, stage.clone(),
-                        playerTimer.clone(), sequence, sequenceTimer, shake, directedControlPlayers.capture(context)));
+                        playerTimer.clone(), sequence, sequenceTimer, shake));
     }
 
     @Override
@@ -333,7 +332,6 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
             sequence = extra.sequence();
             sequenceTimer = extra.sequenceTimer();
             shake = extra.shake();
-            directedControlPlayers.restore(extra.ownedPlayers(), context);
         }
     }
 

@@ -1,10 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.level.objects.PlayerControlOwners;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
-import com.openggf.game.rewind.RewindTransient;
-import com.openggf.game.rewind.identity.PlayerRefId;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -96,13 +92,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     // State
     private int mappingFrame;
     private boolean opened;
-    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+
     private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+
     private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Queued or applied P2 poses are encoded by stable PlayerRefId in control extras.")
+
     private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+
     private final PlayerControlOwners geyserInputOwners = new PlayerControlOwners();
     private boolean resultsStarted;
     private boolean geyserSpawned;
@@ -465,33 +461,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         geyserInputOwners.clear();
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new CapsuleControlExtra(
-                resultControlOwners.capture(context), sidekickControlOwners.capture(context),
-                sidekickPoseOwners.capture(context), geyserInputOwners.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof CapsuleControlExtra extra) {
-            resultControlOwners.restore(extra.resultControlOwners(), context);
-            sidekickControlOwners.restore(extra.sidekickControlOwners(), context);
-            sidekickPoseOwners.restore(extra.sidekickPoseOwners(), context);
-            geyserInputOwners.restore(extra.geyserInputOwners(), context);
-        } else {
-            resultControlOwners.clear();
-            sidekickControlOwners.clear();
-            sidekickPoseOwners.clear();
-            geyserInputOwners.clear();
-        }
-    }
-
-    private record CapsuleControlExtra(List<PlayerRefId> resultControlOwners,
-            List<PlayerRefId> sidekickControlOwners, List<PlayerRefId> sidekickPoseOwners,
-            List<PlayerRefId> geyserInputOwners) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
     // ===== Rendering =====
 
     @Override
@@ -512,9 +481,9 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     private static final class HczEndBossResultsScreenObjectInstance
             extends S3kResultsScreenObjectInstance {
-        @RewindTransient(reason = "Actual acquired player locks are captured in results control extras.")
+
         private final PlayerControlOwners inputOwners = new PlayerControlOwners();
-        @RewindTransient(reason = "Actual acquired CPU locks are captured in results control extras.")
+
         private final PlayerControlOwners cpuOwners = new PlayerControlOwners();
 
         @Override
@@ -524,23 +493,6 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
                 player.getCpuController().setController2SignedLocked(false);
             inputOwners.clear(); cpuOwners.clear();
         }
-
-        @Override
-        public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-            return super.captureRewindState(context).withObjectSubclassExtra(new ResultsControlExtra(
-                    inputOwners.capture(context), cpuOwners.capture(context)));
-        }
-
-        @Override
-        public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-            super.restoreRewindState(snapshot, context);
-            if (snapshot.objectSubclassExtra() instanceof ResultsControlExtra extra) {
-                inputOwners.restore(extra.input(), context); cpuOwners.restore(extra.cpu(), context);
-            } else { inputOwners.clear(); cpuOwners.clear(); }
-        }
-
-        private record ResultsControlExtra(java.util.List<PlayerRefId> input, java.util.List<PlayerRefId> cpu)
-                implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
         private HczEndBossResultsScreenObjectInstance(PlayerCharacter character, int act) {
             super(character, act);

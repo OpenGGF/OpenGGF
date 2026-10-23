@@ -34,6 +34,20 @@ public class TestObjectManagerLifecycle {
     }
 
     @Test
+    public void untypedWorldDoesNotPreventObjectManagerConstruction() {
+        var module = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        var world = org.mockito.Mockito.mock(com.openggf.game.session.WorldSession.class);
+        org.mockito.Mockito.when(world.getGameModule()).thenReturn(module);
+        var services = new TestObjectServices().withWorldSession(world);
+
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null,
+                null, null, services);
+
+        assertTrue(manager.getActiveObjects().isEmpty());
+        assertEquals("test", manager.stageplaySourceGame);
+    }
+
+    @Test
     public void testPersistentObjectsRemainActive() {
         ObjectSpawn persistentSpawn = new ObjectSpawn(0, 0, 0x01, 0, 0, false, 0);
         ObjectSpawn tempSpawn = new ObjectSpawn(400, 0, 0x02, 0, 0, false, 0);

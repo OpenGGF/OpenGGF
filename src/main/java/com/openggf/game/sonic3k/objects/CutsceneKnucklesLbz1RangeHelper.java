@@ -22,28 +22,9 @@ import java.util.List;
  * {@code word_62822 = -$40,+$80,-$30,+$60}.
  */
 public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstance implements RewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
-
-    private record DirectedControlSnapshot(
-            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(
-                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                ? saved.ownedPlayers() : java.util.List.of(), context);
-    }
 
     private static final int LEFT = -0x40;
     private static final int RIGHT = 0x80;

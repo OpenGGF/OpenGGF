@@ -29,7 +29,7 @@ import java.util.List;
  */
 public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in RewindExtra")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
 

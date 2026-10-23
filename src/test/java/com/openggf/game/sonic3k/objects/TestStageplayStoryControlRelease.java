@@ -75,7 +75,8 @@ class TestStageplayStoryControlRelease {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"cnz2b", "hpz-entry", "hpz-route", "giant-ring", "pedestal", "p2-lock"})
+    @ValueSource(strings = {"mhz2", "mhz2-lift", "cnz2b", "sk-intro", "mhz1", "mhz1-p2",
+            "lbz1-range", "hpz-entry", "hpz-theft", "hpz-route", "giant-ring", "pedestal", "p2-lock"})
     void rewindOwnershipResolvesStablePlayerIdsInsteadOfKeepingOldPlayers(String kind) throws Exception {
         var oldPlayer = mock(AbstractPlayableSprite.class);
         when(oldPlayer.getCentreX()).thenReturn((short) 1000);
@@ -93,6 +94,7 @@ class TestStageplayStoryControlRelease {
         }
         var identities = new RewindIdentityTable();
         identities.registerPlayer(oldPlayer, PlayerRefId.mainPlayer());
+        registerNativeParent(kind, owner, identities);
         var snapshot = owner.captureRewindState(RewindCaptureContext.withIdentityTable(identities));
         owner.releasePlayersForVisualDirection();
         if (kind.equals("cnz2b")) {
@@ -103,6 +105,7 @@ class TestStageplayStoryControlRelease {
         var restoredPlayer = mock(AbstractPlayableSprite.class);
         var restoredIdentities = new RewindIdentityTable();
         restoredIdentities.registerPlayer(restoredPlayer, PlayerRefId.mainPlayer());
+        registerNativeParent(kind, owner, restoredIdentities);
         clearInvocations(oldPlayer);
         owner.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(restoredIdentities));
         if (kind.equals("cnz2b")) {
@@ -115,6 +118,22 @@ class TestStageplayStoryControlRelease {
         owner.releasePlayersForVisualDirection();
         assertFalse(mockingDetails(restoredPlayer).getInvocations().isEmpty());
         verifyNoInteractions(oldPlayer);
+    }
+
+    @Test void inactiveNativeOwnersSnapshotAndRestoreWithoutPlayerIdentities() throws Exception {
+        for (String kind : List.of("mhz2", "mhz2-lift", "cnz2b", "sk-intro", "mhz1", "mhz1-p2",
+                "lbz1-range", "hpz-entry", "hpz-theft", "hpz-route", "giant-ring", "pedestal", "p2-lock")) {
+            var owner = owner(kind);
+            owner.setServices(services(kind, mock(AbstractPlayableSprite.class), mock(AbstractPlayableSprite.class)));
+            // The MHZ P2 helper already requires its native parent graph identity;
+            // that pre-existing object reference does not require a player registration.
+            var identities = new RewindIdentityTable();
+            registerNativeParent(kind, owner, identities);
+            var context = kind.equals("mhz1-p2")
+                    ? RewindCaptureContext.withIdentityTable(identities) : RewindCaptureContext.none();
+            var snapshot = owner.captureRewindState(context);
+            assertDoesNotThrow(() -> owner.restoreRewindState(snapshot, context), kind);
+        }
     }
 
     @Test void giantRingTransfersCapturedOwnershipToItsSurvivingFlashWithoutChangingPlayerState() throws Exception {
@@ -195,6 +214,15 @@ class TestStageplayStoryControlRelease {
                 RewindCaptureContext.withIdentityTable(new RewindIdentityTable()));
         when(services.objectManager()).thenReturn(manager);
         return services;
+    }
+
+    private static void registerNativeParent(String kind, AbstractObjectInstance owner,
+            RewindIdentityTable identities) throws Exception {
+        if (!kind.equals("mhz1-p2")) return;
+        Field field = owner.getClass().getDeclaredField("owner");
+        field.setAccessible(true);
+        identities.registerObject((AbstractObjectInstance) field.get(owner),
+                com.openggf.game.rewind.identity.ObjectRefId.layout(1, 0, 0));
     }
 
     private static AbstractObjectInstance owner(String kind) throws Exception {

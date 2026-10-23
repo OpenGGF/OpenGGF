@@ -2222,3 +2222,149 @@ the same packaged code complete simulation and capture its graph at Puppet 60 an
 Pose 210. No animal implementation changed. Final captions identify real bird flap
 cycles and are shortened to fit the film. Walking/state-owned animal frames keep
 the documented native held fallback.
+
+
+### Interrupted smoke repair resumed (2026-10-23)
+
+The completed run `20261022T213349Z-cb3f5e38` tested `a60509304` against
+integration base `7d35d4a7b`: all 73 ordinary batches completed, 37,825 tests,
+4 failures, 2,369 errors and 97 skips; the guard lane completed 718 tests,
+9 failures, zero errors/skips. Execution totals were 5,909.2 seconds ordinary
+and 259.95 seconds guards; queue waiting was additional. The first 1,000
+failure records were capped (1,373 omitted), so counts in that sample were
+not treated as a complete distribution. The dominant error was missing player
+identity context, not thousands of independent gameplay defects. After reading
+results, skip reasons, bounded logs and guard details, diagnostics were deleted
+with `run_categories.py --acknowledge 20261022T213349Z-cb3f5e38`.
+
+The interrupted repair's focused job (PID 1768863) had completed: 264 tests,
+5 failures, zero errors and one optional performance skip. Four remaining
+ownership-restore failures and the final-reference audit exposed the same
+incomplete repair: registering a `PlayerControlOwners` codec did not add the
+final mutable helper to the default object-field capture policy. The helper is
+captured in place by the central codec, using stable team IDs rather than raw
+sprite pointers. Empty ownership needs no identity table. Context-aware manager
+dispatch takes precedence over no-context wrappers at the nearest declaration;
+legacy-only overrides retain their existing path. Added story-owner checks
+exercise every variant and the surviving giant-ring flash handoff.
+
+The inherited GameId correction tolerates an untyped test module without a game
+ID and retains the existing test-source identity. The Tails body-pixel oracle
+now transforms actor offsets by actual camera zoom before probing the film.
+Neither correction changes native movement or rendering. Constructor injection
+removes service lookup from sprite-capture construction, and Stageplay retirement
+uses the existing lifecycle operation. No visual algorithm changes are planned
+in this repair; the accepted round-2 films remain the visual evidence for the
+unchanged presentation code. Qualification results and repair commit follow
+below after execution.
+
+
+### Final disposition of the original review findings
+
+The accepted presentation evidence remains under
+`$STAGEPLAY_EVIDENCE/round2/`.
+The three original review documents remain in the sibling Claude task directory.
+These dispositions describe the complete round (`d8e441fbf`, `2dcd4dffa`,
+`a60509304` and the resumed repair), not only this repair diff.
+
+| Finding | Disposition and evidence |
+| --- | --- |
+| F1 | Fixed: one LIVE world; current canonical v7/screenplay v6 only; timed clears express authored absence. Legacy formats and held zoom removed. |
+| F2 | Fixed: retired/rejected graph members and strong references are pruned; graph rewind follows live membership. Direction/graph tests cover retirement. |
+| F3 | Fixed: placed identities carry game/zone/act; source transitions require another shot; stale materialization is rejected. |
+| F4 | Fixed: native player-only release precedes suspension/removal; acquired-player ownership, hidden-player handoffs and queued poses rewind by stable identities. Central codec/policy and holder/story/capsule tests cover the repair. |
+| F5 | Fixed: placed-object map resolves placements; shared scoped identity replaces tuple scans over dynamic children. |
+| F6 | Fixed: materialization/retirement, admission, graph, capture, draw and rewind have collaborators. Rejected undoing the verified verbatim plane-switcher extraction: restoring it gives 3,198 effective facade lines versus the unchanged 3,086 budget. Current facade is 3,019; no budget increase or source compaction. |
+| F7 | Fixed: speculative catalogue observations, duplicate role/version and dead forwarder/return removed. |
+| F8 | Fixed: LoadPolicy alone owns persistent placement removal and clear state; authored visibility remains timeline state. |
+| F9 | Fixed: observation guards precede capture lambda construction; nullable cached activation policy skips ordinary-gameplay service lookup. |
+| F10 | Fixed: unrelated shared-file import/format churn restored; existing CRLF animal source preserved. |
+| F11 | Fixed: stock catalogue and badnik classification cached. |
+| F12 | Fixed: native ARGB arrays and nonblack palette colors asserted, not only part counts. |
+| P3-1 | Fixed: interpolation uses framing centres; centred keys retain their centre between keys. |
+| P3-2 | Fixed: fractional source origin survives raster composition/resampling; zoom movie watched at 1x and quarter speed. |
+| P3-3 | Fixed: grow-only bucketed framebuffer; crop source extent/origin without per-frame recreation. |
+| P3-4 | Rejected the quoted HUD cut-at-zoom finding as stale against the reviewed source, which already said zoom animates. Surviving legacy help/status elsewhere fixed in both editors. |
+| P3-5 | Fixed: no unpublished held-zoom compatibility branch. |
+| P3-6 | Fixed: shared parallax/scroll formatter churn restored. |
+| P3-7 | Fixed: DEZ native and directed projection share the planet silhouette/projection implementation. |
+| P3-8 | Fixed: directed background uses LevelManager's native window-selection policy. |
+| P4-1 | Fixed: sole current screenplay/canonical formats; no version ladder/migrations. |
+| P4-2 | Fixed: one screenplay VERSION constant feeds tool help/results. |
+| P5-1 | Fixed: spaces in user-facing limits and errors restored. |
+| P5-2 | Fixed: ordinary Java classpath in production; tests inject launcher behavior. |
+| P5-3 | Fixed bounded walking-route behavior/docs with slopes and steps <=8px; no general object pathfinder claimed. Rejected dropping content fingerprints: unchanged documents can reference changed ROM/level bytes, invalidating a verified route without any document change. |
+| P5-4 | Fixed: route sources follow nearby four-space Java style. |
+| Editor parity | Fixed: shared current-only runtime with thin desktop shell. Prior refreshed build passed 16 behavioral tests and five explicitly enabled pictures, zero skips; evidence desktop-pictures/ and hud-pictures/. No Editor edits needed for the central rewind repair; unknown config.yaml.example preserved. |
+| Visual 1 | Fixed: native 224-row EHZ background preserved; extra height extends the native bottom pattern band. Native pixel comparison and ensemble 2.0-2.5s playback accepted. |
+| Visual 2 | Fixed: GHZ 400x384 retains one sky and textured water. Rejected single-row clamping after stripes were visible in first-take/ghz-tall/film.mp4; bottom-eight-row band passes comparison and final playback. |
+| Visual 3 | Fixed Free-mode ICZ framing so the boss stays visible. Rejected removing the pale-cyan band: same-camera native RGBA comparison proves it is native. |
+| Visual 4 | Rejected further filtering changes: reviewer accepted the appearance; native-size zoom playback at 1x and quarter speed shows no alpha fringes; text remains crisp. |
+| Visual 5 | Fixed native timer-driven bird cycles in S1/S2/S3K Puppet/Pose. State/physics-owned walking animation remains an explicitly labelled held fallback; general free-running state animation is deferred, not claimed. |
+| Visual 6 | Fixed staging: Penguinator Puppet/Pose stays above/left of the cage; final s3k-badnik playback confirms visibility. |
+
+Each of the nine evidence sets (zoom, ensemble, ghz-tall, icz-boss,
+s1-animals, s2-animals, s3k-animals, s3k-badnik, air-traffic) contains films,
+state and stills. `capture-source.json` pins the accepted a605 source/jar,
+ROM and scene hashes. All final films previously reached ended at intended
+320x224, 640x224 or 400x384. The repair changes rewind, lifecycle dispatch,
+construction wiring and test projection; it does not change the accepted
+rendering algorithm or staged takes. These captures establish those earlier
+visuals, not exhaustive native physics or every possible object graph.
+
+
+### Resumed repair qualification before broad smoke
+
+The newly added null-reference regression first failed test compilation because
+its assertNull import was missing (zero tests); the import was corrected. The
+first 20-class run completed 295 tests, 1 failure, 2 errors, 1 optional skip:
+the inherited five failures were gone, the null-player restore requirement was
+reproduced both directly and through an inactive native helper, and the expanded
+MHZ P2 fixture exposed its unregistered pre-existing object-parent reference.
+The codec now returns null before consulting an identity table for a null ID.
+The MHZ fixture registers the real parent in both capture and restore contexts;
+it does not suppress or weaken the native object-reference contract.
+
+Corrected focused command (all three original ROM paths were absolute under the
+engine worktree, hashes matched the repository SHA-1 table):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=com.openggf.game.rewind.TestRewindInPlaceObjectRestore,com.openggf.game.rewind.schema.TestRewindPlayerReferenceCodecs,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.mutators.TestNativeMutatorRuntime,com.openggf.game.sonic3k.objects.TestStageplayCapsuleControlRelease,com.openggf.game.sonic3k.objects.TestStageplayIntroControlRelease,com.openggf.game.sonic3k.objects.TestStageplayLateHolderRelease,com.openggf.game.sonic3k.objects.TestStageplayStoryControlRelease,com.openggf.level.TestLevelLostRingSpawnCoordinator,com.openggf.level.TestLevelRingfallIntegration,com.openggf.level.TestMutatorStageAdmission,com.openggf.level.objects.TestObjectManagerLifecycle,com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance,com.openggf.level.objects.TestStageplayObjectDirection,com.openggf.mods.code.TestNativeObjectFieldCallbacks,com.openggf.stageplay.runtime.TestStageplayLiveWorldRendering,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading' \
+  '-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5/Sonic and Knuckles & Sonic 3 (W) [!].gen' test -B
+```
+
+295 tests: 294 passed, zero failures/errors, one skip (the opt-in warm-dispatch
+wall-clock measurement, not its behavioral assertions). Maven execution 35.637
+seconds; queue wait 207 seconds. Required S3K AIZ skip, both level-loading
+classes, bootstrap and decoding checks all executed. The five real live-world
+rendering checks passed, including the Tails pixel assertion at fractional zoom.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestRewindArchitectureGuard,TestRewindCoverageGuard,TestObjectPhysicsStandardizationGuard,TestNoServicesInObjectConstructors' test -B
+```
+
+49 tests passed, zero failures/errors/skips; Maven execution 1 minute 32 seconds,
+queue wait 94 seconds. These checks cover central-policy/codec preference,
+per-object override triage, coverage gaps, lifecycle operations and construction
+injection. The two retained custom paths are documented in guard triage: AIZ's
+embedded post-defeat owner is not an SST member, and sanctuary already has a
+bespoke native runtime snapshot. General holders use the central helper codec.
+
+`run_categories.py --base 7d35d4a7b --preflight` passed in the same EGL/Java25/
+Lua5.4 environment with `$HOME/.local/bin` on PATH for PowerShell. The change-based
+plan selects 3,618 candidate classes, 73 ordinary batches plus the separate guard
+lane. Expected execution is roughly two hours based on the previous complete
+run; queue time is unknown. Stopping rule: let the one detached run complete,
+inspect exact failures/skips and acknowledge diagnostics; any new or worsened
+failure blocks handback as qualified. No full-suite selection is requested.
+Doc/skill mirrors and `git diff --check` passed. No visual algorithm changed;
+round-2 captures remain accepted with their original provenance.

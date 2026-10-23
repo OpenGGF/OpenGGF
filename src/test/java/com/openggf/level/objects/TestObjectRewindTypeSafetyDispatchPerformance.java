@@ -108,6 +108,19 @@ class TestObjectRewindTypeSafetyDispatchPerformance {
     }
 
     @Test
+    void explicitContextOverrideKeepsIdentityTableBesideNoArgumentConvenienceWrappers() {
+        var object = new WrappedContextObject();
+        var context = context();
+        for (int i = 0; i < 2; i++) {
+            var snapshot = ObjectRewindTypeSafety.capture(object, context);
+            ObjectRewindTypeSafety.restore(object, snapshot, context);
+        }
+        assertEquals(0, object.noArgumentCalls);
+        assertSame(context, object.capturedContext);
+        assertSame(context, object.restoredContext);
+    }
+
+    @Test
     void warmDispatchReusesResolvedRouteDescriptor() {
         ObjectRewindTypeSafety.DispatchRoute coldRoute =
                 ObjectRewindTypeSafety.dispatchRoute(CacheIdentityRouteObject.class);
@@ -258,6 +271,27 @@ class TestObjectRewindTypeSafetyDispatchPerformance {
             contextRestoreCalls++;
             lastRestoreContext = context;
             super.restoreRewindState(snapshot, context);
+        }
+    }
+
+    private static final class WrappedContextObject extends RouteObject {
+        int noArgumentCalls;
+        RewindCaptureContext capturedContext, restoredContext;
+        WrappedContextObject() { super("WrappedContextObject"); }
+        @Override public PerObjectRewindSnapshot captureRewindState() {
+            noArgumentCalls++;
+            return captureRewindState(RewindCaptureContext.none());
+        }
+        @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+            noArgumentCalls++;
+            restoreRewindState(snapshot, RewindCaptureContext.none());
+        }
+        @Override public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+            capturedContext = context;
+            return BENCHMARK_SNAPSHOT;
+        }
+        @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+            restoredContext = context;
         }
     }
 

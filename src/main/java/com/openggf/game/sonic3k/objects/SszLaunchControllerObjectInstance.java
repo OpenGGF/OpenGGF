@@ -28,7 +28,7 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private int p1Jump;
     private int p2Jump;
     private boolean transitionRequested;
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through stable PlayerRefId values.")
+
     private final com.openggf.level.objects.PlayerControlOwners ownedPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
 
@@ -209,22 +209,6 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         ownedPlayers.clear();
         // This native controller ends through a level transition. Interruption
         // releases its players without running the spiral, SFX or DEZ handoff.
-    }
-
-    private record RewindExtra(java.util.List<com.openggf.game.rewind.identity.PlayerRefId> players)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(ownedPlayers.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) ownedPlayers.restore(extra.players(), context);
     }
 
     private PlayerCharacter character() {

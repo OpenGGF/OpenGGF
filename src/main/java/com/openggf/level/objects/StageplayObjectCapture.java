@@ -25,10 +25,10 @@ final class StageplayObjectCapture {
     final Map<PaletteColors, Integer> paletteIds = new LinkedHashMap<>();
     final List<String> limitations = new ArrayList<>();
 
-    StageplayObjectCapture(StageplayObjectDirection owner, ObjectInstance root) {
+    StageplayObjectCapture(StageplayObjectDirection owner, ObjectInstance root, GraphicsManager graphics) {
         this.owner = owner;
         this.objects = owner.objects;
-        this.graphics = objects.services().graphicsManager();
+        this.graphics = Objects.requireNonNull(graphics, "graphics");
         this.root = root;
         anchorX = root.getX();
         anchorY = root.getY();

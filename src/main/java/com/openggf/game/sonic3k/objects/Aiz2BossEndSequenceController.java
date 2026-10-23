@@ -1,8 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.PlayerControlOwners;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 
@@ -69,11 +67,10 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     private int postButtonMaxYAccumulator;
     private int postResultsControlRestoreDelay = -1;
 
-    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
     private final PlayerControlOwners objectControlOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
+
     private final PlayerControlOwners inputLockOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Acquired player identities are captured by control extras, including the embedded boss owner.")
+
     private final PlayerControlOwners forcedInputOwners = new PlayerControlOwners();
 
     public Aiz2BossEndSequenceController(int arenaMaxX, int arenaBaseY) {
@@ -114,20 +111,6 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     record ControlOwners(List<PlayerRefId> object, List<PlayerRefId> input, List<PlayerRefId> forced) { }
-
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new ControlExtra(captureControlOwners(context)));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        restoreControlOwners(snapshot.objectSubclassExtra() instanceof ControlExtra extra ? extra.owners()
-                : new ControlOwners(List.of(), List.of(), List.of()), context);
-    }
-
-    private record ControlExtra(ControlOwners owners) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     void configureArena(int arenaMaxX, int arenaBaseY) {
         this.arenaMaxX = arenaMaxX;

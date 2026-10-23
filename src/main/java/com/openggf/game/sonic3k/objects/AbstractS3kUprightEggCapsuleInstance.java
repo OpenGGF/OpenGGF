@@ -1,10 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.PlayerControlOwners;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
-import com.openggf.game.rewind.RewindTransient;
-import com.openggf.game.rewind.identity.PlayerRefId;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -58,9 +54,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private boolean resultsStarted;
     private boolean sidekickEndPoseWaiting;
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
-    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+
     private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
-    @RewindTransient(reason = "Acquired players are encoded by stable PlayerRefId in control rewind extras.")
+
     private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
     private int postOpenTimer;
     protected S3kBossExplosionController explosionController;
@@ -115,27 +111,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         sidekickControlOwners.clear();
         sidekickPoseOwners.clear();
     }
-
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new CapsuleControlExtra(
-                sidekickControlOwners.capture(context), sidekickPoseOwners.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof CapsuleControlExtra extra) {
-            sidekickControlOwners.restore(extra.sidekickControlOwners(), context);
-            sidekickPoseOwners.restore(extra.sidekickPoseOwners(), context);
-        } else {
-            sidekickControlOwners.clear();
-            sidekickPoseOwners.clear();
-        }
-    }
-
-    private record CapsuleControlExtra(List<PlayerRefId> sidekickControlOwners,
-            List<PlayerRefId> sidekickPoseOwners) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     @Override
     public int getX() {

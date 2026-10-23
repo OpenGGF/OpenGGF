@@ -35,28 +35,9 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
  */
 public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
-
-    private record DirectedControlSnapshot(
-            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(
-                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                ? saved.ownedPlayers() : java.util.List.of(), context);
-    }
 
     private static final int STOP_X = 0x14D0;
     private static final int FREEZE_X = 0x15A8;

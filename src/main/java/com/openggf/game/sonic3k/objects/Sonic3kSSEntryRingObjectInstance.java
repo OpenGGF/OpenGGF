@@ -64,36 +64,11 @@ import java.util.logging.Logger;
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
 public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
 
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as a stable PlayerRefId in DirectedControlSnapshot")
     private AbstractPlayableSprite directedHiddenPlayer;
-
-    private record DirectedControlSnapshot(
-            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers,
-            com.openggf.game.rewind.identity.PlayerRefId hiddenPlayer)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(
-                new DirectedControlSnapshot(directedControlPlayers.capture(context), directedHiddenPlayer == null ? null
-                        : context.requireIdentityTable().encodePlayer(directedHiddenPlayer)));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                ? saved.ownedPlayers() : java.util.List.of(), context);
-        directedHiddenPlayer = snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                && saved.hiddenPlayer() != null ? (AbstractPlayableSprite) context.requireIdentityTable()
-                .resolvePlayer(saved.hiddenPlayer(), true) : null;
-    }
 
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryRingObjectInstance.class.getName());
 

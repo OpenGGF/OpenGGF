@@ -269,7 +269,8 @@ public class ObjectManager {
         var nativeSpawns = nativeSource == null ? spawns : List.copyOf(nativeSource.placements());
         this.stageplaySourceSpawns = List.copyOf(nativeSpawns);
         var sourceWorld = objectServices == null ? null : objectServices.worldSession();
-        this.stageplaySourceGame = sourceWorld == null ? "test" : sourceWorld.getGameModule().getGameId().code();
+        var sourceGame = sourceWorld == null ? null : sourceWorld.getGameModule().getGameId();
+        this.stageplaySourceGame = sourceGame == null ? "test" : sourceGame.code();
         this.stageplaySourceZone = sourceWorld == null ? 0 : sourceWorld.getCurrentZone();
         this.stageplaySourceAct = sourceWorld == null ? 0 : sourceWorld.getCurrentAct();
         var directionPolicy =

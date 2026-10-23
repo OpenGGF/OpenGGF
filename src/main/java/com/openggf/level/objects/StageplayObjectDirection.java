@@ -482,7 +482,7 @@ public final class StageplayObjectDirection implements AutoCloseable {
 
     public VisualTemplate captureDynamic(ObjectInstance root) {
         Objects.requireNonNull(root);
-        return new StageplayObjectCapture(this, root).capture();
+        return new StageplayObjectCapture(this, root, objects.services().graphicsManager()).capture();
     }
 
     static List<VisualAnimation> pureAnimations(SpriteAnimationSet source, int frameCount) {

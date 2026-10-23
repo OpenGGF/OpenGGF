@@ -91,24 +91,6 @@ public final class SszCranePlayerRelease extends AbstractObjectInstance implemen
         player.setObjectMappingFrameControl(false);
     }
 
-    private record RewindExtra(com.openggf.game.rewind.identity.PlayerRefId player)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        var player = context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null);
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(player));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        ownedPlayer = snapshot.objectSubclassExtra() instanceof RewindExtra extra && extra.player() != null
-                ? (AbstractPlayableSprite) context.requireIdentityTable().resolvePlayer(extra.player(), true) : null;
-    }
-
     private void copyPosition(AbstractPlayableSprite player) {
         NativePositionOps.writeXPosPreserveSubpixel(player, xFixed >>> 16);
         NativePositionOps.writeYPosPreserveSubpixel(player, yFixed >>> 16);

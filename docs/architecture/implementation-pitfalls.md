@@ -2139,3 +2139,18 @@ Initial decoder transforms must consume their own object/ring dirty notification
 before native managers assemble. Leaving an editor mutation notification pending
 can trigger a first-frame placement resync and erase an explicitly admitted cast.
 Do not weaken ordinary dirty-region processing or native unload windows to mask it.
+
+
+### Native player ownership needs the central rewind policy (Stageplay, 2026-10-23)
+
+A codec alone does not make a final mutable helper part of default object capture.
+Register its type with the default helper policy as well; otherwise recreation
+silently drops acquired-player state and the final-reference audit correctly
+rejects the new structural type. Restore the helper in place and encode actual
+players by stable team IDs. Empty sets and null references need no identity table;
+nonempty references must retain the manager's capture context. A no-context
+convenience wrapper beside an explicit context overload must not win manager
+dispatch and discard that table. Keep legacy-only overrides on their existing
+route. Exercise the real holder, not only a standalone codec fixture, across
+release/restore and participant recreation. See the
+[repair evidence](plans/2026-10-21-stageplay-live-world-plan.md#interrupted-smoke-repair-resumed-2026-10-23).

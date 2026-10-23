@@ -37,28 +37,9 @@ import java.util.List;
  */
 public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+
     private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
             new com.openggf.level.objects.PlayerControlOwners();
-
-    private record DirectedControlSnapshot(
-            java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
-            implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-    @Override
-    public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(
-                new DirectedControlSnapshot(directedControlPlayers.capture(context)));
-    }
-
-    @Override
-    public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                ? saved.ownedPlayers() : java.util.List.of(), context);
-    }
 
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_WAIT_PLAYER = 0x02;
@@ -347,28 +328,9 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
 
     private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance
             implements RewindRecreatable {
-        @com.openggf.game.rewind.RewindTransient(reason = "Captured as stable PlayerRefIds in DirectedControlSnapshot")
+
         private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
                 new com.openggf.level.objects.PlayerControlOwners();
-
-        private record DirectedControlSnapshot(
-                java.util.List<com.openggf.game.rewind.identity.PlayerRefId> ownedPlayers)
-                implements com.openggf.level.objects.PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
-
-        @Override
-        public com.openggf.level.objects.PerObjectRewindSnapshot captureRewindState(
-                com.openggf.game.rewind.schema.RewindCaptureContext context) {
-            return super.captureRewindState(context).withObjectSubclassExtra(
-                    new DirectedControlSnapshot(directedControlPlayers.capture(context)));
-        }
-
-        @Override
-        public void restoreRewindState(com.openggf.level.objects.PerObjectRewindSnapshot snapshot,
-                com.openggf.game.rewind.schema.RewindCaptureContext context) {
-            super.restoreRewindState(snapshot, context);
-            directedControlPlayers.restore(snapshot.objectSubclassExtra() instanceof DirectedControlSnapshot saved
-                    ? saved.ownedPlayers() : java.util.List.of(), context);
-        }
 
 
         private Mhz1CutsceneKnucklesInstance owner;
