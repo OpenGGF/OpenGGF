@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -16,7 +18,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -48,8 +49,8 @@ import java.util.logging.Logger;
  */
 public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private AbstractPlayableSprite directedHiddenPlayer;
 
@@ -133,7 +134,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     @Override
     public void releasePlayersForVisualDirection() {
         for (AbstractPlayableSprite player : directedControlPlayers.players()) {
-            com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+            ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
         }
         if (directedHiddenPlayer != null) directedHiddenPlayer.setHidden(false);

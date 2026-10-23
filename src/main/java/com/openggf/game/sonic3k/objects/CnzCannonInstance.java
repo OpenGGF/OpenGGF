@@ -22,7 +22,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -62,12 +61,10 @@ public final class CnzCannonInstance extends AbstractObjectInstance
             capturedPlayer.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
             capturedPlayer.setHighPriority(false);
             capturedPlayer = null;
-            state = STATE_IDLE;
         }
         if (releasedPlayer != null) {
             releasedPlayer.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
             releasedPlayer = null;
-            releasedPlayerPriorityTimer = 0;
         }
     }
 

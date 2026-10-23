@@ -27,7 +27,6 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.NativePositionOps;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -467,7 +466,6 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             if (entry.getValue().launcherState != 0 && activeLaunchers.get(entry.getKey()) == this) {
                 releaseTrackedPlayer(entry.getKey());
                 recentLauncherMoves.remove(entry.getKey());
-                entry.getValue().launcherState = 0;
             }
         }
     }

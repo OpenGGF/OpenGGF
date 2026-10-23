@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
-
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
@@ -22,7 +21,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -196,7 +194,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     /** Whether this object currently owns player control lock. */
     private boolean ownsPlayerControl;
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
     private AbstractPlayableSprite ownedPlayer;
 
     /** Reference to the plane child sprite (biplane visual). */

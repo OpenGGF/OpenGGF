@@ -20,6 +20,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -31,7 +32,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -153,18 +153,17 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         subtype = spawn.subtype() & 0xFF;
     }
 
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
     @Override
     public void releasePlayersForVisualDirection() {
-        if (state < STATE_CHARGING || state > STATE_SETTLING) return;
-        if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player) {
+        for (var player : visualControlOwners.players()) {
             releaseControl(player);
             player.setObjectMappingFrameControl(false);
             var manager = services().objectManager();
             if (manager != null) manager.releaseRidingObject(player, this);
         }
-        playerOnObjCleared = false;
-        // Interrupt the local transport, without publishing arrival or route-completion effects.
-        state = STATE_IDLE;
+        visualControlOwners.clear();
     }
 
     @Override
@@ -290,7 +289,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         sprite.setGSpeed((short) 0);
         sprite.setYSpeed((short) -1);
         sprite.setSpindash(false);
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
         state = STATE_CHARGING;
         playerOnObjCleared = false;
@@ -378,7 +377,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         // loc_45744: HPZ keeps the full subtype as the rise count.
         state = STATE_RISING;
         riseRemaining = isHiddenPalace() ? subtype : subtype & 0x3F;
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
         sprite.setAnimationId(Sonic3kAnimationIds.WALK);
         sprite.setMappingFrame(0);
         // object_control = 3: bit 1 skips Animate_Sonic, so mapping_frame stays 0 through the rise
@@ -482,7 +481,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             }
             return;
         }
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
         // loc_457BE: object_control = 1 re-enables Animate_Sonic; anim 2 equals prev_anim, so the
         // roll script resumes where the charge left it instead of restarting.
         sprite.setObjectMappingFrameControl(false);
@@ -499,8 +498,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         state = STATE_SETTLING;
     }
 
-    private static void releaseControl(AbstractPlayableSprite sprite) {
-        ObjectControlState.none().applyTo(sprite);
+    private void releaseControl(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
     }
 
     /** {@code loc_4581C}. */

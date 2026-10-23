@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -12,7 +13,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -23,8 +23,8 @@ import java.util.List;
  */
 public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstance implements RewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int LEFT = -0x40;
     private static final int RIGHT = 0x80;

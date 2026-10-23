@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
@@ -17,7 +20,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.save.SaveReason;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,8 +32,8 @@ import java.util.List;
 public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int CENTRE_X = 0x1640;
 
@@ -281,7 +283,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private void applyMidpointPlayerMappings() {
         if (tryServices() == null) return;
         for (PlayableEntity entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
                 // ROM reads character_id, not the engine registration code (e.g. tails_p2).
                 String code = sprite.characterKey().persisted();
@@ -300,7 +302,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private void applyFinalPlayerMappings() {
         if (tryServices() == null) return;
         for (PlayableEntity entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
                 // ROM reads character_id, not the engine registration code (e.g. tails_p2).
                 String code = sprite.characterKey().persisted();
@@ -366,7 +368,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         if (finalPanStarted) {
             services().camera().setScrollLocked(false);
             for (PlayableEntity entity : services().playerQuery().playersFor(
-                    com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
                 if (entity instanceof AbstractPlayableSprite sprite) {
                     releaseFreshLockForTest(sprite);
                 }
@@ -399,7 +401,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private void applyConversionPlayerMappings(int subtype) {
         int[] flipAndVariant = conversionPoseForTest(subtype);
         for (PlayableEntity entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
                 // ROM reads character_id, not the engine registration code (e.g. tails_p2).
                 String code = sprite.characterKey().persisted();
@@ -470,7 +472,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         applyFreshLockForTest(primary);
         if (tryServices() == null) return;
         for (PlayableEntity entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite && sprite != primary) {
                 applyFreshLockForTest(sprite);
             }
@@ -495,14 +497,13 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (AbstractPlayableSprite player : directedControlPlayers.players())
             releaseFreshLockForTest(player);
         directedControlPlayers.clear();
-        playersLocked = false;
     }
 
     private void releaseFreshLockFromParticipants(AbstractPlayableSprite primary) {
         releaseFreshLockForTest(primary);
         if (tryServices() == null) return;
         for (PlayableEntity entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite && sprite != primary) {
                 releaseFreshLockForTest(sprite);
             }
@@ -605,17 +606,17 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
 
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
-        return captureRewindState(com.openggf.game.rewind.schema.RewindCaptureContext.none());
+        return captureRewindState(RewindCaptureContext.none());
     }
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
-        restoreRewindState(snapshot, com.openggf.game.rewind.schema.RewindCaptureContext.none());
+        restoreRewindState(snapshot, RewindCaptureContext.none());
     }
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+            RewindCaptureContext context) {
         ensureState();
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(runtime.capture(), reentry, childrenSpawned,
@@ -627,7 +628,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+            RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
         if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
             ensureState();

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -25,7 +26,6 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 
 /**
@@ -38,8 +38,8 @@ import java.util.List;
 public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_WAIT_PLAYER = 0x02;
@@ -329,8 +329,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
     private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance
             implements RewindRecreatable {
 
-        private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-                new com.openggf.level.objects.PlayerControlOwners();
+        private final PlayerControlOwners directedControlPlayers =
+                new PlayerControlOwners();
 
 
         private Mhz1CutsceneKnucklesInstance owner;

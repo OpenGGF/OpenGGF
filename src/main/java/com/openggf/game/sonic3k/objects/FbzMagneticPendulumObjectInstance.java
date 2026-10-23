@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -39,13 +40,12 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         anglePhase = initialAngle() << 8;
     }
 
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
     @Override
     public void releasePlayersForVisualDirection() {
-        var main = services().playerQuery().mainPlayerOrNull();
-        if ((grabbed || releaseCarryFrames > 0) && main instanceof AbstractPlayableSprite player) {
-            releaseControl(player);
-            releaseCarryFrames = 0;
-        }
+        for (var player : visualControlOwners.players()) releaseControl(player);
+        visualControlOwners.clear();
     }
 
     @Override
@@ -61,7 +61,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         if (releaseCarryFrames > 0 && main != null) {
             main.move(main.getXSpeed(), main.getYSpeed());
             if (--releaseCarryFrames == 0 && main instanceof AbstractPlayableSprite sprite) {
-                ObjectControlState.none().applyTo(sprite);
+                ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
                 sprite.setAir(false);
             }
         } else if (swinging) {
@@ -107,7 +107,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
 
     private void releaseControl(AbstractPlayableSprite player) {
         grabbed = false;
-        ObjectControlState.none().applyTo(player);
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(player));
     }
 
     private void releaseByJump(AbstractPlayableSprite player) {
@@ -184,7 +184,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
         swinging = true;
         grabbed = true;
         if (main instanceof AbstractPlayableSprite sprite) {
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
         }
     }
 

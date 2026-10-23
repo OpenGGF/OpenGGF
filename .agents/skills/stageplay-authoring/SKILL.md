@@ -232,7 +232,10 @@ relocation. Prefer its original arena or a directed visual. Puppet and Pose susp
 graph, including child routines and contacts; their motion is visual direction,
 not a controller that arbitrary objects do not have. Directing/removing a holder
 releases its acquired players through native player-only cleanup. It must not
-complete the cutscene/world event; helper and queued-pose ownership must rewind. Pure ROM animation scripts and native timer-owned bird flap cycles
+complete the cutscene/world event or reset its native routine, timers or transport
+progress. Only acquired-player ownership and native release cooldowns change;
+Free resumes the frozen routine with players released. Helper and queued-pose
+ownership must rewind. Pure ROM animation scripts and native timer-owned bird flap cycles
 run independently in Puppet/Pose. Walking animal frames tied to native vertical
 velocity retain an explicit held fallback; direction does not invent hop physics. Otherwise use the held/native mapping frame or explicit
 per-part frames and record the state-machine appearance exclusion. A newly cast

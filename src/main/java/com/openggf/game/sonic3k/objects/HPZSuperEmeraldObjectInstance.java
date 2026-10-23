@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.SpecialStageEntryRequest;
@@ -21,15 +23,14 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /** ROM {@code Obj_HPZSuperEmerald} (SKL object $B4). */
 public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int[][] POSITIONS = {
             {0x1640, 0x368}, {0x15E0, 0x3A0}, {0x16A0, 0x3A0},
@@ -241,7 +242,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     private SanctuaryPlayerMode sanctuaryPlayerMode() {
         if (tryServices() != null) {
             for (PlayableEntity player : services().playerQuery().playersFor(
-                    com.openggf.level.objects.ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)) {
+                    ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)) {
                 if (player instanceof AbstractPlayableSprite sprite
                         && "knuckles".equalsIgnoreCase(sprite.getCode())) {
                     return SanctuaryPlayerMode.KNUCKLES;

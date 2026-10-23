@@ -9,7 +9,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZChainLink} ($72), sonic3k.asm $3A7D4-$3AD88. */
@@ -32,7 +31,7 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (entity instanceof AbstractPlayableSprite player) {
                 int slot = participants.slot(player);
                 if (participants.flag(slot, 0)) releaseInvalid(player, slot);

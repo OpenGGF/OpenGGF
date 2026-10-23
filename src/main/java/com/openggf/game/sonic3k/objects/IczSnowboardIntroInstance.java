@@ -15,7 +15,6 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -136,7 +135,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private int overlayAnimationCursor;
     private int lastOverlayAnimationId = -1;
     private boolean initialized;
-    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
     private AbstractPlayableSprite ownedPlayer;
     private boolean sonicSnowboardOverlayActive;
     private boolean sonicSnowboardTouchedGround;

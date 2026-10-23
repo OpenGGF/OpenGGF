@@ -9,12 +9,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -40,13 +40,12 @@ public final class SszCraneClaw extends AbstractSszCraneChild implements SszCran
         y = spawn.y();
     }
 
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
     @Override
     public void releasePlayersForVisualDirection() {
-        if ((phase == 4 || phase == 5)
-                && services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player) {
-            SszCranePlayerRelease.releaseControl(player);
-            phase = 0;
-        }
+        for (var player : visualControlOwners.players()) SszCranePlayerRelease.releaseControl(player);
+        visualControlOwners.clear();
     }
 
     @Override public SszCraneClaw recreateForRewind(RewindRecreateContext context) {
@@ -100,6 +99,7 @@ public final class SszCraneClaw extends AbstractSszCraneChild implements SszCran
             NativePositionOps.writeXPosPreserveSubpixel(player, x);
             NativePositionOps.writeYPosPreserveSubpixel(player, (y + 0x16) & 0xFFFF);
         }
+        if (state.cutsceneFlag(5)) visualControlOwners.clear();
         grabbedThisPass = false;
         visible = true;
         updateDynamicSpawn(x, y);
@@ -119,7 +119,7 @@ public final class SszCraneClaw extends AbstractSszCraneChild implements SszCran
         grabbedThisPass = true;
         state.setCutsceneFlag(2);
         mappingFrame = 2;
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setObjectMappingFrameControl(true);
         player.setMappingFrame(0xCB);
         player.setDirection(Direction.LEFT);

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
@@ -13,9 +14,7 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
-
 import java.util.List;
-
 import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 
 /**
@@ -36,8 +35,8 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int STOP_X = 0x14D0;
     private static final int FREEZE_X = 0x15A8;

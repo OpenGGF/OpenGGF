@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -21,7 +22,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -43,8 +43,8 @@ import java.util.List;
 public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     static final int KNUCKLES_EXIT_CAMERA_Y = 0x240;
     static final int KNUCKLES_EXIT_PLAYER_X = 0xB00;

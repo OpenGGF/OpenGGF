@@ -14,7 +14,6 @@ import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -248,8 +247,11 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         if (nativeP2EndingPoseOwner != null && (tailsOpenControllerLockApplied || tailsEndingPoseApplied)
                 && nativeP2EndingPoseOwner.getCpuController() != null)
             nativeP2EndingPoseOwner.getCpuController().cancelQueuedNativeEndingPose();
+        boolean nativeControlsReleased = endingPoseControlsReleased;
         releaseTailsControlNow(false);
-        tailsEndingPoseApplied = false;
+        // Release ownership without rewinding the capsule's native ending progress.
+        endingPoseControlsReleased = nativeControlsReleased;
+        nativeP2EndingPoseOwner = null;
         super.releasePlayersForVisualDirection();
     }
 

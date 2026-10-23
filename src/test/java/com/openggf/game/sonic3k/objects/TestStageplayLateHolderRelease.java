@@ -106,7 +106,13 @@ class TestStageplayLateHolderRelease {
             case "ssz-release" -> set(object, "ownedPlayer", player);
             default -> set(object, "state", SSZHPZTeleporterObjectInstance.STATE_CHARGING);
         }
+        if (List.of("fbz-spider", "fbz-pendulum", "ssz-claw", "ssz-teleporter").contains(kind)) {
+            ((com.openggf.level.objects.PlayerControlOwners) get(object, "visualControlOwners")).add(player);
+        }
+        Object nativeState = kind.equals("ssz-claw") ? get(object, "phase")
+                : kind.equals("fbz-spider") || kind.equals("ssz-teleporter") ? get(object, "state") : null;
         object.releasePlayersForVisualDirection();
+        if (nativeState != null) assertEquals(nativeState, get(object, kind.equals("ssz-claw") ? "phase" : "state"));
         verify(player).applyObjectControlState(ObjectControlState.NONE);
         verify(player, never()).setXSpeed(anyShort());
         verify(player, never()).setYSpeed(anyShort());
@@ -122,6 +128,7 @@ class TestStageplayLateHolderRelease {
         object.releasePlayersForVisualDirection();
         verifyNoInteractions(player);
         set(object, "armed", true); set(object, "playerCaptured", true); set(object, "playerHidden", true);
+        ((com.openggf.level.objects.PlayerControlOwners) get(object, "visualControlOwners")).add(player);
         object.releasePlayersForVisualDirection();
         verify(player).applyObjectControlState(ObjectControlState.NONE);
         verify(player).setControlLocked(false);
@@ -129,6 +136,7 @@ class TestStageplayLateHolderRelease {
         verify(services, never()).camera();
         verify(services, never()).playSfx(anyInt());
         assertFalse((boolean) get(object, "playerCaptured"));
+        assertTrue((boolean) get(object, "armed"), "Direction preserves the native route progress");
     }
 
     @Test void cannonInterruptionUsesNativeControlCooldownWithoutLaunch() throws Exception {

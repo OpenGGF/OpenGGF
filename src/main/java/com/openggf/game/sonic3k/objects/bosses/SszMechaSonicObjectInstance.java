@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.S3kFullSaveGame;
@@ -1130,7 +1131,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 sszState().setAct2EndingActive(true); sszState().setEventsFg4Low(0xFF);
                 if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p1) {
                     // Native object_control=$83: scripted owner suppresses normal motion/contact.
-                    com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p1));
+                    ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p1));
                     p1.setObjectMappingFrameControl(true);
                     p1.setMappingFrame(0); p1.setOnObject(false); p1.setRollingJump(false); p1.setSpindash(false);
                 }
@@ -1519,7 +1520,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     private boolean nearestNativePlayerIsRight() {
         var nearest = services().playerQuery().nearestByRomX(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2, getX()).player();
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, getX()).player();
         return nearest != null && (short) (getX() - nearest.getCentreX()) < 0;
     }
 

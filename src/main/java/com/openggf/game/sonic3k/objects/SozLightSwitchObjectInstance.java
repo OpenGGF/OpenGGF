@@ -21,7 +21,7 @@ public final class SozLightSwitchObjectInstance extends AbstractObjectInstance i
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (entity instanceof AbstractPlayableSprite player) {
                 int slot = players.slot(player);
                 if (players.flag(slot, 0)) release(player, slot, 60);

@@ -274,7 +274,8 @@ cannot relocate an arena-bound routine. Object **Puppet** moves a visual anchor 
 object **Pose** authors positions and mapping frames. Both suspend the whole graph's
 native routines and contacts. Directing or removing a holder releases only the
 players it acquired through its native player-control cleanup, without completing
-the world event. Child parts follow the captured native relationships;
+the world event. Native routine phases and timers are preserved; Free resumes
+them with the acquired players released. Child parts follow the captured native relationships;
 pure ROM animation tables may run, while state-machine-only appearances use an
 explicit held/authored frame. Native timer-owned bird flap cycles animate in
 Puppet/Pose; walking animal frames tied to native vertical velocity keep their

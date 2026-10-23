@@ -14,7 +14,6 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZWireCage} ($6F), sonic3k.asm $39F2E-$3A220. */
@@ -36,7 +35,7 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
     @Override
     public void releasePlayersForVisualDirection() {
         for (var entity : services().playerQuery().playersFor(
-                com.openggf.level.objects.ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (entity instanceof AbstractPlayableSprite player) {
                 int slot = participants.slot(player);
                 if (participants.flag(slot, 2)) release(player, slot);

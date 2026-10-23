@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -29,8 +30,8 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private int p2Jump;
     private boolean transitionRequested;
 
-    private final com.openggf.level.objects.PlayerControlOwners ownedPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners ownedPlayers =
+            new PlayerControlOwners();
 
     public SszLaunchControllerObjectInstance(ObjectSpawn spawn) { super(spawn, "SSZLaunch"); }
 

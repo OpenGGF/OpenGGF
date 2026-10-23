@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -28,7 +29,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -42,8 +42,8 @@ import java.util.List;
 public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private static final int CAMERA_X = 0x0560;
     private static final int CAMERA_Y = 0x0948;

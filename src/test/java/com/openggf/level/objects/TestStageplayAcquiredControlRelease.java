@@ -86,7 +86,9 @@ class TestStageplayAcquiredControlRelease {
         }
         var context = RewindCaptureContext.withIdentityTable(identities);
         var snapshot = object.captureRewindState(context);
+        var nativeState = scalarState(object);
         object.releasePlayersForVisualDirection();
+        assertEquals(nativeState, scalarState(object), "Release cannot reset native routine progress");
         assertFalse(mockingDetails(owner).getInvocations().isEmpty(), name);
         verify(owner, never()).setXSpeed(anyShort());
         verify(owner, never()).setYSpeed(anyShort());
@@ -99,6 +101,19 @@ class TestStageplayAcquiredControlRelease {
         assertEquals(List.of(owner), ownership.players(), "Rewind must restore the exact acquired identity");
         object.releasePlayersForVisualDirection();
         assertFalse(mockingDetails(owner).getInvocations().isEmpty(), name);
+    }
+
+    private static java.util.Map<java.lang.reflect.Field, Object> scalarState(Object target) throws Exception {
+        var state = new java.util.HashMap<java.lang.reflect.Field, Object>();
+        for (Class<?> type = target.getClass(); type != AbstractObjectInstance.class; type = type.getSuperclass()) {
+            for (var field : type.getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+                if (field.getType().isPrimitive() || field.getType().isEnum()) {
+                    field.setAccessible(true); state.put(field, field.get(target));
+                }
+            }
+        }
+        return state;
     }
 
     private static AbstractObjectInstance create(String name, ObjectServices services) throws Exception {

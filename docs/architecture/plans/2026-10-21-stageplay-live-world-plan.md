@@ -2541,3 +2541,26 @@ The new acquisition harness exposed a real S2 main-ending gap: the existing rele
 method was gated by sidekick membership. Extracting its native input release tail
 fixed main-player release too. Parent references in the rewind fixture must be
 registered independently; the first harness version omitted that registration.
+
+N6: release hooks preserve native routine phases/timers/positions. Removed directed-only
+resets from the crane/spider/pendulum, HPZ entry, CNZ cannon/teleporter, SSZ teleporter,
+OOZ launcher and AIZ2 capsule. S1 junction/teleporter now share the native player-only
+tail with cancellation while preserving waypoint/routine progress on direction.
+Acquisition references/latches clear, and existing ROM release cooldowns remain in
+their native release paths (for example loc_4436E turbine drop and loc_4A4F0 magnet
+release); neither respawning nor resetting an object implements visual suspension.
+The 42 acquired-owner cases compare native scalar state before/after release; direct
+regressions also cover crane/teleporter phases, cannon/HPZ and capsule progress.
+The misleading AIZ/ICZ ownedPlayer transient annotations are removed: exact CAPTURED
+policies now agree with reflective fallback instead of silently depending on compact
+schema precedence. Inline release/rewind qualifiers use ordinary imports.
+
+Cleanup: portable source identity, ring classification, suppression and activation
+admission now live in ObjectStageplayController (ObjectManager sheds 25 net lines).
+Absent game identity is rejected when a portable placement is requested; ordinary
+untyped managers still construct. The obsolete alternate PlayablePuppet factory and
+128-pixel detached floor search are removed, leaving the native-world route probe.
+Tests now use its actual entry and ordinary landing. Focused combined checks pass
+112/112 with no skips. Old assertions for the removed detached entry and a stale
+internal manager-field assertion were corrected; no production branch was retained
+for those tests. Remaining verification: ROM route/preview, mandatory S3K and guards.

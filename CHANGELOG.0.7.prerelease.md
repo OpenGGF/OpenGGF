@@ -42,8 +42,9 @@ Unreleased. The earlier development themes remain in
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. ROM object roles add Free native behavior and visual Puppet/Pose
   direction with child-part frames, portable placed identities and timed clear/removal
-  commands. Interrupting a native holder releases its acquired players, and
-  seeking restores that ownership. A generated ID/context catalog reports native arena and appearance
+  commands. Interrupting a native holder, including nested ending/P2 helpers, releases its
+  acquired players while preserving native routine progress; seeking restores
+  that ownership. A generated ID/context catalog reports native arena and appearance
   restrictions. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
   beginner scene with a companion conceptual tutorial/promo.

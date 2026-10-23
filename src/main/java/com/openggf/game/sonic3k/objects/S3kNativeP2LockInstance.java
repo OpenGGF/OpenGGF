@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 
 /**
@@ -15,8 +14,8 @@ import java.util.List;
 public final class S3kNativeP2LockInstance extends AbstractObjectInstance
         implements ZeroArgRewindRecreatable {
 
-    private final com.openggf.level.objects.PlayerControlOwners directedControlPlayers =
-            new com.openggf.level.objects.PlayerControlOwners();
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
 
     private boolean lockIssued;
 

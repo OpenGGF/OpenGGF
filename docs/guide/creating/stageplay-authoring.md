@@ -450,7 +450,10 @@ arena restriction from the boss category. Use its original arena or a directed
 visual mode for predictable placement. There are no object-specific spatial adapters. Switching an existing graph to Puppet/Pose
 suspends all parent/child routines and contacts before the next native tick.
 Directing or removing a holder releases its acquired players through the native
-player-only cleanup. Helper handoffs and queued ending poses retain ownership
+player-only cleanup. Native routine phases, timers and transport progress remain
+frozen; only acquired-player references/latches and the native release cooldowns
+are cleared or advanced. Returning to Free resumes that native state with players
+released. Helper handoffs and queued ending poses retain ownership
 through rewind; interruption does not complete a cutscene or change the world.
 Visual parts retain their native relative transforms. In directed modes, `flipX`
 mirrors the captured graph around its visual anchor; it is an additional visual
