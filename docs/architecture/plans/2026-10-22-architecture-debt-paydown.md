@@ -505,3 +505,49 @@ confirmed main and origin develop both remain at `213400802`. Unrelated main
 submodule/untracked work is preserved. Final guide/release/pitfall prose records
 the landed behavior. The complete corrected-source smoke/guard selection is next;
 the original omitted-case gap and integration/push/cleanup remain open.
+
+The complete corrected-source run at `2db93ebe37fac687d11b9d8bb1886ebbcdded779`
+finished all 72 ordinary batches and separate guards. The command retained
+Java 25, Lua 5.4, display-unset surfaceless EGL, the existing absolute ROM
+directory and the 120-minute execution limit (`ROM_DIRECTORY` below denotes
+the existing main-checkout ROM directory):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/run_categories.py --base 23a18e2a232d38cca4a541be586041e9b7b01163 --rom-directory "$ROM_DIRECTORY" --max-minutes 120 --run
+```
+
+Run `20261022T234611Z-2c8e0ca9` executed 37,728 ordinary cases: four failures,
+14 errors and 93 skips. All 722 guards passed without skips. Ordinary execution
+took 6,064.37 seconds, preparation 86.46 seconds and guards 276.73 seconds;
+additional queue delay is not included. This is smoke coverage, not the release
+full suite. All failure and skip details were captured, with zero omissions.
+The skip identities/reasons were inspected: opt-in measurements/captures/soak,
+unavailable graphics, optional external fixtures, inapplicable InfiniteSonic
+route products and the existing CPZ spin-tube prerequisite. None represents a
+missing original ROM.
+
+Eleven errors expose an ordering defect in the new inactive-world binding gate:
+it dereferences the level manager before determining whether installation is
+supported and enabled. The affected pacing fixtures deliberately omit that
+manager on paths which should not install rewind. The bounded correction must
+preserve inactive-world rejection for admitted object-world installation while
+leaving rejected installation paths untouched. Existing inactive, special-stage,
+mode-entry, fresh-assembly and cosmetic-fade controls remain obligations.
+
+Five route cases still assume history is available during intentional retirement
+or before the first destination installation: LRZ wide act two, LRZ wide boss,
+MHZ Knuckles, MHZ pair and SOZ's bonus-route invocation. These identify the
+previously omitted three errors and two failures. Their consumer migration must
+retain actual outgoing history, reject stale handles and wait for admitted new
+history while preserving the original world/route/replay assertions. The sixth
+previously omitted case is the complete-run audio CLI's first-byte stderr check;
+its inherited launcher environment is being attributed with the exact method
+on the reconciled destination. The HCZ pixel check remains the already matched
+baseline GLFW-initialization failure. No pixel coverage is claimed for it.
+
+The existing remediation child owns the eleven pacing errors and five route
+cases, with focused checks and a local commit only. An independent attribution
+worker owns the audio CLI baseline. No duplicate broad run is planned: retain
+the completed smoke coverage and verify actual corrections and unresolved risk
+narrowly. Integration, push and accounted cleanup remain blocked pending that
+evidence; a green combined run is not claimed.
