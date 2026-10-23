@@ -551,3 +551,65 @@ worker owns the audio CLI baseline. No duplicate broad run is planned: retain
 the completed smoke coverage and verify actual corrections and unresolved risk
 narrowly. Integration, push and accounted cleanup remain blocked pending that
 evidence; a green combined run is not claimed.
+
+The audio CLI failure is inherited. Its test file is byte-identical at the
+original base, reconciled destination and tested campaign source (blob
+`87c070511453f2b1447648269ddd8a747cce0206`). The exact
+`TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+method on destination `213400802` reproduced one failure, no errors or skips,
+at the same first-byte assertion on line 182. A temporary observation around
+the existing stderr read retained that assertion and confirmed the child output:
+the Java launcher emits its `JDK_JAVA_OPTIONS` notice before
+`PRODUCER_UNAVAILABLE`. The preceding expected exit status 4 and empty stdout
+assertions passed. The original test bytes were restored; no CLI, graphics flag
+or audio typing change was made. Admission waited 94 seconds and Maven took
+26.380 seconds. This matches the documented child-launcher measurement hazard;
+neither this failure nor the inherited HCZ GLFW failure certifies the behavior
+their blocked assertions would otherwise cover.
+
+After parent inspection of all 18 failure identities and 93 explicit skips,
+and extraction of the child's 16 owned rewind cases, the complete smoke
+diagnostics were acknowledged and removed. No raw logs or pass cache were
+retained. The sixteen introduced rewind failures remain the delivery blocker.
+
+Final bounded correction moves the inactive-world check inside supported and
+enabled installation admission. It introduces no null bypass and does not weaken
+the pacing fixtures. A new control proves unsupported/disabled bindings never
+read object-world installation state. The exact original pacing reproducer failed
+once with an NPE on unchanged `80c37a727`; the corrected eleven pacing cases
+and seventeen owner controls all passed without skips.
+
+The five route migrations retain each admitted outgoing controller through native
+retirement, prove stale advancement/seeking is rejected, and require a distinct
+first destination controller with floor zero and cursor at most one. Original
+input streams, snapshot diffs, two-cycle windows, world/position/endpoints and
+mandatory destination history remain. SOZ retains the two actual source/bonus
+handles independently and proves both replacement worlds install their history.
+LRZ Act2 observes recording during the cosmetic reveal once actual LEVEL and
+fresh/inactive assembly admission permit it; held-key engagement has a later
+fade gate. Its first new observer incorrectly waited for fade completion and
+failed after recording had already advanced. Correcting only that observation
+boundary preserved all 104 original two-cycle windows and endpoint checks.
+No production change was needed for any route migration.
+
+All 55 final focused cases passed without failures, errors or skips: eleven
+pacing cases, seventeen owner controls, nine route invocations across the five
+failed methods, fourteen affected admission cases and four architecture guards
+in a fresh JVM. The first route/admission run passed 22 of 23; after the test-only
+LRZ observation correction, only its exact method was rerun and passed. All
+sixteen owned original smoke failure identities are covered. The reviewed
+runtime delta from `80c37a727` has SHA-256
+`e01912a1fd39ea44454798bf90ccba5be3da7c3ef3d4525161b8f6ada06128c0`.
+There is no duplicate broad run or further review round. The completed smoke
+coverage is reused with these focused corrections; this is not a claim that a
+single combined invocation passed or that the release full suite ran.
+
+The final route rerun waited 551 seconds and took 53.263 seconds of Maven time
+(25.58 seconds for the route); guards waited 1,440 seconds and took 27.366
+seconds. Earlier corrected pacing/owner admission waited 143 seconds and took
+1:18, while the 23-case route/admission run waited 1,283 seconds and took 2:37.
+These overlapping intervals are not summed as delivery elapsed time. Exact XML
+identities and skips were inspected, consumed reports removed, and no child
+validation jobs remain. Local commit, final composition, integration, push and
+accounted cleanup are the remaining delivery actions. The two matched inherited
+graphics/launcher failures and explicit smoke skips remain coverage limits.
