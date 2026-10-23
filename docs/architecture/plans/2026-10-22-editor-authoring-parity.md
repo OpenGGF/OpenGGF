@@ -330,3 +330,15 @@ after the storage change reproduced their bytes exactly. API snapshot output
 exactly matches the merged 0.7 candidate pin; no version/descriptor change.
 The one broad smoke run remains attributed to frozen source `7fdfc9518`; its
 final totals and inherited-failure comparisons will be recorded after completion.
+
+A final Rings viewer check found the shared scene still showed only the cursor
+for the ring brush. It now uses the existing ROM ring texture at half opacity
+at the placement position, suppressed during clipboard paste. Ring culling also
+scales its sprite-radius margin with zoom. All six Rings captures were refreshed
+and viewed; the other 23 final images stayed byte-identical. No gameplay object
+or placement is created for this preview.
+
+The Rings follow-up passed 25 focused preview/HUD/rendering cases with no skips,
+and the desktop consumer passed 27 cases with only the two explicit Stageplay
+capture skips. Packaging passed in both trees; the six new Rings images were
+viewed, with the other 23 unchanged.

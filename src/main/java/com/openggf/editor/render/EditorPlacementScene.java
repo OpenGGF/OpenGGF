@@ -23,7 +23,8 @@ public final class EditorPlacementScene {
             object(controller, cache, painter, labels, spawn, left, top, width, height, unit, cameraX, cameraY, false);
         for (var ring : controller.currentLevel().getRings()) {
             float x = left + (short) (ring.x() - cameraX) * unit, y = top + (short) (ring.y() - cameraY) * unit;
-            if (x < left - 8 || y < top - 8 || x > left + width + 8 || y > top + height + 8) continue;
+            float margin = 8 * unit;
+            if (x < left - margin || y < top - margin || x > left + width + margin || y > top + height + margin) continue;
             var sprite = cache.ring();
             if (sprite != null) painter.image(sprite, x - sprite.originX() * unit, y - sprite.originY() * unit,
                     sprite.width() * unit, sprite.height() * unit, 1);
@@ -39,6 +40,14 @@ public final class EditorPlacementScene {
                     && cursor.y() < controller.currentLevel().getMap().getHeight() * controller.currentLevel().getBlockPixelSize())
                 brush = com.openggf.editor.properties.EditorGizmoPlacements.initialize(brush, controller.currentLevel());
             object(controller, cache, painter, labels, brush, left, top, width, height, unit, cameraX, cameraY, true);
+        } else if (controller.spawnEditMode() == EditorSpawnEditMode.RINGS && !controller.isPastePreviewActive()) {
+            var cursor = controller.worldCursor();
+            var sprite = cache.ring();
+            float x = left + (short) (cursor.x() - cameraX) * unit, y = top + (short) (cursor.y() - cameraY) * unit;
+            float margin = 8 * unit;
+            if (sprite != null && x >= left - margin && y >= top - margin && x <= left + width + margin && y <= top + height + margin)
+                painter.image(sprite, x - sprite.originX() * unit, y - sprite.originY() * unit,
+                        sprite.width() * unit, sprite.height() * unit, .5f);
         }
         // Labels are chrome: rings and object pictures must never obscure their text.
         for (var chip : labels) painter.chip(chip.label(), chip.x(), chip.y(), chip.color(), chip.alpha());

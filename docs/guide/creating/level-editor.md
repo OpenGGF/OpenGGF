@@ -311,7 +311,7 @@ authoring gizmos. Use **All / internal IDs** on desktop, or **X** in the HUD obj
 to reveal system IDs and objects whose art needs a different level or live runtime state.
 
 Placements keep their native origins, subtype pose and flips. A translucent brush shows where
-an object will land; selection and hover outlines identify existing sprites. Camera, music,
+an object or ring will land; selection and hover outlines identify existing sprites. Camera, music,
 warp and Stageplay regions use translucent bounds and small labels that stay legible at every
 zoom. Logic-only placements use compact named markers. The desktop canvas fits between its
 panels, including narrow docks; nearest-neighbour sampling keeps sprite edges clear.
