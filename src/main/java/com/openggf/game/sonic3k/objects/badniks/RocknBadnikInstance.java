@@ -81,12 +81,7 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         return getTouchResponseProfile(false);
     }
     @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
-        TouchResponseProfile base = super.getTouchResponseProfile(multiRegionSource);
-        return new TouchResponseProfile(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
-                base.continuousCallbacks(), base.requiresRenderFlagForTouch(), multiRegionSource,
-                base.shieldDeflectCapability(), base.shieldReactionFlags(),
-                base.enablesPostSpecialTouchAirborneSideVelocityPreservation(), base.attackBouncePolicy(),
-                base.actorContextPolicy(), base.stopAfterFirstOverlapPolicy());
+        return super.getTouchResponseProfile(multiRegionSource);
     }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public int getCollisionFlags() { return routine == 4 ? 0xD9 : 0; }

@@ -6,6 +6,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
@@ -20,6 +21,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 /** Cold locked-on Knuckles routes; pad input drives the production GameLoop. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -141,6 +143,7 @@ class TestMhzKnucklesColdRouteCapture {
         var health = new HashSet<Integer>();
         int reload = -1;
         long outgoingHistory = 0;
+        RewindController outgoingController = null, incomingController = null;
         boolean isolatedHistory = false;
         boolean escapedAtOne = false;
         var drawing = new RouteFrameDrawing(true);
@@ -152,6 +155,7 @@ class TestMhzKnucklesColdRouteCapture {
                         SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
+                incomingController = observeIncomingHistory(session, outgoingController, incomingController);
                 assertEquals(CharacterKey.KNUCKLES, session.player().characterKey());
                 assertEquals(320, GameServices.camera().getWidth());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -193,20 +197,29 @@ class TestMhzKnucklesColdRouteCapture {
                         com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController.class).isEmpty()) {
                     pending.add("weather-fade");
                 }
-                var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                var rewind = owner(session.loop()).getRewindController();
                 if (frame >= 63600 && level.getCurrentZone() == 7) {
-                    outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
+                    if (rewind != null) outgoingController = rewind;
+                    assertNotNull(outgoingController, "the enabled Knuckles route records before its exit");
+                    outgoingHistory = Math.max(outgoingHistory, outgoingController.currentFrame());
+                    if (rewind == null) assertRetiredHistory(session, outgoingController);
                 } else if (level.getCurrentZone() == 4 && reload < 0) {
                     reload = frame;
                     assertTrue(outgoingHistory > 10, "record real outgoing live history");
-                    assertTrue(rewind.currentFrame() < outgoingHistory,
+                    assertNotNull(outgoingController);
+                    assertRetiredHistory(session, outgoingController);
+                }
+                if (incomingController != null && !isolatedHistory) {
+                    assertTrue(incomingController.currentFrame() < outgoingHistory,
                             "actual FBZ assembly retires the outgoing timeline");
                     isolatedHistory = true;
                 }
                 if (level.getCurrentZone() == 4 && level.getCurrentAct() == 0
                         && !level.hasPendingFreshLevelTransitionBoundary()
-                        && !SessionManager.getCurrentGameplayMode().getFadeManager().hasPendingCompletion()
-                        && level.getFrameCounter() > 0) pending.add("fbz-released");
+                        && !owner(session.loop()).getFadeManager().hasPendingCompletion()
+                        && level.getFrameCounter() > 0) {
+                    pending.add("fbz-released");
+                }
                 pending.removeAll(checked);
                 if (pending.isEmpty()) continue;
                 assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
@@ -221,6 +234,7 @@ class TestMhzKnucklesColdRouteCapture {
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n));
                     drawing.draw(session);
+                    incomingController = observeIncomingHistory(session, outgoingController, incomingController);
                     assertSame(savedLevel, level.getCurrentLevel(), "same level replay " + pending);
                     assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
                 }
@@ -232,6 +246,7 @@ class TestMhzKnucklesColdRouteCapture {
                     for (int n = 1; n <= horizon; n++) {
                         session.step(movie.getFrame(frame + n));
                         drawing.draw(session);
+                        incomingController = observeIncomingHistory(session, outgoingController, incomingController);
                     }
                     same(forward, registry.capture(), pending + " replay " + cycle);
                 }
@@ -246,6 +261,8 @@ class TestMhzKnucklesColdRouteCapture {
             assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health);
             assertTrue(escapedAtOne);
             assertTrue(isolatedHistory);
+            assertNotNull(incomingController, "the route reaches an admitted FBZ timeline");
+            assertNotNull(owner(session.loop()).getRewindController());
             assertEquals(66064, reload);
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
@@ -254,6 +271,40 @@ class TestMhzKnucklesColdRouteCapture {
             assertTrue(session.player().getCentreX() > 128, "ordinary released FBZ movement");
             System.out.println("MHZ Knuckles Act2: " + checked.size() + " two-cycle whole-world windows");
         }
+    }
+
+    private static RewindController observeIncomingHistory(GameplayCaptureSession session,
+            RewindController outgoing, RewindController first) {
+        var context = owner(session.loop());
+        var level = context.getLevelManager();
+        if (first == null && level.getCurrentZone() == 4 && level.getCurrentAct() == 0
+                && !level.hasPendingFreshLevelTransitionBoundary() && !level.isLevelInactiveForTransition()
+                && !context.getFadeManager().hasPendingCompletion()) {
+            var installed = context.getRewindController();
+            if (installed != null) {
+                assertNotNull(outgoing);
+                assertNotSame(outgoing, installed);
+                assertEquals(0, installed.earliestAvailableFrame());
+                assertTrue(installed.currentFrame() <= 1, "the first admitted FBZ history starts at frame zero");
+                return installed;
+            }
+        }
+        return first;
+    }
+
+    private static void assertRetiredHistory(GameplayCaptureSession session, RewindController outgoing) {
+        var context = owner(session.loop());
+        assertNotSame(outgoing, context.getRewindController());
+        int frame = outgoing.currentFrame();
+        var level = context.getLevelManager();
+        int worldFrame = level.getFrameCounter();
+        var objects = level.getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), "retired MHZ history rejects replay");
+        assertEquals(frame, outgoing.currentFrame());
+        assertEquals(worldFrame, level.getFrameCounter());
+        assertSame(objects, level.getObjectManager());
     }
 
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String label) {

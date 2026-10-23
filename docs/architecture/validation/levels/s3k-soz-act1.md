@@ -615,3 +615,12 @@ act-1 and act-2 routes are unchanged: ready 28436, 31587, 16626 and 28612.
 | Movie | Old SHA-256 | New SHA-256 | Removed | Frames | Releases |
 |---|---|---|---|---|---|
 | `soz1-cold-knuckles.bk2` | `1f470578c537eb075398b77b0614884efda6deaf8e099d4e243d0be5775f198e` | `f2d6cdccac2a5f1ca7d70c6aa8f62a8803cbb972ba66be3dc71c3b4f28f332d6` | -5 at 3312 (bonus entry), -64 at 3588 (bonus return) | 24005 | bonus 3317, return 3644 |
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Spring-vine generation and display writes reuse unchanged derived inputs and invalidate on restore. The display follows its raw saved owned slot, including pending deletion/replacement. Signed single-byte sampling avoids a bulk copy while `getSlopeData()` stays defensive; `TestSozSpringVine` covers bounds, signed bytes, replacement and restore. SOZ solid getters use the established bounded immutable parameter factory.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

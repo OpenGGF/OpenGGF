@@ -119,7 +119,8 @@ class TestLiveRewindMonitorPresentation {
         objects.reset(camera.getX());
 
         InputHandler rewindInput = new InputHandler();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         try {
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));

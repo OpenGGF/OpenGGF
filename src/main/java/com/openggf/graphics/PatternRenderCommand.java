@@ -49,6 +49,7 @@ public class PatternRenderCommand implements GLCommandable {
     private boolean piecePriority; // VDP per-tile priority from PatternDesc bit 15
     private int capturedTileOcclusionPaletteMask;
     private boolean ghostEffectActive;
+    private boolean ghostColour;
     private float ghostAlpha;
     private boolean leased;
     private float x;
@@ -57,6 +58,10 @@ public class PatternRenderCommand implements GLCommandable {
     private float height;
     private GraphicsManager graphicsManager;
     private float[] presentationQuad;
+    private static final int MAX_PRESENTATION_PATTERNS = 512;
+    private static final int[] PRESENTATION_TRIANGLES = {3, 2, 1, 3, 1, 0};
+    private float[] presentationBatchData;
+    private int presentationCount;
     private float presentationHue;
     private float presentationOpacity=1;
     private boolean presentationPriorityShader;
@@ -77,6 +82,7 @@ public class PatternRenderCommand implements GLCommandable {
     private static int lastPriorityViewportHeight = Integer.MIN_VALUE;
     private static boolean lastPriorityWaterEnabled;
     private static boolean lastGhostEffectActive;
+    private static boolean lastGhostColour;
     private static float lastGhostAlpha = Float.NaN;
     private static float lastPriorityWaterlineScreenY = Float.NaN;
     private static float lastPriorityWindowHeight = Float.NaN;
@@ -173,7 +179,8 @@ public class PatternRenderCommand implements GLCommandable {
             cmd = new PatternRenderCommand();
         }
         cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
-        cmd.presentationQuad=null;cmd.presentationHue=0;cmd.presentationOpacity=1;cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
+        cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;
+        cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
         cmd.paletteTextureId = paletteTextureId;
         cmd.atlasIndex = entry.atlasIndex();
         cmd.paletteIndex = paletteIndex;
@@ -184,6 +191,7 @@ public class PatternRenderCommand implements GLCommandable {
         cmd.piecePriority = piecePriority;
         cmd.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         cmd.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        cmd.ghostColour = graphicsManager.isGhostRenderColourPreserved();
         cmd.ghostAlpha = graphicsManager.getGhostRenderAlpha();
         cmd.x = x;
         cmd.width = 8f;
@@ -230,7 +238,8 @@ public class PatternRenderCommand implements GLCommandable {
             float width, float height,
             GraphicsManager graphicsManager) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
-        presentationQuad=null;presentationHue=0;presentationOpacity=1;nativeShadow15=false;shadowBackdrop=null;
+        presentationQuad=null;presentationCount=0;presentationHue=0;presentationOpacity=1;
+        nativeShadow15=false;shadowBackdrop=null;
         this.paletteTextureId = paletteTextureId;
         this.u0 = entry.u0();
         this.v0 = entry.v0();
@@ -246,6 +255,7 @@ public class PatternRenderCommand implements GLCommandable {
         this.piecePriority = desc.getPriority();
         this.capturedTileOcclusionPaletteMask = graphicsManager.getCurrentSpriteTileOcclusionPaletteMask();
         this.ghostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        this.ghostColour = graphicsManager.isGhostRenderColourPreserved();
         this.ghostAlpha = graphicsManager.getGhostRenderAlpha();
         this.x = x;
         this.width = width;
@@ -270,6 +280,8 @@ public class PatternRenderCommand implements GLCommandable {
         graphicsManager = null;
         paletteReplay=null;
         presentationQuad=null;
+        presentationCount=0;
+        nativeShadow15=false;
         shadowBackdrop=null;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
@@ -299,6 +311,7 @@ public class PatternRenderCommand implements GLCommandable {
         lastPriorityViewportHeight = Integer.MIN_VALUE;
         lastPriorityWaterEnabled = false;
         lastGhostEffectActive = false;
+        lastGhostColour = false;
         lastGhostAlpha = Float.NaN;
         lastPriorityWaterlineScreenY = Float.NaN;
         lastPriorityWindowHeight = Float.NaN;
@@ -320,9 +333,9 @@ public class PatternRenderCommand implements GLCommandable {
 
     static void ensureNativeScratch() {
         if (vertexBuffer == null) {
-            vertexBuffer = MemoryUtil.memAllocFloat(8);
-            texCoordBuffer = MemoryUtil.memAllocFloat(8);
-            paletteBuffer = MemoryUtil.memAllocFloat(4);
+            vertexBuffer = MemoryUtil.memAllocFloat(MAX_PRESENTATION_PATTERNS * 12);
+            texCoordBuffer = MemoryUtil.memAllocFloat(MAX_PRESENTATION_PATTERNS * 12);
+            paletteBuffer = MemoryUtil.memAllocFloat(MAX_PRESENTATION_PATTERNS * 6);
         }
     }
 
@@ -508,9 +521,11 @@ public class PatternRenderCommand implements GLCommandable {
             lastPaletteIndex = effectivePalette;
         }
 
-        if (ghostEffectActive != lastGhostEffectActive || ghostAlpha != lastGhostAlpha) {
-            shaderProgram.setGhostEffect(ghostEffectActive, ghostAlpha);
+        if (ghostEffectActive != lastGhostEffectActive || ghostColour != lastGhostColour
+                || ghostAlpha != lastGhostAlpha) {
+            shaderProgram.setGhostEffect(ghostEffectActive, ghostColour, ghostAlpha);
             lastGhostEffectActive = ghostEffectActive;
+            lastGhostColour = ghostColour;
             lastGhostAlpha = ghostAlpha;
         }
 
@@ -540,30 +555,35 @@ public class PatternRenderCommand implements GLCommandable {
             y1 = temp;
         }
 
-        // Whole-picture geometry uses frozen source UVs and the admitted row crop.
         vertexBuffer.clear();
-        if(presentationQuad!=null) {
-            int displayHeight=resolveDisplayHeight(graphicsManager);
-            for(int vertex:new int[]{3,2,1,0}) vertexBuffer.put(presentationQuad[vertex*2]).put(displayHeight-presentationQuad[vertex*2+1]);
+        texCoordBuffer.clear();
+        paletteBuffer.clear();
+        if (presentationCount > 1) {
+            int displayHeight = resolveDisplayHeight(graphicsManager);
+            for (int tile = 0; tile < presentationCount; tile++) {
+                int offset = tile * 12;
+                for (int vertex : PRESENTATION_TRIANGLES) {
+                    vertexBuffer.put(presentationBatchData[offset + vertex * 2])
+                            .put(displayHeight - presentationBatchData[offset + vertex * 2 + 1]);
+                    texCoordBuffer.put(presentationBatchData[offset + ((vertex == 0 || vertex == 3) ? 8 : 10)])
+                            .put(presentationBatchData[offset + ((vertex < 2) ? 11 : 9)]);
+                    paletteBuffer.put(effectivePalette);
+                }
+            }
         } else {
-            vertexBuffer.put(x0).put(y0);
-            vertexBuffer.put(x1).put(y0);
-            vertexBuffer.put(x1).put(y1);
-            vertexBuffer.put(x0).put(y1);
+            // Same triangle-fan vertices/UVs as the unbatched reference path.
+            if (presentationQuad != null) {
+                int displayHeight = resolveDisplayHeight(graphicsManager);
+                for (int vertex = 3; vertex >= 0; vertex--)
+                    vertexBuffer.put(presentationQuad[vertex * 2]).put(displayHeight - presentationQuad[vertex * 2 + 1]);
+            } else {
+                vertexBuffer.put(x0).put(y0).put(x1).put(y0).put(x1).put(y1).put(x0).put(y1);
+            }
+            texCoordBuffer.put(u0).put(v0).put(u1).put(v0).put(u1).put(v1).put(u0).put(v1);
+            paletteBuffer.put(effectivePalette).put(effectivePalette).put(effectivePalette).put(effectivePalette);
         }
         vertexBuffer.flip();
-
-        // Fill texture coordinate buffer
-        texCoordBuffer.clear();
-        texCoordBuffer.put(u0).put(v0);
-        texCoordBuffer.put(u1).put(v0);
-        texCoordBuffer.put(u1).put(v1);
-        texCoordBuffer.put(u0).put(v1);
         texCoordBuffer.flip();
-
-        // Fill palette coordinate buffer (same palette index for all 4 vertices)
-        paletteBuffer.clear();
-        paletteBuffer.put(effectivePalette).put(effectivePalette).put(effectivePalette).put(effectivePalette);
         paletteBuffer.flip();
 
         // Upload and bind vertex data
@@ -583,7 +603,10 @@ public class PatternRenderCommand implements GLCommandable {
         glEnableVertexAttribArray(ATTRIB_PALETTE);
 
         shaderProgram.setPresentationColor(presentationHue,presentationOpacity);
-        try { glDrawArrays(GL_TRIANGLE_FAN, 0, 4); }
+        try {
+            glDrawArrays(presentationCount > 1 ? GL_TRIANGLES : GL_TRIANGLE_FAN, 0,
+                    presentationCount > 1 ? presentationCount * 6 : 4);
+        }
         finally { shaderProgram.setPresentationColor(0,1); }
 
     }
@@ -591,9 +614,46 @@ public class PatternRenderCommand implements GLCommandable {
     void presentation(float[] quad,float hue,float opacity) {
         if(quad.length!=8) throw new IllegalArgumentException("Presentation quad requires four vertices");
         for(float value:quad) if(!Float.isFinite(value)) throw new IllegalArgumentException("Nonfinite picture vertex");
-        presentationQuad=quad.clone();presentationHue=hue;presentationOpacity=Math.clamp(opacity,0,1);
+        presentationQuad=quad.clone();presentationCount=1;presentationHue=hue;presentationOpacity=Math.clamp(opacity,0,1);
         presentationPriorityShader=graphicsManager.isUseSpritePriorityShader();
     }
+
+    /** Only adjacent commands with identical draw state may share a submission. */
+    boolean appendPresentation(PatternRenderCommand next) {
+        if (presentationCount == 0 || next.presentationCount != 1 || presentationCount >= MAX_PRESENTATION_PATTERNS
+                || graphicsManager != next.graphicsManager || paletteTextureId != next.paletteTextureId
+                || atlasIndex != next.atlasIndex || paletteIndex != next.paletteIndex
+                // Deferred resolvers may change rows/residency per invocation. Keep their original call boundary.
+                || paletteReplay != null || next.paletteReplay != null
+                || paletteReplayUnderwater != next.paletteReplayUnderwater
+                || piecePriority != next.piecePriority || capturedTileOcclusionPaletteMask != next.capturedTileOcclusionPaletteMask
+                || ghostEffectActive != next.ghostEffectActive || ghostColour != next.ghostColour
+                || ghostAlpha != next.ghostAlpha
+                || nativeShadow15 != next.nativeShadow15 || shadowBackdrop != next.shadowBackdrop
+                || presentationPriorityShader != next.presentationPriorityShader
+                || presentationHue != next.presentationHue || presentationOpacity != next.presentationOpacity) return false;
+        int required = (presentationCount + 1) * 12;
+        if (presentationBatchData == null || presentationBatchData.length < required) {
+            int capacity = Math.min(MAX_PRESENTATION_PATTERNS * 12,
+                    Math.max(required, presentationBatchData == null ? 96 : presentationBatchData.length * 2));
+            presentationBatchData = presentationBatchData == null ? new float[capacity]
+                    : java.util.Arrays.copyOf(presentationBatchData, capacity);
+        }
+        if (presentationCount == 1) writePresentationData(this, 0);
+        writePresentationData(next, presentationCount++ * 12);
+        next.recycle();
+        return true;
+    }
+
+    private void writePresentationData(PatternRenderCommand source, int offset) {
+        System.arraycopy(source.presentationQuad, 0, presentationBatchData, offset, 8);
+        presentationBatchData[offset + 8] = source.u0;
+        presentationBatchData[offset + 9] = source.v0;
+        presentationBatchData[offset + 10] = source.u1;
+        presentationBatchData[offset + 11] = source.v1;
+    }
+
+    int presentationPatternCount() { return presentationCount; }
 
     /**
      * Clean up GL state after all patterns are rendered.

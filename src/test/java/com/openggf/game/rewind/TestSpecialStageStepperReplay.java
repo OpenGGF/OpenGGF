@@ -64,7 +64,7 @@ class TestSpecialStageStepperReplay {
     }
 
     @Test
-    void providerIsResolvedEveryStep() {
+    void registeredProviderRemainsBoundForTheStepperLifetime() {
         LiveRewindInputSource inputs = new LiveRewindInputSource();
         InputHandler input = new InputHandler();
         FakeSpecialStageProvider first = new FakeSpecialStageProvider();
@@ -80,10 +80,10 @@ class TestSpecialStageStepperReplay {
         stepper.step(row);
         stepper.step(row);
 
-        assertIterableEquals(List.of("handleInput:220:220", "handlePlayer2Input:33:33", "update"),
-                first.calls);
-        assertIterableEquals(List.of("handleInput:220:220", "handlePlayer2Input:33:33", "update"),
-                second.calls);
+        assertIterableEquals(List.of("handleInput:220:220", "handlePlayer2Input:33:33", "update",
+                "handleInput:220:220", "handlePlayer2Input:33:33", "update"), first.calls);
+        assertIterableEquals(List.of(), second.calls);
+        assertEquals(1, supplierCalls.get(), "provider acquisition belongs to installation, not replay");
     }
 
     @Test
@@ -133,7 +133,7 @@ class TestSpecialStageStepperReplay {
         };
         GameplayModeContext gameplayMode = gameplayMode(service);
         SpecialStageStepper stepper = new SpecialStageStepper(
-                inputs, () -> input, () -> provider, () -> gameplayMode);
+                inputs, () -> input, provider, gameplayMode);
 
         stepper.step(new Bk2FrameInput(
                 1, 0, 0, false, 0, 0, false, "row"));
@@ -150,7 +150,7 @@ class TestSpecialStageStepperReplay {
             java.util.function.Supplier<SpecialStageProvider> provider) {
         GameplayModeContext gameplayMode = gameplayMode(null);
         return new SpecialStageStepper(
-                inputs, () -> input, provider, () -> gameplayMode);
+                inputs, () -> input, provider.get(), gameplayMode);
     }
 
     private static GameplayModeContext gameplayMode(PlcLifecycleService service) {

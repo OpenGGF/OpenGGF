@@ -42,6 +42,12 @@ final class LevelCheckpointCoordinator {
         }
     }
 
+    void restartFromStartAfterDeath() {
+        clear();
+        levelManager.restartCurrentLevelAfterDeath();
+        levelManager.skipPendingInitialTitleCardPresentation();
+    }
+
     RespawnState state() {
         return checkpointState;
     }

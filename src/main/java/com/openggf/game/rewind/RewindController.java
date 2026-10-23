@@ -36,6 +36,19 @@ public final class RewindController {
     private boolean audioRestoreDeferred;
     private int replayDepth;
     private RewindDeterminismAuditor determinismAuditor;
+    private java.util.function.BooleanSupplier replayAdmission = () -> true;
+    private int historyOperationDepth;
+
+    /** Optional lifetime admission for an installed live history. Generic history edits remain independent. */
+    public void setReplayAdmission(java.util.function.BooleanSupplier admission) {
+        replayAdmission = Objects.requireNonNull(admission, "admission");
+    }
+
+    /** Boundary reporters must wait until snapshot application/auditing has completed. */
+    public boolean isApplyingHistory() {
+        return historyOperationDepth != 0;
+    }
+
 
     public RewindController(
             RewindRegistry registry,
@@ -175,6 +188,16 @@ public final class RewindController {
 
     /** Steps forward one frame, capturing a keyframe at the boundary. */
     public void step() {
+        if (!replayAdmission.getAsBoolean()) { return; }
+        historyOperationDepth++;
+        try {
+            stepAdmitted();
+        } finally {
+            historyOperationDepth--;
+        }
+    }
+
+    private void stepAdmitted() {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return;   // end of trace
         }
@@ -206,6 +229,16 @@ public final class RewindController {
      * @return true when the controller advanced its cursor, false at input end
      */
     public boolean recordExternalStep() {
+        if (!replayAdmission.getAsBoolean()) { return false; }
+        historyOperationDepth++;
+        try {
+            return recordExternalStepAdmitted();
+        } finally {
+            historyOperationDepth--;
+        }
+    }
+
+    private boolean recordExternalStepAdmitted() {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return false;
         }
@@ -315,6 +348,16 @@ public final class RewindController {
      * {@link #stepBackward()} for steady-state O(1) cost.
      */
     public void seekTo(int targetFrame) {
+        if (!replayAdmission.getAsBoolean()) { return; }
+        historyOperationDepth++;
+        try {
+            seekToAdmitted(targetFrame);
+        } finally {
+            historyOperationDepth--;
+        }
+    }
+
+    private void seekToAdmitted(int targetFrame) {
         if (targetFrame == currentFrame) return;
         if (targetFrame < earliestAvailableFrame()) {
             targetFrame = earliestAvailableFrame();
@@ -368,6 +411,16 @@ public final class RewindController {
      * Returns false if already at {@code earliestAvailableFrame}.
      */
     public boolean stepBackward() {
+        if (!replayAdmission.getAsBoolean()) { return false; }
+        historyOperationDepth++;
+        try {
+            return stepBackwardAdmitted();
+        } finally {
+            historyOperationDepth--;
+        }
+    }
+
+    private boolean stepBackwardAdmitted() {
         if (currentFrame <= earliestAvailableFrame()) return false;
         int originalFrame = currentFrame;
         int target = currentFrame - 1;

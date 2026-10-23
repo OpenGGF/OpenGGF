@@ -16,6 +16,10 @@ import java.util.List;
  * arms X=0 masking on the next line; count overflow alone does not. An overflowing
  * piece retains its leftmost screen columns, including when horizontally flipped.
  * Evaluation is frame-local, with no state retained across render/rewind calls.</p>
+ *
+ * <p>Gameplay ghosts are presentation-only: native entries retain their table, line
+ * and pixel budgets when ghosts are interleaved. Ghosts are clipped by the mask at
+ * their submission position, but never arm one or become a native marker/companion.</p>
  */
 public final class SpriteSatMaskPostProcessor {
     private static final int MASK_TILE_WORD = 0x7C0;
@@ -74,11 +78,12 @@ public final class SpriteSatMaskPostProcessor {
         scratch.reset(size, raster.height());
         int firstMarker = -1;
         for (int i = 0; i < size; i++) {
-            if (spriteMaskEnabled && isMaskMarker(entries, i)) {
+            int companion = spriteMaskEnabled ? maskCompanion(entries, i) : -1;
+            if (companion >= 0) {
                 scratch.control[i] = true;
-                scratch.control[i + 1] = true;
+                scratch.control[companion] = true;
                 scratch.xOverride[i] = 1;
-                scratch.xOverride[i + 1] = 0;
+                scratch.xOverride[companion] = 0;
                 if (firstMarker < 0) firstMarker = i;
             }
         }
@@ -98,7 +103,14 @@ public final class SpriteSatMaskPostProcessor {
                     && entries.get(i).maskReplayRole() == SpriteMaskReplayRole.PRE_MASK_FRONT && !scratch.control[i]) continue;
             scratch.order[ordered++] = i;
         }
-        int total = Math.min(ordered, raster.tableSprites());
+        int total = 0;
+        int nativeEntries = 0;
+        for (int slot = 0; slot < ordered; slot++) {
+            int index = scratch.order[slot];
+            if (entries.get(index).isGhost() || nativeEntries++ < raster.tableSprites()) {
+                scratch.order[total++] = index;
+            }
+        }
         boolean carry = false;
         for (int row = 0; row < raster.height(); row++) {
             int line = raster.y() + row;
@@ -107,11 +119,22 @@ public final class SpriteSatMaskPostProcessor {
             carry = false;
             int count = 0;
             int pixels = 0;
+            boolean nativeExhausted = false;
             for (int slot = 0; slot < total; slot++) {
                 int index = scratch.order[slot];
                 SpriteSatEntry entry = entries.get(index);
                 if (line < entry.y() || line >= entry.endYExclusive()) continue;
-                if (count++ == raster.lineSprites()) break;
+                if (entry.isGhost()) {
+                    if (!masked && entry.endXExclusive() > raster.x() && entry.x() < raster.x() + raster.width()) {
+                        scratch.columns[index * raster.height() + row] = entry.widthTiles();
+                    }
+                    continue;
+                }
+                if (nativeExhausted) continue;
+                if (count++ == raster.lineSprites()) {
+                    nativeExhausted = true;
+                    continue;
+                }
                 int rawX = scratch.xOverride[index];
                 if (rawX < 0) {
                     int biasedX = entry.x() - raster.x() + 128;
@@ -128,7 +151,7 @@ public final class SpriteSatMaskPostProcessor {
                 }
                 if (pixels >= raster.hardwareWidth()) {
                     carry = true;
-                    break;
+                    nativeExhausted = true;
                 }
             }
         }
@@ -139,11 +162,15 @@ public final class SpriteSatMaskPostProcessor {
         return scratch.processed;
     }
 
-    private static boolean isMaskMarker(List<SpriteSatEntry> entries, int index) {
-        if (index + 1 >= entries.size()) return false;
+    private static int maskCompanion(List<SpriteSatEntry> entries, int index) {
         SpriteSatEntry entry = entries.get(index);
-        return entry.tileWordLow11() == MASK_TILE_WORD && !entry.hFlip() && !entry.vFlip()
-                && !entry.piecePriority() && (entry.paletteIndex() & 3) == 0;
+        if (entry.isGhost() || entry.tileWordLow11() != MASK_TILE_WORD || entry.hFlip() || entry.vFlip()
+                || entry.piecePriority() || (entry.paletteIndex() & 3) != 0) return -1;
+        // Ghosts do not occupy the native SAT link that selects the companion.
+        for (int next = index + 1; next < entries.size(); next++) {
+            if (!entries.get(next).isGhost()) return next;
+        }
+        return -1;
     }
 
     private static void appendVisible(SpriteSatEntry entry, int index, Raster raster, Scratch scratch) {

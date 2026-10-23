@@ -1,5 +1,10 @@
 package com.openggf.graphics;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL14.*;
@@ -17,6 +22,55 @@ import static org.lwjgl.opengl.GL33.glBindSampler;
  * Resources exist only while the queued begin/end pair is executing on its context.
  */
 final class NativeSpriteOwnership implements AutoCloseable {
+    /** One contiguous source-order span; 255 remains the unclaimed stencil value. */
+    record Layer<T>(int rank, boolean ghost, List<T> entries) { }
+
+    @FunctionalInterface
+    interface LayerSelection {
+        void select(int rank, boolean ghost);
+    }
+
+    /** Plan completely before opening a scope or emitting any native commands. */
+    static <T> List<Layer<T>> layers(List<T> frontToBack, Predicate<T> isGhost) {
+        java.util.Objects.requireNonNull(frontToBack, "native layers");
+        java.util.Objects.requireNonNull(isGhost, "ghost predicate");
+        if (frontToBack.isEmpty()) return List.of();
+        var layers = new ArrayList<Layer<T>>();
+        int start = 0;
+        boolean ghost = isGhost.test(frontToBack.getFirst()), containsGhost = ghost;
+        for (int index = 1; index < frontToBack.size(); index++) {
+            boolean nextGhost = isGhost.test(frontToBack.get(index));
+            containsGhost |= nextGhost;
+            if (nextGhost == ghost) continue;
+            addLayer(layers, ghost, frontToBack.subList(start, index));
+            start = index;
+            ghost = nextGhost;
+        }
+        if (!containsGhost) return List.of();
+        addLayer(layers, ghost, frontToBack.subList(start, frontToBack.size()));
+        return List.copyOf(layers);
+    }
+
+    private static <T> void addLayer(List<Layer<T>> layers, boolean ghost, List<T> entries) {
+        if (layers.size() >= 255)
+            throw new IllegalArgumentException("Native ghost replay exceeds 255 ordered spans");
+        layers.add(new Layer<>(layers.size(), ghost, List.copyOf(entries)));
+    }
+
+    /** Real spans own source coverage first; ghosts then blend back-to-front without owning it. */
+    static <T> void replayLayers(List<Layer<T>> layers, LayerSelection selection, Consumer<List<T>> emitter) {
+        for (Layer<T> layer : layers) if (!layer.ghost()) {
+            selection.select(layer.rank(), false);
+            emitter.accept(layer.entries());
+        }
+        for (int index = layers.size() - 1; index >= 0; index--) {
+            Layer<T> layer = layers.get(index);
+            if (!layer.ghost()) continue;
+            selection.select(layer.rank(), true);
+            emitter.accept(layer.entries().reversed());
+        }
+    }
+
     /** Deferred commands live outside the published GraphicsManager declaration. */
     static final class Commands {
         private NativeSpriteOwnership scope;
@@ -29,12 +83,23 @@ final class NativeSpriteOwnership implements AutoCloseable {
         };
 
         Commands(GraphicsManager graphics, java.util.function.Consumer<NativeSpriteOwnership> activate) {
+            this(graphics, activate, false);
+        }
+
+        Commands(GraphicsManager graphics, java.util.function.Consumer<NativeSpriteOwnership> activate, boolean layered) {
             this.activate = activate;
             begin = (x, y, width, height) -> {
                 if (graphics.nativeSpriteOwnershipActive()) throw new IllegalStateException("Native sprite scope already executing");
                 if (graphics.getSpritePriorityShaderProgram() == null) throw new IllegalStateException("Native sprite priority shader unavailable");
-                scope = NativeSpriteOwnership.open(graphics);
+                scope = layered ? NativeSpriteOwnership.openLayered(graphics) : NativeSpriteOwnership.open(graphics);
                 activate.accept(scope);
+            };
+        }
+
+        GLCommandable layer(int rank, boolean ghost) {
+            return (x, y, width, height) -> {
+                if (scope == null) throw new IllegalStateException("Native sprite layer has no executing scope");
+                scope.selectLayer(rank, ghost);
             };
         }
 
@@ -46,6 +111,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     }
 
     private final GraphicsManager graphics;
+    private final boolean layered;
     private final int drawFramebuffer = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
     private final int readFramebuffer = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
     private final int renderbuffer = glGetInteger(GL_RENDERBUFFER_BINDING);
@@ -79,7 +145,12 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private boolean closed;
 
     private NativeSpriteOwnership(GraphicsManager graphics) {
+        this(graphics, false);
+    }
+
+    private NativeSpriteOwnership(GraphicsManager graphics, boolean layered) {
         this.graphics = graphics;
+        this.layered = layered;
         for (int unit = 0; unit < textures.length; unit++) {
             glActiveTexture(GL_TEXTURE0 + unit);
             textures[unit] = glGetInteger(GL_TEXTURE_BINDING_2D);
@@ -89,6 +160,17 @@ final class NativeSpriteOwnership implements AutoCloseable {
 
     static NativeSpriteOwnership open(GraphicsManager graphics) {
         NativeSpriteOwnership scope = new NativeSpriteOwnership(graphics);
+        try {
+            scope.begin();
+            return scope;
+        } catch (RuntimeException | Error failure) {
+            try { scope.close(); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+            throw failure;
+        }
+    }
+
+    private static NativeSpriteOwnership openLayered(GraphicsManager graphics) {
+        NativeSpriteOwnership scope = new NativeSpriteOwnership(graphics, true);
         try {
             scope.begin();
             return scope;
@@ -148,17 +230,26 @@ final class NativeSpriteOwnership implements AutoCloseable {
         glEnable(GL_SCISSOR_TEST);
         glScissor(viewport[0], viewport[1], viewport[2], viewport[3]);
         glStencilMask(0xFF);
-        glClearStencil(0);
+        glClearStencil(layered ? 255 : 0);
         contentsChanged = true;
         glClear(GL_STENCIL_BUFFER_BIT);
         requireNoError("clearing native SAT coverage");
         restoreScissor();
         glEnable(GL_STENCIL_TEST);
-        glStencilFunc(GL_EQUAL, 0, 0xFF);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+        glStencilFunc(layered ? GL_LESS : GL_EQUAL, 0, 0xFF);
+        glStencilOp(GL_KEEP, GL_KEEP, layered ? GL_REPLACE : GL_INCR);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(false);
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+    }
+
+    private void selectLayer(int rank, boolean ghost) {
+        if (!layered || rank < 0 || rank >= 255) throw new IllegalStateException("Invalid native sprite layer rank");
+        // LESS compares the incoming rank with the frontmost opaque native rank.
+        // Ghosts retain that test but can never change the native coverage image.
+        glStencilFunc(GL_LESS, rank, 0xFF);
+        glStencilMask(ghost ? 0 : 0xFF);
+        glStencilOp(GL_KEEP, GL_KEEP, ghost ? GL_KEEP : GL_REPLACE);
     }
 
     @Override

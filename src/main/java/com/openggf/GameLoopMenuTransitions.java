@@ -19,6 +19,24 @@ final class GameLoopMenuTransitions {
         fadeOutTo(fadeManager, audioManager, () -> {}, next);
     }
 
+    /** Nothing is fading, or a completed fade-to-black is holding the screen black. */
+    static boolean idleOrHeldBlack(FadeManager fadeManager) {
+        return !fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_BLACK;
+    }
+
+    /**
+     * Fades out to {@code next}; a screen already held black (a run that ended straight into the
+     * next launch) continues at once, as a completed fade-to-black runs its callback.
+     */
+    static void fadeOutOrContinue(FadeManager fadeManager, AudioManager audioManager, Runnable next) {
+        if (fadeManager.getState() == FadeManager.FadeState.HOLD_BLACK) {
+            audioManager.fadeOutMusic();
+            next.run();
+        } else {
+            fadeOutTo(fadeManager, audioManager, next);
+        }
+    }
+
     static void fadeOutTo(FadeManager fadeManager, AudioManager audioManager, Runnable prepareExit, Runnable next) {
         if (fadeManager.isActive()) {
             return;

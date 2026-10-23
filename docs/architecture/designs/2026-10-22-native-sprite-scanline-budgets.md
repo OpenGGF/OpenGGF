@@ -499,3 +499,30 @@ No guard baseline changed. This isolated result does not certify the independent
 S2 AbstractPlayable extraction or later composed-root growth; Parent owns that
 composition and combined validation. Only one affected request plus these two
 exact guards was used, with no second affected run needed.
+
+
+## Develop ghost composition — 2026-10-23
+
+The aggregate's pinned develop reconciliation keeps gameplay ghosts as an engine
+presentation extension. Interleaving ghosts does not spend native table, line or
+pixel capacity, change the real SAT's marker/companion links, or arm masking.
+A ghost retains the mask window at its presentation position. Both prepared
+priority layers are visited even when no local player occupies one.
+
+A ghost cannot own the opaque native-source stencil. For tables containing
+both kinds, contiguous source-order spans receive ranks0..254;255 denotes no
+native winner. Native spans draw first with a less-than rank test and replace
+coverage on source-opaque pixels, including terrain-hidden winners. Ghost spans
+then draw in reverse span and tile order with stencil writes disabled. They
+blend over the real sprites behind them, remain hidden by earlier real winners,
+and blend with one another in painter order. A256th span is rejected before
+opening a scope or emitting commands. Ghost-free tables retain the original
+coverage scope and single picture replay. Foreign stencil attachments, contents,
+face states and failure cleanup retain their existing ownership contract.
+
+The direct SAT path uses admitted, expanded fragments and actual bucket/source
+order. Published frames carry the same immutable tiles, frozen art, native pixel
+operation and coloured-ghost fields. No physical console ghost or new timing
+behaviour is inferred. The initial composed source reproduced six assertion
+failures in seven matched cases before this correction; current qualification
+is recorded in the existing native-gap delivery plan.

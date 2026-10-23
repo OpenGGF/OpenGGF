@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.DdzDiagnostics;
 import com.openggf.game.sonic3k.objects.DdzEndBossObjectInstance;
 import com.openggf.game.sonic3k.objects.DdzEndBossBodyObjectInstance;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 /** Actual DEZ boss routes through native ending, credits and terminal Start, without reseeding loads. */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -49,6 +51,7 @@ class TestDezIncomingFinalRouteCapture {
         var checked = new HashSet<String>();
         boolean chaseSeen = false, releasedDdzEntrySeen = false;
         long outgoingDdzHistory = 0;
+        RewindController ddzHistory = null;
         int historyStart = movie.getFrameCount() - 120;
         int previousCamera = 0;
         // Held-button history belongs to this external input driver, not gameplay.
@@ -67,8 +70,9 @@ class TestDezIncomingFinalRouteCapture {
                 String spot = null;
                 int zone = GameServices.level().getCurrentZone();
                 if (zone == 12 && frame >= historyStart) {
-                    var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
-                    if (rewind != null) outgoingDdzHistory = Math.max(outgoingDdzHistory, rewind.currentFrame());
+                    var rewind = owner(session.loop()).getRewindController();
+                    if (rewind != null) ddzHistory = rewind;
+                    if (ddzHistory != null) outgoingDdzHistory = Math.max(outgoingDdzHistory, ddzHistory.currentFrame());
                 }
                 if (zone == 12 && !releasedDdzEntrySeen
                         && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
@@ -134,7 +138,8 @@ class TestDezIncomingFinalRouteCapture {
             assertEquals(Set.of("hands", "half-hands", "core-half", "core-last", "ship-half",
                     "ship-last", "ship-defeat", "ddz-flight", "ddz-body", "ddz-wrap", "ddz-defeat"), checked);
             assertTrue(outgoingDdzHistory > 10, "real outgoing DDZ history precedes the ending load");
-            verifyEndingComposition(session, drawing, 2);
+            assertNotNull(ddzHistory, "the actual DDZ route established its outgoing production history");
+            verifyEndingComposition(session, drawing, 2, ddzHistory);
         }
     }
 
@@ -335,6 +340,8 @@ class TestDezIncomingFinalRouteCapture {
         var rewindBlocked = com.openggf.GameLoop.class.getDeclaredMethod("isRewindBlocked");
         rewindBlocked.setAccessible(true);
         long outgoingFinalHistory = 0, outgoingActTwoHistory = 0;
+        RewindController actTwoHistory = null, finalHistory = null;
+        RewindController firstFinalHistory = null, firstEndingHistory = null;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
@@ -357,23 +364,47 @@ class TestDezIncomingFinalRouteCapture {
                 if (frame == 50511) assertFalse((boolean) rewindBlocked.invoke(session.loop()),
                         "ordinary final gameplay becomes rewindable after the incoming fade");
                 int zone = GameServices.level().getCurrentZone();
-                if (zone == 11 && frame >= 50200) outgoingActTwoHistory = Math.max(outgoingActTwoHistory,
-                        SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                if (zone == 11 && frame >= 50200) {
+                    var installed = owner(session.loop()).getRewindController();
+                    if (installed != null) actTwoHistory = installed;
+                    assertNotNull(actTwoHistory, "the enabled Act2 route records before its exit");
+                    outgoingActTwoHistory = Math.max(outgoingActTwoHistory, actTwoHistory.currentFrame());
+                    if (installed == null) assertRetiredHistory(session, actTwoHistory);
+                }
                 if (zone == 23 && finalLoad < 0) {
                     finalLoad = frame;
-                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
-                    assertEquals(0, incoming.earliestAvailableFrame());
-                    assertTrue(incoming.currentFrame() <= 1);
-                    GameServices.configuration().setSessionOverride(
-                            com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                    assertNotNull(actTwoHistory);
+                    assertRetiredHistory(session, actTwoHistory);
                 }
-                if (zone == 23 && frame >= 60061) outgoingFinalHistory = Math.max(outgoingFinalHistory,
-                        SessionManager.getCurrentGameplayMode().getRewindController().currentFrame());
+                if (zone == 23 && firstFinalHistory == null) {
+                    firstFinalHistory = owner(session.loop()).getRewindController();
+                    if (firstFinalHistory != null) {
+                        assertNotSame(actTwoHistory, firstFinalHistory);
+                        assertEquals(0, firstFinalHistory.earliestAvailableFrame());
+                        assertTrue(firstFinalHistory.currentFrame() <= 1);
+                        GameServices.configuration().setSessionOverride(
+                                com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+                    }
+                }
+                if (zone == 23 && frame >= 60061) {
+                    var installed = owner(session.loop()).getRewindController();
+                    if (installed != null) finalHistory = installed;
+                    assertNotNull(finalHistory, "the final fight records before its ending exit");
+                    outgoingFinalHistory = Math.max(outgoingFinalHistory, finalHistory.currentFrame());
+                    if (installed == null) assertRetiredHistory(session, finalHistory);
+                }
                 if (zone == 13 && GameServices.level().getCurrentAct() == 1 && endingLoad < 0) {
                     endingLoad = frame;
-                    var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
-                    assertEquals(0, incoming.earliestAvailableFrame());
-                    assertTrue(incoming.currentFrame() <= 1);
+                    assertNotNull(finalHistory);
+                    assertRetiredHistory(session, finalHistory);
+                }
+                if (endingLoad >= 0 && firstEndingHistory == null) {
+                    firstEndingHistory = owner(session.loop()).getRewindController();
+                    if (firstEndingHistory != null) {
+                        assertNotSame(finalHistory, firstEndingHistory);
+                        assertEquals(0, firstEndingHistory.earliestAvailableFrame());
+                        assertTrue(firstEndingHistory.currentFrame() <= 1);
+                    }
                 }
                 assertFalse(session.player().getDead(), "death at " + frame);
                 assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
@@ -426,6 +457,7 @@ class TestDezIncomingFinalRouteCapture {
             assertTrue(checkedPendingFade);
             assertEquals(50382, finalLoad);
             assertTrue(outgoingActTwoHistory > 10);
+            assertNotNull(firstFinalHistory, "the route reaches an installed final-stage timeline");
             if (endingLoad < 0) {
                 var fade = (com.openggf.graphics.FadeManagerSnapshot) SessionManager.getCurrentGameplayMode()
                         .getRewindRegistry().capture().get("fademanager");
@@ -442,7 +474,8 @@ class TestDezIncomingFinalRouteCapture {
             // The unchanged input endpoint may still belong to native PaletteWhiteOut.
             // The existing bounded helper consumes that transition, then requires the
             // actual D01 owner, roster, progress and continuous terminal handoff.
-            verifyOrdinaryEndingHandoff(session, drawing);
+            assertNotNull(finalHistory, "the actual final fight established production history before exit");
+            verifyEndingComposition(session, drawing, -2, finalHistory);
         }
     }
 
@@ -546,14 +579,16 @@ class TestDezIncomingFinalRouteCapture {
 
     private static void verifyOrdinaryEndingHandoff(GameplayCaptureSession session,
                                                      RouteFrameDrawing drawing) throws Exception {
-        verifyEndingComposition(session, drawing, -2);
+        verifyEndingComposition(session, drawing, -2, owner(session.loop()).getRewindController());
     }
 
     private static void verifyEndingComposition(GameplayCaptureSession session,
-                                                RouteFrameDrawing drawing, int expectedProgress) throws Exception {
+                                                RouteFrameDrawing drawing, int expectedProgress,
+                                                RewindController sourceRewind) throws Exception {
         var neutral = new Bk2FrameInput(0, 0, 0, false, "");
-        var sourceRewind = SessionManager.getCurrentGameplayMode().getRewindController();
         long outgoingHistory = sourceRewind == null ? 0 : sourceRewind.currentFrame();
+        boolean recordingAtEntry = GameServices.configuration().getBoolean(
+                com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED);
         boolean incomingLoadPending = GameServices.level().getCurrentZone() != 13;
         if (incomingLoadPending) {
             var source = GameServices.level();
@@ -570,11 +605,12 @@ class TestDezIncomingFinalRouteCapture {
         assertEquals(13, GameServices.level().getCurrentZone(), "actual ending load follows the source request");
         assertEquals(1, GameServices.level().getCurrentAct());
         if (incomingLoadPending && outgoingHistory > 10) {
-            var releasedHistory = SessionManager.getCurrentGameplayMode().getRewindController();
-            assertNotNull(releasedHistory);
-            assertEquals(0, releasedHistory.earliestAvailableFrame());
-            assertTrue(releasedHistory.currentFrame() < outgoingHistory,
-                    "actual ending load discards its recorded source timeline");
+            assertRetiredHistory(session, sourceRewind);
+        }
+        var firstIncoming = owner(session.loop()).getRewindController();
+        if (incomingLoadPending && firstIncoming != null) {
+            assertEquals(0, firstIncoming.earliestAvailableFrame());
+            assertTrue(firstIncoming.currentFrame() <= 1, "the ending load starts a frame-zero destination history");
         }
         if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
                 || GameServices.level().getTransitions().isTitleCardRequested()) {
@@ -610,7 +646,28 @@ class TestDezIncomingFinalRouteCapture {
         // Dynamic_object_RAM follows three Object_RAM slots; loc_5D96A uses5/45.
         assertTrue(actors.stream().anyMatch(a -> a.getSlotIndex() == 8));
         assertTrue(actors.stream().anyMatch(a -> a.getSlotIndex() == 48));
-        var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+        // D01 skips the title but retains the native fade completion callback.
+        // Check its initial composition above, then let the real loop release
+        // that non-rewindable window before requiring destination history.
+        if (incomingLoadPending && recordingAtEntry) {
+            for (int n = 0; n < 64 && owner(session.loop()).getRewindController() == null; n++) {
+                step(session, neutral);
+            }
+            var releasedHistory = owner(session.loop()).getRewindController();
+            assertNotNull(releasedHistory, "native D01 fade release installs its production timeline");
+            assertEquals(0, releasedHistory.earliestAvailableFrame());
+            if (firstIncoming == null) {
+                assertTrue(releasedHistory.currentFrame() <= 1,
+                        "the first released destination history starts at frame zero");
+            }
+            assertNotSame(sourceRewind, releasedHistory);
+            if (outgoingHistory > 10) {
+                assertRetiredHistory(session, sourceRewind);
+                assertTrue(releasedHistory.currentFrame() < outgoingHistory,
+                        "actual ending load discards its recorded source timeline");
+            }
+        }
+        var incoming = owner(session.loop()).getRewindController();
         if (incoming != null) {
             assertEquals(0, incoming.earliestAvailableFrame());
             assertTrue(incoming.currentFrame() <= 2, "source final-stage history cannot enter D01");
@@ -661,7 +718,7 @@ class TestDezIncomingFinalRouteCapture {
         GameServices.configuration().setSessionOverride(
                 com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
         for (int n = 0; n < 30; n++) step(session, neutral);
-        incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+        incoming = owner(session.loop()).getRewindController();
         assertNotNull(incoming);
         assertEquals(0, incoming.earliestAvailableFrame());
         assertTrue(incoming.currentFrame() > 10 && incoming.currentFrame() <= 35,
@@ -722,6 +779,25 @@ class TestDezIncomingFinalRouteCapture {
                 != com.openggf.game.GameMode.TITLE_SCREEN; n++) step(session, neutral);
         assertEquals(com.openggf.game.GameMode.TITLE_SCREEN, session.loop().getCurrentGameMode(),
                 "native terminal Start uses the production title handoff");
+        assertRetiredHistory(session, incoming);
+    }
+
+    private static void assertRetiredHistory(GameplayCaptureSession session, RewindController outgoing) {
+        var context = owner(session.loop());
+        assertTrue(context == null || context.getRewindController() != outgoing,
+                "the production mode boundary retires its outgoing timeline");
+        int frame = outgoing.currentFrame();
+        var level = context != null && context.isGameplayRuntimeReady() ? context.getLevelManager() : null;
+        int worldFrame = level == null ? -1 : level.getFrameCounter();
+        var objects = level == null ? null : level.getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), "retired final-route history rejects replay");
+        assertEquals(frame, outgoing.currentFrame());
+        if (level != null) {
+            assertEquals(worldFrame, level.getFrameCounter());
+            assertSame(objects, level.getObjectManager());
+        }
     }
 
     private static int health(String name) {

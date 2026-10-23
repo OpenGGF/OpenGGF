@@ -90,4 +90,21 @@ class TestSceneRunLauncher {
         assertEquals(List.of(RunEndReason.LOAD_FAILED), returned);
         assertFalse(loop.hostedRuns.isActive());
     }
+
+    @Test
+    void aRunBehindTheSceneKeepsTheSceneOverItAndOwnsStart() {
+        RunHandle plain = launcher.launch(spec("s2", "sonic"), new RunHost() { });
+        assertFalse(loop.hostedRuns.ownsStart(com.openggf.game.GameMode.LEVEL), "a plain run pauses as usual");
+        loop.hostedRuns.end(RunEndReason.LEFT);
+        assertFalse(plain.isActive());
+        RunHandle behind = launcher.launchBehind(spec("s2", "sonic"), new RunHost() { });
+        assertTrue(behind.isActive());
+        assertTrue(loop.hostedRuns.ownsStart(com.openggf.game.GameMode.LEVEL),
+                "Start and the pause key reach the scene over the run");
+        assertTrue(loop.hostedRunLaunchPending(), "the session still opens at the next boundary");
+        assertThrows(IllegalArgumentException.class, () -> {
+            loop.hostedRuns.end(RunEndReason.LEFT);
+            launcher.launchBehind(spec("s2", "knuckles"), new RunHost() { });
+        });
+    }
 }

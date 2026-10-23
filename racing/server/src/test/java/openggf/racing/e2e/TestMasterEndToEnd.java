@@ -71,6 +71,8 @@ class TestMasterEndToEnd {
         RaceConnection guest3 = guest3Master.joinRoom(roomId, guest3Identity, "G3", FP)
                 .get(15, TimeUnit.SECONDS);
 
+        // Readiness has its own tests; nobody waits under AUTO.
+        host.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         host.sendControl(new ControlMessage.RoundConfigure(
                 new ControlMessage.RoundConfig("s3k", 0, 0, 20, "OPEN", null)));
         awaitControl(host, ControlMessage.RoundStart.class, 10_000);

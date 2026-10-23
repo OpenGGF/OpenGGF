@@ -137,7 +137,7 @@ class SnapshotPolicyTests(unittest.TestCase):
         for name in ['validate-policy.sh', 'validate-policy.ps1', 'audit-release-tree.py',
                      'authored_fixture_policy.py', 'authored-fixtures.json',
                      'authored-clover-valley-assets.json',
-                     'machine-local-path-grandfather.sha256']:
+                     'machine-local-path-grandfather.sha256', 'mod_api_record_surface.py']:
             text = (ROOT / '.githooks' / name).read_text().replace(BASELINE, baseline)
             text = text.replace(NEXT_BASELINE, getattr(self, 'next_baseline', NEXT_BASELINE))
             text = text.replace(PUBLISHED_BASELINE, getattr(self, 'published_baseline', PUBLISHED_BASELINE))
@@ -286,6 +286,27 @@ public class Rules {
                                      .replace('publicLookingCall(1)', 'publicLookingCall(2)')
                                      .replace('return 1', 'return 2'), None)
 
+    def test_class_initializer_bodies_preserve_following_field_declarations(self):
+        old = """@ModApi
+public class Rules {
+    public static final java.util.function.IntSupplier FN = () -> { return 1; };
+    public static final int[] ARRAY = { 1, 2, 3 };
+    public static final int FIRST = call(1, 2), SECOND = 3;
+    public static final Object OBJECT = new Object() {
+        public String toString() { return "old // {"; }
+    };
+    public int size() { return 1; }
+}
+"""
+        new = old.replace('return 1;', 'return 2;').replace('{ 1, 2, 3 }', '{ 3, 4 }')
+        new = new.replace('call(1, 2)', 'call(4, 5)').replace('SECOND = 3', 'SECOND = 9')
+        new = new.replace('old // {', 'new /* }')
+        self.check_api_source_change(old, new, None)
+        self.write('src/main/java/example/Rules.java', new.replace(', SECOND = 9', ''))
+        self.assert_api_commit_policy('candidate signature pin')
+        self.write('src/main/java/example/Rules.java', new.replace('int size()', 'long size()'))
+        self.assert_api_commit_policy('candidate signature pin')
+
     def test_private_nested_type_insertions_do_not_require_pin(self):
         old = """@ModApi
 public final class Rules {
@@ -409,6 +430,13 @@ public class Rules {
         self.write('src/main/java/example/Rules.java', old.replace('private void implementation() { }',
             'private void implementation() { different(); }'))
         self.assert_api_commit_policy(None)
+
+    def test_class_nested_interface_field_initializers_do_not_change_api(self):
+        old = ('@ModApi\npublic class Rules { public interface Nested { '
+               'int VALUE = call(1); int size(); } }')
+        self.check_api_source_change(old, old.replace('call(1)', 'call(2)'), None)
+        self.write('src/main/java/example/Rules.java', old.replace('int VALUE', 'long VALUE'))
+        self.assert_api_commit_policy('candidate signature pin')
 
     def test_record_public_declaration_changes_still_require_candidate_pin(self):
         old = """@ModApi
@@ -562,6 +590,94 @@ public record Rules(int value) {
             for key in ['Changelog', 'Guide', 'Known-Discrepancies', 'S3K-Known-Discrepancies',
                         'Agent-Docs', 'Configuration-Docs', 'Skills']))
         self.assert_policy(BASELINE, self.base, head, 'develop', 'Known-Discrepancies')
+
+    def record_change(self, before, after, expected):
+        self.next_baseline = self.base
+        self.write('src/main/java/example/Value.java', before)
+        self.next_baseline = self.commit('historical API')
+        self.write('src/main/java/example/Value.java', after)
+        head = self.commit('chore: record edit\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills']))
+        self.assert_policy(BASELINE, self.next_baseline, head, 'develop', expected)
+
+    def test_record_private_state_and_executable_bodies_do_not_change_api(self):
+        before = """package example;
+@ModApi public record Value(@Nullable int value) {
+    private static final int CACHE = 1;
+    public Value { if (value < 0) throw new IllegalArgumentException("old"); }
+    public int visible() { return CACHE; }
+    private static class Helper { public int hidden() { return 1; } }
+}
+"""
+        after = before.replace('CACHE = 1', 'CACHE = 7').replace('return CACHE;',
+                'return new Object() { public String toString() { return "public { //"; } }.hashCode();')
+        after = after.replace('"old"', '"new { }"').replace('public int hidden()', 'public long hidden()')
+        after = after.replace('    private static final', '    private static int[] extra = {1, 2};\n    private static final')
+        self.record_change(before, after, None)
+
+    def test_record_component_changes_still_require_pin(self):
+        self.record_change('@ModApi public record Value(int value) {}',
+                           '@ModApi public record Value(long value) {}', 'candidate signature pin')
+
+    def test_record_public_method_contracts_still_require_pin(self):
+        self.record_change('@ModApi public record Value(int value) { public int get() { return value; } }',
+                           '@ModApi public record Value(int value) { public long get() { return value; } }',
+                           'candidate signature pin')
+
+    def test_record_visible_annotations_and_nested_contracts_still_require_pin(self):
+        self.record_change('@ModApi public record Value(int value) { @Contract("old") public int get() { return value; } }',
+                           '@ModApi public record Value(int value) { @Contract("new") public int get() { return value; } }',
+                           'candidate signature pin')
+        self.record_change('@ModApi public record Value(int value) { public record Nested(int x) {} }',
+                           '@ModApi public record Value(int value) { public record Nested(long x) {} }',
+                           'candidate signature pin')
+
+    def test_record_nested_annotation_array_defaults_still_require_pin(self):
+        prefix = '@ModApi public record Value(int value) { public @interface Contract { '
+        suffix = ' } }'
+        for before, after in [('String[] value() default {"old"};', 'String[] value() default {"new"};'),
+                              ('int[] value() default {};', 'int[] value() default {1, 2};')]:
+            with self.subTest(before=before, after=after):
+                self.record_change(prefix + before + suffix, prefix + after + suffix,
+                                   'candidate signature pin')
+
+    def test_record_nested_default_interface_method_bodies_do_not_change_api(self):
+        before = ('@ModApi public record Value(int value) { '
+                  'public interface Nested { @SuppressWarnings("unused") default String text() { return "old"; } } }')
+        self.record_change(before, before.replace('"old"', '"new { //"'), None)
+
+    def test_record_nested_enum_private_state_and_method_bodies_do_not_change_api(self):
+        before = ('@ModApi public record Value(int value) { public enum Choice { '
+                  'ONE; private static class Hidden { public int size() { return 1; } } '
+                  'private int hidden() { return 1; } public int size() { return 1; } } }')
+        after = before.replace('public int size() { return 1; }',
+                               'public int size() { return 2; }')
+        after = after.replace('private int hidden() { return 1; }',
+                              'private long renamed() { return 2; }')
+        after = after.replace('private static class Hidden', '@Deprecated private static class Helper')
+        self.record_change(before, after, None)
+
+    def test_enum_constants_and_nested_enum_visible_contracts_still_require_pin(self):
+        declarations = [('@ModApi public enum Value { ONE }', 'ONE', 'ONE, TWO'),
+                        ('@ModApi public record Value(int value) { public enum Choice { ONE; '
+                         'public int size() { return 1; } } }', 'ONE;', 'ONE, TWO;'),
+                        ('@ModApi public record Value(int value) { public enum Choice { ONE; '
+                         'public int size() { return 1; } } }', 'int size()', 'long size()')]
+        for before, old, new in declarations:
+            with self.subTest(before=before, new=new):
+                self.record_change(before, before.replace(old, new), 'candidate signature pin')
+
+    def test_annotation_defaults_in_classes_and_annotation_types_still_require_pin(self):
+        wrappers = [('@ModApi public @interface Value { ', ' }'),
+                    ('@ModApi public class Value { public @interface Contract { ', ' } }')]
+        for prefix, suffix in wrappers:
+            for before, after in [('String value() default "old";', 'String value() default "new";'),
+                                  ('int[] value() default {};', 'int[] value() default {1, 2};')]:
+                with self.subTest(prefix=prefix, before=before):
+                    self.record_change(prefix + before + suffix, prefix + after + suffix,
+                                       'candidate signature pin')
 
     def test_next_rollover_rejects_postbaseline_uncoupled_api_changes(self):
         self.next_baseline = self.base

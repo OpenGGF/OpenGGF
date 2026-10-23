@@ -65,6 +65,7 @@ public class GraphicsManager {
     private boolean scopedUnderwaterDirty;
     private int underwaterCompositionLines;
     private Object scopedPaletteWorld;
+    private final AppearancePalettes.Rows appearancePaletteRows = new AppearancePalettes.Rows(this);
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
 	// Last palette handed to cachePaletteTexture per line, so a palette fade change
 	// can re-upload the affected lines without asking their owners to write again.
@@ -151,6 +152,7 @@ public class GraphicsManager {
 	private boolean currentSpriteHighPriority = false;
 	private int currentSpriteTileOcclusionPaletteMask = 0xF;
 	private boolean ghostRenderEffectActive = false;
+	private boolean ghostRenderPreservesColour = false;
 	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
@@ -394,7 +396,12 @@ public class GraphicsManager {
 		flushPatternBatch();
 		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
 		command.presentation(quad,hue,opacity);
-		registerCommand(command);
+        // The queue is the painter-order boundary, including captured commands.
+        // Never merge across a primitive, normal instance batch, or state command.
+        List<GLCommandable> target = commandCaptureTarget != null ? commandCaptureTarget : commands;
+        if (!batchingEnabled || target.isEmpty()
+                || !(target.getLast() instanceof PatternRenderCommand previous)
+                || !previous.appendPresentation(command)) registerCommand(command);
 	}
 
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
@@ -758,6 +765,16 @@ public class GraphicsManager {
 		patternAtlas.cachePattern(pattern, patternId);
 	}
 
+    void restoreFrozenPattern(SpritePresentation.PatternVersion version, int patternId) {
+        ensurePatternAtlas();
+        patternAtlas.restoreFrozenPattern(version, patternId, headlessMode || !glInitialized);
+    }
+
+    boolean presentationMaskIsPerInstance() {
+        return !headlessMode && spritePresentationBuilder == null && batchingEnabled
+                && instancedBatchActive && instancedPatternRenderer != null;
+    }
+
 	public void updatePatternTexture(Pattern pattern, int patternId) {
 		// Native null uploads allocate residency but leave existing GPU bytes intact.
 		ensurePatternAtlas();
@@ -908,6 +925,29 @@ public class GraphicsManager {
 	private void invalidateScopedPaletteBanks() {
 		for(var lease:scopedPaletteOwners.values())RenderContext.releaseScopedPaletteBank(lease.token());
 		scopedPaletteOwners.clear();
+		appearancePaletteRows.invalidateAll();
+	}
+
+	AppearancePalettes.Rows appearancePaletteRows() { return appearancePaletteRows; }
+
+	/** The palette last handed to {@code row}, or null. */
+	PaletteView cachedPaletteLine(int row) {
+		return row >= 0 && row < lastCachedPaletteLines.length ? lastCachedPaletteLines[row] : null;
+	}
+
+	/** Uploads a composed appearance row; it fades with {@code fadeLine}, the row it mirrors. */
+	void uploadAppearanceRow(PaletteView palette, int row, int fadeLine) {
+		uploadPaletteRow(palette, row, fadeLine);
+	}
+
+	/** Appearance rows were reserved or released: draws and the water texture see new rows. */
+	void appearanceRowsChanged() {
+		PatternRenderCommand.resetFrameState();
+		scopedUnderwaterDirty = true;
+	}
+
+	void appearanceUnderwaterChanged() {
+		scopedUnderwaterDirty = true;
 	}
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
@@ -980,6 +1020,12 @@ public class GraphicsManager {
 	}
 
 	void uploadPaletteLine(PaletteView palette, int paletteId) {
+		uploadPaletteRow(palette, paletteId, paletteId);
+		// Private appearance rows mirror this row; recompose them from what it now holds.
+		appearancePaletteRows.sourceUploaded(paletteId, palette);
+	}
+
+	private void uploadPaletteRow(PaletteView palette, int paletteId, int fadeLineId) {
 		if (headlessMode) {
 			// In headless mode, just record that the palette was cached
 			paletteTextureMap.put("palette_" + paletteId, -1);
@@ -1031,7 +1077,7 @@ public class GraphicsManager {
 		paletteBuffer.clear();
 		// An active palette fade owns what CRAM receives for its lines (PalFadeIn_Alt
 		// rebuilds v_palette from v_palette_fading); the owner's palette is untouched.
-		boolean fadeLine = publishedPaletteFade.affects(paletteId);
+		boolean fadeLine = publishedPaletteFade.affects(fadeLineId);
 		for (int i = 0; i < COLORS_PER_PALETTE; i++) {
             if (palette instanceof NativeIntensityPalette intensity) {
                 int rgb = intensity.displayedRgb(i, publishedPaletteFade, displayColorProfile, displayColorExpansion);
@@ -1322,18 +1368,39 @@ public class GraphicsManager {
 		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
 	}
 
+	/** Draws following sprites as a desaturated, translucent ghost. */
 	public void beginGhostRenderEffect(float alpha) {
+		beginGhostRenderEffect(alpha, false);
+	}
+
+	/**
+	 * Draws following sprites as a translucent ghost; {@code preserveColour} keeps their palette
+	 * colours (a player's chosen look) instead of desaturating them.
+	 */
+	public void beginGhostRenderEffect(float alpha, boolean preserveColour) {
 		this.ghostRenderEffectActive = true;
+		this.ghostRenderPreservesColour = preserveColour;
 		this.ghostRenderAlpha = Math.max(0.0f, Math.min(1.0f, alpha));
 	}
 
 	public void endGhostRenderEffect() {
 		this.ghostRenderEffectActive = false;
+		this.ghostRenderPreservesColour = false;
 		this.ghostRenderAlpha = 1.0f;
 	}
 
 	public boolean isGhostRenderEffectActive() {
 		return ghostRenderEffectActive;
+	}
+
+	/** Whether the active ghost effect keeps palette colours (meaningless when none is active). */
+	public boolean isGhostRenderColourPreserved() {
+		return ghostRenderEffectActive && ghostRenderPreservesColour;
+	}
+
+	/** Shader {@code GhostMode}: 0 none, 1 desaturated ghost, 2 colour-preserving ghost. */
+	static int ghostShaderMode(boolean active, boolean preserveColour) {
+		return !active ? 0 : preserveColour ? 2 : 1;
 	}
 
 	public float getGhostRenderAlpha() {
@@ -1827,7 +1894,12 @@ public class GraphicsManager {
 			byte rowCase = UNDERWATER_ROW_DIRECT;
 			if (source == null) {
 				rowCase = UNDERWATER_ROW_ABSENT;
-				if (normalLine0 != null && underwaterLine0 != null) {
+				PaletteView appearance = appearancePaletteRows.isEmpty() ? null
+						: appearancePaletteRows.underwaterRow(row, palettes, normalLine0, underwaterLine0);
+				if (appearance != null) {
+					source = appearance;
+					rowCase = UNDERWATER_ROW_DIRECT;
+				} else if (normalLine0 != null && underwaterLine0 != null) {
 					source = RenderContext.getUnderwaterPaletteForEffectiveLine(row);
 					if (source != null) {
 						rowCase = UNDERWATER_ROW_DIRECT;
@@ -1875,7 +1947,7 @@ public class GraphicsManager {
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
             boolean fadeRow = !whiteFade && sourceIndex < totalLines
-                    && paletteFadeAffects(fadeMode, fadeMask, sourceIndex);
+                    && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(sourceIndex));
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 				byte r = source.red(colorIndex);
 				byte g = source.green(colorIndex);
@@ -1950,7 +2022,7 @@ public class GraphicsManager {
 			if (rowCase == UNDERWATER_ROW_DERIVED) {
 				int normalOffset = totalLines * 16 * 3;
 				int shiftedOffset = (totalLines + 1) * 16 * 3;
-                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)
+                var rowWhiteMode = whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))
                         ? fadeMode : PaletteFadePresentation.Mode.NONE;
 				if (!underwaterDerivedRowKeyMatches(row, rgbOffset, normalOffset, shiftedOffset,
                         rowWhiteMode, fadeSteps)) {
@@ -1970,7 +2042,7 @@ public class GraphicsManager {
 				int r = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int g = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
 				int b = Byte.toUnsignedInt(underwaterPaletteSourceRgb[rgbOffset++]);
-                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, row)) {
+                if (whiteFade && paletteFadeAffects(fadeMode, fadeMask, appearancePaletteRows.fadeLine(row))) {
                     int faded = PaletteFadePresentation.fadeRgb(r, g, b, fadeMode, fadeSteps);
                     r = (faded >>> 16) & 255;
                     g = (faded >>> 8) & 255;
@@ -2530,6 +2602,46 @@ public class GraphicsManager {
         }
     }
 
+    /** Engine-only layered coverage; the ordinary no-ghost ownership path stays intact. */
+    <T> void replayNativeLayers(List<T> frontToBack, java.util.function.Predicate<T> isGhost,
+                               java.util.function.Consumer<List<T>> emitter) {
+        java.util.Objects.requireNonNull(emitter, "native layer emitter");
+        var layers = NativeSpriteOwnership.layers(frontToBack, isGhost);
+        if (layers.isEmpty()) {
+            withNativeSpriteOwnership(() -> emitter.accept(frontToBack));
+            return;
+        }
+        if (submittingNativeSpriteOwnership) throw new IllegalStateException("Nested native sprite ownership");
+        if (spritePresentationBuilder != null) { emitter.accept(frontToBack); return; }
+        boolean previousPriorityShader = useSpritePriorityShader;
+        if (headlessMode) {
+            submittingNativeSpriteOwnership = true;
+            try { NativeSpriteOwnership.replayLayers(layers, (rank, ghost) -> { }, emitter); }
+            finally {
+                submittingNativeSpriteOwnership = false;
+                useSpritePriorityShader = previousPriorityShader;
+            }
+            return;
+        }
+        flushPatternBatch();
+        var state = new NativeSpriteOwnership.Commands(this, scope -> nativeSpriteOwnership = scope, true);
+        registerCommand(state.begin);
+        submittingNativeSpriteOwnership = true;
+        try {
+            NativeSpriteOwnership.replayLayers(layers, (rank, ghost) -> {
+                flushPatternBatch();
+                registerCommand(state.layer(rank, ghost));
+            }, emitter);
+        } finally {
+            try { flushPatternBatch(); }
+            finally {
+                submittingNativeSpriteOwnership = false;
+                useSpritePriorityShader = previousPriorityShader;
+                registerCommand(state.end);
+            }
+        }
+    }
+
 	/**
 	 * Set whether the current sprite being rendered has high priority.
 	 * This is used by the sprite priority shader to determine if the sprite
@@ -2628,9 +2740,13 @@ public class GraphicsManager {
                 .withTileOcclusionPaletteMask(getCurrentSpriteTileOcclusionPaletteMask())
                 .withPixelOperation(currentSpritePixelOperation);
         if (entry.pixelOperation() == SpriteSatEntry.PixelOperation.SHADOW_15) validateShadowEntry(entry);
-		(spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(
-                spritePresentationSubject == SpritePresentation.Subject.WORLD
-				? entry : entry.withPresentationSubject(spritePresentationSubject));
+        if (spritePresentationSubject != SpritePresentation.Subject.WORLD) {
+            entry = entry.withPresentationSubject(spritePresentationSubject);
+        }
+        if (ghostRenderEffectActive) {
+            entry = entry.withGhost(new SpriteSatEntry.Ghost(ghostRenderAlpha, ghostRenderPreservesColour));
+        }
+        (spriteSatFragments == null ? spriteSatEntries : spriteSatFragments).add(entry);
 	}
 
     /**
@@ -2702,6 +2818,20 @@ public class GraphicsManager {
                 return;
             }
 
+            if (processedEntries.stream().anyMatch(SpriteSatEntry::isGhost)) {
+                // Mask admission already expanded immutable art fragments. Flatten
+                // the actual bucket order before planning real/ghost coverage spans.
+                var frontToBack = new ArrayList<SpriteSatEntry>(processedEntries.size());
+                for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+                    for (SpriteSatEntry entry : processedEntries) {
+                        if (entry.priorityBucket() == bucket && !entry.presentationSubject().suppressed())
+                            frontToBack.add(entry);
+                    }
+                }
+                replayNativeLayers(frontToBack, SpriteSatEntry::isGhost, this::replayOrderedSpriteSatEntries);
+                return;
+            }
+
 			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
 			// carefully ordered SAT sequence into a still-open batch owned by another layer,
 			// flattening or reordering it. Instead the replay owns its emission: a dedicated
@@ -2736,6 +2866,46 @@ public class GraphicsManager {
 				&& !instancedBatchActive;
 	}
 
+    /** A single already ordered span; its dedicated batch cannot cross a stencil selection command. */
+    private void replayOrderedSpriteSatEntries(List<SpriteSatEntry> entries) {
+        ensurePatternAtlas();
+        Integer paletteTextureId = resolveSpriteSatReplayPaletteTextureId();
+        int palette = paletteTextureId == null ? -1 : paletteTextureId;
+        setCurrentSpriteHighPriority(false);
+        if (canBatchSpriteSatReplay()) {
+            try {
+                satReplayBatchOpen = false;
+                for (SpriteSatEntry entry : entries) {
+                    if (paletteTextureId == null && entry.pixelOperation() != SpriteSatEntry.PixelOperation.SHADOW_15) continue;
+                    setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
+                    appendBatchedReplayCommands(entry, palette);
+                }
+                flushSatReplayBatch();
+            } finally {
+                instancedPatternRenderer.cancelBatch();
+                satReplayBatchOpen = false;
+            }
+            return;
+        }
+        reusableReplayCommands.clear();
+        int registered = 0;
+        try {
+            for (SpriteSatEntry entry : entries) {
+                if (paletteTextureId == null && entry.pixelOperation() != SpriteSatEntry.PixelOperation.SHADOW_15) continue;
+                setCurrentSpriteTileOcclusionPaletteMask(entry.tileOcclusionPaletteMask());
+                appendDirectReplayCommands(entry, palette, reusableReplayCommands);
+            }
+            for (PatternRenderCommand command : reusableReplayCommands) {
+                registerCommand(command);
+                registered++;
+            }
+        } finally {
+            for (int index = registered; index < reusableReplayCommands.size(); index++)
+                reusableReplayCommands.get(index).discard();
+            reusableReplayCommands.clear();
+        }
+    }
+
 	/**
 	 * Replays the processed SAT entries through dedicated instanced batches instead
 	 * of one PatternRenderCommand (3 glBufferData + 1 draw) per 8x8 tile. Tiles are
@@ -2769,7 +2939,36 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-        withSpritePixelOperation(entry.pixelOperation(), () -> SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
+        withSpritePixelOperation(entry.pixelOperation(),
+                () -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+	}
+
+	/**
+	 * Replays {@code entry} under its gameplay-ghost style, if it has one. Every replay sink
+	 * (presentation tiles, instanced batches, direct commands) captures the ghost state when a
+	 * tile is added, and a batch never mixes states, so a ghost keeps its translucency and
+	 * colour mode inside the SAT order.
+	 */
+	private void withSatEntryGhost(SpriteSatEntry entry, Runnable replay) {
+		if (!entry.isGhost()) {
+			replay.run();
+			return;
+		}
+		boolean active = ghostRenderEffectActive;
+		boolean colour = ghostRenderPreservesColour;
+		float alpha = ghostRenderAlpha;
+		beginGhostRenderEffect(entry.ghost().alpha(), entry.ghost().preserveColour());
+		try {
+			replay.run();
+		} finally {
+			ghostRenderEffectActive = active;
+			ghostRenderPreservesColour = colour;
+			ghostRenderAlpha = alpha;
+		}
+	}
+
+	private void appendBatchedReplayTiles(SpriteSatEntry entry, int paletteTextureId) {
+		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					// CPU preparation uses this same tile decoder before any atlas lookup.
 					// A sprite-mask band can hide single scanlines of this tile.
@@ -2808,7 +3007,7 @@ public class GraphicsManager {
 					flushSatReplayBatch();
 					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
 							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
-				}));
+				});
 	}
 
 	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
@@ -2905,6 +3104,11 @@ public class GraphicsManager {
 		if (entry == null || replayCommands == null) {
 			return;
 		}
+		withSatEntryGhost(entry, () -> appendDirectReplayTiles(entry, paletteTextureId, replayCommands));
+	}
+
+	private void appendDirectReplayTiles(SpriteSatEntry entry, int paletteTextureId,
+			List<PatternRenderCommand> replayCommands) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;

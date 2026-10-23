@@ -896,6 +896,22 @@ surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
 the additions together.
 
 
+### Player names and looks (2026-10-22)
+
+The unpublished `0.7.0` candidate adds Unicode player text and player looks for Time
+Attack and other multiplayer mods. `NameFont` draws any Basic Multilingual Plane text
+from bundled, unmodified Fusion Pixel 10px and GNU Unifont glyphs (left to right, no
+shaping); `DisplayNames` defines the canonical name every host enforces;
+`SceneContext.typedText()` delivers typed code points to scenes. `PlayerAppearance`
+carries a base colour and the palette entries that differ from stock in a canonical
+wire form, `CharacterLooks` builds body-ramp looks from disassembly-cited tables,
+`GhostPose.appearance` colours a ghost and `RunHandle.setPlayerAppearance` recolours
+the run's own character through private palette rows. Protocol version 4 adds
+`Hello.appearance`, `UpdateProfile` and `PlayerLook`, and `RoomHostHooks` gains a
+`ProfileListener`. The descriptor keeps `0.7.0` candidate with no published
+baselines; `ModApiVersion`, curated roots and the regenerated mutable pin describe
+the additions together.
+
 The October 15 hub polish adds twelve `SonicConfiguration` enum constants for
 optional hub music, volume, focused-game history and per-game Continue zone,
 act and leader. The normalized mutable `0.7` pin and runtime candidate description

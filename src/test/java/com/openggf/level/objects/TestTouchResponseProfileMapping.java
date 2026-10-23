@@ -12,6 +12,42 @@ import org.junit.jupiter.api.Test;
 class TestTouchResponseProfileMapping {
 
     @Test
+    void valueReuseStillSamplesMutableProviderFlagsAndMultiRegionPresence() {
+        class Mutable implements TouchResponseProvider {
+            boolean continuous, render = true, multi, preserve, special;
+            int shield;
+            @Override public int getCollisionFlags() { return 0x87; }
+            @Override public int getCollisionProperty() { return 0; }
+            @Override public boolean requiresContinuousTouchCallbacks() { return continuous; }
+            @Override public boolean requiresRenderFlagForTouch() { return render; }
+            @Override public boolean enablesPostSpecialTouchAirborneSideVelocityPreservation() { return preserve; }
+            @Override public boolean usesS3kTouchSpecialPropertyResponse() { return special; }
+            @Override public int getShieldReactionFlags() { return shield; }
+            @Override public TouchRegion[] getMultiTouchRegions() { return multi ? new TouchRegion[0] : null; }
+        }
+        var provider = new Mutable();
+        var original = provider.getTouchResponseProfile();
+        org.junit.jupiter.api.Assertions.assertSame(original, new Mutable().getTouchResponseProfile());
+        provider.continuous = true; provider.render = false; provider.multi = true;
+        provider.preserve = true; provider.special = true; provider.shield = 8;
+        var changed = provider.getTouchResponseProfile();
+        assertTrue(changed.continuousCallbacks()); assertFalse(changed.requiresRenderFlagForTouch());
+        assertTrue(changed.multiRegionSource()); assertTrue(changed.enablesPostSpecialTouchAirborneSideVelocityPreservation());
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY, changed.categoryDecodeMode());
+        assertEquals(8, changed.shieldReactionFlags());
+        org.junit.jupiter.api.Assertions.assertSame(changed, provider.getTouchResponseProfile());
+        assertFalse(provider.getTouchResponseProfile(false).multiRegionSource(), "explicit adapter argument remains authoritative");
+        provider.shield = 0x12345678;
+        assertEquals(0x12345678, provider.getTouchResponseProfile().shieldReactionFlags(), "unusual creator words are never truncated for a table key");
+        provider.continuous = false; provider.render = true; provider.multi = false;
+        provider.preserve = false; provider.special = false; provider.shield = 0;
+        org.junit.jupiter.api.Assertions.assertSame(original, provider.getTouchResponseProfile());
+        org.junit.jupiter.api.Assertions.assertSame(
+                com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy(),
+                com.openggf.game.profiles.touchresponse.TouchResponseProfile.fromProvider(provider));
+    }
+
+    @Test
     void providerDefaultsMapToSingleRegionNormalEdgeTriggeredProfile() {
         TouchResponseProfile profile = TouchResponseProfile.fromProvider(new DefaultProvider());
 

@@ -200,152 +200,120 @@ function Test-ContainsModApiAnnotation([string]$Text) {
     return $Text -match '(?m)^\s*@(?:com\.openggf\.game\.)?ModApi(?:[.(\s]|$)'
 }
 
-# Mirrors mod_api_surface_text in validate-policy.sh.
+# Mirrors the conservative declaration projection in mod_api_surface_text.
+# Annotations travel with their declaration; private enclosing types hide their
+# entire subtree. Class/record field initializer values are not signatures.
+# The exact signature snapshot remains authoritative.
 function Get-ModApiSurfaceText([string]$Text) {
-    $inBlock = $false
-    $stripQuote = ""; $stripEscaped = $false
-    $kind = ""
-    $typeName = ""
-    $stripped = New-Object System.Collections.Generic.List[string]
-    foreach ($raw in ($Text -split "\r?\n")) {
-        $line = $raw
-        $out = ""
-        for ($k = 0; $k -lt $line.Length; $k++) {
-            $c = $line[$k]
-            $pair = if ($k + 1 -lt $line.Length) { $line.Substring($k, 2) } else { "" }
-            $triple = $k + 2 -lt $line.Length -and $line.Substring($k, 3) -eq '"""'
-            if ($inBlock) {
-                if ($pair -eq '*/') { $inBlock = $false; $k++ }
-                continue
-            }
-            if ($stripQuote) {
-                $out += $c
-                if ($stripEscaped) { $stripEscaped = $false }
-                elseif ($c -eq '\') { $stripEscaped = $true }
-                elseif ($stripQuote -eq 'text' -and $triple) { $out += '""'; $k += 2; $stripQuote = "" }
-                elseif ([string]$c -eq $stripQuote) { $stripQuote = "" }
-                continue
-            }
-            if ($pair -eq '//') { break }
-            if ($pair -eq '/*') { $inBlock = $true; $out += ' '; $k++; continue }
-            if ($triple) { $stripQuote = 'text'; $out += '"""'; $k += 2; continue }
-            if ($c -eq '"' -or $c -eq [char]39) { $stripQuote = [string]$c }
-            $out += $c
-        }
-        $stripped.Add($out)
-        if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+([A-Za-z_][A-Za-z0-9_]*)') {
-            $kind = $Matches[1]; $typeName = $Matches[2]
-        }
-    }
-    # Remove class/record implementation text before declaration selection.
-    # Field initializer values are absent from the normalized signature exporter.
-    # All type forms exclude private nested declarations and their entire bodies.
-    # Other type forms retain their existing conservative declaration comparison.
-    if ($kind -ne "") {
-        $stripBodies = $kind -eq "class" -or $kind -eq "record"
-        $source = $stripped -join "`n"
-        $clean = New-Object System.Text.StringBuilder
-        $segment = New-Object System.Text.StringBuilder
-        $typeTokens = New-Object System.Text.StringBuilder
-        $parens = 0; $body = 0; $initializer = $false
-        $initParens = 0; $initBraces = 0; $initBrackets = 0
-        $quote = [char]0; $escaped = $false
-        for ($j = 0; $j -lt $source.Length; $j++) {
-            $c = $source[$j]
-            $triple = $j + 2 -lt $source.Length -and $source.Substring($j, 3) -eq '"""'
-            if ($quote -ne [char]0) {
-                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c) }
-                if ($quote -eq 'text' -and -not $escaped -and $triple) {
-                    if (-not $body -and -not $initializer) { [void]$clean.Append('""'); [void]$segment.Append('""') }
-                    $j += 2; $quote = [char]0; continue
-                }
-                if ($escaped) { $escaped = $false }
-                elseif ($c -eq '\') { $escaped = $true }
-                elseif ($c -eq $quote) { $quote = [char]0 }
-                continue
-            }
-            if ($triple) {
-                $quote = 'text'
-                if (-not $body -and -not $initializer) { [void]$clean.Append('"""'); [void]$segment.Append('"""'); [void]$typeTokens.Append(' ') }
-                $j += 2; continue
-            }
-            if ($c -eq '"' -or $c -eq [char]39) {
-                $quote = $c
-                if (-not $body -and -not $initializer) { [void]$clean.Append($c); [void]$segment.Append($c); [void]$typeTokens.Append(' ') }
-                continue
-            }
-            if ($body) {
-                if ($c -eq '{') { $body++ }
-                elseif ($c -eq '}') { $body-- }
-                continue
-            }
-            if ($initializer) {
-                if ($initParens -eq 0 -and $initBraces -eq 0 -and $initBrackets -eq 0 -and ($c -eq ';' -or $c -eq ',')) { $initializer = $false }
-                else {
-                    if ($c -eq '(') { $initParens++ }
-                    elseif ($c -eq ')') { $initParens-- }
-                    elseif ($c -eq '{') { $initBraces++ }
-                    elseif ($c -eq '}') { $initBraces-- }
-                    elseif ($c -eq '[') { $initBrackets++ }
-                    elseif ($c -eq ']') { $initBrackets-- }
-                    continue
-                }
-            }
-            if ($stripBodies -and $c -eq '=' -and $parens -eq 0) { $initializer = $true; continue }
-            if ($c -eq '{' -and $parens -eq 0) {
-                $isType = $typeTokens.ToString() -cmatch '(?:^|[ \t\n])(?:class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]'
-                if ($isType -and $typeTokens.ToString() -cmatch '(?:^|[ \t\n])private[ \t\n]') {
-                    # Exposed members of a private enclosing type are not exported.
-                    $clean.Length -= $segment.Length
-                    [void]$segment.Clear(); [void]$typeTokens.Clear(); $body = 1; continue
-                }
-                if (-not $isType -and $stripBodies) {
-                    [void]$clean.Append('{}'); [void]$segment.Clear(); [void]$typeTokens.Clear(); $body = 1; continue
-                }
-                [void]$segment.Clear(); [void]$typeTokens.Clear()
-            } elseif ($c -eq ';' -or $c -eq '}') { [void]$segment.Clear(); [void]$typeTokens.Clear() }
-            else { [void]$segment.Append($c); [void]$typeTokens.Append($c) }
-            [void]$clean.Append($c)
-            if ($c -eq '(') { $parens++ }
-            elseif ($c -eq ')') { $parens-- }
-        }
-        $stripped = $clean.ToString() -split "`n"
-    }
-    $whole = $kind -ne "class"
-    $depth = 0; $braces = 0; $interfaceDepth = 0; $interfacePending = $false
-    $quote = [char]0; $escaped = $false
+    $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($null -eq $python) { Fail "Python 3 is required for Mod API record admission." }
+    $surface = $Text | & $python.Source (Join-Path $PSScriptRoot "mod_api_record_surface.py")
+    if ($LASTEXITCODE -eq 0) { return ($surface -join "`n") }
+    if ($LASTEXITCODE -ne 2) { Fail "Cannot inspect Java record declaration." }
     $kept = New-Object System.Collections.Generic.List[string]
-    foreach ($l in $stripped) {
-        if ($l -notmatch '[^ \t]') { continue }
-        if ($whole) { $kept.Add($l); continue }
-        if ($l -cmatch '(?:^|[ \t])(?:@interface|interface)[ \t]+[A-Za-z_]') { $interfacePending = $true }
-        if ($interfaceDepth -gt 0 -or $depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or
-                $l -cmatch '(?:^|[ \t])(?:class|interface|record|enum|extends|implements)[ \t]') {
-            $kept.Add($l)
-            $depth += ([regex]::Matches($l, '\(')).Count - ([regex]::Matches($l, '\)')).Count
-            if ($depth -lt 0) { $depth = 0 }
+    $visible = @{}; $implicit = @{}
+    $top = 0; $parens = 0; $bodyDepth = 0; $defaultDepth = 0
+    $initializer = $false; $stripInitializers = $false; $initParens = 0; $initBraces = 0; $initBrackets = 0
+    $header = ""; $code = ""; $quote = ""; $escaped = $false
+    $inLine = $false; $inBlock = $false
+    for ($i = 0; $i -lt $Text.Length; $i++) {
+        $c = $Text[$i]
+        $pair = if ($i + 1 -lt $Text.Length) { $Text.Substring($i, 2) } else { "" }
+        $triple = if ($i + 2 -lt $Text.Length) { $Text.Substring($i, 3) } else { "" }
+        if ($inLine) { if ($c -eq "`n") { $inLine = $false } else { continue } }
+        if ($inBlock) {
+            if ($pair -eq "*/") { $inBlock = $false; $i++ }
+            continue
         }
-        # Nested interface methods are implicitly public; literal braces do not
-        # change their enclosing type scope.
-        for ($j = 0; $j -lt $l.Length; $j++) {
-            $c = $l[$j]
-            if ($quote -ne [char]0) {
-                if ($escaped) { $escaped = $false }
-                elseif ($c -eq '\') { $escaped = $true }
-                elseif ($c -eq $quote) { $quote = [char]0 }
+        if ($quote -ne "") {
+            if ($bodyDepth -eq 0 -and -not $initializer) { $header += $c; $code += " " }
+            if ($escaped) { $escaped = $false }
+            elseif ($c -eq '\') { $escaped = $true }
+            elseif ($quote -eq '"""' -and $triple -eq $quote) {
+                if ($bodyDepth -eq 0 -and -not $initializer) { $header += '""'; $code += "  " }
+                $i += 2; $quote = ""
+            } elseif ([string]$c -ceq $quote) { $quote = "" }
+            continue
+        }
+        if ($pair -eq "//" -or $pair -eq "/*") {
+            if ($bodyDepth -eq 0 -and -not $initializer -and -not $header.EndsWith(" ")) { $header += " "; $code += " " }
+            if ($pair -eq "//") { $inLine = $true } else { $inBlock = $true }
+            $i++; continue
+        }
+        if ($c -eq '"' -or $c -eq [char]39) {
+            $quote = [string]$c
+            if ($triple -eq '"""') {
+                $quote = $triple
+                if ($bodyDepth -eq 0 -and -not $initializer) { $header += '""'; $code += "  " }
+                $i += 2
+            }
+            if ($bodyDepth -eq 0 -and -not $initializer) { $header += $c; $code += " " }
+            continue
+        }
+        if ($bodyDepth -gt 0) {
+            if ($c -eq '{') { $bodyDepth++ }
+            elseif ($c -eq '}') { $bodyDepth-- }
+            continue
+        }
+        if ($initializer) {
+            if ($initParens -eq 0 -and $initBraces -eq 0 -and $initBrackets -eq 0 -and ($c -eq ';' -or $c -eq ',')) { $initializer = $false }
+            else {
+                if ($c -eq '(') { $initParens++ }
+                elseif ($c -eq ')') { $initParens-- }
+                elseif ($c -eq '{') { $initBraces++ }
+                elseif ($c -eq '}') { $initBraces-- }
+                elseif ($c -eq '[') { $initBrackets++ }
+                elseif ($c -eq ']') { $initBrackets-- }
                 continue
             }
-            if ($c -eq '"' -or $c -eq [char]39) { $quote = $c; continue }
-            if ($c -eq '{') {
-                $braces++
-                if ($interfacePending) {
-                    if ($interfaceDepth -eq 0) { $interfaceDepth = $braces }
-                    $interfacePending = $false
-                }
-            } elseif ($c -eq '}') {
-                $braces--
-                if ($braces -lt $interfaceDepth) { $interfaceDepth = 0 }
+        }
+        if ($c -eq '=' -and $parens -eq 0 -and $stripInitializers) {
+            $initializer = $true; continue
+        }
+        if ($c -match '[ \t\r\n]') {
+            if (-not $header.EndsWith(" ")) { $header += " "; $code += " " }
+            continue
+        }
+        if ($c -eq '{') {
+            # Annotation-element array defaults are declaration values.
+            if ($defaultDepth -gt 0 -or $code -cmatch '(?:^|[^A-Za-z0-9_])default[ \t]*$') {
+                $defaultDepth++; $header += $c; $code += $c; continue
             }
+            if ($parens -gt 0) { $header += $c; $code += $c; continue }
+            $kind = ""
+            if ($code -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*') { $kind = $Matches[1] }
+            $memberVisible = $top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')
+            $header += $c; $code += $c
+            if ($kind -ne "") {
+                $allowed = ($top -eq 0 -or $visible[$top]) -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]'
+                if ($top -eq 0) { $stripInitializers = $kind -ceq 'class' -or $kind -ceq 'record' }
+                if ($allowed) { $kept.Add($header.Trim()) }
+                $top++; $visible[$top] = $allowed; $implicit[$top] = $kind -cne "class"
+            } else {
+                if ($memberVisible) { $kept.Add($header.Trim()) }
+                $bodyDepth = 1
+            }
+            $header = ""; $code = ""; continue
+        }
+        if ($c -eq '}' -and $defaultDepth -gt 0) { $defaultDepth--; $header += $c; $code += $c; continue }
+        if ($c -eq '}' -and $parens -eq 0) {
+            if ($top -gt 0) {
+                # Enum constant lists need no terminating semicolon.
+                if ($header.Trim() -ne "" -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                        ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
+                if ($visible[$top]) { $kept.Add("}") }
+                $visible.Remove($top); $implicit.Remove($top); $top--
+            }
+            $header = ""; $code = ""; continue
+        }
+        $header += $c; $code += $c
+        if ($c -eq '(') { $parens++ }
+        elseif ($c -eq ')') { $parens-- }
+        elseif ($c -eq ';' -and $parens -eq 0) {
+            if ($top -gt 0 -and $visible[$top] -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' -and
+                    ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')) { $kept.Add($header.Trim()) }
+            $header = ""; $code = ""
         }
     }
     return ($kept -join "`n")

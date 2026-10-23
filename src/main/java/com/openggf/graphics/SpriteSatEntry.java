@@ -30,10 +30,57 @@ public record SpriteSatEntry(
         SpritePresentation.Subject presentationSubject,
         java.util.List<SpriteSatEntry> replayFragments,
         int tileOcclusionPaletteMask,
-        PixelOperation pixelOperation
+        PixelOperation pixelOperation,
+        Ghost ghost
 ) {
     /** Constrained indexed native operators; this does not enable general shadow/highlight mode. */
     public enum PixelOperation { NORMAL, SHADOW_15 }
+
+    /**
+     * A gameplay ghost's draw style. Ghosts are not ROM sprites: a sprite mask clips them like
+     * any later SAT entry, but they never arm one (see {@link SpriteSatMaskPostProcessor}).
+     *
+     * @param alpha          ghost opacity
+     * @param preserveColour keep palette colours (a player's look) instead of desaturating
+     */
+    public record Ghost(float alpha, boolean preserveColour) { }
+
+    public boolean isGhost() { return ghost != null; }
+
+    public SpriteSatEntry withGhost(Ghost style) {
+        return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
+                rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
+                maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments, tileOcclusionPaletteMask,
+                pixelOperation, style);
+    }
+
+    /** Compatibility shape for a gameplay ghost without native replay metadata. */
+    public SpriteSatEntry(int priorityBucket, int x, int y, int widthTiles, int heightTiles,
+            int firstPatternIndex, int rawTileWordLow11, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, boolean globalHighPriority, SpriteMaskReplayRole maskReplayRole,
+            int startColTile, int colCountTiles, int startRowTile, int rowCountTiles, String debugSource,
+            int visibleTopY, int visibleBottomY, SpritePresentation.Subject presentationSubject, Ghost ghost) {
+        this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11,
+                paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole,
+                startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                visibleTopY, visibleBottomY, presentationSubject, null, globalHighPriority ? 0 : 0xF,
+                PixelOperation.NORMAL, ghost);
+    }
+
+    /** Compatibility shape for a native entry without gameplay ghost styling. */
+    public SpriteSatEntry(int priorityBucket, int x, int y, int widthTiles, int heightTiles,
+            int firstPatternIndex, int rawTileWordLow11, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, boolean globalHighPriority, SpriteMaskReplayRole maskReplayRole,
+            int startColTile, int colCountTiles, int startRowTile, int rowCountTiles, String debugSource,
+            int visibleTopY, int visibleBottomY, SpritePresentation.Subject presentationSubject,
+            java.util.List<SpriteSatEntry> replayFragments, int tileOcclusionPaletteMask, PixelOperation pixelOperation) {
+        this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11,
+                paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole,
+                startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments, tileOcclusionPaletteMask,
+                pixelOperation, null);
+    }
 
     /** Visible-scanline bound meaning "no sprite-mask clip on this side". */
     public static final int UNCLIPPED_TOP = Integer.MIN_VALUE;
@@ -81,7 +128,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                visibleTopY, visibleBottomY, presentationSubject, replayFragments, tileOcclusionPaletteMask, operation);
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments, tileOcclusionPaletteMask, operation, ghost);
     }
 
     /** Compatibility shape: ordinary low sprites hide behind every high terrain palette. */
@@ -101,7 +148,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                visibleTopY, visibleBottomY, presentationSubject, replayFragments, mask, pixelOperation);
+                visibleTopY, visibleBottomY, presentationSubject, replayFragments, mask, pixelOperation, ghost);
     }
 
     /** Native piece shape; composite replay is an internal HUD topology bridge. */
@@ -113,7 +160,7 @@ public record SpriteSatEntry(
         this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11, paletteIndex,
                 hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole, startColTile, colCountTiles,
                 startRowTile, rowCountTiles, debugSource, visibleTopY, visibleBottomY, presentationSubject,
-                null);
+                (java.util.List<SpriteSatEntry>) null);
     }
 
     /** One hardware admission piece may replay scattered, immutable ROM-backed art fragments. */
@@ -121,7 +168,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                visibleTopY, visibleBottomY, presentationSubject, fragments, tileOcclusionPaletteMask, pixelOperation);
+                visibleTopY, visibleBottomY, presentationSubject, fragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /** Compatibility shape for native producers with no presentation overlay. */
@@ -139,7 +186,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                visibleTopY, visibleBottomY, subject, replayFragments, tileOcclusionPaletteMask, pixelOperation);
+                visibleTopY, visibleBottomY, subject, replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /** Pre-scanline-clip shape, kept for producers that never clip. */
@@ -288,7 +335,7 @@ public record SpriteSatEntry(
                 debugSource,
                 visibleTopY,
                 visibleBottomY,
-                presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation);
+                presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     public SpriteSatEntry clipRows(int clippedStartRowTile, int clippedRowCountTiles) {
@@ -317,7 +364,7 @@ public record SpriteSatEntry(
                 debugSource,
                 visibleTopY,
                 visibleBottomY,
-                presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation);
+                presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /** Copy restricted to screen scanlines {@code [top, bottom)}; tile rows are left whole. */
@@ -325,7 +372,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                top, bottom, presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation);
+                top, bottom, presentationSubject, replayFragments, tileOcclusionPaletteMask, pixelOperation, ghost);
     }
 
     /**

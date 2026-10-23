@@ -1,4 +1,4 @@
-package com.openggf.game.sonic1.dataselect;
+package com.openggf.game.dataselect;
 
 import com.openggf.graphics.RgbaImage;
 import com.openggf.level.Palette;
@@ -13,15 +13,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Converts cached Sonic 1 preview PNGs into the pattern, palette, and mapping-frame contract used
+ * Converts cached host preview PNGs into the pattern, palette, and mapping-frame contract used
  * by the donated S3K selected-slot renderer.
  *
  * <p>The generated preview frame intentionally renders on palette line 2 so it can coexist with the
  * dedicated S2 purple-emerald path on line 3.</p>
  */
-public final class S1SelectedSlotPreviewLoader {
-    private static final int TILE_COLUMNS = S1DataSelectImageGenerator.PREVIEW_WIDTH / Pattern.PATTERN_WIDTH;
-    private static final int TILE_ROWS = S1DataSelectImageGenerator.PREVIEW_HEIGHT / Pattern.PATTERN_HEIGHT;
+public final class SelectedSlotPreviewLoader {
+    private static final int PREVIEW_WIDTH = 80;
+    private static final int PREVIEW_HEIGHT = 56;
+    private static final int TILE_COLUMNS = PREVIEW_WIDTH / Pattern.PATTERN_WIDTH;
+    private static final int TILE_ROWS = PREVIEW_HEIGHT / Pattern.PATTERN_HEIGHT;
     private static final int MAX_VISIBLE_COLORS = 15;
     private static final int SELECTED_ICON_TILE_OFFSET = 0x31B;
     private static final int PALETTE_INDEX = 2;
@@ -46,8 +48,8 @@ public final class S1SelectedSlotPreviewLoader {
      */
     public LoadedPreview load(RgbaImage image) {
         if (image == null
-                || image.width() != S1DataSelectImageGenerator.PREVIEW_WIDTH
-                || image.height() != S1DataSelectImageGenerator.PREVIEW_HEIGHT) {
+                || image.width() != PREVIEW_WIDTH
+                || image.height() != PREVIEW_HEIGHT) {
             throw new IllegalArgumentException("S1 selected preview images must be 80x56");
         }
         QuantizedPreview quantized = quantize(image);
@@ -167,8 +169,8 @@ public final class S1SelectedSlotPreviewLoader {
     private static SpriteMappingFrame buildFrame() {
         List<SpriteMappingPiece> pieces = new ArrayList<>(TILE_COLUMNS * TILE_ROWS);
         int tileIndex = 0;
-        int yOffsetBase = -(S1DataSelectImageGenerator.PREVIEW_HEIGHT / 2);
-        int xOffsetBase = -(S1DataSelectImageGenerator.PREVIEW_WIDTH / 2);
+        int yOffsetBase = -(PREVIEW_HEIGHT / 2);
+        int xOffsetBase = -(PREVIEW_WIDTH / 2);
         for (int tileY = 0; tileY < TILE_ROWS; tileY++) {
             for (int tileX = 0; tileX < TILE_COLUMNS; tileX++) {
                 pieces.add(new SpriteMappingPiece(

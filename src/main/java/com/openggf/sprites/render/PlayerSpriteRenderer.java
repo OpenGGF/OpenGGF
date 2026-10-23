@@ -45,6 +45,16 @@ public class PlayerSpriteRenderer {
         this.renderContext = ctx;
     }
 
+    /** The palette context draws resolve through, or null for the level's own lines 0-3. */
+    public RenderContext getRenderContext() {
+        return renderContext;
+    }
+
+    /** The logical palette line (0-3) the art's mappings draw with. */
+    public int paletteLine() {
+        return artSet.paletteIndex();
+    }
+
     public void ensureCached(GraphicsManager graphicsManager) {
         patternBank.ensureCached(graphicsManager);
     }

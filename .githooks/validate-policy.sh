@@ -160,149 +160,129 @@ contains_mod_api_annotation() {
     printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
-# Declaration text of a Java source that can change the normalized signature pin.
-# Classes and records exclude executable bodies and field initializer values;
-# the exporter records field types/modifiers/annotations, never their values.
-# Strip implementations before selecting public/protected declaration lines, so
-# multiline initializer calls cannot leak parentheses into signature continuations.
-# Private nested types are implementation details, including their exposed members.
-# Other implicitly public type forms retain their conservative text comparison.
-# TestModApiSignatureSurface remains the exact signature check.
+# Conservative declaration projection for pre-staging pin coupling, not a Java
+# signature parser. Keep annotations attached to their declaration and carry type
+# visibility through nested bodies: a public member of a private type is private
+# implementation too. Buffer complete headers (including record components), and
+# skip member bodies lexically so braces/comments in literals cannot change owners.
+# Class/record field initializers are executable values, not signature contracts.
+# Non-private type declarations remain conservative; the exact signature snapshot
+# is authoritative for what the pin can express.
 mod_api_surface_text() {
+    # Records have private members and executable bodies too. Use one shared
+    # lexical declaration probe in Bash/PowerShell; other primary kinds fall
+    # back to the visibility-aware lexer. The exact signature pin is authoritative.
+    if command -v python3 >/dev/null 2>&1; then surface_python=python3
+    elif command -v python >/dev/null 2>&1; then surface_python=python
+    else die "Python 3 is required for Mod API record admission."; fi
+    if record_surface=$(printf '%s\n' "$1" | "$surface_python" "$POLICY_DIR/mod_api_record_surface.py"); then
+        printf '%s\n' "$record_surface"
+        return
+    else
+        surface_status=$?
+        [ "$surface_status" -eq 2 ] || die "Cannot inspect Java record declaration."
+    fi
     printf '%s\n' "$1" | awk '
-    BEGIN { inblock = 0; kind = ""; typeName = ""; n = 0 }
-    {
-        line = $0; out = ""
-        for (k = 1; k <= length(line); k++) {
-            c = substr(line, k, 1); pair = substr(line, k, 2)
-            if (inblock) {
-                if (pair == "*/") { inblock = 0; k++ }
-                continue
-            }
-            if (stripQuote != "") {
-                out = out c
-                if (stripEscaped) stripEscaped = 0
-                else if (c == "\\") stripEscaped = 1
-                else if (stripQuote == "text" && substr(line, k, 3) == "\"\"\"") {
-                    out = out "\"\""; k += 2; stripQuote = ""
-                } else if (c == stripQuote) stripQuote = ""
-                continue
-            }
-            if (pair == "//") break
-            if (pair == "/*") { inblock = 1; out = out " "; k++; continue }
-            if (substr(line, k, 3) == "\"\"\"") { stripQuote = "text"; out = out "\"\"\""; k += 2; continue }
-            if (c == "\"" || c == sprintf("%c", 39)) stripQuote = c
-            out = out c
-        }
-        lines[++n] = out
-        if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
-            t = substr(out, RSTART, RLENGTH); sub(/^[ \t]+/, "", t); split(t, parts, /[ \t]+/); kind = parts[1]; typeName = parts[2]
-        }
+    function append(c, mask) {
+        if (bodyDepth == 0 && !initializer) { header = header c; code = code mask }
     }
+    function space() {
+        if (header !~ / $/) append(" ", " ")
+    }
+    function emit() {
+        sub(/^[ \t\r\n]+/, "", header); sub(/[ \t\r\n]+$/, "", header)
+        if (header != "") print header
+    }
+    function member_visible() {
+        return top > 0 && visible[top] && code !~ /(^|[^A-Za-z0-9_])private[ \t]/ &&
+            (implicit[top] || code ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/)
+    }
+    { source = source $0 "\n" }
     END {
-        # Class/record members need declaration text, not executable bodies or
-        # field values (the normalized exporter records field type/modifiers only).
-        # Strip those first, so initializer calls cannot open continuation depth.
-        source = ""; for (i = 1; i <= n; i++) source = source lines[i] "\n"
-        if (kind != "") {
-            stripBodies = (kind == "class" || kind == "record")
-            clean = ""; segment = ""; typeTokens = ""; parens = 0; body = 0; initializer = 0
-            initParens = 0; initBraces = 0; initBrackets = 0; quote = ""; escaped = 0
-            for (j = 1; j <= length(source); j++) {
-                c = substr(source, j, 1)
-                if (quote != "") {
-                    if (!body && !initializer) { clean = clean c; segment = segment c }
-                    if (quote == "text" && !escaped && substr(source, j, 3) == "\"\"\"") {
-                        if (!body && !initializer) { clean = clean "\"\""; segment = segment "\"\"" }
-                        j += 2; quote = ""; continue
-                    }
-                    if (escaped) escaped = 0
-                    else if (c == "\\") escaped = 1
-                    else if (c == quote) quote = ""
-                    continue
-                }
-                if (substr(source, j, 3) == "\"\"\"") {
-                    quote = "text"
-                    if (!body && !initializer) { clean = clean "\"\"\""; segment = segment "\"\"\""; typeTokens = typeTokens " " }
-                    j += 2; continue
-                }
-                if (c == "\"" || c == sprintf("%c", 39)) {
-                    quote = c
-                    if (!body && !initializer) { clean = clean c; segment = segment c; typeTokens = typeTokens " " }
-                    continue
-                }
-                if (body) {
-                    if (c == "{") body++
-                    else if (c == "}") body--
-                    continue
-                }
-                if (initializer) {
-                    if (initParens == 0 && initBraces == 0 && initBrackets == 0 && (c == ";" || c == ",")) initializer = 0
-                    else {
-                        if (c == "(") initParens++
-                        else if (c == ")") initParens--
-                        else if (c == "{") initBraces++
-                        else if (c == "}") initBraces--
-                        else if (c == "[") initBrackets++
-                        else if (c == "]") initBrackets--
-                        continue
-                    }
-                }
-                if (stripBodies && c == "=" && parens == 0) { initializer = 1; continue }
-                if (c == "{" && parens == 0) {
-                    isType = typeTokens ~ /(^|[ \t\n])(class|interface|record|enum|@interface)[ \t\n]+[A-Za-z_]/
-                    if (isType && typeTokens ~ /(^|[ \t\n])private[ \t\n]/) {
-                        # Drop the complete declaration as well as its body. Public
-                        # members inside a private enclosing type are not exported.
-                        clean = substr(clean, 1, length(clean) - length(segment))
-                        segment = ""; typeTokens = ""; body = 1; continue
-                    }
-                    if (!isType && stripBodies) {
-                        clean = clean "{}"; segment = ""; typeTokens = ""; body = 1; continue
-                    }
-                    segment = ""; typeTokens = ""
-                } else if (c == ";" || c == "}") { segment = ""; typeTokens = "" }
-                else { segment = segment c; typeTokens = typeTokens c }
-                clean = clean c
-                if (c == "(") parens++
-                else if (c == ")") parens--
+        top = 0; parens = 0; bodyDepth = 0; defaultDepth = 0; quote = ""; escaped = 0
+        initializer = 0; initParens = 0; initBraces = 0; initBrackets = 0
+        for (i = 1; i <= length(source); i++) {
+            c = substr(source, i, 1); pair = substr(source, i, 2); triple = substr(source, i, 3)
+            if (inLine) { if (c == "\n") inLine = 0; else continue }
+            if (inBlock) {
+                if (pair == "*/") { inBlock = 0; i++ }
+                continue
             }
-            n = split(clean, lines, "\n")
-        }
-        whole = (kind != "class"); depth = 0; braces = 0; interfaceDepth = 0; interfacePending = 0
-        quote = ""; escaped = 0
-        for (i = 1; i <= n; i++) {
-            l = lines[i]
-            if (l !~ /[^ \t]/) continue
-            if (whole) { print l; continue }
-            if (l ~ /(^|[ \t])(@interface|interface)[ \t]+[A-Za-z_]/) interfacePending = 1
-            if (interfaceDepth > 0 || depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
-                    || l ~ /(^|[ \t])(class|interface|record|enum|extends|implements)[ \t]/) {
-                print l
-                t = l; opens = gsub(/\(/, "(", t); closes = gsub(/\)/, ")", t)
-                depth += opens - closes; if (depth < 0) depth = 0
+            if (quote != "") {
+                append(c, " ")
+                if (escaped) escaped = 0
+                else if (c == "\\") escaped = 1
+                else if (quote == "\"\"\"" && triple == quote) {
+                    append("\"\"", "  "); i += 2; quote = ""
+                } else if (c == quote) quote = ""
+                continue
             }
-            # Nested interface methods are implicitly public. Track their type
-            # scope after body stripping, without treating literal braces as scope.
-            for (j = 1; j <= length(l); j++) {
-                c = substr(l, j, 1)
-                if (quote != "") {
-                    if (escaped) escaped = 0
-                    else if (c == "\\") escaped = 1
-                    else if (c == quote) quote = ""
+            if (pair == "//") { space(); inLine = 1; i++; continue }
+            if (pair == "/*") { space(); inBlock = 1; i++; continue }
+            if (c == "\"" || c == sprintf("%c", 39)) {
+                quote = c
+                if (triple == "\"\"\"") { quote = triple; append("\"\"", "  "); i += 2 }
+                append(c, " "); continue
+            }
+            if (bodyDepth > 0) {
+                if (c == "{") bodyDepth++
+                else if (c == "}") bodyDepth--
+                continue
+            }
+            if (initializer) {
+                if (initParens == 0 && initBraces == 0 && initBrackets == 0 && (c == ";" || c == ",")) initializer = 0
+                else {
+                    if (c == "(") initParens++
+                    else if (c == ")") initParens--
+                    else if (c == "{") initBraces++
+                    else if (c == "}") initBraces--
+                    else if (c == "[") initBrackets++
+                    else if (c == "]") initBrackets--
                     continue
                 }
-                if (c == "\"" || c == sprintf("%c", 39)) { quote = c; continue }
-                if (c == "{") {
-                    braces++
-                    if (interfacePending) {
-                        if (interfaceDepth == 0) interfaceDepth = braces
-                        interfacePending = 0
-                    }
-                } else if (c == "}") {
-                    braces--
-                    if (braces < interfaceDepth) interfaceDepth = 0
+            }
+            if (c == "=" && parens == 0 && stripInitializers) {
+                initializer = 1; continue
+            }
+            if (c ~ /[ \t\r\n]/) { space(); continue }
+            if (c == "{") {
+                # Annotation-element array defaults are declaration values.
+                if (defaultDepth > 0 || code ~ /(^|[^A-Za-z0-9_])default[ \t]*$/) {
+                    defaultDepth++; append(c, c); continue
                 }
+                if (parens > 0) { append(c, c); continue }
+                kind = ""
+                if (match(code, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
+                    t = substr(code, RSTART, RLENGTH); sub(/^[ \t]+/, "", t)
+                    split(t, parts, /[ \t]+/); kind = parts[1]
+                }
+                if (kind != "") {
+                    allowed = (top == 0 || visible[top]) && code !~ /(^|[^A-Za-z0-9_])private[ \t]/
+                    if (top == 0) stripInitializers = (kind == "class" || kind == "record")
+                    append(c, c); if (allowed) emit()
+                    top++; visible[top] = allowed; implicit[top] = (kind != "class")
+                } else {
+                    append(c, c); if (member_visible()) emit()
+                    bodyDepth = 1
+                }
+                header = code = ""; continue
+            }
+            if (c == "}" && defaultDepth > 0) { defaultDepth--; append(c, c); continue }
+            if (c == "}" && parens == 0) {
+                if (top > 0) {
+                    # Enum constant lists need no terminating semicolon.
+                    if (member_visible()) emit()
+                    if (visible[top]) print "}"
+                    delete visible[top]; delete implicit[top]; top--
+                }
+                header = code = ""; continue
+            }
+            append(c, c)
+            if (c == "(") parens++
+            else if (c == ")") parens--
+            else if (c == ";" && parens == 0) {
+                if (member_visible()) emit()
+                header = code = ""
             }
         }
     }'

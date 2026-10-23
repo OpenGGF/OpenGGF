@@ -1253,7 +1253,7 @@ public final class LevelRenderer {
             underlay.run();
         }
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null
+        if (options.includeHud() && lm.hudRenderManager != null && !com.openggf.level.objects.HudProfileAccess.coveredByHost(lm.hudRenderManager)
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             if (LevelSpritePresentation.enabled(lm)) {
@@ -1705,11 +1705,6 @@ public final class LevelRenderer {
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), layer -> !layer.isHud(), presentationRuntime());
         }
         if (preparingSpritePresentation) return;
-        // Ghosts are presentation overlays, outside the native hardware budget.
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            renderGhostsForLayer(bucket, false);
-            renderGhostsForLayer(bucket, true);
-        }
         GraphicsManager graphicsManager = lm.graphicsManager;
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
 
@@ -1748,6 +1743,12 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
+        TraceGhostHook.GhostLayerRenderer traceGhostHook = selectGhostLayerHook(
+                currentTraceVisibility, TraceGhostHook.active());
+        GhostRenderRegistry gameplayGhosts = resolveGameplayGhostRegistry();
+        TraceGhostHook.GhostLayerRenderer ghostLayerHook =
+                (traceGhostHook != null || (gameplayGhosts != null && !gameplayGhosts.isEmpty()))
+                        ? layeredGhostHook : null;
         if (spriteManager != null) spriteManager.prepareRenderBucketsForPass();
         // Render_Sprites lets a zone splice its own sprites into the end of a priority level
         // (Lava Reef's rocks at Render_Sprites_NextLevel). Sprite-table order is behaviour.
@@ -1783,7 +1784,9 @@ public final class LevelRenderer {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
                 if (spriteManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                    // Ghosts join the table behind their layer's players; a sprite mask clips
+                    // them like the players they stand for but never arms on them.
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
                 }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);

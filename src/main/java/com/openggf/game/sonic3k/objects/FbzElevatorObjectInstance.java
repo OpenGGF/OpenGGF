@@ -132,7 +132,7 @@ public final class FbzElevatorObjectInstance extends AbstractObjectInstance
         @Override public int getOnScreenHalfHeight() { return 0x20; }
         @Override public int getPriorityBucket() { return 1; }
         @Override public SolidObjectParams getSolidParams() {
-            return new SolidObjectParams(0x3B, 0x10, 0x10);
+            return SolidObjectParams.of(0x3B, 0x10, 0x10);
         }
         @Override public byte[] getSlopeData() { return SLOPE.clone(); }
         @Override public boolean isSlopeFlipped() { return false; }

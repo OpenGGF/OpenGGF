@@ -23,7 +23,7 @@ public final class TimeAttackHud {
             if (!state.saveNotice().isEmpty()) {
                 line = TimeAttackTimeFormat.frames(state.elapsedDisplayFrames()) + "  " + state.saveNotice();
             }
-            return HudTextLayout.panel(width, height - 22, 220,
+            return HudTextLayout.panel(width, HudTextLayout.finishStripTop(height), 220,
                     List.of(new HudTextLayout.Line(line,
                             state.newBest() ? HudTextLayout.GOLD
                                     : state.saveNotice().isEmpty() ? HudTextLayout.WHITE : 0xFFFF8E83)),

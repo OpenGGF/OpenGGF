@@ -278,8 +278,7 @@ public class GameLoop {
 
     private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
     private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
-    private final LevelIterationAdmissionController levelIterationAdmission =
-            new LevelIterationAdmissionController();
+    private final LevelIterationAdmissionController levelIterationAdmission;
 
     // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
     private BonusStageProvider deferredBonusProvider;
@@ -300,7 +299,7 @@ public class GameLoop {
 
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
-    private GameplayModeContext liveRewindBoundaryReporterContext;
+    private final GameLoopRewindBoundaryReporter liveRewindBoundaryReporter;
     private GameplayModeContext livePlaybackInputPublisherContext;
     private final Runnable scheduledPlaybackInputPublisher = this::applyScheduledPlaybackInputImmediately;
 
@@ -339,10 +338,11 @@ public class GameLoop {
                 this::doEnterLevelSelectFromTitleScreen, this::startLevelFromTitleScreenImmediate,
                 this::publishNativeGameplayMode, () -> inputHandler, () -> currentGameMode);
         this.liveRewindManager = new LiveRewindManager(
-                configService,
-                () -> currentGameMode,
-                this::getActiveSpecialStageProvider,
-                LevelRewindFrameRecorder::activeScriptedRewind);
+                configService, audioManager, () -> currentGameMode);
+        this.liveRewindBoundaryReporter = new GameLoopRewindBoundaryReporter(
+                liveRewindManager, () -> TraceSessionLauncher.active() == null);
+        this.levelIterationAdmission = new LevelIterationAdmissionController(context ->
+                liveRewindBoundaryReporter.initialAssemblyCompleted(context, resolveGameplayModeContext(), currentGameMode));
         this.userRecordingSessionLauncher = new UserRecordingSessionLauncher(this);
         this.userRecordingControls = new UserRecordingRuntimeControls(
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
@@ -394,6 +394,9 @@ public class GameLoop {
 
     void refreshRuntimeBindings() {
         GameplayModeContext currentGameplayMode = resolveGameplayModeContext();
+        liveRewindManager.bindOwner(TraceSessionLauncher.active() == null
+                        ? (suspension.parked() ? suspension.parkedOwner() : currentGameplayMode) : null,
+                suspension.parked(), currentGameMode);
         if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
             bindScheduledPlaybackInputPublisher(null);
             // Gameplay mode has been torn down (e.g. trace teardown returning to
@@ -410,7 +413,7 @@ public class GameLoop {
             this.gameState = null;
             this.fadeManager = null;
             this.waterSystem = null;
-            this.liveRewindBoundaryReporterContext = null;
+            liveRewindBoundaryReporter.clear();
             engineServices.graphics().clearRuntimeManagedReferences();
             return;
         }
@@ -427,9 +430,7 @@ public class GameLoop {
         this.waterSystem = currentGameplayMode.getWaterSystem();
         bindScheduledPlaybackInputPublisher(currentGameplayMode);
         engineServices.graphics().bindRuntimeManagedReferences(this.camera, this.fadeManager);
-        if (currentGameplayMode != liveRewindBoundaryReporterContext) {
-            installLiveRewindBoundaryReporter();
-        }
+        liveRewindBoundaryReporter.refresh(currentGameplayMode);
     }
 
     private void bindScheduledPlaybackInputPublisher(GameplayModeContext context) {
@@ -667,20 +668,11 @@ public class GameLoop {
     }
 
     void installLiveRewindBoundaryReporter() {
-        installLiveRewindBoundaryReporter(liveRewindManager::markBoundary);
+        liveRewindBoundaryReporter.install(resolveGameplayModeContext());
     }
 
     void installLiveRewindBoundaryReporter(Consumer<RewindBoundary> liveBoundaryConsumer) {
-        GameplayModeContext context = resolveGameplayModeContext();
-        if (context == null) {
-            return;
-        }
-        context.setRewindBoundaryReporter(boundary -> {
-            if (TraceSessionLauncher.active() == null) {
-                liveBoundaryConsumer.accept(boundary);
-            }
-        });
-        liveRewindBoundaryReporterContext = context;
+        liveRewindBoundaryReporter.install(resolveGameplayModeContext(), liveBoundaryConsumer);
     }
 
     GameMode changeGameModeForBoundary(GameMode nextMode) {
@@ -718,6 +710,8 @@ public class GameLoop {
                 context.markRewindBoundary(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE);
             }
         }
+        liveRewindManager.bindOwner(TraceSessionLauncher.active() == null ? context : null, false, newMode);
+        installLiveRewindBoundaryReporter();
         if (newMode == GameMode.SPECIAL_STAGE && isActiveSpecialStageProviderRewindable()) {
             context.markRewindBoundary(RewindBoundary.MODE_ENTER_REWINDABLE);
         }
@@ -1155,6 +1149,7 @@ public class GameLoop {
                 && com.openggf.game.mode.ControlledFrameRuntime.controller(lifecycleContext) != null) {
             requireInputHandler();
             audioUpdatedThisStep = false;
+            if (RewindReleaseRetryCoordinator.consumePendingFrame(liveRewindManager, inputHandler)) return;
             ControlledLevelIteration.step(lifecycleContext, inputHandler, escapeToMasterTitleController,
                     userRecordingControls, liveRewindManager, playbackDebugManager,
                     new ControlledLevelIteration.HostPause(configService.getInt(SonicConfiguration.PAUSE_KEY),
@@ -1306,7 +1301,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler) || hostedRuns.ownsStart(currentGameMode);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
         boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
@@ -1859,6 +1854,8 @@ public class GameLoop {
         // ending transition, or a pending zone/act fade (ObjB2 transition parity).
         boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();
         if (!freezeForArtViewer && !freezeForNonRewindableTransition) {
+            GameplayModeContext executedOwner = gameplayMode;
+            GameMode executedMode = currentGameMode;
             beginGameplayAudioFrameForTick();
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask
             // us to skip the gameplay tick on ROM lag frames so the
@@ -1947,7 +1944,7 @@ public class GameLoop {
                 LevelRewindFrameRecorder.record(
                         traceSession,
                         liveRewindManager,
-                        currentGameMode,
+                        executedOwner, executedMode,
                         freezeForNonRewindableTransition,
                         inputHandler,
                         seamlessTransitionCompleted);
@@ -2105,12 +2102,15 @@ public class GameLoop {
     }
 
     private void startPendingHostedRunLaunch() {
-        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+        if (pendingHostedRunLaunch != null && GameLoopMenuTransitions.idleOrHeldBlack(resolveFadeManager())) {
             Runnable launch = pendingHostedRunLaunch;
             pendingHostedRunLaunch = null;
-            fadeOutTo(launch);
+            GameLoopMenuTransitions.fadeOutOrContinue(resolveFadeManager(), audioManager, launch);
         }
     }
+
+    /** A scene asked to launch a run (for example from {@code resumed}) and it has not started yet. */
+    boolean hostedRunLaunchPending() { return pendingHostedRunLaunch != null; }
 
     /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
     void endHostedRunAfterFailedLaunch(boolean returnToHost) {
@@ -2122,9 +2122,12 @@ public class GameLoop {
         }
     }
 
-    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
-    void announceHostedRunLevelReady() {
-        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    /**
+     * Tells the hosted run its level is ready when a launch or a fast death restart
+     * ({@code deathRestart}) bypassed {@code doZoneAct}.
+     */
+    void announceHostedRunLevelReady(boolean deathRestart) {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY), deathRestart);
     }
 
     /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
@@ -2177,6 +2180,9 @@ public class GameLoop {
         // Bonus stage runs the same level frame steps as LEVEL mode
         boolean freezeForBonusExit = bonusStageTransitionPending;
         if (!freezeForBonusExit) {
+            GameplayModeContext executedOwner = gameplayMode;
+            GameMode executedMode = currentGameMode;
+            BonusStageProvider executedProvider = activeBonusStageProvider;
             beginGameplayAudioFrameForTick();
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask us to
@@ -2202,15 +2208,16 @@ public class GameLoop {
                 forcePlayerHighPriorityInBonusStage();
 
                 // Notify coordinator of frame tick
-                com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(activeBonusStageProvider);
+                com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(executedProvider);
 
                 // Record a rewind keyframe/step for rewind-supported bonus stages
                 // whose providers capture their interior state. Placed before
                 // the completion check so the transition boundary can retire
                 // the interior history independently of ordinary LEVEL history.
-                if (isBonusStageRewindable() && TraceSessionLauncher.active() == null) {
-                    liveRewindManager.recordExternalFrame(
-                            currentGameMode, bonusStageTransitionPending, inputHandler);
+                if (executedProvider != null && executedProvider.supportsRewind()
+                        && TraceSessionLauncher.active() == null) {
+                    liveRewindManager.recordExternalFrame(executedOwner,
+                            executedMode, null, executedProvider, freezeForBonusExit, inputHandler, false);
                 }
 
                 // Check bonus stage completion
@@ -4327,13 +4334,7 @@ public class GameLoop {
      * Starts the fade-to-black transition for death respawn.
      */
     private void startRespawnFade() {
-        LOGGER.info("Starting fade-to-black for respawn");
-
-        // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        audioManager.fadeOutMusic();
-
-        // Start fade-to-black, then respawn when complete
-        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, continueScreen::respawn);
+        continueScreen.startRespawn(runPolicy(), audioManager::fadeOutMusic);
     }
 
     /**
@@ -4405,9 +4406,10 @@ public class GameLoop {
 
         // GM_Level enters its blocking PaletteFadeOut after the request's
         // completed level iteration, not when an event first writes f_restart
-        // (S1 REV01 sonic.asm:3016-3017,2710-2712). Other entry profiles retain
-        // their caller-selected deactivation policy and ordinary fade behavior.
-        if (GameServices.module().getLevelInitProfile()
+        // (S1 REV01 sonic.asm:3016-3017,2710-2712). An active host owns its
+        // explicit retry policy: mid-act retries keep playing, completed-act
+        // retries already requested a hold. Other profiles retain caller policy.
+        if (!hostedRuns.isActive() && GameServices.module().getLevelInitProfile()
                 instanceof com.openggf.game.internal.BlockingLevelEntryFade) {
             levelManager.setLevelInactiveForTransition(true);
         }

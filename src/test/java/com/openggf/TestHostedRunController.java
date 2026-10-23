@@ -39,6 +39,22 @@ class TestHostedRunController {
     }
 
     @Test
+    void playerAppearanceIsHeldForTheRunAndResetByTheNextOne() {
+        var red = new com.openggf.net.identity.PlayerAppearance(0x00E, List.of());
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook());
+        handle.setPlayerAppearance(red);
+        assertEquals(red, controller.localLook());
+        assertThrows(NullPointerException.class, () -> handle.setPlayerAppearance(null));
+        controller.end(RunEndReason.LEFT);
+        handle.setPlayerAppearance(red);
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook(),
+                "an ended run's handle no longer changes the look");
+        controller.begin(SPEC, new RunHost() { });
+        assertEquals(com.openggf.net.identity.PlayerAppearance.STOCK, controller.localLook());
+    }
+
+    @Test
     void retryOnActCompletionDefaultsToFalse() {
         assertFalse(controller.retryOnActCompletion(), "no run, nothing to retry");
         controller.begin(SPEC, new RunHost() { });
@@ -316,5 +332,66 @@ class TestHostedRunController {
         assertTrue(active.frame().highPriority());
         assertEquals("ME", active.nameplate());
         assertEquals(0.5f, active.opacityScale());
+    }
+
+    @Test
+    void aSceneOverlayOwnsStartAndTicksBeforeTheHostDecides() {
+        List<String> order = new ArrayList<>();
+        controller.begin(SPEC, new RunHost() {
+            @Override public boolean admitStep(com.openggf.mods.run.RunInput input) {
+                order.add("host");
+                return true;
+            }
+        });
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.LEVEL), "a plain run keeps host pause");
+        controller.setSceneOverlay(new HostedRunController.SceneOverlay() {
+            @Override public void update(com.openggf.control.InputHandler input) { order.add("scene"); }
+            @Override public void draw(int width, int height) { }
+        });
+        assertTrue(controller.ownsStart(com.openggf.game.GameMode.LEVEL));
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.TITLE_CARD));
+        assertTrue(controller.admitStep(new com.openggf.control.InputHandler()));
+        assertEquals(List.of("scene", "host"), order);
+        controller.end(RunEndReason.LEFT);
+        assertFalse(controller.ownsStart(com.openggf.game.GameMode.LEVEL), "the overlay ends with its run");
+    }
+
+    @Test
+    void aFailingSceneOverlayAbortsTheRunInsteadOfTheEngine() {
+        controller.begin(SPEC, new RunHost() { });
+        controller.setSceneOverlay(new HostedRunController.SceneOverlay() {
+            @Override public void update(com.openggf.control.InputHandler input) {
+                throw new IllegalStateException("scene bug");
+            }
+            @Override public void draw(int width, int height) { }
+        });
+        assertTrue(controller.admitStep(new com.openggf.control.InputHandler()));
+        assertEquals(RunEndReason.ABORTED, controller.consumeLeave());
+        assertThrows(IllegalStateException.class, () -> new HostedRunController(
+                mock(SonicConfigurationService.class)).setSceneOverlay(new HostedRunController.SceneOverlay() {
+                    @Override public void update(com.openggf.control.InputHandler input) { }
+                    @Override public void draw(int width, int height) { }
+                }), "an overlay needs a run");
+    }
+
+    @Test
+    void runAreasValidateTheirFence() {
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.mods.run.RunArea(0x50, 0x50, 0x100, 0x80, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new com.openggf.mods.run.RunArea(-1, 0, 0, 0, 0, 0));
+        var area = new com.openggf.mods.run.RunArea(0x50, 0x3B0, 0, 0x280, 0x300, 0x300);
+        assertEquals(area, new RunSpec("s1", 0, 0, "sonic", GameplayRunPolicy.isolatedAct(), area).area());
+        assertNull(SPEC.area(), "the five-component spec plays the whole act");
+    }
+
+    @Test
+    void aCoveringMenuIsHeldForTheRunAndClearedWithIt() {
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertFalse(controller.levelCovered());
+        handle.setLevelCovered(true);
+        assertTrue(controller.levelCovered());
+        controller.end(RunEndReason.LEFT);
+        assertFalse(controller.levelCovered(), "the cover ends with its run");
+        handle.setLevelCovered(true);
+        assertFalse(controller.levelCovered(), "an ended run's handle no longer covers the level");
     }
 }

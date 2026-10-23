@@ -348,7 +348,7 @@ class TestRoomBrokerAdversarial {
                             new ControlMessage.Heartbeat(room, Integer.MAX_VALUE),
                             new ControlMessage.AttemptStart(random.nextInt()),
                             new ControlMessage.RoomCreate(null, "UNKNOWN", -1, FP),
-                            new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP),
+                            new ControlMessage.Hello(Integer.MAX_VALUE, "%%%", "Peer", FP, ""),
                             new ControlMessage.AuthProof(Base64.getEncoder().encodeToString(new byte[64])),
                             new ControlMessage.PowSolution(null, random.nextLong()));
                     ControlMessage payload = corpus.get(op);

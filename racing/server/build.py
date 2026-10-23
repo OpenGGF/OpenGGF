@@ -34,6 +34,7 @@ TOOLS = {
     "socket-stress": "openggf.racing.server.tools.RacingSocketStressTool",
     "scale-test": "openggf.racing.server.tools.RacingScaleTool",
     "capture-video": "openggf.racing.server.tools.TimeAttackCapacityVideoTool",
+    "capture-lobby": "openggf.racing.server.tools.TimeAttackLobbyVideoTool",
     "track-profiles": "openggf.racing.server.tools.TrackProfileExportTool",
 }
 

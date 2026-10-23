@@ -40,6 +40,24 @@ class TestTimeAttackScene {
     private final List<RunSpec> launched = new ArrayList<>();
     private final List<RunHost> hosts = new ArrayList<>();
     private int retries;
+    /** Runs launched behind the scene (the lobby level) when {@link #behindSupported} is set. */
+    private final List<RunSpec> behind = new ArrayList<>();
+    private final List<FakeHandle> behindHandles = new ArrayList<>();
+    private boolean behindSupported;
+
+    /** A run handle that records the commands a lobby level receives. */
+    private static final class FakeHandle implements RunHandle {
+        boolean held;
+        boolean covered;
+        int holdChanges;
+        boolean left;
+        @Override public void retry() { }
+        @Override public void leave() { left = true; }
+        @Override public void spectate(boolean active, int dx, int dy) { }
+        @Override public void holdControls(boolean hold) { held = hold; holdChanges++; }
+        @Override public void setLevelCovered(boolean cover) { covered = cover; }
+        @Override public boolean isActive() { return true; }
+    }
 
     @AfterEach
     void close() {
@@ -49,7 +67,16 @@ class TestTimeAttackScene {
     private Optional<String> fingerprint = Optional.empty();
     private TimeAttackScene scene;
 
+    /** Opens the scene and answers the first-run name prompt, as a new player does. */
     private void open(List<String> games) {
+        openFresh(games);
+        if (scene.isPromptingForName()) {
+            type("Tester");
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        }
+    }
+
+    private void openFresh(List<String> games) {
         SceneGameplay gameplay = new SceneGameplay() {
             @Override public List<String> availableGames() { return games; }
             @Override public Optional<String> determinismFingerprint(String gameId) { return fingerprint; }
@@ -62,6 +89,14 @@ class TestTimeAttackScene {
                     @Override public void spectate(boolean active, int dx, int dy) { }
                     @Override public boolean isActive() { return true; }
                 };
+            }
+            @Override public RunHandle launchBehind(RunSpec spec, RunHost runHost) {
+                if (!behindSupported) return SceneGameplay.super.launchBehind(spec, runHost);
+                behind.add(spec);
+                hosts.add(runHost);
+                FakeHandle handle = new FakeHandle();
+                behindHandles.add(handle);
+                return handle;
             }
         };
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
@@ -93,7 +128,7 @@ class TestTimeAttackScene {
         assertEquals(1, launched.size());
         RunSpec spec = launched.get(0);
         assertEquals("s2", spec.gameId());
-        assertEquals(GameplayRunPolicy.isolatedAct(), spec.policy());
+        assertEquals(GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros(), spec.policy());
         assertInstanceOf(TimeAttackRuntime.class, hosts.get(0));
     }
 
@@ -143,6 +178,46 @@ class TestTimeAttackScene {
         assertEquals(2, launched.size(), "the menu returns focused on START RUN");
     }
 
+    @Test
+    void aNewPlayerNamesThemselvesBeforeAnyModeAndTheNameIsSaved() throws Exception {
+        openFresh(List.of("s2"));
+        assertTrue(scene.isPromptingForName());
+        assertTrue(host.capturesTextInput(), "the name prompt takes text");
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertTrue(scene.isPromptingForName(), "an empty name cannot skip the prompt");
+        assertTrue(launched.isEmpty());
+        type("Nguyễn ");
+        com.openggf.control.MenuInput.handleCharEvent(input, ' ');
+        type("花子"); // an IME commits 花子 as two characters
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertFalse(scene.isPromptingForName());
+        assertEquals("Nguyễn 花子", scene.settings().displayName(), "canonical: single spaces, NFC");
+        Path saved;
+        try (var files = java.nio.file.Files.walk(temp)) {
+            saved = files.filter(p -> p.getFileName().toString().equals(TimeAttackSettings.FILE_NAME))
+                    .findFirst().orElseThrow();
+        }
+        assertTrue(java.nio.file.Files.readString(saved).contains("displayName=Nguyễn 花子"));
+        for (int i = 0; i < 5; i++) press(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        assertEquals(1, launched.size(), "the menu works once the name is chosen");
+    }
+
+    @Test
+    void escapeAtTheNamePromptLeavesInsteadOfSkippingIt() {
+        openFresh(List.of("s2"));
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+        assertEquals(List.of("master"), exits);
+        assertTrue(scene.isPromptingForName());
+    }
+
+    @Test
+    void anExistingIdentityWithoutANameIsNotPrompted() throws Exception {
+        java.nio.file.Files.createDirectories(temp.resolve("identity"));
+        java.nio.file.Files.writeString(temp.resolve("identity").resolve("player-identity.key"), "legacy");
+        openFresh(List.of("s2"));
+        assertFalse(scene.isPromptingForName(), "legacy profiles keep the identity-prefix name");
+    }
+
     // ── Multiplayer through the scene ────────────────────────────────────
 
     private static final String FP = "0.8:cafe1234";
@@ -169,11 +244,12 @@ class TestTimeAttackScene {
         input.update();
     }
 
+    /** Types {@code text} as GLFW delivers it: one character event per code point, one tick each. */
     private void type(String text) {
-        for (char c : text.toCharArray()) {
-            int[] key = openggf.timeattack.ui.FakeViewInput.keyFor(c);
-            tap(key[0], key[1] != 0);
-        }
+        text.codePoints().forEach(codePoint -> {
+            com.openggf.control.MenuInput.handleCharEvent(input, codePoint);
+            idle();
+        });
     }
 
     private void idleUntil(String what, java.util.function.BooleanSupplier condition) throws InterruptedException {
@@ -197,7 +273,7 @@ class TestTimeAttackScene {
     void multiplayerWithoutAFingerprintExplainsTheMissingRom() {
         open(List.of("s2"));
         chooseMode(1); // HOST LAN
-        for (int i = 0; i < 3; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past policy and window
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past policy, window and vote pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertEquals("The S2 ROM is not available for racing", scene.status());
         assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
@@ -237,7 +313,8 @@ class TestTimeAttackScene {
         assertTrue(host.capturesTextInput(), "display name field");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertFalse(host.capturesTextInput(), "display name accepted");
-        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // look
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // host port
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // master URL
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertTrue(host.capturesTextInput(), "master URL field");
@@ -250,7 +327,8 @@ class TestTimeAttackScene {
         open(List.of("s2"));
         for (int i = 0; i < 5; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // SETTINGS
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
-        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // display name editor
+        tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // display name editor, holding the prompt's name
+        for (int i = 0; i < "Tester".length(); i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE);
         type("Ray");
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertEquals("Ray", scene.settings().displayName());
@@ -288,7 +366,8 @@ class TestTimeAttackScene {
             assertEquals(invite, scene.settings().lastJoinAddress());
             assertEquals(1, onRoomThread(room, () -> room.room().playerCount()));
             assertFalse(host.capturesTextInput(), "lobby");
-            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // a guest's lobby opens on WRITE CHAT MESSAGE
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // a guest's lobby opens on READY UP; chat is next
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             assertTrue(host.capturesTextInput(), "room chat field");
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
             assertFalse(host.capturesTextInput(), "room chat cancelled");
@@ -297,7 +376,7 @@ class TestTimeAttackScene {
             ControlMessage.RoundConfig round = new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null);
             assertTrue(onRoomThread(room, () -> room.room().requestStartRound(round)));
             idleUntil("the round run", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.RACING);
-            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct())), launched);
+            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros())), launched);
             host.resume(RunEndReason.ACT_COMPLETED);
             assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, scene.raceSession().state());
 
@@ -308,6 +387,115 @@ class TestTimeAttackScene {
                 assertTrue(System.nanoTime() < deadline, "the room still counts the player");
                 Thread.sleep(20);
             }
+        }
+    }
+
+    @Test
+    void theLobbyLevelPlaysBehindTheMenuTogglesOnceReadyAndHandsOverToTheRound() throws Exception {
+        behindSupported = true;
+        com.openggf.net.identity.PlayerIdentity roomIdentity =
+                com.openggf.net.identity.PlayerIdentity.loadOrCreate(temp.resolve("room-host"));
+        try (com.openggf.net.host.jdk.JdkRaceHostServer room = com.openggf.net.host.jdk.JdkRaceHostServer.startTls(0,
+                new com.openggf.net.hub.RoomHostConfig("LAN", "s2", 0, 0, "OPEN", null, 8, FP),
+                roomIdentity, com.openggf.net.hub.TrackValidationProfileSource.none())) {
+            String invite = "127.0.0.1:" + room.port() + "#" + com.openggf.net.client.DirectJoinAddress.shareCode(
+                    room.tlsCertificateSha256(), roomIdentity.fingerprint());
+            fingerprint = Optional.of(FP);
+            open(List.of("s2"));
+            chooseMode(2); // JOIN LAN
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            type(invite);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("the lobby level", () -> !behind.isEmpty());
+            var raceSession = scene.raceSession();
+            assertEquals(openggf.timeattack.mp.LobbyAreas.runSpec(
+                    openggf.timeattack.mp.LobbyAreas.forGame("s2"), "sonic"), behind.getFirst());
+            assertEquals(GameplayRunPolicy.DeathRestart.FAST_FROM_START, behind.getFirst().policy().deathRestart(),
+                    "lobby deaths reload at the lobby spawn with no lives");
+            assertInstanceOf(openggf.timeattack.mp.LobbyRun.class, hosts.getLast());
+            FakeHandle lobbyLevel = behindHandles.getFirst();
+            assertTrue(lobbyLevel.held, "the menu owns the controller while shown");
+            assertTrue(lobbyLevel.covered, "and covers the stock HUD and nameplates");
+            assertTrue(raceSession.lobbyMenuShown());
+
+            // Not ready yet: Enter is the menu's confirm (on READY UP), not the toggle.
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("ready", () -> raceSession.coordinator().session().isLocalReady());
+            assertTrue(raceSession.lobbyMenuShown());
+            assertTrue(lobbyLevel.held);
+
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // ready: Enter hides the menu
+            assertFalse(raceSession.lobbyMenuShown());
+            assertFalse(lobbyLevel.held, "the character has the controller");
+            assertFalse(lobbyLevel.covered, "with the stock HUD back");
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);  // the hidden menu takes no input
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+            assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, raceSession.state());
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER); // and Enter brings it back
+            assertTrue(raceSession.lobbyMenuShown());
+            assertTrue(lobbyLevel.held);
+
+            // Once ready, Start/Enter is the toggle and A (Space) confirms; a chat editor keeps
+            // Enter, which sends the message instead of hiding the menu.
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE);
+            assertTrue(host.capturesTextInput());
+            type("hi");
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            assertFalse(host.capturesTextInput());
+            assertTrue(raceSession.lobbyMenuShown());
+
+            ControlMessage.RoundConfig round = new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null);
+            assertTrue(onRoomThread(room, () -> room.room().requestStartRound(round)));
+            idleUntil("the lobby level to leave", () -> lobbyLevel.left);
+            assertTrue(launched.isEmpty(), "the round waits for the lobby level to end");
+            host.resume(RunEndReason.LEFT);
+            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic",
+                    GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros())), launched,
+                    "the scene launches the round as it resumes, so the hand-over stays black");
+            assertEquals(openggf.timeattack.mp.RaceSession.State.RACING, raceSession.state());
+
+            host.resume(RunEndReason.ACT_COMPLETED);
+            assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, raceSession.state());
+            assertEquals(2, behind.size(), "back in the lobby, the lobby level relaunches at once");
+            assertTrue(behindHandles.get(1).held);
+
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE); // leave the room from the lobby menu
+            assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, raceSession.state());
+            assertTrue(behindHandles.get(1).left);
+            host.resume(RunEndReason.LEFT);
+            assertEquals(2, behind.size(), "no lobby level outside a room");
+        }
+    }
+
+    @Test
+    void aLobbyLevelThatCannotLoadLeavesTheMenuOnItsOwn() throws Exception {
+        behindSupported = true;
+        com.openggf.net.identity.PlayerIdentity roomIdentity =
+                com.openggf.net.identity.PlayerIdentity.loadOrCreate(temp.resolve("room-host"));
+        try (com.openggf.net.host.jdk.JdkRaceHostServer room = com.openggf.net.host.jdk.JdkRaceHostServer.startTls(0,
+                new com.openggf.net.hub.RoomHostConfig("LAN", "s2", 0, 0, "OPEN", null, 8, FP),
+                roomIdentity, com.openggf.net.hub.TrackValidationProfileSource.none())) {
+            String invite = "127.0.0.1:" + room.port() + "#" + com.openggf.net.client.DirectJoinAddress.shareCode(
+                    room.tlsCertificateSha256(), roomIdentity.fingerprint());
+            fingerprint = Optional.of(FP);
+            open(List.of("s2"));
+            chooseMode(2);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            type(invite);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+            tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+            idleUntil("the lobby level", () -> !behind.isEmpty());
+            host.resume(RunEndReason.LOAD_FAILED);
+            for (int i = 0; i < 5; i++) idle();
+            assertEquals(1, behind.size(), "a failed lobby level is not retried in a loop");
+            assertFalse(scene.raceSession().lobbyRunActive());
+            assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, scene.raceSession().state());
         }
     }
 

@@ -105,11 +105,30 @@ public final class SpritePresentation {
     public record Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
                        boolean priority, float x, float y, float width, float height,
                        boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
-                       int rowStart, int rowEnd, Subject subject, SpriteSatEntry.PixelOperation pixelOperation) {
+                       int rowStart, int rowEnd, Subject subject, boolean ghostColour,
+                       SpriteSatEntry.PixelOperation pixelOperation) {
         public Tile {
             java.util.Objects.requireNonNull(subject, "subject");
             java.util.Objects.requireNonNull(pixelOperation, "pixel operation");
         }
+        /** Compatibility shape for native operators whose ghost effect desaturates. */
+        public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
+                    boolean priority, float x, float y, float width, float height,
+                    boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
+                    int rowStart, int rowEnd, Subject subject, SpriteSatEntry.PixelOperation pixelOperation) {
+            this(layer, patternId, palette, hFlip, vFlip, priority, x, y, width, height,
+                    priorityShader, occlusionMask, ghost, ghostAlpha, rowStart, rowEnd, subject, false, pixelOperation);
+        }
+        /** Compatibility shape for a coloured ghost with an ordinary indexed draw. */
+        public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
+                    boolean priority, float x, float y, float width, float height,
+                    boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
+                    int rowStart, int rowEnd, Subject subject, boolean ghostColour) {
+            this(layer, patternId, palette, hFlip, vFlip, priority, x, y, width, height,
+                    priorityShader, occlusionMask, ghost, ghostAlpha, rowStart, rowEnd, subject, ghostColour,
+                    SpriteSatEntry.PixelOperation.NORMAL);
+        }
+        /** A tile whose ghost effect (when {@code ghost}) desaturates. */
         public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
                     boolean priority, float x, float y, float width, float height,
                     boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
@@ -183,7 +202,8 @@ public final class SpritePresentation {
                     desc.priority(), x - cameraX, y - cameraY, width, height,
                     graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
                     graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), 0, 8,
-                    graphics.spritePresentationSubject, graphics.currentSpritePixelOperation));
+                    graphics.spritePresentationSubject, graphics.isGhostRenderColourPreserved(),
+                    graphics.currentSpritePixelOperation));
             if (graphics.currentSpritePixelOperation == SpriteSatEntry.PixelOperation.SHADOW_15)
                 bindPatternVersion(graphics, id, graphics.scenePatternSample(id));
         }
@@ -194,7 +214,8 @@ public final class SpritePresentation {
                     desc.priority(), x - cameraX, y - cameraY, 8, 8,
                     graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
                     graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd,
-                    graphics.spritePresentationSubject, graphics.currentSpritePixelOperation));
+                    graphics.spritePresentationSubject, graphics.isGhostRenderColourPreserved(),
+                    graphics.currentSpritePixelOperation));
             if (graphics.currentSpritePixelOperation == SpriteSatEntry.PixelOperation.SHADOW_15)
                 bindPatternVersion(graphics, id, graphics.scenePatternSample(id));
         }
@@ -211,6 +232,7 @@ public final class SpritePresentation {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
+        boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         graphics.spritePresentationBuilder = builder;
         try {
@@ -231,7 +253,7 @@ public final class SpritePresentation {
         } finally {
             graphics.spritePresentationBuilder = null;
             graphics.cancelSpritePresentationCollection();
-            if (ghost) graphics.beginGhostRenderEffect(alpha); else graphics.endGhostRenderEffect();
+            if (ghost) graphics.beginGhostRenderEffect(alpha, ghostColour); else graphics.endGhostRenderEffect();
             graphics.setUseSpritePriorityShader(priority);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
         }

@@ -351,10 +351,11 @@ public class BatchedPatternRenderer {
         boolean usePriority = gm.isUseSpritePriorityShader();
         int tileOcclusionPaletteMask = gm.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghostEffectActive = gm.isGhostRenderEffectActive();
+        boolean ghostColour = gm.isGhostRenderColourPreserved();
         float ghostAlpha = gm.getGhostRenderAlpha();
         BatchRenderCommand command = obtainBatchCommand();
         command.load(vertexData, texCoordData, paletteCoordData, patternCount,
-                usePriority, tileOcclusionPaletteMask, ghostEffectActive, ghostAlpha);
+                usePriority, tileOcclusionPaletteMask, ghostEffectActive, ghostColour, ghostAlpha);
 
         // Reset for next batch
         patternCount = 0;
@@ -530,6 +531,7 @@ public class BatchedPatternRenderer {
         private boolean usePriorityShader;
         private int capturedTileOcclusionPaletteMask;
         private boolean capturedGhostEffectActive;
+        private boolean capturedGhostColour;
         private float capturedGhostAlpha;
         private FloatBuffer vertexBuffer;
         private FloatBuffer texCoordBuffer;
@@ -553,11 +555,12 @@ public class BatchedPatternRenderer {
 
         private void load(float[] vertexData, float[] texCoordData, float[] paletteCoordData,
                           int patternCount, boolean usePriorityShader, int tileOcclusionPaletteMask,
-                          boolean ghostEffectActive, float ghostAlpha) {
+                          boolean ghostEffectActive, boolean ghostColour, float ghostAlpha) {
             this.patternCount = patternCount;
             this.usePriorityShader = usePriorityShader;
             this.capturedTileOcclusionPaletteMask = tileOcclusionPaletteMask;
             this.capturedGhostEffectActive = ghostEffectActive;
+            this.capturedGhostColour = ghostColour;
             this.capturedGhostAlpha = ghostAlpha;
             this.vertexFloatCount = patternCount * FLOATS_PER_PATTERN_VERTS;
             this.texCoordFloatCount = patternCount * FLOATS_PER_PATTERN_TEXCOORDS;
@@ -615,7 +618,7 @@ public class BatchedPatternRenderer {
             glUniform1i(shader.getIndexedColorTextureLocation(), 1);
             shader.setPaletteLine(-1.0f);
             shader.setTotalPaletteLines((float) RenderContext.getTotalPaletteLines());
-            shader.setGhostEffect(capturedGhostEffectActive, capturedGhostAlpha);
+            shader.setGhostEffect(capturedGhostEffectActive, capturedGhostColour, capturedGhostAlpha);
 
             // Cache uniform locations per shader program to avoid per-batch string lookups
             int programId = shader.getProgramId();

@@ -144,8 +144,10 @@ public final class SpritePresentationRenderer {
                     : com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(), graphics, frame);
             if (runtime != null && !runtime.trails().isEmpty()) drawTrails(graphics, frame, cameraX, cameraY, visible, runtime);
             var nativeFrame = new Frame(frame.tiles().reversed(), java.util.List.of(), frame.patternVersions());
-            com.openggf.graphics.SpriteSatInternalAccess.withNativeOwnership(graphics,
-                    () -> drawPicture(graphics, nativeFrame, cameraX, cameraY, visible, runtime, 1));
+            com.openggf.graphics.SpriteSatInternalAccess.replayNativeLayers(graphics, nativeFrame.tiles(), Tile::ghost,
+                    tiles -> drawPicture(graphics, tiles == nativeFrame.tiles() ? nativeFrame
+                                    : new Frame(tiles, java.util.List.of(), nativeFrame.patternVersions()),
+                            cameraX, cameraY, visible, runtime, 1));
             if (!frame.primitives().isEmpty()) {
                 var overlays = frame.primitives().stream()
                         .map(primitive -> new Primitive(0, primitive.layer(), primitive.primitive(), primitive.subject())).toList();
@@ -191,7 +193,8 @@ public final class SpritePresentationRenderer {
                 versions.put(id,pose.frame().patternVersions().get(tile.patternId()));
                 tiles.add(new Tile(tile.layer(),id,tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
                         tile.x()+pose.cameraX()-cameraX,tile.y()+pose.cameraY()-cameraY,tile.width(),tile.height(),
-                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject(),tile.pixelOperation()));
+                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject(),
+                        tile.ghostColour(),tile.pixelOperation()));
             }
             // Every retained actor stays clearly readable; the newest echoes are nearly opaque.
             float opacity=.65f+.30f*poseIndex++/Math.max(1,poses.size()-1);
@@ -204,19 +207,21 @@ public final class SpritePresentationRenderer {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
+        boolean ghostColour = graphics.isGhostRenderColourPreserved();
         float alpha = graphics.getGhostRenderAlpha();
         PatternDesc desc = new PatternDesc();
         graphics.beginPatternAtlasBatch();
         try {
-            // Atlas upload copies pixels immediately; one draw-local scratch tile
-            // avoids allocating a Pattern and arrays for every immutable DPLC slot.
-            Pattern scratch = new Pattern();
-            for (var entry : frame.patternVersions().entrySet()) {
-                unpackPattern(entry.getValue(), scratch);
-                graphics.cachePatternTexture(scratch, entry.getKey());
-            }
+            for (var entry : frame.patternVersions().entrySet())
+                com.openggf.graphics.PresentationGraphicsAccess.restoreFrozenPattern(graphics, entry.getValue(), entry.getKey());
         } finally { graphics.endPatternAtlasBatch(); }
+        var viewport = com.openggf.graphics.PresentationGraphicsAccess.viewport(graphics);
         Tile previous = null;
+        boolean previousPictureGeometry = false;
+        var policies = runtime == null ? java.util.List.<com.openggf.game.mutators.TransientMutatorPolicySource.Entry>of()
+                : runtime.spritePolicies();
+        java.util.Map<Body, com.openggf.game.mutators.SpritePictureTransform> transforms = policies.isEmpty()
+                ? java.util.Map.of() : new java.util.HashMap<>();
         graphics.flushPatternBatch();
         try {
             int primitiveIndex = 0;
@@ -235,41 +240,60 @@ public final class SpritePresentationRenderer {
                 if (index == frame.tiles().size()) break;
                 Tile tile = frame.tiles().get(index);
                 if (!visible.test(tile.layer()) || tile.subject().suppressed()) continue;
-                // The native tile priority bit bypasses every terrain palette. The
-                // non-instanced batch has one mask for the whole draw, so a change
-                // in effective priority must also close that batch.
+                var body = tile.subject().body();
+                var transform = policies.isEmpty() || body == null
+                        ? com.openggf.game.mutators.SpritePictureTransform.IDENTITY
+                        : transforms.computeIfAbsent(body, ignored ->
+                            com.openggf.game.mutators.SpritePictureTransform.forTile(tile, cameraX, cameraY, policies));
+                boolean pictureGeometry = !transform.identity() || opacity != 1;
+                boolean shadow = tile.pixelOperation() == com.openggf.graphics.SpriteSatEntry.PixelOperation.SHADOW_15;
+                float[] quad = pictureGeometry || shadow ? transform.quad(tile, cameraX, cameraY) : null;
+                if (viewport != null) {
+                    boolean outside;
+                    if (pictureGeometry || shadow) outside = viewport.outside(quad, cameraX, cameraY);
+                    else if (tile.rowClipped()) {
+                        // The native row path emits integer-positioned 8-pixel strips.
+                        float left = (int) (tile.x() + cameraX) - cameraX;
+                        float top = (int) (tile.y() + cameraY) - cameraY;
+                        outside = viewport.outside(left, top + tile.rowStart(), left + 8, top + tile.rowEnd());
+                    } else outside = viewport.outside(tile.x(), tile.y(), tile.x() + tile.width(), tile.y() + tile.height());
+                    if (outside) continue;
+                }
+                // Native high-priority tiles bypass terrain palettes. Only actual
+                // instancing carries each tile's effective mask inside the batch.
                 int tileMask = tile.priority() ? 0 : tile.occlusionMask();
-                if (previous == null || previous.priorityShader() != tile.priorityShader()
+                if (previous == null || previousPictureGeometry != pictureGeometry || previous.priorityShader() != tile.priorityShader()
                         || previous.pixelOperation() != tile.pixelOperation()
-                        || (previous.priority() ? 0 : previous.occlusionMask()) != tileMask
-                        || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()) {
+                        || ((previous.priority() ? 0 : previous.occlusionMask()) != tileMask
+                            && !com.openggf.graphics.PresentationGraphicsAccess.maskIsPerInstance(graphics))
+                        || previous.ghost() != tile.ghost() || previous.ghostAlpha() != tile.ghostAlpha()
+                        || previous.ghostColour() != tile.ghostColour()) {
                     graphics.flushPatternBatch();
                     graphics.setUseSpritePriorityShader(tile.priorityShader());
                     graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
-                    if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
+                    if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                     else graphics.endGhostRenderEffect();
                     graphics.beginPatternBatch();
                 }
                 previous = tile;
+                previousPictureGeometry = pictureGeometry;
                 graphics.setUseSpritePriorityShader(tile.priorityShader());
                 graphics.setCurrentSpriteTileOcclusionPaletteMask(tileMask);
-                if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha());
+                if (tile.ghost()) graphics.beginGhostRenderEffect(tile.ghostAlpha(), tile.ghostColour());
                 else graphics.endGhostRenderEffect();
                 desc.setPaletteIndex(tile.palette());
                 desc.setHFlip(tile.hFlip());
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
-                var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
-                        com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
                 SpritePresentation.withSubject(graphics,tile.subject(),()-> {
-                if (tile.pixelOperation() == com.openggf.graphics.SpriteSatEntry.PixelOperation.SHADOW_15) {
+                if (shadow) {
                     com.openggf.graphics.SpriteSatInternalAccess.renderShadowTile(graphics, tile, cameraX, cameraY,
-                            transform.quad(tile, cameraX, cameraY), opacity);
-                } else if(!transform.identity()||opacity!=1) {
+                            quad, opacity);
+                } else if(pictureGeometry) {
                     com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
-                            transform.quad(tile,cameraX,cameraY),transform.hue(),opacity);
+                            quad,transform.hue(),opacity);
                 } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
                 } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {
@@ -283,7 +307,7 @@ public final class SpritePresentationRenderer {
             graphics.flushPatternBatch();
             graphics.setUseSpritePriorityShader(priority);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
-            if (ghost) graphics.beginGhostRenderEffect(alpha); else graphics.endGhostRenderEffect();
+            if (ghost) graphics.beginGhostRenderEffect(alpha, ghostColour); else graphics.endGhostRenderEffect();
         }
     }
 }

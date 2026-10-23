@@ -274,7 +274,8 @@ class TestHeldRewindAudioRestoreDeferral {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         try {
             TestEnvironment.activeGameplayMode();
-            LiveRewindManager manager = new LiveRewindManager(config);
+            LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+            manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
             RewindController controller = newController(scriptedStepper(), 4);
             for (int i = 0; i < 8; i++) {
                 controller.step();
@@ -378,7 +379,8 @@ class TestHeldRewindAudioRestoreDeferral {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         try {
             TestEnvironment.activeGameplayMode();
-            LiveRewindManager manager = new LiveRewindManager(config);
+            LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+            manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
             InputHandler input = new InputHandler();
 
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
@@ -468,7 +470,11 @@ class TestHeldRewindAudioRestoreDeferral {
 
     private static void installTestController(LiveRewindManager manager, RewindController controller)
             throws Exception {
-        setField(manager, "installedGameplayMode", TestEnvironment.activeGameplayMode());
+        var owner = TestEnvironment.activeGameplayMode();
+        setField(owner, "rewindController", controller);
+        setField(manager, "boundOwner", owner);
+        setField(manager, "installedFade", owner.getFadeManager());
+        setField(manager, "installedGameplayMode", owner);
         setInstalledStepperKind(manager, "LEVEL_FRAME");
         setField(manager, "inputSource", new LiveRewindInputSource());
         setField(manager, "rewindController", controller);
@@ -486,7 +492,8 @@ class TestHeldRewindAudioRestoreDeferral {
     private LiveRewindManager liveManagerWithControllerAtFrame(
             SonicConfigurationService config,
             int frame) throws Exception {
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = newController(scriptedStepper(), 4);
         for (int i = 0; i < frame; i++) {
             controller.step();

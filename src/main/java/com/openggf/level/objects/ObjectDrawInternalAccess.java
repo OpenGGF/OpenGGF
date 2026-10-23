@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandGroup;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PresentationGraphicsAccess;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.render.SpriteSlotEmission;
 import java.util.Collection;
@@ -179,9 +180,10 @@ public final class ObjectDrawInternalAccess {
                             ? !entry.nativeSubmission() && next.slot() < entry.slot()
                             : entry.nativeSubmission() || next.slot() > entry.slot()))) {
                         if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != next.tileOcclusionPaletteMask()) {
-                            gfx.flushPatternBatch();
+                            boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(gfx);
+                            if (!perInstance) gfx.flushPatternBatch();
                             gfx.setCurrentSpriteTileOcclusionPaletteMask(next.tileOcclusionPaletteMask());
-                            gfx.beginPatternBatch();
+                            if (!perInstance) gfx.beginPatternBatch();
                         }
                         next.draw().run();
                         extra++;
@@ -194,9 +196,10 @@ public final class ObjectDrawInternalAccess {
                     objectCallbacks.run(entry.instance(), () -> {
                         int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
                         if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                            gfx.flushPatternBatch();
+                            boolean perInstance = PresentationGraphicsAccess.maskIsPerInstance(gfx);
+                            if (!perInstance) gfx.flushPatternBatch();
                             gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                            gfx.beginPatternBatch();
+                            if (!perInstance) gfx.beginPatternBatch();
                         }
                         ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
                     });

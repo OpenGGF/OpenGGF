@@ -117,10 +117,8 @@ final class DezFinalBeam extends DezFinalBossSprite implements RewindRecreatable
         @Override public void update(int vIntRunCount,PlayableEntity player) {
             visible=false;
             if(pendingDelete) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
-            ObjectInstance parent=null;
-            for(var candidate:services().objectManager().getActiveObjects()) {
-                if(candidate instanceof AbstractObjectInstance object && !object.isDestroyed() && object.getSlotIndex()==parentSlot) { parent=object; break; }
-            }
+            var parent=NativeObjectQueries.liveAtSlot(services().objectManager(), parentSlot,
+                    AbstractObjectInstance.class);
             int px=parent==null?0:parent.getX(),py=parent==null?0:parent.getY();
             if(!initialized) {
                 initialized=true; priority=4; halfWidth=halfHeight=4; frame=0x1B; highPriority=false;

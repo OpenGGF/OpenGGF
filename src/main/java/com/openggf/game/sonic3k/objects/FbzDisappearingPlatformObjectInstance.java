@@ -88,7 +88,7 @@ public final class FbzDisappearingPlatformObjectInstance
   int mappingFrame() { return frame; }
   public int getPriorityBucket() { return 5; }
   public SolidObjectParams getSolidParams() {
-    return new SolidObjectParams(0x1B, 0x11, 0x11);
+    return SolidObjectParams.of(0x1B, 0x11, 0x11);
   }
   public boolean isSolidFor(PlayableEntity p) { return frame == 0; }
   @Override

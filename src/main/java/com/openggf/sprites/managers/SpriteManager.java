@@ -1753,20 +1753,51 @@ public class SpriteManager implements PlayableSstDispatcher {
 			boolean collectingSat = gfx.isSpriteSatCollectionActive();
 			boolean lowHookDrawn = false;
 			boolean highHookDrawn = false;
+            // Remote ghosts have layers even when no local player anchors them.
+            // Painter order places such layers behind this bucket's local actors.
+            if (!collectingSat && hook != null) {
+                if (lowPriorityBuckets[idx].isEmpty()) {
+                    drawUnanchoredPriorityLayer(hook, bucket, false, gfx);
+                    lowHookDrawn = true;
+                }
+                if (highPriorityBuckets[idx].isEmpty()) {
+                    drawUnanchoredPriorityLayer(hook, bucket, true, gfx);
+                    highHookDrawn = true;
+                }
+            }
 			for (int i = 0; i < instances.size(); i++) {
 				AbstractPlayableSprite sprite = instances.get(collectingSat ? instances.size() - 1 - i : i);
 				boolean high = sprite.isHighPriority();
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(high);
 				gfx.beginPatternBatch();
-				if (hook != null && !(high ? highHookDrawn : lowHookDrawn)) {
+				// Painter order: a layer's hook draws just behind its first player sprite.
+				if (!collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)) {
 					hook.beforePriorityLayer(bucket, high);
 					if (high) highHookDrawn = true; else lowHookDrawn = true;
 					gfx.setCurrentSpriteHighPriority(high);
 					gfx.beginPatternBatch();
 				}
 				sprite.draw();
+				// SAT order is front to back (earlier entries win), so the same layering puts the
+				// hook's entries straight after that layer's last player sprite.
+				if (collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)
+						&& lastOfLayer(instances, instances.size() - 1 - i, high)) {
+					hook.beforePriorityLayer(bucket, high);
+					if (high) highHookDrawn = true; else lowHookDrawn = true;
+					gfx.flushPatternBatch();
+					gfx.setCurrentSpriteHighPriority(high);
+					gfx.beginPatternBatch();
+				}
 			}
+            if (collectingSat && hook != null) {
+                // Reverse painter order: missing layers follow every local actor.
+                if (!highHookDrawn) drawUnanchoredPriorityLayer(hook, bucket, true, gfx);
+                if (!lowHookDrawn) drawUnanchoredPriorityLayer(hook, bucket, false, gfx);
+                gfx.flushPatternBatch();
+                gfx.setCurrentSpriteHighPriority(false);
+                gfx.beginPatternBatch();
+            }
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
@@ -1776,6 +1807,25 @@ public class SpriteManager implements PlayableSstDispatcher {
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
 		}
+	}
+
+    private void drawUnanchoredPriorityLayer(SpritePriorityLayerHook hook, int bucket, boolean high,
+            GraphicsManager graphics) {
+        graphics.flushPatternBatch();
+        graphics.setCurrentSpriteHighPriority(high);
+        graphics.beginPatternBatch();
+        hook.beforePriorityLayer(bucket, high);
+        graphics.flushPatternBatch();
+        graphics.setCurrentSpriteHighPriority(high);
+        graphics.beginPatternBatch();
+    }
+
+	/** Whether no sprite before {@code index} in painter order shares its priority layer. */
+	private static boolean lastOfLayer(List<AbstractPlayableSprite> instances, int index, boolean high) {
+		for (int j = 0; j < index; j++) {
+			if (instances.get(j).isHighPriority() == high) return false;
+		}
+		return true;
 	}
 
 	/**

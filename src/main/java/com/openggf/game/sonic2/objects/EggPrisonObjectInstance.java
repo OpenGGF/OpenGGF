@@ -241,6 +241,13 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
             if (levelGamestate != null) {
                 levelGamestate.pauseTimer();
             }
+            // The game-agnostic act-completion signal marks the same frame for observers such
+            // as Time Attack: the boss act's clock stops at the button (loc_3F354) as the
+            // signpost act's stops at Load_EndOfAct. Not consumed by physics; cleared on level
+            // load (resetForLevel()).
+            if (services().gameState() != null) {
+                services().gameState().setActCompletionSignalActive(true);
+            }
         }
     }
 

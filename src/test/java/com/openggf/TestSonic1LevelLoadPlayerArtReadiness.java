@@ -89,7 +89,7 @@ class TestSonic1LevelLoadPlayerArtReadiness {
         assertEquals(0x31, old.s1PreparationAfterPreMainLoopTail().mappingFrame());
         assertEquals(0x30, old.initialLoadPreparation().mappingFrame());
 
-        level.requestZoneAndAct(0, 1, false);
+        level.requestZoneAndAct(0, 1, true);
         loop.step(); // real request consumer starts the blocking entry fade
         assertTrue(level.isLevelInactiveForTransition());
         for (int frame = 0; frame < 4; frame++) {

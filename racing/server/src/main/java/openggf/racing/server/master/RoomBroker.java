@@ -6,6 +6,7 @@ import com.openggf.net.hub.SessionTokenIssuer;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.identity.ProofOfWork;
 import openggf.racing.protocol.ControlCodec;
+import com.openggf.net.identity.DisplayNames;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
@@ -320,6 +321,11 @@ public final class RoomBroker {
     }
 
     private void afterAdmit(Member member, HostHandshake.Admit admit) {
+        if (!admit.displayName().isEmpty() && !DisplayNames.isCanonical(admit.displayName())) {
+            // Clients send canonical names; anything else would persist unsafe text in the store.
+            reject(member, "invalid display name");
+            return;
+        }
         member.fingerprint = admit.fingerprint();
         member.displayNameClaimed = !admit.displayName().isBlank();
         member.displayName = admit.displayName().isBlank()
@@ -417,8 +423,9 @@ public final class RoomBroker {
             send(member, new ControlMessage.RoomCreateRejected("invalid player limit"));
             return;
         }
-        if (!validVoteTrackPool(descriptor.gameId(), create.voteTrackKeys())) {
-            send(member, new ControlMessage.RoomCreateRejected("invalid vote track pool"));
+        String poolProblem = voteTrackPoolProblem(descriptor.gameId(), create.voteTrackKeys());
+        if (poolProblem != null) {
+            send(member, new ControlMessage.RoomCreateRejected("invalid vote track pool: " + poolProblem));
             return;
         }
         if (descriptor.verified() && !"RELAY".equals(routing)) {
@@ -608,14 +615,28 @@ public final class RoomBroker {
         registry.updateTrack(room.roomId(), member.fingerprint, update.zone(), update.act());
     }
 
-    private boolean validVoteTrackPool(String gameId, List<String> trackKeys) {
+    /**
+     * Why a client-supplied vote pool is refused, or null: every key must be a well-formed
+     * {@code game:zone:act} of the room's own game that the master knows as an eligible track
+     * (custom pools cannot mix games). The 32-key bound is enforced by {@code RoomCreate} itself.
+     */
+    private String voteTrackPoolProblem(String gameId, List<String> trackKeys) {
         for (String key : trackKeys) {
             String[] parts = key.split(":", -1);
-            if (parts.length != 3 || !parts[0].equals(gameId) || !knownTrack.test(key)) {
-                return false;
+            if (parts.length != 3 || !parts[1].matches("[0-9]{1,3}") || !parts[2].matches("[0-9]{1,3}")) {
+                return "malformed track key " + key;
+            }
+            if (!parts[0].equals(gameId)) {
+                return key + " is not a " + gameId + " act";
+            }
+            if (!knownTrack.test(key)) {
+                return key + " is not an eligible Time Attack act";
             }
         }
-        return true;
+        if (trackKeys.stream().distinct().count() != trackKeys.size()) {
+            return "duplicate track key";
+        }
+        return null;
     }
 
     private static boolean validDescriptorFields(ControlMessage.RoomDescriptor descriptor,

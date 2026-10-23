@@ -18,7 +18,6 @@ import com.openggf.mods.run.RunSpec;
 import com.openggf.mods.run.RunStep;
 import com.openggf.ghost.GhostFrame;
 import com.openggf.mods.ui.LevelOverlayCanvas;
-import com.openggf.sprites.ghost.ActiveGhost;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.version.AppVersion;
 
@@ -38,8 +37,18 @@ final class HostedRunController {
     private static final Logger LOGGER = Logger.getLogger(HostedRunController.class.getName());
     private static final int MAX_GHOSTS = 8;
 
+    /** The scene a run plays behind ({@code SceneGameplay.launchBehind}): ticked and drawn over the run. */
+    interface SceneOverlay {
+        /** One scene tick with the frame's live input. */
+        void update(InputHandler input);
+
+        /** Draws the scene over the level at the run's screen size. */
+        void draw(int width, int height);
+    }
+
     private final SonicConfigurationService configuration;
     private final GhostRenderer ghostRenderer = new GhostRenderer();
+    private final LocalPlayerLook localLook = new LocalPlayerLook();
     private final GhostRenderRegistry.GhostLayerRenderer layerRenderer = this::renderGhostsForLayer;
     private GhostRenderRegistry registeredRegistry;
 
@@ -50,6 +59,8 @@ final class HostedRunController {
     private int pendingHeldMask;
     private boolean pendingStartHeld;
     private boolean debugAssistThisStep;
+    /** Player input is released for the admitted step because the host asked; this run set it. */
+    private boolean inputHeld;
     private boolean retryRequested;
     private RunEndReason leaveReason;
     private boolean actCompleteSeen;
@@ -57,6 +68,10 @@ final class HostedRunController {
     private boolean spectateActive;
     private int spectateDx;
     private int spectateDy;
+    private SceneOverlay overlay;
+    private boolean controlsHeld;
+    private boolean controlsHoldApplied;
+    private boolean levelCovered;
 
     HostedRunController(SonicConfigurationService configuration) {
         this.configuration = Objects.requireNonNull(configuration, "configuration");
@@ -78,13 +93,88 @@ final class HostedRunController {
         this.spec = Objects.requireNonNull(spec, "spec");
         this.host = Objects.requireNonNull(host, "host");
         this.handle = new Handle();
+        localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
         retryRequested = false;
         leaveReason = null;
+        overlay = null;
+        controlsHeld = false;
+        controlsHoldApplied = false;
+        levelCovered = false;
         return handle;
+    }
+
+    /** The run plays behind {@code overlay}, which then owns Start and the pause key. */
+    void setSceneOverlay(SceneOverlay overlay) {
+        if (host == null) {
+            throw new IllegalStateException("No run is active");
+        }
+        this.overlay = Objects.requireNonNull(overlay, "overlay");
+    }
+
+    /**
+     * True while a run plays behind a scene: Start and the pause key belong to the scene, so the
+     * host neither toggles its pause nor lets the ROM pause the level.
+     */
+    boolean ownsStart(com.openggf.game.GameMode mode) {
+        return overlay != null && host != null && mode == com.openggf.game.GameMode.LEVEL;
+    }
+
+    /**
+     * Arms the run area's spawn for the next load of {@code level}; a one-shot the load consumes
+     * after its native or checkpoint start, so it is re-armed every frame to cover respawns.
+     */
+    void armAreaSpawn(com.openggf.level.LevelManager level) {
+        com.openggf.mods.run.RunArea area = spec == null ? null : spec.area();
+        if (area != null && level != null) {
+            com.openggf.level.LevelSceneActAccess.prepareSpawn(level,
+                    java.util.OptionalInt.of(area.spawnX()), java.util.OptionalInt.of(area.spawnY()));
+        }
+    }
+
+    /** Holds the camera inside the run area after anything (level events) rewrote its bounds. */
+    private void holdArea() {
+        com.openggf.mods.run.RunArea area = spec == null ? null : spec.area();
+        if (area == null) {
+            return;
+        }
+        armAreaSpawn(GameServices.levelOrNull());
+        var camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        if (camera.getMinX() != area.minX() || camera.getMinXTarget() != area.minX()) camera.setMinX((short) area.minX());
+        if (camera.getMaxX() != area.maxX() || camera.getMaxXTarget() != area.maxX()) camera.setMaxX((short) area.maxX());
+        if (camera.getMinY() != area.minY() || camera.getMinYTarget() != area.minY()) camera.setMinY((short) area.minY());
+        if (camera.getMaxY() != area.maxY() || camera.getMaxYTarget() != area.maxY()) camera.setMaxY((short) area.maxY());
+    }
+
+    /** Hides the stock HUD while the host's scene covers the level (the flag is re-applied each frame). */
+    private void applyLevelCover() {
+        var level = GameServices.levelOrNull();
+        if (level != null) com.openggf.level.LevelHudCoverAccess.setCovered(level, levelCovered);
+    }
+
+    /** True while the host's scene covers the level (tests). */
+    boolean levelCovered() {
+        return levelCovered;
+    }
+
+    /** Gives the run's characters a released controller while the host holds them. */
+    private void applyControlHold() {
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null && (controlsHeld || controlsHoldApplied)) {
+            sprites.setInputSuppressed(controlsHeld);
+            controlsHoldApplied = controlsHeld;
+        }
     }
 
     /** The run's level is loaded (launch or retry). */
     void onLevelReady(boolean debugAssisted) {
+        onLevelReady(debugAssisted, false);
+    }
+
+    /** The run's level is loaded; {@code deathRestart} marks a fast restart after a death. */
+    void onLevelReady(boolean debugAssisted, boolean deathRestart) {
         if (host == null) {
             return;
         }
@@ -98,11 +188,21 @@ final class HostedRunController {
         // (LevelPlayableArtInitializer), so cached ghost slots hold stale bank
         // bases; clear them before the new level's first render.
         ghostRenderer.clearSlots();
+        // The load built fresh player renderers; point them at the look before the first draw.
+        refreshLocalLook();
         attachRenderer(GameServices.ghostRenderRegistryOrNull());
         stopSpectating();
         actCompleteSeen = false;
+        if (spec.area() != null) {
+            holdArea();
+            var camera = GameServices.cameraOrNull();
+            if (camera != null && camera.getFocusedSprite() != null) {
+                camera.updatePosition(true);
+            }
+        }
         int[] size = levelSize();
-        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1]);
+        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1],
+                deathRestart);
         guarded(() -> host.onLevelReady(start));
     }
 
@@ -165,8 +265,19 @@ final class HostedRunController {
             return true;
         }
         try {
+            if (overlay != null) {
+                overlay.update(input);
+                if (host == null || leaveReason != null) {
+                    return true;
+                }
+            }
+            holdArea();
+            applyControlHold();
+            applyLevelCover();
             boolean admitted = host.admitStep(new FrameInput(input));
             applySpectate();
+            refreshLocalLook();
+            holdPlayerInput(admitted && host.holdsPlayerInput());
             return admitted;
         } catch (RuntimeException failure) {
             abort(failure);
@@ -174,11 +285,26 @@ final class HostedRunController {
         }
     }
 
+    /**
+     * Releases player 1's controller for the admitted step at the host's request. Only a
+     * suppression this run set is cleared, so the engine's own input locks are left alone.
+     */
+    private void holdPlayerInput(boolean hold) {
+        if (hold == inputHeld) {
+            return;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            sprites.setInputSuppressed(hold);
+        }
+        inputHeld = hold;
+    }
+
     /** Captures player 1's admitted input for the step about to execute. */
     void beforeStep(InputHandler input) {
         var p1 = input.logical().player1();
-        pendingHeldMask = p1.heldMask();
-        pendingStartHeld = p1.startHeld();
+        pendingHeldMask = inputHeld ? 0 : p1.heldMask();
+        pendingStartHeld = !inputHeld && p1.startHeld();
     }
 
     /** A debug shortcut was used this frame; reported with the next step. */
@@ -191,6 +317,7 @@ final class HostedRunController {
         if (host == null) {
             return;
         }
+        holdArea();
         var sprites = GameServices.spritesOrNull();
         var level = GameServices.levelOrNull();
         var gameState = GameServices.gameStateOrNull();
@@ -274,7 +401,18 @@ final class HostedRunController {
     /** Draws the host's screen-space overlay. */
     void drawOverlay(LevelOverlayCanvas canvas) {
         if (host != null && leaveReason == null) {
+            // Also runs on paused and held frames, so a look set then shows from the next frame.
+            refreshLocalLook();
+            applyLevelCover();
+            // Covered by the host's menu: the nameplate clock still runs, but nothing is drawn.
+            ghostRenderer.drawNameplates(levelCovered ? new HiddenCanvas(canvas.width(), canvas.height()) : canvas);
             guarded(() -> host.drawOverlay(canvas));
+            if (overlay != null && leaveReason == null) {
+                // Scene drawing renders at once; finish the queued rectangles beneath it first.
+                GameServices.graphics().flushScreenSpace();
+                SceneOverlay scene = overlay;
+                guarded(() -> scene.draw(canvas.width(), canvas.height()));
+            }
         }
     }
 
@@ -284,9 +422,17 @@ final class HostedRunController {
             return;
         }
         RunHost ended = host;
+        holdPlayerInput(false);
         stopSpectating();
+        overlay = null;
+        controlsHeld = false;
+        applyControlHold();
+        levelCovered = false;
+        applyLevelCover();
         detachRenderer();
         ghostRenderer.clearSlots();
+        localLook.request(com.openggf.net.identity.PlayerAppearance.STOCK);
+        localLook.clear();
         handle.active = false;
         host = null;
         spec = null;
@@ -352,14 +498,39 @@ final class HostedRunController {
                 active.add(toActiveGhost(pose));
             }
         }
-        ghostRenderer.renderForLayer(active, bucket, highPriority, player.getCentreX(), player.getCentreY());
+        ghostRenderer.renderForLayer(active, bucket, highPriority, player.getCentreX(), player.getCentreY(),
+                spec.character());
+    }
+
+    /** Points the run's own character at the requested look (or back at its stock rows). */
+    private void refreshLocalLook() {
+        if (host == null) {
+            return;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites == null) {
+            return;
+        }
+        AbstractPlayableSprite player;
+        try {
+            player = RecordingMainPlayerResolver.resolve(configuration, sprites);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        localLook.refresh(player, spec.character());
+    }
+
+    /** The look requested for the run's own character; for tests. */
+    com.openggf.net.identity.PlayerAppearance localLook() {
+        return localLook.requested();
     }
 
     static ActiveGhost toActiveGhost(GhostPose pose) {
         PlayerPose p = pose.pose();
         GhostFrame frame = new GhostFrame(p.centreX(), p.centreY(), p.mappingFrame(), p.hFlip(), p.vFlip(),
                 false, p.priorityBucket(), p.highPriority());
-        return new ActiveGhost(pose.slotId(), pose.characterCode(), frame, pose.nameplate(), pose.opacity());
+        return new ActiveGhost(pose.slotId(), pose.characterCode(), frame, pose.nameplate(), pose.opacity(),
+                pose.appearance());
     }
 
     /** Runs a host callback; a failure aborts the run at the next boundary instead of the engine. */
@@ -416,8 +587,37 @@ final class HostedRunController {
         }
 
         @Override
+        public void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance appearance) {
+            Objects.requireNonNull(appearance, "appearance");
+            if (active) {
+                localLook.request(appearance);
+            }
+        }
+
+        @Override
+        public void holdControls(boolean held) {
+            if (active) {
+                controlsHeld = held;
+            }
+        }
+
+        @Override
+        public void setLevelCovered(boolean covered) {
+            if (active) {
+                levelCovered = covered;
+            }
+        }
+
+        @Override
         public boolean isActive() {
             return active;
+        }
+    }
+
+    /** A canvas of the run's screen size that draws nothing (nameplates under a covering menu). */
+    private record HiddenCanvas(int width, int height) implements com.openggf.mods.ui.PixelCanvas {
+        @Override
+        public void fill(int x, int y, int w, int h, int argb) {
         }
     }
 
@@ -435,6 +635,14 @@ final class HostedRunController {
         @Override
         public boolean keyPressed(int key) {
             return handler.isKeyPressed(key);
+        }
+
+        @Override
+        public boolean levelFadingIn() {
+            var level = GameServices.levelOrNull();
+            return level != null && level.getAnimatedPatternManager()
+                    instanceof com.openggf.game.internal.LevelPaletteFadeOwner owner
+                    && owner.presentsLevelFadeFromBlack();
         }
     }
 }

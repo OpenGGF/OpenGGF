@@ -68,4 +68,12 @@ public final class SpriteSatInternalAccess {
         engineCaller();
         graphics.withNativeSpriteOwnership(producer);
     }
+
+    /** Replay admitted front-to-back layers, blending gameplay ghosts without claiming native coverage. */
+    public static <T> void replayNativeLayers(GraphicsManager graphics, List<T> frontToBack,
+                                               java.util.function.Predicate<T> isGhost,
+                                               java.util.function.Consumer<List<T>> emitter) {
+        engineCaller();
+        graphics.replayNativeLayers(frontToBack, isGhost, emitter);
+    }
 }

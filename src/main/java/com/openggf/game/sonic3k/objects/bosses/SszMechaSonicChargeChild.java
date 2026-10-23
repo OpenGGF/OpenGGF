@@ -45,14 +45,8 @@ public final class SszMechaSonicChargeChild extends AbstractObjectInstance
     }
 
     private SszMechaSonicObjectInstance parent() {
-        var manager = services().objectManager();
-        if (manager != null) {
-            for (var object : manager.getActiveObjects()) {
-                if (object instanceof SszMechaSonicObjectInstance mecha
-                        && mecha.getSlotIndex() == parentSlot && !mecha.isDestroyed()) return mecha;
-            }
-        }
-        return null;
+        return com.openggf.level.objects.NativeObjectQueries.liveAtSlot(
+                services().objectManager(), parentSlot, SszMechaSonicObjectInstance.class);
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {

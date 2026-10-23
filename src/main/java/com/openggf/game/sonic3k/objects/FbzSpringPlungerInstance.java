@@ -115,7 +115,7 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
         plunger.services().playSfx(Sonic3kSfx.SPRING.id);
     }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 4, 6); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean usesInclusiveRightEdge() { return true; }
     @Override public int getX() { return spawn.x(); }

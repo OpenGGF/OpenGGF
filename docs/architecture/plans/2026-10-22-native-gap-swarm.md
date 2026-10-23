@@ -986,3 +986,206 @@ absent. The old package's target-absence and zero-JVM records describe its freez
 time and are preserved, not rewritten as current build state. Only consumed
 build logs are removed after readback; useful source packages and historical
 worktrees remain. No test, native, Lua or observation result is claimed.
+
+
+## Root pinned develop reconciliation — 2026-10-23
+
+The resumed aggregate starts at `7fded12cee6f22e1199ad6576736ce19e1589f02`.
+It merges the observed committed develop snapshot
+`fa160d81832382f11bcddb23511a73c7bffcdd53` in the isolated aggregate only.
+Main's foreign submodules and untracked files remain untouched; its integration
+window and the matched MHZ observation gate remain closed. The separately owned
+PR223 reconciliation is not a substitute for this aggregate's qualification.
+The next six original Mode sources wait until this boundary is qualified.
+
+The actual merge has fifteen conflicts: ten rendering/object files, mirrored
+policy hooks, and three existing documents. Document resolution retains both
+complete histories. Runtime resolution preserves native SAT admission, reverse
+accepted FIFO and live reserved-slot resolution while carrying develop's
+appearance palettes, coloured ghosts, frozen presentation batches, viewport
+culling, native object indices and exact live-rewind owner/reporting semantics.
+The merged PM rewind record and candidate signature pin both retain develop's
+`deathElapsedFrames`; this does not replace the qualified glide/callback bodies.
+
+The policy merge retains declaration-only private-record/initializer handling
+alongside enum and annotation-default support. Its full Python module passes
+62 tests in51.037 seconds, exercising Bash and PowerShell with zero skips.
+Taking develop's record helper wholesale reproduced six initializer failures;
+no public signature pin was fabricated to hide them.
+
+Build-only session31268 stops during compilation with zero executed tests:
+`LevelRenderer`'s automatically merged always-SAT helper references an absent
+`ghostLayerHook` (Maven48.680 seconds). Restoring the original layered hook at
+actual preparation removes that compile defect; ghosts must then be captured
+once, rather than painted a second time after native replay.
+
+Independent review found two further interactions that compilation alone
+cannot detect. A translucent/alpha-zero ghost inside the ordinary native
+coverage scope claimed stencil ownership and hid a later real sprite. A layer
+without a local actor never invoked its ghost hook. The matched old-source
+session46206 reproduces7 tests with6 assertion failures,0 errors and0 skips:
+two of three real EGL coverage tests fail, all four missing-layer cases fail,
+and the opaque-front-native control passes. Queue wait0 seconds; Maven1:19.
+Exact selected XML identities and Java25.0.5/EGL/three absolute ROM properties
+were read; older unrelated XMLs in the directory are not this invocation.
+The source-freeze digest measured before execution is
+`2df3af277043d4d929351341dda2f1acbe3c10518503c92512338d7be8c19765`
+(HEAD newline, binary diff against HEAD, then length-framed sorted untracked
+paths and contents); production edits were held until that run terminated.
+
+The intended correction keeps ghost-free native coverage unchanged. Native
+sprites retain their opaque first-winner semantics, including winners whose
+colour is supplied by terrain. Presentation ghosts do not consume native table,
+line or pixel budgets or arm/change native mask links. They retain mask clipping
+and blend at their presentation depth without writing native coverage. Missing
+local layers still invoke their visual hooks once; prepared bucket membership
+supplies that decision without another actor-getter pass. This is an engine
+presentation extension, not a claim that the console has translucent ghosts.
+Candidate qualification remains pending at this checkpoint.
+
+Source-size inspection also exposes the composed facades above their fixed
+budgets. The unchanged reserved-slot constructor body moves to the existing
+`ObjectFixedSlotConstruction` helper with original allocation, callback,
+registration, virtual-add and rollback order. Five controls cover those
+boundaries. Effective OM count becomes3069 against3086. The new fast-restart
+sequence delegates to its existing checkpoint coordinator, keeping the same
+checkpoint clear, virtual restart and card-skip order; LM becomes3144 against
+3144. These are guard-equivalent source counts, not fresh JUnit guard passes.
+No allocator, budget, pin, queue or native-memory-clear policy is changed.
+
+The S1 full-load regression now passes explicit `deactivateLevelNow=true` for
+its intended blocking branch. Current develop honours the caller's policy;
+restoring the old implicit override would change runtime intent. Its readiness,
+fade, actual-load and registered-restore assertions remain intact. The matching
+terminal-entry regression is being reconciled with both explicit blocking and
+nonblocking caller controls by the PR223 owner, with source shared for aggregate
+qualification rather than a duplicate implementation.
+
+
+The candidate affected selection contains50 named classes covering native
+coverage/masks/shadow, coloured ghosts, fragments/heads/batching/pools, queue and
+reserved-slot allocation, native indices, configured headless audio, live-rewind
+ownership/admission/reporting, fast death restarts, PLC/ending/S1 readiness/results,
+recorded input, native audio pause, candidate signatures and all four mandated
+S3K stability classes. Expected execution is roughly1–3 minutes plus compilation
+and queue delay; stop on any new failure and correct only its owning seam.
+This is bounded integration verification, not the deferred delivery-wide smoke
+selection or a maintained route/native capture. The exact command is:
+
+```bash
+rom_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+selection='TestSpriteSatMaskPostProcessor,TestSpritePresentation,TestPresentationPatternBatching,TestPooledRenderCommandDiscard,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestSatGhostLayering,TestPresentationSpritePixels,TestNativeShadow15Pixels,TestGhostRendererLayerSelection,TestNativeSpriteOwnershipPixels,TestNativeSpriteSatGameplay,TestSpritePreparationHeadComposition,TestObjectDrawSlotEmissions,TestObjectManagerNativeSpriteSubmissions,TestObjectManagerMultiBucketRenderable,TestNativeObjectQueries,TestNativeObjectSlotOccupancy,TestObjectManagerProviderIndexes,TestObjectReservedSlotConstruction,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity,TestLiveRewindInputSource,TestLiveRewindOwnerLifetime,TestLiveRewindBoundaryPolicy,TestLiveRewindStepperPlcLifecycle,TestLiveRewindStepperAdmission,TestGameplayRunPolicy,TestFastDeathRestart,TestDeathRestartRoutineParity,TestPlcFrameLifecycleCoordinator,TestEndingReturnFadeOwnership,TestSonic1ResultsNativeWaitBoundary,TestSonic1LevelLoadPlayerArtReadiness,TestSonic1PaletteFadePlayerArtService,TestNativeTerminalLevelAdmission,TestPlaybackInputBridgeOwnership,TestRecordedInputOwnership,TestAudioNativePause,TestAudioTimelineNativePause,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestGraphicsProjectionScope,TestScopedPaletteGraphicsAccess,TestSonic2BubbleNativeLifecycle,TestNativeSstWord2C,TestNativeSpriteSubmissionRegistration'
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u MAVEN_OPTS \
+  -u DISPLAY -u WAYLAND_DISPLAY -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH \
+  -u LIBGL_ALWAYS_SOFTWARE -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${rom_root}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${rom_root}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${rom_root}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=${selection}" test -B > target/fa160-composed-affected.log 2>&1
+```
+
+The terminal-entry test-only caller-policy adaptation is shared from the PR223
+owner (whole test SHA25682bf5df86e788d22a4d3f92412a51c1a880bc0e7c5fb74a8170fffa3a4c50b71).
+Its positive case requests blocking explicitly; two new launcher controls retain
+nonblocking continuation, physical input, one body pass, cursor and observer
+assertions. Peer35657 passes162 tests, including these12 terminal cases; that
+is peer-source evidence, not this aggregate's pending result. The aggregate
+already includes the PALETTE_FADE-only policy leaf `a839af474096b291a3e1247a0c1f2b0609cfb592`.
+
+
+Candidate25883 completes461 distinct testcase identities across54 suite XMLs:
+459 pass,2 fail,0 errors/skips; queue0 seconds and Maven1:30. All50 selectors
+execute, with nested suite wrappers counted separately from testcase identities.
+Java25.0.5, surfaceless EGL and all three absolute verified ROM properties match.
+All six new native/ghost coverage controls and four missing-layer cases pass,
+along with native-only pixels, source allocation, audio ownership and signatures.
+Expected injected reverse-audio failures are logged by their passing rollback
+controls; they are not production errors or a native audio fidelity result.
+
+The two failures are the imported peer test's newly added nonblocking cases,
+`terminalRowsConsumeANonblockingEntryWithoutInventingALevelHold[1]/[2]`:
+expected inactive=false after consumption, actual=true. Root's pre-existing
+`74e8d2806` source (original ad67 contract) deliberately opts S1's native profile
+into consumed-entry blocking. Main and PR223 never contained that guard. The
+earlier assumption that these parent runtimes matched was incorrect; removing
+the native guard to satisfy a test from the other parent would lose qualified
+native behavior. The existing `TestGameLoopBlockingLevelEntryFadeS1` already
+separates the opted-in native path, a public-only unopted profile with identical
+22-frame duration, ordinary callback fades and S2's nonblocking policy.
+
+The aggregate therefore retains the runtime gate and declares that same
+public-only, otherwise fully delegated profile explicitly in the two new
+terminal negative controls. No engine gameplay value, trace scheduling or
+assertion is weakened. The positive explicit-true case remains; the existing
+native event controls separately retain publication-active then consumption-held
+behavior. Peer82bf test bytes and162 passes remain honest evidence for its parent;
+this additional aggregate fixture adaptation has its own affected check. Hosted
+controller, retry-completion and lead-in tests accompany the terminal/native-entry
+checks so caller policy is not certified solely by this profile fixture.
+
+
+Follow-up20756 stops in test compilation with zero executed tests
+(Maven23.021 seconds): the new fixture's ROM getter declares IOException.
+Root corrected that test setup to assert the existing ROM lookup succeeds; no
+production I/O contract was changed. The subsequent old-hosted-source check
+44769 executes64 distinct tests across seven suite XMLs:63 pass,1 fails,0 errors
+or skips, queue4 seconds/Maven31.357 seconds. Both terminal-profile negatives
+now pass. The single new actual S1 hosted mid-act retry fails because consumption
+forces inactive=true. Its completed-act retry control and all native/unopted/S2
+entry, hosted controller and completion-wiring controls pass.
+
+This is a genuine cross-parent runtime conflict, unlike the earlier fixture
+assumption. Main's active host deliberately requests nonblocking mid-act retries;
+Root's native profile hold overrides it. The minimal correction limits the
+profile-forced hold to an unhosted native loop. Active hosts retain the request's
+existing deactivation choice; completed-act retries already requested true, so
+remain frozen. The actual S1 regression checks four pre-load passes of object
+execution, airborne player movement, host.afterStep and fade progress; the paired
+completed-act case requires the same quantities held while the fade advances.
+No new request provenance, timing authority, mode/zone exception, API or snapshot
+field is introduced. The final affected command reuses the50-class environment
+above with this selector:
+
+```text
+TestNativeTerminalLevelAdmission,TestGameLoopBlockingLevelEntryFadeS1,TestHostedRunController,TestHostedRunActCompletionWiring,TestHostedRunLeadIn,TestFastDeathRestart,TestGameLoopFreezeContractWiring
+```
+
+Previously passing rendering/audio/slot tests are not resubmitted unchanged;
+the new runtime condition is contained in the hosted/native level-entry seam.
+Fresh structural guards follow this affected result. No delivery-wide green or
+integration/push is claimed by these bounded invocations.
+
+
+Final affected session48659 exits0 with81 distinct testcase identities across12
+suite XMLs,0 failures/errors/skips; queue0 seconds/Maven1:20. All seven requested
+classes execute. Java25.0.5, explicit surfaceless EGL and the three absolute ROM
+properties match; suite output/error blocks and dump files are empty. The actual
+hosted S1 mid-act and completed-act paths now both pass alongside unhosted native,
+unopted terminal, freeze and all three games' fast-death controls. Independent
+review of only the final guard and its two production-path regressions finds no
+concrete mismatch; the source review is separate from Root's executed evidence.
+
+Fresh separate-JVM structural session98642 exits0:111 distinct tests across six
+classes,0 failures/errors/skips, queue0 seconds/Maven41.413 seconds. Exact coverage
+is ArchUnit32, source architecture72, native-image resources1, rewind architecture4,
+field disposition1 and rewind coverage1. The fixed facade budgets pass without
+ratchet changes: OM3069/3086, LM3144/3144, APS3235/3258 and S1 art2046/2047.
+The command reuses the explicit environment and ROM arguments above with
+`-Pguards -Dtest=TestArchUnitRules,TestArchitecturalSourceGuard,TestNativeImageResourceGuard,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard,TestRewindCoverageGuard test -B`.
+All XML identities, skips, properties and output blocks were inspected. Previously
+passing unchanged rendering/audio/slot controls from461 cases are reused as
+bounded evidence; this is not one wholly green50-class invocation, a full suite,
+a delivery-wide smoke result or maintained-route/native fidelity qualification.
+
+All runtime edits finish before06:10Z. The local merge reconciles Root7fded12cee
+with pinned developfa160d818; Main, activation and push stay closed. The PR223
+owner independently commits its parent union as68662f644613ef94f978bd47721ac1835d7712b4.
+Its small APS callback extraction remains a separate supplied delta, not a whole
+APS replacement. Root already retains the private power-up restore extraction and
+passes its own size guard, so no source import is justified by size alone. A new
+peer-owned single two-method SOZ2 route request is deduplicated against Root;
+no MHZ paired observation is authorized by this reconciliation.

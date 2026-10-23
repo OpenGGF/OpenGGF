@@ -101,7 +101,7 @@ public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public SolidObjectParams getSolidParams(){
         // loc_3A5DA calls SolidObjectFull_Offset with d2=$C and d3=-$D.
         // d3 shifts the collision anchor; it is not a second surface radius.
-        return new SolidObjectParams(0x2B,0x0C,0x0C,0,-0x0D);
+        return SolidObjectParams.of(0x2B,0x0C,0x0C,0,-0x0D);
     }
     @Override public SolidRoutineProfile getSolidRoutineProfile(){
         return SolidRoutineProfile.fullSolid(false,true,true);

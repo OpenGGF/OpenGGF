@@ -99,6 +99,6 @@ final class PlayerHeadPresentation {
                              int rowStart, int rowEnd, Subject subject) {
         return new Tile(source.layer(), id, source.palette(), source.hFlip(), source.vFlip(), source.priority(),
                 x, y, width, height, source.priorityShader(), source.occlusionMask(), source.ghost(), source.ghostAlpha(),
-                rowStart, rowEnd, subject, source.pixelOperation());
+                rowStart, rowEnd, subject, source.ghostColour(), source.pixelOperation());
     }
 }

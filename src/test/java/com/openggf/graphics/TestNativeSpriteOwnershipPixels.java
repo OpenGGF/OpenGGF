@@ -29,6 +29,164 @@ import static org.lwjgl.opengl.GL30.*;
 @Isolated
 class TestNativeSpriteOwnershipPixels {
     @Test
+    void ghostsBlendOverNativeWithoutClaimingCoverageInBothReplayPaths() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(false);
+            for (boolean published : new boolean[]{false, true}) for (int mode = 0; mode < 3; mode++) {
+                fixture.graphics.setBatchingEnabled(mode != 0);
+                fixture.graphics.setInstancedBatchingEnabled(mode == 2);
+                for (float alpha : new float[]{0, .5f}) {
+                    fixture.clear(0);
+                    fixture.layers(published, new ReplayLayer(1, true, alpha), new ReplayLayer(2, true, null));
+                    rgb(pixels(), 41, 42, Math.round(255 * alpha), Math.round(255 * (1 - alpha)), 0);
+                    pixel(pixels(), 46, 42, 2);
+                }
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void opaqueNativeWinnersCoverGhostsEvenWhenTerrainSuppliesTheirColour() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            for (boolean published : new boolean[]{false, true}) for (int mode = 0; mode < 3; mode++) {
+                fixture.graphics.setBatchingEnabled(mode != 0);
+                fixture.graphics.setInstancedBatchingEnabled(mode == 2);
+                for (boolean hidden : new boolean[]{false, true}) {
+                    fixture.terrain(hidden);
+                    fixture.clear(0);
+                    fixture.layers(published, new ReplayLayer(1, !hidden, null), new ReplayLayer(2, true, .5f));
+                    pixel(pixels(), 41, 42, hidden ? 3 : 1);
+                    rgb(pixels(), 46, 42, 0, 128, 128);
+                }
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void multipleGhostsBlendInPainterOrderAndRespectInterveningNativeWinners() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(false);
+            for (boolean published : new boolean[]{false, true}) for (int mode = 0; mode < 3; mode++) {
+                fixture.graphics.setBatchingEnabled(mode != 0);
+                fixture.graphics.setInstancedBatchingEnabled(mode == 2);
+                fixture.clear(0);
+                fixture.layers(published, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, .5f),
+                        new ReplayLayer(3, true, null));
+                rgb(pixels(), 41, 42, 128, 64, 64);
+                rgb(pixels(), 46, 42, 0, 128, 128);
+                fixture.clear(0);
+                fixture.layers(published, new ReplayLayer(1, true, .5f), new ReplayLayer(3, true, null),
+                        new ReplayLayer(2, true, .5f));
+                rgb(pixels(), 41, 42, 128, 0, 128);
+                pixel(pixels(), 46, 42, 3);
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void layeredScopesRestoreForeignStencilAndFaceStatesAfterDrawAndFailure() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(false);
+            fixture.clear(0);
+            fixture.layers(false, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, null));
+            glStencilMask(0xFF);
+            glClearStencil(0x66);
+            glClear(GL_STENCIL_BUFFER_BIT);
+            byte[] original = stencil(0);
+            glEnable(GL_STENCIL_TEST);
+            glStencilFuncSeparate(GL_FRONT, GL_NEVER, 3, 0x7F);
+            glStencilFuncSeparate(GL_BACK, GL_LESS, 9, 0x37);
+            glStencilMaskSeparate(GL_FRONT, 0x5A);
+            glStencilMaskSeparate(GL_BACK, 0xA5);
+            glStencilOpSeparate(GL_FRONT, GL_INVERT, GL_DECR, GL_REPLACE);
+            glStencilOpSeparate(GL_BACK, GL_ZERO, GL_INCR, GL_KEEP);
+            glClearStencil(37);
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(32, 170, 24, 24);
+            glEnable(GL_DEPTH_TEST);
+            glDepthMask(true);
+            glEnable(GL_BLEND);
+            glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ZERO, GL_ONE);
+            glBlendEquationSeparate(GL_FUNC_REVERSE_SUBTRACT, GL_FUNC_SUBTRACT);
+            List<Integer> before = state();
+            for (boolean published : new boolean[]{false, true}) for (int mode = 0; mode < 3; mode++) {
+                fixture.graphics.setBatchingEnabled(mode != 0);
+                fixture.graphics.setInstancedBatchingEnabled(mode == 2);
+                fixture.layers(published, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, null));
+                assertEquals(before, state());
+                assertArrayEquals(original, stencil(0));
+            }
+            IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
+                    fixture.graphics.executeCapturedCommands(() -> SpriteSatInternalAccess.replayNativeLayers(
+                            fixture.graphics, List.of(false, true), Boolean::booleanValue,
+                            span -> fixture.graphics.registerCommand((x, y, width, height) -> {
+                                if (span.getFirst()) throw new IllegalStateException("injected layered ghost draw failure");
+                            })), 0, 0, 320, 224));
+            assertEquals("injected layered ghost draw failure", failure.getMessage());
+            assertEquals(before, state());
+            assertArrayEquals(original, stencil(0));
+            assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void layeredColorOnlyScopesReleaseCoverageAfterDrawAndFailure() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(false);
+            FboHelper.FboHandle scene = FboHelper.createColorOnly(320, 224, GL_CLAMP_TO_EDGE);
+            assertNotNull(scene);
+            try {
+                for (boolean published : new boolean[]{false, true}) {
+                    fixture.clear(scene.fboId());
+                    fixture.layers(published, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, null));
+                    rgb(pixels(), 41, 42, 128, 128, 0);
+                    assertEquals(GL_NONE, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                            GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+                    assertEquals(GL_FRAMEBUFFER_COMPLETE, glCheckFramebufferStatus(GL_FRAMEBUFFER));
+                }
+                assertThrows(IllegalStateException.class, () -> fixture.graphics.executeCapturedCommands(() ->
+                        SpriteSatInternalAccess.replayNativeLayers(fixture.graphics, List.of(false, true), Boolean::booleanValue,
+                                span -> fixture.graphics.registerCommand((x, y, width, height) -> {
+                                    if (span.getFirst()) throw new IllegalStateException("injected layered scene failure");
+                                })), 0, 0, 320, 224));
+                assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
+                assertEquals(GL_NONE, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                        GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+            } finally {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                FboHelper.destroy(scene);
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void layeredReplayRejectsMoreThan255SpansBeforeScopeOrEmission() {
+        var frontToBack = new ArrayList<Boolean>();
+        for (int rank = 0; rank < 255; rank++) frontToBack.add((rank & 1) != 0);
+        var layers = NativeSpriteOwnership.layers(frontToBack, Boolean::booleanValue);
+        assertEquals(255, layers.size());
+        assertEquals(254, layers.getLast().rank());
+        frontToBack.add(true);
+        var graphics = new GraphicsManager();
+        var emissions = new java.util.concurrent.atomic.AtomicInteger();
+        assertThrows(IllegalArgumentException.class, () -> SpriteSatInternalAccess.replayNativeLayers(
+                graphics, frontToBack, Boolean::booleanValue, span -> emissions.incrementAndGet()));
+        assertEquals(0, emissions.get());
+        assertTrue(graphics.commands.isEmpty());
+        assertFalse(graphics.nativeSpriteOwnershipActive());
+    }
+
+    @Test
     void terrainHiddenOpaqueWinnerStillExcludesLaterHighSpriteButItsTransparentHoleDoesNot() throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         try (Fixture fixture = new Fixture()) {
@@ -237,6 +395,18 @@ class TestNativeSpriteOwnershipPixels {
         }
     }
 
+    private static void rgb(ByteBuffer pixels, int x, int y, int red, int green, int blue) {
+        int offset = ((223 - y) * 320 + x) * 4;
+        int[] expected = {red, green, blue};
+        for (int channel = 0; channel < expected.length; channel++) {
+            int actual = pixels.get(offset + channel) & 255;
+            assertTrue(Math.abs(expected[channel] - actual) <= 1,
+                    "pixel " + x + "," + y + " channel " + channel + ": expected " + expected[channel] + ", got " + actual);
+        }
+    }
+
+    private record ReplayLayer(int pattern, boolean high, Float ghostAlpha) { }
+
     private static byte[] stencil(int framebuffer) {
         int read = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
         try {
@@ -284,8 +454,9 @@ class TestNativeSpriteOwnershipPixels {
                 Palette palette = new Palette();
                 palette.setColor(1, new Palette.Color((byte) 255, (byte) 0, (byte) 0));
                 palette.setColor(2, new Palette.Color((byte) 0, (byte) 255, (byte) 0));
+                palette.setColor(3, new Palette.Color((byte) 0, (byte) 0, (byte) 255));
                 for (int line = 0; line < 4; line++) graphics.cachePaletteTexture(palette, line);
-                for (int id = 1; id <= 2; id++) {
+                for (int id = 1; id <= 3; id++) {
                     Pattern pattern = new Pattern();
                     for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
                         pattern.setPixel(x, y, (byte) (id == 1 && x >= 4 ? 0 : id));
@@ -318,6 +489,28 @@ class TestNativeSpriteOwnershipPixels {
                 graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
                 submit(first, firstHigh, flip); submit(second, secondHigh, false);
                 graphics.endSpriteSatCollectionAndReplay();
+            }, 0, 0, 320, 224);
+        }
+        void layers(boolean published, ReplayLayer... layers) {
+            graphics.executeCapturedCommands(() -> {
+                if (published) {
+                    var tiles = java.util.Arrays.stream(layers).map(layer -> new SpritePresentation.Tile(
+                            SpritePresentation.Layer.OBJECT, layer.pattern(), 0, false, false, layer.high(),
+                            40, 40, 8, 8, true, 0xF, layer.ghostAlpha() != null,
+                            layer.ghostAlpha() == null ? 1 : layer.ghostAlpha(), 0, 8,
+                            SpritePresentation.Subject.WORLD, true, SpriteSatEntry.PixelOperation.NORMAL)).toList();
+                    SpritePresentationRenderer.drawNative(graphics, new SpritePresentation.Frame(tiles.reversed()),
+                            0, 0, layer -> true);
+                } else {
+                    graphics.beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
+                    for (ReplayLayer layer : layers) {
+                        graphics.endGhostRenderEffect();
+                        if (layer.ghostAlpha() != null) graphics.beginGhostRenderEffect(layer.ghostAlpha(), true);
+                        submit(layer.pattern(), layer.high(), false);
+                    }
+                    graphics.endGhostRenderEffect();
+                    graphics.endSpriteSatCollectionAndReplay();
+                }
             }, 0, 0, 320, 224);
         }
         private void submit(int pattern, boolean high, boolean flip) {

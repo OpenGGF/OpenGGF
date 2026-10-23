@@ -207,8 +207,18 @@ sending any proof. A bare address or `ws://` has no safe identity source and is 
 The code is a trust-on-sharing capability: guests must receive it through a trusted
 channel and should not accept an invite edited by an untrusted party.
 These wire fields and the initial-snapshot/`PlayerUpsert`/`PlayerLeft` membership
-contract use protocol version 3. Earlier experimental clients and servers cannot
-mix on control connections; no deployed compatibility path exists.
+contract use protocol version 5. Version 4 added the player's look to the signed
+`Hello` (transcript tag `client-auth/v2`), a lobby-only `UpdateProfile` for renaming
+or recolouring without a new identity, and a per-player `PlayerLook`; looks stay out
+of `RoomState` so a 256-player roster still fits one frame. Version 5 adds readiness
+(`SetReady`, per-player `PlayerReady`, `ReadyReset`, the owner's `SetReadyRule` and
+the host's `ReadyRule`: `REQUIRED`, `AUTO` or `DEFAULT_BY_SIZE`, required up to five
+players) and between-round lobby presence: binary `TYPE_LOBBY_FRAMES` up and
+`TYPE_LOBBY_AGGREGATE` down, in the ghost frame and aggregate layouts, validated
+(forward-only streams, rate and per-frame movement caps) and relayed to each player's
+eight nearest senders in relay rooms. Hosts and the master
+accept only `DisplayNames`-canonical names. Earlier experimental clients and servers
+cannot mix on control connections; no deployed compatibility path exists.
 
 Direct-room fallback tunnels check the receiving `HubConnection.queuedBytes()`
 before forwarding either text or binary in either direction. Above the shared

@@ -82,3 +82,11 @@ word overflow and both contacts. Fresh-instance restore replays the 42-pass
 window across both contacts. This is an independent cutscene component gate;
 actual button/bridge effects, whole-scene pixels and the existing route,
 preset/donor/roster obligations remain inherited gaps.
+
+## Object pipeline optimization — 2026-10-22
+
+HCZ column selection retains native lifetime/replacement and rewind ownership while
+removing repeated query/order work. See the [performance evidence](../../audits/performance/2026-10-22-object-pipeline-performance.md)
+for exact focused commands, results and structural counts. This local component
+change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
+product beyond the obligations already recorded above.
