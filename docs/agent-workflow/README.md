@@ -43,6 +43,13 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   [retail profile reproduction](../../tools/soniccd/retail_profiles.py) binds the
   known content records to primary checksum metadata. Header agreement and
   content matching do not certify physical provenance or gameplay parity.
+- [CD device observation](../../tools/soniccd/device_observer_run.py),
+  [service callbacks](../../tools/soniccd/service_events_run.py) and
+  [stamp continuation fixtures](../../tools/soniccd/stamp_fixture_run.py)
+  preserve pinned native provenance and repeated/control/restore evidence.
+  The [fixture validator](../../tools/soniccd/stamp_fixture_validate.py) compares
+  complete external RAM payloads. Origin and limits are in the
+  [23 October implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

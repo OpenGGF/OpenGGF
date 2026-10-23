@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A callback scope name does not authenticate its CPU owner (2026-10-23, Sonic CD
+device research). Both M68K and S68K reach hooks advertised as `M68K BUS`; the
+stock adapter drops CPU identity and access width. An ownership poll can prove
+image bytes were sampled before consumption without identifying the exact final
+render service edge. Keep backend sector reads, graphics busy clear, final pixel
+output and Word RAM return as distinct source boundaries. A partial fixture must
+retain its actual cursors and completed lines, enforce supported 2M ownership and
+bind mode/priority across ingress and egress. Comparing all RAM bytes proves the
+bounded transform, not scheduling or full-submission state. See the
+[local CD observation handoff](../architecture/plans/2026-10-23-sonic-cd-implementation.md#native-continuation-and-service-observation-handoff).
+
 Different virtual pattern IDs do not imply different physical atlas pages
 (2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
 separate commands for two IDs that the allocator placed on the same page. Use

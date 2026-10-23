@@ -987,3 +987,66 @@ Each task ID uses the existing delegated-task command prefix recorded above.
 The parent retains Git, Java compilation, Maven target and delivery ownership.
 All implementation remains on the local feature branch with no upstream,
 integration or push. No playable Sonic CD module is implemented yet.
+
+The media-loading unit is committed locally as `ae72cb487`; its patch and the
+updated plan are exported to Downloads. The native-tool review verified both
+fixture runs' full RAM comparisons and independently reproduced all six images.
+It found one P2 acceptance gap: 1M ingress and changes to egress stamp mode or
+priority could pass validation. Existing captures have the expected settings.
+Fix task `sonic-cd-native-guards-portability-20261023-r1` owns the producer and
+validator guards, regressions, a fresh guarded capture, and portable Python
+output-root defaults. The review's nine-file fingerprint was
+`0ed1cf71393cfeafc94f4857d437257926a9c5ebf4bbf8ebf8999bb12442d045`.
+Captured original producer sources are preserved in the Downloads source bundle
+before these changes, so old manifests remain attributable without rewriting
+their pins. The pure Java and native-owner workers have the finding and changed
+helper ownership. Their owned packages/prefixes remain separate. No Maven job
+is active, and no probe unit has been committed yet.
+
+### Guarded probe delivery checkpoint
+
+The accepted fixture finding is fixed in both producer and validator. Ingress
+requires 2M sub ownership and matching raw request/register state. Stamp mode
+and priority stay bound while the ownership bits legitimately return to main.
+The saved review mutations now reject. Eighteen stamp Python tests, including
+27 compiled C# guard cases, six device tests and eleven service tests passed
+without skips. Twenty-eight CLI scenarios checked portable roots and path guards.
+Machine-specific Python root literals now derive from the user's home directory.
+
+Two fresh 1,500-frame observed boots, an observer-free control and every
+120-frame restored continuation passed. All six guarded ingress/egress RAM
+payloads, images, inventories, AV streams and checkpoints equal the originals.
+The guarded manifest SHA256 is
+`10552d10b019ea1a689f62d85b32d4ae8c9f85468b66cb6230f19b095f09781a`.
+The parent independently checked its current producer hashes and all bound run
+streams/full-byte continuations with `stamp_fixture_validate.py`. Old manifests
+remain unchanged and refer to their captured source versions; the historical
+service checker correctly rejects a revised wrapper rather than silently
+certifying it. The Downloads source archive retains the original versions.
+
+The separate pure Java device unit returned seven stable files. Its pending
+focused command is below. Session `14205` owns the only Maven job. Fresh review
+task `sonic-cd-stamp-java-review-20261023-r1` is read-only on those seven files.
+The native-owner build continues separately and does not write Java or target.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdStampGraphics,TestStampFixtureAdmission,TestCdStampNativeContinuations' -Dsoniccd.stamp.fixtures=${SCD_STAMP_FIXTURES} test -B
+```
+
+The device has no runtime registration, timing authority, file reads or hidden
+mutable worker state. It transforms caller-owned 2M Word RAM in bounded line
+steps. Exact native evidence remains partial mode-7, normal-priority title work;
+other modes, rotations and wrapping have constructed tests only. Compilation
+and JUnit are still pending at this checkpoint. CD-02 and CD-05 remain open.
+
+The first device command finished in 1 minute 19 seconds with 112 tests,
+one failure, zero errors and zero skips. All six native full-RAM continuations
+and all 52 fixture-admission invocations passed. The sole failure was the
+constructed overlap expectation in
+`TestCdStampGraphics.takesEachSubsequentVectorFromTheCurrentCallerMemory`.
+Its second output replaces only a byte's high nibble; the expected array
+incorrectly discarded the original low nibble of the overlapping delta word.
+Pinned `gfx_render` preserves that paired pixel. The lead removed the erroneous
+expected-byte assignment; production source is unchanged. Only
+`TestCdStampGraphics` is rerunning, in session `82450`. The other 58 passing
+invocations retain unchanged source and need no ceremonial repeat.
