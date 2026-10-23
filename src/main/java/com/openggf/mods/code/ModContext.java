@@ -107,6 +107,14 @@ public final class ModContext {
         });
     }
 
+    /** Engine composition only: consume a just-registered public bundle without publishing a second controller. */
+    java.util.function.Supplier<com.openggf.game.GameServiceBundle> extractServiceBundle(String localKey) {
+        requireOpen();
+        var factory = serviceBundles.remove(ModKeySyntax.requireLocalName(localKey));
+        if (factory == null) throw failure("Missing service bundle for engine composition: " + localKey);
+        return factory;
+    }
+
     /** Registers a fixed instance; use a bundle factory for state recreated on each application. */
     public <T> void registerService(String localKey, Class<T> contract, T service) {
         registerServiceBundle(localKey, () -> com.openggf.game.GameServiceBundle.builder().service(contract, service).build());
@@ -388,6 +396,7 @@ public final class ModContext {
     }
 
     private String resolveZoneAnchor(ModZoneContribution contribution) {
+        if (contribution.terminalCampaign()) return null;
         if (contribution.insertAfter() != null) return contribution.insertAfter();
         if (defaultInsertAfter != null) return defaultInsertAfter;
         // A host without a compatibility default (notably S3K) keeps game-start zones

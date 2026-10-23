@@ -73,6 +73,23 @@ class TestEditorHudControls {
     }
 
     @Test
+    void namedPropertiesAreNavigableWithoutPaintingAndEachChangeUndoes() {
+        controller.configureSpawnEditing(new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(),
+                new com.openggf.game.common.CommonObjectPlacementEncoding());
+        controller.setSpawnEditMode(com.openggf.editor.EditorSpawnEditMode.OBJECTS);
+        controller.objectPalette().setObjectId(0x41);
+        controller.placeSpawnAtCursor();
+        hud.openProperties(); tick();
+        assertEquals(EditorHud.Modal.PROPERTIES, hud.modal);
+        press(BUTTON_DPAD_DOWN); // Strength
+        press(BUTTON_DPAD_RIGHT);
+        assertEquals(2, controller.selectedObjectSpawn().subtype());
+        assertEquals(1, level.getObjects().size());
+        controller.undo(); assertEquals(0, controller.selectedObjectSpawn().subtype());
+        press(BUTTON_B); assertEquals(EditorHud.Modal.NONE, hud.modal);
+    }
+
+    @Test
     void southStillHeldAfterChoosingFromTheLibraryDoesNotPaintTheWorkbench() {
         controller.placeBlock(0, 0, 0, 2);
         pullRightTrigger();

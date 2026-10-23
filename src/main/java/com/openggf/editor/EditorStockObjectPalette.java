@@ -70,8 +70,29 @@ public final class EditorStockObjectPalette {
         subtype = spawn.subtype();
         renderFlags=spawn.renderFlags();respawnTracked=spawn.respawnTracked();
     }
+    /** Query-only: previews never execute registry factories or gameplay initialization. */
+    public com.openggf.level.metadata.ObjectPreview preview(ObjectSpawn spawn) {
+        if (registry instanceof com.openggf.level.metadata.ObjectPreviewProvider provider) return provider.objectPreview(spawn);
+        var key = spawn.objectKey() == null ? registry.editorPreviewArtKey(spawn.objectId()) : registry.editorPreviewArtKey(spawn.objectKey());
+        return key.map(value -> com.openggf.level.metadata.ObjectPreview.frame(value, 0))
+                .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
+    }
+    public static String displayName(String value) {
+        if (value.startsWith("openggf:")) value = value.substring(8);
+        value = value.replaceAll("^[0-9A-Fa-f]{2}: ", "").replace('_', ' ').replace('-', ' ')
+                .replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Z0-9])([A-Z][a-z])", "$1 $2");
+        return value.isEmpty() ? "Unnamed object" : Character.toUpperCase(value.charAt(0)) + value.substring(1);
+    }
+    public ObjectSpawn previewSpawn(Entry entry, int subtype, int flags) {
+        return new ObjectSpawn(0, 0, entry.stockObjectId() == null ? 0 : entry.stockObjectId(), subtype, flags,
+                false, 0, -1, entry.objectKey() == null ? null : entry.objectKey().split(":", 2)[0], entry.objectKey());
+    }
+    public ObjectSpawn brushPreview(int x, int y) {
+        var spawn = previewSpawn(entries.get(cursor), subtype, renderFlags);
+        return new ObjectSpawn(x, y, spawn.objectId(), subtype, renderFlags, false, y, -1, spawn.ownerModId(), spawn.objectKey());
+    }
     public record Entry(Integer stockObjectId, String objectKey, String label, String previewArtKey) {
-        static Entry stock(int id, String name,String preview) { return new Entry(id, null, "%02X: %s".formatted(id, name),preview); }
-        static Entry keyed(String key,String preview) { return new Entry(null, key, key,preview); }
+        static Entry stock(int id, String name,String preview) { return new Entry(id, null, "%02X: %s".formatted(id, displayName(name)),preview); }
+        static Entry keyed(String key,String preview) { return new Entry(null, key, displayName(key),preview); }
     }
 }

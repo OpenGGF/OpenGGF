@@ -1024,6 +1024,9 @@ public final class LevelRenderer {
     }
 
     private short presentationForegroundY() {
+        // Authoring owns a free camera without a live deformation update. Align the terrain
+        // with placement origins instead of inheriting the parked gameplay Plane A VScroll.
+        if (lm.authoringView) return lm.camera.getY();
         return currentScrollPresentation == null ? lm.parallaxManager.getVscrollFactorFG()
                 : currentScrollPresentation.registers().foregroundY();
     }

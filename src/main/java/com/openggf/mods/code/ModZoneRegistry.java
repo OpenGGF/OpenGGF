@@ -37,6 +37,8 @@ public final class ModZoneRegistry implements ZoneRegistry {
             List<PreparedModZone> acts = grouped.computeIfAbsent(key, ignored -> new ArrayList<>());
             if (authored.actIndex() != acts.size())
                 throw new IllegalArgumentException("Duplicate or unordered mod act identity: " + key + "/" + authored.actIndex());
+            if (!acts.isEmpty() && acts.getFirst().terminalCampaign() != authored.terminalCampaign())
+                throw new IllegalArgumentException("All acts must agree on terminal campaign ownership: " + key);
             acts.add(authored);
         }
         ArrayList<PreparedModZone> remapped = new ArrayList<>();
@@ -67,7 +69,8 @@ public final class ModZoneRegistry implements ZoneRegistry {
         ArrayList<ZoneProgressionPlan.ZoneMetadata> metadata =
                 new ArrayList<>(stock.progressionTopology().zones());
         modZones.forEach(acts -> metadata.add(new ZoneProgressionPlan.ZoneMetadata(
-                acts.size(), ZoneProgressionPlan.Completion.RESULTS_DRIVEN)));
+                acts.size(), acts.getFirst().terminalCampaign()
+                        ? ZoneProgressionPlan.Completion.TERMINAL : ZoneProgressionPlan.Completion.RESULTS_DRIVEN)));
         this.topology = ZoneProgressionPlan.ZoneTopology.of(metadata);
         ZoneProgressionPlan.Builder builder = ZoneProgressionPlan.builder(topology);
         for (int i = 0; i < modZones.size(); i++) {

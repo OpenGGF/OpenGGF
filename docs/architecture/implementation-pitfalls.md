@@ -68,6 +68,27 @@ preserves vertices; the path picker now does so with `finally` cleanup. A warm
 font or short labels can hide the problem. The shared immediate renderer was
 outside this menu-only fix (2026-10-15 master-title usability review).
 
+**Authoring art and terrain share one origin.** Retain detached ROM sheets from the
+normal asset load; requesting a new module provider during drawing can return an
+unloaded provider (S1 does this deliberately). A free editor camera has no live
+parallax/deformation update, so use its own Y for foreground placement rather
+than the parked Plane A VScroll. Inspect both sprites and floor pixels. Capture
+each ROM in a fresh JVM when reusing native palette-publication resources across
+boots would contaminate the picture. AIZ's initial palette belongs to its intro;
+select the ROM-backed static authoring palette only on the first library copy,
+never by advancing gameplay or overwriting a reopened project's edited colors
+(October 2026 visual-polish viewer pass).
+
+**Detached editor art must not retain runtime providers.** Keep an editor picture catalogue in a weak level-keyed presentation sidecar,
+outside the level/checkpoint graph, with detached CPU art and value metadata only. Do not retain a live object-art provider or a closure
+that captures it: level references can appear in opaque checkpoint graphs, and
+the provider can lead to ROM file channels or runtime managers. Pass the provider
+explicitly while preparing an authoring library, then release it. Even detached
+pattern banks made the checkpoint graph exceed its bounded traversal budget when
+stored directly on the level.
+`TestPuttPuttParadise.opaqueCourseCheckpointGraphDoesNotRetainMutableSessionOwners`
+caught this during the October 2026 editor polish pass.
+
 **Editor rendering uses editor-owned managers.** Once an authored document enters
 `EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
 mode and reject the call. Offscreen editor examples use the active
@@ -1792,6 +1813,17 @@ standing latches and plane-switcher sides capture players by reference, so the
 new carrier replayed beside stale entries for the old one (`headroomSnapshots`
 9 vs 10 in MHZ1). Re-admit the departed instance with its structural links and
 clear only uncaptured deletion markers on restore (2026-10-16, `f07a25bf9`).
+
+### Spawn-based rewind probes must retain placement data
+
+Generic recreation constructs a probe before invoking the object's recreation
+hook. A typed object can reject an anonymous spawn before the hook ever sees its
+captured properties. Use the captured spawn for SpawnRewindRecreatable probes
+when present. Coordinate-only native effects such as S3kSignpostSparkleChild
+deliberately have no spawn; retain the neutral probe fallback and restore their
+coordinates from captured scalar state. Check the real ObjectManager codec path,
+not only a direct recreation-hook call or an in-place restore.
+Origin: [editor authoring parity recovery](plans/2026-10-22-editor-authoring-parity.md#complete-smoke-and-recovery).
 
 ### A recreated effect must keep the owner its spawner supplied
 

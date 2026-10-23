@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  * This provider lazily initializes the art loader when first needed, obtaining the ROM
  * from RomManager.
  */
-public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.game.presentation.RomSceneArtSource,
+public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.level.metadata.ObjectArtPreviewSource, com.openggf.game.presentation.RomSceneArtSource,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
 
@@ -772,6 +772,11 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, com.openggf.g
      */
     public ObjectArtData getArtData() {
         return artData;
+    }
+
+    @Override public java.util.Map<String, ObjectSpriteSheet> editorPreviewSheets(Level level) {
+        return level == null || artLoader == null ? java.util.Map.of()
+                : java.util.Map.of("platform", artLoader.loadGenericPlatformASheet(level, level.getZoneIndex()));
     }
 
     @Override

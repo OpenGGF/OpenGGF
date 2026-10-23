@@ -281,10 +281,16 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
     record BackingState(int objectPlacementId, int[] ringPlacementIds) {}
     record RingState(int x, int y, int placementId) {}
     record ObjectState(int placementId, int x, int y, int objectId, int subtype, int renderFlags,
-            boolean respawnTracked, int rawYWord, String ownerModId, String objectKey) {
+            boolean respawnTracked, int rawYWord, String ownerModId, String objectKey,
+            com.fasterxml.jackson.databind.JsonNode authoredProperties) {
+        ObjectState(int placementId, int x, int y, int objectId, int subtype, int renderFlags,
+                    boolean respawnTracked, int rawYWord, String ownerModId, String objectKey) {
+            this(placementId, x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, ownerModId, objectKey, null);
+        }
         static ObjectState capture(ObjectSpawn spawn) {
             return new ObjectState(spawn.layoutIndex(), spawn.x(), spawn.y(), spawn.objectId(), spawn.subtype(),
-                    spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(), spawn.ownerModId(), spawn.objectKey());
+                    spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(), spawn.ownerModId(), spawn.objectKey(),
+                    spawn.authoredProperties() == null ? null : com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.toJson(spawn.authoredProperties()));
         }
         void validate() {
             if (placementId < 0) throw new IllegalArgumentException("Invalid object placement id");
@@ -296,9 +302,13 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
                 ModKeySyntax.requireManifestId(ownerModId); ModKeySyntax.requireDisplayKey(objectKey);
                 if (!objectKey.startsWith(ownerModId + ":")) throw new IllegalArgumentException("Object key owner mismatch");
             }
+            spawn(); // Decode typed properties and validate their identity/geometry before admission.
         }
         ObjectSpawn spawn() {
-            return new ObjectSpawn(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, placementId, ownerModId, objectKey);
+            try {
+                return new ObjectSpawn(x, y, objectId, subtype, renderFlags, respawnTracked, rawYWord, placementId, ownerModId, objectKey,
+                        com.openggf.level.objects.authored.AuthoredObjectPropertiesJson.parse(authoredProperties));
+            } catch (java.io.IOException error) { throw new IllegalArgumentException("Invalid project authored properties: " + error.getMessage(), error); }
         }
     }
 }

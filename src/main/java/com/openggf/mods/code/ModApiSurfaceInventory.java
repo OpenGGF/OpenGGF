@@ -8,6 +8,10 @@ import java.util.List;
 /** Canonical annotated-type inventory shared by signature and Javadoc tooling. */
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
+            "com.openggf.level.objects.authored.AuthoredObjectProperties",
+            "com.openggf.level.objects.authored.AuthoredStageplayService",
+            "com.openggf.game.modzone.ModLevelSettings",
+            "com.openggf.game.modzone.ModLevelSettingsProvider",
             "com.openggf.stageplay.StageplayDocument",
             "com.openggf.stageplay.StageplayDialogue",
             "com.openggf.stageplay.StageplayTimeline",

@@ -37,9 +37,16 @@ public final class EditorSpawnFactory {
     }
 
     public ObjectSpawn withProperties(ObjectSpawn spawn,int subtype,int flags,boolean respawn) {
-        return spawn.objectKey()==null
+        ObjectSpawn changed = spawn.objectKey()==null
                 ? encoding.create(spawn.x(),spawn.y(),spawn.objectId(),subtype,flags,respawn,spawn.layoutIndex())
                 : encoding.createKeyed(spawn.x(),spawn.y(),spawn.objectKey(),subtype,flags,respawn,spawn.layoutIndex());
+        ObjectSpawn nativeBefore = encoding.create(spawn.x(), spawn.y(), spawn.objectId(), spawn.subtype(),
+                spawn.renderFlags(), spawn.respawnTracked(), spawn.layoutIndex());
+        // Apply only the native flag changes. Preserve uninterpreted envelope bits
+        // (e.g. S2 Y-word bit 12) without assuming another game's flag layout.
+        int raw = spawn.rawYWord() ^ nativeBefore.rawYWord() ^ changed.rawYWord();
+        return new ObjectSpawn(changed.x(), changed.y(), changed.objectId(), changed.subtype(), changed.renderFlags(),
+                changed.respawnTracked(), raw, changed.layoutIndex(), changed.ownerModId(), changed.objectKey(), spawn.authoredProperties());
     }
 
     public RingSpawn createRingSpawn(int x, int y) {

@@ -61,7 +61,7 @@ public final class ModZoneLoader {
                 definition.primaryCollisionIndices(), definition.secondaryCollisionIndices(),
                 definition.paletteLines(), definition.hostMetadata(), definition.paletteClaims(),
                 decodeObjects(definition, true), decodeRings(definition), definition.patternCount(),
-                definition.chunkCount(), definition.blockCount());
+                definition.chunkCount(), definition.blockCount(), definition.settings());
     }
 
     /** Builds a standalone level without consulting a ROM or host game module. */
@@ -134,9 +134,16 @@ public final class ModZoneLoader {
                 String display = com.openggf.game.ModKeySyntax.requireDisplayKey(keyed.objectKey());
                 String owner = display.substring(0, display.indexOf(':'));
                 objects.add(new ObjectSpawn(keyed.x(), keyed.y(), 0, keyed.subtype(), keyed.renderFlags(),
-                        keyed.respawnTracked(), keyed.rawYWord(), keyed.placementId(), owner, display));
+                        keyed.respawnTracked(), keyed.rawYWord(), keyed.placementId(), owner, display, keyed.authoredProperties()));
             }
         }
+        try {
+            com.openggf.level.objects.authored.AuthoredGizmos.validatePlacements(objects);
+            int cellSize = definition.blockGridSide() * 16;
+            com.openggf.level.objects.authored.AuthoredGizmos.validateBounds(objects,
+                    definition.width() * cellSize, definition.height() * cellSize);
+        }
+        catch (IllegalArgumentException error) { throw new IOException("Invalid authored gizmo placements: " + error.getMessage(), error); }
         return List.copyOf(objects);
     }
 

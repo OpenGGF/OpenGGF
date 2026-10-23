@@ -16,7 +16,17 @@ import java.util.logging.Logger;
  * Subclasses implement {@link #registerDefaultFactories()} to populate the map
  * and {@link #getPrimaryName(int)} to return human-readable object names.
  */
-public abstract class AbstractObjectRegistry implements ObjectRegistry {
+public abstract class AbstractObjectRegistry implements ObjectRegistry, HostObjectKeyRegistry {
+
+    @Override public boolean hasObjectKey(String key) { return hasHostObjectKey(key); }
+    @Override public boolean hasHostObjectKey(String key) { return com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(key); }
+    @Override public java.util.List<String> browsableObjectKeys() { return com.openggf.level.objects.authored.AuthoredGizmos.KEYS; }
+    @Override public boolean ownsHostObject(ObjectSpawn spawn, ObjectInstance instance) {
+        return spawn != null && hasHostObjectKey(spawn.objectKey())
+                && instance instanceof com.openggf.level.objects.authored.AuthoredGizmoInstance
+                && instance.getClass().getClassLoader() == AbstractObjectRegistry.class.getClassLoader()
+                && spawn.equals(instance.getSpawn());
+    }
 
     private static final Logger LOG = Logger.getLogger(AbstractObjectRegistry.class.getName());
 
@@ -32,6 +42,9 @@ public abstract class AbstractObjectRegistry implements ObjectRegistry {
 
     @Override
     public ObjectInstance create(ObjectSpawn spawn) {
+        if (com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey()))
+            return com.openggf.level.objects.authored.AuthoredGizmos.create(spawn);
+        if (spawn.objectKey() != null) throw new IllegalArgumentException("Unknown host object: " + spawn.objectKey());
         ensureLoaded();
         int id = spawn.objectId();
         ObjectFactory factory = factories.getOrDefault(id, defaultFactory);

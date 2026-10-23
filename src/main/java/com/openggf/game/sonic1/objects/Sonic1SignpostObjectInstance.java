@@ -43,6 +43,7 @@ import java.util.logging.Logger;
  */
 public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
     private static final Logger LOGGER = Logger.getLogger(Sonic1SignpostObjectInstance.class.getName());
 
     // Routine states matching disassembly Sign_Index offsets
@@ -135,7 +136,9 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         // Signpost is disabled in act 3 (boss acts)
         // S1 only has signposts in acts 1 and 2 (indices 0 and 1)
         int currentAct = services().currentAct();
-        if (currentAct >= BOSS_ACT_INDEX) {
+        // An explicit authored goal reuses the native sign/results graph in any
+        // campaign slot. Numeric stock signposts retain their shipped-act gate.
+        if (!AUTHORED_GOAL_KEY.equals(spawn.objectKey()) && currentAct >= BOSS_ACT_INDEX) {
             ObjectManager objMgr = services().objectManager();
             ObjectLifetimeOps.markSpawnRemembered(objMgr, spawn);
             setDestroyed(true);

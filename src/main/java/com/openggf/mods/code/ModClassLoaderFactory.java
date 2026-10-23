@@ -91,6 +91,7 @@ public final class ModClassLoaderFactory {
                 boolean loadCode = descriptor.containsCode()
                         && descriptor.manifest().entrypoint() != null;
                 boolean retainData = !descriptor.manifest().artOverrides().isEmpty()
+                        || descriptor.manifest().campaign() != null
                         || descriptor.retainedSource()!=null;
                 if (!loadCode && !retainData) {
                     availableOwners.add(owner);

@@ -113,6 +113,7 @@ public final class ModRuntime implements AutoCloseable {
                             descriptor.manifest().type() == com.openggf.mods.ModType.STANDALONE, storageRoot);
                     descriptor.manifest().artOverrides().forEach((key, path) ->
                             context.registerManifestArtOverride(key, new BakedSheetRef(path)));
+                    ModCampaignRegistration.register(descriptor.manifest(), context);
                     if (descriptor.manifest().entrypoint() != null && loaders.containsKey(owner)) {
                         Class<?> type = loadOwned(owner, descriptor.manifest().entrypoint());
                         if (!GgfMod.class.isAssignableFrom(type)) {

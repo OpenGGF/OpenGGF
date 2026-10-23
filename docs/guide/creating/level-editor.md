@@ -34,10 +34,22 @@ directing document and preserves the level workspace when you switch back.
 *New blank level after choosing Sonic 2 and an Emerald Hill asset library.
 Dimensions count map cells; an 8×4 Sonic 2 canvas is 1024×512 pixels.*
 
-To begin from a supported stock layout, enable `debug.flags.editor`, load the
-zone/act in gameplay, and press `Shift+Tab`. The editor adopts it as a project.
-With a project open, **Clone this layout** makes a named copy of the current
-layout and placements.
+To edit a stock layout, enable `debug.flags.editor`, load the zone/act in
+gameplay, and press `Shift+Tab`. Native editing preserves ROM collision and
+camera semantics, including Sonic 1 loop flags. S3K starts from its complete ROM
+asset library rather than transient intro art; this does not import a running
+cutscene or event phase. Native playtests use independent snapshots; returning restores
+your edits and undo history. `F5` starts at the source act's start, while `Shift+Tab`
+starts at a validated cursor. Playtesting does not save native edits or publish a
+gameplay sidecar. Save records native edits;
+leaving for another project or quitting prompts for unsaved changes. Native edit
+files store terrain descriptors and object/ring placements. Palette edits, imported
+art and project settings require a portable project; native palette cells are read-only.
+S3K native edit files are not automatically reapplied on a fresh ROM load; use a
+portable project for a complete reusable authoring document.
+Choose **Editor projects → Clone native layout as project** to turn a compatible
+stock layout into a portable project. With a project open, **Clone this layout**
+makes a named copy of its layout and placements.
 
 Cloning copies level data into an authored level with a fresh, flat runtime.
 Native zone events, terrain swaps, animations, water programs, and PLC scripts do
@@ -174,6 +186,60 @@ Sonic 1 has one collision-profile path. Its primary and secondary assignments
 must agree for a playable export. S2/S3K have separate paths. Assigning a profile
 uses existing collision data; this tool does not draw new height/width profiles.
 
+## Select, copy and fill regions
+
+In World view, **Shift + left drag** selects a rectangle of map cells. For a
+keyboard or controller, move to the first corner, choose **Region: set corner /
+finish** (keyboard **F6**), move to the opposite corner, then choose it again.
+The rectangle covers terrain on the active FG/BG layer and object/ring centres
+inside it. Native object-backed ring groups are indivisible: selecting any member
+includes the whole group, even if other members cross the rectangle edge.
+
+**Ctrl+C**, **Ctrl+X**, and **Ctrl+V** copy, cut, and open a paste preview. The desktop
+World inspector and HUD editor menu expose the same actions, plus **Delete region**,
+**Fill rectangle**, **Flood fill at cursor**, and **Clear region / cancel paste**.
+Choose a block brush before filling. Flood fill uses four-neighbour connectivity
+on the active layer; rectangle fill changes terrain only. Delete/cut use actual
+transparent, noncolliding terrain, and report an error if none exists.
+
+Move the translucent terrain-and-spawn preview to the destination, then press
+**Enter / South** or click to paste. **Escape / East** cancels. Out-of-bounds or
+invalid native placements cannot be committed; no partial paste is published.
+Each cut, paste, delete, rectangle fill or flood fill is one undo step. Copy keeps
+an immutable snapshot, so overlapping pastes are safe. A clipboard belongs to
+one document/library and clears when another level is attached. Shared block and
+chunk definitions stay unchanged; subsequent local composition edits retain the
+existing derived-definition behavior.
+
+### Canvas navigation
+
+Middle-drag pans independently of the editing cursor. The mouse wheel zooms around
+the pointer in integer steps from **1× to 8×**. Keyboard **Ctrl+arrows** pans,
+**Ctrl+= / Ctrl+-** zooms, and **Ctrl+0** resets zoom. Every navigation command is
+also in the command menu. In the HUD, hold **LB+RB**, steer the left stick to pan,
+and use D-pad up/down to zoom. Navigation does not enter undo history or change
+playtest bounds. **1× is the minimum**: zoom magnifies the native world render;
+zooming out to show more terrain is not yet implemented.
+
+## Named object properties
+
+Pick an object with right click / West, then use **Selected placement** in the
+desktop inspector. Springs expose orientation and strength, monitors expose
+contents; spikes, checkpoints, platform types and badnik variants have per-game fields.
+The current inventory covers 52 IDs (19 Sonic 1, 20 Sonic 2, 13 Sonic 3&K).
+Each typed edit is one undo step. Inspection preserves every subtype bit, including
+unknown values. **Raw subtype** remains available for every object and preserves
+unsupported or unusual data. Flips and respawn tracking remain separate controls;
+changing a placement leaves the future-placement brush unchanged.
+
+In the HUD, press **F2** or choose **Object properties** from the editor menu or
+**Properties** from the selected object's tools wheel. Up/down chooses a field;
+left/right changes its value. East / Escape closes the list. Enums cycle through
+named choices; an imported unknown value is shown without changing it until edited.
+The [coverage inventory](../../status/editor-object-property-coverage.md) lists every
+numeric ID and identifies raw fallback. A named schema does not imply that a stock
+object is portable to a flat authored level.
+
 ## Properties and resizing
 
 Start X/Y and object/ring positions use their centers in level pixels. Bounds
@@ -210,6 +276,106 @@ mean different things; validate the result with a fresh playtest.
 *Level properties keeps the authored start, camera bounds, and music together.
 Choose a row to edit it, then scroll to **Apply properties**. S3K projects also
 show the object-family field.*
+
+### Palette colors
+
+The desktop inspector's **Level palette / Genesis 9-bit** section shows four
+palette lines and sixteen colors per line. Choose a swatch, then select exact
+red, green and blue values: **0, 36, 73, 109, 146, 182, 219, 255**. Each color
+change is one undo step; preview textures refresh on apply, undo and redo.
+
+The HUD editor menu exposes **Level palette (Genesis colors)**. LB/RB (Page
+Up/Down) chooses a color, up/down chooses the RGB channel, and left/right changes
+its native value. All three channels of an edited cell become Genesis colors;
+legacy arbitrary RGB remains untouched until that cell is edited, and undo
+restores its original bytes. Character line 0 is host-owned in all games; S3K
+also locks its reserved HUD cells. Project saves retain palette edits and the
+existing v1/v2 exporter carries them through its strict palette validation.
+
+### Environment and allowed team
+
+Open **Level settings** in the desktop inspector, or **F3 / Level settings** in
+the HUD. Up/down selects a row and left/right changes it. Each change has one
+undo step. Choose Flat or a stock background scroll source, enable water and set
+its signed height, and choose an unrestricted or required playable team. The
+properties form also edits the title, music, start and camera bounds. Settings
+persist in the project, baked export and campaign; playtest applies them without
+rewriting gameplay saves or user configuration. Unsupported required sidekicks
+are rejected; their presets are omitted for hosts that cannot create them.
+
+The provider catalogue intentionally lists handlers that can run independently:
+Sonic 1 Green Hill acts and Final Zone, Sonic 2 Emerald Hill acts, and Sonic 3&K
+Flying Battery indoor bands / Death Egg acts. These reuse native scroll handlers
+with the selected stock act. They scroll your background layout; choosing a source
+does not import that zone's art. Water uses existing ROM-backed underwater palette
+providers with a fixed authored surface, without stock-zone water events.
+
+### Browse and place by picture
+
+Both editors show objects using ROM-loaded mapping frames and the level's current palette.
+The desktop library pairs thumbnails with readable names; the HUD hotbar and **Tab** library
+use the same art. The default library shows placeable objects with available source art and
+authoring gizmos. Use **All / internal IDs** on desktop, or **X** in the HUD object library,
+to reveal system IDs and objects whose art needs a different level or live runtime state.
+
+Placements keep their native origins, subtype pose and flips. A translucent brush shows where
+an object or ring will land; selection and hover outlines identify existing sprites. Camera, music,
+warp and Stageplay regions use translucent bounds and small labels that stay legible at every
+zoom. Logic-only placements use compact named markers. The desktop canvas fits between its
+panels, including narrow docks; nearest-neighbour sampling keeps sprite edges clear.
+
+Source art is detached during the normal ROM load and retained with the editor's library.
+AIZ1 uses its ROM main-level palette for the initial library instead of the intro's
+black palette; saved palette edits take precedence when a project reopens.
+Viewing thumbnails or moving a ghost never creates gameplay objects or changes undo/rewind
+state. Reopening a saved project reloads its source ROM library for these transient previews;
+projects and exports contain no bundled stock sprite images.
+
+### Semantic gizmos
+
+Place `openggf:authored-goal` to finish any authored act through its native results
+flow, including later campaign acts where stock signposts retire.
+
+In the object library select an `openggf:` camera-zone, music-zone, warp or
+stageplay-trigger. Place its origin, pick it and edit the typed inspector or F2
+property list. Regions appear as outlines. HUD text fields open the shared
+controller keyboard; desktop fields use the same project form and path browser.
+
+Camera zones set bounds until leaving the region or crossing a configured X/Y
+threshold. Music zones select a stock ID or mod track and can fire once. Place a
+Warp source, then a second Warp for its exit; both share a link, and two-way mode
+updates the pair in one undo step. A pasted complete pair receives a fresh link.
+An incomplete pair must be repaired before playtest/export.
+
+Stageplay triggers reference a project-relative `.stageplay` resource, activate on
+entry or a fresh **Up** press, and can fire once or consume themselves. Playback
+uses the public registered Stageplay player and participates in rewind. Its current
+public API supports blocking playback only; non-blocking requests are rejected.
+Campaign export includes bounded referenced scenes/assets. No Stageplay workspace
+or package changes are required.
+
+### Campaigns and art import
+
+Open **Campaign levels** from the settings panel or project menu. Append relative
+`.ogfproject` files, then move or remove entries to set their order. Include the
+current project explicitly when the list is nonempty. An empty list exports this
+level alone. **Export playable campaign** saves this document and packages the
+saved sequence into a mod JAR, with no Java entrypoint. All levels must use the same
+game and required team; the last level ends the campaign. Native title/results
+art supports the original act glyphs (1–3); longer logical sequences retain their
+progression but do not gain new number artwork. Campaign acts also share the
+native zone title; individual saved project names remain in their exports.
+
+**Import art** opens PNG and sheet-YAML path fields with a file browser. Save the
+project to establish an asset folder, or choose a separate import folder; keep both inputs inside that folder. Conversion uses the existing
+`ggfmod convert art` path and bounded typed asset loading. Tile dimensions, colour
+counts, free pattern slots and palette ownership are checked before applying one
+undoable command. If copied terrain references art whose slots have since been reused, paste fails
+before changing the level; restore that art or copy again. Imported art occupies
+blank unreferenced slots; transparent
+imports reserve their slots too. Optional palette installation obeys host locks.
+Choose the imported patterns in Chunk view to compose your terrain. Projects retain
+imported pixels and reservations, and exports contain the resulting native art.
 
 ## Save and reopen safely
 
@@ -248,12 +414,14 @@ open; cancelling restores the editor or active playtest.
 
 ## Playtest and return
 
-Choose **Playtest from level start** for the authored start or **Playtest from
-cursor** for a validated cursor position. Cursor launches use the same camera
-bounds and body-clearance checks as the authored start, so the final runway beyond
-Camera maximum X cannot be a launch point. `F5` starts a fresh playtest of the
-current project from its authored start. `Shift+Tab` switches between the editor and its playtest;
-when entering from ordinary gameplay, enable `debug.flags.editor` first.
+For a project, choose **Playtest from level start** for the authored start or
+**Playtest from cursor** for a validated cursor position. Project launches use
+its authored bounds and body-clearance checks, so the final runway beyond Camera
+maximum X cannot be a launch point. Native cursor launches use the loaded terrain
+bounds and native collision mapping; native camera-origin limits do not bound
+player positions. `F5` starts a fresh playtest from the project's authored start
+or the native source act's start. `Shift+Tab` switches between the editor and its
+playtest; when entering from ordinary gameplay, enable `debug.flags.editor` first.
 
 Each playtest builds a fresh runtime snapshot. Rings collected, objects destroyed,
 terrain changed by gameplay, score/timer/checkpoint state, and other runtime

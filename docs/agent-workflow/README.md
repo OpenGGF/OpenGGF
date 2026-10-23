@@ -392,3 +392,5 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
 support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
+
+- `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).

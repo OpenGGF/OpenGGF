@@ -113,6 +113,10 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return modZoneAdapter; }
 
+    @Override public com.openggf.game.modzone.ModLevelSettingsProvider getModLevelSettingsProvider() {
+        return new Sonic1ModLevelSettingsProvider();
+    }
+
     @Override
     public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
             throws java.io.IOException {

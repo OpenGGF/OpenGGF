@@ -27,6 +27,16 @@ public final class LevelEditorController {
     EditorCommandPalette commandPalette() { return commandPalette; }
     private static final int CHUNK_INDEX_MASK = 0x03FF;
 
+    private final EditorCanvasNavigation canvasView = new EditorCanvasNavigation();
+    public EditorCanvasNavigation canvasView() { return canvasView; }
+    private com.openggf.editor.selection.CellRectangle regionSelection;
+    private com.openggf.editor.selection.EditorRegionOperations.Clipboard clipboard;
+    private final java.util.Set<Integer> clipboardBlocks = new java.util.HashSet<>();
+    private final java.util.Set<Integer> clipboardChunks = new java.util.HashSet<>();
+    private boolean selectingRegion;
+    private boolean pastePreview;
+    private int regionAnchorX, regionAnchorY;
+
     private final EditorHistory history = new EditorHistory();
     private EditorHierarchyDepth depth = EditorHierarchyDepth.WORLD;
     private EditorFocusRegion focusRegion = EditorFocusRegion.WORLD_CANVAS;
@@ -50,6 +60,22 @@ public final class LevelEditorController {
     private EditorSpawnFactory spawnFactory;
     private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
+    private com.openggf.editor.project.EditorProjectWorkspace projects;
+    public void setProjects(com.openggf.editor.project.EditorProjectWorkspace value) { projects = value; }
+    public com.openggf.editor.project.EditorProjectWorkspace projects() { return projects; }
+    private com.openggf.level.metadata.ObjectPropertyProvider propertyProvider;
+    private java.util.function.BiPredicate<Integer, Integer> paletteEditable = (line, color) -> false;
+    private java.util.function.IntConsumer paletteRefresh = line -> { };
+    public void setPaletteRefresh(java.util.function.IntConsumer refresh) { paletteRefresh = Objects.requireNonNull(refresh); }
+    public boolean isPaletteCellEditable(int line, int color) { return paletteEditable.test(line, color); }
+    public void editPaletteColor(int line, int color, int redStep, int greenStep, int blueStep) {
+        executeCommand(com.openggf.editor.palette.EditorPaletteEditing.command(requireLevel(), line, color,
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(redStep),
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(greenStep),
+                com.openggf.editor.palette.EditorPaletteEditing.componentFromStep(blueStep), paletteEditable, paletteRefresh));
+        setStatus("Palette color updated");
+    }
+
     private RingSpawn selectedRingSpawn;
     private ObjectSpawn selectedRingBackingObject;
     private boolean collisionOverlayEnabled;
@@ -90,6 +116,7 @@ public final class LevelEditorController {
     /** Pointer hover never asks the camera to follow itself. */
     public void setPointerWorldCursor(EditorCursorState cursor) {
         worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+        if (selectingRegion) extendRegionToCursor();
     }
     public void focusRegion(EditorFocusRegion region) {
         finishPendingEdits();
@@ -112,6 +139,9 @@ public final class LevelEditorController {
         finishPendingEdits();
         if (this.level == level) return;
         this.level = level;
+        canvasView.reset();
+        regionSelection = null; clipboard = null; selectingRegion = false; pastePreview = false;
+        clipboardBlocks.clear(); clipboardChunks.clear();
         cameraNavigationRequested = true;
         statusText = "Ready";
         lastExportDirectory = null;
@@ -133,6 +163,8 @@ public final class LevelEditorController {
         activeLayer = 0;
         spawnEditMode = EditorSpawnEditMode.TILES;
         objectPalette = null;
+        propertyProvider = null;
+        paletteEditable = (line, color) -> false;
         spawnFactory = null;
         placementIds = null;
         selectedObjectSpawn = null;
@@ -146,11 +178,20 @@ public final class LevelEditorController {
         configureSpawnEditing(registry, encoding, registry::getPrimaryName);
     }
 
+    /** Native edit files persist terrain/placements; palette authoring belongs to portable projects. */
+    public void configureNativeSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding) {
+        configureSpawnEditing(registry, encoding);
+        paletteEditable = (line, color) -> false;
+    }
+
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
                                       java.util.function.IntFunction<String> names) {
         MutableLevel attachedLevel = requireLevel();
         EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry, names);
+        propertyProvider = registry instanceof com.openggf.level.metadata.ObjectPropertyProvider provider ? provider : null;
+        paletteEditable = registry instanceof com.openggf.level.metadata.EditorPalettePolicyProvider provider
+                ? provider::isPaletteCellEditable : (line, color) -> false;
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
                 try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
@@ -166,6 +207,10 @@ public final class LevelEditorController {
     public void setSpawnEditMode(EditorSpawnEditMode mode) {
         finishPendingEdits();
         spawnEditMode = Objects.requireNonNull(mode, "mode");
+        if (mode == EditorSpawnEditMode.OBJECTS && objectPalette != null && !objectPalette.selectedIsKeyed()
+                && objectPalette.selectedObjectId() == 0)
+            objectPalette.entries().stream().filter(entry -> entry.stockObjectId() != null && entry.previewArtKey() != null)
+                    .findFirst().ifPresent(entry -> objectPalette.setObjectId(entry.stockObjectId()));
         if(mode!=EditorSpawnEditMode.TILES&&depth!=EditorHierarchyDepth.WORLD) {
             depth=EditorHierarchyDepth.WORLD;focusRegion=EditorFocusRegion.WORLD_CANVAS;
             selection=new EditorSelectionState(blockBrushIndex,null);
@@ -173,6 +218,11 @@ public final class LevelEditorController {
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
+        setStatus(switch (mode) {
+            case TILES -> "Terrain brush ready";
+            case OBJECTS -> "Choose an object, then place it at the cursor";
+            case RINGS -> "Ring brush ready; pick a ring to move or delete it";
+        });
     }
 
     public EditorSpawnEditMode spawnEditMode() { return spawnEditMode; }
@@ -183,6 +233,9 @@ public final class LevelEditorController {
     }
     /** The object palette, or null before spawn editing is configured. */
     public EditorStockObjectPalette objectPaletteOrNull() { return objectPalette; }
+    public boolean isPlaceableObject(EditorStockObjectPalette.Entry entry) {
+        return entry.objectKey() != null || spawnFactory != null && spawnFactory.canCreateObject(entry.stockObjectId());
+    }
 
     public void cycleSpawnEditMode() {
         setSpawnEditMode(switch (spawnEditMode) {
@@ -205,6 +258,9 @@ public final class LevelEditorController {
                         objectPalette().selectedObjectKey(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked())
                 : requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
                         objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked());
+        if (com.openggf.level.objects.authored.AuthoredGizmos.handlesKey(spawn.objectKey()))
+            spawn = com.openggf.editor.properties.EditorGizmoPlacements.initialize(
+                    requireSpawnFactory().withProperties(spawn, spawn.subtype(), spawn.renderFlags(), true), requireLevel());
         history.execute(new PlaceObjectSpawnCommand(requireLevel(), spawn));
         selectedObjectSpawn = spawn;
     }
@@ -296,6 +352,73 @@ public final class LevelEditorController {
                         .thenComparingInt(RingSpawn::placementId)).orElse(null);
     }
     public ObjectSpawn selectedObjectSpawn() {return selectedObjectSpawn;}
+    public com.openggf.level.metadata.ObjectPropertySchema selectedObjectProperties() {
+        return selectedObjectSpawn == null || propertyProvider == null
+                ? com.openggf.level.metadata.ObjectPropertySchema.FALLBACK : propertyProvider.objectProperties(selectedObjectSpawn);
+    }
+    public void setSelectedObjectProperty(String fieldId, int value) {
+        if (selectedObjectSpawn == null) { setStatus("Pick an object before changing its properties"); return; }
+        var field = selectedObjectProperties().editableFields().stream().filter(f -> f.id().equals(fieldId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("Unknown object property: " + fieldId));
+        int subtype = field.encode(selectedObjectSpawn.subtype(), value);
+        if (subtype != selectedObjectSpawn.subtype()) editSelectedSpawnProperties(subtype, selectedObjectSpawn.renderFlags(), selectedObjectSpawn.respawnTracked());
+    }
+    public void stepSelectedObjectProperty(int fieldIndex, int delta) {
+        if (selectedObjectSpawn == null) return;
+        var fields = selectedObjectProperties().editableFields();
+        var field = fields.get(Math.floorMod(fieldIndex, fields.size()));
+        setSelectedObjectProperty(field.id(), field.decode(field.step(selectedObjectSpawn.subtype(), delta)));
+    }
+    public java.util.List<com.openggf.editor.properties.AuthoredGizmoPropertyFields.Field> selectedGizmoFields() {
+        return selectedObjectSpawn == null || selectedObjectSpawn.authoredProperties() == null ? java.util.List.of()
+                : com.openggf.editor.properties.AuthoredGizmoPropertyFields.fields(selectedObjectSpawn.authoredProperties());
+    }
+    public void setSelectedGizmoProperty(String key, Object value) {
+        if (selectedObjectSpawn == null || selectedObjectSpawn.authoredProperties() == null) return;
+        var previous = selectedObjectSpawn;
+        var properties = com.openggf.editor.properties.AuthoredGizmoPropertyFields.withValue(previous.authoredProperties(), key, value);
+        if (properties.equals(previous.authoredProperties())) return;
+        if (properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.StageplayTrigger trigger && !trigger.blocking())
+            throw new IllegalArgumentException("The public Stageplay player currently requires blocking playback");
+        var replacement = com.openggf.editor.properties.EditorGizmoPlacements.withProperties(previous, properties);
+        var commands = new java.util.ArrayList<EditorCommand>();
+        commands.add(new MoveObjectSpawnCommand(requireLevel(), previous, replacement));
+        if (key.equals("twoWay") && properties instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp warp) {
+            for (var other : requireLevel().getObjects()) if (other.layoutIndex() != previous.layoutIndex()
+                    && other.authoredProperties() instanceof com.openggf.level.objects.authored.AuthoredObjectProperties.Warp endpoint
+                    && endpoint.link().equals(warp.link()))
+                commands.add(new MoveObjectSpawnCommand(requireLevel(), other,
+                        com.openggf.editor.properties.EditorGizmoPlacements.withProperties(other,
+                                new com.openggf.level.objects.authored.AuthoredObjectProperties.Warp(endpoint.width(), endpoint.height(), endpoint.link(), warp.twoWay()))));
+        }
+        executeCommand(new EditorCommand() {
+            @Override public void apply() { commands.forEach(EditorCommand::apply); }
+            @Override public void undo() { commands.reversed().forEach(EditorCommand::undo); }
+        });
+        selectedObjectSpawn = replacement;
+    }
+    public void stepSelectedGizmoProperty(int index, int delta) {
+        var fields = selectedGizmoFields();
+        if (fields.isEmpty()) return;
+        var field = fields.get(Math.floorMod(index, fields.size()));
+        Object current = field.value(selectedObjectSpawn.authoredProperties());
+        switch (field.kind()) {
+            case BOOL -> setSelectedGizmoProperty(field.key(), !(Boolean) current);
+            case INT -> setSelectedGizmoProperty(field.key(), Math.clamp((long)(Integer)current + delta, field.min(), field.max()));
+            case ENUM -> setSelectedGizmoProperty(field.key(), field.choices().get(Math.floorMod(field.choices().indexOf(current) + delta, field.choices().size())));
+            case TEXT -> openGizmoTextField(field);
+        }
+    }
+    public void openGizmoTextField(com.openggf.editor.properties.AuthoredGizmoPropertyFields.Field field) {
+        if (projects == null) { setStatus("Open an authored project to edit text properties"); return; }
+        var expected = selectedObjectSpawn;
+        projects.menu().showForm(field.label(), java.util.List.of(new com.openggf.editor.project.EditorProjectMenu.Field(
+                "value", field.label(), (String)field.value(expected.authoredProperties()), com.openggf.game.MenuTextEditor.Mode.TEXT, field.max())),
+                "Apply property", values -> {
+                    if (selectedObjectSpawn != expected) throw new IllegalStateException("Selected object changed");
+                    setSelectedGizmoProperty(field.key(), values.get("value"));
+                });
+    }
     public RingSpawn selectedRingSpawn() {return selectedRingSpawn;}
     public void editSelectedSpawnProperties(int subtype,int flags,boolean respawn) {
         finishPendingEdits();
@@ -327,7 +450,10 @@ public final class LevelEditorController {
         if(selectedObjectSpawn!=null)return "Selected #"+selectedObjectSpawn.layoutIndex()+" "+selectedObjectSpawn.x()+","+selectedObjectSpawn.y()
                 +" :%02X F%d R%s".formatted(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked()?"1":"0");
         if(selectedRingSpawn!=null)return "Ring #"+selectedRingSpawn.placementId()+" "+selectedRingSpawn.x()+","+selectedRingSpawn.y();
-        return "Block "+selection.selectedBlock()+" Chunk "+selection.selectedChunk()+" cell "+selectedBlockCellX+","+selectedBlockCellY+" / "+selectedChunkCellX+","+selectedChunkCellY;
+        if (spawnEditMode == EditorSpawnEditMode.RINGS) return "Click to place a ring. Right-click to select one.";
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) return "Right-click a placement to inspect it.";
+        if (selection.selectedBlock() == null) return "Choose a block from the library.";
+        return "Block " + selection.selectedBlock() + (selection.selectedChunk() == null ? "" : " / Chunk " + selection.selectedChunk());
     }
 
     private EditorSpawnFactory requireSpawnFactory() {
@@ -337,6 +463,89 @@ public final class LevelEditorController {
 
     private void requireSpawnMode(EditorSpawnEditMode expected) {
         if (spawnEditMode != expected) throw new IllegalStateException("Editor is not in " + expected + " mode");
+    }
+
+    private com.openggf.editor.selection.EditorRegionOperations regionOperations() {
+        return new com.openggf.editor.selection.EditorRegionOperations(requireLevel(), requireSpawnFactory());
+    }
+    private int cellX() { return worldCursor.x() / requireLevel().getBlockPixelSize(); }
+    private int cellY() { return worldCursor.y() / requireLevel().getBlockPixelSize(); }
+    public com.openggf.editor.selection.CellRectangle regionSelection() { return regionSelection; }
+    public com.openggf.level.Level clipboardLibrary() {
+        if (clipboard == null) return null;
+        var library = clipboard.library();
+        // Palette ownership is level-wide; a terrain clipboard shares current colors.
+        for (int line = 0; line < level.getPaletteCount(); line++) for (int color = 0; color < 16; color++) {
+            var rgb = level.getPalette(line).getColor(color);
+            library.getPalette(line).setColor(color, new com.openggf.level.Palette.Color(rgb.r, rgb.g, rgb.b));
+        }
+        return library;
+    }
+    public boolean isSelectingRegion() { return selectingRegion; }
+    public boolean isPastePreviewActive() { return pastePreview; }
+    public void beginRegionAtCursor() {
+        finishPendingEdits();
+        if (depth != EditorHierarchyDepth.WORLD) { setStatus("Select regions in World view"); return; }
+        pastePreview = false; selectingRegion = true; regionAnchorX = cellX(); regionAnchorY = cellY();
+        extendRegionToCursor(); setStatus("Move to the opposite corner, then finish selection");
+    }
+    public void extendRegionToCursor() {
+        if (selectingRegion) regionSelection = com.openggf.editor.selection.CellRectangle.between(regionAnchorX, regionAnchorY, cellX(), cellY());
+    }
+    public void finishRegionSelection() {
+        extendRegionToCursor(); selectingRegion = false;
+        if (regionSelection != null) setStatus("Region " + regionSelection.width() + " x " + regionSelection.height() + " cells selected");
+    }
+    public void toggleRegionCorner() { if (selectingRegion) finishRegionSelection(); else beginRegionAtCursor(); }
+    public void clearRegionSelection() { finishPendingEdits(); selectingRegion = false; regionSelection = null; pastePreview = false; }
+    private com.openggf.editor.selection.CellRectangle requireRegion() {
+        finishRegionSelection();
+        if (regionSelection == null) throw new IllegalStateException("Select two region corners first (F6)");
+        return regionSelection;
+    }
+    private void retainClipboard(com.openggf.editor.selection.EditorRegionOperations.Clipboard copied) {
+        clipboard = copied;
+        clipboardBlocks.clear(); clipboardChunks.clear(); clipboardBlocks.addAll(copied.blocks());
+        for (int index : clipboardBlocks) {
+            Block block = requireLevel().getBlock(index);
+            for (int y = 0; y < block.getGridSide(); y++) for (int x = 0; x < block.getGridSide(); x++)
+                clipboardChunks.add(block.getChunkDesc(x, y).getChunkIndex());
+        }
+    }
+    public void copyRegion() {
+        finishPendingEdits(); retainClipboard(regionOperations().copy(activeLayer, requireRegion()));
+        setStatus("Region copied; paste opens a movable preview");
+    }
+    public void cutRegion() {
+        finishPendingEdits(); var cut = regionOperations().cut(activeLayer, requireRegion());
+        executeCommand(cut.command()); retainClipboard(cut.clipboard()); reconcileSpawnSelection(); setStatus("Region cut");
+    }
+    public void deleteRegion() {
+        executeCommand(regionOperations().delete(activeLayer, requireRegion())); reconcileSpawnSelection(); setStatus("Region deleted");
+    }
+    public void beginPastePreview() {
+        finishPendingEdits();
+        if (clipboard == null) throw new IllegalStateException("Copy or cut a region first");
+        if (depth != EditorHierarchyDepth.WORLD) throw new IllegalStateException("Paste regions in World view");
+        selectingRegion = false; pastePreview = true; setStatus("Paste preview: move, Enter / South to place, Escape / East cancels");
+    }
+    /** Invalid previews are visibly rejected and never mutate the level. */
+    public com.openggf.editor.selection.EditorRegionOperations.Preview pastePreview() {
+        return pastePreview ? regionOperations().preview(clipboard, activeLayer, cellX(), cellY()) : null;
+    }
+    public void commitPastePreview() {
+        if (!pastePreview) return;
+        executeCommand(regionOperations().paste(clipboard, activeLayer, cellX(), cellY()));
+        pastePreview = false; setStatus("Region pasted");
+    }
+    public void cancelPastePreview() { pastePreview = false; setStatus("Paste cancelled"); }
+    public void fillRegion() {
+        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
+        executeCommand(regionOperations().rectangleFill(activeLayer, requireRegion(), blockBrushIndex)); setStatus("Region filled");
+    }
+    public void floodFillAtCursor() {
+        if (blockBrushIndex == null) throw new IllegalStateException("Choose a block brush first");
+        executeCommand(regionOperations().floodFill(activeLayer, cellX(), cellY(), blockBrushIndex)); setStatus("Connected cells filled");
     }
 
     public void placeBlock(int layer, int x, int y, int blockIndex) {
@@ -474,13 +683,13 @@ public final class LevelEditorController {
         setStatus("Edited this placement; other placements preserved");
     }
     private int countBlockPlacements(int index) {
-        int count=0;var map=level.getMap();
+        int count=clipboardBlocks.contains(index)?1:0;var map=level.getMap();
         for(int layer=0;layer<map.getLayerCount();layer++)for(int y=0;y<map.getHeight();y++)for(int x=0;x<map.getWidth();x++)
             if(Byte.toUnsignedInt(map.getValue(layer,x,y))==index)count++;
         return count;
     }
     private int countChunkReferences(int index) {
-        int count=0;
+        int count=clipboardChunks.contains(index)?1:0;
         for(int b=0;b<level.getBlockCount();b++) {
             Block block=level.getBlock(b);
             for(int y=0;y<block.getGridSide();y++)for(int x=0;x<block.getGridSide();x++)
@@ -881,6 +1090,7 @@ public final class LevelEditorController {
     public void setWorldCursor(EditorCursorState cursor) {
         Objects.requireNonNull(cursor, "cursor");
         this.worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+        if (selectingRegion) extendRegionToCursor();
         cameraNavigationRequested = true;
     }
 
@@ -898,6 +1108,7 @@ public final class LevelEditorController {
 
     public void moveWorldCursor(int dx, int dy) {
         worldCursor = clampWorldCursor(worldCursor.x() + dx, worldCursor.y() + dy);
+        if (selectingRegion) extendRegionToCursor();
         cameraNavigationRequested = true;
     }
 
@@ -1035,18 +1246,18 @@ public final class LevelEditorController {
         return (descriptorRaw & ~CHUNK_INDEX_MASK) | unflaggedChunkDescriptorRaw(chunkIndex);
     }
 
-    private static int findUnreferencedBlockSlot(MutableLevel level, int sourceBlockIndex) {
+    private int findUnreferencedBlockSlot(MutableLevel level, int sourceBlockIndex) {
         for (int blockIndex = 0; blockIndex < Math.min(256,level.getBlockCount()); blockIndex++) {
-            if (blockIndex != sourceBlockIndex && !level.isBlockReferencedInMap(blockIndex)) {
+            if (blockIndex != sourceBlockIndex && !clipboardBlocks.contains(blockIndex) && !level.isBlockReferencedInMap(blockIndex)) {
                 return blockIndex;
             }
         }
         return -1;
     }
 
-    private static int findUnreferencedChunkSlot(MutableLevel level, int sourceChunkIndex) {
+    private int findUnreferencedChunkSlot(MutableLevel level, int sourceChunkIndex) {
         for (int chunkIndex = 0; chunkIndex < Math.min(1024,level.getChunkCount()); chunkIndex++) {
-            if (chunkIndex != sourceChunkIndex && !level.isChunkReferencedInBlocks(chunkIndex)) {
+            if (chunkIndex != sourceChunkIndex && !clipboardChunks.contains(chunkIndex) && !level.isChunkReferencedInBlocks(chunkIndex)) {
                 return chunkIndex;
             }
         }

@@ -1361,7 +1361,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     protected ObjectSpawn buildSpawnAt(int x, int y) {
         return new ObjectSpawn(x, y, spawn.objectId(), spawn.subtype(),
                 spawn.renderFlags(), spawn.respawnTracked(), spawn.rawYWord(),
-                spawn.layoutIndex(), spawn.ownerModId(), spawn.objectKey());
+                spawn.layoutIndex(), spawn.ownerModId(), spawn.objectKey(), spawn.authoredProperties());
     }
 
     /**

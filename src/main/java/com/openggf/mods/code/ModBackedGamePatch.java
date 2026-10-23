@@ -180,6 +180,7 @@ public final class ModBackedGamePatch implements GamePatch {
             resolvedZones = resolvedZones.stream().map(zone -> {
                 ModZoneLevelData hostData = prepareHostData(zone);
                 zoneAdapter.validate(zone.ownerModId(), hostData);
+                com.openggf.game.modzone.ModLevelSettingsValidation.validateCapabilities(base, hostData.settings());
                 ModZoneRuntimeProfile profile = zoneAdapter.runtimeProfile(
                         zone.ownerModId(), hostData);
                 if (!ModZoneRuntimeProfile.flatEmpty().equals(profile)) {
@@ -238,6 +239,16 @@ public final class ModBackedGamePatch implements GamePatch {
                         @Override
                         public java.util.Optional<com.openggf.game.GameplayLaunchTeam> launchTeam(
                                 com.openggf.game.ZoneKey destination) {
+                            if (destination instanceof com.openggf.game.ZoneKey.Mod key) {
+                                var authoredTeam = publishedZones.stream()
+                                        .filter(zone -> zone.ownerModId().equals(key.ownerModId()) && zone.localKey().equals(key.localName()))
+                                        .filter(zone -> zone.hostData() != null && zone.hostData().settings().team() != null)
+                                        .map(zone -> zone.hostData().settings().team()).findFirst();
+                                if (authoredTeam.isPresent()) {
+                                    com.openggf.game.session.GameplayTeamBootstrap.requireExactTeam(getPlayableCharacterRegistry(), authoredTeam.get());
+                                    return authoredTeam;
+                                }
+                            }
                             if (faultBoundary == null) {
                                 return inherited.launchTeam(destination);
                             }

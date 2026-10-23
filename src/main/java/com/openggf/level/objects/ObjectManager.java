@@ -476,7 +476,7 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
-        fixedSstObjects.installConfiguredObjects();
+        ConfiguredObjectInstaller.install(fixedSstObjects, placement, this::addRewindableAuxiliaryDynamicObject);
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty

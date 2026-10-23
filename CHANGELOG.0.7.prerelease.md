@@ -246,13 +246,31 @@ Unreleased. The earlier development themes remain in
   Atomic saves retain placements and missing dependency records; close and quit
   protect unsaved work. Start/cursor
   playtests use fresh native runtime snapshots and return to the authored
-  document with selection and undo history. Host-validated exports support
-  S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
+  level with selection and undo history, including native in-place editing without
+  automatically publishing gameplay sidecars. Host-validated exports support
+  S1/S2 v1 and S3K v2, including a host-owned native results goal in every game. Title Tools and
   the editor menu expose creation, import, properties, resizing and
   Save As; pattern browsing, descriptor controls, local collision edits, erase
-  and spawn inspection complete layout authoring. A controller-first HUD drawn at
+  and spawn inspection complete layout authoring. 52 named hazard, checkpoint, badnik, spring, monitor and
+  platform schemas share lossless subtype schemas between desktop inspectors
+  and a controller-navigable HUD property list; other IDs retain raw-byte editing.
+  World-cell regions copy terrain and native spawn groups, with undoable cut/paste,
+  translucent destination previews, delete and rectangle/flood fill. Independent
+  mouse, keyboard and controller canvas pan and integer 1×–8× magnification keep
+  hit tests aligned. Creator-owned palette cells use exact Genesis RGB values and
+  preserve colors through undo, project saves and existing exports. Provider-backed
+  background scrolling, fixed water height and required teams persist into native
+  playtests and packages. Typed camera/music regions, paired warps and blocking
+  public-API Stageplay triggers support runtime rewind. Ordered saved projects
+  export data-only playable campaigns; project-contained PNG/sheet imports install
+  native art and optional palettes in one undo step. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
-  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  of ROM-art thumbnails, native sprite placements and translucent brush previews.
+  Picture-based object browsing hides internal IDs by default, while compact gizmo
+  labels and a dock-fitted desktop canvas keep the level readable. Native editing
+  retains ROM collision semantics, with explicit compatible-layout cloning and
+  save/cancel/discard protection before replacing unsaved work. A tools wheel,
+  block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested
