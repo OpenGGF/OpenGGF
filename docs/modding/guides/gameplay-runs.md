@@ -69,7 +69,12 @@ the run's characters a released controller while your menu owns it (the level ke
 `holdControls(false)` hands it back. While your menu covers the level,
 `RunHandle.setLevelCovered(true)` stops the engine drawing the stock HUD and ghost nameplates,
 which would otherwise read through a translucent menu; it is presentation only (the act's timer
-and everything else keep running). When the run ends, `resumed` follows as usual; launching the
+and everything else keep running). `RunHandle.setHudTime(frames)` shows your run's own clock in
+the stock HUD's TIME instead of the act's timer (a negative value restores the act's timer); set
+it from `afterStep` and the HUD shows it that frame. `RunHandle.setHudTimeHundredths(true)` adds
+hundredths (`0:00.00`), as Sonic CD shows them, in the game's own HUD digits. Both are
+presentation only: the act's timer, its time-over and its warning flash do not change, and both
+clear when the run ends. When the run ends, `resumed` follows as usual; launching the
 next run from `resumed` keeps the screen black between the two loads. Time Attack's lobby level is
 built this way.
 

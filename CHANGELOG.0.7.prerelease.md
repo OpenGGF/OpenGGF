@@ -106,6 +106,11 @@ Unreleased. The earlier development themes remain in
   hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
   The master and the host reject a malformed, foreign or ineligible act with the reason.
   S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
+  The HUD's TIME can show hundredths of a second (`0:00.00`), as Sonic CD does, in
+  every game's own HUD digits: `display.hudTimeHundredths` turns it on for normal play,
+  and runs can ask for it and show their own clock there (`RunHandle.setHudTime`,
+  `setHudTimeHundredths`). Time Attack uses both, so the game's TIME is the attempt's
+  time and the run panel no longer repeats it.
   Time Attack has no lives counter and unlimited tries: after a death (skippable
   with jump after half a second) the act reloads at once from its start with no
   title card, then a 3-2-1 countdown over the visible level holds control before a

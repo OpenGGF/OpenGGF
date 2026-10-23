@@ -394,4 +394,22 @@ class TestHostedRunController {
         handle.setLevelCovered(true);
         assertFalse(controller.levelCovered(), "an ended run's handle no longer covers the level");
     }
+
+    @Test
+    void aRunsHudClockIsHeldForTheRunAndClearedWithIt() {
+        RunHandle handle = controller.begin(SPEC, new RunHost() { });
+        assertEquals(-1, controller.hudTimeFrames(), "the act timer until the run sets its own");
+        handle.setHudTime(3210);
+        handle.setHudTimeHundredths(true);
+        assertEquals(3210, controller.hudTimeFrames());
+        assertTrue(controller.hudTimeHundredths());
+        handle.setHudTime(-5);
+        assertEquals(-1, controller.hudTimeFrames(), "any negative value returns TIME to the act timer");
+        handle.setHudTime(42);
+        controller.end(RunEndReason.LEFT);
+        assertEquals(-1, controller.hudTimeFrames(), "the clock ends with its run");
+        assertFalse(controller.hudTimeHundredths());
+        handle.setHudTime(99);
+        assertEquals(-1, controller.hudTimeFrames(), "an ended run's handle no longer sets TIME");
+    }
 }

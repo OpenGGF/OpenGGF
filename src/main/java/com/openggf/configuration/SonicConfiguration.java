@@ -208,6 +208,8 @@ public enum SonicConfiguration {
 	WIDESCREEN_DEADZONE_MODE,
 	/** Horizontal anchor for the score/time/rings/lives HUD on widescreen profiles. */
 	DISPLAY_HUD_ANCHOR,
+	/** When true, the HUD's TIME shows hundredths of a second (0:00.00), as Sonic CD's does. */
+	DISPLAY_HUD_TIME_HUNDREDTHS,
 	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
 	DISPLAY_WINDOW_AUTOSIZE,
 	/** Windowed, borderless desktop fullscreen, or exclusive fullscreen presentation. */

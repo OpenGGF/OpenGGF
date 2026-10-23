@@ -205,6 +205,44 @@ class TestTimeAttackRuntime {
     }
 
     @Test
+    void theGamesOwnHudShowsTheAttemptClockInHundredths(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s1", 0, 0, "sonic", java.util.List.of()));
+        java.util.List<Integer> times = new java.util.ArrayList<>();
+        boolean[] hundredths = {false};
+        runtime.attachHandle(new com.openggf.mods.run.RunHandle() {
+            @Override public void retry() { }
+            @Override public void leave() { }
+            @Override public void spectate(boolean active, int dx, int dy) { }
+            @Override public boolean isActive() { return true; }
+            @Override public void setHudTime(int frames) { times.add(frames); }
+            @Override public void setHudTimeHundredths(boolean shown) { hundredths[0] = shown; }
+        });
+        assertTrue(hundredths[0], "Time Attack asks for 0:00.00");
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
+        assertEquals(0, times.getLast(), "a fresh attempt shows 0:00.00");
+        assertTrue(runtime.admitStep(NO_KEYS));
+        runtime.afterStep(step(0, 10, false));
+        assertEquals(0, times.getLast(), "the clock waits for the first input");
+        for (int frame = 0; frame < 3; frame++) {
+            assertTrue(runtime.admitStep(NO_KEYS));
+            runtime.afterStep(step(0x08, 11 + frame, false));
+        }
+        assertEquals(runtime.hudState().elapsedDisplayFrames(), times.getLast(),
+                "the HUD shows the attempt clock the room times, after every step");
+        assertTrue(times.getLast() > 0);
+    }
+
+    @Test
+    void theRunPanelNoLongerRepeatsTheTime() {
+        assertEquals(null, TimeAttackHud.layout(320, 224, new TimeAttackHudState(true, 3210, -1, Integer.MIN_VALUE, false, false)),
+                "no best and no split: the game's own TIME says it all");
+        var panel = TimeAttackHud.layout(320, 224, new TimeAttackHudState(true, 3210, 3500, -120, false, false));
+        assertTrue(panel.lines().stream().noneMatch(line -> line.text().startsWith("TIME")), panel.lines().toString());
+        assertTrue(panel.lines().stream().anyMatch(line -> line.text().startsWith("BEST")));
+    }
+
+    @Test
     void aLongLeadInDrainsIntoTheRoomInsideTheHostStreamLimits(@TempDir Path root) {
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
         runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
