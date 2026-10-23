@@ -107,6 +107,41 @@ public sealed interface ControlMessage {
     record PlayerLook(int slot, String appearance) implements ControlMessage {
     }
 
+    /**
+     * Client to host between rounds: the sender is ready (or no longer ready). Ready is a
+     * visible signal; under a {@link ReadyRule} that requires it, the room owner's round start
+     * waits for every present player. The host answers with {@link PlayerReady}.
+     */
+    @com.openggf.game.ModApi
+    record SetReady(boolean ready) implements ControlMessage {
+    }
+
+    /** Host to clients: one player's ready state. {@link RoundStart} clears everyone's. */
+    @com.openggf.game.ModApi
+    record PlayerReady(int slot, boolean ready) implements ControlMessage {
+    }
+
+    /** Host to clients: every present player's ready state becomes {@code ready} at once. */
+    @com.openggf.game.ModApi
+    record ReadyReset(boolean ready) implements ControlMessage {
+    }
+
+    /**
+     * Room owner to host between rounds: the room's ready rule, one of
+     * {@link com.openggf.net.protocol.ReadyRules} by name. Anything else is ignored.
+     */
+    @com.openggf.game.ModApi
+    record SetReadyRule(String rule) implements ControlMessage {
+    }
+
+    /**
+     * Host to clients: the room's ready rule and whether, with the players present now, the
+     * owner's round start waits for every player to be ready.
+     */
+    @com.openggf.game.ModApi
+    record ReadyRule(String rule, boolean required) implements ControlMessage {
+    }
+
     @com.openggf.game.ModApi
     record Chat(String text) implements ControlMessage {
     }

@@ -1,5 +1,6 @@
 package openggf.racing.server.master;
 
+import openggf.timeattack.TimeAttackTrackCatalog;
 import com.openggf.net.hub.HubConnection;
 import com.openggf.net.hub.RoomHost;
 import com.openggf.net.hub.RoomHostConfig;
@@ -444,9 +445,10 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
                 });
     }
 
+    /** A relay room votes only among eligible Time Attack acts the master holds bounds for. */
     private boolean knownVoteTrack(String key) {
         String[] parts = key == null ? new String[0] : key.split(":", -1);
-        if (parts.length != 3) {
+        if (parts.length != 3 || !TimeAttackTrackCatalog.isEligibleKey(key)) {
             return false;
         }
         try {

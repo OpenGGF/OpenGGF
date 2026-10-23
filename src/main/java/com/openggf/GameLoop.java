@@ -1292,7 +1292,7 @@ public class GameLoop {
             inputHandler.update();
             return;
         }
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler) || hostedRuns.ownsStart(currentGameMode);
         var overlay = GameLoopPauseInput.overlay(currentGameMode);
         var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
         boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
@@ -2084,12 +2084,15 @@ public class GameLoop {
     }
 
     private void startPendingHostedRunLaunch() {
-        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+        if (pendingHostedRunLaunch != null && GameLoopMenuTransitions.idleOrHeldBlack(resolveFadeManager())) {
             Runnable launch = pendingHostedRunLaunch;
             pendingHostedRunLaunch = null;
-            fadeOutTo(launch);
+            GameLoopMenuTransitions.fadeOutOrContinue(resolveFadeManager(), audioManager, launch);
         }
     }
+
+    /** A scene asked to launch a run (for example from {@code resumed}) and it has not started yet. */
+    boolean hostedRunLaunchPending() { return pendingHostedRunLaunch != null; }
 
     /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
     void endHostedRunAfterFailedLaunch(boolean returnToHost) {
@@ -2101,9 +2104,12 @@ public class GameLoop {
         }
     }
 
-    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
-    void announceHostedRunLevelReady() {
-        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    /**
+     * Tells the hosted run its level is ready when a launch or a fast death restart
+     * ({@code deathRestart}) bypassed {@code doZoneAct}.
+     */
+    void announceHostedRunLevelReady(boolean deathRestart) {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY), deathRestart);
     }
 
     /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
@@ -4425,13 +4431,7 @@ public class GameLoop {
      * Starts the fade-to-black transition for death respawn.
      */
     private void startRespawnFade() {
-        LOGGER.info("Starting fade-to-black for respawn");
-
-        // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        audioManager.fadeOutMusic();
-
-        // Start fade-to-black, then respawn when complete
-        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, continueScreen::respawn);
+        continueScreen.startRespawn(runPolicy(), audioManager::fadeOutMusic);
     }
 
     /**

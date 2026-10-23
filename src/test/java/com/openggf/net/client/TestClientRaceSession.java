@@ -158,4 +158,31 @@ class TestClientRaceSession {
         session.onControl(new ControlMessage.PlayerLeft(2));
         assertTrue(session.appearance(2).isStock());
     }
+
+    @Test
+    void readyStateFollowsTheHostAndClearsAtARoundStart() {
+        ClientRaceSession session = new ClientRaceSession(() -> 0L);
+        session.applyJoin(new ControlMessage.JoinAccepted("t", 1, null, null));
+        session.onControl(new ControlMessage.RoomState(List.of(
+                new ControlMessage.PlayerInfo(0, "aa", "A", "sonic"),
+                new ControlMessage.PlayerInfo(1, "bb", "B", "tails"))));
+        assertEquals("DEFAULT_BY_SIZE", session.readyRule());
+        assertTrue(session.readyRequired());
+        assertEquals(2, session.playersNotReady().size());
+        session.onControl(new ControlMessage.PlayerReady(1, true));
+        assertTrue(session.isLocalReady());
+        assertEquals(List.of("A"), session.playersNotReady().stream().map(ControlMessage.PlayerInfo::displayName).toList());
+        session.onControl(new ControlMessage.ReadyRule("AUTO", false));
+        session.onControl(new ControlMessage.ReadyReset(true));
+        assertFalse(session.readyRequired());
+        assertTrue(session.isReady(0) && session.isReady(1));
+        session.onControl(new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null), 100, 1000));
+        assertFalse(session.isReady(0) || session.isReady(1), "a round start clears ready");
+        session.onControl(new ControlMessage.PlayerReady(0, true));
+        session.onControl(new ControlMessage.PlayerLeft(0));
+        assertFalse(session.isReady(0));
+        session.onControl(new ControlMessage.ReadyReset(false));
+        assertFalse(session.isLocalReady());
+    }
 }

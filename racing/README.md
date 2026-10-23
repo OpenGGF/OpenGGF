@@ -27,6 +27,11 @@ non-saving session with no mod content, so ghost times stay comparable across pl
 
 Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN and Browse.
 **R** retries an act by default; **Settings > Retry key** captures another keyboard key.
+There are no lives: after a death the animation plays (press jump after half a second to skip
+the rest), the act reloads straight from its start without a title card, and once the level is
+visible a 3-2-1 countdown holds control before the fresh attempt. Solo and room runs behave the
+same; neither the fade-in nor the countdown is part of the attempt's time. Acts start without
+their intro cutscene (Angel Island 1 begins on the beach), so the clock measures the race.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
 A best save validates the ghost and its input recording before publication. The
@@ -68,6 +73,60 @@ custom palette as `.`-separated `IBGR` entries of that character's 16-colour lin
 the body ramp follows the base colour. Unreadable look values fall back to the stock look or
 the preset ramp. The canonical look sent on join comes from
 `TimeAttackSettings.appearanceFor(game, character)`.
+
+Round-end votes offer three acts from the room's vote pool. Each game's default pool is
+the curated signpost list. With **Host LAN** or **Browse**, the menu's **Vote pool** row
+chooses the default pool or a custom pool with Left/Right; Enter opens the pool editor.
+The editor shows the menu's game only, so only games whose ROM is available. NEW POOL and
+the default row start from the default pool's acts. Any act that ends in a results tally
+can be added: signpost acts and boss/capsule acts, never special or bonus stages (see
+`TimeAttackTrackCatalog.eligibleFor`). A pool holds 3-32 acts of one game; 32 is the room
+protocol's vote-pool limit, and three leave a choice after any race. `settings.txt` keeps up
+to eight pools per game as `votePool.<game>.<n>=<zone>:<act>,...|<name>`, for example
+`votePool.s2.1=0:1,1:1,7:2|Boss acts`. The acts are the engine zone/act ints, `n` counts from
+1 in creation order, and the name is display text of at most 20 code points after the first
+`|`. `votePoolChoice.<game>=<name>` records the chosen pool; if it is absent or names no saved
+pool, rooms use the default pool. Unreadable pool lines are dropped. Before creating a room,
+the chosen pool is checked against the eligible catalog, including the locked character's
+acts. The master checks it again, and either one rejects a bad act with the reason. In S3K the
+Lava Reef boss act, Sky Sanctuary and Death Egg 1 are Sonic/Tails acts. When a vote picks an
+act the player's character cannot race, that round uses the act's first permitted character.
+
+### The lobby level
+
+In a room, the lobby menu draws over a short level of the room's own game that every player
+spawns into (`LobbyAreas`): the Hidden Palace arena where Knuckles fights Sonic for S3K (engine
+zone 22 act 1, fenced left of the fight trigger so the fight never starts), the start of Green
+Hill 1 for S1 and of Emerald Hill 1 for S2. The fence is a `RunArea`: every load (launch, act
+restart, death reload) places the character at its spawn and the engine holds the camera inside
+it each frame, after the act's own level events. The lobby run is `GameplayRunPolicy.isolatedAct().withFastRestarts()`
+and restarts its act on completion; a death reloads at once at the fence spawn with no lives
+counter, game over or countdown. A
+room's lobby that cannot load or faults falls back to the menu on its own for that room.
+
+The menu owns the controller while it is shown (`RunHandle.holdControls`). It draws on a dark
+translucent backing panel in the multiplayer HUD's panel style (`HudTextLayout.FILL` alpha), so
+the level stays visibly alive behind it, and covers the level (`RunHandle.setLevelCovered`): the
+stock HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). **READY UP** marks the
+player ready (`SetReady`; the room shows a READY badge and a ready line). Once ready, Start or Enter
+on the lobby's own page hides the menu and hands the controller to the character; pressing it
+again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
+because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
+Time Attack scene (`SceneGameplay.launchBehind`), so Start and the pause key never pause it.
+
+The room owner's **READY RULE** is `REQUIRED` (the owner's START ROUND is refused until every
+present player is ready), `AUTO` (everyone counts as ready on joining) or the default
+`DEFAULT_BY_SIZE` (required with five or fewer players present, `AUTO` with six or more,
+re-evaluated as players join and leave; an auto-readied player keeps it unless they unready).
+Nothing auto-starts. Ready clears at each round start and in `AUTO` is re-applied at once. The
+owner's last choice is `readyRule` in `settings.txt` and is re-sent when they open a room.
+
+Other players appear as named ghosts in their looks. Each client streams its lobby pose between
+rounds (`TYPE_LOBBY_FRAMES`, three frames a packet) and the host relays nearby poses every tick
+(`TYPE_LOBBY_AGGREGATE`; relay rooms send each recipient its eight nearest senders). Hosts accept
+lobby frames only in the lobby, results and vote phases, keep streams forward-only, cap their
+rate and per-frame movement, skip congested recipients and close a member after repeated
+violations. Ghosts also draw in sprite-masking zones such as Hidden Palace.
 
 Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
 on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
@@ -192,6 +251,18 @@ The older `load-test` remains an in-process diagnostic: it times only hub ticks 
 reports the largest emitted packet, not transport queue depth. It cannot establish
 socket throughput. The [design and delivery record](../docs/architecture/plans/2026-10-21-racing-stress-system.md)
 records the architecture, validation and remaining coverage limits.
+
+### Recording a lobby demonstration
+
+`racing-server capture-lobby OUTPUT REPOSITORY_ROOT GAME` (GAME `s1`, `s2` or `s3k`) drives the
+same display-free Engine through Extras > Time Attack, hosts a LAN room for GAME, and records its
+lobby level: three loopback protocol peers with international names and looks join, ready up and
+walk beside the player (replaying the player's own recent poses at an offset, so their animation
+is the game's own); the player readies, hides the menu, runs both ways, brings the menu back and
+starts the round. Same launch rules as below (fresh owned directory, `DISPLAY`/`WAYLAND_DISPLAY`
+unset, bundled mod built). Outputs PNG stills, `lobby.mp4` (with FFmpeg) and `state.csv`
+(mode, position, menu state and the received lobby ghosts' positions). The peers' poses are
+synthetic.
 
 ### Recording a capacity demonstration
 

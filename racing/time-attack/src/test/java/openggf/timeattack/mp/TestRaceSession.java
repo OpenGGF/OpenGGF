@@ -264,20 +264,33 @@ class TestRaceSession {
         assertTrue(guestStorage.read(TimeAttackSettings.FILE_NAME).orElseThrow()
                 .contains("lastJoinAddress=" + guestInvite));
 
+        // Two players under the default rule: the owner's start waits for both to be ready.
+        assertTrue(host.coordinator().session().readyRequired());
+        host.coordinator().sendRoundConfigure(host.roundConfig());
+        for (int i = 0; i < 20; i++) {
+            host.poll();
+            guest.poll();
+            Thread.sleep(5);
+        }
+        assertEquals(RaceSession.State.LOBBY, host.state(), "the start waits for readiness");
+        host.coordinator().setReady(true);
+        guest.coordinator().setReady(true);
+        pollUntil("both players ready", () -> host.coordinator().session().playersNotReady().isEmpty()
+                && guest.coordinator().session().isLocalReady(), host, guest);
         host.coordinator().sendRoundConfigure(host.roundConfig());
         pollUntil("both players racing", () -> host.state() == RaceSession.State.RACING
                 && guest.state() == RaceSession.State.RACING, host, guest);
         assertEquals(1, hostLaunches.specs.size());
         assertEquals(1, guestLaunches.specs.size());
         RunSpec hostSpec = hostLaunches.specs.get(0);
-        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct()), hostSpec);
+        assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), hostSpec);
         assertEquals("tails", guestLaunches.specs.get(0).character());
         TimeAttackRuntime hostRun = assertInstanceOf(TimeAttackRuntime.class, hostLaunches.hosts.get(0));
         assertSame(hostRun, host.activeRuntime());
         assertTrue(host.coordinator().isRuntimeAttached());
 
         // The host room validates against the act the host actually loaded.
-        hostRun.onLevelReady(new RunLevelStart(hostSpec, FP, false, 4096, 1024));
+        hostRun.onLevelReady(new RunLevelStart(hostSpec, FP, false, 4096, 1024, false));
         JdkRaceHostServer server = host.hostServer();
         CompletableFuture<Object> applied = new CompletableFuture<>();
         server.execute(() -> applied.complete(currentProfile(server.room().hub())));
@@ -366,6 +379,32 @@ class TestRaceSession {
         session.browse(SETUP, FP);
         assertEquals(RaceSession.State.IDLE, session.state());
         assertTrue(session.consumeNotice().contains("master server URL"));
+    }
+
+    @Test
+    void anIneligibleVotePoolIsRefusedBeforeAnyRoomStarts() {
+        RaceSession session = session("host", settings(27888), new MemoryModStorage(), new Launches());
+        session.hostLan(new RaceSession.RoundSetup("s2", 0, 0, "sonic", "OPEN", null, 60,
+                List.of("s2:0:1", "s2:7:2", "s2:9:0")), FP);
+        assertEquals(RaceSession.State.IDLE, session.state());
+        assertNull(session.hostServer(), "no room is started for a refused pool");
+        assertEquals("Cannot host: Vote track s2:9:0 is not an act Time Attack can finish",
+                session.consumeNotice());
+    }
+
+    @Test
+    void aVotedActTheCharacterCannotRaceUsesItsFirstPermittedCharacter() {
+        AtomicLong clock = new AtomicLong();
+        Launches launches = new Launches();
+        RaceSession session = session("guest", settings(27888), new MemoryModStorage(), launches, clock::get);
+        FakeConnection connection = new FakeConnection();
+        ControlMessage.RoundConfig skySanctuary = new ControlMessage.RoundConfig("s3k", 10, 0, 60, "OPEN", null);
+        session.enterLobbyForTest(connection, false, skySanctuary, "knuckles");
+        connection.control(new ControlMessage.RoundStart(skySanctuary, 1_000, 100_000));
+        session.poll();
+        assertEquals(List.of("sonic"), launches.specs.stream().map(RunSpec::character).toList(),
+                "Knuckles' route never reaches Sky Sanctuary act 1");
+        assertEquals("KNUCKLES cannot race this act; racing as SONIC", session.consumeNotice());
     }
 
     @Test
@@ -517,7 +556,7 @@ class TestRaceSession {
                 new ControlMessage.RoundConfig("s2", 1, 0, 60, "LOCKED", "sonic"), 3_000, 100_000));
         session.poll();
         assertEquals(2, launches.specs.size());
-        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct()), launches.specs.get(1));
+        assertEquals(new RunSpec("s2", 1, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros()), launches.specs.get(1));
     }
 
     @Test
@@ -600,7 +639,7 @@ class TestRaceSession {
         session.poll();
         assertEquals(RaceSession.State.RACING, session.state());
         TimeAttackRuntime run = assertInstanceOf(TimeAttackRuntime.class, launches.hosts.get(0));
-        run.onLevelReady(new RunLevelStart(launches.specs.get(0), FP, false, 4096, 1024));
+        run.onLevelReady(new RunLevelStart(launches.specs.get(0), FP, false, 4096, 1024, false));
         clock.set(2_000); // RUNNING
         run.admitStep(NO_KEYS);
         assertEquals(0, launches.leaves.get());

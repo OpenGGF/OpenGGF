@@ -65,6 +65,26 @@ Unreleased. The earlier development themes remain in
   when joining. Hosts reject names with hidden or direction-changing characters.
   Protocol version 4; right-to-left reordering and script shaping are not yet done.
 
+- **Time Attack lobby level:** a room's lobby is now a short, fenced level of its own
+  game that every player spawns into behind the lobby menu: the Hidden Palace arena
+  where Knuckles fights Sonic (S3K, left of the fight trigger so the fight never
+  starts), the start of Green Hill 1 (S1) or Emerald Hill 1 (S2), so nobody needs a ROM
+  the room does not race. Players ready up from the menu; once ready, Start or Enter
+  hides the menu and hands the controller to the character, and pressing it again
+  brings the menu back. The menu sits on a dark translucent panel with the level
+  still moving behind it; the stock HUD and ghost nameplates are hidden under it. Other players walk the lobby as named ghosts in their looks
+  (presence is streamed between rounds only, and relay rooms send each player its
+  nearest eight). The room owner chooses whether the round start waits for everyone
+  to be ready: always, never, or (the default) only with five or fewer players
+  present; rounds still start only when the owner starts them. A round start hands
+  the lobby level straight to the race through one black load, and the lobby level
+  returns after the round. A lobby death reloads at once at the lobby spawn, with no
+  lives or game over. Ghosts and their nameplates now also draw in S3K's
+  sprite-masking zones (Sandopolis, Lava Reef, Sky Sanctuary and Hidden Palace), in
+  races and in the lobby. Protocol version 5. Mods get `RunArea` (a fenced spawn for a run),
+  `RunHandle.holdControls`, `RunHandle.setLevelCovered` and `SceneGameplay.launchBehind`
+  (a run that plays behind its still-active scene).
+
 - **Time Attack multiple attempts:** players can submit several runs inside one
   round window, and the best valid run counts. While the window is open a finish's
   results tally is followed by a fresh attempt; the retry key still restarts mid-run.
@@ -77,6 +97,19 @@ Unreleased. The earlier development themes remain in
   reloading racers stop holding nearby ghost slots and show their state in the
   roster, and verifiers keep polling after a failed cycle. Mods can opt into the
   same act-completion retry through `RunHost.retryOnActCompletion()`.
+  Round-end votes can draw from a custom pool: the room owner starts from the game's
+  default pool, adds or removes any act that ends in a results tally (signpost acts
+  and boss/capsule acts, never special or bonus stages), names it and chooses it when
+  hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
+  The master and the host reject a malformed, foreign or ineligible act with the reason.
+  S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
+  Time Attack has no lives counter and unlimited tries: after a death (skippable
+  with jump after half a second) the act reloads at once from its start with no
+  title card, then a 3-2-1 countdown over the visible level holds control before a
+  fresh attempt. Angel Island 1 starts on the beach without the plane intro.
+  `GameplayRunPolicy.withFastRestarts()` (`DeathRestart.FAST_FROM_START`, hidden
+  lives counter), `withoutZoneIntros()`, `RunLevelStart.deathRestart()`,
+  `RunInput.levelFadingIn()` and `RunHost.holdsPlayerInput()` give mods the same.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,

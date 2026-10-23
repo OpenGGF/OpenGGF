@@ -2081,7 +2081,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		initializeGameplayRuntime(gameplay, false);
 		levelManager.setEditorSaveManager(null);
 		var policy = new com.openggf.game.session.GameplayRunPolicy(false, false,
-				com.openggf.game.session.GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, true);
+				com.openggf.game.session.GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, true,
+				com.openggf.game.session.GameplayRunPolicy.DeathRestart.STOCK, true, true);
 		gameplay.beginGameplayRun(policy, 0, 0);
 		gameLoop.beginHostedRun(new com.openggf.mods.run.RunSpec(module.getGameId().code(), 0, 0,
 				configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE), policy), new com.openggf.mods.run.RunHost() {},
@@ -2093,7 +2094,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			levelManager.loadZoneAndActForFreshRuntime(0, 0);
 			gameplay.initializeFreshGameplayState();
 			editorProjectPlaytestActive = true;
-			gameLoop.announceHostedRunLevelReady();
+			gameLoop.announceHostedRunLevelReady(false);
 			gameLoop.setGameMode(GameMode.LEVEL);
 		} catch (IOException | RuntimeException failure) {
 			gameLoop.stopEditorHostedRun();
@@ -2526,13 +2527,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		initializeGameplayRuntime(gameplay, false);
 		// The run policy is fixed before the level loads so every object sees it.
 		gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+		gameLoop.hostedRuns.armAreaSpawn(levelManager);
 		loadLevelFromDataSelect(spec.zone(), spec.act());
 		gameLoop.setGameMode(GameMode.LEVEL);
 
 		// loadLevelFromDataSelect -> levelManager.loadZoneAndAct(...) bypasses
 		// GameLoop.doZoneAct (the mid-game zone-transition path that announces the
 		// level for a retry), so announce it explicitly for this fresh launch.
-		gameLoop.announceHostedRunLevelReady();
+		gameLoop.announceHostedRunLevelReady(false);
 		return true;
 	}
 
@@ -2581,7 +2583,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		FadeManager fadeManager = graphicsManager.getFadeManager();
-		if (fadeManager != null) {
+		// A scene that launched its next run while resuming keeps the screen black for it.
+		if (fadeManager != null && !gameLoop.hostedRunLaunchPending()) {
 			fadeManager.startFadeFromBlack(null);
 		}
 	}

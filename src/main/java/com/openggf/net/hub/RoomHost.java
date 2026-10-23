@@ -8,6 +8,7 @@ import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.ReadyRules;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -55,6 +56,8 @@ public final class RoomHost {
         // Latest start refused only because the window was not open. Its in-flight
         // frames, reset and finish are dropped quietly rather than counted.
         int refusedAttemptId = -1;
+        boolean ready;
+        long lastReadyMillis = Long.MIN_VALUE;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -68,6 +71,10 @@ public final class RoomHost {
     private final LongSupplier wallClockMillis;
     private final SessionTokenIssuer tokens = new SessionTokenIssuer();
     private final GhostHub hub;
+    private final LobbyPresenceRelay lobby;
+    private ReadyRules readyRule = ReadyRules.DEFAULT_BY_SIZE;
+    // Whether the owner's round start currently waits for everyone, as last told to the room.
+    private boolean readyRequiredAnnounced = true;
     private final HostRoundEngine round;
     private final RoomHostHooks hooks;
     private final ControlJsonCodec codec;
@@ -117,6 +124,9 @@ public final class RoomHost {
                             "ghost violation slot=" + slot + " fp=" + fingerprint + " "
                                     + kind + ": " + detail);
                 }, this.hooks.relevanceFiltering());
+        this.lobby = new LobbyPresenceRelay(wallClockMillis, this.hooks.relevanceFiltering(),
+                (slot, detail) -> System.getLogger(RoomHost.class.getName()).log(
+                        System.Logger.Level.WARNING, "lobby presence violation slot=" + slot + ": " + detail));
         this.round = new HostRoundEngine(wallClockMillis, this::broadcast);
         round.setVerifiedRoom(config.verified());
         round.setPendingExpiryListener((slot, attemptId) -> {
@@ -174,6 +184,13 @@ public final class RoomHost {
             members.remove(connection);
             return;
         }
+        if (data != null && data.length > 0 && (data[0] & 0xFF) == GhostPackets.TYPE_LOBBY_FRAMES) {
+            // Lobby poses outside the between-round phases are a transition race, not abuse.
+            if (betweenRounds() && lobby.onFrames(member.slot, data) == LobbyPresenceRelay.Verdict.KICK) {
+                drop(member, "lobby presence violations");
+            }
+            return;
+        }
         if (round.phase() != HostRoundEngine.Phase.RUNNING
                 || member.activeAttemptId < 0) {
             if (!isRefusedAttemptBatch(member, data)) {
@@ -205,6 +222,9 @@ public final class RoomHost {
             drop(loiterer, "handshake timeout");
         }
         hub.tick();
+        if (betweenRounds()) {
+            lobby.tick();
+        }
         HostRoundEngine.Phase previousPhase = round.phase();
         round.onTick();
         if (previousPhase == HostRoundEngine.Phase.RUNNING
@@ -234,6 +254,13 @@ public final class RoomHost {
             member.activeAttemptId = -1;
             member.lastAttemptId = -1;
             member.refusedAttemptId = -1;
+            member.ready = false;
+        }
+        // Clients clear every ready state on RoundStart; a rule that needs nobody to wait
+        // readies everyone again at once.
+        lobby.clear();
+        if (!readyRequired()) {
+            readyEveryone();
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         roomGameId = roundConfig.gameId();
@@ -395,6 +422,7 @@ public final class RoomHost {
         member.token = tokens.issue();
         member.participantId = UUID.randomUUID().toString();
         hub.addPlayer(slot, member.fingerprint, member.connection);
+        lobby.addMember(slot, member.connection);
         member.connection.sendText(codec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
@@ -410,6 +438,100 @@ public final class RoomHost {
         if (!member.appearance.isStock()) {
             broadcastLook(member, member);
         }
+        send(member, new ControlMessage.ReadyRule(readyRule.name(), readyRule.required(playerCount())));
+        for (Member other : members.values()) {
+            if (other.admitted && other != member && other.ready) {
+                send(member, new ControlMessage.PlayerReady(other.slot, true));
+            }
+        }
+        if (!readyRule.required(playerCount())) {
+            // Everyone counts as ready on joining a room that needs nobody to wait.
+            member.ready = true;
+            broadcast(new ControlMessage.PlayerReady(member.slot, true));
+        }
+        announceReadyRule();
+    }
+
+    /** Ready traffic belongs between rounds: the lobby, the results linger and the track vote. */
+    private boolean betweenRounds() {
+        return switch (round.phase()) {
+            case LOBBY, ROUND_END, VOTE -> true;
+            case COUNTDOWN, RUNNING -> false;
+        };
+    }
+
+    private boolean readyRequired() {
+        return readyRule.required(playerCount());
+    }
+
+    /** True when the owner may start a round: the rule does not wait, or everyone is ready. */
+    public boolean readyToStart() {
+        return !readyRequired() || members.values().stream()
+                .filter(member -> member.admitted).allMatch(member -> member.ready);
+    }
+
+    /** The room's ready rule. */
+    public ReadyRules readyRule() {
+        return readyRule;
+    }
+
+    /** Whether the player in {@code slot} is ready (tests and diagnostics). */
+    public boolean isReady(int slot) {
+        Member member = memberForSlot(slot);
+        return member != null && member.ready;
+    }
+
+    private void readyEveryone() {
+        for (Member member : members.values()) {
+            if (member.admitted) member.ready = true;
+        }
+        broadcast(new ControlMessage.ReadyReset(true));
+    }
+
+    /**
+     * Tells the room when the rule's effect changes as players join or leave. Moving to a rule
+     * that needs nobody to wait readies everyone; players already ready keep it either way.
+     */
+    private void announceReadyRule() {
+        boolean required = readyRequired();
+        if (required == readyRequiredAnnounced) {
+            return;
+        }
+        readyRequiredAnnounced = required;
+        broadcast(new ControlMessage.ReadyRule(readyRule.name(), required));
+        if (!required) {
+            readyEveryone();
+        }
+    }
+
+    private void handleSetReady(Member member, ControlMessage.SetReady ready, long now) {
+        if (!betweenRounds() || ready.ready() == member.ready
+                || (member.lastReadyMillis != Long.MIN_VALUE
+                    && now - member.lastReadyMillis < Protocol.READY_MIN_INTERVAL_MILLIS)) {
+            return;
+        }
+        member.lastReadyMillis = now;
+        member.ready = ready.ready();
+        broadcast(new ControlMessage.PlayerReady(member.slot, member.ready));
+    }
+
+    private void handleSetReadyRule(Member member, ControlMessage.SetReadyRule update) {
+        ReadyRules rule = ReadyRules.parse(update.rule());
+        if (!isOwner(member) || !betweenRounds() || rule == null || rule == readyRule) {
+            return;
+        }
+        readyRule = rule;
+        readyRequiredAnnounced = rule.required(playerCount());
+        broadcast(new ControlMessage.ReadyRule(rule.name(), readyRequiredAnnounced));
+        if (!readyRequiredAnnounced) {
+            readyEveryone();
+        }
+    }
+
+    private boolean isOwner(Member member) {
+        String owner = hooks.roundOwnerFingerprint() != null
+                ? hooks.roundOwnerFingerprint() : hostIdentity.fingerprint();
+        return member.fingerprint.equals(owner);
     }
 
     private void rejectAdmission(Member member, String reason) {
@@ -472,6 +594,8 @@ public final class RoomHost {
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
             case ControlMessage.UpdateProfile update -> handleProfileUpdate(member, update, now);
+            case ControlMessage.SetReady ready -> handleSetReady(member, ready, now);
+            case ControlMessage.SetReadyRule rule -> handleSetReadyRule(member, rule);
             case ControlMessage.Ping ping -> member.connection.sendText(codec.encode(
                     null, new ControlMessage.Pong(ping.t0ClientMillis(), now)));
             case ControlMessage.SelectCharacter select -> {
@@ -489,9 +613,8 @@ public final class RoomHost {
                 }
             }
             case ControlMessage.RoundConfigure configure -> {
-                String owner = hooks.roundOwnerFingerprint() != null
-                        ? hooks.roundOwnerFingerprint() : hostIdentity.fingerprint();
-                if (member.fingerprint.equals(owner)) {
+                // A rule that waits for everyone refuses the start until all present are ready.
+                if (isOwner(member) && readyToStart()) {
                     requestStartRound(configure.config());
                 }
             }
@@ -712,6 +835,7 @@ public final class RoomHost {
         if (!closing) {
             broadcast(new ControlMessage.PlayerLeft(member.slot));
             publishPlayerChanges(null);
+            announceReadyRule();
         }
     }
 
@@ -735,6 +859,7 @@ public final class RoomHost {
     private void removeAdmittedMember(Member member) {
         tokens.revoke(member.token);
         hub.removePlayer(member.slot);
+        lobby.removeMember(member.slot);
         round.onPlayerLeft(member.slot);
     }
 

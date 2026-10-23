@@ -768,6 +768,8 @@ public final class MasterClient implements AutoCloseable {
                 int type = data[0] & 0xFF;
                 if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
                     enqueue(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                } else if (type == GhostPackets.TYPE_LOBBY_AGGREGATE) {
+                    enqueue(new RaceClient.LobbyGhostData(GhostPackets.decodeLobbyAggregate(data)));
                 } else if (type == GhostPackets.TYPE_ROSTER) {
                     enqueue(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
                 } else {

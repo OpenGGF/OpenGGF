@@ -144,3 +144,46 @@ also keys its live-finish check on the display name "Capture Player", so the see
 - Limits: bounded smoke selection, not the full suite; no trace sweep. Smoke coverage is of
   f1f43c6fd. 9f70b0660 was checked by guards, the focused classes, the matched batch and
   the EGL pixel tests.
+
+## Follow-up: Time Attack quality-of-life integration (2026-10-23)
+
+Four further lanes, requested after the names delivery, integrated on
+`feature/ai-ta-qol` from develop f1869d069 (the names merge).
+
+| Lane | Commit | Content |
+|---|---|---|
+| Vote pools | 1b5b103c4 | Custom round-end vote pools of the room's own game; eligible-act catalogue (acts ending in a results tally) with disassembly citations; master/room validation; S1/S2 boss acts finish at the capsule switch |
+| SAT ghosts | c1d668287 | Ghosts and nameplates on the S3K sprite-masking path (SOZ, LRZ, SSZ, Gumball, LRZ boss/HPZ); masks hide ghosts but ghosts never arm a mask |
+| Fast respawn | 0af61f65f, 6f07f86ae, ea392743e | `DeathRestart.FAST_FROM_START`, hidden lives counter, jump-skip after 30 dead steps, lead-in through the level fade then 3-2-1, `withoutZoneIntros()` (AIZ1 starts on the beach) |
+| Lobby level | 399376575, ffc4dd371 | Per-game fenced lobby run behind the menu (HPZ arena, GHZ1/EHZ1 starts), ready-up with the owner's REQUIRED/AUTO/by-size rule, Start/Enter UI toggle, lobby presence stream, protocol v5 |
+
+Integration commits: lane merges 8c5222f16, 1be7e6c75, 546bf9182, c72d9ba6c (lobby runs
+switched to the fast-restart policy inside that merge); 879183aab and 5708411ae (test
+expectations for the vote-pool menu row and the lobby/race run policies); 619e59971 moves
+the lobby's HUD-cover flag beside the HUD (`LevelHudCoverAccess`, engine-only) because the
+combined lanes pushed `LevelManager` two lines over its size ratchet, and renames two frozen
+ArchUnit entries whose `GraphicsManager` replay helpers the SAT-ghost lane split (same edges,
+count unchanged); e3d820acb and 6cf3f8fc0 fix the capture tools (vote-pool row; the S1 lobby
+is Green Hill 1, so the capacity tool now waits for the RACING state before driving its route).
+
+Rejected: allowlisting the `LevelManager` growth or the moved ArchUnit edges as new
+violations; keeping the lobby's stock death reload (losing every life ended in game over).
+
+Validation at 619e59971: `run_categories.py --base origin/develop --run --max-minutes 150`
+selected all ten smoke categories, 3,610 classes in 73 batches plus guards (2026-10-23
+00:44-~03:30 UTC; ordinary execution 98 min). Ordinary: 37,787 tests, 2 failures, 85 skips;
+guards: 718 tests, 0 failures. `TestLobbyAreas` expected the lobby's old stock-death policy
+and was updated in 5708411ae. `TestRoomBrokerAdversarial.seededOutOfOrderAndCredential...`
+failed once at state JOIN_POW op=1: that operation sends a random JOIN proof-of-work nonce
+against an 8-bit attack-mode challenge, which solves by chance about 1 in 256 per attempt
+(fresh identity keys each run). The class passed 3/3 on the same tree and on develop in the
+names delivery; it is a pre-existing probabilistic test, not caused by this branch. After the
+fixes: focused lane/integration sets (406 and 195 tests incl. ROM-backed lobby fences, fast
+restarts and the four S3K classes) and `-Pguards` 718/718 pass. Limits: bounded smoke
+selection, no trace sweep; the smoke run covers 619e59971, later commits are test/tool fixes
+checked by their own classes and captures.
+
+Evidence (outside the repo, `$SCRATCH/agent-tmp/claude/ta-qol/capture/`): the integrated S3K
+lobby (`s3k-hpz/`: coloured named ghosts in Hidden Palace, legible menu, race hand-over to the
+AIZ1 beach with no intro or lives counter) and a nine-player relay race (`cap9/`: 9/9
+finishes accepted, live rank 5/9, the GHZ1 route finishing at input 3230 as before).
