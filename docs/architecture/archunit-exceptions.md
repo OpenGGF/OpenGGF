@@ -19,6 +19,10 @@ requires an explicit, reviewed store update.
   packages, or injected services.
 - Do not use `freeze.refreeze=true` as a routine workflow; update baselines only
   when the architectural exception decision is reviewed.
+- With ArchUnit 1.4.2, solved frozen records are strict too: evaluation requests a
+  store save when violations disappear, and disabled updates reject that save.
+  Prune verified resolved identities explicitly. Lower totals do not authorize
+  replacing them with different callers or members.
 
 ## Decay Targets
 
@@ -59,20 +63,52 @@ grouped records can be substituted for member dependencies when evaluating
 this migration. The next target is <=10 members, closing the four shared
 menu-animator dependencies while preserving explicit host-ROM donation.
 
+## Active Migration Queue
+
+Keep this queue small. Close one ownership boundary, prove its behavior, then
+prune its exact allowances; a lower aggregate alone is not completion. The
+[2026-10-23 plan](plans/2026-10-23-architecture-ratchet-paydown.md) records the
+current campaign and delivery evidence. Earlier campaigns already removed
+cross-game preview members and runtime-installed framework lookups; this work
+continues those cuts rather than treating the inventory as untouched.
+
+| Slice / owner | Expected change | Completion evidence | Status |
+|---|---|---|---|
+| Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Current campaign |
+| Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Current campaign; not a claim of complete graphics-layer isolation |
+| Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K preview behavior and donor/host selection remain ROM-backed; no concrete type checks in shared preview orchestration | Next bounded slice, not delivered in this campaign |
+| Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
+
+Lifecycle calls are a separate migration inventory, not hundreds of automatically
+safe replacements. Preserve the intentional slot/reconstruction bridges and move
+callers only with focused lifecycle behavior evidence. Ambient test setup and
+remaining low-level audio/data allowances stay outside this campaign.
+
 ## Source Ratchets
 
 Some review findings are source-shape constraints rather than ArchUnit bytecode
-rules. These live in `TestArchitecturalSourceGuard`. The figures below are
-executable maximum budgets, not measurements of the current source. A passing
-guard proves the source stays within its cap; reductions do not automatically
-change these constants. Lower a cap explicitly when publishing a tighter budget.
+rules. These live in `TestArchitecturalSourceGuard`. The figures below are executable budgets. Class/reference checks enforce
+maximums; dispatcher checks enforce exact current spans. Constants do not update
+automatically: lower them explicitly when publishing a tighter budget.
+Dispatcher budgets require exact current spans, so extraction fails until the
+obsolete budget is lowered. Method spans come from the JDK parser, including
+annotations and multiline declarations; comments, strings and text blocks cannot
+truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
+budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
+cap is 3073, down from 3086. The other large-class caps are 2045
+(`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
+and 3311 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+`Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
+share these identities, and ambiguous dispatcher names fail. Exchanging one
+large method for another no longer
+fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 
-| Rule | Enforced cap (not measured usage) | Target | Trigger |
+| Rule | Enforced budget | Target | Trigger |
 |------|----------|--------|---------|
-| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 3, `GameLoop.java`: 15 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 2, `GameLoop.java`: 8 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 181, `Engine.display`: 228, `GameLoop.stepInternal`: 235, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 105, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 66, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
 The former aggregate lifecycle figures (`setDestroyed(true)`: 585,
@@ -180,11 +216,15 @@ the 1 record listed above.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 159 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 152 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
-set. It is not a newly measured count of live edges, and unused permissions are
-not pruned by this accounting check.
+set. The live dependency census on 2026-10-23 found seven unused permissions:
+`debug -> data`, `sprites -> ghost`, `stageplay -> configuration`,
+`timer -> camera`, `tools -> ghost`, `tools -> net`, and `util -> tools`.
+These were pruned from 159 to 152. The runtime-edge guard now rejects both
+unapproved edges and stale permissions; the documentation check verifies the
+published allowance count.
 
 - `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
   `data`, `debug`, `editor`, `game`, `graphics`, `level`, `physics`, `sprites`,

@@ -606,3 +606,12 @@ after it. The loop boundary moves only once that redraw completes.
 The AIZ2 background-tree maker now places all seventeen trees, one per frame,
 in the slots after itself. It retries when no slot is free and gives each tree
 its original drawing priority.
+
+- **Architecture maintenance:** Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
+  reject stale rewind and dependency allowances, and identify raw lifecycle calls
+  by caller rather than a shared total. Shared menu animation and execution-time
+  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics-owned geometry value and one tile-expansion implementation while
+  preserving the existing candidate Mod API submission signature. Remaining
+  migrations and exact allowance accounting live in the
+  [exception guide](docs/architecture/archunit-exceptions.md).
