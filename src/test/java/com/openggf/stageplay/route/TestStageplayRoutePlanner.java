@@ -186,6 +186,18 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void speedDependentGapSuggestsRunAndRunReallyCrossesTheSameTerrain() {
+        var terrain=terrain();
+        for(int column=20;column<=27;column++) terrain.put(column,16,0);
+        for(int column=28;column<64;column++) {terrain.put(column,14,0xF001);terrain.put(column,15,0xF001);}
+        var walk=new StageplayRouteRequest("hero",0,512,205,300,128,20000,10000,1,null,1,RouteMotion.DEFAULT);
+        try(var probe=probe(terrain.level)) {
+            var initial=probe.capture();var slow=search(probe,walk);assertFalse(slow.found());
+            assertTrue(slow.message().contains("Run or Spindash"),slow.message());
+            probe.restore(initial);var fast=search(probe,request(512,205));assertTrue(fast.found(),fast.message());
+        }
+    }
+
     @Test void downhillWalkBrakesToKeepTheStrollCapWithoutSkidding() {
         var terrain=terrain();
         for(int half=0;half<2;half++) {
@@ -370,7 +382,7 @@ class TestStageplayRoutePlanner {
             if(moving && goal.motion().endingAction()==EndingAction.OVERSHOOT)
                 returning=StageplayRouteSteering.returning(Math.floor(before.x()),goal.x(),approach,returning);
             int direction=moving?StageplayRouteSteering.direction(Math.floor(before.x()),before.xSpeed(),before.groundSpeed(),
-                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
+                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.angle(),before.slopeRunning(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
                     :goal!=null && goal.kind()==PuppetCommandKind.STOP && goal.motion().endingAction()!=EndingAction.GENTLE_STOP
                             ?StageplayMovementIntent.direction(Math.floor(before.x()),before.xSpeed(),before.runAccel(),before.runDecel(),before.maxSpeed(),before.airborne(),before.x(),0):0;
             boolean down=false,jump=frame<jumpEnd;

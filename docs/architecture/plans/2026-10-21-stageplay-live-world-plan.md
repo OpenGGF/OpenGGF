@@ -2828,3 +2828,16 @@ Editing a generated SPINDASH keeps its fixed charge hold. The picture fixtures
 now require a grounded default rehearsal with one MOVE_TO and record the settings
 form before the observed route. Focused native/ROM/UI checks remain queued at
 this checkpoint; packaging success is not evidence of motion correctness.
+
+
+The initial conservative stroll-margin policy was rejected by real EHZ rehearsal:
+1024 nodes / 16748 ticks exhausted, with the retained prefix at x398 still moving.
+It braked repeatedly on flat ground instead of holding the cap. The corrected
+policy predicts the next native slope impulse from the actor's live slope factor
+and angle (`Sonic_SlopeResist`, s2.asm:37709-37732), then chooses coast/drive/brake.
+Search velocity keys retain native precision so friction-to-rest states are not
+collapsed. The same 300-frame EHZ shot-entry request then cold-qualified in 22
+nodes / 1340 ticks, with exactly MOVE_TO (frame 34) and STOP (282), no JUMP, final
+centre x397.80078125 / y624.61328125 for goal 400/624. The search never changed
+native physics or adopted a fitted speed. Build-only package passed; focused
+Maven coverage remains queued at this checkpoint.

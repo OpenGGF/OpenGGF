@@ -139,7 +139,7 @@ public final class PlayablePuppet implements AutoCloseable {
     public record Observation(double x, double y, int xSpeed, int ySpeed, int groundSpeed,
             int angle, int animation, int mappingFrame, boolean flipX, boolean flipY,
             boolean airborne, boolean onGround, int maxSpeed, int xRadius, int yRadius,
-            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash) { }
+            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeRunning) { }
 
     public record Tail(int mappingFrame, boolean flipX, boolean flipY) { }
 
@@ -154,7 +154,7 @@ public final class PlayablePuppet implements AutoCloseable {
                 actor.getAir(), !actor.getAir(), actor.getMax(), actor.getXRadius(), actor.getYRadius(),
                 tail == null ? null : new Tail(tail.mappingFrame(), tail.flipX(), tail.flipY()),
                 actor.getRunAccel(), actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel(),
-                actor.getFriction(), actor.getSkidding(), actor.getSpindash());
+                actor.getFriction(), actor.getSkidding(), actor.getSpindash(), actor.getSlopeRunning());
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */

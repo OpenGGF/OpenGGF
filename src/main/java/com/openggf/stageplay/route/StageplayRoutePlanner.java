@@ -476,7 +476,7 @@ public final class StageplayRoutePlanner {
                             returning=StageplayRouteSteering.returning(Math.floor(sample.x()),goal,current.approach,returning);
                         int direction = StageplayRouteSteering.direction(Math.floor(sample.x()),sample.xSpeed(),
                                 sample.groundSpeed(),sample.runAccel(),sample.runDecel(),sample.friction(),
-                                sample.maxSpeed(),sample.airborne(),goal,request.urgency(),request.motion(),returning,current.approach);
+                                sample.maxSpeed(),sample.angle(),sample.slopeRunning(),sample.airborne(),goal,request.urgency(),request.motion(),returning,current.approach);
                         ticks++;
                         probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
                         sample = probe.sample();
@@ -828,10 +828,10 @@ public final class StageplayRoutePlanner {
 
     private static Key key(PlayablePuppet.Observation sample, boolean held, int jumpRemaining, boolean returning) {
         return new Key(
-                (int) Math.floor(sample.x() / 4),
-                (int) Math.floor(sample.y() / 4),
-                sample.xSpeed() / 64,
-                sample.ySpeed() / 64,
+                (int) Math.floor(sample.x()),
+                (int) Math.floor(sample.y()),
+                sample.xSpeed(),
+                sample.ySpeed(),
                 sample.angle(),
                 sample.airborne(),
                 held,
