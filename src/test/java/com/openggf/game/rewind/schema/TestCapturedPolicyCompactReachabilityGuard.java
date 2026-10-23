@@ -111,14 +111,14 @@ class TestCapturedPolicyCompactReachabilityGuard {
     private static final class ExcludedOwner extends AbstractObjectInstance {
         @RewindTransient(reason = "Deliberately invalid ownership exclusion for the guard regression") private final PlayerControlOwners owners = new PlayerControlOwners();
         ExcludedOwner() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "excluded-owner"); }
-        @Override public void update(int frame, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 
     private static final class RawOwners extends AbstractObjectInstance {
         private final List<AbstractPlayableSprite> owners = new ArrayList<>();
         RawOwners() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "raw-owners"); }
-        @Override public void update(int frame, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 

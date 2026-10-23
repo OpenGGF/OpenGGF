@@ -2726,5 +2726,64 @@ initial invocation stopped at compilation because the new negative annotation
 fixture omitted its required `reason`; corrected before this successful run,
 with no tests executed by the failed compilation.
 
-Remaining affected selectors, the mandatory S3K four and the single guards run
-are recorded below when complete. No broad smoke is launched by this worker.
+Projection repair commit: `811bbd234`. The following additional selector used
+the same environment, queue, EGL and absolute ROM properties as above:
+
+```text
+-Dtest=TestRewindPlayerReferenceCodecs,TestRewindReferenceClosureValidation,TestRewindInPlaceObjectRestore,TestObjectRewindTypeSafetyDispatchPerformance,TestStageplayAcquiredControlRelease,TestStageplayNativeStateRelease,TestStageplayInteractionRelease,TestStageplayIntroControlRelease,TestStageplayStoryControlRelease,TestStageplayCapsuleControlRelease,TestStageplayLateHolderRelease,TestStageplayObjectDirection,TestStageplayCameraBounds,TestStageplayWorldPresentation,TestStageplayCinematicCameraRendering,TestStageplayLiveWorldRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test -B
+```
+
+Result at `811bbd234`: **267 tests, 0 failures, 0 errors, 1 skip**, across
+21 classes. The skip is the opt-in allocation/throughput measurement in
+`TestObjectRewindTypeSafetyDispatchPerformance` (property
+`openggf.performance.rewindDispatch.measure` is intentionally unset); its eight
+functional dispatch tests executed. All 60 mandatory S3K cases executed without
+skips: AIZ1 skip (8), both LevelLoading classes (36 + 7), BootstrapResolver (6),
+DecodingUtils (3). Queue wait was 1105 seconds; Maven execution 37.486 seconds.
+No production/test source changed after the exact-failure run.
+
+The single complete guards invocation used:
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5 && env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+Result at `811bbd234` (plan prose uncommitted): **722 tests, 5 failures,
+0 errors, 0 skips**; admission wait 1725 seconds, Maven execution 5:07. The new
+central reachability checks passed (6/6, 254 fields audited), as did the existing
+native holder hook guard (2/2). Four failures match the supplied baseline:
+
+- `TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices`
+  and `productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge`:
+  `MenuAudioProbeTool.java:41`, the same forbidden `AudioManager.getInstance()`.
+- `TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes`:
+  the same three `HubMusicController.java:118` audio-profile constructors.
+- `TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages`:
+  the same nine HubMusic constructor/title/id edges at lines 118/120.
+
+The fifth failure was introduced by this repair's two negative fixtures:
+`TestObjectUpdateClockTerminologyGuard.objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`
+rejected their unused `update(int frame, ...)` parameter names. Renamed both to
+`vIntRunCount`; the change affects fixture terminology only. The targeted rerun used:
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5 && env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestObjectUpdateClockTerminologyGuard,TestCapturedPolicyCompactReachabilityGuard' test -B
+```
+
+Result on the two-parameter correction atop `811bbd234`: **7 tests, 0 failures,
+0 errors, 0 skips** (terminology 1/1, codec reachability 6/6). Admission wait was
+1303 seconds; Maven execution 1:30. This correction and the completed verification
+record land in the follow-up `test(rewind): name fixture update clocks by V-int`;
+the final STATUS handback records its exact commit hash.
+The complete guards run is not repeated; the lead owns the next broad smoke.
+No all-green guards or full-suite claim is made.
+
+
+All originally reported new failures are repaired and their exact classes passed.
+The earlier focused selectors omitted the native SOZ exit snapshot callers and
+both projection classes; the explicit selectors above close those omissions.
+The complete guards invocation was run once, with its repair verified narrowly.
+Queue intervals overlap and must not be added into elapsed delivery time; total
+wall-clock attribution outside the recorded waits/executions is unmeasured.
+The lead owns the next smoke/integration decision. No merge, push or PR was made.
+Consumed repair logs and commit-message temporaries are removed at final handback.
