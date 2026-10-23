@@ -4993,6 +4993,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 followerHistoryRecordedThisTick = false;
         }
 
+        void markFollowerHistoryHandledWithoutWrite() {
+                followerHistoryRecordedThisTick = true;
+        }
+
         /**
          * Returns the recorded input bitmask from framesBehind frames ago.
          * ROM: Reads from Sonic_Stat_Record_Buf for Tails CPU input replay.

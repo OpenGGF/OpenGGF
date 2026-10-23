@@ -64,7 +64,14 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         int beforeAct = session.act(), beforeSpecial = session.specialStageIndex();
         session.advancePresentation();
         switch (before) {
-            case ACT -> host.step(session, input);
+            case ACT -> {
+                host.step(session, input);
+                if (host.consumePendingTitleExit()) {
+                    exit = new Exit(Destination.TITLE_SCREEN, null, false);
+                    pendingLoad = null;
+                    return;
+                }
+            }
             case SPECIAL_STAGE -> special.step(input);
             case SELECT -> session.updateMenu(input.logical(), supportsSelection(nextSelection(input)));
             default -> session.updateMenu(input.logical(), session.resultsPlcReady());

@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -162,6 +163,27 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
     @Override public GameStateManager gameState(int slot) { return gameStates[slot]; }
     @Override public LevelState levelState(int slot) { return levelStates[slot]; }
 
+    @Override public void prepareRestore(GameplayModeContext context, Set<String> capturedCodes) {
+        if (NativeCompetitionRoster.from(context.getWorldSession()) != this)
+            throw new IllegalArgumentException("Restore context does not own this native competition roster");
+        var sprites = context.getSpriteManager();
+        for (var participant : players) {
+            String code = "s3k-competition-p" + (participant.slot() + 1);
+            if (!capturedCodes.contains(code) || sprites.getSprite(code) != null) continue;
+            try {
+                // Recreate construction identity only. The canonical sprite owner
+                // overlays captured RAM, then bindRoster reconnects these models
+                // and the current fixed tail/dust owners before object restore.
+                var replacement = new S3kCompetitionPlayer(participant.slot(), participant.character(), 0, 0,
+                        S3kCompetitionPlayer.readSpeeds(rom, participant.character()));
+                replacement.setAnimator(animator);
+                sprites.addSprite(replacement.sprite());
+            } catch (IOException failure) {
+                throw new UncheckedIOException("Cannot reconstruct the ROM-backed native human", failure);
+            }
+        }
+    }
+
     @Override public S3kCompetitionSession openArena(S3kCompetitionScreen.Launch launch) {
         if (stepping) throw new IllegalStateException("Native arena loads must occur after the current world step");
         Objects.requireNonNull(launch);
@@ -280,6 +302,10 @@ public final class S3kCompetitionNativeHost implements S3kCompetitionScreen.Host
             camera.setMinY((short) bounds.minimumY()); camera.setMaxY((short) bounds.maximumY());
         }
         mirrorCamera(scroll.view(0)); mirrorCamera(scroll.view(1));
+        // Publish the already initialized native handler for LF0 snapshots.
+        // Its init is intentionally inert: no second native scroll/camera pass.
+        world.context().getParallaxManager().initZone(arena.arena().zoneId(), 0,
+                cameras[0].getX(), cameras[0].getY());
     }
     private void mirrorCamera(S3kCompetitionScroll.View view) {
         Camera camera = cameras[view.slot()];

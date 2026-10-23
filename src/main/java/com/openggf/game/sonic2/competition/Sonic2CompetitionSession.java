@@ -8,10 +8,15 @@ import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.LevelState;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.level.objects.DefaultPowerUpSpawner;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /** Native REV01 competition ledger, controller slots and results transitions. */
 public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
@@ -85,6 +90,42 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     public void bindCameras(Camera p1, Camera p2) {
         if (p1 == null || p2 == null || p1 == p2) throw new IllegalArgumentException("Two independent cameras required");
         cameras[0] = p1; cameras[1] = p2;
+    }
+
+    /** Fixed S2 product participants, shared by native entry and missing-human reconstruction. */
+    public static AbstractPlayableSprite createNativeParticipant(int slot, String code) {
+        checkSlot(slot);
+        java.util.Objects.requireNonNull(code, "code");
+        return slot == 0 ? new Sonic(code, (short) 0, (short) 0) : new Tails(code, (short) 0, (short) 0);
+    }
+
+    @Override public void prepareRestore(GameplayModeContext context, Set<String> capturedCodes) {
+        if (NativeCompetitionRoster.from(context.getWorldSession()) != this)
+            throw new IllegalArgumentException("Foreign native restore world");
+        var sprites = context.getSpriteManager();
+        boolean recreated = false;
+        for (int slot = 0; slot < 2; slot++) {
+            // The session owns the stable slot/code binding; a snapshot cannot select
+            // a different character, CPU controller or configured campaign team.
+            String code = java.util.Objects.requireNonNull(players[slot], "native participant").getCode();
+            if (capturedCodes.contains(code) && sprites.getSprite(code) == null) {
+                sprites.addSprite(createNativeParticipant(slot, code));
+                recreated = true;
+            }
+        }
+        if (!recreated) return;
+        var sonic = (AbstractPlayableSprite) sprites.getSprite(players[0].getCode());
+        var tails = (AbstractPlayableSprite) sprites.getSprite(players[1].getCode());
+        bindPlayers(sonic, tails);
+        // Same ROM-backed initializer used by native entry. Both actor resources
+        // must exist before canonical sprite/auxiliary RAM and object references
+        // are restored; no captured gameplay value is passed through this hook.
+        var level = context.getLevelManager();
+        level.refreshPlayableSpriteArt();
+        for (var player : players) {
+            player.setPowerUpSpawner(new DefaultPowerUpSpawner(level.getObjectManager()));
+            player.updateSensors(player.getX(), player.getY());
+        }
     }
     private static void checkSlot(int slot) { if (slot < 0 || slot > 1) throw new IllegalArgumentException("slot " + slot); }
     public Sonic2CompetitionResults.Wins actResult(int zoneIndex, int row) {

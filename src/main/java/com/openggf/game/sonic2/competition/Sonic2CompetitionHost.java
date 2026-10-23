@@ -8,6 +8,8 @@ public interface Sonic2CompetitionHost {
     boolean supportsZone(int romZoneId);
     void loadAct(Sonic2CompetitionSession session, int romZoneId, int act);
     void step(Sonic2CompetitionSession session, InputHandler input);
+    /** Published only after the native pause continuation's following world body. */
+    default boolean consumePendingTitleExit() { return false; }
     void draw(Sonic2CompetitionSession session);
     void freezeObjects(int ticks);
     /** False for illegal/dead actor routines. True requires the entire native atomic swap. */

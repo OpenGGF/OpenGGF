@@ -317,7 +317,8 @@ class TestArchitecturalSourceGuard {
             "com/openggf/tools/HeadlessGameBoot.java",
             // Native screen composition validates the base ROM identity once when
             // assembling its decorator; no gameplay behavior is selected by GameId.
-            "com/openggf/game/sonic3k/competition/S3kCompetitionRuntimeModule.java"
+            "com/openggf/game/sonic3k/competition/S3kCompetitionRuntimeModule.java",
+            "com/openggf/game/sonic2/competition/Sonic2CompetitionRuntimeModule.java"
     );
     private static final List<String> GAME_ID_BRANCH_APPROVED_PREFIXES = List.of(
             "com/openggf/game/dataselect/"

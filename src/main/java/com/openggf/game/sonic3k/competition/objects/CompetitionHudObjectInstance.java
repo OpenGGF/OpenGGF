@@ -36,12 +36,16 @@ public final class CompetitionHudObjectInstance extends AbstractObjectInstance i
     private boolean drawPublished;
 
     /** Supported generic rewind probe; compact state restores the actual routine and slot. */
-    public CompetitionHudObjectInstance(ObjectSpawn spawn) { this(Kind.RESERVED, spawn.subtype()); }
+    public CompetitionHudObjectInstance(ObjectSpawn spawn) { this(Kind.RESERVED, spawn); }
 
     public CompetitionHudObjectInstance(Kind kind, int slot) {
-        super(new ObjectSpawn(0x120, 0xB8, 0x65, slot, 0, false, 0), "CompetitionHud" + kind);
+        this(kind, new ObjectSpawn(0x120, 0xB8, 0x65, slot, 0, false, 0));
+    }
+
+    private CompetitionHudObjectInstance(Kind kind, ObjectSpawn spawn) {
+        super(spawn, "CompetitionHud" + kind);
         this.kind = java.util.Objects.requireNonNull(kind);
-        this.playerSlot = slot;
+        this.playerSlot = spawn.subtype();
         setRomWorldPositioned(false); // Native HUD routines select screen views, never render_flags.level_fg.
         if (kind == Kind.FALSE_START) animation = 7;
         if (kind == Kind.LOSER_NEON) animation = 2;
@@ -209,6 +213,6 @@ public final class CompetitionHudObjectInstance extends AbstractObjectInstance i
         }
     }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        return new CompetitionHudObjectInstance(kind, playerSlot);
+        return new CompetitionHudObjectInstance(context.spawn());
     }
 }
