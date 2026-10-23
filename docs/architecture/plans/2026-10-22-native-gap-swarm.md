@@ -3081,3 +3081,127 @@ Maven/XML/text diagnostics are removed after readback; compiled output remains.
 The clean local test-only commit and useful worktree are retained for the
 parent. Main integration, push, PR work, provider activation and paired
 MHZ/SOZ observations remain closed.
+
+
+### Isolated auxiliary dispatch and debug-ring fixture corrections — 2026-10-23
+
+Owner `aux_debug_fixtures` works only in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5a51aeb7`, branch
+`bugfix/ai-native-aux-debug-fixtures-20261023`, based on
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`. T3 task suffix
+`root-smoke-aux-debug-fixtures-20261023-1537-r1`; native session/thread
+`01a16968-1581-7f82-80cc-aedfd5ce50db`. Exact T3 IDs and ownership are
+registered under the parent temporary-agents state, child `aux_debug_fixtures`.
+Source cutoff 16:30 UTC, review/cleanup 17:00 UTC, expiry 17:15 UTC today.
+No Root/Main/other checkout source or target is changed or observed; Main's
+absolute Maven wrapper is the expressly allowed execution entry point.
+
+The supplied independent current-source audit reported five auxiliary fixture
+errors from the mocked ObjectManager's null services and one debug fixture
+error from real stars creation resolving a different legacy LevelManager.
+No compiler or old-source test was run here before these corrections. The
+auxiliary fixture now installs real DefaultObjectServices immediately after
+attaching its level, asserting world/level/object-manager/coordinator identity.
+All seven original tests and their ordering, non-advancement, termination, CPU
+exclusion and snapshot-forward assertions remain. The ordinary module selects
+RuntimeArtCoordinator.NONE: this qualifies dispatch and same-actor/controller RAM
+restore, not physical DPLC loading or destructive roster recreation.
+
+The debug fixture now opens one active gameplay world using the existing
+LevelMutatorTestWorld module solely as its mutable policy-provider factory.
+Real ObjectManager services, attached mock LevelManager, global/player level
+lookups and active GUMBALL provider agree. Each policy toggle checks policy
+identity and that the active runtime differs from the helper runtime. Real
+transformation creates an owned SuperSonicStars object in the configured fixed
+slot; reset/STOCK reuses that object while restoring the original addRings(50)
+control. Only the obsolete player-level spy stub was removed. The helper's
+private extra world is unused; this is not a foreign-world alias-isolation proof.
+Production/controller code, helpers, filters, POM, metadata and APIs are unchanged.
+
+Source frozen at `2026-10-23T15:41:16.858802+00:00` before request 1. Selection: both whole owning classes
+plus existing `TestLevelMutatorRuntime` for its module-provider/runtime control,
+14 expected test identities. No native assembly, broad smoke, guards, route,
+capture, held leaves or unrelated StartEffects selection. One normal queued
+focused request is planned; a second is reserved only for an actual changed
+fixture correction. Source fingerprint (tracked src, pom.xml, .mvn and
+tools/testing path/content SHA-256): `f3064055aeb52e152dcfa14d3a3c9f16c3869f38aacf4d77b091999cd46d842c`. Fixture diff SHA-256:
+`bf6e2034a485cb882fdd12072dfd5f06c3c0f1d0a77d8cceaae8296d101704c4`. Selected source blob IDs:
+
+- `src/test/java/com/openggf/sprites/managers/TestNativeCompetitionFixedAuxiliaryDispatch.java`: `ffa64d10af6638d3bf923f2afaad3e52991f86a1`.
+- `src/test/java/com/openggf/sprites/playable/TestMutatorDebugRingGrant.java`: `ce3f9c81e3aa19a18d3486fd9e4486989dde126b`.
+- `src/test/java/com/openggf/game/mutators/TestLevelMutatorRuntime.java`: `bf5a6bd51c23886664aab6194c67eb2e133318ed`.
+
+Portable command variables (all paths refer to existing original ROM entries;
+no ROM copies or links created):
+
+```bash
+task_wt=$(git rev-parse --show-toplevel)
+main_wt=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+main_wrapper="$main_wt/tools/testing/maven_queue.py"
+task_java=/usr/lib/jvm/java-25-openjdk
+s1_rom="$task_wt/Sonic The Hedgehog (W) (REV01) [!].gen"
+s2_rom="$task_wt/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+s3k_rom="$task_wt/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+cd "$task_wt"
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_OPTS -u MAVEN_ARGS \
+  -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME="$task_java" \
+  LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  python3 "$main_wrapper" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestNativeCompetitionFixedAuxiliaryDispatch,TestMutatorDebugRingGrant,TestLevelMutatorRuntime \
+  "-Dsonic1.rom.path=$s1_rom" "-Dsonic2.rom.path=$s2_rom" \
+  "-Ds3k.rom.path=$s3k_rom" test -B
+```
+
+ROM SHA-1 identities read through these existing entries match S1 REV01
+69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B, S2 REV01
+8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9 and locked-on S3K
+CFBF98C36C776677290A872547AC47C53D2761D6. This focused selection is ROM-free;
+these properties establish launch paths, not ROM-backed coverage.
+`tools/testing/install-hooks.sh` completed; `git diff --check` passed.
+A single independent read-only source review is pending. Execution/queue timing
+and actual XML identities/skips/properties/streams remain pending.
+
+Request 1 completed at 2026-10-23 16:05:04 UTC, command session 79104, exit 0.
+The wrapper measured 1,327 seconds of admission wait (22:07); Maven reported
+01:22 including fresh production/test compilation and execution. Selected
+JUnit class times were 0.279 seconds (runtime), 0.573 (auxiliary) and 0.111
+(debug); these are not delivery elapsed time. No second request, build-only
+probe, old-source run or broader check was submitted.
+
+Readback found exactly three fresh XML reports and 14 distinct completed
+identities: all six TestLevelMutatorRuntime controls, all seven original
+TestNativeCompetitionFixedAuxiliaryDispatch methods, and the original
+TestMutatorDebugRingGrant method. All 14 passed, zero failures/errors/skips;
+there were no dump files. Every report names Java 25.0.5, the owned checkout
+as user.dir/basedir, the exact three-class selector, surfaceless EGL and the
+three intended absolute original ROM paths. XML stdout is empty; captured
+stderr consists only of the existing FAST load-time/no-manifest/NONE warnings
+(27 auxiliary, two debug). The fresh compiled owning class files predate these
+reports and postdate source freeze. The tracked-source fingerprint after exit
+is still f3064055aeb52e152dcfa14d3a3c9f16c3869f38aacf4d77b091999cd46d842c,
+and all selected blob IDs remain as recorded above.
+
+The single independent current-diff source review found no concrete issue.
+A byte comparison also confirmed every auxiliary test body/assertion, the
+canonical frame driver and Fixture record are unchanged. The two original
+policy grant/transformation controls and real stars owner/slot/reuse assertions
+passed in the active world. This is bounded ROM-free fixture validation only:
+no physical DPLC, destructive roster recreation, foreign-world alias isolation,
+ROM/native/route/capture, broad smoke or guard qualification is claimed.
+No Root/Main/other target or live log was read, and no held leaf was imported.
+
+After readback the three consumed XML reports, their text reports and the owned
+focused Maven log were deleted; compiled outputs remain in this worktree.
+`git diff --check` and the exact prepared-message `git interpret-trailers --parse`
+check passed. Seven mapped policy trailers are n/a for these test-only and
+existing-plan changes, before the final GPT-6.1-Sol co-author block. Normal
+repository hooks remain enabled. The successor stays local and unmerged; no
+Main integration, push or worktree removal is authorized for this child.
+
+The first normal-hook commit attempt was rejected before creating a commit
+because the command example contained a machine-local user-home path. Only
+that prose was corrected: task_wt and main_wt now derive their absolute values
+from Git worktree metadata and main_wrapper derives from main_wt. This preserves
+the actual command/environment without retaining a host-specific home path.
+No Java source changed and no check was repeated. The commit was retried through
+the same normal hooks after this correction.
