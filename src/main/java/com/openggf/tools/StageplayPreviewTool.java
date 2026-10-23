@@ -65,7 +65,8 @@ public final class StageplayPreviewTool {
                             int frame=request.path("frame").intValue();
                             if (!request.path("frame").isInt()) throw new IllegalArgumentException("Preview frame must be an integer");
                             if (frame<0 || frame>=document.durationFrames()) throw new IllegalArgumentException("Frame outside scene");
-                            var sample=resources.resolveFrame(document,StageplayTimeline.sample(document,frame));
+                            var authored=StageplayTimeline.sample(document,frame);
+                            var sample=resources.resolveFrame(document,authored);
                             var current=com.openggf.game.session.SessionManager.getCurrentGameplayMode();
                             if (current!=audioWorld) {
                                 audio.endCaptureMode(); audio.beginCaptureMode(rate,60); audioWorld=current; audioFrame=-1;
@@ -77,13 +78,23 @@ public final class StageplayPreviewTool {
                                 var bytes=java.nio.ByteBuffer.allocate(count*2).order(java.nio.ByteOrder.LITTLE_ENDIAN);
                                 bytes.asShortBuffer().put(pcm,0,count); packet=bytes.array(); audioFrame=frame;
                             }
-                            var view = request.has("camera") ? json.treeToValue(request.get("camera"),StageplayTimeline.CameraPose.class) : sample.camera();
-                            if (request.has("camera")) view = world.boundedCamera(view);
+                            var view = sample.camera();
+                            var base = sample.baseCamera();
+                            if (request.has("camera")) {
+                                var requested=json.treeToValue(request.get("camera"),StageplayTimeline.CameraPose.class);
+                                // Recover the draft's unshaken framing before clipping either layer.
+                                // Use authored shake: the native sample may already have clipped it at an edge.
+                                double shakeX=authored.camera().x()-authored.baseCamera().x(),
+                                        shakeY=authored.camera().y()-authored.baseCamera().y();
+                                base=world.boundedCamera(new StageplayTimeline.CameraPose(
+                                        requested.x()-shakeX,requested.y()-shakeY,requested.zoom()));
+                                view=world.boundedCamera(new StageplayTimeline.CameraPose(
+                                        base.x()+shakeX,base.y()+shakeY,base.zoom()));
+                            }
                             resources.drawLiveWorld(sample,view);
-                            if (!view.equals(sample.camera())) {
-                                double shakeX=sample.camera().x()-sample.baseCamera().x(),shakeY=sample.camera().y()-sample.baseCamera().y();
+                            if (!view.equals(sample.camera()) || !base.equals(sample.baseCamera())) {
                                 sample=new StageplayTimeline.Frame(sample.frame(),sample.actors(),view,sample.captions(),sample.set(),sample.transition(),
-                                        new StageplayTimeline.CameraPose(view.x()-shakeX,view.y()-shakeY,view.zoom()),sample.dialogue(),sample.puppets(),sample.world());
+                                        base,sample.dialogue(),sample.puppets(),sample.world());
                             }
                             output.println(json.writeValueAsString(Map.of("sample",sample,"rgba",Base64.getEncoder().encodeToString(pixels.grab()),"pcm",packet,"sampleRate",rate,
                                     "objectInspection",world.objectInspection())));

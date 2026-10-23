@@ -116,7 +116,7 @@ class TestStageplayObjectDocument {
                 placed.keys(), List.of());
         assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(placed, duplicate)));
         assertThrows(IllegalArgumentException.class, () -> scene().withObjectActors(List.of(placed))
-                .withSet(new SetSource("s2", 1, 0, "", "", WorldPolicy.LIVE)));
+                .withSet(new SetSource("s2", 1, 0, "", "")));
         var anchored = scene().withCamera(List.of(scene().camera().getFirst(), new CameraKey(100, 0, 0, 1, Interpolation.HOLD)))
                 .withSceneChanges(List.of(new SceneChange("next", 100, scene().set(), Transition.CUT, 0)));
         assertThrows(IllegalArgumentException.class, () -> anchored.withObjectActors(List.of(placed)));

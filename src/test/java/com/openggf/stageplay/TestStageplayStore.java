@@ -72,7 +72,7 @@ class TestStageplayStore {
             tree.remove(field);
             assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)), field);
         }
-        for (String policy : List.of("TERRAIN_ONLY", "LEGACY_LIVE", "LEGACY_TERRAIN_ONLY")) {
+        for (String policy : List.of("LIVE", "TERRAIN_ONLY", "LEGACY_LIVE", "LEGACY_TERRAIN_ONLY")) {
             var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(scene()));
             ((ObjectNode) tree.get("set")).put("worldPolicy", policy);
             assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)), policy);

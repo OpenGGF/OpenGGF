@@ -28,8 +28,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 11,
-        "act": 1,
-        "worldPolicy": "LIVE"
+        "act": 1
       },
       "camera": [
         {

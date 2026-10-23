@@ -2284,7 +2284,7 @@ These dispositions describe the complete round (`d8e441fbf`, `2dcd4dffa`,
 | P3-1 | Fixed: interpolation uses framing centres; centred keys retain their centre between keys. |
 | P3-2 | Fixed: fractional source origin survives raster composition/resampling; zoom movie watched at 1x and quarter speed. |
 | P3-3 | Fixed: grow-only bucketed framebuffer; crop source extent/origin without per-frame recreation. |
-| P3-4 | Rejected the quoted HUD cut-at-zoom finding as stale against the reviewed source, which already said zoom animates. Surviving legacy help/status elsewhere fixed in both editors. |
+| P3-4 | Fixed. The reviewed source did contain the quoted HUD cut-at-zoom help; the earlier rejection was incorrect. Help/status now describes animated zoom in both editors. |
 | P3-5 | Fixed: no unpublished held-zoom compatibility branch. |
 | P3-6 | Fixed: shared parallax/scroll formatter churn restored. |
 | P3-7 | Fixed: DEZ native and directed projection share the planet silhouette/projection implementation. |
@@ -2512,3 +2512,11 @@ configuration example remain untouched. Consumed category diagnostics were
 acknowledged; temporary logs/messages from the resumed commands are discarded
 after their results are recorded here. The final outside-repository STATUS
 contains the exact final HEAD and remaining limits.
+
+### Interrupted round-3 continuation (2026-10-23)
+
+N1: evaluated native-envelope framing covers authored keys, follow, shake and paused
+drafts without rewriting keys; both frontends share the resolved preview. N4:
+the one-value WorldPolicy field is removed directly from unpublished formats and
+the candidate API pin, with examples updated and no migration. P4-2: scaffolds use
+the screenplay version constant. Focused validation and later holder audit follow.

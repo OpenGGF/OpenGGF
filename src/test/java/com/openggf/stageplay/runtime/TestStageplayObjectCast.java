@@ -32,10 +32,10 @@ class TestStageplayObjectCast {
         for (String game : List.of("s1", "s2", "s3k")) {
             var actor = actor(game, 2, 1);
             assertDoesNotThrow(() -> StageplayObjectCast.requireNativeContext(actor,
-                    new SetSource(game, 2, 1, "", "", WorldPolicy.LIVE)));
-            for (var source : List.of(new SetSource(game, 3, 1, "", "", WorldPolicy.LIVE),
-                    new SetSource(game, 2, 0, "", "", WorldPolicy.LIVE),
-                    new SetSource(game.equals("s1") ? "s2" : "s1", 2, 1, "", "", WorldPolicy.LIVE))) {
+                    new SetSource(game, 2, 1, "", "")));
+            for (var source : List.of(new SetSource(game, 3, 1, "", ""),
+                    new SetSource(game, 2, 0, "", ""),
+                    new SetSource(game.equals("s1") ? "s2" : "s1", 2, 1, "", ""))) {
                 var error = assertThrows(IllegalArgumentException.class, () -> StageplayObjectCast.requireNativeContext(actor, source));
                 assertTrue(error.getMessage().contains("native source set " + game + "/2/1"));
                 assertTrue(error.getMessage().contains("Puppet/Pose"));

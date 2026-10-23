@@ -121,7 +121,7 @@ class TestStageplayObjectWorkspace {
         var base = StageplayDocument.empty("s2",0,0,0,0,320,224);
         var scene = base.withCamera(List.of(base.camera().getFirst(), new CameraKey(100,0,0,1,Interpolation.HOLD),
                         new CameraKey(200,0,0,1,Interpolation.HOLD)))
-                .withSceneChanges(List.of(new SceneChange("foreign",100,new SetSource("s3k",0,1,"","",WorldPolicy.LIVE),Transition.CUT,0),
+                .withSceneChanges(List.of(new SceneChange("foreign",100,new SetSource("s3k",0,1,"",""),Transition.CUT,0),
                         new SceneChange("return",200,base.set(),Transition.CUT,0)));
         var workspace = workspace(scene); workspace.seek(100); workspace.invoke(OBJECTS); choose(workspace,"Cast ROM object");
         workspace.menu().setValue("layout", "7"); workspace.menu().setValue("object", "86");

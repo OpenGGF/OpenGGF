@@ -331,7 +331,7 @@ public final class StageplayTool {
     static String scaffold() {
         return """
                 {
-                  "version": 6, "name": "First take", "width": 400, "height": 224,
+                  "version": %d, "name": "First take", "width": 400, "height": 224,
                   "cast": [{"id":"tails","name":"Tails","gameId":"s2","character":"tails"}],
                   "objectCast": [],
                   "shots": [{
@@ -346,6 +346,6 @@ public final class StageplayTool {
                     "audio":[], "cameraEffects":[], "objects":{}, "objectActions":{}, "worldCommands":[]
                   }]
                 }
-                """;
+                """.formatted(StageplayScriptCompiler.VERSION);
     }
 }

@@ -40,6 +40,10 @@ public final class StageplayWorkspace {
         default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, int frame) throws IOException {
             return StageplayTimeline.sample(document, frame);
         }
+        /** Resolve transient framing through the same native preview owner as authored frames. */
+        default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, StageplayTimeline.Frame draft) throws IOException {
+            return draft;
+        }
         default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
         default void startRoute(StageplayDocument document, Path root, StageplayRouteRequest request) throws IOException {
@@ -124,9 +128,7 @@ public final class StageplayWorkspace {
     /** Frontends suspend held camera controls while a palette or text widget owns input. */
     public void setCameraInputEnabled(boolean enabled) { cameraInputEnabled = enabled; if (!enabled) resetZoomRepeat(); }
     public StageplayTimeline.CameraPose directorCamera() {
-        if (cameraDraft != null) return cameraDraft;
-        var document = recordingDocument();
-        return resolvePreview(document, controller.frame()).baseCamera();
+        return previewFrame().baseCamera();
     }
     public String status() { return status; }
     public Path path() { return path; }
@@ -296,11 +298,20 @@ public final class StageplayWorkspace {
 
     /** Unkeyed framing is view state, so a full document key budget cannot break preview. */
     public StageplayTimeline.Frame previewFrame() {
-        var frame = resolvePreview(previewDocument(), controller.frame());
+        var document = previewDocument();
+        var frame = resolvePreview(document, controller.frame());
         if (cameraDraft == null || controller.playing()) return frame;
-        var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+frame.camera().x()-frame.baseCamera().x(),
-                cameraDraft.y()+frame.camera().y()-frame.baseCamera().y(),cameraDraft.zoom());
-        return new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue(),frame.puppets(),frame.world());
+        // Boundary clipping may suppress some native shake. A moved draft still uses
+        // the authored seeded motion, then lets the preview owner bound both layers.
+        var authored = StageplayTimeline.sample(document, frame.frame());
+        var shaken = new StageplayTimeline.CameraPose(cameraDraft.x()+authored.camera().x()-authored.baseCamera().x(),
+                cameraDraft.y()+authored.camera().y()-authored.baseCamera().y(),cameraDraft.zoom());
+        var draft = new StageplayTimeline.Frame(frame.frame(),frame.actors(),shaken,frame.captions(),frame.set(),frame.transition(),cameraDraft,frame.dialogue(),frame.puppets(),frame.world());
+        try { return Objects.requireNonNull(host.resolvePreview(document, assetRoot, draft), "preview draft"); }
+        catch (IOException | RuntimeException failure) {
+            previewFailure(failure); cameraDraft = null;
+            return frame;
+        }
     }
 
     private void invalidatePreview() { previewSource=null; resolvedPreview=null; previewError=null; previewAt=-1; }
@@ -310,14 +321,18 @@ public final class StageplayWorkspace {
         previewSource=document; previewRoot=assetRoot; previewAt=frame; previewError=null;
         try { resolvedPreview=Objects.requireNonNull(host.resolvePreview(document,assetRoot,frame),"preview frame"); }
         catch (IOException | RuntimeException failure) {
-            controller.pause(); startedThisTick=false; previewSoundActive=false;
-            try { host.stop(); } catch (RuntimeException cleanup) { if (cleanup!=failure) failure.addSuppressed(cleanup); }
-            previewError="Puppet preview unavailable: "+(failure.getMessage()==null?failure.getClass().getSimpleName():failure.getMessage());
-            status=previewError;
+            previewFailure(failure);
             // Keep authoring available without claiming the unresolved placement is a simulated result.
             resolvedPreview=StageplayTimeline.sample(document,frame);
         }
         return resolvedPreview;
+    }
+
+    private void previewFailure(Exception failure) {
+        controller.pause(); startedThisTick=false; previewSoundActive=false;
+        try { host.stop(); } catch (RuntimeException cleanup) { if (cleanup!=failure) failure.addSuppressed(cleanup); }
+        previewError="Puppet preview unavailable: "+(failure.getMessage()==null?failure.getClass().getSimpleName():failure.getMessage());
+        status=previewError;
     }
 
     public StageplayTimeline.ActorPose selectedActorPose() {
@@ -640,7 +655,7 @@ public final class StageplayWorkspace {
         var audio = new ArrayList<AudioCue>();
         for (var cue : doc.audio()) audio.add(new AudioCue(cue.id(), cue.frame(), cue.kind(), cue.gameId(),
                 cue.soundId(), relative(oldRoot, newRoot, cue.asset()), cue.gain()));
-        return doc.withSet(new SetSource(set.gameId(), set.zone(), set.act(), set.romSha1(), project, set.worldPolicy())).withAudio(audio);
+        return doc.withSet(new SetSource(set.gameId(), set.zone(), set.act(), set.romSha1(), project)).withAudio(audio);
     }
 
     private static boolean hasRelativeAssets(StageplayDocument doc) {
@@ -662,11 +677,10 @@ public final class StageplayWorkspace {
         menu.showForm("Stageplay scene / set", List.of(text("name", "Name", doc.name()), number("duration", "Length (60 Hz frames)", doc.durationFrames()),
                 number("width", "Width", doc.width()), number("height", "Height", doc.height()), text("game", "Set game: s1 / s2 / s3k", set.gameId()),
                 number("zone", "Zone (zero based)", set.zone()), number("act", "Act (zero based)", set.act()),
-                text("rom", "Optional ROM SHA-1", set.romSha1()), text("project", "Relative .ogfproject (optional)", set.levelProject()),
-                text("world", "Native world (LIVE; clear objects with a world command)", set.worldPolicy().name())),
+                text("rom", "Optional ROM SHA-1", set.romSha1()), text("project", "Relative .ogfproject (optional)", set.levelProject())),
                 "Apply scene", v -> edit(d -> d.withName(v.get("name")).withDurationFrames(integer(v,"duration"))
                         .withSize(integer(v,"width"), integer(v,"height"))
-                        .withSet(new SetSource(v.get("game"),integer(v,"zone"),integer(v,"act"),v.get("rom"),v.get("project"),WorldPolicy.valueOf(v.get("world").toUpperCase(java.util.Locale.ROOT))))));
+                        .withSet(new SetSource(v.get("game"),integer(v,"zone"),integer(v,"act"),v.get("rom"),v.get("project")))));
         menu.setSubtitle("Shortening requires deleting out-of-range keys and cues first. Linked sets must be saved under the scene folder.");
     }
 
@@ -988,12 +1002,11 @@ public final class StageplayWorkspace {
                 number("duration", "Transition frames (CUT = 0)", change == null ? 0 : change.durationFrames()),
                 text("game", "Incoming set: s1 / s2 / s3k", set.gameId()), number("zone", "Zone (zero based)", set.zone()),
                 number("act", "Act (zero based)", set.act()), text("rom", "Optional ROM SHA-1", set.romSha1()),
-                text("project", "Relative .ogfproject (optional)", set.levelProject()),
-                text("world", "Native world (LIVE; clear objects with a world command)", set.worldPolicy().name())), "Apply scene change", v -> edit(d -> {
+                text("project", "Relative .ogfproject (optional)", set.levelProject())), "Apply scene change", v -> edit(d -> {
             String id = change == null ? nextId("scene", d) : change.id();
             var values = new ArrayList<>(d.sceneChanges()); values.removeIf(c -> c.id().equals(id));
             values.add(new SceneChange(id, integer(v,"frame"), new SetSource(v.get("game"), integer(v,"zone"),
-                    integer(v,"act"), v.get("rom"), v.get("project"), WorldPolicy.valueOf(v.get("world").toUpperCase(java.util.Locale.ROOT))),
+                    integer(v,"act"), v.get("rom"), v.get("project")),
                     Transition.valueOf(v.get("transition").toUpperCase(java.util.Locale.ROOT)), integer(v,"duration")));
             values.sort(Comparator.comparingInt(SceneChange::frame));
             return withSceneBoundaries(d, values);

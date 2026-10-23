@@ -52,11 +52,11 @@ public final class StageplayResources implements AutoCloseable {
     public List<String> availableGames() { requireOpen(); return available; }
     public void setProjectRoot(Path root) {
         requireOpen(); projectRoot = root == null ? null : root.toAbsolutePath().normalize(); sets.clear();
-        assetReader = null; terrains.clear(); resetPuppets(); livePreview = null; clearDialogue();
+        assetReader = null; terrains.clear(); resetWorld(); livePreview = null; clearDialogue();
     }
     /** A bounded owner snapshot reader, used by registered cutscenes without filesystem access. */
     public void setAssetReader(StageplayAssets.Reader reader) {
-        requireOpen(); assetReader = Objects.requireNonNull(reader); sets.clear(); terrains.clear(); resetPuppets(); livePreview = null; clearDialogue();
+        requireOpen(); assetReader = Objects.requireNonNull(reader); sets.clear(); terrains.clear(); resetWorld(); livePreview = null; clearDialogue();
     }
     private void clearDialogue() {
         preparedDialogue = null; dialogueImages = Map.of(); dialogueLayouts = Map.of();
@@ -75,20 +75,20 @@ public final class StageplayResources implements AutoCloseable {
         requireOpen();
         if (source.levelProject().isEmpty()) throw new IllegalArgumentException("Only authored sets may be registered");
         sets.put(Objects.requireNonNull(source), Objects.requireNonNull(kit));
-        terrains.remove(source); resetPuppets();
+        terrains.remove(source); resetWorld();
     }
-    /** Registered authored terrain is shared by its pictured set and private playable simulation. */
+    /** Registered authored terrain is shared by its pictured set and isolated native world. */
     public void registerSet(StageplayDocument.SetSource source, Level level) {
         registerSet(source, authored(level));
-        terrains.put(source, Objects.requireNonNull(level)); resetPuppets();
+        terrains.put(source, Objects.requireNonNull(level)); resetWorld();
     }
 
-    /** Resolves terrain puppets or the shared LIVE world; editor LIVE pixels/state come from an isolated worker. */
+    /** Resolves the native world; editor preview pixels and state come from an isolated worker. */
     public StageplayTimeline.Frame resolveFrame(StageplayDocument document, StageplayTimeline.Frame authoredFrame) {
         requireOpen();
         if (liveWorld != null) return liveWorld.resolve(document, authoredFrame);
         if (livePreview == null) livePreview = new StageplayOfflinePreview(StageplayPreviewAssets.source(projectRoot, assetReader));
-        return livePreview.resolve(document, authoredFrame.frame(), authoredFrame.world() == null ? null : authoredFrame.camera());
+        return livePreview.resolve(document, authoredFrame);
     }
 
     /** The caller supplies an explicitly owned offline world; resources owns its lifetime. */
@@ -122,7 +122,7 @@ public final class StageplayResources implements AutoCloseable {
     /** Captured native no-device SFX for this sampled frame; the editor decides forward-playback admission. */
     public com.openggf.audio.StreamedMusicPort.SfxPcm previewSound(int frame) { return livePreview==null ? null : livePreview.sound(frame); }
     SceneImage livePreviewImage() { return livePreview == null ? null : livePreview.image(); }
-    public void resetPuppets() { if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
+    public void resetWorld() { if (liveWorld != null) liveWorld.reset(); if (livePreview != null) livePreview.close(); }
 
     public java.util.List<StageplayObjectInspection> objectInspection() {
         if (liveWorld != null) return liveWorld.objectInspection();

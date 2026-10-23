@@ -16,7 +16,7 @@ class TestStageplayLiveContract {
             {"version":6,"name":"Native intent","width":320,"height":224,
              "cast":[{"id":"pilot","name":"Tails","gameId":"s3k","character":"tails"}],
              "shots":[{"id":"flight","durationFrames":600,
-               "set":{"gameId":"s3k","zone":0,"act":0,"worldPolicy":"LIVE"},
+               "set":{"gameId":"s3k","zone":0,"act":0},
                "camera":[{"frame":0,"x":5000,"y":900,"follow":{"actors":["pilot"],"deadZoneX":12,
                    "deadZoneY":8,"lookAhead":4,"smoothing":0.2,"offsetX":0,"offsetY":-8}}],
                "actors":{"pilot":[{"frame":0,"x":5200,"y":1040}]},
@@ -29,7 +29,7 @@ class TestStageplayLiveContract {
     }
     @Test void liveContractRoundTripsAndCompilerKeepsBoundedSemanticIntent() throws Exception {
         var scene=compile(SOURCE);
-        assertEquals(StageplayDocument.WorldPolicy.LIVE,scene.set().worldPolicy());
+        assertEquals(new StageplayDocument.SetSource("s3k",0,0,"",""),scene.set());
         assertEquals(List.of("pilot"),scene.camera().getFirst().follow().actors());
         assertEquals(60,scene.puppets().getFirst().commands().getFirst().timeoutFrames());
         assertEquals(scene,StageplayStore.decode(StageplayStore.encode(scene)));
@@ -45,7 +45,7 @@ class TestStageplayLiveContract {
         for(String invalid:List.of(SOURCE.replace("\"timeoutFrames\":60","\"timeoutFrames\":0"),
                 SOURCE.replace("\"gameId\":\"s3k\",\"character\":\"tails\"","\"gameId\":\"s2\",\"character\":\"tails\""),
                 SOURCE.replace("\"actors\":[\"pilot\"]","\"actors\":[\"missing\"]"),
-                SOURCE.replace("\"worldPolicy\":\"LIVE\"","\"worldPolicy\":\"TERRAIN_ONLY\""),
+                SOURCE.replace("\"act\":0", "\"act\":0,\"worldPolicy\":\"LIVE\""),
                 SOURCE.replace("\"condition\":\"GROUNDED\"","\"condition\":\"TARGET_AVAILABLE\"")))
             assertThrows(IOException.class,()->compile(invalid),invalid);
     }

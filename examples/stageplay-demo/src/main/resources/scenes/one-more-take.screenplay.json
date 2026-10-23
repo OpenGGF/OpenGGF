@@ -36,8 +36,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 11,
-        "act": 1,
-        "worldPolicy": "LIVE"
+        "act": 1
       },
       "camera": [
         {
@@ -484,8 +483,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 11,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "camera": [
         {
@@ -679,8 +677,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 0,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "camera": [
         {
@@ -918,8 +915,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 11,
-        "act": 1,
-        "worldPolicy": "LIVE"
+        "act": 1
       },
       "camera": [
         {
@@ -1278,8 +1274,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 0,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "transition": {
         "kind": "FADE_BLACK",

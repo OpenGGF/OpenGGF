@@ -282,8 +282,8 @@ review the entire movie in motion at its intended output size.
 
 ## Native ROM worlds (screenplay 6, document 7)
 
-New scenes default to `LIVE`. A shot selects a populated native level with
-`"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
+Every scene uses a native world. A shot selects a populated native level with
+`"set":{"gameId":"s3k","zone":11,"act":1}`.
 Saved authored terrain, mixed supplied-game performers, zoom, output dimensions,
 team size, activation windows and native binding use the same rules with populated
 or cleared objects. Output dimensions are 160–1920 by 112–1080; the source view
@@ -550,3 +550,7 @@ inputs or late cancelled work cannot overwrite newer authoring edits. The conten
 fingerprint is retained because a terrain project or ROM can change while the
 scene document remains equal; document equality cannot certify the tested route.
 Planning does not borrow the active gameplay session, preview worker or audio ownership.
+
+Evaluated cameras, including authored keys, follow offsets, shake and paused director
+drafts, clamp to the loaded level camera envelope at the current viewport and zoom.
+Keys retain their authored values. Both editors display the resolved framing.

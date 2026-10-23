@@ -130,7 +130,7 @@ Four ROM-backed sources accompany the location-remote scene in the current forma
 | `live-ring-run` | 4 s | Three placed rings disappear once; the placed DEZ1 hazard causes hurt, knockback, native scattered rings and recovery. Camera hands off to Tails. |
 | `one-more-take` | 60 s | Five-shot rehearsal: relay, ring-spill mishap, airborne regrouping, retry, and all-three closing run. |
 
-All use `worldPolicy:LIVE` and physical performers. Air traffic smoothly widens to
+All use the native world and physical performers. Air traffic smoothly widens to
 zoom 0.7 while Tails hovers above Knuckles, then returns to zoom one after landing.
 Its RELEASE stops new flap inputs; the scene waits for native descent before the
 last reply. The other demonstrations use zoom one. Their controllers

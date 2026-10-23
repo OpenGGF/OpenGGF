@@ -150,7 +150,7 @@ no voice service or fabricated licensing claim is part of this workflow.
 
 ## Live-world route evidence
 
-Current screenplays use only `worldPolicy:LIVE`; author object clears as timed
+Every screenplay uses a native world; author object clears as timed
 world commands. Use the
 `level` command to inspect stable ROM placements and rings, and `catalog` for native
 capabilities. Read the live schema in the authoring guide before using object
@@ -177,7 +177,9 @@ state/movie evidence in the task's external capture directory.
 
 LIVE film views omit gameplay HUD/debug overlays and reveal fresh terrain without
 advancing actors through the native load palette fade. Author shot transitions
-for the intended reveal. LIVE camera controls show the resolved follow view;
+for the intended reveal. LIVE camera controls show evaluated framing clamped to the loaded level camera
+envelope at the current viewport and zoom, including authored keys and shake;
+authored keys are preserved. Both editors show the resolved view;
 Capture key / Record stores authored framing and clears following at those keys.
 The camera form keeps follow targets and applies position edits as follow offsets.
 

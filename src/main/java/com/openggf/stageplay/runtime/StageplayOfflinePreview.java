@@ -30,10 +30,14 @@ final class StageplayOfflinePreview implements AutoCloseable {
 
     StageplayOfflinePreview(StageplayPreviewAssets.Source assets) { this.assets = Objects.requireNonNull(assets); }
 
-    StageplayTimeline.Frame resolve(StageplayDocument value, int frame, StageplayTimeline.CameraPose camera) {
+    StageplayTimeline.Frame resolve(StageplayDocument value, StageplayTimeline.Frame authoredFrame) {
+        int frame = authoredFrame.frame();
+        var camera = authoredFrame.world() == null ? null : authoredFrame.camera();
         try {
             if (!value.equals(document)) start(value);
-            if (sample != null && sample.frame()==frame && (Objects.equals(camera,requestedCamera) || camera != null && camera.equals(sample.camera()))) return sample;
+            // Drawing an exact resolved response must not reinterpret its clipped camera
+            // as a new raw draft. Otherwise clipping can change the unshaken origin twice.
+            if (sample == authoredFrame || sample != null && sample.frame()==frame && Objects.equals(camera,requestedCamera)) return sample;
             var requestValue = JSON.createObjectNode().put("frame",frame);
             if (camera != null) requestValue.set("camera",JSON.valueToTree(camera));
             input.write(JSON.writeValueAsString(requestValue)); input.newLine(); input.flush();

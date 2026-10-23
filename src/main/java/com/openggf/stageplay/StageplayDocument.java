@@ -245,7 +245,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public static StageplayDocument empty(String gameId, int zone, int act, double x, double y,
             int width, int height) {
         return new StageplayDocument(VERSION, "Untitled", 600, width, height,
-                new SetSource(gameId, zone, act, "", "", WorldPolicy.LIVE), List.of(),
+                new SetSource(gameId, zone, act, "", ""), List.of(),
                 List.of(new CameraKey(0, x, y, 1, Interpolation.HOLD)), List.of(), List.of());
     }
 
@@ -323,13 +323,9 @@ public record StageplayDocument(int version, String name, int durationFrames, in
 
     /** Stock set reference and optional identity/authored-level reference. */
     @ModApi
-    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject, WorldPolicy worldPolicy) {
-        public SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
-            this(gameId, zone, act, romSha1, levelProject, WorldPolicy.LIVE);
-        }
+    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
         public SetSource {
             gameId = game(gameId);
-            require(worldPolicy != null, "worldPolicy is required");
             range(zone, 0, 255, "zone");
             range(act, 0, 255, "act");
             require(romSha1 != null && (romSha1.isEmpty() || romSha1.matches("[0-9a-f]{40}")),
@@ -545,10 +541,6 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                     "Absent target must use the canonical empty identity");
         }
         public static ObjectTarget none() { return new ObjectTarget(-1, 0, 0, 0, 0); }
-    }
-    @ModApi public enum WorldPolicy {
-        LIVE;
-
     }
     @ModApi public enum WaitCondition { NONE, ARRIVED, ON_OBJECT, GROUNDED, AIRBORNE, HURT, RECOVERED, RING_COLLECTED, TARGET_AVAILABLE }
     @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL }

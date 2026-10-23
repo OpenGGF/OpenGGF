@@ -26,6 +26,41 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayS1EnsembleRom {
     @BeforeEach void graphics() { EngineServices.current().graphics().initHeadless(); }
 
+    @Test void authoredGhzCameraAt832AndItsShakeClampToNativeLevelBoundsWithoutRewritingKeys() throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
+            var scene = StageplayDocument.empty("s1", 0, 0, 100, 832, 320, 224).withDurationFrames(12)
+                    .withCameraEffects(List.of(new CameraEffect("edge-shake", 0, 12, 0, 40, 30, 7)));
+            StageplayTimeline.Frame end = null;
+            boolean outwardShake = false;
+            for (int frame = 0; frame < 12; frame++) {
+                var authored = StageplayTimeline.sample(scene, frame);
+                outwardShake |= authored.camera().y() > authored.baseCamera().y();
+                end = world.resolve(scene, authored);
+                assertEquals(768, end.baseCamera().y(), "GHZ1 native bottom camera origin is 0x300");
+                assertTrue(end.camera().y() <= 768, "Shake cannot reveal scenery below the native world envelope");
+            }
+            assertTrue(outwardShake, "The regression must exercise shake pushing against the bottom edge");
+            assertEquals(832, scene.camera().getFirst().y(), "Evaluation must preserve the authored key");
+            var camera = SessionManager.getCurrentGameplayMode().getCamera();
+            camera.setMinX((short) 100); camera.setMaxX((short) 100);
+            camera.setMinY((short) 100); camera.setMaxY((short) 100);
+            assertEquals(new StageplayTimeline.CameraPose(800, 768, 1),
+                    world.boundedCamera(new StageplayTimeline.CameraPose(800, 832, 1)),
+                    "Runtime arena locks do not constrain directed framing");
+            world.resolve(scene, StageplayTimeline.sample(scene, 0));
+            assertEquals(end, world.resolve(scene, StageplayTimeline.sample(scene, 11)));
+
+            var follow = scene.withCameraEffects(List.of()).withActors(List.of(actor("hero", 128, 900)))
+                    .withPuppets(List.of(new PuppetTrack("hero", false, 0, List.of())))
+                    .withCamera(List.of(new CameraKey(0, 100, 832, 1, Interpolation.HOLD,
+                            new CameraFollow(List.of("hero"), 0, 0, 0, 1, 0, 1000))));
+            assertEquals(768, world.resolve(follow, StageplayTimeline.sample(follow, 0)).baseCamera().y(),
+                    "Follow offsets obey the same level envelope as authored keys");
+        }
+    }
+
     @Test void supplementalTrackedMonitorKeepsNativeRespawnIdentityAndReplaysWithPrimaryCameraFarAway() throws Exception {
         try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
              var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
@@ -76,7 +111,7 @@ class TestStageplayS1EnsembleRom {
                     new ObjectKey(0, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.POSE),
                     new ObjectKey(10, monitor.x(), monitor.y(), 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE)), List.of());
             var scene = StageplayDocument.empty("s1", 0, 0, 0, 0, 320, 224).withDurationFrames(30)
-                    .withSet(new SetSource("s1", 0, 0, "", "", WorldPolicy.LIVE))
+                    .withSet(new SetSource("s1", 0, 0, "", ""))
                     .withObjectActors(List.of(actor));
             var posed = world.resolve(scene, StageplayTimeline.sample(scene, 5));
             assertTrue(posed.world().objects().stream().anyMatch(o -> o.type().equals("Stageplay:monitor:POSE")));

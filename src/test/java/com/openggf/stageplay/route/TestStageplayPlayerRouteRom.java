@@ -136,7 +136,7 @@ class TestStageplayPlayerRouteRom {
     }
 
     private static StageplayDocument hillScene() {
-        var source = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
+        var source = new SetSource("s2", 0, 0, "", "");
         var actor =
                 new Actor(
                         "hero",
@@ -183,7 +183,7 @@ class TestStageplayPlayerRouteRom {
                     initial.reset();
                 }
             }
-            var source = new SetSource(game, 0, 0, "", "", WorldPolicy.LIVE);
+            var source = new SetSource(game, 0, 0, "", "");
             var anchor = discoverFlatNativeWalk(resources, library, source);
             var actor =
                     new Actor(

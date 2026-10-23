@@ -32,6 +32,8 @@ Unreleased. The earlier development themes remain in
   with cold LIVE verification, plus visual walking-object routes over slopes and
   steps up to eight pixels. Centred camera pushes preserve their framing centre,
   fractional origins survive composition, and the world framebuffer is reused.
+  Evaluated framing stays within native level bounds in films and both editors;
+  authored keys keep their original values.
   Tall views extend native background pattern bands without stacking another sky.
   Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.

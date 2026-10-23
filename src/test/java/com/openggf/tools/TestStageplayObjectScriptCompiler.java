@@ -114,7 +114,7 @@ class TestStageplayObjectScriptCompiler {
                   "camera":[{"frame":0,"x":0,"y":500}]}]}
                 """);
         var compiled = compile(nativeRecipe);
-        assertEquals(WorldPolicy.LIVE, compiled.set().worldPolicy());
+        assertEquals(new SetSource("s2", 0, 0, "", ""), compiled.set());
         assertTrue(compiled.objectActors().isEmpty()); assertTrue(compiled.worldCommands().isEmpty());
         for (int version = 1; version <= 4; version++) {
             var old = nativeRecipe.deepCopy(); old.put("version", version);

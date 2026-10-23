@@ -124,23 +124,21 @@ class TestStageplayTimeline {
 
     @Test
     void nativeWorldZoomSharesCameraEasingWithoutSeekHistoryOrShotBleed() {
-        for (var policy : List.of(WorldPolicy.LIVE, WorldPolicy.LIVE)) {
-            var set = new SetSource("s2", 0, 0, "", "", policy);
-            var document = scene().withSet(set).withCamera(List.of(
-                    new CameraKey(0, 0, 0, .75, Interpolation.SMOOTH),
-                    new CameraKey(20, 200, 400, 2.25, Interpolation.LINEAR),
-                    new CameraKey(40, 400, 800, 1, Interpolation.HOLD)));
-            assertEquals(1.5, StageplayTimeline.sample(document, 10).camera().zoom());
-            assertEquals(1.625, StageplayTimeline.sample(document, 30).camera().zoom());
-            var middle = StageplayTimeline.sample(document, 7);
-            StageplayTimeline.sample(document, 39);
-            assertEquals(middle, StageplayTimeline.sample(document, 7));
-            assertEquals(1, StageplayTimeline.sample(document, 41).camera().zoom());
+        var set = new SetSource("s2", 0, 0, "", "");
+        var document = scene().withSet(set).withCamera(List.of(
+                new CameraKey(0, 0, 0, .75, Interpolation.SMOOTH),
+                new CameraKey(20, 200, 400, 2.25, Interpolation.LINEAR),
+                new CameraKey(40, 400, 800, 1, Interpolation.HOLD)));
+        assertEquals(1.5, StageplayTimeline.sample(document, 10).camera().zoom());
+        assertEquals(1.625, StageplayTimeline.sample(document, 30).camera().zoom());
+        var middle = StageplayTimeline.sample(document, 7);
+        StageplayTimeline.sample(document, 39);
+        assertEquals(middle, StageplayTimeline.sample(document, 7));
+        assertEquals(1, StageplayTimeline.sample(document, 41).camera().zoom());
 
-            var cut = document.withSceneChanges(List.of(new SceneChange("cut", 20, set, Transition.CUT, 0)));
-            assertEquals(.75, StageplayTimeline.sample(cut, 19).camera().zoom());
-            assertEquals(2.25, StageplayTimeline.sample(cut, 20).camera().zoom());
-        }
+        var cut = document.withSceneChanges(List.of(new SceneChange("cut", 20, set, Transition.CUT, 0)));
+        assertEquals(.75, StageplayTimeline.sample(cut, 19).camera().zoom());
+        assertEquals(2.25, StageplayTimeline.sample(cut, 20).camera().zoom());
     }
 
     @Test

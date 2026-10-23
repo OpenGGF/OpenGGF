@@ -200,25 +200,23 @@ class TestStageplayWorkspace {
         assertEquals(before,workspace.controller().document()); assertTrue(workspace.controller().canUndo());
     }
 
-    @Test void sharedCameraFormsSaveAnAnimatedZoomInEitherNativeWorld() throws Exception {
-        for (var policy : List.of(StageplayDocument.WorldPolicy.LIVE)) {
-            var workspace = workspace(); workspace.activate();
-            workspace.controller().replace(workspace.controller().document().withSet(
-                    new StageplayDocument.SetSource("s2", 0, 0, "", "", policy)));
-            for (int frame : List.of(0, 60)) {
-                workspace.seek(frame); workspace.invoke(CAMERA_KEY);
-                var input = new com.openggf.control.InputHandler();
-                input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
-                input.refreshLogicalSnapshot(); workspace.menu().update(input);
-                workspace.menu().setValue("zoom", frame == 0 ? ".75" : "1.5");
-                workspace.menu().setValue("interpolation", "SMOOTH"); workspace.menu().submit();
-                assertNull(workspace.menu().error());
-            }
-            var path = directory.resolve(policy.name() + ".stageplay"); workspace.saveTo(path);
-            assertEquals(1.125, StageplayTimeline.sample(StageplayStore.read(path), 30).camera().zoom());
-            workspace.invoke(UNDO);
-            assertEquals(1, workspace.controller().document().camera().size(), "One key edit is one undo step");
+    @Test void sharedCameraFormsSaveAnimatedNativeWorldZoom() throws Exception {
+        var workspace = workspace(); workspace.activate();
+        workspace.controller().replace(workspace.controller().document().withSet(
+                new StageplayDocument.SetSource("s2", 0, 0, "", "")));
+        for (int frame : List.of(0, 60)) {
+            workspace.seek(frame); workspace.invoke(CAMERA_KEY);
+            var input = new com.openggf.control.InputHandler();
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            input.refreshLogicalSnapshot(); workspace.menu().update(input);
+            workspace.menu().setValue("zoom", frame == 0 ? ".75" : "1.5");
+            workspace.menu().setValue("interpolation", "SMOOTH"); workspace.menu().submit();
+            assertNull(workspace.menu().error());
         }
+        var path = directory.resolve("native-world.stageplay"); workspace.saveTo(path);
+        assertEquals(1.125, StageplayTimeline.sample(StageplayStore.read(path), 30).camera().zoom());
+        workspace.invoke(UNDO);
+        assertEquals(1, workspace.controller().document().camera().size(), "One key edit is one undo step");
     }
 
     @Test void directedTakeIsOneUndoStepAndNeverClaimsSimulation() {

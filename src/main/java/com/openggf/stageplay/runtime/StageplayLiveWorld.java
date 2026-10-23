@@ -10,6 +10,7 @@ import com.openggf.game.*;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.*;
+import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectDirectionAccess;
 import com.openggf.level.objects.StageplayActivationPolicy;
@@ -229,7 +230,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             com.openggf.level.LevelCameraInitialization.recenterPositionedEntry(owned.getLevelManager());
             this.document = document; source = set; start = first; cursor = first - 1;
             cast = List.copyOf(performers); checkpoints.clear(); last = null;
-            director = StageplayTimeline.sample(document, first).baseCamera();
+            director = boundedCamera(StageplayTimeline.sample(document, first).baseCamera());
             validateTargets();
             if (!document.objectActors().isEmpty() || !document.worldCommands().isEmpty())
                 objectCast = new StageplayObjectCast(owned, document, set, first, end, originalObjects, objectTemplates);
@@ -439,7 +440,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         CameraKey key = document.camera().getFirst();
         for (var candidate : document.camera()) if (candidate.frame() <= cursor) key = candidate;
         var follow = key.follow();
-        if (follow.actors().isEmpty()) { director = authored.baseCamera(); return; }
+        if (follow.actors().isEmpty()) { director = boundedCamera(authored.baseCamera()); return; }
         double minX = Double.POSITIVE_INFINITY, maxX = Double.NEGATIVE_INFINITY, minY = minX, maxY = maxX, velocity = 0;
         for (String id : follow.actors()) {
             var p = cast.stream().filter(a -> a.actor.id().equals(id)).findFirst()
@@ -517,17 +518,32 @@ public final class StageplayLiveWorld implements AutoCloseable {
         double panY = key.follow().actors().isEmpty() ? 0 : authored.baseCamera().y()
                 + document.height() / 2.0 / zoom - anchor.y() - document.height() / 2.0 / anchor.zoom();
         var base = boundedCamera(new CameraPose(director.x() + panX, director.y() + panY, zoom));
-        var camera = new CameraPose(base.x() + shakeX, base.y() + shakeY, zoom);
+        var camera = boundedCamera(new CameraPose(base.x() + shakeX, base.y() + shakeY, zoom));
         return new Frame(cursor, poses, camera, authored.captions(), source, authored.transition(), base, authored.dialogue(), samples,
                 new WorldSample(owned.getLevelManager().getFrameCounter(), owned.getLevelManager().getObjectManager().getVblaCounter(), actors, objects, rings, events));
     }
 
-    /** Validate director framing independently of gameplay-owned camera locks and ROM camera-origin bounds. */
+    /** Clamp evaluated framing to loaded level bounds, independently of gameplay-owned arena locks. */
     public CameraPose boundedCamera(CameraPose view) {
-        // Reuse the authored camera contract's finite coordinate/zoom limits.
-        // This never moves the gameplay camera or changes world activation.
+        return boundedCamera(view, owned.getLevelManager().getCurrentLevel(), document.width(), document.height());
+    }
+
+    static CameraPose boundedCamera(CameraPose view, Level level, int width, int height) {
+        // Preserve the authored coordinate/zoom contract. Only evaluation is clamped;
+        // this never rewrites keys, moves the gameplay camera or changes activation.
         new CameraKey(0, view.x(), view.y(), view.zoom(), Interpolation.HOLD);
-        return view;
+        return new CameraPose(boundedAxis(view.x(), level.getMinX(), level.getMaxX(), 320, width / view.zoom()),
+                boundedAxis(view.y(), level.getMinY(), level.getMaxY(), 224, height / view.zoom()), view.zoom());
+    }
+
+    private static double boundedAxis(double value, int min, int max, int nativeExtent, double viewExtent) {
+        // ROM maxima are camera origins, not terrain dimensions. Recover the native
+        // right/bottom edge before accounting for the directed viewport and zoom.
+        // An inverted interval retains Camera's signed-domain lower-only clamp.
+        if (max < min) return Math.max(min, value);
+        // A view larger than the entire envelope cannot fit; anchor at its minimum.
+        double lastOrigin = Math.max(min, (double) max + nativeExtent - viewExtent);
+        return Math.clamp(value, min, lastOrigin);
     }
 
     public void draw(Frame frame) { draw(frame,frame.camera()); }
@@ -541,6 +557,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
     public void draw(Frame frame, CameraPose view, StageplayWorldPresentation.WorldDraw worldLayer) {
         if (last != frame || owned == null) throw new IllegalStateException("Resolve the live frame before drawing");
         Objects.requireNonNull(worldLayer);
+        view = boundedCamera(view);
         var hidden = cast.stream().map(p -> p.sprite.isHidden()).toList();
         try {
             for (var p : cast) {

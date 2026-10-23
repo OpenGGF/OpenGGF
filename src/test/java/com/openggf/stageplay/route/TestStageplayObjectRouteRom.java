@@ -47,7 +47,7 @@ class TestStageplayObjectRouteRom {
     private static void verify(String game, int zone, int act, int objectId, int foot, String property, int freeLead) throws Exception {
         try (var library = SceneRomLibrary.open(Map.of(game, Path.of(System.getProperty(property))));
              var resources = new StageplayResources(library, false)) {
-            var source = new SetSource(game, zone, act, "", "", WorldPolicy.LIVE);
+            var source = new SetSource(game, zone, act, "", "");
             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode());
             resources.setLiveWorld(world);

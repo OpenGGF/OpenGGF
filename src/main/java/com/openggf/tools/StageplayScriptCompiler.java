@@ -201,12 +201,10 @@ public final class StageplayScriptCompiler {
                                         "zone",
                                         "act",
                                         "romSha1",
-                                        "levelProject",
-                                        "worldPolicy")
+                                        "levelProject")
                                 .deepCopy();
                 defaults(set, "romSha1", "");
                 defaults(set, "levelProject", "");
-                defaults(set, "worldPolicy", "LIVE");
                 if (offset == 0) {
                     document.set("set", set);
                     if (shot.has("transition"))

@@ -132,9 +132,9 @@ class TestStageplayScriptRoundTrip {
     }
 
     private static StageplayDocument refinedDocument() {
-        var live = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
-        var terrain = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
-        var thirdSet = new SetSource("s2", 0, 0, "", "", WorldPolicy.LIVE);
+        var firstSet = new SetSource("s2", 0, 0, "", "");
+        var secondSet = new SetSource("s2", 0, 0, "", "");
+        var thirdSet = new SetSource("s2", 0, 0, "", "");
         var actors = List.of(actor(A, "Alpha", "sonic"), actor(B, "Beta", "tails"),
                 new Actor(MANUAL, "Manual", "s3k", "knuckles", List.of(
                         new ActorKey(0, -17.25, 101.5, 18, 4, false, true, 2.25, Interpolation.SMOOTH),
@@ -156,7 +156,7 @@ class TestStageplayScriptRoundTrip {
                                 new ObjectTarget(43, 0x26, 3, 0, 0), WaitCondition.TARGET_AVAILABLE, 40),
                         new PuppetCommand(id("jumpA"), 61, PuppetCommandKind.JUMP, 0, 0, 0, 12),
                         new PuppetCommand(id("legacyMove"), 123, PuppetCommandKind.MOVE_TO, 301, 144, .5, 0))));
-        return new StageplayDocument(StageplayDocument.VERSION, "Editor refinements: quotes \" and Unicode 👩‍🚀", 180, 400, 224, live,
+        return new StageplayDocument(StageplayDocument.VERSION, "Editor refinements: quotes \" and Unicode 👩‍🚀", 180, 400, 224, firstSet,
                 actors, List.of(new CameraKey(0, 7.25, -3.5, .85, Interpolation.SMOOTH,
                                 new CameraFollow(List.of(B, A), 3, 5, 4, .2, -9.25, 2.75)),
                         new CameraKey(60, 109.5, 3.25, 1.2, Interpolation.LINEAR,
@@ -170,7 +170,7 @@ class TestStageplayScriptRoundTrip {
                         new AudioCue(id("stopMiddle"), 75, AudioKind.MUSIC_STOP, "s3k", -1, "", 0)),
                 List.of(new CameraEffect(id("effectLate"), 130, 170, 3, 4, 9, 7),
                         new CameraEffect(id("effectCross"), 50, 150, 8, 2, 6, Integer.MIN_VALUE)),
-                List.of(new SceneChange(id("transitionA"), 60, terrain, Transition.FADE_BLACK, 10),
+                List.of(new SceneChange(id("transitionA"), 60, secondSet, Transition.FADE_BLACK, 10),
                         new SceneChange(id("transitionB"), 120, thirdSet, Transition.CUT, 0)),
                 List.of(new DialogueTyper("unusedTyper", 0, 0, 0), new DialogueTyper("usedTyper", 1, 2, 0)),
                 List.of(new DialogueSkin("unusedSkin", -1, -1, 0, 0, 7, "decor/unused.png", 3, false),

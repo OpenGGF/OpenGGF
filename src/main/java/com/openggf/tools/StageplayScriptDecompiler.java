@@ -20,7 +20,7 @@ public final class StageplayScriptDecompiler {
     private StageplayScriptDecompiler() {}
 
     /**
-     * Emits deterministic screenplay v6. Identity, list order and supported authored data are
+     * Emits deterministic screenplay in the current supported format. Identity, list order and supported authored data are
      * preserved; source formatting, comments and the former shot labels are not canonical data.
      */
     public static byte[] decompile(StageplayDocument document) throws IOException {

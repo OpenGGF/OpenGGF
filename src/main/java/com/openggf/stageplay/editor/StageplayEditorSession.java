@@ -79,8 +79,13 @@ public final class StageplayEditorSession implements AutoCloseable {
 
     /** Random-access native physics preview; repeated reads never advance its simulation. */
     public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) throws IOException {
+        return resolvePreview(document, root, StageplayTimeline.sample(document, frame));
+    }
+
+    /** Resolve paused director framing through the isolated worker without advancing native state. */
+    public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame frame) throws IOException {
         ensure(root);
-        return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+        return resources.resolveFrame(document, frame);
     }
 
     public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() {

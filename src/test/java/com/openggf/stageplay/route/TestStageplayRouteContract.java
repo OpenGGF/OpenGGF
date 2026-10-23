@@ -20,7 +20,7 @@ class TestStageplayRouteContract {
                 .withCamera(List.of(new CameraKey(0,0,0,1,Interpolation.HOLD),new CameraKey(80,0,0,1,Interpolation.HOLD)))
                 .withActors(List.of(player)).withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())))
                 .withObjectActors(List.of(object)).withSceneChanges(List.of(new SceneChange("next",80,
-                        new SetSource("s2",0,1,"","",WorldPolicy.LIVE),Transition.CUT,0)));
+                        new SetSource("s2",0,1,"",""),Transition.CUT,0)));
     }
     private static ObjectKey key(int frame,ObjectMode mode,boolean visible) {
         return new ObjectKey(frame,100,200,0,-1,false,visible,Interpolation.HOLD,mode);

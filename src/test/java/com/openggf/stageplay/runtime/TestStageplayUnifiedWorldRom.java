@@ -42,12 +42,11 @@ class TestStageplayUnifiedWorldRom {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("s3k.rom.path") != null,
                 "This mixed-donor check requires the explicit S3K ROM property");
         for (boolean clear : List.of(false, true)) {
-            var policy = WorldPolicy.LIVE;
             try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path")),
                     "s3k", Path.of(System.getProperty("s3k.rom.path"))));
                  var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
                          : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
-                var scene = physical(policy, "");
+                var scene = physical("");
                 if (clear) scene = scene.withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
                 var end = world.resolve(scene, StageplayTimeline.sample(scene, 30));
                 assertTrue(end.actors().getFirst().x() > 100, end.toString());
@@ -70,7 +69,7 @@ class TestStageplayUnifiedWorldRom {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path")),
                 "s3k", Path.of(System.getProperty("s3k.rom.path"))));
              var resources = new StageplayResources(library, false)) {
-            var scene = physical(WorldPolicy.LIVE, "set.ogfproject");
+            var scene = physical("set.ogfproject");
             var terrain = MutableLevel.snapshot(library.level("s2", 0, 0));
             int originalObjects = terrain.getObjects().size();
             resources.registerSet(scene.set(), terrain);
@@ -89,13 +88,12 @@ class TestStageplayUnifiedWorldRom {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("s3k.rom.path") != null,
                 "This mixed-donor ability check requires the explicit S3K ROM property");
         for (boolean clear : List.of(false, true)) {
-            var policy = WorldPolicy.LIVE;
             for (String character : List.of("tails", "knuckles")) {
                 try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path")),
                         "s3k", Path.of(System.getProperty("s3k.rom.path"))));
                      var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
                              : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
-                    var base = physical(policy, "").withDurationFrames(90);
+                    var base = physical("").withDurationFrames(90);
                     if (clear) base = base.withWorldCommands(List.of(new WorldCommand("clear", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
                     var actor = new Actor("performer", character, "s3k", character, base.actors().getFirst().keys());
                     var kind = character.equals("tails") ? PuppetCommandKind.FLY_TO : PuppetCommandKind.GLIDE_TO;
@@ -108,7 +106,7 @@ class TestStageplayUnifiedWorldRom {
                     for (int frame = 0; frame < 60; frame++) rows.add(world.resolve(scene, StageplayTimeline.sample(scene, frame)));
                     var performing = rows.stream().filter(row -> row.world().actors().getFirst().abilityState() != 0
                             && row.puppets().getFirst().airborne()).findFirst().orElseThrow(() -> new AssertionError(
-                            "Native " + character + " ability never started in " + policy));
+                            "Native " + character + " ability never started (cleared=" + clear + ")"));
                     assertTrue(performing.actors().getFirst().y() < scene.actors().getFirst().keys().getFirst().y());
                     assertFalse(performing.world().actors().getFirst().dead());
                     if (character.equals("tails")) {
@@ -130,7 +128,7 @@ class TestStageplayUnifiedWorldRom {
         try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path")),
                 "s3k", Path.of(System.getProperty("s3k.rom.path"))));
              var world = StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
-            var base = physical(WorldPolicy.LIVE, "");
+            var base = physical("");
             var lead = new Actor("lead", "Sonic", "s2", "sonic", base.actors().getFirst().keys());
             var follower = new Actor("follower", "Tails", "s3k", "tails", List.of(new ActorKey(0,
                     128, 655, 0, -1, false, true, 1, Interpolation.HOLD)));
@@ -195,10 +193,10 @@ class TestStageplayUnifiedWorldRom {
                 : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode());
     }
 
-    private static StageplayDocument physical(WorldPolicy policy, String project) {
+    private static StageplayDocument physical(String project) {
         var key = new ActorKey(0, 96, 655, 0, -1, false, true, 1, Interpolation.HOLD);
         return new StageplayDocument(VERSION, "Native donor", 60, 640, 448,
-                new SetSource("s2", 0, 0, "", project, policy),
+                new SetSource("s2", 0, 0, "", project),
                 List.of(new Actor("tails", "Tails", "s3k", "tails", List.of(key))),
                 List.of(new CameraKey(0, 0, 500, .75, Interpolation.HOLD)), List.of(), List.of(), List.of(), List.of(),
                 List.of(), List.of(), List.of(), List.of(new PuppetTrack("tails", true, 0,

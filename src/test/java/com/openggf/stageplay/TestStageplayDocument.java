@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayDocument {
     static StageplayDocument scene() {
         return StageplayDocument.empty("s3k", 0, 0, 100, 200, 320, 224)
-                .withSet(new SetSource("s3k", 0, 0, "", "", WorldPolicy.LIVE));
+                .withSet(new SetSource("s3k", 0, 0, "", ""));
     }
 
     static ActorKey key(int frame, double x, int animation, int pose, Interpolation interpolation) {

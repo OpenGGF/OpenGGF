@@ -30,7 +30,7 @@ class TestStageplayLiveBinding {
         var scene = TestStageplayDocument.scene().withDurationFrames(3)
                 .withActors(List.of(TestStageplayDocument.actor(List.of(
                         TestStageplayDocument.key(0, 100, 0, -1, Interpolation.HOLD)))))
-                .withSet(new SetSource("s3k", 0, 0, "", "", WorldPolicy.LIVE));
+                .withSet(new SetSource("s3k", 0, 0, "", ""));
         when(course.presentationReady()).thenReturn(true);
         when(course.objectServices().gameModule().getGameCode()).thenReturn("s3k");
         when(course.playerState()).thenReturn(new CourseControl.PlayerState("sonic", 0, 0, 0, 0, 0, 0,

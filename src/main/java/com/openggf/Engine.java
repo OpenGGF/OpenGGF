@@ -475,6 +475,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
 			public void validate(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.validate(document, root); }
 			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
+			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, com.openggf.stageplay.StageplayTimeline.Frame frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
 			public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return stageplaySession.objectInspection(); }
 			public void refreshResources() { stageplaySession.release(); }
 			public void play(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { stageplaySession.play(document, root, frame); }
@@ -573,7 +574,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			} else stageplayInitialAssetRoot = setPath.toAbsolutePath().getParent();
 			var source = document.set();
 			document = document.withSet(new com.openggf.stageplay.StageplayDocument.SetSource(game, zone, act,
-					source.romSha1(), setPath.getFileName().toString(), source.worldPolicy()));
+					source.romSha1(), setPath.getFileName().toString()));
 		}
 		return document;
 	}

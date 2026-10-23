@@ -79,7 +79,6 @@ final class StageplayObjectCast implements AutoCloseable {
     private void ensureManager() {
         requireCurrentSource();
         if (objects == context.getLevelManager().getObjectManager()) return;
-        requireCurrentSource();
         direction.close(); bindManager();
         for (var role : roles) {
             role.root = null; role.synthetic = false; role.goal = null;

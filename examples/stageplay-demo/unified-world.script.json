@@ -40,8 +40,7 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "camera": [
         {
@@ -163,8 +162,7 @@
       "set": {
         "gameId": "s2",
         "zone": 0,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "camera": [
         {
