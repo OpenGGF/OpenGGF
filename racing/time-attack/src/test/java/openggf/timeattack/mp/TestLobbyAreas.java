@@ -29,7 +29,8 @@ class TestLobbyAreas {
         assertTrue(area.spawnX() >= area.minX() + 0x10 && area.spawnX() <= rightWall, gameId + " spawn X");
         assertTrue(area.spawnY() >= area.minY() && area.spawnY() < area.maxY() + 0xE0, gameId + " spawn Y");
         RunSpec spec = LobbyAreas.runSpec(lobby, "sonic");
-        assertEquals(GameplayRunPolicy.isolatedAct(), spec.policy(), "no stages, rewind or editor");
+        assertEquals(GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros(), spec.policy(),
+                "no stages, rewind or editor; deaths reload at once at the lobby spawn");
         assertSame(area, spec.area());
     }
 
