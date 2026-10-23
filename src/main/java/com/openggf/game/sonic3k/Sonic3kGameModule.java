@@ -91,7 +91,14 @@ import java.util.logging.Logger;
  * <p>Provides audio, zone registry, scroll handlers, object/art providers,
  * data select, special/bonus-stage providers, and level initialization hooks.
  */
-public class Sonic3kGameModule implements GameModule {
+public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.SpriteTableBuildProfile {
+    @Override
+    public PlacedRings placedRingEmission() {
+        return PlacedRings.BEFORE_OBJECT_BUCKETS;
+    }
+
+    @Override public PlacedRingY placedRingY() { return PlacedRingY.BIAS_BEFORE_SCREEN_WRAP; }
+
 
     private static final com.openggf.game.common.CommonObjectPlacementEncoding OBJECT_PLACEMENT_ENCODING =
             new com.openggf.game.common.CommonObjectPlacementEncoding();
@@ -569,6 +576,7 @@ public class Sonic3kGameModule implements GameModule {
         // A reused module cannot select a world. These aliases are available
         // only through that world's injected services / explicit engine bridge.
         if (type == Sonic3kLevelTitlePlcService.class
+                || type == Sonic3kGameOverPlcService.class
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return null;
         if (type == com.openggf.game.LevelInputOverlay.class) {

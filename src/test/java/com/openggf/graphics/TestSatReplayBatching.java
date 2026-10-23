@@ -70,28 +70,26 @@ public class TestSatReplayBatching {
         assertEquals(3, getIntField(batchCommand, "instanceCount"));
         FloatBuffer instanceBuffer = (FloatBuffer) getField(batchCommand, "instanceBuffer");
 
-        // Bucket-major order: bucket 4 first, then bucket 2 in reverse SAT order —
-        // identical to the direct (unbatched) replay path's command order.
-        assertEquals(20f, instanceBuffer.get(0), "first instance x");
+        // Native ownership visits bucket 2 in SAT order, then bucket 4.
+        assertEquals(10f, instanceBuffer.get(0), "first instance x");
         assertEquals(30f, instanceBuffer.get(FLOATS_PER_INSTANCE), "second instance x");
-        assertEquals(10f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
+        assertEquals(20f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
 
         // Per-instance VDP priority survives batching as the tile-occlusion
         // palette mask (instance float 9): high-priority pieces are occluded by
         // no priority-tile palette line, while ordinary pieces are occluded by all.
-        assertEquals(0f, instanceBuffer.get(9), "bucket-4 piece carries high priority");
+        assertEquals(15f, instanceBuffer.get(9));
         assertEquals(15f, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
-        assertEquals(15f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
+        assertEquals(0f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9), "bucket-4 piece carries high priority");
         // Per-instance tile-occlusion mask survives batching (instance float 9):
         // a high-priority tile bypasses every palette line, while ordinary tiles
         // remain occludable by all four lines.
-        assertEquals(0f, instanceBuffer.get(9), "bucket-4 piece bypasses tile occlusion");
+        assertEquals(0xF, instanceBuffer.get(9));
         assertEquals(0xF, instanceBuffer.get(FLOATS_PER_INSTANCE + 9));
-        assertEquals(0xF, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9));
+        assertEquals(0f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE + 9), "bucket-4 piece bypasses tile occlusion");
 
-        // Parity with the direct path: its commands resolve the shader at flush time,
-        // after the sprite pass cleared the priority-shader flag, so the batch must
-        // capture usePriorityShader=false even though the flag was set during replay.
+        // This GL-free fixture has no compiled priority shader to capture. The
+        // actual EGL regression verifies the native execution-time override.
         assertEquals(false, getField(batchCommand, "usePriorityShader"));
         assertTrue(graphicsManager.isUseSpritePriorityShader(),
                 "replay must restore the caller's priority-shader flag");

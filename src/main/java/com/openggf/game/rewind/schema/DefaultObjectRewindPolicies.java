@@ -109,6 +109,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikHead", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossRobotnikFlame", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
+            // Immutable ROM scripts are reloaded through the live slot controller on recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "spinScript"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance", "sparkleScript"), RewindFieldPolicy.TRANSIENT),
+            // S1 visual SSTs retain their exact ship identity across independent recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.S1EggmanVisualComponent", "shipOwner"), RewindFieldPolicy.CAPTURED),
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
@@ -357,7 +362,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.EggPrisonObjectInstance", "lastPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.BreakablePlatingObjectInstance", "lastNativeMainPlayer"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FallingPillarObjectInstance", "childInstance"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "animationState"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "animationState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "launchCooldown"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "lockedPlayerPrevSuppressed"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.FlipperObjectInstance", "playerFlipperState"), RewindFieldPolicy.CAPTURED),

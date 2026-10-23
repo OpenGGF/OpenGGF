@@ -20,6 +20,11 @@ public interface SmpsStatefulCommandPolicy {
 
     Identity identity();
 
+    /** Native service/chip pause; unrelated to the host speaker's pause state. */
+    default SmpsNativePausePolicy nativePausePolicy() {
+        return SmpsNativePausePolicy.NONE;
+    }
+
     /** Blocks new SFX during an override, releasing them at music restoration. */
     default boolean suppressesSfxDuringOverride() {
         return false;

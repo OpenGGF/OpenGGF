@@ -732,6 +732,18 @@ The [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#root-hcz2-sna
 preserves commands, original counterexamples, the rejected partial correction and
 actual terminal comparisons. This is focused validation, not smoke certification.
 
+## Cutscene floor contacts — 2026-10-22
+
+The [narrow native audit](../../audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records `loc_620AA` / `loc_620D8`, native stock contact positions and the exact
+first/second-contact contract. `TestHcz2CutsceneFloorContacts` drives actual
+`update()` through injected terrain, including optional background translation,
+negative/zero/positive/missing floor distances, the post-gravity signed gate,
+word overflow and both contacts. Fresh-instance restore replays the 42-pass
+window across both contacts. This is an independent cutscene component gate;
+actual button/bridge effects, whole-scene pixels and the existing route,
+preset/donor/roster obligations remain inherited gaps.
+
 ## Object pipeline optimization — 2026-10-22
 
 HCZ column selection retains native lifetime/replacement and rewind ownership while

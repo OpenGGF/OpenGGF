@@ -29,8 +29,8 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
     private boolean active;
 
     // ROM $34/$38: 32-bit fixed-point position (pixel:16 | sub:16)
-    private long currentX32;
-    private long currentY32;
+    private int currentX32;
+    private int currentY32;
     // ROM $3C/$3E: target pixel position (cage center)
     private int targetX;
     private int targetY;
@@ -67,8 +67,8 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
         active = true;
         framesRemaining = EXPIRY_FRAMES;
         setDestroyed(false);
-        this.currentX32 = (long) spawnX << 16;
-        this.currentY32 = (long) spawnY << 16;
+        this.currentX32 = spawnX << 16;
+        this.currentY32 = spawnY << 16;
         this.targetX = centerX;
         this.targetY = centerY;
     }
@@ -83,7 +83,7 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
      * <p>Only meaningful while active.
      */
     public int getInterpolatedX() {
-        return (int) (currentX32 >> 16);
+        return currentX32 >>> 16;
     }
 
     /**
@@ -92,7 +92,7 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
      * <p>Only meaningful while active.
      */
     public int getInterpolatedY() {
-        return (int) (currentY32 >> 16);
+        return currentY32 >>> 16;
     }
 
     @Override
@@ -108,13 +108,9 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
             return;
         }
 
-        // ROM Obj_SlotSpike interpolation:
-        //   d0 = current - target ; asr.l #4,d0 ; sub.l d0,$34
-        //   ↔ current += (target - current) >> 4
-        long dx = ((long) targetX << 16) - currentX32;
-        currentX32 += dx >> 4;
-        long dy = ((long) targetY << 16) - currentY32;
-        currentY32 += dy >> 4;
+        // Obj_SlotSpike (sonic3k.asm:99609-99625): signed 32-bit SUB/ASR/SUB.
+        currentX32 -= (currentX32 - (targetX << 16)) >> 4;
+        currentY32 -= (currentY32 - (targetY << 16)) >> 4;
 
         if (--framesRemaining > 0) {
             return;
@@ -157,12 +153,12 @@ public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstan
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(0);
+        return RenderPriority.fromS3kWord(0x200); // loc_4C0BE: bucket 4
     }
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false; // loc_4C0BE: make_art_tile(ArtTile_SlotsBlocks+$155,1,0)
     }
 
     @Override

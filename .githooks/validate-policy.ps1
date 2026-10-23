@@ -237,7 +237,7 @@ function Get-ModApiSurfaceText([string]$Text) {
     $clean = $cleanBuilder.ToString(); $lex = $lexBuilder.ToString()
     if (($state -cne "" -and $state -cne "line") -or $lex -cmatch '[^\t\r\n -~]') { return $Text }
     $types = [System.Collections.Generic.List[object]]::new()
-    $types.Add([pscustomobject]@{ Kind = ""; Name = ""; Parent = 0; Exposed = $false; Visible = $false })
+    $types.Add([pscustomobject]@{ Kind = ""; Name = ""; Parent = 0; Exposed = $false; Visible = $false; EnumConstants = $false })
     $declarations = [System.Collections.Generic.List[object]]::new()
     $omitted = [bool[]]::new($lex.Length)
     $addDeclaration = {
@@ -317,6 +317,7 @@ function Get-ModApiSurfaceText([string]$Text) {
                 $id = $types.Count
                 $types.Add([pscustomobject]@{
                     Kind = $typeMatch.Groups[1].Value; Name = $typeMatch.Groups[2].Value; Parent = $owner
+                    EnumConstants = $typeMatch.Groups[1].Value -ceq 'enum'
                     Exposed = $supported -or ($owner -gt 0 -and $types[$owner].Kind -cin @('interface', '@interface'))
                     Visible = $owner -eq 0 -or $h -cmatch '@(?:[A-Za-z0-9_$.]+\.)?ModApi(?:[^A-Za-z0-9_$]|$)'
                     InferredSealed = $h -cmatch '(?:^|\s)sealed\s' -and $h -cnotmatch '(?:^|\s)permits\s'
@@ -328,9 +329,11 @@ function Get-ModApiSurfaceText([string]$Text) {
                 # Records and interfaces may own private implementation members.
                 $keep = $owner -gt 0 -and $h -cnotmatch '(?:^|[^A-Za-z0-9_$])private\s' -and
                         ($supported -or $types[$owner].Kind -cne 'class')
-                if ($keep -and -not ($c -ceq '{' -and $types[$owner].Kind -ceq 'enum')) { & $addDeclaration $first $i $owner }
-                if ($c -ceq '{') { $body = 1; if ($types[$owner].Kind -ceq 'enum') { $bodyFirst = $first } }
+                if ($keep -and -not ($c -ceq '{' -and $types[$owner].EnumConstants)) { & $addDeclaration $first $i $owner }
+                if ($c -ceq '{') { $body = 1; if ($types[$owner].EnumConstants) { $bodyFirst = $first } }
             }
+            # Only the constant list precedes the first owner-level semicolon.
+            if ($c -ceq ';' -and $types[$owner].Kind -ceq 'enum') { $types[$owner].EnumConstants = $false }
             $first = $i + 1; $init = -1; $firstInit = -1; $initAngles = 0
         } elseif ($c -ceq '}') {
             if ($types[$owner].Kind -ceq 'enum') { & $addDeclaration $first $i $owner }

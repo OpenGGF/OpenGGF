@@ -2304,3 +2304,14 @@ payout route, natural EggRobo pairing, cold traversal, opt-in cold journal execu
 the other loading suites, native capture/pixel/timing parity or a whole-game pass.
 Existing route and product obligations remain open. Main integration and push are
 unqualified. See the [SSZ composition note](s3k-ssz-act1.md#composed-eggrobo-confirmation-2026-10-20).
+
+## Slot reward animation and interpolation — 2026-10-22
+
+The [narrow native audit](../../audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records ROM script pointers, retained animation cursor, exact deletion pass and
+signed-long interpolation. `TestS3kSlotRingRewardObjectInstance` exercises the
+production reward render consumer, altered ROM script bytes, both reward
+children's fractional/wrapped positions and restore/forward replay through
+grant and deletion. Existing slot runtime and generic recreation checks cover
+its consumer boundary. These are bounded reward checks, not additional full
+entry/return products or whole-scene native picture/audio certification.

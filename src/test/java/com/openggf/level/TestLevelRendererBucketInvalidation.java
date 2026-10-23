@@ -30,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -287,14 +289,24 @@ class TestLevelRendererBucketInvalidation {
         long[] fingerprint = {0};
         doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 2; return null; }).when(low).draw();
         doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 4; return null; }).when(high).draw();
-        SpritePriorityLayerHook hook = (bucket, highPriority) ->
-                fingerprint[0] = fingerprint[0] * 10 + (highPriority ? 3 : 1);
+        List<String> layerCalls = new ArrayList<>();
+        SpritePriorityLayerHook hook = (bucket, highPriority) -> {
+            layerCalls.add(bucket + ":" + highPriority);
+            if (bucket == 2) fingerprint[0] = fingerprint[0] * 10 + (highPriority ? 3 : 1);
+        };
 
         manager.prepareRenderBucketsForPass();
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
             manager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, hook);
         }
         assertEquals(3412, fingerprint[0], "hook follows native sprite order, independent of terrain priority");
+        List<String> expectedLayers = new ArrayList<>();
+        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+            // Anchored layers follow the local actor order; empty layers still own ghosts.
+            expectedLayers.add(bucket + ":" + (bucket == 2));
+            expectedLayers.add(bucket + ":" + (bucket != 2));
+        }
+        assertEquals(expectedLayers, layerCalls, "each prepared bucket exposes both layers exactly once");
 
         manager.suppressionResolutionCount = 0;
         for (int frame = 0; frame < 1_200; frame++) {
@@ -317,23 +329,28 @@ class TestLevelRendererBucketInvalidation {
         manager.addSprite(sidekick);
 
         int[] layerHookCount = {0};
+        int[] sidekickDrawCount = {0};
+        doAnswer(invocation -> { sidekickDrawCount[0]++; return null; }).when(sidekick).draw();
         SpritePriorityLayerHook hook = (bucket, highPriority) -> layerHookCount[0]++;
         manager.suppressed = false;
         manager.prepareRenderBucketsForPass();
         manager.suppressed = true;
         manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
         assertEquals(1, manager.suppressionResolutionCount);
-        assertEquals(1, layerHookCount[0], "mid-pass toggle must not change prepared membership");
+        assertEquals(1, sidekickDrawCount[0], "mid-pass toggle must not change prepared membership");
+        assertEquals(2, layerHookCount[0], "the missing local layer still exposes its ghosts");
 
         manager.prepareRenderBucketsForPass();
         assertEquals(2, manager.suppressionResolutionCount);
         manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
-        assertEquals(1, layerHookCount[0], "next pass must observe sidekick suppression");
+        assertEquals(1, sidekickDrawCount[0], "next pass must observe sidekick suppression");
+        assertEquals(4, layerHookCount[0], "an empty local bucket retains both ghost layers");
         manager.suppressed = false;
         manager.prepareRenderBucketsForPass();
         assertEquals(3, manager.suppressionResolutionCount);
         manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager, hook);
-        assertEquals(2, layerHookCount[0]);
+        assertEquals(2, sidekickDrawCount[0]);
+        assertEquals(6, layerHookCount[0]);
 
         manager.drawUnifiedBucketWithPriority(2, graphicsManager);
         assertEquals(4, manager.suppressionResolutionCount,
@@ -354,10 +371,12 @@ class TestLevelRendererBucketInvalidation {
         int[] hookCount = {0};
         manager.drawPreparedUnifiedBucketWithPriority(2, graphicsManager,
                 (bucket, highPriority) -> hookCount[0]++);
-        assertEquals(0, hookCount[0]);
+        verify(player, never()).draw();
+        assertEquals(2, hookCount[0], "old local bucket still exposes both ghost layers");
         manager.drawPreparedUnifiedBucketWithPriority(5, graphicsManager,
                 (bucket, highPriority) -> hookCount[0]++);
-        assertEquals(1, hookCount[0], "prepare must rebuild after a direct priority mutation");
+        verify(player).draw();
+        assertEquals(4, hookCount[0], "prepare moves the player without removing ghost layers");
         manager.clearAllSprites();
     }
 
@@ -378,15 +397,15 @@ class TestLevelRendererBucketInvalidation {
         AbstractPlayableSprite player = playableSprite("player", RenderPriority.MIN, false, false);
         Sprite nonPlayable = mock(Sprite.class);
         when(nonPlayable.getCode()).thenReturn("non-playable");
-        long[] fingerprint = {0};
-        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 2; return null; }).when(player).draw();
-        doAnswer(invocation -> { fingerprint[0] = fingerprint[0] * 10 + 3; return null; }).when(nonPlayable).draw();
+        List<String> order = new ArrayList<>();
+        doAnswer(invocation -> { order.add("player"); return null; }).when(player).draw();
+        doAnswer(invocation -> { order.add("non-playable"); return null; }).when(nonPlayable).draw();
         manager.addSprite(player);
         manager.addSprite(nonPlayable);
         manager.prepareRenderBucketsForPass();
         manager.drawPreparedUnifiedBucketWithPriority(RenderPriority.MIN, graphicsManager,
-                (bucket, highPriority) -> fingerprint[0] = fingerprint[0] * 10 + 1);
-        assertEquals(123, fingerprint[0]);
+                (bucket, highPriority) -> order.add(highPriority ? "ghost-high" : "ghost-low"));
+        assertEquals(List.of("ghost-high", "ghost-low", "player", "non-playable"), order);
         manager.clearAllSprites();
     }
 

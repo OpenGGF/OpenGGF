@@ -118,6 +118,8 @@ public final class ModApiVersion {
      * player/camera borrowing with captured handover and fault revocation.
      * Reusable dialogue typers and skins, grapheme-safe reveal schedules and
      * shared dialogue layout keep creator styling portable between both editors.
+     * Native retail options and competition screens have explicit host game modes;
+     * competition participant and session services remain engine internals.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

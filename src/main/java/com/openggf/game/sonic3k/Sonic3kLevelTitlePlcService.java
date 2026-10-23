@@ -28,13 +28,16 @@ import java.util.Objects;
  */
 public final class Sonic3kLevelTitlePlcService
         implements PlcLifecycleService, RewindSnapshottable<NemesisPlcQueueSnapshot>,
-        com.openggf.game.internal.WorldPlcPatternPublication {
+        com.openggf.game.internal.WorldPlcPatternPublication,
+        com.openggf.game.internal.WorldPlcServiceProvider {
     private Rom rom;
     private final com.openggf.game.GameDataSource worldSource;
     private final NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
+    // Stateless delegate: the facade alone owns/captures this world's FIFO and recipe purposes.
+    private final Sonic3kGameOverPlcService event;
 
     /** Captured recipe semantics, never inferred from a source address or PLC ID. */
-    public enum RecipePurpose { READINESS, PHYSICAL_PATTERNS }
+    public enum RecipePurpose { READINESS, PHYSICAL_PATTERNS, EVENT_READINESS }
 
     /**
      * The unchanged public count projection is paired with this engine-private
@@ -318,11 +321,18 @@ public final class Sonic3kLevelTitlePlcService
     public Sonic3kLevelTitlePlcService(Rom rom) {
         this.rom = Objects.requireNonNull(rom);
         this.worldSource = null;
+        this.event = null; // Existing detached title/results component owner remains title-only.
     }
 
     /** Opening a world is ROM-free; the first ROM-dependent submission pins its actual source. */
     Sonic3kLevelTitlePlcService(com.openggf.game.GameDataSource worldSource) {
         this.worldSource = Objects.requireNonNull(worldSource, "worldSource");
+        this.event = new Sonic3kGameOverPlcService(this); // No ROM resolution during world opening.
+    }
+
+    @Override
+    public <T> T worldPlcService(Class<T> type) {
+        return type == Sonic3kGameOverPlcService.class ? type.cast(event) : null;
     }
 
     private Rom requireRom() throws IOException {
@@ -416,6 +426,30 @@ public final class Sonic3kLevelTitlePlcService
         appendRecipe(definition, NemesisPlcPatternCounts.derive(rom, definition), RecipePurpose.READINESS);
     }
 
+    /** Event Load_PLC_2 clears the same FIFO, including its paired recipe semantics. */
+    void beginGameOverEvent() throws IOException {
+        Rom rom = requireRom();
+        var definition = Sonic3kPlcLoader.parsePlc(rom, 3);
+        var counts = NemesisPlcPatternCounts.derive(rom, definition);
+        // Complete ROM validation precedes Clear_Nem_Queue. Preserve independent water ownership.
+        queue.restore(new NemesisPlcQueueSnapshot(null, List.of()));
+        activePurpose = null;
+        queuedPurposes.clear();
+        awaitingRecipes = false;
+        decoded.clear();
+        appendRecipe(definition, counts, RecipePurpose.EVENT_READINESS);
+    }
+
+    void serviceEventReadiness(int patterns) {
+        requireRecipes();
+        if (activePurpose == RecipePurpose.READINESS
+                || activePurpose == RecipePurpose.EVENT_READINESS) consume(patterns);
+    }
+
+    void prepareEventReadiness() {
+        prepare(RecipePurpose.EVENT_READINESS);
+    }
+
     public boolean isBusy() {
         return queue.isBusy();
     }
@@ -423,7 +457,8 @@ public final class Sonic3kLevelTitlePlcService
     @Override
     public void serviceVBlank(PlcLifecyclePhase phase) {
         requireRecipes();
-        if (activePurpose != RecipePurpose.READINESS) return;
+        if (activePurpose != RecipePurpose.READINESS
+                && activePurpose != RecipePurpose.EVENT_READINESS) return;
         if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD) {
             // VInt_A_C -> Process_Nem_Queue: six patterns from the prepared
             // head. A VInt_0 lag closure services none and cannot arm a head.
@@ -431,6 +466,14 @@ public final class Sonic3kLevelTitlePlcService
         } else if (phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS) {
             // VInt_1E -> Process_Nem_Queue_2: three patterns per prepared head.
             consume(3);
+        } else if (event != null) {
+            // Ordinary/pause/fade readiness service shares the same prepared head exactly once.
+            event.serviceVBlank(phase);
+        } else if (phase == PlcLifecyclePhase.ORDINARY_LEVEL
+                || phase == PlcLifecyclePhase.NORMAL_PAUSE) {
+            consume(3); // Detached component owners retain the prepared decoder's native budget too.
+        } else if (phase == PlcLifecyclePhase.PALETTE_FADE) {
+            consume(6);
         }
     }
 
@@ -438,15 +481,23 @@ public final class Sonic3kLevelTitlePlcService
     public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
         return phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
                 || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS
-                || phase == PlcLifecyclePhase.ORDINARY_LEVEL;
+                || phase == PlcLifecyclePhase.ORDINARY_LEVEL
+                || (event != null && event.hasPreparationBoundary(phase));
     }
 
     @Override
     public void prepareAfterLoop(PlcLifecyclePhase phase) {
-        if (hasPreparationBoundary(phase)) {
-            // loc_62CC and loc_2E0C4 call Process_Nem_Queue_Init after VBlank.
-            prepare(phase == PlcLifecyclePhase.ORDINARY_LEVEL
-                    ? RecipePurpose.PHYSICAL_PATTERNS : RecipePurpose.READINESS);
+        if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD
+                || phase == PlcLifecyclePhase.SPECIAL_STAGE_RESULTS) {
+            // loc_62CC and loc_2E0C4 can arm either readiness producer, never physical patterns.
+            prepare(queuedPurposes.peekFirst() == RecipePurpose.EVENT_READINESS
+                    ? RecipePurpose.EVENT_READINESS : RecipePurpose.READINESS);
+        } else if (phase == PlcLifecyclePhase.ORDINARY_LEVEL
+                && (event == null || queuedPurposes.peekFirst() == RecipePurpose.PHYSICAL_PATTERNS)) {
+            prepare(RecipePurpose.PHYSICAL_PATTERNS);
+        } else if (event != null) {
+            // Only explicit EVENT_READINESS can be armed here; generic READINESS cannot be skipped.
+            event.prepareAfterLoop(phase);
         }
     }
 

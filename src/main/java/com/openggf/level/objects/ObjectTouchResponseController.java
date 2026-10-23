@@ -485,8 +485,11 @@ final class ObjectTouchResponseController {
 
         buffers.building.clear();
 
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(objectManager.services().worldSession());
+        boolean nativeHuman = sidekick instanceof AbstractPlayableSprite sprite
+                && roster != null && roster.slotOf(sprite) == 1;
         processCollisionLoop(sidekick, playerX, playerY, playerHeight, 0x10,
-                buffers.building, buffers.overlapping, true, usePreUpdateState);
+                buffers.building, buffers.overlapping, !nativeHuman, usePreUpdateState);
 
         buffers.swap();
     }
@@ -645,8 +648,9 @@ final class ObjectTouchResponseController {
             // drops below 90 while the player is still continuously overlapping.
             // Keyed on the LostRingObjectInstance marker, NOT the 0x47 byte shape -
             // so other SPECIAL objects sharing $47 (e.g. S1 placed rings) keep their
-            // own listener path. ROM tests MainCharacter+invulnerable_time even
-            // on the sidekick pass, then stores the touching player in parent(a1).
+            // own listener path. ROM tests MainCharacter+invulnerable_time in
+            // ordinary play, but the actual actor in competition, then stores
+            // the touching player in parent(a1) (Touch_ChkValue, s2.asm:85413-85436).
             // CollectRing_Tails falls through to the 1P shared counter/sound path
             // outside two-player mode (docs/s2disasm/s2.asm:85201-85219,
             // 25023-25075). This is now the sole lost-ring collection path - the
@@ -655,7 +659,7 @@ final class ObjectTouchResponseController {
                 if (player instanceof AbstractPlayableSprite aps) {
                     int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
-                        lostRing.markCollected(currentFrameCounter);
+                        lostRing.markCollected(currentFrameCounter, player);
                     }
                 }
                 break; // ROM: rts — first overlapping object ends the loop (both paths).

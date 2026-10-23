@@ -114720,3 +114720,605 @@ read; owned6files1422215B consumed. No controller/assertion/source edit, retry,
 broad/native job or Main integration. Exact portable command and the independent
 oracle audit/source limits are in the
 [completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+
+## 2026-10-22 — S1 pre-object water clock
+
+Isolated `bugfix/ai-gap-s1-chain-20261022`, based on
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`, corrects the S1 water reader's
+pre-object publication phase without moving the shared clock. The seven-case
+production boundary regression first reproduces six gate failures and one
+passing control, then passes after the fix, including lag, byte/word rollover
+and restore/forward replay. Three existing logical-pad/clock checks and both
+second-BK2 LZ2/LZ3 complete-run controls pass. No errors or skips.
+
+Exact focused command, with `S1_ROM` denoting the existing original REV01 image:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_RING_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1LZWaterPreObjectClock,TestSonic1LZWaterEventsClock,TestS1Lz3CompleteRunTraceReplay,TestS1Lz2CompleteRunTraceReplay,TestS1CompleteEmeraldRunChain' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Completed 13 tests, one chain assertion failure, zero errors/skips. Baseline full
+chain: 17 axes. Candidate: 15 axes; segment 25 LZ2 10 errors → 0, segment 26 LZ3
+10,212 errors at row3838 Y `$0655/$0653` → three queue-only errors at row10185
+`queue.s1_nemesis_plc.prepared` true/false. LZ3→SLZ1 art gap also closes. Earliest
+remaining segment12 row101 queue prepared true/false; all later physics/art
+frontiers remain explicit. Segment33 still loses production ownership in
+TITLE_CARD at BK2 cursor210396. Temporary read-only diagnostics were removed
+before commit. No fixture payload, timing authority or comparison was changed;
+this is bounded validation, not a green complete chain. The
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md) retains
+native bytes, rejected end-of-frame oracle and full before/after profile.
+
+## 2026-10-22 — S1 standalone reference-closure validation enabled
+
+Lane `bugfix/ai-gap-s1-lifecycle-20261022`, based on `94c40570a`, enables the
+ordinary standalone S1 replay's captured-reference closure guard. In the lane
+worktree, this command passes one GHZ1 replay integration test (3,905 compared
+frames, zero comparator errors, zero failures/errors/skips; no first-error
+frame/field). It also passes one actual GameLoop credits-load EGL regression:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic1CreditsScrollBoundary,TestS1ReplayReferenceClosureIntegration' \
+  "-Dsonic1.rom.path=$SONIC1_ROM" test -B
+```
+
+The [lifecycle audit](../architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md)
+records the fresh-entry/checkpoint distinction and validation limits. No whole
+chain frontier moved, no broad trace sweep ran, and boss/custom-snapshot or
+unexecuted-route closure is not certified by this fixture.
+
+## 2026-10-22 — S2 native Super player boundary and live entry milestone
+
+Isolated `bugfix/ai-gap-s2-chain-pacing-20261022` at base
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` plus this change, worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-dcf07b84`. Java25, Lua5.4, original absolute
+S2 ROM, unset DISPLAY/WAYLAND_DISPLAY; every test through `maven_queue.py`.
+No trace payload, comparison tolerance, hydration or timing-port change.
+
+Command: `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain test`.
+Both tests still fail, no skips. The complete chain's ARZ1 segment18 moves from
+119 errors (first4213, mapping61/65) to complete/zero. ARZ2 segment19 moves from
+incomplete47450 errors/first2175 x_sub to complete14546 errors/first4920
+`dynamic_art.edge[1].mapping_frame` (194/207). Its next CNZ1 handoff rejects
+cursor113342 against destination113340. All12 structural-gap axes remain.
+The other-movie halfpipe chain matches exact-base Java: two return-gap axes,
+all eight edges65 rows early on each return. This is not full-route parity.
+
+Seven standalone special stages and independent ARZ2 level-select replay passed
+in the prior10-class focused run, no skips. Native Super/control/rewind39 and
+replay/timing-authority guards36 pass. An isolated missing HUD wait was verified
+from ROM and tried, then withheld because it exposed an earlier seventh-return
+TITLE_CARD admission defect; no blanket40-frame delay or copied bootstrap art
+hold landed. Source decisions, rejected evidence and timing/SAT gaps are in
+[the research record](../architecture/research/2026-10-22-s2-chain-pacing.md).
+
+## 2026-10-22 — S1 native object slots and conversion
+
+`bugfix/ai-gap-s1-chain-20261022`, HEAD `dde29476` plus the narrowly approved
+borrowed-owner retirement argument and S1 Bomb/Pole edits: 23 focused cases pass
+after independently reproducing old-source failures. Destructive restore/forward
+covers parent/child allocation and native conversion/release. The combined route
+selection completes 29 cases, 28 passes, 1 inherited chain assertion failure,
+0 errors/skips. Original-BK2 SLZ1/2/3 and both existing prefix tests pass.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY OPENGGF_S1_BOUND_PROBE=1 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSonic1BombFuseConversion,TestSonic1PoleThatBreaksObjectInstance,TestBorrowedExecutionSlotRetirement,TestS1Slz1CompleteRunTraceReplay,TestS1Slz2CompleteRunTraceReplay,TestS1Slz3CompleteRunTraceReplay,TestS1CompleteEmeraldRunChain,TestS1CompleteEmeraldRunPrefix' "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Full chain 15→12 axes (original base 17). SLZ1 segment 27 becomes exact, eliminating
+3,880 errors beginning at 1771 rings 1/0. Both following SLZ art gaps close.
+Earliest remaining error is segment 12 row 101 `queue.s1_nemesis_plc.prepared`
+true/false. Segment 15 has 6 queue errors; 22 has 44 camera errors; 26 has 3 queue
+errors; 29 has 1,456 errors beginning with non-camera row 8557 X fraction
+`$F500/$0000`; 31 has 1 rings 9/10 error at 7821; 32 has 12 queue errors.
+Four later art gaps and segment 33 TITLE_CARD ownership loss at cursor 210396
+remain. Segment 33's incomplete report has 3,203 errors (first non-camera 356
+dynamic art), not a completed segment result. The [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md)
+records native bytes, exact scope and coordinated dependencies. Temporary boundary
+instrumentation was removed; no comparisons, timing edges or fixture rows changed.
+
+### 2026-10-22 — narrow slot reward fidelity controls
+
+Candidate: `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` plus the lane changes in
+`${OPENGGF_WORKTREE_ROOT}/t3-a1d6305f`, local branch
+`bugfix/ai-gap-s3k-narrow-fidelity-20261022`. The
+[native audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records ROM-backed reward scripts, signed-long interpolation, event PLC3 and
+HCZ2 floor branches. General campaign integration and smoke remain lead-owned.
+
+Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/maven_queue.py -Dmse=off -P<profile>
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSlotsBonusTraceReplay*'
+"-Ds3k.rom.path=${OPENGGF_S3K_ROM}" test -B`, with the existing absolute
+locked-on ROM, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+| Profile / actual case | Maven completed (BST) | Observed JUnit / default ALL gate | Queue wait / Maven |
+| --- | --- | --- | --- |
+| `trace-replay` / `TestS3kSlotsBonusTraceReplay$SonicAndTails$Segment1` | 2026-10-22 10:36:37 | 1/0/0/0; zero-divergence gate passes | 315s / 31.597s |
+| `trace-replay-r7` / `TestS3kSlotsBonusTraceReplay$Knuckles$Segment1` | 2026-10-22 10:42:47 | 1/0/0/0; zero-divergence gate passes | 307s / 28.376s |
+
+The default ALL gate rejects every report error/warning: neither completed
+control has a first-error frame/field. Raw successful diagnostics are retired
+automatically, so no compared-row count is inferred from fixture length or
+zero-test nested-container summaries. This is two focused slot controls, not a
+trace sweep, whole-scene native image check or campaign qualification.
+
+
+## 2026-10-22 — S1 retail rolling camera
+
+`bugfix/ai-gap-s1-chain-20261022`, HEAD `702f142c5` plus the coordinated camera
+semantic and fresh Bomb animation: the exact 104-case combined selector recorded
+in the [lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
+completes 103 passes, 1 inherited complete-chain failure, 0 errors/skips. Original
+SLZ1/2/3 and SYZ3 movies, prefix 2, and required S3K checks pass. Independent
+bias 50/80, air and destructive restore checks pass; separate affected guards 54
+pass without errors/skips. No comparison/fixture/timing change.
+
+SYZ3 segment 22's 44 camera errors become 0. Chain 12→11 reported axes (original 17).
+Earliest remaining error is segment 12 row 101 prepared true/false; segment 15 has 6
+queue errors, 26 has 3 queue errors, 29 has 1456 errors (first non-camera 8557 X
+fraction `$F500/$0000`), 31 has 1 rings 9/10 error at 7821, 32 has 12 queue errors.
+Four later art gaps and segment 33's TITLE_CARD ownership loss at cursor 210396
+remain; its incomplete report still has 3203 errors beginning at non-camera 356
+`dynamic_art.edges`. No coverage is claimed past that loss. Temporary probes
+identify a late SLZ killing-hit window and an untracked SBZ2 saw-copy allocation
+cause; those source-backed follow-ups have separate owners/tests.
+
+## 2026-10-22 — S2 Super balance and global palette owner correction
+
+Isolated `bugfix/ai-gap-s2-chain-pacing-20261022`, candidate over `364088d93`
+(with implementation milestone `44c1d674` and approved H32 dependencies).
+The last qualified chain remains red: segment18 complete/0 errors; segment19
+complete/14546 errors, first4920 `dynamic_art.edge[1].mapping_frame` C2/CF;
+CNZ1 handoff cursor113342/destination113340. No new chain pass is claimed.
+
+ROM analysis identifies that first ARZ2 animation mismatch as the existing
+Super single-facing balance semantic; normal poses/positions agree at4920.
+The existing S2 Super profile now selects that branch. Parent review also
+corrected the milestone's whole-controller phase move: control/ring work stays
+before animation, global palette/completion follows objects even during
+hurt/death. Neither comparison rows nor timing admission changed.
+
+Focused command `python3 tools/testing/maven_queue.py -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl -Dtest=<12 classes listed in the dated S2
+chain research artifact> <three original absolute ROM properties> test`
+completed108 cases with one new fixture-arrangement failure; the final narrow
+`--lean -Dtest=TestSonic2SuperGlobalPalettePhase` run passed4/4,0 skips, and the
+other104 checks passed on unchanged production source (including33 balance and
+11 API checks). Fresh affected five-class `-Pguards` batch passed43/43,0 skips.
+The chain and second-movie route will be measured again after this local fix;
+return-load and recurring ordinary SS pacing remain open.
+
+
+Post-correction measurement: the queued three-class trace selection
+`TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay`
+completed3 cases/2 failures/0 skips at `364088d93` plus staged native phase/balance
+and unstaged mapping-loader translation. Independent ARZ2 passed; second-movie
+halfpipe retained exactly its matched-baseline two65-row-early gap axes.
+Main-chain ARZ1 stays0 errors; ARZ2 first mismatch advances4920 animation→5084
+sidekick_y `$48A/$489`,13495 errors. CNZ1 admission+2 and12 structural gap axes
+remain unchanged. Maven45.47s, measured queue35s. No green-chain claim.
+
+## 2026-10-22 — S1 dormant saw placement follow-up
+
+On `bugfix/ai-gap-s1-chain-20261022`, HEAD `a69971edf` plus the S1-only saw
+ownership release, `TestSonic1SawPlacementReentry` passes 11 independent real-loader
+cases, 0 errors/failures/skips via the queued lean command in the
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#untracked-dormant-saw-re-entry).
+The old continuous profile remains the measured profile: 11 axes, earliest
+segment 12 row 101 queue prepared true/false; SBZ2 still last measured 1 rings
+error at 7821. Its native cause is now identified as the suppressed second
+untracked dormant saw, shifting the spilled-ring SST index. Source-only evidence
+and focused loader/restore tests do not claim a new route result; original and
+emerald BK2 qualification will use the next necessary composed run. No shared
+manager, ring threshold, trace row or comparison changes.
+
+The next diagnostic at committed `e157bbadb` plus ROM mapping translation
+observed the second ARZ arrow at Y `$481` versus native `$461`. Original BK2
+native playback through row111839 then captured478 paired RNG calls: arrows
+consume draws477/478, while the engine seeds correspond to491/492. Fourteen
+extra engine producers precede the first arrow; their owner is not yet
+attributed. No seed correction or fixture-dependent compensation is justified.
+The temporary observation hook was removed; exact source/input hashes and the
+excluded sparse slot columns are recorded in the research artifact.
+
+The next transform-start correction is validated locally with6 new focused
+cases (within the final11-case two-class pass),0 skips. Stars at fixed129,
+invincibility clear and semantic Super audio now publish at the native start;
+ordinary engine93/Title96 namespaces remain unchanged. No chain measurement on
+that new source is claimed yet. The subsequent normal-star Super rewind fix
+passes the expanded ten-case start-effects class within78 focused checks,
+including destructive restoration, missing/other owner and failure retry;
+seven affected architecture guards pass, all zero skips. Native H32 consumer
+composition remains separate active work.
+### 2026-10-22 — S1 composed native-slot fixes and complete timing candidate
+
+S1 chain worker, isolated `t3-bfcde7c7`, branch
+`bugfix/ai-gap-s1-chain-20261022`, source `2cbcb6e90` plus Bomb fuse/shrapnel
+explicit submissions, the complete uncommitted native242 v5 candidate and new
+S1 literal publication guard. This composes own milestones `dde29476`,
+`52a34690`, `a69971ed`, `a1f10b68`, boss dependencies `d8aca9ad`/`9f7c034f`
+(locally `702f142c`/`ed56906e`) and backend `d89c09e6` (local `2cbcb6e9`).
+
+The exact 17-class focused command is recorded in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#current-composed-qualification-and-withheld-publication).
+It uses queued Maven, `-Ptrace-replay`, one fork, surfaceless EGL, unset display
+variables, Lua5.4, the absolute verified S1 REV01 ROM and temporary read-only
+row/FZ callbacks. Job38000 completes129 cases:128 pass, one chain assertion
+fails, zero errors/skips. Six original-movie controls (SLZ1/2/3, SBZ2, LZ2/3),
+both retained prefix pins, all three S1 literal artifact cases and focused
+hardware-timing prerequisites pass. Probes are removed before final guards.
+
+The full-chain profile moves11→4 reported axes (initial baseline17). All21
+complete level reports before FZ are exact, including the former MZ2/MZ3/LZ3/LZ4
+prepared-state mismatches, SLZ3's1456 errors and SBZ2's one-row ring mismatch.
+The six special stages and six presentation bridges close without a reported
+axis. SLZ3 first escape now expands on8472 and moves8px; the former8557 clamp
+retains nativeF500 fraction. The independent saw re-entry fix closes SBZ2
+without a shared ring collision change.
+
+FZ now compares all5086 rows, with722 errors:20 physics/dynamic-art and702
+animation. First overall error is4735 player animation native07LOOK_UP/map05,
+engine05WAIT/map01, while physical fields match; first non-camera physics error
+is downstream4736 dynamic_art.edge[0].mapping_frame5/1. Prior354 animation
+and subsequent ownership loss are gone. Remaining gaps are SBZ2→LZ4 art
+(expected2/actual12 edges; first expected movie202106/map1 versus201916/map50)
+and LZ4→FZ art (expected2/actual8;209046/map1 versus208858/map9). The10943-row
+terminal tail is consumed but ends LEVEL instead of TITLE_SCREEN.
+
+Strict run timing verification reports no missing/unmatched/late edge; the
+historical ordinal170 failure does not recur on this composition. Publication
+still requires **all** comparisons and terminal closure: the entire62-file
+candidate and its S1 guard remain uncommitted, capture-time Mono/core digests
+UNKNOWN. No prefix pin is lowered or advanced against unpublished inputs.
+Boss lane owns the native late lookup/object ending cause; S1 chain retains
+transition-art admission and terminal caller attribution. Parent owns combined
+smoke; this is bounded focused evidence, not a passing continuous-chain claim.
+
+
+### 2026-10-22 S1 consumed entry fade: focused fix, route qualification pending
+
+Worktree `t3-bfcde7c7`, branch `bugfix/ai-gap-s1-chain-20261022`, source
+`65d7ee3a1` plus the internal S1 blocking-entry capability and the nine-line
+`GameLoop.startZoneActFade` consumption gate. Native REV01 `$3AFE` returns to
+`GM_Level`, whose `$37B6` call enters the22-VBlank palette/PLC loop without
+object execution. Preserve the event-producing pass; hold only on request
+consumption. No comparison/timing authority changes or event-write freeze.
+
+Focused old-consumer70556:3 cases,2 failures at consumed inactive false and
+1 unopted-profile pass. Final30119:5/5 pass, including both actual SBZ source
+events, destination title/player-object prelude, adapter restore and forward,
+plus unopted22-frame, ordinary S1 callback and S2 false-deactivation controls.
+Command: `maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestGameLoopBlockingLevelEntryFadeS1 -Dsonic1.rom.path=<absolute-original-S1>
+-Dsonic2.rom.path=<absolute-original-S2> test -B`, with display variables unset
+and Lua5.4. Existing matched controls37/37, fresh affected guards40/40 and
+owner/fade-owner controls23/23 pass, all zero errors/skips. Exact selections
+and the intentional headless-title harness correction are in the existing
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
+No new chain result is claimed. Last composed38000 still reports four axes,
+first FZ4735 animation07/05, then4736 DPLC5/1, two late transition-art gaps and
+terminal LEVEL/TITLE_SCREEN. Its terminal-mode assertion prevented the terminal
+art-ledger comparison; four reported axes are not a completeness claim. The
+complete native242 candidate remains uncommitted pending actual whole-chain
+qualification with the late FZ input and consumed-fade fixes.
+
+
+## 2026-10-22 - Bounded S3K attracted-ring native-slot qualification
+
+- Isolated `bugfix/ai-gap-sprite-limits-20261022`, repaired candidate over
+  `323239a13`: native reserved rings continue through P1 death, and converted
+  bouncers retain the frame copied at their own SST dispatch before late global
+  spin. Ordinary legacy spill presentation remains outside this native claim.
+- Exact movie selector:
+  `TestS3kAttractedRingMoviePhase#standaloneMgzAttractionThroughSlotDeletion+completeMovieMgzAttractionThroughSlotDeletion`.
+  Queued Java25/EGL focused command 36034 also selected
+  `TestRingNativeSlotDispatch,TestLostRingRenderState,TestNativeSpriteSatGameplay,TestGraphicsProjectionScope,TestRenderProjection,TestModApiSignatureSurface`:
+  48 tests / 0 failures / 0 errors / 0 skips, including both movie methods.
+  Environment and exact Maven arguments are in the
+  [native SAT evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md#ring-repair-and-two-movie-qualification).
+- Actual standalone MGZ rows0–650 (BK2 offset2602) and independent complete-movie
+  MGZ rows0–500 (offset58653) acquire LIGHTNING naturally and exercise reserved
+  ring flight, queue admission, GiveRing/award, sparkle deletion and registered
+  restore/forward. ROM entry and BK2 inputs own gameplay; comparison rows supply
+  expectations and the restricted hardware timing/input contract only.
+- No full-trace frontier moves or whole-act/campaign parity claim. There is no
+  failing checkpoint/first-error field in these bounded tests. Earlier 2/2 movie
+  evidence on `323239a13` did not cover the independently found dead-player and
+  late-spin defects; separate branch regressions now cover them. Fresh guards
+  remain a separate delivery obligation.
+
+
+### 2026-10-22 S1 composed46550: all22 level reports exact, three reported axes
+
+Source `595eb962fd271632d2b77f5afaba03c3db242ee7`, isolated `t3-bfcde7c7`,
+includes the native Bomb body, late FZ input, consumed fade and S1 scroll
+lifecycles. Complete native242 candidate remains unpublished. Exact nine-class
+queued replay command/environment is in the existing
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#second-composed-qualification-exact-levels-withheld-tail-publication).
+Result12T/11PASS/1chainFAIL/0errors/skips; queue325s, Maven1m13s. Six independent
+original BK2 controls, unchanged prefix2 and literal-artifact3 all pass.
+
+All22 complete level reports have zero comparison/bootstrap errors, including
+all5086 FZ rows (physics/animation/warnings0): prior4735 animation and4736 art
+frontiers close. Three reported axes remain. SBZ2→LZ4 art expected2/actual4,
+first extra movie201916/map50, followed by correct destination202106/map1;
+LZ4→FZ now2/2 with matching mapping/movie/requests but preceding-transfer
+ordinal+2/transfer+1/ledger cascade. Terminal10943 rows end LEVEL/TITLE_SCREEN;
+its art-ledger comparison is **not reached**, so this is not complete tail
+coverage or fixture-publication qualification.
+
+Read-only actual-loop diagnostics prove the terminal native body is held:
+ObjectManager5087/VInt342AB and liveFZ33 X28FE.C000/vx0180 remain unchanged from
+first tail214158 through225100, with no ending request/pending transition/fade.
+Actual loop provider is null/UNKNOWN, actual zone6:0 and ending bootstrap false.
+Native next ordinary movement reaches2900.4000; do not attribute this caller
+boundary to broken object ending choreography. The exact map50 service caller/
+phase remains unknown from this run. No forced tick, fitted boundary, source
+comparison filter or journal clearing was added. Both temporary test observers
+are removed. New aggregate title/input leaves were excluded and the initial
+retained-level load did not traverse the title startup; no aggregate intro
+qualification is claimed.
+
+
+### 2026-10-22 S1 palette-fade DMA policy, route qualification pending
+
+On source76f3e948 plus the bounded S1 phase policy in isolated t3-bfcde7c7,
+queued focused28147 passes39/39 with zero failures/errors/skips (new7 ROM-art
+staging, model5, coordinator27; wait107s/Maven1m34s). Exact command and native
+`VBlank_PaletteFade` byte/source proof are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#s1-palette-fade-player-art-service-policy).
+Only PALETTE_FADE stops servicing S1 staged player art; pending preparation is
+retained until genuine overwrite or an eligible handler. NORMAL_PAUSE and all
+other existing phase behavior remain unchanged, with no journal filtering.
+Old-source21049 reproduces six phase failures; its ten unrelated terminal
+constructor errors provide no native gate/input evidence.
+
+No replay was submitted for this source leaf, so46550 remains the measured
+frontier: all22 level reports exact, first extra SBZ2→LZ4 transfer at
+movie201916/map50 (exact caller/phase UNKNOWN), downstream ordinal cascade and
+terminal LEVEL/TITLE_SCREEN, with terminal art comparison not reached. Native
+load-RAM clearing is not qualified by the phase tests. The full242 candidate is
+still unpublished; prefix pins are unchanged.
+
+
+### 2026-10-22 Terminal LEVEL caller and input handoff, focused qualification
+
+Isolated t3-bfcde7c7 sourcea839af474 plus the narrow launcher/input-owner repair
+passes60/60 focused cases, zero failures/errors/skips (96319; wait27s/Maven1m37s).
+Exact eight-class command, old-source44503 six valid failures and76155 three
+independent input replacement failures are recorded in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#terminal-native-body-admission-and-exact-input-owner-handoff).
+Actual loop/launcher and driver-only paths execute ordinary terminal native
+LEVEL passes with first input edge once; pause, consumed entry fade and the
+SHARED_GAP latch retain their existing gates. Ordinary logical playback remains
+disabled for terminal rows. Cleanup compares raw override reference identity,
+so native-stage samples and equal-valued replacements cannot confuse owners.
+
+No whole-chain replay follows this focused result yet. Last observed46550
+frontier is still all22 level reports exact, extra SBZ2→LZ4 movie201916/map50,
+downstream art ordinal cascade and terminal LEVEL/TITLE_SCREEN; terminal art
+comparison was not reached. Final-mode/ending choreography and aggregate
+recorded-input lease compatibility remain unqualified here. No fixture values,
+forced ticks, comparison filters or prefix changes were introduced; the full242
+candidate remains unpublished.
+
+
+### 2026-10-22 S1 full-load readiness boundary, independent focused proof
+
+Isolated t3-bfcde7c7 source d90cc4160 plus the approved existing-service clear
+passes79/79 focused cases with zero failures/errors/skips (95396; wait7s,
+Maven1m28s). Exact six-class command, real-ROM clear bytes, valid old-service
+45714 two failures/one S2 pass and limits are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#full-load-s1-readiness-clear-separate-from-palette-fade-service).
+Only unpublished S1 preparation/tail readiness is invalidated at the existing
+full-load-before-prime boundary. Actual load/title/release produces the fresh
+mapping1 pair with prior journal/IDs intact; registered restore/forward and S2
+submitted-work controls pass. No GameLoop/event/LevelManager/journal or snapshot
+shape change is made, and midgame renderer refresh retains its prior path.
+
+No route has run on this leaf yet.46550's extra SBZ2→LZ4 movie201916/map50 caller
+and service phase remain UNKNOWN; that measured three-axis frontier and the
+not-reached terminal-art comparison are unchanged. Full native242 candidate is
+unpublished, prefix pins unchanged. Next necessary tail composition includes
+the already-ready S1 title/input caller prerequisites before qualification.
+
+
+## 2026-10-22 — S2 native geometry/ROM-palette milestone, chain frontier unchanged
+
+Source `9854f02b146a8cbe1a4d656f54778a5918ee2852`, worktree
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-dcf07b84`, includes the corrected Super
+control/global phases, start effects and captured normal-star restoration, native
+SS slot/counter owners, native curve registers, injected-ROM palettes and the
+source-proven slow-touch leaf phase reseed. No trace comparison or timing
+authority was weakened.
+
+Command (Java25, Lua5.4, DISPLAY/WAYLAND unset, original absolute S2 REV01 ROM):
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2SpecialStage1TraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage3TraceReplay,TestS2SpecialStage4TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2CompleteEmeraldRunChain,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`. Completed session41514:
+10 tests,8 passed,2 failed,0 errors/skips; measured queue331s, Maven53.088s.
+
+All seven standalone native SS regressions and independent ARZ2 pass. The main
+chain retains exactly14 failing axes: ARZ1 segment18 completes with0 errors;
+ARZ2 segment19 completes with13495 errors, first5084 `sidekick_y`
+`$048A/$0489`, then CNZ1 admission sees cursor113342 instead of113340. The12
+dynamic-art gap axes remain, first SS return10308 expected/10268 actual
+(40 early). The second movie retains its matched-baseline two65-row-early gap
+axes. The leaf correction did not move this frontier; it must not be presented
+as closure of the14-extra-RNG-producer discrepancy. Retained start769 does not
+certify natural row0 startup, later-route completion or audio PCM.
+
+The corresponding focused source selection covered100 unchanged-production
+cases plus the final20-case native geometry pass, all zero skips; initial new
+rewind-test oracle/setup failures and their corrections are recorded in the
+[dated S2 research artifact](../architecture/research/2026-10-22-s2-chain-pacing.md).
+Native H32 renderer/intensity-companion wiring and ordinary recurring/return
+timing remain active work.
+
+
+## 2026-10-22 — S2 Obj24 native lifecycle correction, route measurement pending
+
+Isolated `t3-dcf07b84`, parent source `d53e035d3` plus only the two Obj24
+production files and focused tests. The actual second read-only RNG observation
+completed one unchanged chain with14 failing axes (session24942,0 skips); both
+temporary GameRng/fixed-controller hunks were exactly removed before commits.
+Correct native aux slots and native callbacks attribute premature engine child
+slot reuse to generic coarse culling. Native generator timer/allocation work also
+precedes its range tail. The correction preserves those lifetimes, ROM scripts
+and full-pool draw branches without changing RNG or comparison authority.
+
+Queued focused selector
+`TestSonic2BubbleNativeLifecycle,TestBubbleObjectInstance,TestSonic2Rng,TestS2SelfContainedTransientRewind,TestRewindFixS2Batch4Codecs,TestModApiSignatureSurface,TestArchitecturalSourceGuard#migratedObjectChildSpawnsStayOnManagedHelpers`
+with `--lean -Dmse=off -Dsonic2.rom.path=<original absolute REV01 path> test`
+passed46/46,0 skips (session69339,queue38s,Maven93s). Fresh affected rewind
+architecture/field guards passed5/5,0 skips (session74227,queue9s,Maven29.805s).
+These include20 independent ROM/lifecycle/slot/allocation/pop/restore cases;
+initial test-fixture failures are recorded in the dated research artifact.
+
+New chain and independent ARZ2 measurement are still pending. The last completed
+route result remains source9854: main14 axes, ARZ2 first5084 `sidekick_y`
+`$048A/$0489`,13495 errors, CNZ1 admission+2,12 art-gap axes; independent
+ARZ2 and seven native stages pass. No closure of the14 extra RNG draws or new
+route frontier is inferred from these component checks.
+
+Completed follow-up session21181 on clean committed
+`d489be60add071e398da2eb8261c9ca58832b8f4` in `t3-dcf07b84` used
+`env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3
+tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2CompleteEmeraldRunChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`, Java25.0.5.
+Two tests completed, one pass/one failure, zero errors/skips; queue18s,
+Maven approximately97s. Independent ARZ2 passes. The main chain's14 axes are
+unchanged: ARZ1 exact; ARZ2 complete with13495 errors, first row5084
+`sidekick_y` `$048A/$0489`; CNZ1 admission+2;12 return/art-gap axes with first40
+and later36–40-frame early edges and one-frame gaps. Native component fixes
+therefore do not establish route/RNG closure. No new RNG draw count was
+measured. Consumed diagnostics were removed. Next owned work is the actual H32
+SAT/terrain/SHADOW consumer; native return service admission remains open.
+
+
+## 2026-10-22 — S2 H32 consumer: seven stages retained; return timing still open
+
+Isolated `t3-dcf07b84`, H32 candidate after `ccfb02562116b9d5321c26de810d6d967e2a2780`.
+Session77123 used `env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dsurefire.reuseForks=true
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestS2SpecialStage1TraceReplay,TestS2SpecialStage2TraceReplay,TestS2SpecialStage3TraceReplay,TestS2SpecialStage4TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2EhzHalfpipeRoundTripChain,TestS2Arz2LevelSelectTraceReplay
+-Dsonic2.rom.path=<original absolute REV01 path> test`, Java25.0.5.
+Nine tests completed:8 passes,1 failure,0 errors/skips; queue315s, Maven95s.
+Seven native stages and independent ARZ2 pass. Halfpipe's two known-baseline
+return-art axes remain65 frames early on every edge (first expected9675,
+actual9610); no new gameplay axis. The main chain was not repeated after its
+21181/d48914-axis result. These renderer/derived-resource changes do not close
+ordinary pacing, native return admission or the route's RNG frontier. Actual
+320/528 live entry/input/draw/restore/water checks pass, and an effective-palette3
+ROM inventory finds no14/15 operators in ordinary non-shadow submitted art;
+those bounded source/pixel limits and inherited size-guard failures are in the
+[dated research](../architecture/research/2026-10-22-s2-chain-pacing.md).
+Consumed reports were removed; no comparison or timing ratchet changed.
+
+### 2026-10-22 Reachable S1 title prerequisites composed before tail qualification
+
+The isolated chain tree now contains the approved6211 native-SEGA phase blobs,
+then original7d intro-input and66 title-PLC caller semantics, with final manager
+source exactly matching66. Necessary focus21929 passes43/43, zero
+failures/errors/skips; wait249s/Maven1m30s. The imported instruction tool's19
+Python unit tests pass separately. Exact command/source/limits are in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#reachable-title-prerequisites-for-the-next-tail).
+This enables qualification of title methods newly reachable from the repaired
+terminal caller; it does not establish natural coldboot/startup parity. No
+additional route or capture ran for these consumers.46550 remains the measured
+three-axis frontier, full native242 publication withheld pending the next actual
+whole-chain/terminal-art comparison; prefix pins remain unchanged.
+
+
+### 2026-10-22 S1 composed44223: exact22 levels; result-art clock and terminal callback frontier
+
+At isolated chain HEAD `37a6b260d199f39cb87fc24c889da64f055d6cb8` plus the full
+unpublished native242 candidate/literal guard, the sole composed command in the
+[S1 chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#composed-route44223-exact-levels-missing-final-result-art-and-terminal-fade-re-entry)
+returns12 tests:11PASS, one chainFAIL, zero errors/skips; wait534s/Maven1m15s.
+All22 complete level reports compare exactly, including FZ, and six independent
+BK2s/prefix2/literal3 pass. Five reported axes remain: earliest missing source
+map9 at SLZ3→SBZ1 movie180850, then source map49 at SBZ1→SBZ2 movie189245;
+two later art gaps retain matching edges but cascade ordinal-4/transfer-2.
+The fifth axis is nested native fade rejection at terminal movie223632,
+TRY_AGAIN_END/actual POST_CREDITS provider, caused by repeated ending return
+bypassing its still-pending outgoing callback. The terminal naturally reached
+zone7/credits/post-credits; no FZ-ending repair or forced tick is indicated.
+Terminal-art comparison was not reached. Both temporary observer hunks were
+removed and diffs checked empty. Native242 publication and prefix advancement
+remain withheld; no natural startup claim or capture-provenance upgrade.
+
+
+The approved ending-helper repair now passes all53 focused ending/fade
+identities in44265, including six independent new cases that had five valid
+old-source failures. The complete59-test invocation remains red solely in
+three separate old-source S1 results-wait baseline cases; exact identities,
+commands and limits are in the audit. No new route ran, so44223's five-axis
+frontier/terminal-art-not-reached status is retained until composed replay.
+
+
+### 2026-10-22 Native S1 results routine boundary qualified independently
+
+The S1-only `Got_Wait`→`Got_NextLevel` split now passes39/39 focused cases in
+63147, zero failures/errors/skips, wait277s/Maven1m28s. The new six-case class
+had three valid old-source failures (normal map9/map49 and special exit early)
+in44265; both full-journal art transfers now pass through actual GameLoop and
+destructive registered restore. Special/SBZ2 canonical-frame, host policy and
+retail-byte controls pass, with existing entry/fade/load/results and composed
+ending controls. Exact command/source/limits are in the
+[chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#s1-results-wait-expires-before-the-next-routines-exit-writes).
+No coordinator, phase service, readiness, journal or shared load change is made.
+No new route has run:44223's five reported axes and terminal-art-not-reached
+status remain the measured frontier until parent-composed qualification. The
+full native242 candidate stays unpublished and prefix pins unchanged.
+
+
+### 2026-10-22 S1 owner753/8530: terminal and all33 gaps reached; comparison closure remains red
+
+The sole authorized same-nine-selector command in the
+[existing chain audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#owner753-route8530-full-terminal-reached-comparisons-remain-red)
+ran on owner `753413aa00f71c1856cac37a4fbe43045b52e47a` plus unchanged full
+native242/literal guard and the approved temporary observer. Frozen source
+fingerprint matched before/after; both observer hunks were immediately removed.
+Result12T/11PASS/1chainFAIL/0E/0S, wait345s/Maven1m13s. All10943 tail rows finish
+at cursor225100/TITLE_SCREEN; terminal-art comparison is reached, not censored.
+All33 structural gaps match, closing the previous missing map9/map49 pairs,
+subsequent counter cascades and ending-return exception.
+
+The reported six axes are five final-row `dynamic_art.frame` errors plus
+terminal art. Full report inspection adds omitted segment0: six complete level
+reports each have one +1 art-frame stamp, at segment/local/movie0=
+0/4114/4974,3/3605/13346,8/8683/39769,12/16206/63240,16/9535/87701,
+19/8453/102278. Thus movie4974 is the earliest actual compared error. The other
+16 of22 level reports have zero errors; all22 have zero animation/bootstrap
+errors/warnings. Existing boundary-only assertion registration omits initial0;
+both nominally passing prefix tests also contain that same report error, so
+prefix pins and strict prefix qualification do not advance. No harness change.
+Six full SS DPLC reports compare21838 rows without mismatches; existing SS
+physics and presentation-bridge coverage limits are detailed in the audit.
+All six original BK2 controls and three literal guards pass with no skips.
+
+Terminal art expects4704 edges/actual4784, with10334 errors and4704 timing
+warnings. First pair native map30/movie214287 versus engine32/movie214203;
+its second ROM request differs154640 versus155408. Engine-only indices4704..4783
+add80 edges. Exact field histogram/last aligned pair are recorded in the audit;
+producer/clock cause remains unknown. Native242 remains entirely unpublished,
+Mono/core UNKNOWN and required trust gates unchanged. This qualifies owner753
+only, excludes initial intros/newer aggregate sources, and authorizes no retry,
+new probe, runtime fix or capture after the15Z cutoff. Consumed diagnostics
+are cleaned after exact readback; candidate and foreign state remain preserved.

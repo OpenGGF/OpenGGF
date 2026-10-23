@@ -3333,7 +3333,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doRollSpeed() {
 		short gSpeed = sprite.getGSpeed();
 		Camera camera = playerCameraBiasController();
-		if (camera != null) {
+		GameRules rules = sprite.getGameRules();
+		// FixBugs=0: Sonic_AngledRollSpeed (_incObj/01 Sonic.asm:829-842) omits
+		// recentering; the fixed branch adds the reset that S2/S3K always run.
+		if (camera != null && (rules == null || rules.camera() == null
+				|| rules.camera().groundedRollRecentersCameraBias())) {
 			camera.easeYBiasToDefault();
 		}
 

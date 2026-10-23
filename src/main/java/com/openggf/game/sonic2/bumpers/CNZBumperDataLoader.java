@@ -18,9 +18,10 @@ import java.util.logging.Logger;
  *   <li>Act 2: 0x1795E (SpecialCNZBumpers_Act2)</li>
  * </ul>
  * <p>
- * Format: Array of 6-byte entries sorted by X position.
- * The data does NOT have an explicit terminator - the end is determined by
- * the start of Act 2 data or by reaching invalid coordinates.
+ * Format: six-byte entries ending in a record whose X word is $FFFF.
+ * The ordinary decoder retains its historical filtering and sorting. Native
+ * competition uses {@link #loadNativeCompetition(Rom, int)} because CNZ2 has
+ * an out-of-order record and native cursors must follow the raw ROM adjacency.
  * <p>
  * Disassembly Reference: s2.asm lines 32659-32674
  * <pre>
@@ -48,6 +49,20 @@ public class CNZBumperDataLoader {
      * CNZ 1 has ~54 bumpers, CNZ 2 has ~54 bumpers.
      */
     private static final int MAX_BUMPERS = 100;
+
+    /**
+     * Loads shipped REV01 native data without sorting, filtering or type clamps.
+     * Both files occupy 324 bytes including their $FFFF X marker. The preceding
+     * six bytes matter: fixBugs=0 CNZ1 uses the PlaySound jump as its boundary;
+     * CNZ2 starts with its own zero record.
+     * SpecialCNZBumpers_Act1/Act2 (s2.asm:32887-32905).
+     */
+    public CNZNativeBumperTable loadNativeCompetition(Rom rom, int act) throws IOException {
+        if (act < 0 || act > 1) throw new IllegalArgumentException("CNZ act must be 0 or 1");
+        int base = act == 0 ? Sonic2Constants.CNZ_BUMPERS_ACT1_ADDR
+                : Sonic2Constants.CNZ_BUMPERS_ACT2_ADDR;
+        return new CNZNativeBumperTable(base, rom.readBytes(base - ENTRY_SIZE, 324 + ENTRY_SIZE));
+    }
 
     /**
      * Load CNZ bumper data for the specified act.

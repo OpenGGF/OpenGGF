@@ -3,6 +3,7 @@ package com.openggf.tools.audio.completerun;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.openggf.tools.audio.completerun.s2.S2CompleteRunOpenGgfProducer;
+import com.openggf.tools.audio.completerun.s1.S1CompleteRunOpenGgfProducer;
 import com.openggf.tools.audio.completerun.s3k.S3kCompleteRunOpenGgfProducer;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -39,11 +40,15 @@ class TestCompleteRunAudioAuthorityGuard {
             completeRunSource("CompleteRunAudioObserverLease.java"));
     private static final List<Path> TASK_6_AUTHENTICATED_STAGE = List.of(
             completeRunSource("CompleteRunAudioCaptureReducer.java"),
+            completeRunSource("s1/S1CompleteRunOpenGgfProducer.java"),
             completeRunSource("s2/S2CompleteRunOpenGgfProducer.java"),
             completeRunSource("s3k/S3kCompleteRunOpenGgfProducer.java"));
     private static final Set<Path> PERMITTED_REFERENCE_SOURCES = Set.of(
             completeRunSource("CompleteRunAudioInputSnapshot.java"),
             completeRunSource("TraceChaserAudioProcess.java"),
+            completeRunSource("s1/S1CompleteRunReferenceProducer.java"),
+            completeRunSource("s1/S1CompleteRunReferenceRawAdapter.java"),
+            completeRunSource("s1/S1CompleteRunReferenceProjector.java"),
             completeRunSource("s2/S2CompleteRunReferenceProducer.java"),
             completeRunSource("s2/S2CompleteRunReferenceProjector.java"),
             completeRunSource("s2/S2CompleteRunReferenceRawAdapter.java"),
@@ -58,6 +63,7 @@ class TestCompleteRunAudioAuthorityGuard {
             completeRunSource("CompleteRunAudioJson.java"),
             completeRunSource("CompleteRunAudioProducer.java"),
             completeRunSource("CompleteRunAudioProducerRegistry.java"),
+            completeRunSource("CompleteRunAudioProducerMetadata.java"),
             completeRunSource("CompleteRunAudioProfile.java"),
             completeRunSource("CompleteRunAudioProfiles.java"),
             completeRunSource("CompleteRunAudioRecordSink.java"),
@@ -214,16 +220,30 @@ class TestCompleteRunAudioAuthorityGuard {
 
     @Test
     void unavailableFixedProducerBodiesAreClosedAtTheBytecodeCallGraph() {
-        assertEquals(List.of(), unavailableBodyViolations(
-                S2CompleteRunOpenGgfProducer.class));
+        assertEquals(List.of(), fixedStartupForwarderViolations(
+                S1CompleteRunOpenGgfProducer.class,
+                "s1_rev01_complete_emeralds.v1"));
+        assertEquals(List.of(), fixedStartupForwarderViolations(
+                S2CompleteRunOpenGgfProducer.class,
+                "s2_rev01_complete_emeralds.v1"));
         assertEquals(List.of(), unavailableBodyViolations(
                 S3kCompleteRunOpenGgfProducer.class));
         assertEquals(List.of(), unavailableBytecodeViolations(
-                S2CompleteRunOpenGgfProducer.class,
-                "CompleteRunAudioOpenGgfProducerPreflight.requirePinned"));
-        assertEquals(List.of(), unavailableBytecodeViolations(
                 S3kCompleteRunOpenGgfProducer.class,
                 "CompleteRunAudioOpenGgfProducerPreflight.requirePinned"));
+    }
+
+    private static List<String> fixedStartupForwarderViolations(Class<?> producer, String profileId) {
+        CaptureBytecode bytecode = producerCaptureBytecode(producer);
+        var instructions = bytecode.instructions();
+        return !bytecode.exceptionTable() && instructions.size() == 4
+                && instructions.get(0).opcode().equals("aload_1")
+                && Set.of("ldc", "ldc_w").contains(instructions.get(1).opcode())
+                && instructions.get(1).detail().endsWith("String " + profileId)
+                && instructions.get(2).opcode().equals("invokestatic")
+                && instructions.get(2).detail().contains("CompleteRunAudioOpenGgfProducerSupport.capture:")
+                && instructions.get(3).opcode().equals("return")
+                ? List.of() : List.of("fixed-startup-forwarder");
     }
 
     @Test
@@ -239,6 +259,16 @@ class TestCompleteRunAudioAuthorityGuard {
                     unavailableBytecodeViolations(adversarial, preflight),
                     adversarial.getSimpleName());
         }
+    }
+
+    @Test
+    void fixedStartupForwarderCannotSwapItsProfileOrDelegateElsewhere() {
+        assertEquals(List.of("fixed-startup-forwarder"), fixedStartupForwarderViolations(
+                S2CompleteRunOpenGgfProducer.class, "another-profile"));
+        assertEquals(List.of("fixed-startup-forwarder"), fixedStartupForwarderViolations(
+                HelperDelegatingBody.class, "s2_rev01_complete_emeralds.v1"));
+        assertEquals(List.of("fixed-startup-forwarder"), fixedStartupForwarderViolations(
+                StaticTriggerBody.class, "s2_rev01_complete_emeralds.v1"));
     }
 
     @Test
@@ -947,6 +977,10 @@ class TestCompleteRunAudioAuthorityGuard {
 
     private static List<String> unavailableBytecodeViolations(
             Class<?> producer, String preflightTarget) {
+        return validateUnavailableBytecode(producerCaptureBytecode(producer), preflightTarget);
+    }
+
+    private static CaptureBytecode producerCaptureBytecode(Class<?> producer) {
         try {
             String classpath = java.util.stream.Stream.of(
                             TestCompleteRunAudioAuthorityGuard.class,
@@ -965,9 +999,9 @@ class TestCompleteRunAudioAuthorityGuard {
             if (process.waitFor() != 0) {
                 throw new IllegalStateException("javap failed: " + output);
             }
-            return validateUnavailableBytecode(captureBytecode(output,
+            return captureBytecode(output,
                     "capture(com.openggf.tools.audio.completerun."
-                            + "CompleteRunAudioProducer$Request)"), preflightTarget);
+                            + "CompleteRunAudioProducer$Request)");
         } catch (Exception failure) {
             throw new IllegalStateException("could not inspect unavailable producer bytecode",
                     failure);

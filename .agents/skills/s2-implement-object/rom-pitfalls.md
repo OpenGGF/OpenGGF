@@ -163,6 +163,18 @@ platform subobjects after the parent before later object allocation scans run
 
 **Originating commit.** `fix(s2): advance ARZ2 Obj83 slot pressure`.
 
+**Capsule follow-up (2026-10-22).** Occupancy alone does not preserve execution.
+Obj3E uses `AllocateObject`, so a body at slot40 can create button/lock/broken
+children at16/20/35 even when41..127 are full. Each child must execute at its
+own SST cursor position. Folding lock movement or the broken timer into the
+body makes lower children run too early: the lock moves8px on its arming pass
+and the broken timer falls from$B4 to$B3 before either native child dispatches.
+Use lower-hole, mixed, full-RAM and later-child controls, plus graph recreation
+and forward replay. `loc_3F220 / loc_3F228 (s2.asm:84967-84990)`,
+`loc_3F38E (s2.asm:85081-85088)`,
+`loc_3F3A8 / loc_3F3F4 (s2.asm:85096-85122)`; originating task
+`coverage_assertions`, base `94c40570a`.
+
 ---
 
 ## P1 — Touch-response directional/state guards diverge from ROM
@@ -3617,6 +3629,25 @@ these two native goal owners provide the verified comparisons.
 
 **Originating commit.** 82bf7929c, editor native goal-word regressions.
 
+## P89 -- Native palette timer writes must reach every replica of that timer
+
+**Symptom.** A boss fades the scene white, but a few cycling colours keep
+reappearing, or only one of several otherwise synchronized streams stops.
+
+**Owning routine.** `PalCycle_CPZ` (s2.asm:2951-2984) decrements one
+`PalCycle_Timer`; its early return gates all three writes. The Java CPZ/DEZ
+cycler represents those streams separately. `loc_3D9BE` (s2.asm:83185-83191)
+writes `$7FFF` to that shared timer before the Death Egg ending countdown.
+Freezing only the first Java stream does not reproduce that write. MTZ and
+WFZ use genuinely independent secondary timers and must keep them independent.
+
+**Check.** Find the native timer's branch and every write it gates before
+exposing a timer mutation. Preserve cycle frame counters and snapshot every
+mutable replica. `TestSonic2PaletteCycleAliases` checks direct-ROM cadence,
+primary holds and forward replay; `TestSonic2NativeEndingEntry` checks the
+production boss-to-palette-manager boundary. Origin: the 2026-10-22 S2
+presentation audit lane, based on `94c40570a15a`.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
@@ -3650,3 +3681,83 @@ Never test signed-negativity of S3's packed tier; companion bytes can legitimate
 set its sign. Native ending bindings also need a constructor-RAM baseline for
 fresh re-entry from an inactive snapshot, rather than a cached future scene.
 See the dated S3K completion record's matching-controller qualification.
+
+## Native powered-form writes precede animation and survive fluid status (2026-10-22)
+
+Sonic_Super runs after movement/display and before history, water and animation
+(Obj01_Control, s2.asm:36248-36264). A signpost can pause Update_HUD_timer and
+trigger reversion before ring drain, even while many rings remain. Reversion
+writes prev_anim=Run, not a generic invalid sentinel: Roll restarts its script,
+whereas an already selected Run retains its phase. Its newly written
+invincibility_time=1 expires on the NEXT Sonic_Display, not the same status tail.
+
+Do not move the entire Super controller with Sonic_Super: PalCycle_Load calls
+PalCycle_SuperSonic globally after RunObjects (s2.asm:5095-5106,2689-2690).
+Its fade/cycle continues during Hurt/Dead, which omit Sonic_Super. The final
+fade releases obj_control after Sonic_Animate and keeps its timer reload of 3;
+only the next normal cycle reloads 7. Separate control/ring/revert from global
+palette/completion, and never advance the latter during rewind output refresh.
+
+Obj35's retail lifetime tests secondary invincibility, not invincibility_time;
+the optional Super deletion is FixBugs=1 (s2.asm:42494-42503). Transform start
+clears the timer while keeping existing normal stars. Destructive rewind first
+queues their captured player-bound entry, so a live-only search loses them and
+a blind spawner call can invent an absent owner. Match the exact captured stock
+class and player identity, preserving its slot/scalars/identity through the
+existing pending-entry path; missing or unsupported ownership must not mint one.
+
+Sonic_CheckGoSuper unconditionally writes dry speed constants even when already
+underwater (s2.asm:37481-37483). Sonic_Water's already-underwater return
+(s2.asm:36379-36382) leaves those words intact. Keep their last-writer latch
+separate from in-water status/gravity; real entry/exit and reversion select the
+next native bank. The existing captured speed-bank latch can represent this
+without another rewind field. Evidence and rejected broad-delay approach are in
+`docs/architecture/research/2026-10-22-s2-chain-pacing.md`.
+
+## Special-stage pool capacity precedes even stream markers (2026-10-22)
+
+`SSObjectsManager` probes its shared dynamic object RAM before reading the next
+stream byte and commits the stream pointer only at a marker. A full pool can
+therefore leave a created prefix without advancing the committed pointer.
+Hidden UI, independent flyout letters, shadows and spilled rings share that RAM;
+creation ordinals and visible-only reservations cannot reproduce hole reuse.
+Execute the current live slot in address order and retain parent/child handles
+through rewind, including a shadow's deletion flag until its own slot runs.
+
+Source: `SSObjectsManager` (s2.asm:6935-7001), `SSAllocateObject` /
+`SSAllocateObjectAfterCurrent` (s2.asm:9450-9483). See
+`docs/architecture/designs/2026-10-22-s2-special-stage-slot-topology.md`.
+
+Obj87 digits are also owned by the executing slot. Fixed slot 4 copies both
+players' cached digit bytes before dynamic collection; the total counter copies
+them at its own later slot and can observe an intervening collection or spill.
+Capture each owner's ordered digit frames/centers there and rewind that payload.
+Rebuilding both groups from draw-time ring counts erases their distinct reads.
+Source: `loc_7480` / `loc_74EA` (s2.asm:9851-9929), `loc_753E`
+(s2.asm:9933-10017). This is a counter-publication boundary, not another gameplay pass.
+
+
+## ARZ bubble children own deletion; generator range is a tail (2026-10-22)
+
+Obj24 children use the previous BuildSprites on-screen bit after ObjectMove,
+without a coarse MarkObjGone check. A newly initialized offscreen child keeps
+its initial `$84` until its own display pass publishes the next verdict. A
+shared range unload can release its slot before a lower-address producer's next
+allocation, changing later slot order and RNG producer order. Use the existing
+custom range contract for this self-culling object; transition persistence is a
+separate decision. Surface/pop scripts still display on the `$FC` turn that
+advances routine6 to8; deletion belongs to the following own slot pass.
+
+The generator's idle water/render gates jump to its common range tail. An active
+burst bypasses those gates, and timer/allocation work precedes range deletion.
+Its timer draw precedes AllocateObject, while X/large-bubble draws require a
+successful allocation; the last-bubble delay still runs after allocation failure.
+An eager construction supplier cannot model this failure branch. Reserve the
+existing native slot before those child writes and keep the generator's ROM
+animation on its own executed turns rather than indexing it from VInt.
+
+Source: `loc_1F988` / `loc_1F99E` (s2.asm:45263-45285), `loc_1F9C0`
+(s2.asm:45297-45305), `loc_1FA2A` / `loc_1FAA6` (s2.asm:45329-45369),
+`loc_1FACE` (s2.asm:45375-45384), `Ani_obj24` (s2.asm:45479-45499).
+Evidence and independent checks belong to
+`docs/architecture/research/2026-10-22-s2-chain-pacing.md`.

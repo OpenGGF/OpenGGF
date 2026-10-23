@@ -3,6 +3,8 @@ package com.openggf.audio.session;
 import java.util.Objects;
 
 public sealed interface SmpsSessionCommand {
+    record NativePause(boolean paused) implements SmpsSessionCommand { }
+
     record AdmitSfx(PreparedSmpsSfxProgram program)
             implements SmpsSessionCommand {
         public AdmitSfx {

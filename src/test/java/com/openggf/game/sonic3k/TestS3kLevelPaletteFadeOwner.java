@@ -11,12 +11,15 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PaletteFadePresentation;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelAnimationInternalAccess;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
@@ -33,6 +36,7 @@ import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -62,6 +66,34 @@ class TestS3kLevelPaletteFadeOwner {
         assertEquals(-1, Sonic3kLevelAnimationManager.levelFadePassesAt(1), "21 passes: every colour arrived");
         assertEquals(-1, Sonic3kLevelAnimationManager.levelFadePassesAt(0), "Animate_Palette reached AnPal");
         assertEquals(-1, Sonic3kLevelAnimationManager.levelFadePassesAt((short) 0xFF00), "event ST: BMI");
+    }
+
+    @Test
+    void paletteOnlyReplacementRetainsTheRealCombinedOwnersFadeExecution() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
+                .withFreshLevelStartLifecycle()
+                .build();
+        var level = GameServices.level();
+        var original = (Sonic3kLevelAnimationManager) level.getAnimatedPatternManager();
+        assertSame(original, level.getAnimatedPaletteManager());
+        assertEquals(22, original.globalAnimationState().paletteFadeTimer());
+        assertEquals(0, original.stageRingAnimationFrame());
+        var replacement = new CountingNativePalettes();
+        var context = SessionManager.getCurrentGameplayMode();
+
+        LevelAnimationInternalAccess.installNativeAnimatedPaletteManager(context, replacement);
+        fixture.stepIdleFrames(1);
+
+        assertSame(original, level.getAnimatedPatternManager());
+        assertSame(replacement, level.getAnimatedPaletteManager());
+        assertTrue(context.getRewindRegistry().capture().containsKey(original.key()));
+        assertEquals(1, replacement.ticks);
+        assertEquals(1, original.stageRingAnimationFrame());
+        // Rebinding the palette pointer does not split the real combined update:
+        // its retained pattern role still spends the original palette fade.
+        assertEquals(21, original.globalAnimationState().paletteFadeTimer());
     }
 
     @Test
@@ -237,5 +269,15 @@ class TestS3kLevelPaletteFadeOwner {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static final class CountingNativePalettes
+            implements AnimatedPaletteManager, RewindSnapshottable<Integer> {
+        private int ticks;
+
+        @Override public void update() { ticks++; }
+        @Override public String key() { return "native.palette.characterization"; }
+        @Override public Integer capture() { return ticks; }
+        @Override public void restore(Integer state) { ticks = state; }
     }
 }

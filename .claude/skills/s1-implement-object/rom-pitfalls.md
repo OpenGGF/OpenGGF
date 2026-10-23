@@ -758,3 +758,145 @@ S2 s2.asm Obj0D_Main and Obj0D_Main_State3. The pixel-word rule is cross-game;
 these two native goal owners provide the verified comparisons.
 
 **Originating commit.** 82bf7929c, editor native goal-word regressions.
+
+
+## Lamppost background words are not fresh scroll seeds or rewind snapshots
+
+`Lamp_StoreInfo` / `Lamp_LoadInfo` (`_incObj/79 Lamppost.asm`) bank six integer
+BG camera words. `BgScrollSpeed` (`_inc/LevelSizeLoad & BgScrollSpeed.asm`)
+skips its common foreground-camera seed when a lamppost is active, but still
+runs the zone's setup routine. GHZ retains BG2/BG3 X and clears clouds; LZ
+retains X but replaces Y; REV01 SLZ clears BG1 X even on checkpoint loads.
+Do not restore fractional handler accumulators/cloud epochs as checkpoint RAM,
+or unconditionally reseed X. Rewind separately captures those logical values.
+A same-camera restart can hide a stale entry seed: exercise two different
+entry cameras, then a real checkpoint reload. See the
+[S1 lifecycle audit](../../../docs/architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md).
+
+## P34 — In-place conversion keeps the native SST and its current call stack
+
+**Symptom.** A fragment appears a pass late or loses fractional motion; later
+ring bounces differ after an object unload even though visible objects match.
+
+**What to check.** `Bom_BurnFuseAndExplode` writes only the integer Y word and
+reuses a0 for the first shrapnel. Keep the fuse's position fractions and status,
+then execute the fallthrough `SpeedToPos` in that same pass. Fresh higher-slot
+children instead run `Bom_Main` without moving or animating. Under shipped
+`FixBugs=0`, the caller's `AnimateSprite`/`RememberState` tail still runs after
+`Bom_Shrapnel` returns, including its second display submission; the fixed branch
+skips that return. Motion parity does not by itself prove the sprite queue.
+An explicit DisplaySprite producer must retain both admitted slot references,
+including the first one after RememberState deletes the SST. Opt fresh children
+out of inferred drawing even when their stored mapping frame is zero. Keep
+routine-owned range checks after execution; a manager pre-cull can hide the
+entire display-and-delete branch. Test real-walk admission pressure and graph
+plus queue restore, without storing an object-local display count.
+
+A code-pointer write also preserves the **caller**: the body's
+`Bom_Action_WaitAndExplode` writes ID3F/routine0, then returns through
+`Bom_Action`'s Bomb animation and in-range bucket3 display. Only the next SST
+dispatch runs `Expl_Main`, switching to fiery mappings/bucket1, playing C4 and
+returning without display. Later `ExItem_Animate` passes submit once even when
+holding a mapping frame; frame5 deletes before display. Keep the same live SST
+owner, original placement identity and value-only captured state. The body
+expires one pass before its fuse, so destructive restore at ID3F/fuse timer0
+must recreate that still-live relationship before fuse-to-shrapnel allocation.
+Neither replacing the owner with a disposed-body callback nor blanket
+whole-update submission preserves these branches. See `Bom_Action`
+(`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:41-49`),
+`Bom_Action_WaitAndExplode` (`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:90-97`),
+`Expl_Main` (`docs/s1disasm/_incObj/27, 3F Explosions.asm:72-84`) and
+`ExItem_Animate` (`docs/s1disasm/_incObj/27, 3F Explosions.asm:44-53`).
+
+A consolidated staircase owner can execute at a higher child's slot, but native
+`DeleteObject` still clears each SST at its own walk position. Pass the owner's
+own slot to its retirement operation and preserve the deferred child releases.
+Test a lower hole, intervening allocation, a new forward-slot update, and
+destructive restore; an end-of-pass object count alone can hide leaked bits.
+
+**ROM citation.** `Bom_BurnFuseAndExplode` / `Bom_Shrapnel`
+(`docs/s1disasm/_incObj/5F Badnik - Walking Bomb.asm:171-220`), `Staircase`
+(`docs/s1disasm/_incObj/5B SLZ Staircase.asm:6-12`), and `DeleteObject`
+(`docs/s1disasm/_incObj/sub DeleteObject.asm:10-18`).
+
+**Origin.** S1 chain gap closure, 2026-10-22; exact native bytes, regressions and
+remaining display obligations are recorded in
+`docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## P35 — A FixBugs block may omit an entire retail camera write
+
+**Symptom.** Grounded rolling recenters the vertical look bias even though all
+player physics match, then the native camera catches up only after jumping.
+
+**What to check.** S1 `Sonic_AngledRollSpeed` puts its bias reset entirely inside
+`if FixBugs`; shipped zero omits it. S2 `Obj01_Roll_ResetScr` and S3K `loc_115C6`
+always reset toward `$60`. Keep that distinction in the narrow camera semantic;
+do not gate air movement or infer it from a route's observed look direction.
+Exercise both sides of the default bias and restore the actual camera/player
+owners. A six-argument `CameraRules` caller retains the prior true default.
+
+**ROM citation.** S1 `_incObj/01 Sonic.asm:829-842` and airborne reset `:974-982`;
+S2 `s2.asm:37074-37084`; S3K `sonic3k.asm:23038-23047`.
+
+**Origin.** S1 chain gap closure, 2026-10-22; verified ROM bytes and independent
+bias/restore checks in `docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## P36 — A surviving untracked SST does not suppress a native placement reload
+
+**Symptom.** Visible objects appear plausible, but one missing dormant copy
+shifts later FindFreeObj allocations and spilled-ring bounce phases.
+
+**What to check.** `OPL_SpawnObj` loads untracked entries on each cursor re-entry
+without consulting a live-instance map. Shipped `Saw_Type3/4 .hide` pops the
+caller return and skips normal deletion on X failure. Thus the old SST can live
+outside its placement window while a later cursor crossing loads another copy.
+A one-instance-per-placement admission rule needs its existing ownership-release
+semantic at that native skipped-delete boundary, preserving the old SST/identity.
+Do not delete the survivor or relax all placement deduplication. Tracked entries,
+in-range hidden objects, ordinary saws and Y-failure paths are distinct controls.
+
+**ROM citation.** `_inc/ObjPosLoad.asm:257-275` (`OPL_SpawnObj`) and
+`_incObj/6A SBZ Saws and Pizza Cutters.asm:131-160,181-207` (ground-saw hide).
+The branch is `FixBugs=0`; the fixed branch adds the missing deletion.
+
+**Origin.** S1 chain gap closure, 2026-10-22; native bytes, real cursor/lower-hole
+and destructive-restore cases in
+`docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md`.
+
+
+## Player-art buffer readiness has separate fade and load boundaries
+
+S1 VBlank_PaletteFade (`docs/s1disasm/sonic.asm:967-970`) calls
+StandardTransfers and ProcessPLC_9Tiles, without the per-mode Sonic C800→F000
+DMA. Keep staged Sonic art pending through this fade; NORMAL_PAUSE still has
+its own Sonic graphics DMA. After fade-out, Level_ClrRam
+(`docs/s1disasm/sonic.asm:2739-2743`) clears F700-F7FF, including last-frame F766
+and ready flag F767 (`docs/s1disasm/_Variables.asm:230-231`). It leaves the
+C800-CADF buffer bytes intact (`docs/s1disasm/_Variables.asm:34-35`).
+
+At the existing full-load boundary before player-art priming and title VBlank,
+invalidate only old unpublished readiness and its held-tail bookkeeping. Keep
+published transfer IDs/history and other games' submitted queues. A fade-entry
+clear, journal filtering, or skipping Sonic's pit Animate/DPLC tail would model
+a different native boundary. Test real staging through fade, an actual full
+load/title/release prelude, fresh mapping-1 art, and registered restore/forward.
+See the [S1 chain audit](../../../docs/architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
+
+## Results wait expiry and its next routine are separate object passes
+
+S1 `Got_Wait` (`docs/s1disasm/_incObj/3A Got Through Card.asm:112-119`) only
+advances the routine and displays on expiry. `Got_NextLevel` (`:175-211`)
+performs restart/special-stage writes on the following object pass, after the
+next ordinary VBlank has serviced pending Sonic graphics. Calling the exit
+callback on expiry can accidentally turn that required upload into a palette
+fade, which has no Sonic DMA. Fix the caller's routine boundary; do not relax
+the fade service policy or flush/drop pending art to compensate.
+
+Check what each existing callback represents before adding a delay. SBZ2's
+callback already only arms `Got_SBZ2_MoveOut` (`:227-236`); its movement starts
+the next pass, so another delay would be incorrect. Capture/restore the existing
+state/timer before the exit callback, and test ordinary art service plus the
+special-stage and SBZ2 branches independently. See the S1 chain gap-closure audit.

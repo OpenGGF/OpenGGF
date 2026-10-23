@@ -213,7 +213,9 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         }
 
         if (player.isJumpJustPressed()) {
-            mappingFrame = FRAME_BROKEN;
+            // Pole_Action .checkLetGo falls directly into .release without an
+            // obFrame write; only the timeout branch above breaks the pole.
+            // Pole_Action (_incObj/0B LZ Pole that Breaks.asm:35-79).
             releasePlayer(player);
             return;
         }

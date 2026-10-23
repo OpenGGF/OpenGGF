@@ -65,6 +65,8 @@ public class PatternRenderCommand implements GLCommandable {
     private float presentationHue;
     private float presentationOpacity=1;
     private boolean presentationPriorityShader;
+    private boolean nativeShadow15;
+    private Shadow15Backdrop shadowBackdrop;
 
     // Static state tracking for batch optimization
     private static int lastAtlasTextureId = -1;
@@ -93,6 +95,7 @@ public class PatternRenderCommand implements GLCommandable {
     private static FloatBuffer texCoordBuffer;
     private static FloatBuffer paletteBuffer;
     private static final Map<Integer, int[]> TRANSFORM_UNIFORM_LOCATIONS = new HashMap<>();
+    private static final Map<Integer, int[]> SHADOW_UNIFORM_LOCATIONS = new HashMap<>();
 
     @FunctionalInterface
     interface UniformLookup {
@@ -114,6 +117,7 @@ public class PatternRenderCommand implements GLCommandable {
 
     static void clearUniformLocationCache() {
         TRANSFORM_UNIFORM_LOCATIONS.clear();
+        SHADOW_UNIFORM_LOCATIONS.clear();
     }
 
     // VAO and VBOs for modern OpenGL (shared across all instances)
@@ -176,6 +180,7 @@ public class PatternRenderCommand implements GLCommandable {
         }
         cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         cmd.presentationQuad=null;cmd.presentationCount=0;cmd.presentationHue=0;cmd.presentationOpacity=1;
+        cmd.nativeShadow15=false;cmd.shadowBackdrop=null;
         cmd.paletteTextureId = paletteTextureId;
         cmd.atlasIndex = entry.atlasIndex();
         cmd.paletteIndex = paletteIndex;
@@ -195,6 +200,18 @@ public class PatternRenderCommand implements GLCommandable {
         cmd.y = resolveDisplayHeight(graphicsManager) - (y + rowStart) - cmd.height;
         cmd.resolveRowTextureCoordinates(entry, rowStart, rowEnd);
         return cmd;
+    }
+
+    /** Dedicated indexed shadow command; exactly the normal admitted source UVs, no palette read. */
+    static PatternRenderCommand obtainNativeShadowRows(PatternAtlas.Entry entry, int paletteIndex,
+            boolean hFlip, boolean vFlip, boolean priority, int x, int y, int rowStart, int rowEnd,
+            GraphicsManager graphics) {
+        PatternRenderCommand command = obtainRows(entry, -1, paletteIndex, hFlip, vFlip, priority,
+                x, y, rowStart, rowEnd, graphics);
+        command.nativeShadow15 = true;
+        command.shadowBackdrop = graphics.currentShadow15Backdrop;
+        command.paletteReplay = null;
+        return command;
     }
 
     /**
@@ -222,6 +239,7 @@ public class PatternRenderCommand implements GLCommandable {
             GraphicsManager graphicsManager) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         presentationQuad=null;presentationCount=0;presentationHue=0;presentationOpacity=1;
+        nativeShadow15=false;shadowBackdrop=null;
         this.paletteTextureId = paletteTextureId;
         this.u0 = entry.u0();
         this.v0 = entry.v0();
@@ -262,6 +280,9 @@ public class PatternRenderCommand implements GLCommandable {
         graphicsManager = null;
         paletteReplay=null;
         presentationQuad=null;
+        presentationCount=0;
+        nativeShadow15=false;
+        shadowBackdrop=null;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
         }
@@ -329,16 +350,19 @@ public class PatternRenderCommand implements GLCommandable {
 
     private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         GraphicsManager graphicsManager = this.graphicsManager;
+        if (nativeShadow15 && shadowBackdrop == null)
+            throw new IllegalStateException("SHADOW_15 execution requires a live native shadow backdrop");
         int effectivePalette=paletteReplay==null?paletteIndex:paletteReplay.palette(graphicsManager,paletteIndex);
         if(effectivePalette<0)return;
-        graphicsManager.refreshScopedUnderwaterResidency();
+        if (!nativeShadow15) graphicsManager.refreshScopedUnderwaterResidency();
         if(paletteReplay!=null) {
             Integer current=graphicsManager.scopedReplayPaletteTexture(paletteReplayUnderwater);
             if(current==null)return;
             paletteTextureId=current;
         }
-        ShaderProgram shaderProgram = presentationQuad==null?graphicsManager.getShaderProgram():
-                graphicsManager.presentationShader(presentationPriorityShader);
+        ShaderProgram shaderProgram = nativeShadow15 ? graphicsManager.nativeShadowShader()
+                : presentationQuad==null ? graphicsManager.getShaderProgram()
+                : graphicsManager.presentationShader(presentationPriorityShader);
         if(lastExecutedShaderProgramId!=shaderProgram.getProgramId()) {
             resetFrameState();lastExecutedShaderProgramId=shaderProgram.getProgramId();
         }
@@ -403,6 +427,7 @@ public class PatternRenderCommand implements GLCommandable {
             TilePriorityFBO fbo = graphicsManager.getTilePriorityFBO();
             int tilePriorityTextureId =
                     fbo != null && fbo.isInitialized() ? fbo.getTextureId() : -1;
+            priorityShader.setNativeSpriteOwnership(graphicsManager.nativeSpriteOwnershipActive(), tilePriorityTextureId >= 0);
             int viewportX = graphicsManager.getViewportX();
             int viewportY = graphicsManager.getViewportY();
             int viewportWidth = graphicsManager.getViewportWidth();
@@ -468,7 +493,7 @@ public class PatternRenderCommand implements GLCommandable {
         }
 
         // Only bind palette texture if it changed
-        if (paletteTextureId != lastPaletteTextureId) {
+        if (!nativeShadow15 && paletteTextureId != lastPaletteTextureId) {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, paletteTextureId);
             lastPaletteTextureId = paletteTextureId;
@@ -480,6 +505,14 @@ public class PatternRenderCommand implements GLCommandable {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, atlasTextureId);
             lastAtlasTextureId = atlasTextureId;
+        }
+
+        if (nativeShadow15) {
+            int[] locations = SHADOW_UNIFORM_LOCATIONS.computeIfAbsent(shaderProgram.getProgramId(), program -> new int[]{
+                    glGetUniformLocation(program, "ShadowBackdropTexture"),
+                    glGetUniformLocation(program, "ShadowBackdropOrigin"),
+                    glGetUniformLocation(program, "ShadowBackdropSize")});
+            shadowBackdrop.bind(locations);
         }
 
         // Only update palette line uniform if it changed
@@ -594,7 +627,9 @@ public class PatternRenderCommand implements GLCommandable {
                 || paletteReplay != null || next.paletteReplay != null
                 || paletteReplayUnderwater != next.paletteReplayUnderwater
                 || piecePriority != next.piecePriority || capturedTileOcclusionPaletteMask != next.capturedTileOcclusionPaletteMask
-                || ghostEffectActive != next.ghostEffectActive || ghostAlpha != next.ghostAlpha
+                || ghostEffectActive != next.ghostEffectActive || ghostColour != next.ghostColour
+                || ghostAlpha != next.ghostAlpha
+                || nativeShadow15 != next.nativeShadow15 || shadowBackdrop != next.shadowBackdrop
                 || presentationPriorityShader != next.presentationPriorityShader
                 || presentationHue != next.presentationHue || presentationOpacity != next.presentationOpacity) return false;
         int required = (presentationCount + 1) * 12;

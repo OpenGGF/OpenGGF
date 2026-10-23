@@ -1035,6 +1035,14 @@ loads `SharedLevel` masks this omission. `TestModSceneLauncherAudio` opens throu
 the production launcher without loading a title or level and checks final PCM for
 music and an isolated effect. Origin: Eggman's Sky bug reports, 2026-10-08.
 
+**PCM exhaustion need not release a native caller.** S1 PlaySegaSound starts
+Z80 sample88, then blocks the 68000 in a separate nested NOP/DBF loop inside
+VBlank. The sample's byte clock and the caller's CPU-work completion are distinct;
+a transport-active getter cannot substitute for the latter. Instruction-only
+cycles also omit bus/refresh/peripheral costs and cannot be rounded into an
+absolute startup delay. Preserve each owner and require a service boundary before
+starting the post-chant timer. See the [S1 startup causal evidence](validation/audio/2026-10-22-s1-s2-native-audio-evidence.md#s1-startup-causal-slice-instruction-work-is-not-presentation-time).
+
 **Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
@@ -1223,6 +1231,15 @@ Storing concrete `level.Palette` rows in a new graphics helper introduced 27
 frozen architecture violations despite passing pixel checks. Detached RGB bytes
 preserve publication/value equality and pending writes without adding runtime
 layer dependencies; verify the architecture rule as well as actual water pixels.
+
+**SAT capacity belongs to mapping pieces, not expanded tiles.** HUD letters and
+numeric art can have scattered cache addresses while sharing one native SAT
+footprint; blank columns still consume its declared width. Transparent,
+offscreen and already masked pieces also consume count/width. Preserve the
+native footprint through admission, then clip immutable replay fragments.
+Art-version tests must place the compared mapping inside the evaluated raster:
+a missing offscreen tile version after admission does not prove lost resident
+art. See [native sprite budgets](designs/2026-10-22-native-sprite-scanline-budgets.md).
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
@@ -2410,3 +2427,28 @@ Keep initialized atlas/tile renderers. `GraphicsManager.resetState()` drops the
 GL terrain renderers without recreating them and can leave valid bodies over
 black scenery. Verify visible terrain as a positive control, plus a return to an
 earlier act after changing cast; body-only and equal-blank-image checks can pass.
+
+**Slide collision flags are not glide responses.** Native `Knuckles_Sliding`
+(S3K:31032–31049; KiS2:38449–38469) calls collision-only correction and then a
+second independent floor scan at corrected coordinates. Keep KiS2's 10/10 radii
+through both scans and the writes, and carry the effective scanner bit/path out
+of the first call. Do not dispatch glide landing/wall-grab responses from the
+slide's temporary flags. Signed BPL makes +32→0 continue while −32→0 gets up.
+Get-up uses byte subtraction then sign extension for the radius correction and
+leaves double_jump_property intact. A late restore after ordinary setAir(false)
+is insufficient: landing callbacks already observed zero. Use the narrow native
+floor-reset entry before publication; ordinary landing keeps its original reset.
+Declared component and registered restore/forward controls cover these branches;
+LevelBound/camera prelude, slide sound and live route qualification remain separate.
+
+
+**Preserve native landing bytes before callbacks, without repairing afterward.**
+Knux_TouchFloor retains double_jump_property on native climb-floor exits. A
+private exit that explicitly clears it before public setAir(false) exposes zero
+to both hooks; restoring the old byte afterward also overwrites a hook's new
+value. Reuse the internal native-floor entry before either clear and omit the
+late restore. Keep ordinary and ledge-completion semantics separate. The14-case
+public-dispatch control observes both hooks and callback-written66, as well as
+ordinary/ledge negatives. Original5aef's47 returned-state checks alone did not
+cover callback timing. See the aggregate's bounded5aef/372/372671811 composition
+in [the swarm plan](plans/2026-10-22-native-gap-swarm.md).

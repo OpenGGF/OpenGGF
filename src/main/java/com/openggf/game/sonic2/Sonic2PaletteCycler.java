@@ -50,6 +50,7 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
     private final PaletteOwnershipRegistry paletteRegistry;
     private final boolean usingLocalPaletteRegistry;
     private final List<PaletteCycle> cycles;
+    private final boolean sharedPrimaryTimer;
     private Palette[] cachedLevelPalettes;
 
     public Sonic2PaletteCycler(Rom rom, Level level, int zoneIndex) throws IOException {
@@ -59,6 +60,8 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         this.usingLocalPaletteRegistry = runtimeRegistry == null;
         RomByteReader reader = RomByteReader.fromRom(rom);
         this.cycles = loadCycles(reader, zoneIndex);
+        this.sharedPrimaryTimer = zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CPZ
+                || zoneIndex == Sonic2ZoneConstants.ROM_ZONE_DEZ;
     }
 
     @Override
@@ -80,13 +83,17 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         switch (zoneIndex) {
             case Sonic2ZoneConstants.ROM_ZONE_EHZ -> addIfNotNull(list, createEhzWaterCycle(reader));
             case Sonic2ZoneConstants.ROM_ZONE_HTZ -> addIfNotNull(list, createHtzLavaCycle(reader));
-            case Sonic2ZoneConstants.ROM_ZONE_MTZ -> list.addAll(createMtzCycles(reader));
+            // PalCycle (s2.asm:2703-2720) aliases these ROM zone slots to the same routines.
+            case Sonic2ZoneConstants.ROM_ZONE_MTZ, Sonic2ZoneConstants.ROM_ZONE_MTZ_3 ->
+                    list.addAll(createMtzCycles(reader));
             case Sonic2ZoneConstants.ROM_ZONE_OOZ -> addIfNotNull(list, createOozOilCycle(reader));
             case Sonic2ZoneConstants.ROM_ZONE_MCZ -> addIfNotNull(list, createMczLanternCycle(reader));
             case Sonic2ZoneConstants.ROM_ZONE_CNZ -> list.addAll(createCnzCycles(reader));
-            case Sonic2ZoneConstants.ROM_ZONE_CPZ -> list.addAll(createCpzCycles(reader));
+            case Sonic2ZoneConstants.ROM_ZONE_CPZ, Sonic2ZoneConstants.ROM_ZONE_DEZ ->
+                    list.addAll(createCpzCycles(reader));
             case Sonic2ZoneConstants.ROM_ZONE_ARZ -> addIfNotNull(list, createArzWaterCycle(reader));
-            case Sonic2ZoneConstants.ROM_ZONE_WFZ -> list.addAll(createWfzCycles(reader));
+            case Sonic2ZoneConstants.ROM_ZONE_WFZ, Sonic2ZoneConstants.ROM_ZONE_SCZ ->
+                    list.addAll(createWfzCycles(reader));
         }
         return list;
     }
@@ -283,6 +290,17 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
             cachedLevelPalettes[i] = level.getPalette(i);
         }
         return cachedLevelPalettes;
+    }
+
+    /** Writes the native PalCycle_Timer without changing any frame counters. */
+    void setPrimaryTimer(int timer) {
+        // PalCycle_CPZ (s2.asm:2951-2984) gates all three streams with one timer.
+        // Their Java timer replicas normally advance together and must receive
+        // the same external write (ObjC7's ending hold writes $7FFF).
+        int count = sharedPrimaryTimer ? cycles.size() : Math.min(1, cycles.size());
+        for (int i = 0; i < count; i++) {
+            cycles.get(i).timer = timer;
+        }
     }
 
     /**

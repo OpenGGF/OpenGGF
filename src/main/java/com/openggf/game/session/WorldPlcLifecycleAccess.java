@@ -22,8 +22,10 @@ public final class WorldPlcLifecycleAccess {
 
     public static <T> T ownedService(WorldSession world, Class<T> type) {
         var owned = owned(world);
-        return owned != null && PlcLifecycleService.class.isAssignableFrom(type) && type.isInstance(owned)
-                ? type.cast(owned) : null;
+        if (owned != null && PlcLifecycleService.class.isAssignableFrom(type) && type.isInstance(owned))
+            return type.cast(owned); // The actual lifecycle/rewind facade always wins.
+        return owned instanceof com.openggf.game.internal.WorldPlcServiceProvider provider
+                ? provider.worldPlcService(type) : null;
     }
 
     public static <T> T require(WorldSession world, Class<T> type) {

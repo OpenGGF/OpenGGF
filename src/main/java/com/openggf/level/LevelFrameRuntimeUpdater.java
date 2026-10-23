@@ -1,6 +1,8 @@
 package com.openggf.level;
 
 import com.openggf.game.OscillationManager;
+import com.openggf.level.animation.StageRingAnimationFrameProvider;
+import com.openggf.level.rings.RingManagerInternalAccess;
 
 /**
  * Advances level-owned runtime state that must tick during logic frames, even
@@ -27,6 +29,31 @@ final class LevelFrameRuntimeUpdater {
         OscillationManager.update(levelManager.frameCounter);
     }
 
+    void updateLevelState(com.openggf.sprites.playable.AbstractPlayableSprite playable,
+            com.openggf.game.session.WorldSession worldSession) {
+        if (levelManager.levelGamestate != null) {
+            var roster = com.openggf.game.competition.NativeCompetitionRoster.from(worldSession);
+            if (roster == null) {
+                if (!levelManager.isHudSuppressed()) levelManager.levelGamestate.update();
+                if (levelManager.levelGamestate.isTimeOver() && playable != null && !playable.getDead()) {
+                    playable.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                }
+            } else {
+                // One canonical world tick owns both native timer banks. Split
+                // rendering never advances either timer or global animation.
+                for (int slot = 0; slot < 2; slot++) {
+                    var actor = roster.player(slot);
+                    var state = roster.levelState(slot);
+                    if (actor == null || state == null) continue;
+                    if (!levelManager.isHudSuppressed()) state.update();
+                    if (state.isTimeOver() && !actor.getDead()) {
+                        actor.applyHurtOrDeath(0, com.openggf.game.DamageCause.TIME_OVER, false);
+                    }
+                }
+            }
+        }
+    }
+
     void updateParallaxAndAnimatedContent() {
         if (levelManager.parallaxManager != null) {
             levelManager.parallaxManager.update(
@@ -40,6 +67,18 @@ final class LevelFrameRuntimeUpdater {
             levelManager.animatedPatternManager.update();
         }
         levelManager.updateContributedAnimatedTiles();
+        // Native powered-form palettes are world logic, after RunObjects and
+        // before the zone palette owner. Rewind's derived-output refresh below
+        // never enters this method and must not advance these captured timers.
+        if (levelManager.spriteManager != null) {
+            for (var sprite : levelManager.spriteManager.getAllSprites()) {
+                if (sprite instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable
+                        && playable.getSuperStateController() instanceof
+                        com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeOwner) {
+                    nativeOwner.updateNativeGlobalPaletteAfterObjects();
+                }
+            }
+        }
         if (levelManager.animatedPaletteManager != null
                 && levelManager.animatedPaletteManager != levelManager.animatedPatternManager) {
             levelManager.animatedPaletteManager.update();
@@ -48,6 +87,15 @@ final class LevelFrameRuntimeUpdater {
             levelManager.camera.setShakeOffsets(
                     levelManager.parallaxManager.getShakeOffsetX(),
                     levelManager.parallaxManager.getShakeOffsetY());
+        }
+    }
+
+    void updateSharedSpillAnimation() {
+        if (levelManager.animatedPatternManager instanceof StageRingAnimationFrameProvider provider
+                && !provider.advancesSharedSpillAnimation()) {
+            RingManagerInternalAccess.updateLostRingHousekeeping(levelManager.ringManager);
+        } else {
+            levelManager.ringManager.updateLostRingPhysics(levelManager.frameCounter + 1);
         }
     }
 

@@ -154,13 +154,6 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     // Broken piece state (spawns random animals)
     private int brokenRoutineSecondary = BROKEN_STATE_WAITING;
     private int brokenAnimDuration = 0;
-    /**
-     * True while the broken piece's SST slot has already been passed by the
-     * ExecuteObjects walk that armed it, so {@code loc_3F3A8} does not run
-     * again until the next frame. Derived from slot order, not from a fixed
-     * one-frame skip -- see {@link #armBrokenPieceSpawning()}.
-     */
-    private boolean brokenPieceAlreadyPassedThisFrame = false;
 
     // Player reference for results screen
     private AbstractPlayableSprite lastPlayer;
@@ -187,21 +180,17 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * <p>
      * ROM loc_3F212 initializes the body in a0, then AllocateObject creates
      * the routine-4 button, routine-6 lock, and routine-8 broken/end-checker
-     * from Obj3E_ObjLoadData (docs/s2disasm/s2.asm:84798-84829). The Java
-     * parent still owns lock physics and animal spawning, but these children
-     * preserve the SST slot pressure later AllocateObject scans observe.
+     * from Obj3E_ObjLoadData (s2.asm:84959-84990). The Java parent stores
+     * shared component state, while the component slots own its dispatch.
      * <p>
-     * Divergence: {@code spawnChild} has FindNextFreeObj semantics (scan forward
+     * {@code spawnChild} has FindNextFreeObj semantics (scan forward
      * from the parent slot), while {@code loc_3F220} calls {@code AllocateObject},
      * which restarts its scan at {@code Dynamic_Object_RAM}
-     * (docs/s2disasm/s2.asm:84841, 33681-33695) and can therefore land a piece
-     * BELOW the body. The two coincide whenever every slot under the body is
-     * already taken, which is what both recorded capsules show -- EHZ2 body 16 /
-     * button 17 / lock 18 / broken 19, ARZ2 body 17 / button 18 / lock 19 /
-     * broken 20, both matching the engine. Switching to {@code spawnFreeChild}
-     * was tried and changed no recorded slot, so the ROM allocator is documented
-     * here rather than swapped in blind; {@link #armBrokenPieceSpawning()} reads
-     * whatever order results instead of assuming one.
+     * (AllocateObject, s2.asm:33681-33695) and can therefore land a piece
+     * BELOW the body. Recorded capsules happen to have occupied lower slots,
+     * but sparse SST layouts expose the difference. Use {@code spawnFreeChild}
+     * and dispatch each component at its own slot, including lower slots that
+     * have already passed in this ExecuteObjects walk.
      */
     private void spawnComponentSlotObjects() {
         if (componentSlotsSpawned || services().objectManager() == null) {
@@ -209,10 +198,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         buttonSpawned = true;
-        buttonObject = spawnChild(() -> new EggPrisonButtonObjectInstance(spawn, this));
-        lockSlotChild = spawnChild(() -> new EggPrisonLockSlotChild(
+        buttonObject = spawnFreeChild(() -> new EggPrisonButtonObjectInstance(spawn, this));
+        lockSlotChild = spawnFreeChild(() -> new EggPrisonLockSlotChild(
                 buildComponentSpawn(LOCK_Y_OFFSET), this));
-        brokenSlotChild = spawnChild(() -> new EggPrisonBrokenSlotChild(
+        brokenSlotChild = spawnFreeChild(() -> new EggPrisonBrokenSlotChild(
                 buildComponentSpawn(0), this));
         componentSlotsSpawned = true;
     }
@@ -271,12 +260,14 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         this.lastPlayer = player;
         this.vIntRunCount = vIntRunCount;
-        spawnComponentSlotObjects();
+        if (!componentSlotsSpawned) {
+            spawnComponentSlotObjects();
+            // loc_3F212 / loc_3F272 (s2.asm:84959-84990) initializes the
+            // four pieces and returns; routine 2 begins on the next pass.
+            return;
+        }
 
-        // Update each sub-object according to its routine
         updateBody(player);
-        updateLock();
-        updateBrokenPiece(vIntRunCount);
     }
 
     /**
@@ -351,37 +342,9 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Tell broken piece to start spawning random animals after $B4 frames
         brokenAnimDuration = SPAWN_PHASE_DURATION;
         brokenRoutineSecondary = BROKEN_STATE_SPAWNING;
-        armBrokenPieceSpawning();
 
         // Body is done
         bodyRoutineSecondary = BODY_STATE_DONE;
-    }
-
-    /**
-     * Decides whether the broken piece's {@code loc_3F3A8} routine still runs on
-     * the frame the body arms it.
-     * <p>
-     * ROM {@code loc_3F2FC} arms the piece by writing {@code $B4} to
-     * {@code anim_frame_duration(a2)} and {@code addq.b #2,routine_secondary(a2)}
-     * on the object in {@code objoff_3C(a0)} (docs/s2disasm/s2.asm:84928-84930).
-     * That is a different SST slot from the body's, and {@code ExecuteObjects}
-     * walks the slots in ascending order, so the piece runs again this frame only
-     * if its slot sits after the body's. When it does, {@code loc_3F3A8} sees the
-     * routine_secondary it was just given and its {@code Vint_runcount+3 & 7}
-     * spawn gate (docs/s2disasm/s2.asm:84972-84974) is live on the arming frame;
-     * when it sits before the body's slot the walk has already passed it and the
-     * gate first runs next frame.
-     * <p>
-     * This is deliberately a slot comparison rather than an unconditional
-     * one-frame skip: the ROM allocates the piece with {@code AllocateObject},
-     * which scans from the start of {@code Dynamic_Object_RAM}
-     * (docs/s2disasm/s2.asm:84841, 33681-33695), so the relative order depends on
-     * which slots were free when the capsule initialised, not on a constant.
-     */
-    private void armBrokenPieceSpawning() {
-        brokenPieceAlreadyPassedThisFrame =
-                brokenSlotChild == null
-                        || brokenSlotChild.getSlotIndex() <= getSlotIndex();
     }
 
     /**
@@ -462,10 +425,9 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         if (brokenRoutineSecondary == BROKEN_STATE_SPAWNING) {
             // ROM loc_3F3A8 samples (Vint_runcount+3) and spawns only when
             // its low three bits are zero (docs/s2disasm/s2.asm:84969-84976).
-            if (!brokenPieceAlreadyPassedThisFrame && (vIntRunCount & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnRandomAnimal();
             }
-            brokenPieceAlreadyPassedThisFrame = false;
 
             // Count down duration
             brokenAnimDuration--;
@@ -893,12 +855,16 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
+            } else {
+                // loc_3F38E (s2.asm:85081-85088): execute at this component's
+                // SST position, after or before the body according to allocation.
+                parent.updateLock();
             }
         }
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            // Slot-pressure child only; the parent renders the lock sprite.
+            // The parent draws the lock; this slot owns the native lock dispatch.
         }
 
         @Override
@@ -940,12 +906,16 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
+            } else {
+                // loc_3F3A8 / loc_3F3F4 (s2.asm:85096-85122). The native
+                // slot walk owns both the random gate and timer decrement.
+                parent.updateBrokenPiece(vIntRunCount);
             }
         }
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            // Slot-pressure child only; the parent owns the broken/end-checker routine effects.
+            // The parent renders the body; this slot owns the broken/end-checker dispatch.
         }
 
         @Override

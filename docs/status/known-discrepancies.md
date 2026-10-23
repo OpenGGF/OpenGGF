@@ -55,6 +55,7 @@ no discrepancy entry was added or reclassified by the cutover.
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
 38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
+39. [Fixed Native Sprite Capacity in Wider Presentation](#fixed-native-sprite-capacity-in-wider-presentation)
 
 ---
 
@@ -83,6 +84,13 @@ Trace replay does not use that approximation. Externally paced sessions disable
 it, and a recorded `lag_state.lagged` outcome admits the already-existing
 `VBlank_Lag` loop through the separate scheduling-only contract. That outcome
 supplies no gameplay value or work.
+
+Ordinary entry now spends the existing measured104-presentation NTSC load hold
+after fade-to-white and before track/player work; recorded startup does not add
+it again. This closes the unwired live entry presentation, while its full CPU/
+device derivation and PAL duration remain unqualified. The recurring bucket
+approximation above is still present; this hold is not evidence of exact live
+hardware pacing. See the [current source and validation record](../architecture/research/2026-10-22-s2-chain-pacing.md).
 
 ---
 
@@ -523,12 +531,13 @@ human P2 can use it in the native competition mode.
 
 ### Engine Implementation
 
-S2 has no competition session or human-P2 playable slot. The generic
-`TitleActionRoute.TWO_PLAYER` token is not a capability owner: the shared title
-router rejects that unsupported action, reinitializes the existing title provider
-and remains in `TITLE_SCREEN` without loading an ordinary level. Stock S2's
-title currently emits only `ONE_PLAYER`; S3K and creator providers can emit the
-generic two-player action. `GameplayTeamBootstrap`
+S2 has no connected competition world or human-P2 playable slot. The generic
+`TitleActionRoute.TWO_PLAYER` token is not a capability owner: absent a native
+competition provider, the shared title router reinitializes the title and remains
+in `TITLE_SCREEN` without loading an ordinary level. Stock S2 exposes its ROM
+one-player and options rows while that capability remains unavailable. The
+options screen selects the exact campaign team in a fresh no-save world and
+retains emerald progress on its direct level exit. `GameplayTeamBootstrap`
 constructs every configured secondary as a CPU sidekick, controller-2 bindings
 feed that sidekick's manual-input path, and
 `ObjectPlayerQuery.nativeP2OrNull()` names the first sidekick rather than a
@@ -1531,6 +1540,20 @@ these files so this debt cannot reappear silently under the release branch.
 Replace each embedded table with ROM-backed loaders or generated mappings
 through the normal user-supplied ROM pipeline, then reduce or remove the
 `sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded` ratchet.
+
+## S1 Bomb conversion display queue
+
+Shipped `FixBugs=0` returns from `Bom_Shrapnel`'s `DisplaySprite` through
+`Bom_Fuse`'s `AnimateSprite`/`RememberState` tail, submitting the reused SST
+twice on the conversion tick. If the second path deletes it, the first queued
+pointer still exists. The engine's ordinary object render collection emits one
+part and suppresses destroyed objects, so this queue behavior remains unmodeled.
+Fresh child `Bom_Main` leaves frame 0 untouched until its first animation call;
+the engine now preserves that state and its animation phase, including restore.
+The separate zero-display-call initialization and duplicate/orphan queue behavior
+still require the coordinated native submission backend and Bomb consumer.
+Motion/fraction/status and allocator regressions do not certify those queue
+paths. See the [native source and route evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#native-sst-retirement-and-bomb-conversion).
 
 ## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
 
@@ -3510,3 +3533,25 @@ This independent component correction has no new maintained MHZ qualification
 and does not attribute or waive the death26853 delivery blocker.
 [Evidence and source boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
 [Callback correction and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).
+
+The composed source candidates retain the powered native vertical probes, signed
+radius offsets and KiS2's distinct radii and idle-probe rules. Aggregate affected
+qualification remains pending. No controller or comparison oracle was adapted.
+See the [aggregate checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+## Fixed Native Sprite Capacity in Wider Presentation
+
+Gameplay SAT evaluation retains H40's native 20 pieces per scanline, 320 fetched
+pixels per scanline and 80 table entries at wider display aspects. Extra side
+pieces compete for the same capacity. Expanded coordinates do not wrap through
+the native nine-bit X field; explicit zero-X mask controls still cover the full
+logical line and exact pixel exhaustion still arms the following line. Native
+H32 consumers use their fixed inner 256-pixel region and 16/256/64 capacity.
+This is a presentation extension, not a claim of native widescreen parity.
+
+The ROM-native HUD footprints participate at the table head, including blank
+art and numeric regions; expanded letters/digits are replay fragments of those
+pieces. Reserved attracted rings submit at their actual object-slot phase, and
+ring visibility is filtered after admission. Explicit native FIFO entries precede
+the existing legacy SST suffix; this mixed bridge does not establish every
+object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).

@@ -7,6 +7,8 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelInitProfile;
+import com.openggf.game.internal.BlockingLevelEntryFade;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -35,6 +37,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -169,8 +172,11 @@ class TestNativeTerminalLevelAdmission {
 
     @ParameterizedTest(name = "launcher={0}")
     @ValueSource(booleans = {false, true})
-    void terminalRowsConsumeANonblockingEntryWithoutInventingALevelHold(boolean launcher) {
-        Harness h = open(launcher);
+    void terminalRowsConsumeANonblockingEntryWithoutNativeEntryOptIn(boolean launcher) {
+        Harness h = open(launcher, true);
+        assertFalse(GameServices.module().getLevelInitProfile() instanceof BlockingLevelEntryFade);
+        assertEquals(22, GameServices.module().getLevelInitProfile().preLevelFadeOutFrames(),
+                "the public profile keeps its duration without opting into native blocking");
         h.closeForTail();
         h.level.requestZoneAndAct(0, 1, false);
         assertFalse(h.level.isLevelInactiveForTransition(), "the caller leaves the source level active");
@@ -213,10 +219,33 @@ class TestNativeTerminalLevelAdmission {
     }
 
     private Harness open(boolean launcher) {
+        return open(launcher, false);
+    }
+
+    private Harness open(boolean launcher, boolean unopted) {
         assertNull(TraceSessionLauncher.active());
         Engine.clearGlobalInstance();
         GameServices.playbackDebug().endSession();
-        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
+        var rom = assertDoesNotThrow(() -> GameServices.rom().getRom());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule() {
+            private LevelInitProfile unoptedProfile;
+            @Override public LevelInitProfile getLevelInitProfile() {
+                LevelInitProfile nativeProfile = super.getLevelInitProfile();
+                if (!unopted) return nativeProfile;
+                if (unoptedProfile == null) {
+                    // Same explicit public-only negative profile as the production
+                    // blocking-entry controls; no timing or gameplay values change.
+                    unoptedProfile = (LevelInitProfile) Proxy.newProxyInstance(
+                            LevelInitProfile.class.getClassLoader(), new Class<?>[]{LevelInitProfile.class},
+                            (proxy, method, args) -> {
+                                try { return method.invoke(nativeProfile, args); }
+                                catch (InvocationTargetException error) { throw error.getCause(); }
+                            });
+                }
+                return unoptedProfile;
+            }
+        });
+        GameServices.rom().setRom(rom);
         HeadlessTestFixture fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
         GameplayModeContext mode = fixture.gameplayMode();
         LevelManager level = mode.getLevelManager();

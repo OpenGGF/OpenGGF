@@ -44,7 +44,6 @@ import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
-import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayRunRouting;
@@ -375,11 +374,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     RingManager ringManager;
     private boolean pendingTransitionRingInitialization;
     ZoneFeatureProvider zoneFeatureProvider;
-    private TouchResponseTable touchResponseTable;
+    TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
     HudRenderManager hudRenderManager;
     private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
+    LevelAnimationInternalAccess.Binding nativePatternBinding;
+    LevelAnimationInternalAccess.Binding nativePaletteBinding;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
     final LevelContributedZoneRuntime contributedZoneRuntime;
@@ -1104,7 +1105,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link ObjectManager} into the main player and all sidekicks.
      */
     String resolveMainCharacterCode() {
-        return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+        return LevelPlayableArtInitializer.resolveMainCharacterCode(this, configService);
     }
 
     /**
@@ -1174,6 +1175,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initRings() {
         ringManager = LevelManagerInitializationSupport.initializeRings(this, touchResponseTable,
                 audioManager, camera, graphicsManager, checkpointCoordinator.ringStatusTableForLoad(transitions.bigRingReturnRingStatusTable()));
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
     }
 
     /**
@@ -1298,7 +1300,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void initPlayerAndCheckpoint() {
         resetPlayerState();
         checkpointCoordinator.prepareForLevelStart();
-        levelGamestate = gameModule.createLevelState();
+        var roster = com.openggf.game.competition.NativeCompetitionRoster.from(worldSession);
+        levelGamestate = roster == null ? gameModule.createLevelState() : roster.levelState(0);
     }
 
     /**
@@ -1721,7 +1724,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // Per-ring spilled-ring physics now runs in the object exec loop
             // (LostRingObjectInstance); this only advances the shared decelerating
             // spin once per frame (ROM ChangeRingFrame / Ring_spill_anim_*).
-            ringManager.updateLostRingPhysics(frameCounter + 1);
+            frameRuntimeUpdater.updateSharedSpillAnimation();
         }
         // Water movement — ROM order: MoveWater (move toward target) runs BEFORE
         // DynWaterHeight (zone features set new target for next frame).
@@ -1733,14 +1736,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (zoneFeatureProvider != null && level != null) {
             zoneFeatureProvider.update(playable, camera.getX(), getFeatureZoneId());
         }
-        if (levelGamestate != null) {
-            if (!isHudSuppressed()) {
-                levelGamestate.update();
-            }
-            if (levelGamestate.isTimeOver() && playable != null && !playable.getDead()) {
-                playable.applyHurtOrDeath(0, DamageCause.TIME_OVER, false);
-            }
-        }
+        frameRuntimeUpdater.updateLevelState(playable, worldSession);
 
         frameRuntimeUpdater.updateParallaxAndAnimatedContent();
 
@@ -1869,7 +1865,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
-    private void initObjectArt() {
+    void initObjectArt() {
         activeCustomZonePaletteBridge = null;
         PatternAtlas patternAtlas = graphicsManager.getPatternAtlas();
         if (patternAtlas != null) {
@@ -1938,6 +1934,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 hudRenderManager.setDigitPatternIndex(hudBaseIndex);
 
                 int nextHudIndex = hudBaseIndex + hudDigits.length;
+                com.openggf.level.objects.HudProfileAccess.installSatLayout(hudRenderManager,
+                        provider instanceof com.openggf.game.internal.HudSatLayoutSource nativeHud
+                                ? nativeHud.getHudSatLayout() : null);
                 HudStaticArt staticHudArt = provider.getHudStaticArt();
                 if (staticHudArt != null && staticHudArt.patterns() != null) {
                     LOGGER.info("Cached " + staticHudArt.patterns().length
@@ -2050,6 +2049,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void initAnimatedPatterns() {
+        LevelAnimationInternalAccess.clearNativePatternOwner(this);
         animatedPatternManager = null;
         if (activeModZoneRuntimeProfile != null
                 && !activeModZoneRuntimeProfile.animatedTiles()) {
@@ -2078,7 +2078,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private void initAnimatedPalettes() {
-        animatedPaletteManager = null;
+        LevelAnimationInternalAccess.clearAnimatedPaletteOwner(this);
         if (activeModZoneRuntimeProfile != null
                 && !activeModZoneRuntimeProfile.animatedTiles()) {
             return;
@@ -2692,6 +2692,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         objectManager.resyncSpawnList(level.getObjects());
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
     }
 
     public void resyncRingSpawnListFromLevel() {
@@ -3264,6 +3265,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     objectManager.reset(camera.getX(), persistentRespawnState);
                 }
             }
+            com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
             // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
@@ -3633,9 +3635,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * (S3K AIZ1's plane intro) keeps that card and its art admission for the cutscene.
      */
     public void restartCurrentLevelFromStartAfterDeath() {
-        checkpointCoordinator.clear();
-        restartCurrentLevelAfterDeath();
-        skipPendingInitialTitleCardPresentation();
+        checkpointCoordinator.restartFromStartAfterDeath();
     }
 
     /**
@@ -4239,6 +4239,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ringManager.reset(cameraX);
         }
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
+        com.openggf.level.rings.RingDrawInternalAccess.bindNativeSlots(ringManager);
         var gameplayMode = SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null) {
             gameplayMode.registerRingAdapter(ringManager);
@@ -4683,8 +4684,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeModZoneRuntimeProfile = null;
         contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
-        animatedPatternManager = null;
-        animatedPaletteManager = null;
+        LevelAnimationInternalAccess.clearAnimatedOwners(this);
         checkpointCoordinator.resetState();
         levelGamestate = null;
         if (tilemapManager != null) {

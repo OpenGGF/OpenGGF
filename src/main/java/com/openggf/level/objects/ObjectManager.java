@@ -20,6 +20,7 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.session.SessionManager;
+import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -27,10 +28,12 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.TransitionSstOccupant;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.render.SpriteSlotEmission;
 import com.openggf.level.spawn.AbstractPlacementManager;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
@@ -56,6 +59,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -66,6 +70,7 @@ public class ObjectManager {
     static final int ANIM_SPINDASH = 0x09;
     private final ObjectPlacementController placement;
     private final ObjectPlacementAdmission placementAdmission;
+    private final ObjectManagerInternalAccess.Streaming competitionStreaming;
     private final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
     private final Camera camera;
@@ -87,7 +92,8 @@ public class ObjectManager {
     // Cached spawn-order comparators (built lazily; placement is constructor-set).
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
-    private final ObjectRenderParts objectRenderParts;
+    private final List<GLCommand> renderCommands = new ArrayList<>();
+    private final ObjectDrawInternalAccess.Drawing objectDrawing;
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
@@ -156,6 +162,37 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
+    private final ObjectNativeSstWord2C nativeSstWord2C;
+    private final NativeSpriteSubmissionQueue nativeSpriteSubmissions =
+            new NativeSpriteSubmissionQueue(() -> bucketsDirty = true);
+    // Presentation binding only. RingManager owns its live DTOs and rewind state.
+    private IntFunction<SpriteSlotEmission> nativeSpriteExternalResolver;
+    private NativeSpriteSubmissionAccess.ExternalSlotDispatch nativeSpriteExternalSlotDispatch;
+
+    NativeSpriteSubmissionQueue nativeSpriteSubmissions() {
+        return nativeSpriteSubmissions;
+    }
+
+    void bindNativeSpriteExternalResolver(IntFunction<SpriteSlotEmission> resolver) {
+        nativeSpriteExternalResolver = resolver;
+        bucketsDirty = true;
+    }
+
+    void bindNativeSpriteExternalSlotDispatch(NativeSpriteSubmissionAccess.ExternalSlotDispatch dispatch) {
+        nativeSpriteExternalSlotDispatch = dispatch;
+    }
+
+    private void beginNativeSpriteFrame() {
+        nativeSpriteSubmissions.beginFrame();
+        if (nativeSpriteExternalSlotDispatch != null) nativeSpriteExternalSlotDispatch.beginPass();
+    }
+
+    private void dispatchExternalSpriteSlot(int cameraX, PlayableEntity player) {
+        int slot = slotIndexForExec(currentExecSlot);
+        if (nativeSpriteExternalSlotDispatch != null && currentNativeSstOwner(slot) == null) {
+            nativeSpriteExternalSlotDispatch.dispatch(slot, player, vblaCounter, cameraX);
+        }
+    }
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
 
@@ -242,8 +279,8 @@ public class ObjectManager {
         this.objectServices = objectServices;
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
-        this.objectRenderParts = new ObjectRenderParts(objectCallbacks, objectServices, graphicsManager);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
+        this.nativeSstWord2C = new ObjectNativeSstWord2C(slotLayout.lastProcessSlotExclusive(), this::currentNativeSstOwner, objectCallbacks, () -> rewindReconstructionChildCapture);
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
                 : ObjectWindowingStrategy.LEGACY;
@@ -262,6 +299,13 @@ public class ObjectManager {
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
                         : SlotEmptyPredicate.ID_BYTE);
+        this.competitionStreaming = new ObjectManagerInternalAccess.Streaming(placement, placementAdmission,
+                registry, slotAllocator, slotLayout, objectServices, objectCallbacks, activeObjects,
+                instanceToSpawn, dynamicObjects, this::registerActiveObject, this::removeActiveObject,
+                this::removeDynamicObjectInstance, this::releaseSlot, () -> {
+                    bucketsDirty = true;
+                    activeObjectsCacheDirty = true;
+                });
         this.populationView = new ObjectManagerPopulationView(objectCallbacks, slotLayout,
                 slotAllocator, reservedChildSlots, activeObjects, dynamicObjects,
                 postPlayerHooksScratch);
@@ -286,6 +330,9 @@ public class ObjectManager {
             highPriorityBuckets[i] = new ArrayList<>();
             unifiedBuckets[i] = new ArrayList<>();
         }
+        this.objectDrawing = new ObjectDrawInternalAccess.Drawing(this, graphicsManager, camera, objectServices,
+                objectCallbacks, renderCommands, lowPriorityBuckets, highPriorityBuckets, unifiedBuckets,
+                this::ensureBucketsPopulated, this::currentNativeSstOwner, () -> nativeSpriteExternalResolver);
     }
 
     public ObjectManager(List<ObjectSpawn> spawns, ObjectRegistry registry,
@@ -320,7 +367,6 @@ public class ObjectManager {
     private boolean isManagedDynamicSlot(int slotIndex) {
         return slotLayout.isDynamicSlot(slotIndex);
     }
-
 
     void runObjectCallback(ObjectInstance instance, Runnable callback) { objectCallbacks.run(instance, callback); }
 
@@ -387,7 +433,8 @@ public class ObjectManager {
             return false;
         }
         ObjectSpawn spawn = instanceToSpawn.get(owner);
-        if (!unloadCounterBasedOutOfRange(owner, spawn, execSlot, cameraX)) {
+        int ownSlot = objectCallbacks.call(object, object::getSlotIndex);
+        if (!unloadCounterBasedOutOfRange(owner, spawn, ownSlot, cameraX)) {
             return false;
         }
         execOrder[execIndexForSlot(execSlot)] = null;
@@ -430,6 +477,9 @@ public class ObjectManager {
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
         playerBoundRewind.clear();
+        nativeSpriteSubmissions.clear();
+        nativeSpriteExternalResolver = null;
+        nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
@@ -453,7 +503,8 @@ public class ObjectManager {
         collisionResponseList.restoreRewindState(null, ignored -> null);
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.reset(cameraX, persistentRespawnState);
+        placement.reset(cameraX, persistentRespawnState, competitionStreaming.upfrontActive());
+        if (competitionStreaming.active()) placement.resetNativeCompetitionStreaming(cameraX);
         if (registry != null) {
             registry.reportCoverage(placement.getAllSpawns());
         }
@@ -537,20 +588,23 @@ public class ObjectManager {
      * the next frame will re-instantiate objects in the camera window.
      */
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
-        // Retire only the placed owners being discarded. Consumed child SSTs
-        // already belong to retained dynamic objects; the reservation helper
-        // releases only their still-unconsumed siblings.
+        competitionStreaming.releaseUpfrontPlacementSlots();
+        // Retire only discarded placed owners and their unconsumed child reservations.
+        // Native competition already released each upfront placement's own SST above.
         for (var entry : activeObjects.entrySet()) {
-            releaseSlot(entry.getValue());
+            if (!competitionStreaming.upfrontActive()) releaseSlot(entry.getValue());
             freeAllReservedChildSlots(entry.getKey());
         }
+        nativeSpriteSubmissions.clear();
+        nativeSpriteExternalResolver = null;
+        nativeSpriteExternalSlotDispatch = null;
         clearActiveObjects();
         cachedActiveObjects.clear();
         nativeObjectIndex.clear();
         markActiveObjectCachesDirty();
         bucketsDirty = true;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
-        placement.replaceSpawnsAndReset(newSpawns);
+        placement.replaceSpawnsAndReset(newSpawns, competitionStreaming.upfrontActive());
         if (planeSwitchers != null) {
             planeSwitchers.reset();
         }
@@ -688,6 +742,7 @@ public class ObjectManager {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
         vblaCounter++;
+        beginNativeSpriteFrame();
         // Inline-physics path: snapshotTouchResponseState() ran earlier this
         // frame and already refreshed the cached camera bounds. The second
         // call here is harmless redundancy (the post-camera-step bounds
@@ -770,7 +825,7 @@ public class ObjectManager {
         // post-camera placement pass, while S2 keeps its single exec->load pass.
         if (!counterBased) {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
-                placement.update(cameraX);
+                if (!competitionStreaming.active()) placement.update(cameraX);
             }
             if (execThenLoad && !slotLayout.twoAxisCursorPlacement()) {
                 cleanupDestroyedDynamicObjects();
@@ -821,6 +876,7 @@ public class ObjectManager {
     SolidExecutionRegistry beginInitialSolidExecution(
             PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
         frameCounter++;
+        beginNativeSpriteFrame();
         updateCameraBounds();
         solidContacts.captureExecStartPlayerCentreY(player, sidekicks);
         SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
@@ -828,6 +884,10 @@ public class ObjectManager {
                 frameCounter,
                 execution.collectActivePlayers(player, sidekicks, activePlayersScratch));
         return registry;
+    }
+
+    void runNativeCompetitionTitleObjectPass() {
+        initialDispatch.runNativeCompetitionTitleObjectPass(slotLayout, () -> updating);
     }
 
     int firstDynamicSlot() {
@@ -897,6 +957,14 @@ public class ObjectManager {
     // Sprite_CheckDeleteTouch3 (loc_1B666) rejects range before Add_SpriteToCollisionResponseList.
     void publishInitialCollisionResponse(ObjectInstance instance) {
         if (initialDispatch.isActive()) {
+            // Touch publication records the physical SST, even if its routine
+            // replaced the Java code owner during this dispatch.
+            if (NativeCompetitionRoster.from(objectServices.worldSession()) != null && instance instanceof AbstractObjectInstance object) {
+                int slot = objectCallbacks.call(object, object::getSlotIndex);
+                if (!isProcessedSstSlot(slot)) return;
+                instance = currentNativeSstOwner(slot);
+                if (instance == null) return;
+            }
             collisionResponseList.addToCurrentBuild(instance);
         }
     }
@@ -973,7 +1041,10 @@ public class ObjectManager {
                     objectsRemoved = true;
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
-                if (instance == null) continue;
+                if (instance == null) {
+                    dispatchExternalSpriteSlot(cameraX, player);
+                    continue;
+                }
 
                 // ROM parity: most S1 objects check out_of_range at the START of
                 // their routine during ExecuteObjects (static scenery / fixed
@@ -1178,7 +1249,10 @@ public class ObjectManager {
                     objectsRemoved = true;
                 }
                 ObjectInstance instance = execOrder[currentExecSlot];
-                if (instance == null) continue;
+                if (instance == null) {
+                    dispatchExternalSpriteSlot(cameraX, player);
+                    continue;
+                }
                 processedInExecLoop.add(instance);
 
                 executeObjectWithSolidContext(
@@ -1353,6 +1427,7 @@ public class ObjectManager {
      * @param postCameraX camera X position after the camera update step
      */
     public void postCameraPlacementUpdate(int postCameraX) {
+        if (competitionStreaming.active() || competitionStreaming.upfrontActive()) return;
         if (slotLayout == ObjectSlotLayout.SONIC_2) {
             s2LatchedObjectManagerCameraX = postCameraX;
         }
@@ -1473,17 +1548,11 @@ public class ObjectManager {
     }
 
     public void drawLowPriority() {
-        ensureBucketsPopulated();
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            drawPriorityBucket(bucket, false);
-        }
+        objectDrawing.drawLowPriority();
     }
 
     public void drawHighPriority() {
-        ensureBucketsPopulated();
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            drawPriorityBucket(bucket, true);
-        }
+        objectDrawing.drawHighPriority();
     }
 
     private void ensureBucketsPopulated() {
@@ -1491,42 +1560,12 @@ public class ObjectManager {
             return;
         }
         bucketsDirty = false;
-
-        // Clear all buckets
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].clear();
-            highPriorityBuckets[i].clear();
-            unifiedBuckets[i].clear();
-        }
-
-        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
-        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
-        for (ObjectInstance instance : activeObjects.values()) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
-        }
-
-        // ROM parity: lower sprite-table indices render in front. Objects execute and
-        // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
-        // painter's-algorithm order. Sort each bucket descending by slot so lower
-        // slot indices appear on top.
-        for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-            highPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-            unifiedBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
-        }
-
+        objectDrawing.populateBuckets(activeObjects.values(), dynamicObjects, nativeSpriteSubmissions);
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {
-        ensureBucketsPopulated();
-        int targetBucket = RenderPriority.clamp(bucket);
-        int idx = targetBucket - RenderPriority.MIN;
-        List<ObjectRenderParts.RenderEntry>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        drawBucketInstancesWithPriority(buckets[idx], targetBucket, graphicsManager);
+        objectDrawing.drawPriorityBucket(bucket, highPriority);
     }
 
     /**
@@ -1540,25 +1579,7 @@ public class ObjectManager {
      * @param callback Called before each object draw with (object, isHighPriority)
      */
     public void drawUnifiedBucket(int bucket, ObjectDrawCallback callback) {
-        ensureBucketsPopulated();
-        int targetBucket = RenderPriority.clamp(bucket);
-        int idx = targetBucket - RenderPriority.MIN;
-
-        drawBucketInstances(unifiedBuckets[idx], targetBucket, callback);
-    }
-
-    private void drawBucketInstances(List<ObjectRenderParts.RenderEntry> entries, int bucket,
-                                     ObjectDrawCallback callback) {
-        if (entries.isEmpty()) {
-            return;
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            objectRenderParts.drawBucket(entries, bucket, callback);
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+        objectDrawing.drawUnifiedBucket(bucket, callback);
     }
 
     /**
@@ -1585,24 +1606,17 @@ public class ObjectManager {
      * @param gfx    The graphics manager to use for priority state
      */
     public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
-        ensureBucketsPopulated();
-        int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
+        objectDrawing.drawUnifiedBucketWithPriority(bucket, gfx);
+    }
 
-        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
+    void drawBucketWithSlotEmissions(int bucket, GraphicsManager graphics,
+            List<com.openggf.level.render.SpriteSlotEmission> external) {
+        objectDrawing.drawBucketWithSlotEmissions(bucket, graphics, external);
     }
 
     private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
-                                                 GraphicsManager gfx) {
-        if (entries.isEmpty()) {
-            return;
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            objectRenderParts.drawBucketWithPriority(entries, bucket, gfx);
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+            GraphicsManager gfx, List<com.openggf.level.render.SpriteSlotEmission> external) {
+        objectDrawing.drawBucketInstancesWithPriority(entries, bucket, gfx, external);
     }
 
     public Collection<ObjectInstance> getActiveObjects() {
@@ -1728,7 +1742,7 @@ public class ObjectManager {
         captureCollisionResponseListForNextFrame();
     }
 
-    private void captureCollisionResponseListForNextFrame() {
+    void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
         collisionResponseList.captureForNextFrame(cachedTouchResponseObjects, objectCallbacks);
     }
@@ -1859,16 +1873,22 @@ public class ObjectManager {
         });
     }
 
+    ObjectNativeSstWord2C nativeSstWord2C() { return nativeSstWord2C; }
+
     AbstractObjectInstance currentNativeSstOwner(int slot) {
         return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(),dynamicObjects,objectCallbacks,slot);
     }
 
     AbstractObjectInstance createUncheckedDynamicObject(
             java.util.function.Function<NativeSstState,AbstractObjectInstance> partialWriter) {
-        return ObjectNativeSstOverwrite.create(new ObjectNativeSstOverwrite.Surface(objectServices,
+        return ObjectNativeSstOverwrite.create(nativeSstSurface(), partialWriter);
+    }
+
+    ObjectNativeSstOverwrite.Surface nativeSstSurface() {
+        return new ObjectNativeSstOverwrite.Surface(objectServices,
                 slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
                 dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
-                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty),partialWriter);
+                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty,nativeSstWord2C);
     }
 
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
@@ -1902,32 +1922,8 @@ public class ObjectManager {
      * constructor-time child allocation remains unchanged.
      */
     public <T extends ObjectInstance> T createDynamicObjectWithReservedSlot(Supplier<T> factory) {
-        return ObjectConstructionContext.construct(objectServices, () -> {
-            int reservedSlot = allocateSlot();
-            if (reservedSlot < 0) {
-                return null;
-            }
-            T object;
-            try {
-                object = factory.get();
-            } catch (RuntimeException | Error ex) {
-                releaseSlot(reservedSlot);
-                throw ex;
-            }
-            if (object == null) {
-                releaseSlot(reservedSlot);
-                return null;
-            }
-            registerInheritedCallbackOwner(object);
-            if (object instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(object, aoi::getSlotIndex) < 0) {
-                objectCallbacks.run(object, () -> aoi.setSlotIndex(reservedSlot));
-            } else {
-                releaseSlot(reservedSlot);
-            }
-            addDynamicObject(object);
-            return object;
-        });
+        return ObjectFixedSlotConstruction.createWithReservedSlot(objectServices, objectCallbacks, this::allocateSlot,
+                this::releaseSlot, this::registerInheritedCallbackOwner, this::addDynamicObject, factory);
     }
 
     public void removeDynamicObject(ObjectInstance object) {
@@ -2027,7 +2023,7 @@ public class ObjectManager {
      * Reserves SSTs that the player's own slot allocated during a player step the
      * engine runs before the object load (lightning-shield attracted rings).
      */
-    private void assignPendingPlayerSlotAllocations() {
+    void assignPendingPlayerSlotAllocations() {
         var rings = objectServices.ringManager();
         if (rings != null) {
             rings.assignPendingAttractedRingSlots();
@@ -2036,7 +2032,7 @@ public class ObjectManager {
 
     /** ROM {@code AllocateObject} availability for allocations deferred past the object load. */
     public boolean hasFreeDynamicSlotForDeferredAllocation(int alreadyDeferred) {
-        return slotAllocator.freeSlotCount() > alreadyDeferred;
+        return competitionStreaming.hasFreeDynamicSlotForDeferredAllocation(alreadyDeferred);
     }
 
     void flushPostExecDynamicSpawns() {
@@ -2227,6 +2223,10 @@ public class ObjectManager {
      * Returns -1 if all slots are in use (overflow).
      */
     private int allocateSlot() {
+        // Shipped S2 AllocateObject shortens only its plain scan in competition;
+        // AllocateObjectAfterCurrent retains its separate end-of-RAM bound
+        // (AllocateObject, s2.asm:33680-33694).
+        if (firstFreeDynamicSlot() < 0) return -1;
         return slotAllocator.allocate();
     }
 
@@ -2238,11 +2238,13 @@ public class ObjectManager {
      * (docs/s1disasm/_incObj/0A LZ Drowning Countdown.asm:283-284).
      */
     public boolean hasFreeDynamicSlot() {
-        return slotAllocator.hasFreeSlot();
+        return firstFreeDynamicSlot() >= 0;
     }
 
     /** Non-mutating {@code FindFreeObj} result for ROM owner-boundary decisions. */
-    public int firstFreeDynamicSlot() { return slotAllocator.firstFreeSlot(); }
+    public int firstFreeDynamicSlot() {
+        return competitionStreaming.firstFreeDynamicSlot();
+    }
 
     /**
      * Reserves the next available dynamic slot for non-ObjectInstance systems
@@ -2251,7 +2253,7 @@ public class ObjectManager {
      * by {@code RingManager} rather than {@code ObjectManager}.
      */
     public int allocateDynamicSlot() {
-        return slotAllocator.allocate();
+        return allocateSlot();
     }
 
     /**
@@ -2277,7 +2279,7 @@ public class ObjectManager {
     public void reallocateToFirstFreeDynamicSlot(AbstractObjectInstance object) {
         if (placement.reallocateToFirstFreeDynamicSlot(
                 object, slotAllocator, slotLayout, execOrder,
-                updating, slotsFreedDuringObjectPass)) {
+                updating, slotsFreedDuringObjectPass, this::allocateSlot)) {
             bucketsDirty = true;
             markActiveObjectCachesDirty();
         }
@@ -3302,7 +3304,10 @@ public class ObjectManager {
      * never a sprite top-left bound, so the window is not shifted by half-width.
      */
     private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
+        // Native block ownership replaces MarkObjGone in competition.
+        if (competitionStreaming.active()) return false;
         int referenceX = outOfRangeReferenceX(instance, spawn);
+        if (competitionStreaming.upfrontActive()) return competitionStreaming.isOutsideUpfrontUnloadWindow(referenceX);
         if (windowingStrategy.overridesUnloadWindow()) {
             if (windowingStrategy instanceof ViewportAwareObjectWindowingStrategy viewportAware) return viewportAware.isOutsideUnloadWindow(referenceX, cameraX, camera.getWidth());
             return windowingStrategy.isOutsideUnloadWindow(referenceX, cameraX);
@@ -3482,6 +3487,11 @@ public class ObjectManager {
      * the following frame's ExecuteObjects.
      */
     private void syncActiveSpawnsLoad(boolean allowVerticalLoadBypassForS2) {
+        if (competitionStreaming.initializeUpfrontPlacement()) return;
+        if (competitionStreaming.active()) {
+            competitionStreaming.update();
+            return;
+        }
         Collection<ObjectSpawn> activeSpawns = placement.getActiveSpawns();
         boolean changed = false;
 
@@ -3612,6 +3622,10 @@ public class ObjectManager {
         }
     }
 
+    ObjectManagerInternalAccess.Streaming nativeCompetitionStreaming() {
+        return competitionStreaming;
+    }
+
     private int currentCameraYCoarseForTwoAxisPlacement() {
         return camera != null ? (camera.getY() & 0xFF80) : 0;
     }
@@ -3710,7 +3724,6 @@ public class ObjectManager {
                 spawn, previousYCoarse, currentYCoarse, camera);
     }
 
-
         private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
@@ -3739,17 +3752,6 @@ public class ObjectManager {
             return ObjectPlacementController.isNonCounterSpawnVerticallyEligible(
                     spawn, cameraY, cameraMinY, verticalWrapRange);
         }
-
-    /**
-     * Enables vertical wrap Y adjustment on GraphicsManager if the camera has
-     * vertical wrapping active. Called before object rendering to ensure objects
-     * on the "wrong side" of a wrap boundary render at correct screen positions.
-     */
-    private void enableVerticalWrapIfNeeded() {
-        if (camera.isVerticalWrapEnabled()) {
-            graphicsManager.enableVerticalWrapAdjust(camera.getVerticalWrapRange(), camera.getY());
-        }
-    }
 
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
@@ -3813,7 +3815,8 @@ public class ObjectManager {
      * dynamic entry carries that identity through recreation.
      */
     private void assignRewindObjectId(ObjectInstance instance, ObjectSpawn spawn) {
-        if (!rewindObjectIds.containsKey(instance)) {
+        boolean firstIdentity = !rewindObjectIds.containsKey(instance);
+        if (firstIdentity) {
             if (spawn != null) {
                 SpawnRefId spawnRef = SpawnRefId.fromSpawn(spawn);
                 rewindObjectIds.put(
@@ -3825,6 +3828,7 @@ public class ObjectManager {
                         instance, ObjectRefId.dynamic(slot, 0, dynamicObjectIdCounter++));
             }
         }
+        nativeSstWord2C.projectPublished(instance, firstIdentity);
     }
 
     private void populateDynamicFallbackScratch() {
@@ -4799,7 +4803,6 @@ public class ObjectManager {
         int execIdx = execIndexForSlot(slotIndex);
         return execIdx >= 0 && execIdx < execOrder.length ? execOrder[execIdx] : null;
     }
-
 
     static final class PlaneSwitchers {
         private static final Logger LOGGER = Logger.getLogger(PlaneSwitchers.class.getName());

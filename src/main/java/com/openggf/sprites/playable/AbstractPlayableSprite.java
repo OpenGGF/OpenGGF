@@ -1383,37 +1383,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshInvincibilityStarsAfterRewindRestore() {
-                if (invincibleFrames <= 0) {
-                        if (invincibilityObject != null) {
-                                invincibilityObject.destroy();
-                                invincibilityObject = null;
-                        }
-                        if (shieldObject != null) {
-                                shieldObject.setVisible(true);
-                        }
-                        return;
-                }
-
-                PowerUpObject liveStars = resolveLiveInvincibilityObjectAfterRewindRestore();
-                if (liveStars != null) {
-                        invincibilityObject = liveStars;
-                        invincibilityObject.refreshArtAfterRewindRestore();
-                } else {
-                        if (invincibilityObject != null && !invincibilityObject.isDestroyed()) {
-                                invincibilityObject.destroy();
-                        }
-                        invincibilityObject = null;
-                        if (powerUpSpawner != null) {
-                                invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
-                                if (invincibilityObject != null) {
-                                        invincibilityObject.refreshArtAfterRewindRestore();
-                                }
-                        }
-                }
-
-                if (shieldObject != null) {
-                        shieldObject.setVisible(false);
-                }
+                boolean preserve = invincibleFrames <= 0 && getSuperStateController() instanceof
+                                com.openggf.game.internal.NativeSuperStateBeforeAnimation nativeSuper
+                                && nativeSuper.preserveExistingInvincibilityStars();
+                com.openggf.level.objects.PlayerBoundPowerUpRestoreAccess.refreshInvincibilityStarsAfterRewindRestore(
+                                currentObjectManagerIfAvailable(), () -> powerUpSpawner, this, invincibleFrames,
+                                preserve, () -> invincibilityObject, () -> shieldObject,
+                                value -> invincibilityObject = value);
         }
 
         /** Restores the persistent insta-shield graph immediately after a manager rebuild. */
@@ -1474,21 +1450,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                         && isMatchingLiveShield(objectManager, candidate)) {
                                 return candidate;
                         }
-                }
-                return null;
-        }
-
-        private PowerUpObject resolveLiveInvincibilityObjectAfterRewindRestore() {
-                ObjectManager objectManager = currentObjectManagerIfAvailable();
-                if (invincibilityObject != null
-                                && (invincibilityObject instanceof ObjectInstance instance
-                                                && objectManager != null
-                                        ? !com.openggf.level.objects.ObjectCallbackDispatch.call(
-                                                        objectManager, instance, instance::isDestroyed)
-                                        : !invincibilityObject.isDestroyed())
-                                && (objectManager == null
-                                                || isObjectManagerLivePowerUp(objectManager, invincibilityObject))) {
-                        return invincibilityObject;
                 }
                 return null;
         }
@@ -1696,7 +1657,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return PlayableSpriteRuntimeServices.resolveAnimationId(currentGameModule(), animation);
         }
 
-        public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(currentLevelManagerIfAvailable()); }
+        public final LevelState currentLevelState() { return PlayableSpriteRuntimeServices.levelState(this); }
         public final TimerManager currentTimerManager() { return PlayableSpriteRuntimeServices.timers(this); }
         public final GameStateManager currentGameState() { return PlayableSpriteRuntimeServices.gameState(this); }
         public final GameStateManager currentGameStateOrNull() { return PlayableSpriteRuntimeServices.gameStateOrNull(this); }
@@ -2842,9 +2803,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
-        public void tickStatus() {
-                refreshRuntimeBoundStateIfNeeded();
-                tickInvulnerabilityDisplayTimer();
+        /** Package-owned Sonic_Display invincibility expiry, before native powered-form writes. */
+        void tickInvincibilityDisplayTimer() {
                 if (invincibleFrames > 0) {
                         invincibleFrames--;
                         if (invincibleFrames == 0) {
@@ -2858,6 +2818,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 restoreLevelMusicAfterInvincibility();
                         }
                 }
+        }
+
+        public void tickStatus() {
+                refreshRuntimeBoundStateIfNeeded();
+                tickInvulnerabilityDisplayTimer();
+                if (!(getSuperStateController() instanceof
+                        com.openggf.game.internal.NativeSuperStateBeforeAnimation)) {
+                        tickInvincibilityDisplayTimer();
+                }
                 if (springingFrames > 0) {
                         springingFrames--;
                         if (springingFrames == 0) {
@@ -2868,7 +2837,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // SpriteManager at the ROM Sonic_Display point.
 
                 // Update Super Sonic state (ring drain, palette cycling, transformation)
-                if (controller != null && controller.getSuperState() != null) {
+                if (controller != null && controller.getSuperState() != null
+                        && !(controller.getSuperState() instanceof
+                                com.openggf.game.internal.NativeSuperStateBeforeAnimation)) {
                         controller.getSuperState().update();
                 }
                 // Lazy-register insta-shield with ObjectManager if not yet done (e.g. created before level load).

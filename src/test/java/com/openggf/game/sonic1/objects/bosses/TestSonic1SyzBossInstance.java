@@ -46,18 +46,17 @@ class TestSonic1SyzBossInstance {
 
     // Sonic1SYZBossInstance.initializeBossState() unconditionally sets state.x/y to its
     // own SPAWN_X/SPAWN_Y constants (boss_syz_x+$1B0, boss_syz_y+$E) regardless of the
-    // ObjectSpawn's nominal x/y, so the spawn coordinates below are placeholders -- the
-    // camera mock below is centered on the boss's REAL runtime X (SPAWN_X) instead.
+    // ObjectSpawn's nominal x/y. Placement, packed Y, and camera use the real arena.
     private static final int SPAWN_X = 0x2C00 + 0x1B0; // boss_syz_x + $1B0
 
     private static final ObjectSpawn BOSS_SPAWN = new ObjectSpawn(
-            0x0100,
-            0x0100,
+            SPAWN_X,
+            0x4DA,
             Sonic1ObjectIds.SYZ_BOSS,
             0,
             0,
             false,
-            10);
+            0x4DA);
 
     private ObjectManager objectManager;
     private Camera camera;
@@ -173,9 +172,8 @@ class TestSonic1SyzBossInstance {
      * layout table -- unlike every other currently known boss (e.g. {@code
      * Sonic2EHZBossInstance}, spawned from the layout table and reconstructed in
      * {@code ObjectManager.restore()}'s Phase-1 ACTIVE-object pass). The boss's
-     * constructor unconditionally spawns {@link SYZBossSpike} ({@code
-     * initializeBossState() -> spawnSpikeChild()}), exactly the DEZ articulated-child
-     * shape.
+     * first native object pass creates face, flame, then {@link SYZBossSpike}.
+     * Those independent SST objects must survive full dynamic reconstruction.
      *
      * <p>This test spawns the boss the SAME way ({@code createDynamicObject}, no
      * static layout entry), mutates the spike's captured mutable state, forces a full
@@ -188,6 +186,7 @@ class TestSonic1SyzBossInstance {
         createDynamicHarness();
         Sonic1SYZBossInstance boss =
                 objectManager.createDynamicObject(() -> new Sonic1SYZBossInstance(BOSS_SPAWN));
+        stepFrame(); // Native routine 0 allocates components during the first object pass.
         SYZBossSpike spike = only(SYZBossSpike.class);
 
         // Seed distinguishing captured mutable state on the spike (extension/collision
@@ -213,7 +212,8 @@ class TestSonic1SyzBossInstance {
     }
 
     private void stepFrame() {
-        objectManager.update(0, null, List.of(), 0);
+        objectManager.update(camera.getX(), null, List.of(), 0);
+        objectManager.refreshPostCameraRenderState();
     }
 
     /**
@@ -231,6 +231,7 @@ class TestSonic1SyzBossInstance {
         ObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return cameraHolder[0]; }
+            @Override public com.openggf.data.RomByteReader romReader() { return null; }
             @Override public GameStateManager gameState() { return gameStateManager; }
         };
         objectManager = new ObjectManager(
@@ -243,7 +244,7 @@ class TestSonic1SyzBossInstance {
                 camera,
                 services);
         holder[0] = objectManager;
-        objectManager.reset(0);
+        objectManager.reset(camera.getX());
         objectManager.setRewindInPlaceRestoreEnabledForTest(false);
     }
 
@@ -286,6 +287,7 @@ class TestSonic1SyzBossInstance {
         ObjectServices services = new StubObjectServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return cameraHolder[0]; }
+            @Override public com.openggf.data.RomByteReader romReader() { return null; }
             @Override public GameStateManager gameState() { return gameStateManager; }
         };
         objectManager = new ObjectManager(
@@ -298,7 +300,8 @@ class TestSonic1SyzBossInstance {
                 camera,
                 services);
         holder[0] = objectManager;
-        objectManager.reset(0);
+        objectManager.reset(camera.getX());
+        stepFrame(); // Face, flame, then spike are native first-update allocations.
         return new Harness(objectManager);
     }
 
@@ -316,7 +319,7 @@ class TestSonic1SyzBossInstance {
             // Centered on the boss's real runtime X (SPAWN_X) so it starts on-screen,
             // matching a real fight where the camera has already scrolled to the arena.
             @Override public short getX() { return (short) (SPAWN_X - 160); }
-            @Override public short getY() { return 0; }
+            @Override public short getY() { return 0x480; }
             @Override public short getWidth() { return 320; }
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }

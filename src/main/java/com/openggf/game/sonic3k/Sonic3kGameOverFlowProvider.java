@@ -7,6 +7,9 @@ import com.openggf.game.sonic3k.objects.S3kGameOverCardObjectInstance;
 import com.openggf.level.objects.AbstractGameOverCardObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 /**
  * Sonic 3&amp;K {@code loc_12432} / {@code loc_12498} (docs/skdisasm/sonic3k.asm:24628-24656):
  * <pre>
@@ -16,14 +19,18 @@ import com.openggf.level.objects.ObjectServices;
  *   move.w  #mus_GameOver,d0 ; Play_Music
  *   moveq   #3,d0            ; Load_PLC_2
  * </pre>
- * {@code Load_PLC_2 #3} decompresses ArtNem_GameOver over the shield tiles; the
- * engine's sheet is resident from level load, so only the music and the objects
- * are issued here.
+ * {@code Load_PLC_2 #3} decompresses ArtNem_GameOver over the shield tiles.
+ * The independently decoded rendering sheet remains resident, while the event
+ * owns the native queue submission that gates object initialization.
  */
 public final class Sonic3kGameOverFlowProvider implements GameOverFlowProvider {
 
     @Override
     public void beginGameOverCard(ObjectServices services, boolean timeOver) {
+        Sonic3kGameOverPlcService plc = services.gameService(Sonic3kGameOverPlcService.class);
+        if (plc == null) {
+            throw new IllegalStateException("S3K GAME OVER requires its native PLC service");
+        }
         AbstractGameOverCardObjectInstance.spawnPair(
                 services,
                 timeOver,
@@ -31,5 +38,10 @@ public final class Sonic3kGameOverFlowProvider implements GameOverFlowProvider {
                 Sonic3kConstants.SST_SLOT_GAME_OVER_WORD,
                 Sonic3kConstants.SST_SLOT_GAME_OVER_OVER);
         services.playMusic(Sonic3kMusic.GAME_OVER.id);
+        try {
+            plc.beginGameOver();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to submit S3K GAME OVER PLC3", e);
+        }
     }
 }

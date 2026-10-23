@@ -405,7 +405,7 @@ public class TestS2Cnz1Headless {
      *
      * The forced spin tunnel should cause Sonic to automatically roll when entering.
      * We walk Sonic into the tunnel entrance and verify he passes through to the other side.
-     * If Sonic's X position exceeds TARGET_X (7915), the test passes.
+     * Both the forced-roll/pinball transition without Down input and traversal are required.
      */
     @Test
     public void testForcedSpinTunnelEntry() throws Exception {
@@ -422,6 +422,9 @@ public class TestS2Cnz1Headless {
         System.out.println();
 
         int maxX = sprite.getX();
+        assertFalse(sprite.getRolling(), "Approach the tunnel standing");
+        assertFalse(sprite.getPinballMode(), "The tunnel must enable pinball mode itself");
+        boolean observedForcedRoll = false;
 
         System.out.println("Frame | X Pos | Y Pos | XSpeed | YSpeed | Air | Rolling | MaxX");
         System.out.println("------|-------|-------|--------|--------|-----|---------|-----");
@@ -435,6 +438,7 @@ public class TestS2Cnz1Headless {
             short ySpeed = sprite.getYSpeed();
             boolean inAir = sprite.getAir();
             boolean rolling = sprite.getRolling();
+            observedForcedRoll |= rolling && sprite.getPinballMode();
 
             if (currentX > maxX) {
                 maxX = currentX;
@@ -458,6 +462,7 @@ public class TestS2Cnz1Headless {
         assertTrue(maxX > TUNNEL_TARGET_X, "Sonic should pass through the forced spin tunnel to X > " + TUNNEL_TARGET_X +
                 ", but maximum X reached was " + maxX +
                 ". This indicates Sonic bounced off the tunnel entrance instead of entering.");
+        assertTrue(observedForcedRoll, "Crossing the tunnel must force rolling and pinball mode without Down input");
     }
 }
 

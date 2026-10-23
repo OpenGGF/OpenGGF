@@ -12,6 +12,7 @@ import com.openggf.game.CharacterDefinition;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.competition.NativeCompetitionRoster;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.rules.GameRules;
@@ -764,6 +765,13 @@ final class LevelPlayableArtInitializer {
         if (rules == null || !rules.waterSplashUsesFixedDustObject()) {
             return -1;
         }
+        // Obj08_Init (docs/s2disasm/s2.asm:42725-42737) selects the parent by
+        // fixed-slot identity, independent of CPU control.
+        var roster = NativeCompetitionRoster.from(levelManager.getWorldSession());
+        if (roster != null) {
+            int slot = roster.slotOf(playable);
+            return slot < 0 ? -1 : rules.fixedDustSlotIndex(slot == 1);
+        }
         if (!playable.isCpuControlled()) {
             return rules.fixedDustSlotIndex(false);
         }
@@ -886,6 +894,14 @@ final class LevelPlayableArtInitializer {
     }
 
     private String resolveMainCharacterCode() {
+        return levelManager.resolveMainCharacterCode();
+    }
+
+    static String resolveMainCharacterCode(LevelManager levelManager, SonicConfigurationService configService) {
+        var roster = NativeCompetitionRoster.from(levelManager.getWorldSession());
+        if (roster != null && roster.player(0) != null) {
+            return roster.player(0).getCode();
+        }
         return com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 

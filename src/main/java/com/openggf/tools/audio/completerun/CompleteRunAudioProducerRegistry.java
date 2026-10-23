@@ -10,30 +10,42 @@ final class CompleteRunAudioProducerRegistry {
         S1("s1_rev01_complete_emeralds.v1",
                 "com.openggf.tools.audio.completerun.s1.S1CompleteRunAudioProfile",
                 "com.openggf.tools.audio.completerun.s1.S1CompleteRunReferenceProducer",
-                "com.openggf.tools.audio.completerun.s1.S1CompleteRunOpenGgfProducer"),
+                "com.openggf.tools.audio.completerun.s1.S1CompleteRunOpenGgfProducer",
+                new Startup("s1", com.openggf.configuration.SonicConfiguration.SONIC_1_ROM, "")),
         S2("s2_rev01_complete_emeralds.v1",
                 "com.openggf.tools.audio.completerun.s2.S2CompleteRunAudioProfile",
                 "com.openggf.tools.audio.completerun.s2.S2CompleteRunReferenceProducer",
-                "com.openggf.tools.audio.completerun.s2.S2CompleteRunOpenGgfProducer"),
+                "com.openggf.tools.audio.completerun.s2.S2CompleteRunOpenGgfProducer",
+                new Startup("s2", com.openggf.configuration.SonicConfiguration.SONIC_2_ROM, "tails")),
         S3K("s3k_locked_on_knuckles_superemeralds.v1",
                 "com.openggf.tools.audio.completerun.s3k.S3kCompleteRunAudioProfile",
                 "com.openggf.tools.audio.completerun.s3k.S3kCompleteRunReferenceProducer",
-                "com.openggf.tools.audio.completerun.s3k.S3kCompleteRunOpenGgfProducer");
+                "com.openggf.tools.audio.completerun.s3k.S3kCompleteRunOpenGgfProducer", null);
 
         private final String profileId;
         private final String profileClass;
         private final String referenceClass;
         private final String engineClass;
+        private final Startup startup;
 
-        Game(String profileId, String profileClass, String referenceClass, String engineClass) {
+        Game(String profileId, String profileClass, String referenceClass, String engineClass, Startup startup) {
             this.profileId = profileId;
             this.profileClass = profileClass;
             this.referenceClass = referenceClass;
             this.engineClass = engineClass;
+            this.startup = startup;
         }
     }
 
     private CompleteRunAudioProducerRegistry() { }
+
+    record Startup(String gameId, com.openggf.configuration.SonicConfiguration romKey, String sidekick) { }
+
+    static Startup startup(String profileId) {
+        return Arrays.stream(Game.values()).filter(value -> value.profileId.equals(profileId))
+                .map(value -> value.startup).filter(java.util.Objects::nonNull).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("fixed production startup is not installed"));
+    }
 
     static boolean knowsProfile(String profileId) {
         return Arrays.stream(Game.values()).anyMatch(value -> value.profileId.equals(profileId));

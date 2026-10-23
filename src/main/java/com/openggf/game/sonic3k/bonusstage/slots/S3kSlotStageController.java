@@ -17,6 +17,11 @@ public class S3kSlotStageController {
         this.stageState = stageState;
     }
 
+    /** Internal object asset intake; each child retains the ROM animation cursor across scripts. */
+    public byte[] rewardRingAnimation(boolean sparkle) {
+        return stageState.romData().rewardRingAnimation(sparkle);
+    }
+
     public void bootstrap() {
         stageState.setStatTable(0);
         stageState.setScalarIndex1(0x40);

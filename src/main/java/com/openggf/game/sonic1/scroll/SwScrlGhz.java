@@ -2,6 +2,8 @@ package com.openggf.game.sonic1.scroll;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.CheckpointBackgroundScroll;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -26,7 +28,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * REV01 GHZ uses bg3screenposx (96/256 speed) and bg2screenposx (128/256 speed),
  * plus three auto-scroll cloud counters.
  */
-public class SwScrlGhz extends AbstractZoneScrollHandler {
+public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
 
     private static final Logger LOG = Logger.getLogger(SwScrlGhz.class.getName());
 
@@ -84,6 +86,11 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
         initialized = true;
         LOG.info("SwScrlGhz.init: cameraX=" + cameraX +
                 " bg2XPos=" + (bg2XPos >> 16) + " bg3XPos=" + (bg3XPos >> 16));
+    }
+
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        init(cameraX);
     }
 
     @Override
@@ -315,5 +322,47 @@ public class SwScrlGhz extends AbstractZoneScrollHandler {
         } catch (RuntimeException ignored) {
             return 320;
         }
+    }
+
+    @Override
+    public Object captureRewindState() {
+        return new State(
+                bg2XPos, bg3XPos, cloudLayer1Counter, cloudLayer2Counter, cloudLayer3Counter, cloudBaseFrame,
+                cloudBaseFrameSet, lastCameraX, initialized, vscrollFactorBG, minScrollOffset,
+                maxScrollOffset);
+    }
+
+    @Override
+    public void restoreRewindState(Object state) {
+        if (state instanceof State saved) {
+            bg2XPos = saved.bg2XPos;
+            bg3XPos = saved.bg3XPos;
+            cloudLayer1Counter = saved.cloudLayer1Counter;
+            cloudLayer2Counter = saved.cloudLayer2Counter;
+            cloudLayer3Counter = saved.cloudLayer3Counter;
+            cloudBaseFrame = saved.cloudBaseFrame;
+            cloudBaseFrameSet = saved.cloudBaseFrameSet;
+            lastCameraX = saved.lastCameraX;
+            initialized = saved.initialized;
+            vscrollFactorBG = saved.vscrollFactorBG;
+            minScrollOffset = saved.minScrollOffset;
+            maxScrollOffset = saved.maxScrollOffset;
+        }
+    }
+
+    private record State(
+                long bg2XPos, long bg3XPos, int cloudLayer1Counter, int cloudLayer2Counter,
+                int cloudLayer3Counter, int cloudBaseFrame, boolean cloudBaseFrameSet, int lastCameraX,
+                boolean initialized, short vscrollFactorBG, int minScrollOffset, int maxScrollOffset) { }
+
+    @Override
+    public CheckpointBackgroundScroll captureBackgroundScroll() {
+        return new CheckpointBackgroundScroll(0, 0, (int) (bg2XPos >> 16), 0, (int) (bg3XPos >> 16), 0);
+    }
+
+    @Override
+    public void restoreBackgroundScroll(CheckpointBackgroundScroll state) {
+        bg2XPos = (long) state.bg2X() << 16;
+        bg3XPos = (long) state.bg3X() << 16;
     }
 }

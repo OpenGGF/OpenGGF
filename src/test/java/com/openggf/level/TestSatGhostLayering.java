@@ -13,6 +13,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,16 +46,19 @@ class TestSatGhostLayering {
     }
 
     @Test
-    void levelRendererPassesTheGhostHookOnBothSpritePaths() throws Exception {
+    void levelRendererPassesTheGhostHookThroughTheAuthoritativeTablePreparation() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
-        int sat = source.indexOf("graphicsManager.beginSpriteSatCollection();");
+        int sat = source.indexOf("com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,");
         int replay = source.indexOf("graphicsManager.endSpriteSatCollectionAndReplay();", sat);
         assertTrue(sat >= 0 && replay > sat);
         String satPath = source.substring(sat, replay);
         assertTrue(satPath.contains("drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook)"),
-                "the SAT path must not drop the ghost layer hook");
-        assertTrue(source.indexOf("drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook)",
-                replay) > replay, "the painter path keeps it too");
+                "native table preparation must not drop the ghost layer hook");
+        assertTrue(source.contains("? layeredGhostHook : null;"));
+        int pass = source.indexOf("public void renderSpriteObjectPass(");
+        int preparation = source.indexOf("private void prepareOrDrawLiveSprites(", pass);
+        assertFalse(source.substring(pass, preparation).contains("renderGhostsForLayer("),
+                "ghosts already captured in the table must not be painted a second time after replay");
     }
 
     @Test
@@ -67,7 +72,9 @@ class TestSatGhostLayering {
         long[] order = {0};
         doAnswer(invocation -> { order[0] = order[0] * 10 + 2; return null; }).when(low).draw();
         doAnswer(invocation -> { order[0] = order[0] * 10 + 4; return null; }).when(high).draw();
-        SpritePriorityLayerHook hook = (bucket, highPriority) -> order[0] = order[0] * 10 + (highPriority ? 3 : 1);
+        SpritePriorityLayerHook hook = (bucket, highPriority) -> {
+            if (bucket == 2) order[0] = order[0] * 10 + (highPriority ? 3 : 1);
+        };
 
         manager.prepareRenderBucketsForPass();
         for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
@@ -85,6 +92,32 @@ class TestSatGhostLayering {
         graphics.endSpriteSatCollectionAndReplay();
         // SAT order is front to back: the exact reverse of the painter order above.
         assertEquals(2143, order[0], "SAT: each layer's ghosts follow its players, the same layering");
+        manager.clearAllSprites();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void absentLocalLayersStillCaptureTheirGhostsExactlyOnce(boolean sat, boolean localHigh) {
+        SpriteManager manager = new SpriteManager();
+        manager.clearAllSprites();
+        AbstractPlayableSprite local = playable("local", localHigh, false);
+        var events = new java.util.ArrayList<String>();
+        doAnswer(invocation -> { events.add("player"); return null; }).when(local).draw();
+        manager.addSprite(local);
+        manager.prepareRenderBucketsForPass();
+        SpritePriorityLayerHook hook = (bucket, high) -> events.add("ghost-" + bucket + "-" + high);
+        if (sat) graphics.beginSpriteSatCollection();
+        manager.drawPreparedUnifiedBucketWithPriority(2, graphics, hook);
+        List<String> expected = sat
+                ? List.of("player", "ghost-2-" + localHigh, "ghost-2-" + !localHigh)
+                : List.of("ghost-2-" + !localHigh, "ghost-2-" + localHigh, "player");
+        assertEquals(expected, events, "an absent priority layer must not make its remote ghosts disappear");
+        events.clear();
+        manager.drawPreparedUnifiedBucketWithPriority(3, graphics, hook);
+        assertEquals(sat ? List.of("ghost-3-true", "ghost-3-false")
+                : List.of("ghost-3-false", "ghost-3-true"), events,
+                "a bucket with no local players still owns both ghost layers");
+        if (sat) graphics.endSpriteSatCollectionAndReplay();
         manager.clearAllSprites();
     }
 

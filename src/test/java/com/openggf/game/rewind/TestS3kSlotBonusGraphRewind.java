@@ -25,10 +25,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -82,6 +84,40 @@ class TestS3kSlotBonusGraphRewind {
     }
 
     @Test
+    void registeredDestructiveRestoreReloadsScriptsAndReplaysGrantSparkleAndDeletion() {
+        Harness harness = Harness.withSlotRuntime();
+        SlotGraph before = SlotGraph.create(harness.objectManager(), harness.controller());
+        RewindRegistry registry = registryFor(harness.objectManager());
+        CompositeSnapshot snapshot = registry.capture();
+        List<Object> expected = new ArrayList<>();
+        for (int pass = 1; pass <= 40; pass++) {
+            before.ring().tickSlotRuntime(pass, null);
+            expected.add(before.ring().captureRewindState());
+        }
+        assertTrue(before.ring().isInSparkle());
+        assertTrue(before.ring().isDestroyed());
+
+        before.removeDynamicObjects(harness.objectManager());
+        SlotGraph.createDivergentReplacement(harness.objectManager(), harness.controller());
+        registry.restore(snapshot);
+        SlotGraph restored = SlotGraph.fromLiveObjects(harness.objectManager());
+        assertNotSame(before.ring(), restored.ring());
+        assertSeededScalarsRestored(restored);
+        for (String script : List.of("spinScript", "sparkleScript")) {
+            byte[] reloaded = (byte[]) readObjectField(restored.ring(), script);
+            assertNotSame(readObjectField(before.ring(), script), reloaded);
+            assertArrayEquals(harness.controller().rewardRingAnimation(script.equals("sparkleScript")),
+                    reloaded, "recreation must reload the active ROM bank");
+        }
+        for (int pass = 1; pass <= 40; pass++) {
+            restored.ring().tickSlotRuntime(pass, null);
+            assertEquals(expected.get(pass - 1), restored.ring().captureRewindState(),
+                    "registered recreation must replay cursor and fractional motion at pass " + pass);
+        }
+        assertTrue(restored.ring().isDestroyed());
+    }
+
+    @Test
     void slotBonusObjectsUseRewindRecreatableWithoutExplicitDynamicCodecs() {
         assertRewindRecreatableWithoutCodec(S3kSlotBonusCageObjectInstance.class);
         assertRewindRecreatableWithoutCodec(S3kSlotRingRewardObjectInstance.class);
@@ -132,7 +168,10 @@ class TestS3kSlotBonusGraphRewind {
         assertEquals(0x12, readIntField(graph.ring(), "framesRemaining"));
         assertEquals(0x0460, readIntField(graph.ring(), "targetX"));
         assertEquals(0x0430, readIntField(graph.ring(), "targetY"));
-        assertEquals(9, readIntField(graph.ring(), "lastFrameCounter"));
+        assertEquals(2, readIntField(graph.ring(), "animationFrame"));
+        assertEquals(1, readIntField(graph.ring(), "animationTimer"));
+        assertEquals(1, readIntField(graph.ring(), "mappingFrame"));
+        assertFalse(readBooleanField(graph.ring(), "deleteNextUpdate"));
 
         assertTrue(graph.spike().isActive());
         assertEquals(0x03C0, graph.spike().getInterpolatedX());
@@ -268,7 +307,10 @@ class TestS3kSlotBonusGraphRewind {
 
         ring.activate(0x0500, 0x0510, 0x0460, 0x0430);
         setIntField(ring, "framesRemaining", 0x12);
-        setIntField(ring, "lastFrameCounter", 9);
+        setIntField(ring, "animationFrame", 2);
+        setIntField(ring, "animationTimer", 1);
+        setIntField(ring, "mappingFrame", 1);
+        setBooleanField(ring, "deleteNextUpdate", false);
         ring.suppressObjectManagerUpdate();
 
         spike.activate(0x03C0, 0x03D0, 0x0460, 0x0430);

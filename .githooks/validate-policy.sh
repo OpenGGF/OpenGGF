@@ -282,6 +282,7 @@ mod_api_surface_text() {
                 if (c == "{" && match(h, /(^|[[:space:]])(class|interface|record|enum|@interface)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*/)) {
                     t = substr(h,RSTART,RLENGTH); sub(/^[[:space:]]+/, "", t); split(t,parts, /[[:space:]]+/)
                     id = ++nt; kinds[id] = parts[1]; names[id] = parts[2]; parents[id] = owner
+                    enumConstants[id] = (kinds[id] == "enum")
                     exposed[id] = supported(h) || (owner > 0 && (kinds[owner] == "interface" || kinds[owner] == "@interface"))
                     visible[id] = (owner == 0 || h ~ /@([A-Za-z0-9_$.]+[.])?ModApi([^A-Za-z0-9_$]|$)/)
                     inferredSealed[id] = h ~ /(^|[[:space:]])sealed[[:space:]]/ && h !~ /(^|[[:space:]])permits[[:space:]]/
@@ -293,10 +294,12 @@ mod_api_surface_text() {
                         (supported(h) || kinds[owner] != "class")
                     # Field declarations retain every name/dimension, never values.
                     # Retain compact-constructor annotations and annotation defaults;
-                    # exclude executable bodies except conservative enum bodies.
-                    if (keep && !(c == "{" && kinds[owner] == "enum")) declaration(first,i - 1,owner)
-                    if (c == "{") { body = 1; if (kinds[owner] == "enum") bodyFirst = first }
+                    # exclude executable bodies except conservative enum constant bodies.
+                    if (keep && !(c == "{" && enumConstants[owner])) declaration(first,i - 1,owner)
+                    if (c == "{") { body = 1; if (enumConstants[owner]) bodyFirst = first }
                 }
+                # Only the constant list precedes the first owner-level semicolon.
+                if (c == ";" && kinds[owner] == "enum") enumConstants[owner] = 0
                 first = i + 1; init = 0; firstInit = 0; initAngles = 0
             } else if (c == "}") {
                 if (kinds[owner] == "enum") declaration(first,i - 1,owner)

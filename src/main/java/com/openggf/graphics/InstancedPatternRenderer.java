@@ -78,6 +78,8 @@ public class InstancedPatternRenderer {
     private int cachedWindowHeightLoc = -1;
     private int cachedScreenHeightLoc = -1;
     private int cachedWaterEnabledLoc = -1;
+    private int cachedNativeSpriteOwnershipLoc = -1;
+    private int cachedTilePriorityAvailableLoc = -1;
 
     private final ArrayDeque<InstancedBatchCommand> commandPool = new ArrayDeque<>();
 
@@ -158,6 +160,8 @@ public class InstancedPatternRenderer {
         cachedTilePriorityTexLoc = glGetUniformLocation(priorityProgramId, "TilePriorityTexture");
         cachedScreenSizeLoc = glGetUniformLocation(priorityProgramId, "ScreenSize");
         cachedViewportOffsetLoc = glGetUniformLocation(priorityProgramId, "ViewportOffset");
+        cachedNativeSpriteOwnershipLoc = glGetUniformLocation(priorityProgramId, "NativeSpriteOwnership");
+        cachedTilePriorityAvailableLoc = glGetUniformLocation(priorityProgramId, "TilePriorityAvailable");
 
         // Cache underwater palette uniform locations for priority shader
         cachedUnderwaterPaletteLoc = glGetUniformLocation(priorityProgramId, "UnderwaterPalette");
@@ -663,7 +667,7 @@ public class InstancedPatternRenderer {
             GraphicsManager gm = graphicsManager;
             boolean useWaterShader = this.useWaterShader;
             // Use captured priority shader state from batch creation time
-            boolean usePriorityShader = this.usePriorityShader;
+            boolean usePriorityShader = this.usePriorityShader || gm.nativeSpriteOwnershipActive();
 
             // Select the appropriate shader based on mode
             ShaderProgram shader;
@@ -691,6 +695,8 @@ public class InstancedPatternRenderer {
             // but we still need to bind the tile priority FBO texture and screen size
             if (usePriorityShader) {
                 TilePriorityFBO fbo = gm.getTilePriorityFBO();
+                if (cachedNativeSpriteOwnershipLoc != -1) glUniform1i(cachedNativeSpriteOwnershipLoc, gm.nativeSpriteOwnershipActive() ? 1 : 0);
+                if (cachedTilePriorityAvailableLoc != -1) glUniform1i(cachedTilePriorityAvailableLoc, fbo != null && fbo.isInitialized() ? 1 : 0);
                 if (fbo != null && fbo.isInitialized()) {
                     // Use cached uniform locations instead of glGetUniformLocation every batch
                     if (cachedTilePriorityTexLoc != -1) {

@@ -17,6 +17,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.WidescreenAspect;
+import com.openggf.control.RecordedInputOwnership;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.level.LevelManager;
@@ -291,6 +292,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
     public void step(Bk2FrameInput input) {
         requireBooted();
+        try (var recordedInput = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+            stepRecordedInput(input);
+        }
+    }
+
+    private void stepRecordedInput(Bk2FrameInput input) {
         Bk2FrameInput current = input != null ? input : neutral(previousInput);
         loop.getInputHandler().setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previousInput));
         previousInput = current;
@@ -314,6 +321,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
             loop.debugCompleteSpecialStageWithEmerald();
         }
         loop.step();
+        // Native menu launches replace the entire runtime. Capture state must
+        // follow the same current participant the renderer and GameLoop use.
+        var currentSprites = GameServices.spritesOrNull();
+        if (currentSprites != null) {
+            var currentPlayer = currentSprites.getMainPlayable();
+            if (currentPlayer != null) player = currentPlayer;
+        }
         // After the frame, not before it: the sidekick's own registration re-places him at the
         // level's start position on the step after the first seed lands, so a seed applied at
         // the top of step() is visible in that frame's state line and gone from the next one.
@@ -327,7 +341,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
     /** Optional interactive owner; one input-log row is one presentation, including menu and hold rows. */
     void stepPresentation(Bk2FrameInput input, MutatorGameplayCaptureTool.PresentationInput driver) {
         requireBooted();
-        driver.step(loop, input, showTitleCard);
+        try (var recordedInput = RecordedInputOwnership.acquire(loop.getInputHandler())) {
+            driver.step(loop, input, showTitleCard);
+        }
         previousInput = input;
         if (startAtTitle) {
             var focused = GameServices.camera().getFocusedSprite();
@@ -387,6 +403,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
             graphics.resetForFixedFunction();
             dataSelect.draw(); graphics.flushScreenSpace();
             if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
+            glFinish(); return;
+        }
+        if (com.openggf.game.nativemenu.NativeMenuController.handles(loop.getCurrentGameMode())) {
+            var nativeScreen = com.openggf.NativeMenuPresentationAccess.screen(loop);
+            if (nativeScreen == null) throw new IllegalStateException("Native mode has no screen");
+            nativeScreen.setClearColor();
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            graphics.resetForFixedFunction();
+            nativeScreen.draw();
+            graphics.flushScreenSpace();
+            if (graphics.getUiRenderPipeline() != null) graphics.getUiRenderPipeline().renderFadePass();
             loop.renderHostedRunOverlay();
             glFinish(); return;
         }

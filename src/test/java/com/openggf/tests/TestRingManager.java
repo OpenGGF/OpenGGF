@@ -58,6 +58,17 @@ public class TestRingManager {
     }
 
     @Test
+    public void replacingPlacedRingsWithEmptyListRetiresOldActiveIndicesImmediately() {
+        var manager = buildRingManager(List.of(new RingSpawn(100, 100), new RingSpawn(110, 100)));
+        manager.reset(0);
+        assertEquals(2, manager.getActiveSpawns().size());
+        manager.resyncSpawnList(List.of());
+        assertTrue(manager.getActiveSpawns().isEmpty());
+        manager.update(0, null, 1, false);
+        assertTrue(manager.getActiveSpawns().isEmpty());
+    }
+
+    @Test
     public void testRingCollectionAndSparkleLifecycle() {
         RingSpawn spawn = new RingSpawn(100, 100);
         RingManager ringManager = buildRingManager(List.of(spawn));

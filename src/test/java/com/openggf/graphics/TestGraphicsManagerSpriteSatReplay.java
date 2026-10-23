@@ -33,7 +33,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
-    public void spriteSatReplay_replaysBucketsBackToFrontWhileReversingSatOrderWithinEachBucket() throws Exception {
+    public void spriteSatReplay_replaysNativeBucketsFrontToBackWithFirstSatEntryFirst() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 3), 2);
@@ -82,9 +82,9 @@ public class TestGraphicsManagerSpriteSatReplay {
         assertTrue(graphicsManager.commands.get(0) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(1) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(2) instanceof PatternRenderCommand);
-        assertEquals(20f, getFloatField(graphicsManager.commands.get(0), "x"));
+        assertEquals(10f, getFloatField(graphicsManager.commands.get(0), "x"));
         assertEquals(30f, getFloatField(graphicsManager.commands.get(1), "x"));
-        assertEquals(10f, getFloatField(graphicsManager.commands.get(2), "x"));
+        assertEquals(20f, getFloatField(graphicsManager.commands.get(2), "x"));
     }
 
     @Test
@@ -121,11 +121,25 @@ public class TestGraphicsManagerSpriteSatReplay {
             float v0 = getFloatField(command, "v0");
             float v1 = getFloatField(command, "v1");
             // Four of eight texel rows: half the atlas entry's V span.
-            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i == 0 ? 1 : 0);
+            PatternAtlas.Entry entry = graphicsManager.getPatternAtlas().getEntry(i);
             assertEquals((entry.v1() - entry.v0()) / 2f, Math.abs(v0 - v1), 1e-6f);
         }
         assertEquals(4f, heights[0]);
         assertEquals(4f, heights[1]);
+    }
+
+    @Test
+    public void nativeBudgetAppliesWithoutRequestingSpriteMask() {
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
+        graphicsManager.beginSpriteSatCollection();
+        for (int index = 0; index < 21; index++) {
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    10 + index * 8, 20, 1, 1, 0, 0, 0,
+                    false, false, false, false, SpriteMaskReplayRole.NORMAL,
+                    0, 1, 0, 1, null));
+        }
+        graphicsManager.endSpriteSatCollectionAndReplay();
+        assertEquals(20, graphicsManager.commands.size(), "H40 admits only the first twenty pieces on a line");
     }
 
     private static boolean getBooleanField(Object target, String fieldName) throws Exception {

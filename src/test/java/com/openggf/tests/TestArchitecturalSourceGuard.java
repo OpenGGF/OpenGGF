@@ -314,7 +314,10 @@ class TestArchitecturalSourceGuard {
             // These are wiring-time invariant checks, not per-game runtime behavior branches.
             "com/openggf/mods/code/ModContext.java",
             "com/openggf/mods/code/ModRegistrationPlan.java",
-            "com/openggf/tools/HeadlessGameBoot.java"
+            "com/openggf/tools/HeadlessGameBoot.java",
+            // Native screen composition validates the base ROM identity once when
+            // assembling its decorator; no gameplay behavior is selected by GameId.
+            "com/openggf/game/sonic3k/competition/S3kCompetitionRuntimeModule.java"
     );
     private static final List<String> GAME_ID_BRANCH_APPROVED_PREFIXES = List.of(
             "com/openggf/game/dataselect/"

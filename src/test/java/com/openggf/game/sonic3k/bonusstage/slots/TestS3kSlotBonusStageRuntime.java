@@ -132,8 +132,8 @@ class TestS3kSlotBonusStageRuntime {
         runtime.queueRingReward();
         runtime.update(0);
         assertFalse(runtime.activeSlotRingRewardsForTest().isEmpty());
-        // ROM Obj_SlotRing: 0x1A frames interpolation + 8 frames sparkle before deletion
-        for (int frame = 1; frame <= 0x1A + 8; frame++) {
+        // Obj_SlotRing retains its animation cursor: 26 movement passes + 19 to deletion.
+        for (int frame = 1; frame <= 0x1A + 19; frame++) {
             runtime.update(frame);
         }
 

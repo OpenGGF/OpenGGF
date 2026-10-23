@@ -143,6 +143,22 @@ class TestRewindPolicyRegistry {
     }
 
     @Test
+    void slotRewardScriptsAreExplicitlyReloadedWhileAnimationStateIsCaptured() {
+        Class<?> reward = com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance.class;
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(reward);
+        for (String field : java.util.List.of("spinScript", "sparkleScript")) {
+            assertEquals(RewindFieldPolicy.TRANSIENT,
+                    DefaultObjectRewindPolicies.exactFieldPoliciesForAudit()
+                            .get(new FieldKey(reward.getName(), field)));
+            assertPolicy(schema, field, RewindFieldPolicy.TRANSIENT);
+        }
+        for (String field : java.util.List.of("animationFrame", "animationTimer", "mappingFrame",
+                "deleteNextUpdate")) {
+            assertPolicy(schema, field, RewindFieldPolicy.CAPTURED);
+        }
+    }
+
+    @Test
     void defaultExactPoliciesDoNotRetainRemovedIczBossEmitterField() {
         assertFalse(DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().containsKey(
                 new FieldKey(IczEndBossInstance.class.getName(), "bossSnowdustEmitter")));

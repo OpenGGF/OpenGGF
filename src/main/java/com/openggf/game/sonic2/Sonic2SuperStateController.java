@@ -8,6 +8,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.objects.SuperSonicStarsObjectInstance;
@@ -15,7 +16,9 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 import com.openggf.sprites.playable.SuperStateController;
+import com.openggf.sprites.playable.SuperStateInternalAccess;
 
 import java.util.logging.Logger;
 import com.openggf.game.GameServices;
@@ -40,7 +43,8 @@ import com.openggf.game.GameServices;
  *   <li>2 = fading out (reverting to normal) - frames decrement, timer 3</li>
  * </ul>
  */
-public class Sonic2SuperStateController extends SuperStateController {
+public class Sonic2SuperStateController extends SuperStateController
+        implements com.openggf.game.internal.NativeSuperStateBeforeAnimation {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SuperStateController.class.getName());
 
     /** Palette fade state: 0=off, 1=fading in, -1=cycling, 2=fading out. */
@@ -76,6 +80,39 @@ public class Sonic2SuperStateController extends SuperStateController {
 
     public Sonic2SuperStateController(AbstractPlayableSprite player) {
         super(player);
+    }
+
+    /** Existing direct consumers represent one complete control-plus-global frame. */
+    @Override
+    public void update() {
+        updateNativeControlBeforeAnimation();
+        updateNativeGlobalPaletteAfterObjects();
+    }
+
+    @Override
+    public void updateNativeControlBeforeAnimation() {
+        SuperStateInternalAccess.updateNativeControlFrame(this);
+    }
+
+    @Override
+    public boolean preserveExistingInvincibilityStars() {
+        // Obj35_Layer0Update (s2.asm:42494-42503), FixBugs=0: only the
+        // secondary invincibility bit gates deletion. The fixed branch would
+        // delete on Super_Sonic_flag; the shipped ROM keeps existing stars.
+        return player.isSuperSonic();
+    }
+
+    @Override
+    public void updateNativeGlobalPaletteAfterObjects() {
+        // Level_MainLoop calls PalCycle_Load AFTER RunObjects (s2.asm:5095-5106).
+        // Hurt/death omit Sonic_Super, but neither suppresses this global owner.
+        // The final fade therefore leaves this tick's Sonic_Animate transformed
+        // and releases obj_control only after every object has executed.
+        if (paletteState == -1) updateSuperPalette();
+        else if (paletteState != 0) updatePaletteFade();
+        if (paletteState == -1) {
+            SuperStateInternalAccess.finishNativeTransformationAfterPalette(this);
+        }
     }
 
     @Override
@@ -175,6 +212,17 @@ public class Sonic2SuperStateController extends SuperStateController {
         // (s2.asm:3129). Seeding 3 here shortened the fade's opening step from
         // 16 frames to 4.
         paletteTimer = 0xF;
+        // Sonic_CheckGoSuper writes only Obj7E's ID at $FFD040, before the
+        // timer/status and audio writes (REV01 $1AB6C: 11FC 007E D040).
+        ensureStarsObject();
+        // Sonic_CheckGoSuper unconditionally writes $A00/$30/$100, including
+        // when Status_Underwater is already set. Sonic_Water's existing-water
+        // branch retains that bank (s2.asm:37481-37483,36379-36382).
+        PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, false);
+        // REV01 $1AB84 clears invincibility_time; $1AB8A sets secondary bit1.
+        // The already-published Super flag supplies inherent protection in the
+        // playable's native damage gate, independently of the cleared timer.
+        player.setInvincibleFrames(0);
         // Play transformation SFX
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -186,6 +234,20 @@ public class Sonic2SuperStateController extends SuperStateController {
             }
         } catch (Exception e) {
             LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
+        }
+        // This request follows PlaySound on the SAME Sonic_CheckGoSuper call,
+        // not PalCycle_SuperSonic's later control release ($1AB90-$1ABA3).
+        // Native $96 and the engine playlist ID are different namespaces:
+        // GameMusic.SUPER resolves the loader's legacy Super key, not raw $96.
+        try {
+            if (CrossGameFeatureProvider.isActive()) {
+                GameServices.audio().playDonorMusic(
+                        GameServices.crossGameFeatures().getDonorGameId(), GameMusic.SUPER);
+            } else {
+                GameServices.audio().playMusic(GameMusic.SUPER);
+            }
+        } catch (Exception e) {
+            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
         }
     }
 
@@ -210,33 +272,15 @@ public class Sonic2SuperStateController extends SuperStateController {
     @Override
     protected void onSuperActivated() {
         paletteState = -1;
-        paletteTimer = 7;
-        // Play Super Sonic music (overrides zone music)
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().playDonorMusic(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        GameMusic.SUPER);
-            } else {
-                GameServices.audio().playMusic(GameMusic.SUPER);
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
-        }
-        // Clear invincibility timer - Super Sonic has inherent invincibility
-        player.setInvincibleFrames(0);
+        // PalCycle_SuperSonic reloads 3 before the final fade step, then writes
+        // state=-1/obj_control=0 (s2.asm:3129-3139). Keep that timer: the first
+        // normal-cycle entry follows four ticks later; only that entry reloads 7.
         // Swap to Super Sonic animation set
         if (superAnimSet != null) {
             player.setAnimationSet(superAnimSet);
         }
         // Hide shield - Super Sonic doesn't display shields
         player.setShieldVisible(false);
-        // Spawn Super Sonic stars sparkle effect (Obj7E)
-        ObjectManager objects = GameServices.level().getObjectManager();
-        boolean hasStars = objects.getActiveObjects().stream().anyMatch(object ->
-                object instanceof SuperSonicStarsObjectInstance stars
-                        && stars.isOwnedBy(player) && !stars.isDestroyed());
-        if (!hasStars) addStarsObject(new SuperSonicStarsObjectInstance(player));
         LOGGER.info("Super Sonic activated (S2)");
     }
 
@@ -250,11 +294,29 @@ public class Sonic2SuperStateController extends SuperStateController {
      * execution order. See {@link PowerUpRules#superStarsFixedSlotIndex()}.
      * A negative index keeps ordinary dynamic allocation.
      */
-    private void addStarsObject(SuperSonicStarsObjectInstance stars) {
+    private void ensureStarsObject() {
         ObjectManager objects = GameServices.level().getObjectManager();
         GameRules rules = player != null ? player.getGameRules() : null;
         PowerUpRules powerUp = rules != null ? rules.powerUp() : null;
         int fixedSlot = powerUp != null ? powerUp.superStarsFixedSlotIndex() : -1;
+        for (var object : objects.getActiveObjects()) {
+            if (object.isDestroyed()) continue;
+            if (object instanceof SuperSonicStarsObjectInstance stars && stars.isOwnedBy(player)
+                    && (fixedSlot < 0 || stars.getSlotIndex() == fixedSlot)) {
+                // An ID-only write cannot reset routine, mapping_frame,
+                // anim_frame_duration or objoff_30/31 in the existing SST.
+                return;
+            }
+            if (fixedSlot >= 0 && object instanceof AbstractObjectInstance occupant
+                    && occupant.getSlotIndex() == fixedSlot) {
+                // Cross-kind ID-only SST rewriting needs retained byte state,
+                // which this typed object API does not provide. Preserve the
+                // foreign occupant rather than registering duplicate owners.
+                LOGGER.warning("Cannot rewrite foreign Super stars SST occupant at slot " + fixedSlot);
+                return;
+            }
+        }
+        var stars = new SuperSonicStarsObjectInstance(player);
         if (fixedSlot >= 0) {
             ObjectLifetimeOps.addDynamicAtReservedSlot(objects, stars, fixedSlot);
             return;
@@ -295,6 +357,16 @@ public class Sonic2SuperStateController extends SuperStateController {
         // ROM: move.w #$28,(Palette_frame).w on revert
         paletteFrame = 0x28;
         paletteTimer = 3;
+        // Sonic_RevertToNormal writes prev_anim=Run before Sonic_Animate
+        // (s2.asm:37529-37535; REV01 $1AC04: 117C 0001 001D). Preserve the
+        // exact sentinel: Roll must restart, while an already selected Run
+        // must keep its script phase because anim still equals prev_anim.
+        player.publishRunAsPreviousAnimation();
+        // Unlike transformation, Sonic_RevertToNormal checks Status_Underwater
+        // after installing normal speeds and writes $300/$6/$40 when set
+        // (s2.asm:37536-37545). This changes the speed bank without changing
+        // water status or applying another entry/exit velocity adjustment.
+        PlayableSpriteInternalAccess.publishNativeSpeedConstantsWaterState(player, player.isInWater());
         // ROM: move.w #1,invincibility_time(a0). Besides the one-frame grace
         // period, this is how Sonic_RevertToNormal restores the zone music: it
         // plays none itself and lets Obj01_ChkInvin re-issue Level_Music when

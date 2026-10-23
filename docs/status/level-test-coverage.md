@@ -107,6 +107,26 @@ results supersede the earlier unclosed-new-ring blocker, while fullaux, four
 native debris, broader SST/configuration/cold/BK2 and Root's composed validation
 remain open. Prior R1–R6 numbers retain their historical source/coverage limits.
 
+The [S1 boss mechanics matrix](../architecture/audits/2026-10-22-s1-boss-components.md#bounded-verification-and-inherited-gaps)
+records native component, allocation, animation, contact and recreation checks
+for GHZ3, MZ3, SYZ3, LZ3 and SLZ3, plus ROM explosion pixels. Continuous boss
+routes, FZ topology, SLZ escape timing and broader roster/presentation coverage
+remain open; these local mechanics do not certify any complete act.
+
+The [2026-10-22 S2 presentation matrix](../architecture/validation/2026-10-22-s2-presentation.md)
+records bounded MTZ3, SCZ and DEZ palette-cycle coverage and the seeded native
+DEZ boss-to-ending/NTSC-PAL credits boundaries. Continuous routes and the wider
+character, donor, team and viewport matrix remain explicit inherited gaps.
+
+Assertion/allocation follow-up (2026-10-22): [bounded evidence](../architecture/validation/2026-10-22-native-gap-assertions.md) distinguishes the repaired HTZ1/CNZ1 local assertions, direct DEZ2 cold-entry contract and shared S2 capsule allocation/dispatch checks from whole-act completion. The per-act capsule table records inherited production contact/route, width/donor/team, lifecycle, rewind and native presentation gaps. The old DEZ comparison matched zero rows; its historical seeded diagnostic is not cold-route evidence.
+
+S3K narrow object fidelity (2026-10-22): the [HCZ2 matrix](../architecture/validation/levels/s3k-hcz2.md#cutscene-floor-contacts--2026-10-22)
+and [bonus matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md#slot-reward-animation-and-interpolation--2026-10-22)
+record independent terrain-contact and reward animation/interpolation/rewind
+checks. The [native audit](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md#narrow-native-object-fidelity-follow-up--2026-10-22)
+records event PLC3 phase/readiness/save ordering and remaining presentation and
+route breadth. These local repairs do not certify either act or stage.
+
 Object-pipeline performance follow-up (2026-10-22, local candidate): the
 [query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)
 and linked wave records track native owned-slot, FBZ/SOZ collision-allocation and
@@ -231,6 +251,9 @@ S2 playable-art/spring/Coconuts follow-up (2026-10-07): the [lane audit](../arch
 S1 returned-player art/input follow-up (2026-10-07): the [lane audit](../architecture/audits/2026-10-07-s1-parity-gap-verification.md) records results-entry, release-prelude, zero-tail and art-hold rewind regressions. The shared common-load correction synchronously publishes scheduled BK2 logical input through the live GameLoop InputHandler without consuming a cursor row or writing persistent sprite forced masks. Local composition replay advances the chain stop from segment 12 to 33 and closes the three earlier art gaps; segment 8 remains at zero errors. MZ1 segment 7 falls from 5,466 to 192 physics-group errors, first row 3261 Y $03CB/$03D5; MZ2 segment 12 falls from 196,129 to three queue-state auxiliary comparator differences at row 101, with no animation differences, bootstrap errors or warnings. Seven later gap mismatches and segment 33 remain open (incomplete: 3,192 errors; first row 356 dynamic_art.edges); walk ownership is lost in TITLE_CARD at cursor 210395. Both prefix cases pass. Shared-input focused validation passes 82 cases with no failures/errors/skips; canonical composition has 16 cases, three chain assertion failures and no errors/skips. [Actual-main qualification](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification) retains 27 inherited ordinary failures and 62 literal skips with zero errors; all 672 fresh guards pass. These bounded checks do not supply the missing stock per-act matrices or certify donor/team/viewport, load/respawn and whole-route rewind breadth.
 
 S1 SBZ/FZ scrolling follow-up (2026-10-07): the [stock parity audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#sbz-act-1-owning-routines) records twenty focused cases for REV01 cloud/building bands, signed fractional motion, rewind state and cache-window geometry at five widths. These establish local scroll arithmetic, not renderer tile residency or whole-act visuals. Native checkpoint background-X preservation and reused same-act handler initialization remain inherited gaps; stock SBZ1/SBZ2/FZ matrices and donor/team/load/respawn coverage remain pending.
+
+S1 lifecycle follow-up (2026-10-22): the [bounded lifecycle audit](../architecture/audits/2026-10-22-s1-lifecycle-gap-closure.md) covers provider re-entry at two distinct camera seeds and fractional-state restore/replay for every S1 scroll handler, native setup after lamppost BG-word restoration, actual GHZ same-act reload and lamppost death reload, repeated GHZ credits and the LZ3 credits bank through the production GameLoop with EGL. The generic GHZ1 standalone trace now executes reference-closure validation. A bounded SBZ3 follow-up also verifies native LZ scroll selection through actual full load, SBZ2 progression, rendered wrong-routine control, checkpoint reload and fractional replay while retaining SBZ3 terrain/progression identity. These close the narrow provider/checkpoint obligations above; complete SBZ1/SBZ2/FZ and other stock per-act matrices, ordinary later-zone lamppost routes, full campaign rewind and donor/team/viewport breadth remain pending.
+
 
 LBZ1 trace-campaign follow-up (2026-10-03, Ribot update 2026-10-07): the [focused act matrix](../architecture/validation/levels/s3k-lbz-act1.md) covers cup contact and control ownership, rolling-drum deletion, the miniboss fatal hit, carried-results retirement and the retained title reset, and the Act 1→2 camera hold, each with restore/replay. Ribot now returns from initialization before its first active orbit, with child-graph restoration covered. The fresh Sonic+Tails trace matches through row 30581 but is still red (1,665 errors; first row 30582 `tails_y`, native `$013D`, engine `$012C`). Full-route, viewport, donor and roster obligations remain open.
 
@@ -504,9 +527,9 @@ matrices; never collapse skipped or unrun into pass.
 | S2 | `CHEMICAL_PLANT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `AQUATIC_RUIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
-| S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending; [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
+| S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); [partial Sonic matrix](../architecture/validation/levels/s2-cnz1-sonic.md); [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) adds bounded launcher/flipper/cage release and graph-rewind checks; whole-act breadth remains inherited |
 | S2 | `CASINO_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending. Shared [object roll ownership](../architecture/research/2026-10-16-s2-object-roll-ownership.md) checks cover local launcher/flipper/cage contracts; complete Act 2 route breadth remains inherited |
-| S2 | `HILL_TOP_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `HILL_TOP_1` | [Partial Sonic matrix](../architecture/validation/levels/s2-htz1-sonic.md): positioned natural-earthquake crossing; cold traversal and configuration/rewind breadth remain open |
 | S2 | `HILL_TOP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `MYSTIC_CAVE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
 | S2 | `MYSTIC_CAVE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
@@ -522,7 +545,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_ANGEL_ISLAND_2` | [Second Strike hard-mode obligations (incomplete)](../architecture/validation/levels/s3k-second-strike-aiz.md); [Act 2 matrix](../architecture/validation/levels/s3k-aiz2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. [R11 synchronous retained16](../architecture/validation/levels/s3k-icz-act1.md#r11-synchronous-known16-handoff-repair--2026-10-17) qualifies the known559/unknown30 handoff and queued589 publication with twice-restored world replay (77 construction epoch +4 opaque-restore repair cases, no skips). Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_HYDROCITY_1` | [Sonic-route matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); [local boss obligations and inherited gaps](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md#hcz1-affected-route-matrix). Other main routes and full conformance remain open |
 | S3K | `S3K_HYDROCITY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-hcz2.md), including [snake coarse-cull/re-entry component coverage](../architecture/validation/levels/s3k-hcz2.md#snake-block-respawn-lifecycle--2026-10-22) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
-| S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_MARBLE_GARDEN_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mgz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); physical post 1 activation → hazard death → real post respawn with two-cycle world replay qualified for native320 Sonic, the native pair and the 30 supported solo preset/main/donor rows (2026-10-17; multi-participant rows open); two native320 Sonic+CPU Tails lightning-ring movie intervals with SST admission and registered restore/forward are bounded in the [ring qualification](../architecture/validation/levels/s3k-mgz-act1.md#native-attracted-ring-intervals-2026-10-22); the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_MARBLE_GARDEN_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mgz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction). The [packed warning-art correction](../architecture/validation/levels/s3k-mgz-act2.md#packed-byte-warning-art-correction--2026-10-20) adds literal native byte/tail/layout controls and states its scene/timing limits; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_1` | [Act 1 matrix](../architecture/validation/levels/s3k-cnz-act1.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); five native/off positioned-inlet miniboss→released-CNZ2 products (Sonic solo/pair at320/800, Knuckles solo at800) now qualify nine complete-world spots with two forward replays each (2026-10-17); cold/physical-post/native320-Knuckles and remaining axes stay open. The act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_CARNIVAL_NIGHT_2` | [Act 2 matrix](../architecture/validation/levels/s3k-cnz-act2.md) — bounded normal-entry/restart and object-graph floor qualified (1120 finite restart products across eight acts, `d13585237`; its normal-entry replay held Down, not Right, until the 2026-10-17 input correction); the [native320 Knuckles capsule handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-capsule-results-and-camera-opening--2026-10-20) locally qualifies real results, allocation retry, P1 control and gradual camera opening with two complete-world replay cycles. The [native beam and actual ICZ handoff](../architecture/validation/levels/s3k-cnz-act2.md#knuckles-hide-camera-rise-and-icz-handoff--2026-10-20) now qualify charge/lift, hide `$18`, camera rise, real fade/load and released ICZ with two full-world replay cycles from the positioned pre-results button inlet (affected 250/0F/0E/0S composition). The [native P1 vertical-bound operand](../architecture/validation/levels/s3k-cnz-act2.md#native-p1-vertical-bound-operand--2026-10-21) has separate declared registered-P2-focus component controls; stock cold-route impact is unproven. Cold traversal, broader products and native physical presentation remain open; the act is not certified. Route, interaction, lifecycle and native presentation breadth remain open |
@@ -1785,3 +1808,34 @@ index does not prove identical input/trajectory; the two products first differ
 at35020. Older milestone passes above retain their tested epochs, while current
 route qualification, bounded baseline/current attribution and combined smoke stay
 open. See the [MHZ2 current record](../architecture/validation/levels/s3k-mhz-act2.md#root-native-glide-composition--2026-10-22).
+
+S1 LZ2/LZ3 pre-object water-clock follow-up (2026-10-22): seven independent
+production-frame checks cover the 64-tick suction gate, rollover, lag and
+registry restore/forward; the existing three clock/logical-pad checks and
+both alternate-BK2 complete-run LZ2/LZ3 controls pass without skips. The
+[lane audit](../architecture/audits/2026-10-22-s1-chain-gap-closure.md) records
+LZ2's emerald-route 10→0 errors and LZ3's 10,212→three queue-only differences.
+Full-route timing, viewport/donor/team breadth and complete stock act matrices
+remain inherited gaps; these contracts do not certify either whole act.
+
+S1 native object-lifetime follow-up (2026-10-22): a real folded staircase now
+checks lower-hole/own-slot reuse, forward execution, deferred child release
+before final cleanup, and destructive restore in both manager loops. Bomb fuse
+conversion retains native fractions/status and first-pass movement under full
+and partial slot pressure; manual and timeout pole release replay after restore.
+All 23 focused cases and the original-BK2 SLZ1/2/3 controls pass without skips;
+emerald SLZ1 becomes exact in the continuous chain. [Evidence and limits](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#native-sst-retirement-and-bomb-conversion)
+include remaining native Bomb display-queue/initialization, SLZ3 boss boundary,
+SYZ3 camera and later campaign frontiers. These checks do not replace complete
+act/viewport/donor/character matrices or certify a green continuous route.
+
+
+S1 grounded-roll camera follow-up (2026-10-22): 21 independent cases cover
+retail S1 held bias 50/80, S2/S3K recentering, roll-stop dispatch, air resumption
+and destructive restore. Existing rolling/camera tests, original SLZ/SYZ movie
+controls, 60 selected S3K cases and 54 affected guards pass without skips. SYZ3's
+continuous emerald segment now compares exactly. Fresh Bomb fragment animation
+also preserves native cleared-frame initialization and replays after forced
+recreation. [Exact selection and limitations](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
+retain the remaining PLC, later-route, queue and API pin obligations; this does
+not certify a complete act matrix or complete emerald chain.

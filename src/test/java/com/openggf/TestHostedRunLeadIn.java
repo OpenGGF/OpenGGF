@@ -7,6 +7,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.session.GameplayRunPolicy;
 import com.openggf.game.session.SessionManager;
 import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunHandle;
 import com.openggf.mods.run.RunInput;
 import com.openggf.mods.run.RunLevelStart;
 import com.openggf.mods.run.RunSpec;
@@ -40,6 +41,14 @@ class TestHostedRunLeadIn {
 
     @Nested @RequiresRom(SonicGame.SONIC_1)
     class Sonic1 {
+        @Test void aMidActRetryKeepsNativeS1GameplayRunningUnderTheReloadFade() {
+            assertHostedS1RetryFade(false);
+        }
+
+        @Test void aCompletedActRetryStillHoldsNativeS1GameplayUnderTheReloadFade() {
+            assertHostedS1RetryFade(true);
+        }
+
         @Test void aReloadedS1LevelNeverReportsItsOwnFade() throws Exception {
             Recorder host = new Recorder();
             GameLoop loop = run("s1", false, GameplayRunPolicy.isolatedAct().withFastRestarts(), host);
@@ -127,7 +136,10 @@ class TestHostedRunLeadIn {
         final List<Boolean> fading = new ArrayList<>();
         final List<RunStep> steps = new ArrayList<>();
         boolean holdInput;
+        boolean retryAtCompletion;
+        RunHandle handle;
 
+        @Override public boolean retryOnActCompletion() { return retryAtCompletion; }
         @Override public void onLevelReady(RunLevelStart start) { starts.add(start); }
         @Override public boolean admitStep(RunInput input) {
             fading.add(input.levelFadingIn());
@@ -151,8 +163,43 @@ class TestHostedRunLeadIn {
         SessionManager.getCurrentGameplayMode().beginGameplayRun(policy, 0, 0);
         GameLoop loop = new GameLoop(input);
         loop.setGameMode(GameMode.LEVEL);
-        loop.beginHostedRun(new RunSpec(game, 0, 0, "sonic", policy), host, reason -> { });
+        host.handle = loop.beginHostedRun(new RunSpec(game, 0, 0, "sonic", policy), host, reason -> { });
         return loop;
+    }
+
+    private void assertHostedS1RetryFade(boolean actCompleted) {
+        Recorder host = new Recorder();
+        GameLoop loop = run("s1", false, GameplayRunPolicy.isolatedAct(), host);
+        for (int i = 0; i < 4; i++) loop.step();
+        var level = GameServices.level();
+        assertTrue(GameServices.module().getLevelInitProfile()
+                instanceof com.openggf.game.internal.BlockingLevelEntryFade);
+        player().setAir(true);
+        player().setYSpeed((short) -0x200);
+        if (actCompleted) {
+            host.retryAtCompletion = true;
+            level.getTransitions().requestHostReturn();
+        } else {
+            host.handle.retry();
+        }
+        loop.step(); // host retry publishes its selected deactivation policy
+        assertEquals(actCompleted, level.isLevelInactiveForTransition());
+        loop.step(); // ordinary request consumer starts the reload fade
+        assertTrue(SessionManager.getCurrentGameplayMode().getFadeManager().hasPendingCompletion());
+        assertEquals(actCompleted, level.isLevelInactiveForTransition(),
+                "an active host owns the request's blocking policy");
+        int objects = level.getObjectManager().getFrameCounter();
+        int afterSteps = host.steps.size();
+        int y = player().getCentreY();
+        int fade = SessionManager.getCurrentGameplayMode().getFadeManager().getFrameCount();
+        for (int i = 0; i < 4; i++) loop.step();
+        assertEquals(objects + (actCompleted ? 0 : 4), level.getObjectManager().getFrameCounter());
+        assertEquals(afterSteps + (actCompleted ? 0 : 4), host.steps.size());
+        if (actCompleted) assertEquals(y, player().getCentreY());
+        else assertNotEquals(y, player().getCentreY(), "the real airborne player keeps moving");
+        assertTrue(SessionManager.getCurrentGameplayMode().getFadeManager().getFrameCount() > fade);
+        assertEquals(actCompleted, level.isLevelInactiveForTransition());
+        assertTrue(host.starts.isEmpty(), "the four observed passes precede the reload callback");
     }
 
     private static void dieAndReload(GameLoop loop, Recorder host) {

@@ -1033,3 +1033,14 @@ The record's canonical constructor now takes the flag; the four-argument candida
 `GameRules` pass `false` for S1/S2 and `true` for S3K. The normalized mutable
 `0.7` pin and the `ModApiVersion` description change together. The descriptor
 remains the unpublished candidate `0.7.0`, and no published baseline changes.
+
+### Native-mode host modes (2026-10-22)
+
+The October 22 native-mode host adds four `GameMode` enum values: `OPTIONS`,
+`COMPETITION_MENU`, `COMPETITION`, and `COMPETITION_RESULTS`. They are appended
+so existing enum positions remain stable. The internal menu, launch and native
+participant services are outside the creator surface. The exact mutable `0.7`
+pin gains only those four fields, checked against the compiled surface. The
+candidate remains `0.7.0`; descriptor topology/status and published baselines
+are unchanged. Competition activation still requires a connected native session,
+arena and results provider; the mode names alone expose no playable product.

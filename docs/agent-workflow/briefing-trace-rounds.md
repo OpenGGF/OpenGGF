@@ -96,6 +96,34 @@ and unknown operands. A subsequent cold continuation may evaluate its current
 boundary once, but cannot fill the earlier run's missing values. See the
 [R18 record](../architecture/plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21).
 
+An owned EGL fixture can pass while poisoning the next context (2026-10-23,
+native-mode composition). HeadlessGameBoot closes the session and EGL context;
+a fixture drawing through the legacy pattern path must also release its actual
+post-boot graphics owner's static VAO/VBO/uniform state while that context is
+current. Interlace passed, but the next projection control rendered black;
+projection alone passed and the ordered pair reproduced the failure. Closing
+scene owners then captured graphics before boot closes EGL preserved all pixel
+assertions. A graphics reference taken before boot names the previous owner.
+See the [composition evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+Method selectors may not narrow ArchUnit field rules (2026-10-22, native-mode
+foundation guards). Surefire's two named architecture selectors ran all26
+ArchUnit field identities; adjacent Jupiter method tests were not selected.
+Read actual XML identities and totals before reporting a projected three-test
+run or scheduling another copy. The owning size test plus those26 rules passed;
+see the [foundation composition evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
+An end-of-frame oracle can hide the pre-object writer it intends to test
+(2026-10-22, S1 water clock). Positioned LZ3 checks all ended three pixels lower
+because later physics/radius work replaced the observed Y. The existing
+RecordingFrameDriver physics wrapper samples after the real water callback and
+then still executes the full original frame. That boundary reproduced six gate
+failures and one control before the correction, including lag and rollover;
+restore/forward and another BK2 then passed. Read the actual clock publisher:
+ObjectManager increments after this callback, although native VBlank_Exit has
+already incremented before LZWaterFeatures. See the
+[water-clock evidence](../architecture/audits/2026-10-22-s1-chain-gap-closure.md).
+
 Different virtual pattern IDs do not imply different physical atlas pages
 (2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
 separate commands for two IDs that the allocator placed on the same page. Use

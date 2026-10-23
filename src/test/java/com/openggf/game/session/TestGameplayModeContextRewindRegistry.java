@@ -54,6 +54,8 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.NativeSpriteSubmissionAccess;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.rings.RingManager;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -228,13 +230,12 @@ class TestGameplayModeContextRewindRegistry {
         when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
         when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
         when(level.getRingManager()).thenReturn(rings);
-        ObjectManager objects = mock(ObjectManager.class);
         @SuppressWarnings("unchecked")
         RewindSnapshottable<ObjectManagerSnapshot> objectAdapter = mock(RewindSnapshottable.class);
         ObjectManagerSnapshot objectSnapshot = mock(ObjectManagerSnapshot.class);
         when(objectAdapter.key()).thenReturn("object-manager");
         when(objectAdapter.capture()).thenReturn(objectSnapshot);
-        when(objects.rewindSnapshottable()).thenReturn(objectAdapter);
+        ObjectManager objects = managerWithAdapter(objectAdapter);
         when(level.getObjectManager()).thenReturn(objects);
         ctx.registerLevelAdapters(level);
         ctx.registerLevelAdapters(level);
@@ -306,13 +307,12 @@ class TestGameplayModeContextRewindRegistry {
         CompositeSnapshot sourceSnapshot = registry.capture();
         List<String> before = List.copyOf(sourceSnapshot.entries().keySet());
 
-        ObjectManager replacementObjects = mock(ObjectManager.class);
         @SuppressWarnings("unchecked")
         RewindSnapshottable<ObjectManagerSnapshot> objectAdapter =
                 mock(RewindSnapshottable.class);
         when(objectAdapter.key()).thenReturn("object-manager");
         when(objectAdapter.capture()).thenReturn(mock(ObjectManagerSnapshot.class));
-        when(replacementObjects.rewindSnapshottable()).thenReturn(objectAdapter);
+        ObjectManager replacementObjects = managerWithAdapter(objectAdapter);
         RingManager replacementRings = mock(RingManager.class);
         when(replacementRings.key()).thenReturn("rings");
         when(replacementRings.capture()).thenReturn(mock(RingSnapshot.class));
@@ -322,7 +322,8 @@ class TestGameplayModeContextRewindRegistry {
         List<String> after = List.copyOf(registry.capture().entries().keySet());
         assertEquals(withoutTransitionManagers(before), withoutTransitionManagers(after),
                 "the narrow transition rebind must not move title, provider, event, solid, or tilemap owners");
-        assertEquals(List.of("object-manager", "rings"), after.subList(after.size() - 2, after.size()));
+        assertEquals(List.of("object-manager", NativeSpriteSubmissionAccess.REWIND_KEY, "rings"),
+                after.subList(after.size() - 3, after.size()));
         assertTrue(after.indexOf("s3k-title-card") < after.indexOf("s3k-plc-art"),
                 "title-before-provider restore ordering must remain unchanged");
 
@@ -378,7 +379,16 @@ class TestGameplayModeContextRewindRegistry {
     private static List<String> withoutTransitionManagers(List<String> keys) {
         return keys.stream()
                 .filter(key -> !key.equals("object-manager") && !key.equals("rings"))
+                .filter(key -> !key.equals(NativeSpriteSubmissionAccess.REWIND_KEY))
                 .toList();
+    }
+
+    /** Keep the ordering probe's mocked graph adapter around a real queue owner. */
+    private static ObjectManager managerWithAdapter(RewindSnapshottable<ObjectManagerSnapshot> adapter) {
+        return new ObjectManager(List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), mock(Camera.class), new StubObjectServices()) {
+            @Override public RewindSnapshottable<ObjectManagerSnapshot> rewindSnapshottable() { return adapter; }
+        };
     }
 
     @Test
