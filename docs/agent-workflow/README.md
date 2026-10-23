@@ -80,6 +80,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   [checker](../../tools/soniccd/pcm_native_check.py) validates full state, RAM,
   samples, provenance and controls. Captures are comparison-only; startup
   coverage is distinct from active gameplay and resampling. Origin: 2026-10-23 CD-06.
+- [PCM native comparisons](../../src/test/java/com/openggf/game/soniccd/device/pcm/TestCdPcmNativeContinuations.java)
+  admit complete external integer-loop blocks and compare chip state, RAM and
+  every sample/delta. `TestCdPcmNativeMusic` also checks retail music-preview and
+  active native restore payloads. These test imports never hydrate gameplay.
+  Origin: 2026-10-23 CD-06.
 - [Retail Sound Test PCM route](../../tools/soniccd/pcm_route_soundtest_check.py)
   checks controller-authored music selection, loaded program identity and active
   native restoration against immutable captures. Music preview remains distinct
