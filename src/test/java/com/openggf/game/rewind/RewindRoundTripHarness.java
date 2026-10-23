@@ -205,6 +205,9 @@ public final class RewindRoundTripHarness {
                     "com.openggf.game.sonic1.objects.bosses.FZCylinder",
                     "TestS1FzBossGraphRewind"),
             Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.FZBossVisualComponent",
+                    "TestS1FzBossGraphRewind"),
+            Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.FZPlasmaBall",
                     "TestS1FzBossGraphRewind"),
             Map.entry(
@@ -213,6 +216,12 @@ public final class RewindRoundTripHarness {
             Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall",
                     "TestS1GhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.GHZBossWreckingBall$NativeComponent",
+                    "TestS1GhzBossGraphRewind"),
+            Map.entry(
+                    "com.openggf.game.sonic1.objects.bosses.S1EggmanVisualComponent",
+                    "TestS1EggmanNativeComponents#midScriptRewindRecreatesIdentityAndProducesTheSameForwardFramesWithoutRespawn"),
             Map.entry(
                     "com.openggf.game.sonic1.objects.bosses.Sonic1SYZBossInstance",
                     "TestS1SyzBossBlockGraphRewind"),

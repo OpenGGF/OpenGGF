@@ -1,10 +1,12 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
+import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic1.objects.bosses.FZBossVisualComponent;
 import com.openggf.game.sonic1.objects.bosses.FZCylinder;
 import com.openggf.game.sonic1.objects.bosses.FZPlasmaBall;
@@ -22,6 +24,9 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -130,6 +135,91 @@ class TestS1FzBossGraphRewind {
                 "launcher activeBallCount must remain coherent after updateWaitForBalls");
         assertEquals(2, readInt(restored.launcher(), "launcherState"),
                 "launcher must remain in wait-for-balls state while restored balls are live");
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void nativeVisualClocksCoordinatesAndRenderFlagsSurviveReconstructionAndForwardPasses() throws Exception {
+        for (boolean finishRenderPass : new boolean[]{false, true}) {
+            Harness harness = Harness.create(List.of(BOSS_SPAWN), RomByteReader.fromRom(TestEnvironment.currentRom()));
+            ObjectManager manager = harness.objectManager();
+            manager.setRewindInPlaceRestoreEnabledForTest(false);
+            harness.camera().setX((short) 0x25D0);
+            harness.camera().setY((short) 0x0510);
+            manager.update(harness.camera().getX(), null, List.of(), 1);
+            manager.refreshPostCameraRenderState();
+            Sonic1FZBossInstance boss = only(manager, Sonic1FZBossInstance.class);
+            assertEquals(5, liveObjects(manager, FZBossVisualComponent.class).size());
+            boss.getState().routineSecondary = 12;
+            boss.getState().xFixed = 0x26E0 << 16;
+            boss.getState().yFixed = 0x0596 << 16;
+            boss.getState().x = 0x26E0;
+            boss.getState().y = 0x0596;
+            boss.getState().xVel = 0x100;
+            boss.getState().yVel = -0x180;
+            boss.getState().hitCount = 1;
+            for (int clock = 2; clock <= 10; clock++) {
+                manager.update(harness.camera().getX(), null, List.of(), clock);
+                if (clock < 10 || finishRenderPass) manager.refreshPostCameraRenderState();
+            }
+            List<FZBossVisualComponent> before = liveObjects(manager, FZBossVisualComponent.class);
+            assertEquals(List.of(4, 6, 8, 12), before.stream().map(part -> part.getSpawn().subtype()).toList(),
+                    "native phase12 retires only the empty ship row");
+            FZBossVisualComponent legs = before.stream().filter(part -> part.getSpawn().subtype() == 6).findFirst().orElseThrow();
+            FZBossVisualComponent flame = before.stream().filter(part -> part.getSpawn().subtype() == 12).findFirst().orElseThrow();
+            assertEquals(11, readInt(legs, "animationTimer"), "nine real passes advance the native 20-pass leg clock");
+            assertTrue(readInt(flame, "nextFrame") > 0, "real ROM animation has advanced beyond an initial visual graph");
+            assertEquals(boss.getX(), flame.getX());
+            assertEquals(boss.getY(), flame.getY());
+            assertTrue(readBoolean(flame, "flip"));
+            assertTrue(readBoolean(flame, "renderedLastPass"));
+            assertEquals(!finishRenderPass, readBoolean(flame, "displayedThisPass"));
+            Map<String, ObjectRefId> capturedIds = FzGraph.fromLiveObjects(manager).ids(manager);
+            List<Integer> capturedSlots = before.stream().map(FZBossVisualComponent::getSlotIndex).toList();
+            Map<Integer, List<Object>> capturedState = visualState(manager);
+            RewindRegistry registry = new RewindRegistry();
+            registry.register(manager.rewindSnapshottable());
+            CompositeSnapshot snapshot = registry.capture();
+            List<Map<Integer, List<Object>>> expected = forwardVisuals(harness, 11, 20);
+
+            registry.restore(snapshot);
+            Sonic1FZBossInstance restoredBoss = only(manager, Sonic1FZBossInstance.class);
+            List<FZBossVisualComponent> restored = liveObjects(manager, FZBossVisualComponent.class);
+            assertNotSame(boss, restoredBoss);
+            assertEquals(capturedIds, FzGraph.fromLiveObjects(manager).ids(manager));
+            assertEquals(capturedSlots, restored.stream().map(FZBossVisualComponent::getSlotIndex).toList());
+            assertEquals(capturedState, visualState(manager), "restore preserves both sides of post-camera render publication");
+            for (int i = 0; i < before.size(); i++) {
+                assertNotSame(before.get(i), restored.get(i));
+                assertSame(restoredBoss, readObject(restored.get(i), "parent"));
+            }
+            assertTrue(childComponents(restoredBoss).isEmpty());
+            assertEquals(expected, forwardVisuals(harness, 11, 20),
+                    "real native object passes must reproduce visual clocks, positions, flags and retirement without respawn");
+        }
+    }
+
+    private static List<Map<Integer, List<Object>>> forwardVisuals(Harness harness, int clock, int passes) {
+        List<Map<Integer, List<Object>>> rows = new ArrayList<>();
+        for (int i = 0; i < passes; i++) {
+            harness.objectManager().update(harness.camera().getX(), null, List.of(), clock + i);
+            harness.objectManager().refreshPostCameraRenderState();
+            rows.add(visualState(harness.objectManager()));
+        }
+        return rows;
+    }
+
+    private static Map<Integer, List<Object>> visualState(ObjectManager manager) {
+        Map<Integer, List<Object>> state = new LinkedHashMap<>();
+        for (var part : liveObjects(manager, FZBossVisualComponent.class)) {
+            assertNull(state.put(part.getSpawn().subtype(), List.of(part.getSlotIndex(), part.getX(), part.getY(),
+                    readInt(part, "animation"), readInt(part, "previousAnimation"), readInt(part, "nextFrame"),
+                    readInt(part, "animationTimer"), readInt(part, "mappingFrame"),
+                    readBoolean(part, "flip"), readBoolean(part, "renderedLastPass"),
+                    readBoolean(part, "displayedThisPass"), readObject(part, "artKey"))),
+                    "each native visual routine must have exactly one live SST");
+        }
+        return state;
     }
 
     @Test
@@ -526,12 +616,17 @@ class TestS1FzBossGraphRewind {
         }
 
         static Harness create(List<ObjectSpawn> spawns) {
+            return create(spawns, null);
+        }
+
+        static Harness create(List<ObjectSpawn> spawns, RomByteReader rom) {
             ObjectManager[] holder = new ObjectManager[1];
             TestCamera camera = new TestCamera();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
-                @Override public com.openggf.data.RomByteReader romReader() { return null; }
+                @Override public RomByteReader romReader() { return rom; }
+                @Override public com.openggf.game.GameModule gameModule() { return new Sonic1GameModule(); }
             };
             ObjectManager objectManager = new ObjectManager(
                     spawns,
@@ -550,6 +645,7 @@ class TestS1FzBossGraphRewind {
 
     private static final class TestCamera extends Camera {
         private short x;
+        private short y;
 
         @Override
         public void setX(short x) {
@@ -557,7 +653,8 @@ class TestS1FzBossGraphRewind {
         }
 
         @Override public short getX() { return x; }
-        @Override public short getY() { return 0; }
+        @Override public void setY(short y) { this.y = y; }
+        @Override public short getY() { return y; }
         @Override public short getWidth() { return 320; }
         @Override public short getHeight() { return 224; }
         @Override public boolean isVerticalWrapEnabled() { return false; }
