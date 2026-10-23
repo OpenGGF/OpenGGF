@@ -115322,3 +115322,28 @@ Mono/core UNKNOWN and required trust gates unchanged. This qualifies owner753
 only, excludes initial intros/newer aggregate sources, and authorizes no retry,
 new probe, runtime fix or capture after the15Z cutoff. Consumed diagnostics
 are cleaned after exact readback; candidate and foreign state remain preserved.
+
+### 2026-10-23 LRZ ordinary maintained first-door outcome regresses on matched source
+
+This is an ordinary BK2 route comparison, not a native TraceReplay measurement
+or a new canonical trace qualification. Exact maintained selector
+`com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor`
+runs once on historical `ae025629e971e4ff9616d5a7c400834505741e1d` (80355:
+2T/1PASS/1FAIL/0E/0S) and receiving candidate
+`1237de4bc0d3d2c3c73d3335df91cfeff65bd099` (87702:2T/2FAIL/0E/0S).
+The first-door case passes17 replay windows historically but dies at input15323
+on the candidate; middle-corridor death5027 is shared and precedes all48
+replay windows. The full test blob and six Knuckles script/BK2 pairs match.
+
+Both commands use the current main queue wrapper with normal admission,
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, Java25.0.5/Lua5.4,
+null audio, unset display/JVM overrides and the three verified original ROMs.
+Exact portable command, accepted bundled false-hundredths configuration
+difference, source framing and warnings are in the
+[dated plan](../architecture/plans/2026-10-22-native-gap-swarm.md#matched-lrz-knuckles-source-comparison--2026-10-23).
+Queue/Maven times are430s/1:29 historical and750s/1:52 current. No errors,
+skips or dumps; all identities/properties/streams inspected. The changed
+outcome is attributed to the source epochs only: first divergent production
+decision, receiver, writer and native cause remain unknown. No input, physics,
+timing or oracle adjustment and no automatic third request follow. A separate
+source/pure-unit diagnostic task has no gameplay observation authority.

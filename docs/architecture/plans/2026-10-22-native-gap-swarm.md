@@ -3829,3 +3829,75 @@ four machine-local path prefixes in new prose; the exact authorized portability
 replacement changed only that prose before the successful normal commit. No
 executable correction or test rerun followed. Whole-mode/native-pixel/cold-route
 coverage, whole-candidate smoke and Main/push remain separate obligations.
+
+## Matched LRZ Knuckles source comparison — 2026-10-23
+
+The two maintained methods below ran once on historical source
+`ae025629e971e4ff9616d5a7c400834505741e1d` and once on receiving candidate
+`1237de4bc0d3d2c3c73d3335df91cfeff65bd099`. Their complete test blob is identical
+(`76a460a8b827c42a43c29f128f0286e0fdd7c989`), as are all six Knuckles LRZ
+script/BK2 pairs. The historical `src/main` and POM also match the original
+first-door passing source `b078214e`. Working configuration files are absent
+in both checkouts. The only bundled configuration difference is the candidate's
+explicit `display.hudTimeHundredths: false` default; this was accepted and
+recorded before execution without an overlay or a forced runtime setting.
+
+| Maintained method | Historical80355 | Candidate87702 |
+| --- | --- | --- |
+| `coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor` | PASS:17 replay windows,60 registered keys | FAIL: `first-door death at input 15323` |
+| `coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor` | FAIL: `death at input 5027` | FAIL: `death at input 5027` |
+
+Historical80355 exits1 with2 distinct tests,1 pass/1 failure/0 errors/0 skips;
+queue430s, Maven1:29. Candidate87702 exits1 with2 distinct tests,2 failures,
+0 errors/0 skips; queue750s, Maven1:52, suite17.230s. Candidate case times are
+16.141s and0.788s. Every selected identity, failure, property and output stream
+was inspected. Both use Java25.0.5, surfaceless EGL and the same three original
+absolute ROM paths. Candidate output contains three FAST-to-NONE fallback
+warnings; historical output additionally contains four unmeasured KOS estimates.
+Those messages do not establish installed timing/profile identity or native
+execution costs. No dumps were produced.
+
+Both commands use the following exact selection from their respective isolated
+working directories; each entire `-D...` argument is quoted:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  -u MAVEN_OPTS -u JAVA_OPTS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH -u LIBGL_ALWAYS_SOFTWARE \
+  -u MESA_LOADER_DRIVER_OVERRIDE -u DBUS_SESSION_BUS_ADDRESS \
+  -u PULSE_SERVER -u PIPEWIRE_REMOTE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless \
+  XDG_RUNTIME_DIR="$TASK_RUNTIME_DIR" \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor+coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+`OPENGGF_MAIN` denotes the actual main checkout's current queue wrapper,
+`OPENGGF_ROM_DIR` its verified original root ROM directory, and
+`TASK_RUNTIME_DIR` the current checkout's owned target runtime directory.
+Candidate tracked `src`, POM, `.mvn` and `tools/testing` framing remains
+`57a7ca2c5069439fcce36288d4bce17c1c981552c96b67c0ef87b9461df2ca5a`
+through terminal readback. This records the first-door outcome regression
+between those source epochs, not its first divergent decision, receiver,
+writer or native cause. Middle5027 is shared; neither run reaches that method's
+48 Act2 replay windows. Candidate first-door15323 precedes the explicit23307
+live-history request,23397 destination capture and all17 replay windows.
+The later Act2 door and whole-act claims remain unqualified on the candidate.
+
+Read-only source review found no justified setup correction or definite
+introduced static defect. Existing semantic controls distinguish changed
+glide pre-movement, floor-before-wall, signed slide-zero and native-floor
+callback contracts; none proves route causality. No native-correct behavior,
+input or oracle was changed to restore this authored movie's prior outcome.
+The matched request budget is consumed, with no automatic third request.
+The next isolated task prepares default-absent original-evaluation carriers
+and pure-unit fault/transport controls only. Its gameplay driver remains
+gated off; any matched diagnostic observations require a later reviewed scope.
+Consumed own XML, text and logs are removed after this evidence readback;
+compiled output and useful source checkouts remain. Main, provider activation,
+historical SOZ/MHZ observation gates and candidate-wide smoke stay separate.
