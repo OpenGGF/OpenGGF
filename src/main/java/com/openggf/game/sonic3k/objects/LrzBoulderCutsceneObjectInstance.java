@@ -16,6 +16,19 @@ import java.util.List;
 
 /** SKL $AE: Obj_LRZ2CutsceneKnuckles ($63B22), including the $1600 fresh-load request. */
 public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private int routine;
     private boolean initialized;
     private long artOrdinal = -1;
@@ -56,7 +69,7 @@ public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstan
             case 2 -> {
                 if ((player.getCentreX() & 0xFFFF) < 0x39B0) return;
                 routine = 4;
-                player.setControlLocked(true);
+                visualControlOwners.acquire(player).setControlLocked(true);
                 player.setXSpeed((short) 0); player.setYSpeed((short) 0); player.setGSpeed((short) 0);
                 player.clearLogicalInputState();
             }
@@ -67,7 +80,7 @@ public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstan
                 camera.setMinX((short) 0);
                 camera.setScrollLocked(true);
                 player.setControlLocked(false);
-                ObjectControlState.nativeBit7FullControl().applyTo(player); // object_control=$81
+                ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player)); // object_control=$81
                 player.setAnimationId(7);
             }
             case 6 -> {

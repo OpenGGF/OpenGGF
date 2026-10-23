@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
@@ -27,7 +28,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.ArrayList;
 
@@ -55,6 +55,18 @@ import java.util.ArrayList;
  */
 public class Sonic1FZBossInstance extends AbstractBossInstance
         implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final SpriteAnimationSet SEGG_ANIMATIONS = Sonic1BossAnimations.getSEggAnimations();
 
     // State machine constants (objoff_34 values in the ROM)
@@ -751,7 +763,7 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 // it never clears obVelX, so an airborne rolling Sonic keeps his
                 // x_speed (FZ trace f4200: ROM x_speed stays 0x0255). The prior
                 // setXSpeed(0) zeroed it and diverged.
-                participant.setControlLocked(true);
+                visualControlOwners.acquire(participant).setControlLocked(true);
                 participant.setGSpeed((short) 0);
 
                 // ROM: tst.w obVelY(a0) / bpl loc_1A248 — only when the boss is still

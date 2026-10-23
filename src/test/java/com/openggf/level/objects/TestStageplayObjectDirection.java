@@ -1143,6 +1143,40 @@ class TestStageplayObjectDirection {
         return renderer;
     }
 
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void prisonEndingInputReleasesOnDirectionRemovalAndClearWithoutResettingItsRoutine() throws Exception {
+        for (String action : List.of("puppet", "pose", "remove", "clear")) {
+            var fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            var prison = fixture.objects.createDynamicObject(() ->
+                    new com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance(
+                            new ObjectSpawn(100, 100, 0x3e, 0, 0, false, 100)));
+            var routine = prison.getClass().getDeclaredField("state"); routine.setAccessible(true);
+            Object exploding = Enum.valueOf((Class) routine.getType(), "EXPLODING");
+            routine.set(prison, exploding);
+            setField(prison, "buttonTriggered", true);
+            setField(prison, "buttonTriggerVIntRunCount", 1);
+            prison.update(1, player);
+            verify(player).setForceInputRight(true);
+            verify(player).setControlLocked(true);
+            clearInvocations(player);
+            switch (action) {
+                case "remove" -> direction.removeDynamic(prison);
+                case "clear" -> direction.clearObjects();
+                default -> direction.direct(prison, heldTemplate(), new Direction(100, 80, false, true, 0, -1));
+            }
+            verify(player).setControlLocked(false);
+            verify(player).clearForcedInputMask();
+            assertSame(exploding, routine.get(prison));
+            if (action.equals("puppet") || action.equals("pose")) {
+                direction.releaseToFree(prison);
+                assertSame(exploding, routine.get(prison));
+            }
+        }
+    }
+
     private static VisualTemplate heldTemplate() {
         return new VisualTemplate(
                 100,

@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
-
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -24,7 +24,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -56,6 +55,18 @@ import java.util.logging.Logger;
  */
 public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         implements SpawnCoordinateRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        visualControlOwners.clear();
+    }
+
 
     private static final Logger LOG = Logger.getLogger(HczEndBossGeyserCutscene.class.getName());
 
@@ -426,7 +437,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         if (geyserY - GRAB_Y_OFFSET < playerY) {
             // Grab the player (ROM: loc_6B882 grab branch)
             // ROM: move.b #$81,object_control(a1)
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
 

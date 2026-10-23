@@ -2520,3 +2520,24 @@ drafts without rewriting keys; both frontends share the resolved preview. N4:
 the one-value WorldPolicy field is removed directly from unpublished formats and
 the candidate API pin, with examples updated and no migration. P4-2: scaffolds use
 the screenplay version constant. Focused validation and later holder audit follow.
+
+N2 acquisition audit: parse Java method calls by lexical class scope (including nested
+P2/ending helpers), then resolve inherited hooks against compiled ObjectInstance
+classes. Scan control locks, object-control states, movement suppression, forced input
+and controller-2 writes. The guard rejects a writer with only the interface no-op.
+Non-object helper acquisition paths were followed to their object callers (AIZ vine
+logic, boss signpost flow and AIZ end sequence); their owning hooks already delegate
+release. Added exact acquired-identity tracking to 42 owners, including 7 nested
+owners, and native interaction-release hooks for flippers, turbine, magnet and loop.
+The S1 prison regression exercises direction, removal and CLEAR_OBJECTS after its
+actual forced-right acquisition. Native release tails relinquish tracked identities;
+rewind restores them without relying on a newly focused player. N6 remains a separate
+native-state preservation pass; the complete audited class list is recorded below
+with the final guards result.
+
+Focused checks at this slice: original holder/signpost/FBZ group 155/155; acquired
+identity/rewind + interaction + direction group 74/74; source guard 2/2, no skips.
+The new acquisition harness exposed a real S2 main-ending gap: the existing release
+method was gated by sidekick membership. Extracting its native input release tail
+fixed main-player release too. Parent references in the rewind fixture must be
+registered independently; the first harness version omitted that registration.

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.S3kFullSaveGame;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -26,7 +28,6 @@ import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,6 +95,22 @@ import java.util.List;
  */
 public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         implements SpawnRewindRecreatable, SszBossExplosionController.StopFlag, SszMechaSparkHost {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
 
     // --- ObjSlot_MechaSonic ------------------------------------------------------------------
 
@@ -1054,7 +1071,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             callback = Callback.ACT2_CHARGE;
             services().fadeOutMusic();
             if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite p2)
-                p2.setControlLocked(true);
+                visualControlOwners.acquire(p2).setControlLocked(true);
             return;
         }
         super.state.routine = 4;
@@ -1113,7 +1130,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
                 sszState().setAct2EndingActive(true); sszState().setEventsFg4Low(0xFF);
                 if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p1) {
                     // Native object_control=$83: scripted owner suppresses normal motion/contact.
-                    com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(p1);
+                    com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p1));
                     p1.setObjectMappingFrameControl(true);
                     p1.setMappingFrame(0); p1.setOnObject(false); p1.setRollingJump(false); p1.setSpindash(false);
                 }
@@ -1155,7 +1172,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private void beginAct2Rush() {
         super.state.routine = 0x10;
         if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p1) {
-            p1.clearForcedInputMask(); p1.clearLogicalInputState(); p1.setControlLocked(true);
+            p1.clearForcedInputMask(); p1.clearLogicalInputState(); visualControlOwners.acquire(p1).setControlLocked(true);
             p1.setXSpeed((short) 0); p1.setYSpeed((short) 0); p1.setGSpeed((short) 0);
         }
         var camera = services().camera();
@@ -1219,7 +1236,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private void runAct2PlayerToArena() {
         runDefeatPalette(); toggleEmeraldFrame();
         if (!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p1)) return;
-        p1.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+        visualControlOwners.acquire(p1).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         p1.setLogicalInputState(false, false, false, true, false, false);
         if ((p1.getCentreX() & 0xFFFF) < ((sszState().act2AttackPosition(4) + 0x10) & 0xFFFF)) return;
         services().camera().setScrollLocked(false);

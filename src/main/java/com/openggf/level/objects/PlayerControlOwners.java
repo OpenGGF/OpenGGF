@@ -18,6 +18,18 @@ public final class PlayerControlOwners {
         if (players.stream().noneMatch(owned -> owned == player)) players.add(player);
     }
 
+    /** Records the exact participant at a native acquisition expression, including conditional writes. */
+    public AbstractPlayableSprite acquire(AbstractPlayableSprite player) {
+        add(player);
+        return player;
+    }
+
+    /** Native release-expression counterpart to {@link #acquire}. */
+    public AbstractPlayableSprite relinquish(AbstractPlayableSprite player) {
+        remove(player);
+        return player;
+    }
+
     public void remove(AbstractPlayableSprite player) { players.removeIf(owned -> owned == player); }
     public boolean isEmpty() { return players.isEmpty(); }
     public List<AbstractPlayableSprite> players() { return List.copyOf(players); }

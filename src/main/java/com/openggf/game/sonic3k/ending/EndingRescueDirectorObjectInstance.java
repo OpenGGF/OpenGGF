@@ -16,6 +16,19 @@ import java.util.List;
 
 /** Obj_5D86A / Obj_5DFEE / Obj_Ending, in the native $D01 level. */
 public final class EndingRescueDirectorObjectInstance extends AbstractObjectInstance implements RewindRecreatable, EndingFlightChildHost {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
     public static final int RESCUE = 0, AIZ_RETURN = 1, REUNION = 2;
     private int sequence, routine, timer, xFixed, yFixed, xVelocity, yVelocity;
     private int baseY, bobPhase, swingMaximum = 0x80, mappingFrame, animationCounter, animationFrame;
@@ -103,7 +116,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 else {
                     routine=8;ending().setFlag(0);timer=0x20;setX(plane.getX()+0x20);
                     setY(plane.getY()-(tails()?0x27:0x2B));baseY=getY();
-                    var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(p);
+                    var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
                         if(ending().progress()>0&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered){
                             // loc_5DB1C clears powered flags and restores normal mappings in this pass.
                             powered.beginEndingRescueRevert();powered.completeEndingRescueRevertMappings();
@@ -166,7 +179,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         // loc_5D8BC clears Player_2; retain only the screen-controlled P1 roster.
         com.openggf.sprites.managers.SpriteManagerInternalAccess
                 .retireAllSidekicksForRewind(services().spriteManager());
-        var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(p);
+        var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.clearScriptedNativeStatus(p);
             p.setHighPriority(true);
             p.setAnimationId(0xF);p.setGSpeed((short)0x800);
@@ -250,7 +263,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 S3kEndingCoordinator.initializeProgress(services());routine=2;setX(0xC0);setY(0xE0);
                 swingMaximum=0xC0;yVelocity=0xC0;flipX=true;
                 if(ending().progress()!=2)services().playMusicMailboxNativeRequest(0xDC); // loc_5E1F0
-                var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(p);
+                var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
                     p.setDirection(com.openggf.physics.Direction.LEFT);
                     p.setRenderFlips(true,p.getRenderVFlip()); // loc_5E1F0 bset#0 render_flags, independent of status.
                     p.setHighPriority(false);
@@ -294,7 +307,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             case 10 -> {
                 var p=mainPlayer();if(p!=null&&!p.isObjectControlled()){
                     if(tails()){routine=8;timer=5;flipX=true;hidePlayer=true;}
-                    else{routine=12;ObjectControlState.nativeBit7FullControl().applyTo(p);
+                    else{routine=12;ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));
                         p.setAnimationId(0);p.setXSpeed((short)0x800);p.setGSpeed((short)0x800);}
                 }
             }

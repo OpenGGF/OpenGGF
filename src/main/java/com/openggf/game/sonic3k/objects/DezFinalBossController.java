@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.runtime.DezFinalCamera;
-
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -16,6 +15,18 @@ import com.openggf.sprites.playable.ObjectControlState;
 /** Obj_DEZ3_Boss: background-plane owner, not a player-damage target. */
 public final class DezFinalBossController extends DezFinalBossSprite
         implements RewindRecreatable, DezFinalHand.Owner {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            release(player);
+        }
+        visualControlOwners.clear();
+    }
+
     private int routine;
     private int timer;
     private int callback;
@@ -111,7 +122,7 @@ public final class DezFinalBossController extends DezFinalBossSprite
         NativePositionOps.writeXPosPreserveSubpixel(player,x);
         NativePositionOps.writeYPosPreserveSubpixel(player,0xCD+(CharacterKey.TAILS.equals(player.characterKey())?4:0));
         // Native object_control=$81: full script ownership suppresses CPU and physics.
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(0); player.setXSpeed((short)0x600); player.setGSpeed((short)0x600);
     }
     private int walkPlayers() {
@@ -123,7 +134,7 @@ public final class DezFinalBossController extends DezFinalBossSprite
         if(player==null) return;
         player.setXSpeed((short)0); player.setYSpeed((short)0); player.setGSpeed((short)0); player.setAnimationId(5);
     }
-    private void release(AbstractPlayableSprite player) { if(player!=null) ObjectControlState.none().applyTo(player); }
+    private void release(AbstractPlayableSprite player) { if(player!=null) ObjectControlState.none().applyTo(visualControlOwners.relinquish(player)); }
     private void walk() {
         writeX(getX()+walkStep); walkAngle=(walkAngle+2)&0x7F;
         if(walkAngle!=0) { writeY(savedY-(TrigLookupTable.sinHex(walkAngle)>>4)); return; }

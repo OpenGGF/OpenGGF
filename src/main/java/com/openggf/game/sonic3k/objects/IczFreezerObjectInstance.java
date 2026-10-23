@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -35,7 +36,6 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -341,6 +341,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     }
 
     public static final class CaptureCloud extends AbstractObjectInstance implements RewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                ObjectControlState.none().applyTo(player);
+            }
+            visualControlOwners.clear();
+        }
+
         // loc_8A748 starts at $1F, then scans after the underflow.
         private static final int CAPTURE_DELAY_FRAMES = 0x1F;
         private static final int OFF_PHASE_DELETE_DELAY = 0x1F;
@@ -475,7 +487,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         private void applyCaptureState(AbstractPlayableSprite player, int capturedX, int capturedY) {
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);

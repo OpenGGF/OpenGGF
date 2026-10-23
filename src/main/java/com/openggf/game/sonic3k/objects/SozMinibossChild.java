@@ -171,6 +171,20 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     }
     /** loc_76E4E waits for results to rise then fall before native P1 alignment. */
     static final class Alignment extends SozMinibossSprite implements RewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                player.setControlLocked(false);
+                player.clearForcedInputMask();
+                player.clearLogicalInputState();
+            }
+            visualControlOwners.clear();
+        }
+
         private int phase;
         private int minX;
         private int maxX;
@@ -184,7 +198,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
             if(phase==1){
                 if(services().gameState().isEndOfLevelActive())return;
                 phase=2;
-                if(entity instanceof AbstractPlayableSprite player){player.setControlLocked(true);fromRight=(player.getCentreX()&65535)>=0x43A0;}
+                if(entity instanceof AbstractPlayableSprite player){visualControlOwners.acquire(player).setControlLocked(true);fromRight=(player.getCentreX()&65535)>=0x43A0;}
                 var minimum=spawnChild(() -> new Bounds(getSpawn(), minX, true));
                 if(minimum!=null && !minimum.isDestroyed())
                     spawnChild(() -> new Bounds(getSpawn(), maxX, false));
@@ -192,7 +206,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
             }
             if(!(entity instanceof AbstractPlayableSprite player))return;
             boolean reached=fromRight?player.getCentreX()<=0x43A0:player.getCentreX()>=0x43A0;
-            if(!reached){player.setForcedInputMask((fromRight?AbstractPlayableSprite.INPUT_LEFT:AbstractPlayableSprite.INPUT_RIGHT)|(player.getPushing()?AbstractPlayableSprite.INPUT_JUMP:0));return;}
+            if(!reached){visualControlOwners.acquire(player).setForcedInputMask((fromRight?AbstractPlayableSprite.INPUT_LEFT:AbstractPlayableSprite.INPUT_RIGHT)|(player.getPushing()?AbstractPlayableSprite.INPUT_JUMP:0));return;}
             // loc_76EE4 clears Ctrl_1_logical; with Ctrl_1_locked set it stays clear, so the
             // follower's delayed Stat_table copy also reads no input (soz_completerun row 29093).
             NativePositionOps.writeXPosPreserveSubpixel(player,0x43A0);player.clearForcedInputMask();player.clearLogicalInputState();player.setDirection(com.openggf.physics.Direction.RIGHT);
@@ -218,12 +232,25 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     }
     /** loc_863C0 positive Ctrl_2_locked suppresses human input, not native CPU follow. */
     static final class P2Hold extends SozMinibossSprite implements SpawnRewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                player.setControlLocked(false);
+                if (player.getCpuController() != null) player.getCpuController().setController2Input(0, 0);
+            }
+            visualControlOwners.clear();
+        }
+
         private boolean initialized;
         public P2Hold(ObjectSpawn spawn){super(spawn,"EggGolemP2Hold",Sonic3kObjectArtKeys.SOZ_MINIBOSS);visible=false;}
         @Override public boolean isPersistent(){return true;}
         @Override public void update(int vIntRunCount,PlayableEntity leader){
             if(!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player)){ObjectLifetimeOps.deleteNoRespawn(this);return;}
-            if(!initialized){initialized=true;player.setControlLocked(true);if(player.getCpuController()!=null)player.getCpuController().clearManualControlTimer();}
+            if(!initialized){initialized=true;visualControlOwners.acquire(player).setControlLocked(true);if(player.getCpuController()!=null)player.getCpuController().clearManualControlTimer();}
             if(!player.isControlLocked()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             if(player.getCpuController()!=null)player.getCpuController().clearController2LogicalLatch();
         }

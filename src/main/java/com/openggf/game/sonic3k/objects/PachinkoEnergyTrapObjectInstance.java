@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -18,7 +19,6 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -31,6 +31,18 @@ import java.util.logging.Logger;
  */
 public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOGGER = Logger.getLogger(PachinkoEnergyTrapObjectInstance.class.getName());
 
     private static final int COLUMN_SPACING = 0x190;
@@ -215,7 +227,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         }
 
         // loc_4A024 (:96711-96713).
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAir(true);
         if (!isMainPlayer) {
             return;

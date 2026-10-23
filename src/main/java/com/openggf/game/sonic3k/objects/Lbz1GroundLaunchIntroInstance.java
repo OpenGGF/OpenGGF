@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PlayableEntity;
@@ -16,7 +17,6 @@ import com.openggf.sprites.managers.SpindashDustController;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
-
 import java.util.List;
 
 /**
@@ -30,6 +30,18 @@ import java.util.List;
  */
 public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, FreshLevelTitleOwnerReplacement {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            releasePlayer(player);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int PRE_LAUNCH_DELAY_FRAMES = 30;
     private static final int RELEASE_Y = 0x05C0;
     private static final short LAUNCH_Y_SPEED = (short) -0x0B00;
@@ -117,9 +129,9 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
         holdInputLocked();
         for (PlayableEntity player : players()) {
             if (player instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 sprite.clearForcedInputMask();
-                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
                 primeHeldCpuMappingFromCurrentAnimation(sprite);
                 // Obj_LevelIntro_PlayerLaunchFromGround writes object_control=$03.
                 // Bit 1 skips Animate_Sonic/Animate_Tails, so the mapping frame
@@ -141,9 +153,9 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 // object-owned, but the ordinary animator resumes on the next
                 // player-slot dispatch. sonic3k.asm:77316-77322.
                 sprite.setObjectMappingFrameControl(false);
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 sprite.clearForcedInputMask();
-                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+                ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
             }
         }
     }
@@ -179,7 +191,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     private void holdInputLocked() {
         for (PlayableEntity player : players()) {
             if (player instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 sprite.clearForcedInputMask();
             }
         }
@@ -225,7 +237,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
 
     private void releasePlayer(AbstractPlayableSprite player) {
         player.setControlLocked(false);
-        ObjectControlState.none().applyTo(player);
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(player));
         player.setObjectMappingFrameControl(false);
         player.clearForcedInputMask();
     }

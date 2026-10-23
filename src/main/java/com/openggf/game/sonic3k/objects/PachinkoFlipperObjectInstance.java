@@ -80,6 +80,12 @@ public class PachinkoFlipperObjectInstance extends AbstractObjectInstance
      */
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (lockedPlayer != null) releaseLockedPlayer(lockedPlayer);
+        if (lockedSidekick != null) releaseLockedPlayer(lockedSidekick);
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
     }

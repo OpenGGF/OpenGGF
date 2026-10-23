@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameRng;
@@ -22,7 +23,6 @@ import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -37,6 +37,20 @@ import java.util.logging.Logger;
  */
 public class S3kSignpostInstance extends AbstractObjectInstance
         implements RewindRecreatable, RomWorldPositionedObject {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOG = Logger.getLogger(S3kSignpostInstance.class.getName());
 
     // ---- State machine ----
@@ -566,7 +580,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             for (PlayableEntity candidate : playerQuery(player)
                     .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
                 if (candidate instanceof AbstractPlayableSprite sprite && sprite != player) {
-                    applySidekickInputLock(sprite);
+                    applySidekickInputLock(visualControlOwners.acquire(sprite));
                 }
             }
             state = State.RESULTS;
@@ -615,7 +629,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
             // Obj_EndSignResults calls Set_PlayerEndingPose in its routine-6
             // dispatch, immediately after the grounded-player check.  The
             // following routine-8 dispatch owns only the sidekick handoff.
-            applyMainPlayerEndingPose(player);
+            applyMainPlayerEndingPose(visualControlOwners.acquire(player));
             sidekickEndingPoseCheckArmed = true;
         } else {
             // The short-tail owner retains the native post-object handoff:
@@ -634,7 +648,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 if (sprite == player) {
                     continue;
                 }
-                applySidekickInputLock(sprite);
+                applySidekickInputLock(visualControlOwners.acquire(sprite));
             }
         }
 
@@ -772,7 +786,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private void updateAfter(AbstractPlayableSprite player) {
         if (mainEndingPosePending) {
             mainEndingPosePending = false;
-            applyMainPlayerEndingPose(player);
+            applyMainPlayerEndingPose(visualControlOwners.acquire(player));
         }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
@@ -817,7 +831,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 && !sidekick.getDead()
                 && !sidekick.getAir()) {
             sidekickEndingPoseApplied = true;
-            applySidekickEndingPose(sidekick);
+            applySidekickEndingPose(visualControlOwners.acquire(sidekick));
         }
     }
 

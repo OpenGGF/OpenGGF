@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
@@ -14,7 +15,6 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -41,6 +41,18 @@ import java.util.List;
  * ROM's object placement flow, so the controller treats {@code Debug_placement_mode} as zero.
  */
 public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectInstance {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        visualControlOwners.clear();
+    }
+
     static final int MODE_MAIN = 0;
     static final int MODE_LOCKED = 1;
     static final int MODE_WRAP = 2;
@@ -165,7 +177,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         ddz.setScrollAcceleration(SCROLL_ACCELERATION);
         // bset #7,art_tile(a1) / move.b #$81,object_control(a1) / move.b #2,anim(a1) / clr.b status(a1)
         player.setHighPriority(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(2);
         player.setAir(false);
         player.setRolling(false);
@@ -219,7 +231,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         xPos += xVel << 8;
         yPos += yVel << 8;
         if (formlessReleaseTimer > 0 && --formlessReleaseTimer == 0) {
-            ObjectControlState.none().applyTo(player);
+            ObjectControlState.none().applyTo(visualControlOwners.relinquish(player));
         }
         if (player.isObjectControlled()) {
             return;
@@ -228,7 +240,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         xVel = 0;
         yVel = 0;
         flags |= 1 << 2;
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(0);
         player.setXSpeed((short) 0x1000);
         player.setGSpeed((short) 0x1000);
@@ -305,7 +317,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         mode = MODE_FALL;
         xVel = 0;
         yVel = 0;
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(0x1A);
     }
 

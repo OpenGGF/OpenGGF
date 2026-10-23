@@ -11,12 +11,24 @@ import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /** FBZ2's fixed-position {@code Obj_EggCapsule}, kept as its native real-SST graph. */
 public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         implements SolidObjectProvider, RomObjectCodePointerProvider, SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int[] FRAGMENT_X = {0, -0x10, 0x10, -0x18, 0x18};
     private static final int[] ANIMAL_X = {0, -8, 8, 0x10, -0x10, -0x18, 0x18, -4, 4};
 
@@ -142,7 +154,7 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
     }
 
     private void setEndingPose(AbstractPlayableSprite sprite) {
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
         sprite.setSpindash(false);
         sprite.setPushing(false);
         sprite.setXSpeed((short) 0);
