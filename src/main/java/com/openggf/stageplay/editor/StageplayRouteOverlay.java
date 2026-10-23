@@ -33,7 +33,7 @@ public final class StageplayRouteOverlay {
         reason = switch (result.status()) {
             case VERIFIED -> applied ? "Compare the path during playback." : "Native replay checked. Review, then Apply.";
             case VISUAL_TERRAIN -> "Visual terrain only. Native object AI stays off.";
-            case BUDGET_EXCEEDED -> "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
+            case BUDGET_EXCEEDED -> "Search limit reached. Reachability is still unknown. " + readable(result.message());
             case SEARCH_EXHAUSTED -> "No route found in this search. " + readable(result.message());
             case UNSUPPORTED -> "This route is not supported. " + readable(result.message());
             case CANCELLED -> "Route planning cancelled.";

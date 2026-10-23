@@ -288,6 +288,17 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void anAlreadyReachedWalkGoalEmitsOnlyOneValidStop() {
+        var request=new StageplayRouteRequest("hero",0,224,237,60);
+        try(var probe=probe(terrain().level)) {
+            var plan=search(probe,request);assertTrue(plan.found(),plan.message());
+            assertEquals(List.of(PuppetCommandKind.MOVE_TO,PuppetCommandKind.STOP),plan.commands().stream().map(PuppetCommand::kind).toList());
+            assertTrue(plan.commands().getFirst().frame()<plan.commands().getLast().frame());
+            assertEquals(request.motion(),plan.commands().getFirst().motion());
+            assertDoesNotThrow(()->new PuppetTrack("hero",true,0,plan.commands()));
+        }
+    }
+
     @Test void defaultWalkUsesOneDestinationWithoutJumpingAndKeepsItsStrollCap() {
         var request=new StageplayRouteRequest("hero",0,448,237,300);
         try(var probe=probe(terrain().level)) {

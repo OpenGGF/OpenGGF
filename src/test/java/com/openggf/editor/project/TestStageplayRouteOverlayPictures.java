@@ -70,6 +70,7 @@ class TestStageplayRouteOverlayPictures {
                 },1);
                 assertTrue(chrome.setActive(true));
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                workspace.menu().setValue("x","400");workspace.menu().setValue("y","624");
                 assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
                 for(int i=0;i<120;i++){
                     draw(chrome,session,workspace);
@@ -78,8 +79,7 @@ class TestStageplayRouteOverlayPictures {
                     modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,menuWidth,0,224).get(new float[16]),menuWidth);
                     video.frame(i==0?output.resolve("engine-motion-settings.png"):null);
                 }
-                workspace.menu().close();
-                plan(workspace,"400","624","1024");
+                workspace.menu().submit();assertNull(workspace.menu().error());
                 await(workspace,session,StageplayRouteJob.Phase.READY);
                 var success=session.pollRoute().result();
                 assertTrue(success.success(),success.message());

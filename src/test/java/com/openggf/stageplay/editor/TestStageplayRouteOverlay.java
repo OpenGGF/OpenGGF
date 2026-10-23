@@ -71,6 +71,15 @@ class TestStageplayRouteOverlay {
         assertEquals("Route applied", new StageplayRouteOverlay(result(true,path),true).title());
     }
 
+    @Test void boundedFailuresKeepThePlannersMotionAdviceInEditorChrome() {
+        var failure=new StageplayRouteResult(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                "Speed-dependent terrain may need Run or Spindash", "0".repeat(64),request,null,
+                List.of(),List.of(),path,120,2000,false);
+        var overlay=new StageplayRouteOverlay(failure,false);
+        assertTrue(overlay.reason().contains("Run or Spindash"));
+        assertTrue(overlay.reason().contains("Reachability is still unknown"));
+    }
+
     @Test void emptyUnsupportedResultHasNoInventedStartOrFailureLocation() {
         var painter = paint(new StageplayRouteOverlay(result(false,List.of()),false),new StageplayTimeline.CameraPose(0,0,1));
         assertEquals(8,painter.strokes.size(),"Only goal diamond and its outline, no simulated movement");

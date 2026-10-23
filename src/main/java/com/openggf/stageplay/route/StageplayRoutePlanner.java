@@ -440,7 +440,7 @@ public final class StageplayRoutePlanner {
             current.snapshot = null;
             expanded++;
             if (arrived(current.observation, request) && (request.motion().endingAction()!=EndingAction.OVERSHOOT || current.returning)
-                    && !(current.parent==null && request.motion().startingAction()==StartAction.JUMP))
+                    && !(current.parent==null && request.motion().startingAction()!=StartAction.WALK))
                 return proposal(document, request, current, expanded, ticks);
             int nextFrame = current.frame + 1;
             if (nextFrame >= request.startFrame() + request.maxFrames()) continue;
@@ -577,7 +577,7 @@ public final class StageplayRoutePlanner {
             if(node.hold>0) commands.add(command(ids,"route.jump.",node.start,PuppetCommandKind.JUMP,0,0,0,node.hold,request.motion()));
             path.addAll(node.edge);
         }
-        int terminal=found.frame+1;
+        int terminal=Math.max(found.frame+1,moveStart+1);
         int end=request.startFrame()+request.maxFrames();
         if(terminal>=end) return rejected(BUDGET_EXCEEDED,"Route needs more frames to settle",nodes,ticks,found);
         commands.add(command(ids,"route.stop.",terminal,PuppetCommandKind.STOP,0,0,0,0,request.motion()));
