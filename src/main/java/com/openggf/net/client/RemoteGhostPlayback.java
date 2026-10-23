@@ -140,7 +140,7 @@ public final class RemoteGhostPlayback {
                     clampU16(last.x() + velocityX * extrapolated),
                     clampU16(last.y() + velocityY * extrapolated),
                     last.mappingFrame(), last.hFlip(), last.vFlip(), last.finished(),
-                    last.priorityBucket(), last.highPriority());
+                    last.priorityBucket(), last.highPriority(), last.hurt());
             return Optional.of(new RenderState(projected, 1.0f, false));
         }
         stalled = true;

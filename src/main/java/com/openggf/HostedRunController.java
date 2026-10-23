@@ -366,7 +366,7 @@ final class HostedRunController {
     static PlayerPose poseOf(AbstractPlayableSprite sprite) {
         return new PlayerPose(sprite.getCentreX(), sprite.getCentreY(), sprite.getMappingFrame(),
                 sprite.getRenderHFlip(), sprite.getRenderVFlip(), sprite.getPriorityBucket(),
-                sprite.isHighPriority());
+                sprite.isHighPriority(), sprite.isHurt());
     }
 
     boolean consumeRetry() {
