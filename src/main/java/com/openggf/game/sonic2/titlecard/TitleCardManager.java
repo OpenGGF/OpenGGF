@@ -1114,6 +1114,22 @@ public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
     }
 
     /**
+     * Native assembly already owns art and players. Enter the existing locked
+     * leave state without replaying slide-in or its zone-tile upload waits.
+     */
+    public void beginOmittedPresentationLeave(int zoneIndex, int actIndex) {
+        reset();
+        currentZone = zoneIndex;
+        currentAct = actIndex;
+        enterLeftSwooshExit();
+    }
+
+    /** Obj34_BackgroundOutInit owns one DeformBgLayer call before its first out pass. */
+    public boolean isFirstBackgroundLeavePass() {
+        return state == TitleCardState.EXIT_BACKGROUND && stateTimer == 0;
+    }
+
+    /**
      * Arms the gameplay-phase title-card tail for a presentation that was
      * omitted.
      *

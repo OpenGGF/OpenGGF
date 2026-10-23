@@ -76,6 +76,36 @@ class TestGameLoopNativeMenus {
     }
 
     @Test
+    void nativeModeIsPublishedOnlyAfterSetupCompletesOutsideTheOutgoingToken() throws Exception {
+        var mode = new java.util.concurrent.atomic.AtomicReference<>(GameMode.COMPETITION_RESULTS);
+        var competition = mock(NativeMenuScreen.class);
+        when(competition.mode()).thenAnswer(ignored -> mode.get());
+        when(competition.consumeExit()).thenReturn(NativeMenuScreen.Exit.NONE);
+        var provider = mock(NativeTitleModeProvider.class);
+        when(provider.competitionScreen()).thenReturn(competition);
+        var fixture = fixture(TitleScreenProvider.TitleScreenAction.TWO_PLAYER, provider);
+        invoke(fixture.loop, "doExitTitleScreen");
+        var lifecycle = fixture.loop.resolveGameplayModeContext().plcFrameLifecycle();
+        doAnswer(ignored -> {
+            assertEquals(GameMode.COMPETITION_RESULTS, fixture.loop.getCurrentGameMode());
+            lifecycle.runLogicalIteration(() -> { }, frame -> {
+                GameLoopPlcLifecycle.runPhase(frame,
+                        com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+                return null;
+            });
+            mode.set(GameMode.COMPETITION);
+            return null;
+        }).when(competition).afterFrame();
+
+        fixture.loop.step();
+
+        assertEquals(GameMode.COMPETITION, fixture.loop.getCurrentGameMode());
+        verify(competition).update(fixture.input);
+        verify(competition).afterFrame();
+        verify(fixture.input).update();
+    }
+
+    @Test
     void providerMayChangeNativeMenuToArenaAndResultsWithoutRunningTheOrdinaryLevelLoop() throws Exception {
         var competition = mock(NativeMenuScreen.class);
         when(competition.mode()).thenReturn(GameMode.COMPETITION_MENU);
@@ -86,9 +116,13 @@ class TestGameLoopNativeMenus {
         invoke(fixture.loop, "doExitTitleScreen");
         when(competition.mode()).thenReturn(GameMode.COMPETITION);
         invoke(fixture.loop, "updateNativeMenuMode");
+        assertEquals(GameMode.COMPETITION_MENU, fixture.loop.getCurrentGameMode());
+        invoke(fixture.loop, "completeNativeMenuFrame");
         assertEquals(GameMode.COMPETITION, fixture.loop.getCurrentGameMode());
         when(competition.mode()).thenReturn(GameMode.COMPETITION_RESULTS);
         invoke(fixture.loop, "updateNativeMenuMode");
+        assertEquals(GameMode.COMPETITION, fixture.loop.getCurrentGameMode());
+        invoke(fixture.loop, "completeNativeMenuFrame");
         assertEquals(GameMode.COMPETITION_RESULTS, fixture.loop.getCurrentGameMode());
         verify(fixture.input, times(2)).update();
         verify(competition, times(2)).update(fixture.input);

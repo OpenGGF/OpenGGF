@@ -7,6 +7,7 @@ import java.util.Objects;
 /** Owns one native screen and advances input only after its command is observed. */
 public final class NativeMenuController {
     private NativeMenuScreen screen;
+    private NativeMenuScreen completionCandidate;
 
     public static boolean handles(GameMode mode) {
         return mode == GameMode.OPTIONS || mode == GameMode.COMPETITION_MENU
@@ -39,20 +40,40 @@ public final class NativeMenuController {
         return true;
     }
 
+    /** An incomplete or failed outer frame must not supply a later completion. */
+    public void beginFrame() {
+        completionCandidate = null;
+    }
+
     public NativeMenuScreen.Exit update(InputHandler input, boolean fading) {
+        beginFrame();
         Objects.requireNonNull(input, "input");
+        NativeMenuScreen updated = screen;
+        NativeMenuScreen.Exit exit;
         try {
-            if (screen == null || fading) return NativeMenuScreen.Exit.NONE;
-            screen.update(input);
-            return Objects.requireNonNull(screen.consumeExit(), "native menu exit");
+            if (updated == null || fading) return NativeMenuScreen.Exit.NONE;
+            updated.update(input);
+            exit = Objects.requireNonNull(updated.consumeExit(), "native menu exit");
         } finally {
             input.update();
         }
+        if (screen == updated) completionCandidate = updated;
+        return exit;
+    }
+
+    /** Called only after the outer lifecycle returns successfully, before presentation. */
+    public boolean completeFrame() {
+        NativeMenuScreen completed = completionCandidate;
+        completionCandidate = null;
+        if (completed == null || screen != completed) return false;
+        completed.afterFrame();
+        return true;
     }
 
     public NativeMenuScreen screen() { return screen; }
 
     public void close() {
+        beginFrame();
         NativeMenuScreen previous = screen;
         screen = null;
         if (previous != null) previous.reset();

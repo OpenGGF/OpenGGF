@@ -45,11 +45,71 @@ class TestS3kCompetitionSpritePages {
         assertSame(built,f.pages.publish(PlcLifecyclePhase.NORMAL_PAUSE));
         f.newPass();f.player(0).setCentreNative(110,50);f.submit(0,2);var next=f.prepare();
         assertSame(built,f.pages.publish(PlcLifecyclePhase.LAG));
-        assertSame(built,f.pages.publish(PlcLifecyclePhase.PALETTE_FADE),"fade uploads physical Sprite_table, without flipping");
-        assertSame(built,f.pages.uploaded());
+        var fade=f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);
+        assertSame(built.player1(),fade.player1());assertSame(built.player2(),fade.player2());
+        assertSame(fade,f.pages.uploaded());
         assertTrue(f.pages.flipPending());
         assertSame(next,f.pages.publish(PlcLifecyclePhase.LEVEL_TITLE_CARD));
         assertEquals(0,f.pages.currentPageWord());
+    }
+
+    @Test void lockedOnVintFadeUsesFixedTopDmaAndIndependentHintBottomPageBranch() throws Exception {
+        var rom=RomManager.getInstance().getRom();
+        var hex=java.util.HexFormat.of();
+        assertArrayEquals(hex.parseHex("610001ba"),rom.readBytes(0xA94,4),"VInt_12 calls Do_ControllerPal");
+        assertArrayEquals(hex.parseHex("2abc96fc95003abc977f"),rom.readBytes(0xCC2,10),
+                "Do_ControllerPal fixed top DMA source is $FFF800");
+        assertArrayEquals(hex.parseHex("4a78ef3c6726"),rom.readBytes(0xD60,6),
+                "HInt tests Current_sprite_table_page and branches on zero");
+        assertEquals(0xD8C,0xD66+(rom.readByte(0xD65)&0xFF));
+        assertArrayEquals(hex.parseHex("2abc96bd95803abc977f"),rom.readBytes(0xD72,10),
+                "nonzero front bottom DMA source is $FF7B00");
+        assertArrayEquals(hex.parseHex("2abc96be95c03abc977f"),rom.readBytes(0xD98,10),
+                "zero front bottom DMA source is $FF7D80");
+    }
+
+    @Test void initialFadePublishesNewPhysicalTopButRetainsBottomFrontWithoutFlipping() throws Exception {
+        var f=new Fixture();var retained=f.pages.front();
+        f.submit(0,2);f.submit(1,2);var prepared=f.prepare();
+        var before=f.pages.capture();
+        assertEquals(2,slots(prepared.player1()).size());assertEquals(2,slots(prepared.player2()).size());
+        var fade=f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);
+        assertSame(prepared.player1(),fade.player1(),"Do_ControllerPal DMA reads physical Sprite_table");
+        assertSame(retained.player2(),fade.player2(),"HInt reads the front P2 alternate page independently");
+        assertTrue(fade.player2().pieces().isEmpty());
+        assertSame(fade,f.pages.uploaded());assertEquals(0,f.pages.currentPageWord());assertTrue(f.pages.flipPending());
+        assertEquals(before.physicalPages(),f.pages.capture().physicalPages());
+        assertEquals(before.inputPointers(),f.pages.capture().inputPointers());
+        assertSame(retained,f.pages.publish(PlcLifecyclePhase.LAG));
+        var repeated=f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);assertEquals(fade,repeated);
+        assertSame(prepared,f.pages.publish(PlcLifecyclePhase.ORDINARY_LEVEL));
+        assertEquals(0xFFFF,f.pages.currentPageWord());assertFalse(f.pages.flipPending());
+    }
+
+    @Test void fadeRetainsTheFrontBottomAcrossBothPageWordsAndUploadedRestoreForward() throws Exception {
+        var f=new Fixture();f.submit(0,2);f.submit(1,2);var first=f.prepare();
+        f.pages.publish(PlcLifecyclePhase.ORDINARY_LEVEL);
+        f.newPass();f.player(0).setCentreNative(140,60);f.player(1).setCentreNative(150,60);
+        f.submit(0,2);f.submit(1,2);var second=f.prepare();
+        var nonzeroFade=f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);
+        assertSame(first.player1(),nonzeroFade.player1());assertSame(first.player2(),nonzeroFade.player2());
+        assertEquals(0xFFFF,f.pages.currentPageWord());assertTrue(f.pages.flipPending());
+        f.pages.publish(PlcLifecyclePhase.ORDINARY_LEVEL);assertEquals(0,f.pages.currentPageWord());
+        f.newPass();f.player(0).setCentreNative(180,70);f.player(1).setCentreNative(190,70);
+        f.submit(0,2);f.submit(1,2);var third=f.prepare();
+        var fade=f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);
+        assertSame(third.player1(),fade.player1());assertSame(second.player2(),fade.player2());
+        assertNotEquals(third.player2(),fade.player2(),"bottom is not the newest physical page0");
+        assertEquals(0,f.pages.currentPageWord());assertTrue(f.pages.flipPending());
+        var checkpoint=f.pages.capture();
+        f.pages.publish(PlcLifecyclePhase.NORMAL_PAUSE);f.pages.publish(PlcLifecyclePhase.LAG);
+        f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);var expected=f.pages.capture();
+        f.pages.restore(checkpoint);
+        assertEquals(fade,f.pages.uploaded(),"rewind restores the actually uploaded mixed page pair");
+        assertEquals(checkpoint,f.pages.capture());
+        f.pages.publish(PlcLifecyclePhase.NORMAL_PAUSE);f.pages.publish(PlcLifecyclePhase.LAG);
+        f.pages.publish(PlcLifecyclePhase.PALETTE_FADE);assertEquals(expected,f.pages.capture());
+        assertEquals(0xFFFF,f.pages.currentPageWord());assertFalse(f.pages.flipPending());
     }
 
     @Test void queueKeepsFifoDuplicatesPerBucketAndSwapsOnlyTheExactRawPlayerPrefix() throws Exception {

@@ -500,3 +500,37 @@ found no stale-intent/order/restore/failure defect. Incoming RingSlotDispatch
 rebinding was inspected read-only in the parent's source; that implementation is
 not imported into this child, so its composed integration and the actual EGL
 rerun remain parent-owned. ObjectManager has zero changes in both leaves.
+
+
+## Fade VInt and HInt SAT ownership correction
+
+The parent VInt audit identified a concrete error in `ef850c4f6`: fade publication
+selected physical page0 for both views. Independent pinned-source and supplied-ROM
+inspection confirms two separate hardware reads. VInt_12 (sonic3k.asm:871-874),
+ROM$A94=`610001BA`, calls Do_ControllerPal at$C50. Do_ControllerPal
+(sonic3k.asm:948-965) always DMA-uploads physical `Sprite_table` for the top view:
+ROM$CC2=`2ABC96FC95003ABC977F` encodes RAM$FFF800. HInt
+(sonic3k.asm:977-1010) separately tests `Current_sprite_table_page`: ROM$D60
+=`4A78EF3C6726` branches to$D8C when zero. Its nonzero DMA source at$D72
+=`2ABC96BD95803ABC977F` is P2 physical page0/RAM$FF7B00; the zero branch source
+at$D98=`2ABC96BE95C03ABC977F` is P2 alternate page1/RAM$FF7D80. Neither path
+changes the page word or pending-flip flag.
+
+Fade therefore publishes a mixed pair: top from physical page0, bottom from the
+current front page. Immediately after the initial pending page0 build with page
+word0, the top can show newly prepared sprites while the bottom still shows the
+retained alternate page1. Selecting page0 for both incorrectly advanced the
+bottom presentation. The correction changes only `SpritePages.publish` and
+retains existing physical buffers, uploaded-pair rewind state and public APIs.
+Normal/paused/title flip ownership and lag publication remain unchanged.
+
+The focused regression adds independent locked-ROM opcode/DMA checks plus both
+page-word values, initial pending state, both human projections, immutable buffer
+and pointer retention, and uploaded mixed-pair restore followed by forward
+publication. Validation uses only `TestS3kCompetitionSpritePages` with the existing
+queued Java25/Lua5.4/absolute-ROM/surfaceless command. R17 passed all10 cases
+with0 failures/errors/skips, after112s queue waiting and87s Maven execution
+(1.063s test-class execution). The tested state was `ef850c4f6` plus this three-file
+leaf; no other production source changed. Citation checks report11 valid,0 stale
+and3 unresolvable bare anchors. Actual GPU/view/scroll qualification remains
+parent-owned.

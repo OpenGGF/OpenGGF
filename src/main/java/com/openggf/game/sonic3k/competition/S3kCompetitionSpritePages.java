@@ -221,12 +221,17 @@ public final class S3kCompetitionSpritePages implements RewindSnapshottable<S3kC
                 List.copyOf(mappings),visibility);
     }
 
-    /** VInt8/10/A/C flip completed pages; lag retains front; palette fade uploads physical page zero. */
+    /**
+     * VInt8/10/A/C flip completed pages; lag retains front.
+     * Do_ControllerPal (sonic3k.asm:948-965) uploads physical page0 for P1 during fade.
+     * HInt (sonic3k.asm:977-1010) independently uploads the front page for P2.
+     */
     public Pair publish(PlcLifecyclePhase phase) {
         boolean flip=phase==PlcLifecyclePhase.ORDINARY_LEVEL||phase==PlcLifecyclePhase.NORMAL_PAUSE
                 ||phase==PlcLifecyclePhase.LEVEL_TITLE_CARD;
         if(flip&&flipPending) { currentPageWord^=0xFFFF;flipPending=false; }
-        uploaded=phase==PlcLifecyclePhase.PALETTE_FADE?pages[0]:front();
+        uploaded=phase==PlcLifecyclePhase.PALETTE_FADE
+                ?new Pair(pages[0].player1(),front().player2()):front();
         return uploaded;
     }
     public Pair front() { return pages[currentPageWord==0?1:0]; }

@@ -19,6 +19,9 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
     private Sonic2CompetitionAssets assets;
     private Sonic2CompetitionPresentation presentation;
     private Exit exit = Exit.NONE;
+    private PendingLoad pendingLoad;
+
+    private record PendingLoad(Sonic2CompetitionSession.Phase phase, int zone, int act, int specialIndex) { }
 
     public Sonic2CompetitionScreen(Sonic2CompetitionSession session, Sonic2CompetitionHost host,
                                    Sonic2CompetitiveSpecialStageAdapter special, Rom rom) {
@@ -47,7 +50,7 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         };
     }
     @Override public void initialize() {
-        session.reset(); exit = Exit.NONE;
+        session.reset(); exit = Exit.NONE; pendingLoad = null;
         try { assets = Sonic2CompetitionAssets.load(rom); }
         catch (IOException failure) { throw new IllegalStateException("Cannot load native competition assets", failure); }
         presentation = null;
@@ -55,6 +58,7 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
     /** Actual PLC owner signals this only after the result screen's pending art has retired. */
     public void resultsPlcReady() { session.setResultsPlcReady(true); }
     @Override public void update(InputHandler input) {
+        pendingLoad = null;
         if (assets == null) throw new IllegalStateException("Competition screen not initialized");
         var before = session.phase();
         int beforeAct = session.act(), beforeSpecial = session.specialStageIndex();
@@ -66,15 +70,25 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
             default -> session.updateMenu(input.logical(), session.resultsPlcReady());
         }
         if (session.phase() == Sonic2CompetitionSession.Phase.ACT
-                && (before != session.phase() || beforeAct != session.act())) host.loadAct(session, session.romZone(), session.act());
+                && (before != session.phase() || beforeAct != session.act()))
+            pendingLoad = new PendingLoad(session.phase(), session.romZone(), session.act(), session.specialStageIndex());
         else if (session.phase() == Sonic2CompetitionSession.Phase.SPECIAL_STAGE
-                && (before != session.phase() || beforeSpecial != session.specialStageIndex())) special.load();
+                && (before != session.phase() || beforeSpecial != session.specialStageIndex()))
+            pendingLoad = new PendingLoad(session.phase(), session.romZone(), session.act(), session.specialStageIndex());
         if (session.phase() != before) {
             session.setResultsPlcReady(false);
             if (presentation != null) presentation.invalidate();
         }
         if (session.phase() == Sonic2CompetitionSession.Phase.FINISHED)
             exit = new Exit(Destination.TITLE_SCREEN, null, false);
+    }
+    @Override public void afterFrame() {
+        var load = pendingLoad;
+        pendingLoad = null;
+        if (load == null || session.phase() != load.phase()
+                || session.romZone() != load.zone() || session.act() != load.act()) return;
+        if (load.phase() == Sonic2CompetitionSession.Phase.ACT) host.loadAct(session, load.zone(), load.act());
+        else if (session.specialStageIndex() == load.specialIndex()) special.load();
     }
     private int nextSelection(InputHandler input) {
         int selection = session.selection();
@@ -99,7 +113,7 @@ public final class Sonic2CompetitionScreen implements NativeMenuScreen {
         glClearColor(color.rFloat(), color.gFloat(), color.bFloat(), 1);
     }
     @Override public void reset() {
-        session.reset(); assets = null; presentation = null; exit = Exit.NONE;
+        session.reset(); assets = null; presentation = null; exit = Exit.NONE; pendingLoad = null;
         if (special != null) special.reset();
     }
     @Override public Exit consumeExit() { var result = exit; exit = Exit.NONE; return result; }

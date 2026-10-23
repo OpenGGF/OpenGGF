@@ -1134,6 +1134,7 @@ public class GameLoop {
     }
 
     private void stepInternal() {
+        nativeMenus.beginFrame();
         if (suspension.preparing()) {
             inputHandler.update();
             return;
@@ -1169,9 +1170,10 @@ public class GameLoop {
         }
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
             stepInternalBody();
+            completeNativeMenuFrame();
             return;
         }
-        Runnable productionIteration = () ->
+        Runnable productionIteration = () -> {
             lifecycleContext.plcFrameLifecycle().runLogicalIteration(
                     frame -> {
                         if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
@@ -1188,6 +1190,10 @@ public class GameLoop {
                             activePlcLifecycleFrame = null;
                         }
                     });
+            // The outgoing token has finished; keep setup inside trace failure
+            // containment and before another tick or presentation sees its world.
+            completeNativeMenuFrame();
+        };
         TraceSessionLauncher.runProductionIterationIfActive(
                 productionIteration, this::advanceTraceRunPhysicalRow);
     }
@@ -4011,6 +4017,10 @@ public class GameLoop {
 
     private void updateNativeMenuMode() {
         nativeMenuFlow.updateNativeMenuMode();
+    }
+
+    private void completeNativeMenuFrame() {
+        nativeMenuFlow.completeFrame();
     }
 
     private void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {

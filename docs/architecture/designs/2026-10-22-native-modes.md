@@ -384,3 +384,38 @@ its own PBO before unrelated outer cleanup. A prior fixture left that foreign
 PBO active during outer cleanup and produced GL_INVALID_OPERATION despite correct
 menu pixels; narrowing its lifetime retained the allocation/restore control.
 No GraphicsManager, shader, shared SAT or public API source was changed.
+
+
+## Native screen loads after the outgoing iteration
+
+The native results screen used to call the next act loader from inside its
+`TWO_PLAYER_RESULTS` PLC iteration. The S2 loader's authentic leading object pass
+and 25 title-leave waits then attempted to open another lifecycle iteration
+before the outgoing token had finished. The existing rejection was correct;
+nesting or replacing that token would hide a product-flow defect.
+
+`NativeMenuScreen.afterFrame` now owns setup after a successful outgoing frame.
+The controller records only the screen whose update and exit consumption both
+succeeded, clears stale candidates at iteration entry, and clears a candidate
+before invoking it. Close/replacement/failure cannot execute an old load. GameLoop
+drains this completion after `runLogicalIteration` returns, inside the production
+trace failure boundary, then publishes the resulting screen mode. Both S2 act/VS
+loads and S3K arena/GP loads stage their existing load operations there; input and
+world execution are not repeated. This handoff finishes before presentation and
+is not another saved gameplay timeline or hardware-admission path.
+
+At `3087ec79e` plus the frozen implementation, the exact queued selection
+`TestS3kCompetitionArenaPixels,TestS3kCompetitionViewRegisters,TestNativeMenuController,TestNativeCompetitionIteration,TestGameLoopNativeMenus,TestSonic2CompetitionProduct,TestS3kCompetitionScreen,TestS3kCompetitionNativeHost,TestModApiSignatureSurface`
+ran 82 tests: 81 passed, no assertion failures/skips, one new GPU-view teardown
+error. Queue wait was 512 seconds, Maven execution 1:25. Java 25 and Lua 5.4,
+absolute verified S2/S3K ROM properties, surfaceless EGL and unset desktop display
+variables were explicit. XML was inspected by selected class. All 64 transition,
+controller, product and actual native-host cases passed, including outgoing result
+preparation before 26 sequential entry iterations, input once, failure/close
+discard, mode publication and preserved native actor/history ownership. The six
+new register cases and 11 candidate API cases passed separately in that selection.
+The GPU error belongs to the new Views cleanup after the Host has already torn
+down the session registry; it is not a transition pass or a rendered-route claim.
+Only affected GPU work is being rerun after its correction. Competition activation
+remains gated, with native audio, S2 selective teleport/interlace and actual route
+qualification still required.

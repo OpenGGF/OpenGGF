@@ -33,6 +33,8 @@ class TestSonic2CompetitionProduct {
         assertTrue(screen.supported());
         assertEquals(GameMode.COMPETITION_MENU, screen.mode());
         screen.update(input(1, 0, true));
+        assertNull(host.loaded, "world setup waits until the outgoing frame has finished");
+        screen.afterFrame();
         assertEquals("0:0", host.loaded);
         assertEquals(GameMode.COMPETITION, screen.mode());
         session.gameState(0).addScore(100);
@@ -42,6 +44,8 @@ class TestSonic2CompetitionProduct {
         assertEquals(0, session.act());
         screen.resultsPlcReady();
         screen.update(input(1, 0, true));
+        assertEquals("0:0", host.loaded);
+        screen.afterFrame();
         assertEquals("0:1", host.loaded);
         session.gameState(0).addScore(100);
         finish(session);
@@ -56,6 +60,83 @@ class TestSonic2CompetitionProduct {
         assertFalse(session.completed(0));
         assertEquals(GameMode.COMPETITION_MENU, screen.mode());
         assertEquals(1, halfpipe.resets);
+    }
+
+    @Test void actTwoEntryRunsAfterResultsPreparationAndPreservesTheActOneLedger() throws Exception {
+        var calls = new java.util.ArrayList<String>();
+        var lifecycle = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                new com.openggf.game.resources.PlcLifecycleService() {
+                    @Override public void serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase phase) {
+                        calls.add("service:" + phase);
+                    }
+                    @Override public boolean hasPreparationBoundary(com.openggf.game.resources.PlcLifecyclePhase phase) {
+                        return true;
+                    }
+                    @Override public void prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase phase) {
+                        calls.add("prepare:" + phase);
+                    }
+                });
+        var session = new Sonic2CompetitionSession();
+        var host = new Host();
+        var screen = new Sonic2CompetitionScreen(session, host,
+                new Sonic2CompetitiveSpecialStageAdapter(session, new Halfpipe()), TestEnvironment.currentRom());
+        var menus = new com.openggf.game.nativemenu.NativeMenuController();
+        menus.open(screen);
+        menus.update(input(1, 0, true), false);
+        menus.completeFrame();
+        session.gameState(0).addScore(100);
+        finish(session);
+        var result = session.actResult(0, 0);
+        assertNotNull(result);
+        screen.resultsPlcReady();
+        host.onLoad = () -> {
+            assertEquals(java.util.List.of("service:TWO_PLAYER_RESULTS", "prepare:TWO_PLAYER_RESULTS"), calls);
+            for (int entry = 0; entry < 26; entry++) {
+                lifecycle.runLogicalIteration(() -> { }, frame -> {
+                    frame.claim(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                    frame.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                    return null;
+                });
+            }
+        };
+        menus.beginFrame();
+        lifecycle.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+            menus.update(input(1, 0, true), false);
+            assertEquals("0:0", host.loaded);
+            frame.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.TWO_PLAYER_RESULTS);
+            return null;
+        });
+        menus.completeFrame();
+
+        assertEquals("0:1", host.loaded);
+        assertEquals(54, calls.size());
+        assertEquals(result, session.actResult(0, 0));
+        assertEquals(1, session.act());
+    }
+
+    @Test void resetAndInitializeDiscardStagedActAndSpecialStageLoads() throws Exception {
+        var session = new Sonic2CompetitionSession();
+        var host = new Host();
+        var halfpipe = new Halfpipe();
+        var screen = new Sonic2CompetitionScreen(session, host,
+                new Sonic2CompetitiveSpecialStageAdapter(session, halfpipe), TestEnvironment.currentRom());
+        screen.initialize();
+        screen.update(input(0, 0, true));
+        screen.initialize();
+        screen.afterFrame();
+        assertNull(host.loaded);
+
+        screen.update(input(1, 10, true));
+        assertEquals(-1, halfpipe.loaded);
+        screen.reset();
+        screen.afterFrame();
+        assertEquals(-1, halfpipe.loaded);
+
+        screen.initialize();
+        screen.update(input(1, 10, true));
+        screen.afterFrame();
+        assertEquals(4, halfpipe.loaded);
     }
 
     @Test void missingNativeSpecialOrUnsupportedWorldKeepsActivationUnavailable() throws Exception {
@@ -164,8 +245,9 @@ class TestSonic2CompetitionProduct {
     }
     private static final class Host implements Sonic2CompetitionHost {
         String loaded; boolean available = true, swap; int frozen;
+        Runnable onLoad = () -> { };
         @Override public boolean supportsZone(int zone) { return available && (zone == 0 || zone == 11 || zone == 12); }
-        @Override public void loadAct(Sonic2CompetitionSession s, int zone, int act) { loaded = zone + ":" + act; }
+        @Override public void loadAct(Sonic2CompetitionSession s, int zone, int act) { onLoad.run(); loaded = zone + ":" + act; }
         @Override public void step(Sonic2CompetitionSession s, InputHandler input) { }
         @Override public void draw(Sonic2CompetitionSession s) { }
         @Override public void freezeObjects(int ticks) { frozen = ticks; }

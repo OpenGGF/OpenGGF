@@ -817,6 +817,42 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 	}
 
+	/**
+	 * S2 Level's leading RunObjects and locked leave-loop player slots. These
+	 * execute ordinary physics, history and animation with both controllers zero,
+	 * while Level_frame_counter remains zero. Level (s2.asm:4945-4952) clears
+	 * and locks both controllers; Level_FromCheckpoint (s2.asm:5004-5009) and
+	 * Level_FromCheckpoint (s2.asm:5056-5066) own these object passes. The caller
+	 * owns the following object pass and any preceding WaitForVint; neither
+	 * clock advances here.
+	 */
+	void runNativeCompetitionTitlePlayablePass() {
+		var roster = nativeCompetitionRoster();
+		LevelManager manager = getLevelManager();
+		ObjectManager objects = manager != null ? manager.getObjectManager() : null;
+		if (roster == null || objects == null || frameCounter != 0
+				|| manager.getFrameCounter() != 0 || objects.hasActiveInitialProcessSpritesDispatch()) {
+			throw new IllegalStateException("Native title playable pass requires the assembled zero-epoch world");
+		}
+		AbstractPlayableSprite p1 = roster.player(0);
+		AbstractPlayableSprite p2 = roster.player(1);
+		if (p1 == null || p2 == null || p1 == p2) {
+			throw new IllegalStateException("Native title playable pass requires two distinct human actors");
+		}
+		for (AbstractPlayableSprite player : List.of(p1, p2)) {
+			if (player.isCpuControlled() || player.getCpuController() != null
+					|| sprites.get(player.getCode()) != player
+					|| player.currentSpriteManagerOrNull() != this
+					|| player.currentLevelManagerIfAvailable() != manager) {
+				throw new IllegalStateException("Native title playable pass requires this world's registered human actors");
+			}
+		}
+		var epoch = new ProcessSpritesEpoch(0, objects.getFrameCounter() + 1, false);
+		try (var ignored = NativeCompetitionTitlePlayableScope.enter(p1, p2)) {
+			processPlayableSlots(PlayableDispatchContext.ordinaryWithoutInput(epoch));
+		}
+	}
+
 	private void processPlayableSlots(PlayableDispatchContext context) {
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame.

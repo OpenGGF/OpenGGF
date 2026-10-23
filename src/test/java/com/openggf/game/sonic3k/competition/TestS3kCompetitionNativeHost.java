@@ -592,6 +592,7 @@ class TestS3kCompetitionNativeHost {
             if(frame==null) host.screen().update(logical);
             else NativeCompetitionIterationAccess.runAdmitted(frame,() -> host.screen().update(logical));
         } finally { if(frame!=null)frame.finish(); }
+        host.screen().afterFrame();
     }
     private CompetitionItemObjectInstance ringWheelAt(int x,int y) {
         for (int slot=1;slot<host.players().size();slot++) {

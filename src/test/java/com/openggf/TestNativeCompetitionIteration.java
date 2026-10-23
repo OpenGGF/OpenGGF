@@ -18,6 +18,52 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestNativeCompetitionIteration {
+    @Test void resultsPreparationFinishesBeforeTwentySixSequentialEntryIterations() {
+        var calls = new ArrayList<String>();
+        var coordinator = coordinator(calls);
+        var menus = new com.openggf.game.nativemenu.NativeMenuController();
+        var screen = new com.openggf.game.nativemenu.NativeMenuScreen() {
+            boolean pending;
+            @Override public GameMode mode() { return GameMode.COMPETITION_RESULTS; }
+            @Override public void initialize() { }
+            @Override public void update(com.openggf.control.InputHandler input) { pending = true; }
+            @Override public void afterFrame() {
+                if (!pending) return;
+                pending = false;
+                assertThrows(IllegalStateException.class, NativeCompetitionIterationAccess::currentFrame);
+                for (int entry = 0; entry < 26; entry++) {
+                    coordinator.runLogicalIteration(() -> { }, frame -> {
+                        GameLoopPlcLifecycle.runPhase(frame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+                        return null;
+                    });
+                }
+            }
+            @Override public void draw() { }
+            @Override public void setClearColor() { }
+            @Override public void reset() { pending = false; }
+            @Override public Exit consumeExit() { return Exit.NONE; }
+        };
+        menus.open(screen);
+        var input = mock(com.openggf.control.InputHandler.class);
+        menus.beginFrame();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            GameLoopPlcLifecycle.runNativeScreen(frame, GameMode.COMPETITION_RESULTS,
+                    () -> menus.update(input, false));
+            assertEquals(List.of("service:TWO_PLAYER_RESULTS", "prepare:TWO_PLAYER_RESULTS"), calls);
+            return null;
+        });
+        menus.completeFrame();
+        menus.completeFrame();
+
+        assertEquals(54, calls.size());
+        assertEquals(List.of("service:TWO_PLAYER_RESULTS", "prepare:TWO_PLAYER_RESULTS"), calls.subList(0, 2));
+        for (int entry = 0; entry < 26; entry++) {
+            assertEquals(List.of("service:LEVEL_TITLE_CARD", "prepare:LEVEL_TITLE_CARD"),
+                    calls.subList(2 + entry * 2, 4 + entry * 2));
+        }
+        verify(input).update();
+    }
+
     @Test void nativePauseWaitIncludingResumePrecedesTheNextOrdinaryWaitAndWorldBody() throws Exception {
         var calls = new ArrayList<String>();
         var coordinator = new PlcFrameLifecycleCoordinator(new PlcLifecycleService() {

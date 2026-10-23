@@ -81,6 +81,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     private boolean mainLoopStarted;
     private S3kCompetitionSession session;
     private S3kCompetitionSession.Arena pendingArena;
+    private Launch pendingLaunch;
     private S3kCompetitionSession.Result pendingResult, result;
     private boolean pendingTimeAttackSelection, pendingTitleScreen;
     private Exit exit = Exit.NONE;
@@ -88,7 +89,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     public S3kCompetitionScreen(Host host) { this.host = Objects.requireNonNull(host); }
     @Override public void initialize() {
         enterMode(); Arrays.fill(wheelPriorityWords,0); Arrays.fill(wheelQueuePriorityWords,0);
-        exit = Exit.NONE; result = null; session = null; pendingArena = null; pendingResult = null;
+        exit = Exit.NONE; result = null; session = null; pendingArena = null; pendingResult = null; pendingLaunch = null;
         pendingTimeAttackSelection = pendingTitleScreen = false;
     }
     @Override public GameMode mode() {
@@ -97,6 +98,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
     }
     @Override public void update(InputHandler input) { update(input.logical()); }
     public void update(LogicalInputSnapshot input) {
+        pendingLaunch = null;
         Objects.requireNonNull(input);
         frame = frame + 1 & 0xFFFF;
         mainLoopStarted = true;
@@ -123,7 +125,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
                     } else enterSelection();
                 } else if (pendingArena != null) {
                     var next = pendingArena; pendingArena = null;
-                    openArena(next);
+                    stageArena(next);
                 } else if (pendingResult != null) {
                     result = pendingResult; pendingResult = null;
                     host.closeArena(); session = null;
@@ -197,7 +199,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
                 else if (accept(buttons)) { confirmed[slot] = true; host.playSfx(Sonic3kSfx.STARPOST); }
             }
             if (!allConfirmed()) return;
-            if (phase == Phase.PLAYER_SELECT) { openArena(S3kCompetitionSession.Arena.AZURE_LAKE); return; }
+            if (phase == Phase.PLAYER_SELECT) { stageArena(S3kCompetitionSession.Arena.AZURE_LAKE); return; }
         }
         if (!allConfirmed()) { horizontalScroll = Math.min(0, horizontalScroll + 8); return; }
         if (horizontalScroll > -0x58) { horizontalScroll -= 8; return; }
@@ -215,7 +217,7 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
             scrollRemaining = Math.clamp(arenaRow - 1, 0, 2) * 0x48 - verticalScroll;
             host.playSfx(Sonic3kSfx.SWITCH); return;
         }
-        if (accept(both) && allConfirmed()) openArena(S3kCompetitionSession.GRAND_PRIX_ORDER.get(arenaRow));
+        if (accept(both) && allConfirmed()) stageArena(S3kCompetitionSession.GRAND_PRIX_ORDER.get(arenaRow));
     }
     private void rotateWheel(int slot) {
         int next = wheelAngles[slot] + 5 * wheelDirections[slot];
@@ -247,11 +249,16 @@ public final class S3kCompetitionScreen implements NativeMenuScreen {
         horizontalScroll = 0; verticalScroll = 0; scrollRemaining = 0;
     }
     private boolean allConfirmed() { return confirmed[0] && (participants == 1 || confirmed[1]); }
-    private void openArena(S3kCompetitionSession.Arena arena) {
+    private void stageArena(S3kCompetitionSession.Arena arena) {
         var chars = java.util.stream.IntStream.range(0, participants)
                 .mapToObj(slot -> S3kCompetitionPlayer.Character.values()[characters[slot]]).toList();
-        var launch = new Launch(new S3kCompetitionSession.Config(selectedMode, arena,
+        pendingLaunch = new Launch(new S3kCompetitionSession.Config(selectedMode, arena,
                 itemsEnabled && selectedMode != S3kCompetitionSession.Mode.TIME_ATTACK, participants), chars);
+    }
+    @Override public void afterFrame() {
+        var launch = pendingLaunch;
+        pendingLaunch = null;
+        if (launch == null) return;
         session = Objects.requireNonNull(host.openArena(launch), "Native world must supply its real S3K session");
         phase = Phase.RACE;
     }

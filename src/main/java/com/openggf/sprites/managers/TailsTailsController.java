@@ -181,9 +181,10 @@ public class TailsTailsController {
 
     private void publishDynamicArtDecision() {
         if (isS3k) {
-            submitS3kTailLoadPlc();
+            submitTailLoadPlc();
             return;
         }
+        submitTailLoadPlc();
         if (renderer == null || mappingFrame < 0) {
             return;
         }
@@ -196,19 +197,19 @@ public class TailsTailsController {
     }
 
     /**
-     * S3K Obj_Tails_Tail calls {@code Tails_Tail_Load_PLC} after animating on every frame (sonic3k.asm
-     * {@code Tails_Tail_Load_PLC}); a game that records V-int DMA work receives the routine's inputs. Rendering keeps
-     * its own pattern upload path.
+     * S2 Obj05_Main calls {@code LoadTailsTailsDynPLC} after animating on every frame, as does S3K's
+     * {@code Tails_Tail_Load_PLC}. A game-owned native ROM art sink can receive S2's stored mapping frame without an
+     * ordinary renderer; S3K retains its renderer requirement. Rendering keeps its own pattern upload path.
      */
-    private void submitS3kTailLoadPlc() {
-        if (renderer == null || mappingFrame < 0) {
+    private void submitTailLoadPlc() {
+        if ((isS3k && renderer == null) || mappingFrame < 0) {
             return;
         }
         var level = sprite.currentLevelManagerIfAvailable();
         var objects = level != null ? level.getObjectManager() : null;
         if (objects != null && objects.getObjectServices().runtimeArtCoordinator()
                 instanceof com.openggf.game.internal.PlayerDplcDmaSink sink) {
-            sink.tailsTailLoadPlc(mappingFrame, renderer.dplcFrame(mappingFrame));
+            sink.tailsTailLoadPlc(mappingFrame, renderer != null ? renderer.dplcFrame(mappingFrame) : null);
         }
     }
 

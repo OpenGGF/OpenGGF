@@ -103,4 +103,9 @@ public final class SpriteManagerInternalAccess {
     public static com.openggf.control.LogicalInputSnapshot publishedInput(SpriteManager manager) {
         return manager.publishedLogicalInput();
     }
+
+    /** S2's locked pre-main-loop player slots, without advancing the level clock. */
+    public static void runNativeCompetitionTitlePlayablePass(SpriteManager manager) {
+        manager.runNativeCompetitionTitlePlayablePass();
+    }
 }

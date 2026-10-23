@@ -259,9 +259,7 @@ final class GameLoopNativeMenus {
         var screen = nativeMenus.screen();
         if (screen == null) return;
         switch (exit.destination()) {
-            case NONE -> {
-                if (screen.mode() != currentMode.get()) loop.setGameMode(screen.mode());
-            }
+            case NONE -> { }
             case TITLE_SCREEN -> {
                 nativeMenus.close();
                 loop.initializeTitleScreenMode();
@@ -279,6 +277,13 @@ final class GameLoopNativeMenus {
             }
             case LEVEL -> startNativeMenuLevel(exit);
         }
+    }
+
+    void completeFrame() {
+        if (!nativeMenus.completeFrame()) return;
+        var screen = nativeMenus.screen();
+        if (screen != null && NativeMenuController.handles(currentMode.get())
+                && screen.mode() != currentMode.get()) loop.setGameMode(screen.mode());
     }
 
     void startNativeMenuLevel(com.openggf.game.nativemenu.NativeMenuScreen.Exit exit) {

@@ -8,6 +8,12 @@ public interface NativeMenuScreen {
     default com.openggf.game.GameMode mode() { return com.openggf.game.GameMode.OPTIONS; }
     void initialize();
     void update(InputHandler input);
+    /**
+     * Completes synchronous transition setup after this update's outer PLC frame
+     * has finished. Loads may run their existing entry iterations here; this is
+     * not another input, menu, or gameplay update.
+     */
+    default void afterFrame() { }
     void draw();
     void setClearColor();
     void reset();

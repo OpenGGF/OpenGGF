@@ -15,6 +15,51 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Literal controller paths through the native menu state machine; no production terrain surrogate. */
 class TestS3kCompetitionScreen {
+    @Test void arenaSetupWaitsForFrameCompletionAndGrandPrixRequestsDoNotReenterTheHost() {
+        Fixture f = new Fixture();
+        f.press(0, 0, InputActionMasks.ACTION_A);
+        var accept = LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, InputActionMasks.ACTION_A, InputActionMasks.ACTION_A, false, false),
+                PlayerInputState.neutral());
+        f.screen.update(accept);
+        assertTrue(f.launches.isEmpty());
+        assertEquals(GameMode.COMPETITION_MENU, f.screen.mode());
+        f.screen.afterFrame();
+        var first = f.screen.session();
+        assertEquals(1, f.launches.size());
+        f.arenaStep = () -> f.screen.requestArena(S3kCompetitionSession.Arena.BALLOON_PARK);
+
+        f.screen.update(LogicalInputSnapshot.neutral());
+
+        assertSame(first, f.screen.session());
+        assertEquals(1, f.launches.size());
+        assertEquals(1, f.steps);
+        f.screen.afterFrame();
+        f.screen.afterFrame();
+        assertEquals(2, f.launches.size());
+        assertEquals(S3kCompetitionSession.Arena.BALLOON_PARK, f.launches.getLast().config().arena());
+        assertNotSame(first, f.screen.session());
+        assertEquals(1, f.steps, "completion must not execute another arena body");
+    }
+
+    @Test void initializeAndResetDiscardStagedArenaLaunches() {
+        Fixture f = new Fixture();
+        var accept = LogicalInputSnapshot.ofPlayers(
+                PlayerInputState.of(0, 0, InputActionMasks.ACTION_A, InputActionMasks.ACTION_A, false, false),
+                PlayerInputState.neutral());
+        f.press(0, 0, InputActionMasks.ACTION_A);
+        f.screen.update(accept);
+        f.screen.initialize();
+        f.screen.afterFrame();
+        assertTrue(f.launches.isEmpty());
+        f.press(0, 0, InputActionMasks.ACTION_A);
+        f.screen.update(accept);
+        f.screen.reset();
+        f.screen.afterFrame();
+        assertTrue(f.launches.isEmpty());
+        assertEquals(GameMode.COMPETITION_MENU, f.screen.mode());
+    }
+
     @Test void modeMenuWrapsFourRowsAndControllerTwoCanChooseGrandPrix() {
         Fixture f = new Fixture();
         f.press(0, 1, 0); assertEquals(3, f.screen.view().modeRow());
@@ -269,8 +314,9 @@ class TestS3kCompetitionScreen {
         void press(int slot,int direction,int action) {
             var p = PlayerInputState.of(direction,direction,action,action,false,false);
             screen.update(LogicalInputSnapshot.ofPlayers(slot==0?p:PlayerInputState.neutral(),slot==1?p:PlayerInputState.neutral()));
+            screen.afterFrame();
         }
-        void idle(int frames) { for(int i=0;i<frames;i++) screen.update(LogicalInputSnapshot.neutral()); }
+        void idle(int frames) { for(int i=0;i<frames;i++) { screen.update(LogicalInputSnapshot.neutral()); screen.afterFrame(); } }
         @Override public S3kCompetitionSession openArena(S3kCompetitionScreen.Launch launch) {
             launches.add(launch);
             var world = new CompetitionTestWorld(launch.config().participantCount()==1?
