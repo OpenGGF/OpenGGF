@@ -88,6 +88,10 @@ public final class AttemptReplayHarness {
                     GameplayTeamBootstrap.registerActiveTeam(
                             module, GameServices.sprites(), configuration);
             AbstractPlayableSprite player = team.mainSprite();
+            // Replay under the policy the live run used, so act starts (an intro skipped or
+            // played) match the recording's first frame.
+            mode.beginGameplayRun(openggf.timeattack.TimeAttackRuntime.runPolicy(),
+                    recording.start().zone(), recording.start().act());
             GameServices.level().loadZoneAndAct(
                     recording.start().zone(), recording.start().act());
             GameServices.camera().setFocusedSprite(player);

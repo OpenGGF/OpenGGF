@@ -72,21 +72,161 @@ class TestRelayRoomManager {
 
     private static void finish(RelayRoomManager.RoomAccess access,
                                FakeConnection connection, String token, long[] now) {
+        finish(access, connection, token, now, 1, 100, "aa");
+    }
+
+    private static void finish(RelayRoomManager.RoomAccess access,
+                               FakeConnection connection, String token, long[] now,
+                               int attemptId, int timeFrames, String hashByte) {
         GhostStreamPublisher publisher = new GhostStreamPublisher(
                 packet -> access.room().onBinary(connection, packet));
         access.room().onText(connection, ControlCodec.encode(token,
-                new ControlMessage.AttemptStart(1)));
-        publisher.beginAttempt(1);
-        for (int frame = 0; frame <= 101; frame++) {
+                new ControlMessage.AttemptStart(attemptId)));
+        publisher.beginAttempt(attemptId);
+        for (int frame = 0; frame <= timeFrames + 1; frame++) {
             now[0] += 17;
             publisher.onFrame(new GhostFrame(100 + frame, 200, 1,
                     false, false, false, 2, false));
         }
         publisher.finishAttempt();
         access.room().onText(connection, ControlCodec.encode(token,
-                new ControlMessage.AttemptFinish(1, 100, 1, 101,
-                        "aa".repeat(32), HexFormat.of().formatHex(
+                new ControlMessage.AttemptFinish(attemptId, timeFrames, 1, timeFrames + 1,
+                        hashByte.repeat(32), HexFormat.of().formatHex(
                         publisher.streamHashSha256()), null)));
+    }
+
+    /** A verified room in which one player finished twice, the second time faster. */
+    private record SupersededClaims(RelayRoomManager manager, VerificationJobQueue jobs,
+                                    RelayRoomManager.RoomAccess access, MasterConfig config,
+                                    String fingerprint) { }
+
+    private static SupersededClaims supersededClaims(Path dir, long[] now,
+                                                     SqliteIdentityStore store)
+            throws Exception {
+        var ladder = new TrustLadder(store,
+                new NewIdentityCache(100, 3_600_000, () -> now[0]),
+                TrustLadder.Thresholds.defaults(), () -> now[0]);
+        MasterConfig config = MasterConfig.defaults();
+        VerificationJobQueue jobs = new VerificationJobQueue(() -> now[0], 1000);
+        RelayRoomManager manager = new RelayRoomManager(
+                PlayerIdentity.loadOrCreate(dir.resolve("m")), ladder,
+                TrackValidationProfileSource.none(), List.of(Runnable::run),
+                Runnable::run, () -> now[0], (roomId, count) -> { },
+                (roomId, owner, zone, act) -> { }, config, jobs,
+                new VerdictConsequences(store, ladder, () -> now[0], 0));
+        PlayerIdentity player = PlayerIdentity.loadOrCreate(dir.resolve("player"));
+        SessionRegistry.RoomEntry entry = new SessionRegistry(() -> now[0], config)
+                .create(new ControlMessage.RoomDescriptor(
+                                "Verified", "s3k", 0, 0, "OPEN", null, 8, true),
+                        "RELAY", player.fingerprint(), "1.1.1.1", 0, "0.6:cafe");
+        manager.createRelayRoom(entry);
+        var access = manager.find(entry.roomId()).orElseThrow();
+        FakeConnection connection = new FakeConnection();
+        String token = admit(manager, access, entry.roomId(), connection, player, "P");
+        // One present player under the default rule: ready up before the owner starts.
+        access.room().onText(connection, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
+        access.room().onText(connection, ControlCodec.encode(token,
+                new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
+                        "s3k", 0, 0, 60, "OPEN", null))));
+        now[0] += 3_000;
+        access.room().tick();
+        finish(access, connection, token, now, 1, 100, "aa");
+        finish(access, connection, token, now, 2, 90, "bb");
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, jobs.stateOf("vj-1"));
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, jobs.stateOf("vj-2"));
+        ControlMessage.StandingsRow shown = access.room().round().standings().getFirst();
+        assertEquals(90, shown.bestTimeFrames());
+        assertEquals("PENDING", shown.verifyState());
+        return new SupersededClaims(manager, jobs, access, config, player.fingerprint());
+    }
+
+    @Test
+    void supersededClaimPassSurvivesTheNewerClaimFailing(@TempDir Path dir) throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            SupersededClaims claims = supersededClaims(dir, now, store);
+            assertTrue(claims.jobs().onRecordingUploaded("aa".repeat(32), claims.fingerprint()));
+            VerificationJobQueue.Job older = claims.jobs().lease("worker",
+                    java.util.Set.of("0.6:cafe")).orElseThrow();
+            assertEquals("vj-1", older.jobId());
+            claims.jobs().complete(older.jobId(), "worker").orElseThrow();
+            claims.manager().onVerdict(older, true);
+            assertEquals("PENDING",
+                    claims.access().room().round().standings().getFirst().verifyState());
+
+            assertTrue(claims.jobs().onRecordingUploaded("bb".repeat(32), claims.fingerprint()));
+            VerificationJobQueue.Job newer = claims.jobs().lease("worker",
+                    java.util.Set.of("0.6:cafe")).orElseThrow();
+            claims.jobs().complete(newer.jobId(), "worker").orElseThrow();
+            claims.manager().onVerdict(newer, false);
+            ControlMessage.StandingsRow shown =
+                    claims.access().room().round().standings().getFirst();
+            assertEquals(100, shown.bestTimeFrames());
+            assertEquals("VERIFIED", shown.verifyState());
+        }
+    }
+
+    @Test
+    void roundEndVoidsTheRouteOfEveryUnresolvedClaim(@TempDir Path dir) throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            SupersededClaims claims = supersededClaims(dir, now, store);
+            now[0] += 60_000 + com.openggf.net.hub.HostRoundEngine.FINISH_GRACE_MILLIS;
+            claims.access().room().tick();
+            assertEquals(com.openggf.net.hub.HostRoundEngine.Phase.ROUND_END,
+                    claims.access().room().round().phase());
+            now[0] += com.openggf.net.hub.HostRoundEngine.ROUND_END_LINGER_MILLIS
+                    + claims.config().verifiedUploadDeadlineSeconds() * 1000L
+                    + claims.config().verdictGraceMillis();
+            claims.access().room().tick();
+
+            assertEquals(VerificationJobQueue.State.VOID, claims.jobs().stateOf("vj-1"));
+            assertEquals(VerificationJobQueue.State.VOID, claims.jobs().stateOf("vj-2"));
+            assertTrue(claims.access().room().round().standings().isEmpty());
+            assertEquals(List.of(VerdictCodec.RESULT_VOID_NO_UPLOAD,
+                            VerdictCodec.RESULT_VOID_NO_UPLOAD),
+                    store.verdictsFor(claims.fingerprint()).stream()
+                            .map(IdentityStore.VerdictRecord::result).toList());
+        }
+    }
+
+    @Test
+    void supersededUploadedClaimVoidedAtLingerIsNotRecordedAsNoUpload(@TempDir Path dir)
+            throws Exception {
+        long[] now = {1_000_000};
+        try (var store = new SqliteIdentityStore(dir.resolve("ids.db"))) {
+            SupersededClaims claims = supersededClaims(dir, now, store);
+            assertTrue(claims.jobs().onRecordingUploaded("aa".repeat(32), claims.fingerprint()));
+            assertEquals("vj-1", claims.jobs().lease("worker",
+                    java.util.Set.of("0.6:cafe")).orElseThrow().jobId());
+            assertTrue(claims.jobs().onRecordingUploaded("bb".repeat(32), claims.fingerprint()));
+            VerificationJobQueue.Job newer = claims.jobs().lease("worker",
+                    java.util.Set.of("0.6:cafe")).orElseThrow();
+            claims.jobs().complete(newer.jobId(), "worker").orElseThrow();
+            claims.manager().onVerdict(newer, true);
+            assertEquals(0, claims.access().room().round().pendingVerdictCount());
+
+            // The shown best is verified, so the superseded claim does not hold the
+            // round end; it expires at the linger while its upload is being verified.
+            now[0] += 60_000 + com.openggf.net.hub.HostRoundEngine.FINISH_GRACE_MILLIS;
+            claims.access().room().tick();
+            now[0] += com.openggf.net.hub.HostRoundEngine.ROUND_END_LINGER_MILLIS;
+            claims.access().room().tick();
+
+            assertEquals(VerificationJobQueue.State.VOID, claims.jobs().stateOf("vj-1"));
+            assertEquals(VerificationJobQueue.State.DONE, claims.jobs().stateOf("vj-2"));
+            List<IdentityStore.VerdictRecord> verdicts =
+                    store.verdictsFor(claims.fingerprint());
+            assertEquals(1, verdicts.size());
+            assertEquals("aa".repeat(32), verdicts.getFirst().inputRecordingHashHex());
+            assertEquals(VerdictCodec.RESULT_VOID_VERIFIER_UNAVAILABLE,
+                    verdicts.getFirst().result());
+            assertEquals(0, store.activeSanctions(claims.fingerprint(), now[0]).size());
+            ControlMessage.StandingsRow shown =
+                    claims.access().room().round().standings().getFirst();
+            assertEquals(90, shown.bestTimeFrames());
+            assertEquals("VERIFIED", shown.verifyState());
+        }
     }
 
     @Test
@@ -115,6 +255,8 @@ class TestRelayRoomManager {
             FakeConnection oldConnection = new FakeConnection();
             String oldToken = admit(manager, access, entry.roomId(), oldConnection,
                     player, "Old");
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(oldConnection, ControlCodec.encode(oldToken, new ControlMessage.SetReady(true)));
             access.room().onText(oldConnection, ControlCodec.encode(oldToken,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));
@@ -244,6 +386,8 @@ class TestRelayRoomManager {
             access.room().onText(creator, ControlCodec.encode(null,
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(creator))));
             String token = lastOfType(creator, ControlMessage.JoinAccepted.class).sessionToken();
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(creator, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
             access.room().onText(creator, ControlCodec.encode(token,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));
@@ -293,6 +437,8 @@ class TestRelayRoomManager {
                     handshake.onWelcome((ControlMessage.Welcome) lastMessage(connection))));
             String token = lastOfType(connection,
                     ControlMessage.JoinAccepted.class).sessionToken();
+            // One present player under the default rule: ready up before the owner starts.
+            access.room().onText(connection, ControlCodec.encode(token, new ControlMessage.SetReady(true)));
             access.room().onText(connection, ControlCodec.encode(token,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 60, "OPEN", null))));

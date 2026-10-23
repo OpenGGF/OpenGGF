@@ -704,3 +704,12 @@ qualified physical contact/death scope; other unchanged checks were not repeated
 [Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
 are in the completion plan. Further roster, per-mechanic and cold-route products remain open. No native pixel/audio, overall act
 certification, full-suite or combined delivery claim follows.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Existing FBZ solid collision getters now use the established bounded immutable parameter factory with their complete dimensions/offsets unchanged. The squeeze adapter skips discovery only in impossible ARMED cases and retains exact CONSUMED rearming; winning native/current projections are reused. The FBZ squeeze audit records focused behavior, supported arrival widths/donors and rewind evidence.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

@@ -71,7 +71,7 @@ public final class SozBreakableSandRockObjectInstance extends AbstractObjectInst
         }
     }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x23, 0x10, 0x11); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x23, 0x10, 0x11); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !breaking; }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }

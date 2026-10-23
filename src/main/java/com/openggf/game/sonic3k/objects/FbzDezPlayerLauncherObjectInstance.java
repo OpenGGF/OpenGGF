@@ -89,7 +89,7 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player){return returning;}
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player){return returning;}
-    @Override public int getX(){return x;}@Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x10,3,3);}@Override public boolean isTopSolidOnly(){return true;}@Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.topSolid(false);}
+    @Override public int getX(){return x;}@Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x10,3,3);}@Override public boolean isTopSolidOnly(){return true;}@Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.topSolid(false);}
     @Override public int getPriorityBucket(){return 5;}
     @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_DEZ_PLAYER_LAUNCHER);if(r!=null&&r.isReady())r.drawFrameIndex(0,x,spawn.y(),(spawn.renderFlags()&1)!=0,false);}
 }

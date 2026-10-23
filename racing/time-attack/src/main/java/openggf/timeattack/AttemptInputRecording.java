@@ -22,6 +22,7 @@ public final class AttemptInputRecording {
 
     private final AttemptStartDescriptor start;
     private final ByteArrayOutputStream masks;
+    private byte[] maskSnapshot;
 
     public AttemptInputRecording(AttemptStartDescriptor start) {
         this(start, new ByteArrayOutputStream());
@@ -34,11 +35,12 @@ public final class AttemptInputRecording {
 
     public void appendFrame(int heldMask, boolean startHeld) {
         masks.write((heldMask & 0x1F) | (startHeld ? START_HELD_BIT : 0));
+        maskSnapshot = null;
     }
 
     public AttemptStartDescriptor start() { return start; }
     public int frameCount() { return masks.size(); }
-    public int heldMaskAt(int frame) { return masks.toByteArray()[frame] & 0xFF; }
+    public int heldMaskAt(int frame) { return maskSnapshot()[frame] & 0xFF; }
 
     public byte[] encode() {
         try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -48,7 +50,7 @@ public final class AttemptInputRecording {
             out.writeByte(start.act());
             out.writeUTF(start.character());
             out.writeUTF(start.fingerprint());
-            byte[] data = masks.toByteArray();
+            byte[] data = maskSnapshot();
             out.writeInt(data.length);
             out.write(data);
             out.flush();
@@ -98,5 +100,14 @@ public final class AttemptInputRecording {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private byte[] maskSnapshot() {
+        byte[] current = maskSnapshot;
+        if (current == null) {
+            current = masks.toByteArray();
+            maskSnapshot = current;
+        }
+        return current;
     }
 }

@@ -616,3 +616,12 @@ movement disagree; native backward loads keep the ROM borrow branch. The full
 route is requalified without changing the movie or supplying gameplay state.
 See the [repair and validation record](../../plans/2026-10-13-s3k-playable-completion.md#wide-route-coarse-camera-discontinuity--2026-10-17)
 for the matched baseline, causal controls, exact commands and remaining limits.
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Boss platform break checks and the platform stream dereference their existing saved owned slots with the previous live-occupant predicate. Empty/reset-vector handling and replacement types remain unchanged. `TestLrzEndBossEncounterHeadless` is the focused encounter owner.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

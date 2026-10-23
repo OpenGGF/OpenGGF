@@ -2527,7 +2527,7 @@ public final class RewindRoundTripHarness {
     }
 
     /**
-     * Captures all non-static, non-synthetic primitive/enum/String fields from
+     * Captures all non-static, non-transient, non-synthetic primitive/enum/String fields from
      * the object's class hierarchy between the concrete class and
      * {@code AbstractObjectInstance} (exclusive).
      */
@@ -2539,7 +2539,9 @@ public final class RewindRoundTripHarness {
                 c != null && c != AbstractObjectInstance.class && c != Object.class;
                 c = c.getSuperclass()) {
             for (Field f : c.getDeclaredFields()) {
-                if (Modifier.isStatic(f.getModifiers())) continue;
+                // Match GenericFieldCapturer/RewindSchemaRegistry: Java transient
+                // caches may be invalidated after authoritative state is restored.
+                if (Modifier.isStatic(f.getModifiers()) || Modifier.isTransient(f.getModifiers())) continue;
                 if (f.isSynthetic()) continue;
                 Class<?> type = f.getType();
                 if (!type.isPrimitive() && !type.isEnum() && type != String.class) continue;

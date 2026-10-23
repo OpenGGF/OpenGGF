@@ -104,6 +104,7 @@ public class InstancedPatternRenderer {
     private boolean batchUseWaterShader;
     private boolean batchUnderwaterPalette;
     private boolean batchGhostEffectActive;
+    private boolean batchGhostColour;
     private float batchGhostAlpha;
 
     /**
@@ -195,6 +196,7 @@ public class InstancedPatternRenderer {
         batchUseWaterShader = graphicsManager.getShaderProgram() instanceof WaterShaderProgram;
         batchUnderwaterPalette = graphicsManager.isUseUnderwaterPaletteForBackground();
         batchGhostEffectActive = graphicsManager.isGhostRenderEffectActive();
+        batchGhostColour = graphicsManager.isGhostRenderColourPreserved();
         batchGhostAlpha = graphicsManager.getGhostRenderAlpha();
         batchActive = true;
     }
@@ -218,6 +220,7 @@ public class InstancedPatternRenderer {
                 || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
                 || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
                 || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostColour != graphicsManager.isGhostRenderColourPreserved()
                 || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
@@ -274,6 +277,7 @@ public class InstancedPatternRenderer {
                 || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
                 || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
                 || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostColour != graphicsManager.isGhostRenderColourPreserved()
                 || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
@@ -314,6 +318,7 @@ public class InstancedPatternRenderer {
                 || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
                 || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
                 || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
+                || batchGhostColour != graphicsManager.isGhostRenderColourPreserved()
                 || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
@@ -383,7 +388,7 @@ public class InstancedPatternRenderer {
         GraphicsManager gm = graphicsManager;
         InstancedBatchCommand command = obtainCommand();
         command.load(instanceData, instanceCount, batchAtlasIndex, batchUsePriorityShader,
-                batchUseWaterShader, batchUnderwaterPalette, batchGhostEffectActive, batchGhostAlpha);
+                batchUseWaterShader, batchUnderwaterPalette, batchGhostEffectActive, batchGhostColour, batchGhostAlpha);
         instanceCount = 0;
         batchActive = false;
         return command;
@@ -607,12 +612,13 @@ public class InstancedPatternRenderer {
         private boolean useUnderwaterPalette;
         private int atlasIndex;
         private boolean capturedGhostEffectActive;
+        private boolean capturedGhostColour;
         private float capturedGhostAlpha;
         private boolean leased;
 
         private void load(float[] data, int instanceCount, int atlasIndex, boolean usePriorityShader,
                           boolean useWaterShader, boolean useUnderwaterPalette,
-                          boolean ghostEffectActive, float ghostAlpha) {
+                          boolean ghostEffectActive, boolean ghostColour, float ghostAlpha) {
             this.instanceCount = instanceCount;
             this.floatCount = instanceCount * FLOATS_PER_INSTANCE;
             this.usePriorityShader = usePriorityShader;
@@ -620,6 +626,7 @@ public class InstancedPatternRenderer {
             this.useUnderwaterPalette = useUnderwaterPalette;
             this.atlasIndex = atlasIndex;
             this.capturedGhostEffectActive = ghostEffectActive;
+            this.capturedGhostColour = ghostColour;
             this.capturedGhostAlpha = ghostAlpha;
             instanceBuffer = ensureBuffer(instanceBuffer, floatCount);
             instanceBuffer.clear();
@@ -677,7 +684,7 @@ public class InstancedPatternRenderer {
             glUniform1i(shader.getIndexedColorTextureLocation(), 1);
             shader.setPaletteLine(-1.0f);
             shader.setTotalPaletteLines((float) RenderContext.getTotalPaletteLines());
-            shader.setGhostEffect(capturedGhostEffectActive, capturedGhostAlpha);
+            shader.setGhostEffect(capturedGhostEffectActive, capturedGhostColour, capturedGhostAlpha);
 
             // Set priority uniforms if using the priority shader
             // Priority is now per-instance via InstanceHighPriority attribute,

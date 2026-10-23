@@ -12,14 +12,16 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
 import java.lang.reflect.Field;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
 class TestOOZPoppingPlatformMultiSidekick {
@@ -108,10 +110,144 @@ class TestOOZPoppingPlatformMultiSidekick {
         assertFalse(extensionLocks(fixture.platform).containsKey(fixture.omitted));
     }
 
+    @Test
+    void repeatedEmptyAndOffCenterWaitsDoNotAdmitUntilEveryRiderIsCentered() {
+        Fixture f = fixture();
+        var players = List.of(f.main, f.first, f.omitted);
+        for (var p : players) when(f.services.objectManager.isRidingObject(p, f.platform)).thenReturn(false);
+        for (int frame = 0; frame < 128; frame++) {
+            f.platform.update(frame, f.main);
+            for (var p : players) assertFalse(p.isObjectControlled());
+            assertEquals(0x300, f.platform.getY());
+        }
+        for (var p : players) when(f.services.objectManager.isRidingObject(p, f.platform)).thenReturn(true);
+        f.main.setCentreX((short) 0x410); // exclusive center-trigger boundary; still standing
+        for (int frame = 128; frame < 256; frame++) {
+            f.platform.update(frame, f.main);
+            for (var p : players) assertFalse(p.isObjectControlled());
+            assertEquals(0x300, f.platform.getY());
+        }
+        f.main.setCentreX((short) 0x400);
+        f.platform.update(256, f.main);
+        for (var p : players) assertTrue(p.isObjectControlled());
+    }
+
+    @Test
+    void nestedUnloadPreservesTheOuterNativeOrderCarrySnapshot() {
+        Fixture f = fixture(spy(player("sonic")), spy(player("tails")), spy(player("knuckles")));
+        f.platform.update(1, f.main);
+        f.services.sidekicks = List.of(f.omitted, f.first);
+        var carried = new ArrayList<TestablePlayableSprite>();
+        AtomicBoolean nested = new AtomicBoolean();
+        for (var p : List.of(f.main, f.first, f.omitted)) {
+            doAnswer(call -> {
+                carried.add(p);
+                if (nested.compareAndSet(false, true)) f.platform.onUnload();
+                return false;
+            }).when(p).getDead();
+        }
+        f.platform.update(2, f.main);
+        assertTrue(nested.get());
+        assertEquals(List.of(f.main, f.omitted, f.first), carried);
+        for (var p : carried) {
+            assertFalse(p.isObjectControlled());
+            assertEquals(f.platform.getY() - 8, p.getCentreY(), "outer snapshot still carries every original rider");
+        }
+    }
+
+    @Test
+    void unloadDuringAdmissionDoesNotDiscardTheStandingSnapshot() {
+        Fixture f = fixture(spy(player("sonic")));
+        AtomicBoolean nested = new AtomicBoolean();
+        doAnswer(call -> {
+            if (nested.compareAndSet(false, true)) f.platform.onUnload();
+            return call.callRealMethod();
+        }).when(f.main).setXSpeed((short) 0);
+        f.platform.update(1, f.main);
+        assertTrue(nested.get());
+        for (var p : List.of(f.main, f.first, f.omitted)) assertTrue(p.isObjectControlled());
+        f.platform.onUnload();
+        for (var p : List.of(f.main, f.first, f.omitted)) assertFalse(p.isObjectControlled());
+    }
+
+    @Test
+    void callbackExceptionsAllowSubsequentAdmissionAndCarry() {
+        Fixture f = fixture(spy(player("sonic")));
+        doThrow(new IllegalStateException("lock callback")).when(f.main).setXSpeed((short) 0);
+        assertThrows(IllegalStateException.class, () -> f.platform.update(1, f.main));
+        doCallRealMethod().when(f.main).setXSpeed((short) 0);
+        f.platform.update(2, f.main);
+        for (var p : List.of(f.main, f.first, f.omitted)) assertTrue(p.isObjectControlled());
+        doThrow(new IllegalStateException("carry callback")).when(f.main).getDead();
+        assertThrows(IllegalStateException.class, () -> f.platform.update(3, f.main));
+        doCallRealMethod().when(f.main).getDead();
+        f.platform.update(4, f.main);
+        for (var p : List.of(f.main, f.first, f.omitted)) assertEquals(f.platform.getY() - 8, p.getCentreY());
+    }
+
+    @Test
+    void largeTeamsAreAdmittedCarriedAndReleasedWithoutTruncation() {
+        var main = player("sonic");
+        var followers = new ArrayList<TestablePlayableSprite>();
+        for (int i = 0; i < 12; i++) followers.add(player("follower-" + i));
+        var platform = new OOZPoppingPlatformObjectInstance(
+                new ObjectSpawn(0x400, 0x300, 0x33, 1, 0, false, 0), "OOZPoppingPform");
+        var manager = mock(ObjectManager.class);
+        when(manager.isRidingObject(main, platform)).thenReturn(true);
+        for (var p : followers) when(manager.isRidingObject(p, platform)).thenReturn(true);
+        platform.setServices(new Services(main, followers, manager));
+        platform.update(1, main);
+        assertTrue(main.isObjectControlled());
+        for (var p : followers) assertTrue(p.isObjectControlled());
+        platform.update(2, main);
+        assertEquals(platform.getY() - 8, main.getCentreY());
+        for (var p : followers) assertEquals(platform.getY() - 8, p.getCentreY());
+        platform.onUnload();
+        assertFalse(main.isObjectControlled());
+        for (var p : followers) assertFalse(p.isObjectControlled());
+    }
+
+    @Test
+    void capturedRiseRestoresAndReplaysEveryUpdateThroughExactApex() {
+        Fixture f = fixture();
+        f.platform.update(1, f.main);
+        var players = List.of(f.main, f.first, f.omitted);
+        var context = context(f.main, f.first, f.omitted);
+        var state = f.platform.captureRewindState(context);
+        var playerStates = players.stream().map(TestablePlayableSprite::captureRewindState).toList();
+        var expected = new ArrayList<List<Integer>>();
+        for (int frame = 2; frame <= 17; frame++) {
+            f.platform.update(frame, f.main);
+            expected.add(observe(f));
+        }
+        for (var p : players) {
+            assertFalse(p.isObjectControlled());
+            assertEquals(-0x1000, p.getYSpeed());
+        }
+        f.platform.restoreRewindState(state, context);
+        for (int i = 0; i < players.size(); i++) players.get(i).restoreRewindState(playerStates.get(i));
+        for (int frame = 2; frame <= 17; frame++) {
+            f.platform.update(frame, f.main);
+            assertEquals(expected.get(frame - 2), observe(f));
+        }
+    }
+
+    private static List<Integer> observe(Fixture f) {
+        return List.of(f.platform.getY(), (int) f.main.getCentreY(), (int) f.first.getCentreY(), (int) f.omitted.getCentreY(),
+                (int) f.main.getYSpeed(), (int) f.first.getYSpeed(), (int) f.omitted.getYSpeed(),
+                f.main.isObjectControlled() ? 1 : 0, f.first.isObjectControlled() ? 1 : 0, f.omitted.isObjectControlled() ? 1 : 0);
+    }
+
     private static Fixture fixture() {
-        TestablePlayableSprite main = player("sonic");
-        TestablePlayableSprite first = player("tails");
-        TestablePlayableSprite omitted = player("knuckles");
+        return fixture(player("sonic"));
+    }
+
+    private static Fixture fixture(TestablePlayableSprite main) {
+        return fixture(main, player("tails"), player("knuckles"));
+    }
+
+    private static Fixture fixture(TestablePlayableSprite main, TestablePlayableSprite first,
+                                   TestablePlayableSprite omitted) {
         OOZPoppingPlatformObjectInstance platform = new OOZPoppingPlatformObjectInstance(
                 new ObjectSpawn(0x400, 0x300, 0x33, 1, 0, false, 0), "OOZPoppingPform");
         ObjectManager objectManager = mock(ObjectManager.class);

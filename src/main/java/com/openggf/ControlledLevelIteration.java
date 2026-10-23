@@ -110,7 +110,7 @@ final class ControlledLevelIteration {
             recording.afterLevelFrame();
             playback.onCurrentGameplayTickExecuted();
             playback.onLevelFrameAdvanced();
-            rewind.recordExternalFrame(GameMode.LEVEL, frameStep, input);
+            rewind.recordExternalFrame(context, GameMode.LEVEL, null, frameStep, input, false);
         }
         finishAudio.run();
         if (controller.consumeTitleRequest()) {

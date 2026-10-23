@@ -566,11 +566,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
 
-    static void markRewindLevelLoadBoundary() {
-        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.markRewindBoundary(RewindBoundary.LEVEL_LOAD);
-        }
+    private com.openggf.game.rewind.RewindBoundaryReporter rewindBoundaryReporter =
+            com.openggf.game.rewind.RewindBoundaryReporter.NO_OP;
+
+    void setRewindBoundaryReporter(com.openggf.game.rewind.RewindBoundaryReporter reporter) {
+        rewindBoundaryReporter = java.util.Objects.requireNonNull(reporter, "reporter");
+    }
+
+    void markRewindLevelLoadBoundary() {
+        rewindBoundaryReporter.markBoundary(RewindBoundary.LEVEL_LOAD);
     }
 
     @Override
@@ -813,7 +817,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         .orElse(HudProfile.stock());
             }
         }
-        activeHudProfile = resolved;
+        activeHudProfile = HudProfileAccess.forRunPolicy(resolved, runPolicy());
         if (hudRenderManager != null) {
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
         }
@@ -3534,6 +3538,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * A fast death restart ({@link com.openggf.game.session.GameplayRunPolicy.DeathRestart#FAST_FROM_START}):
+     * the same full death reload as {@link #restartCurrentLevelAfterDeath()}, but from the act's
+     * start with star-post progress cleared (as a hosted run's retry clears it), and its title
+     * card's presentation omitted at the same boundary a headless load omits it. The reload
+     * still decides whether a card exists, so a zone whose card belongs to a later cutscene
+     * (S3K AIZ1's plane intro) keeps that card and its art admission for the cutscene.
+     */
+    public void restartCurrentLevelFromStartAfterDeath() {
+        checkpointCoordinator.clear();
+        restartCurrentLevelAfterDeath();
+        skipPendingInitialTitleCardPresentation();
+    }
+
+    /**
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
@@ -3714,6 +3732,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** The session's run policy; package-visible so unit tests can supply one without a session. */
     java.util.function.Supplier<com.openggf.game.session.GameplayRunPolicy> runPolicySource = GameplayRunRouting::currentPolicy;
+
+    /** The policy of the run this level belongs to; {@code stock()} for the campaign. */
+    public com.openggf.game.session.GameplayRunPolicy runPolicy() {
+        return runPolicySource.get();
+    }
 
     /**
      * Advance to the next level in progression order.
@@ -4782,10 +4805,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void markSynchronousSeamlessTransitionBoundary() {
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null && gameplayMode.getLevelManager() == this) {
-            gameplayMode.markRewindBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
-        }
+        rewindBoundaryReporter.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
     }
 
     private void applySeamlessTransition(SeamlessLevelTransitionRequest request,

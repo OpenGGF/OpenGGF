@@ -56,10 +56,7 @@ final class DezFinalFireball extends DezFinalBossSprite implements RewindRecreat
         spawnChild(()->new Fragment(parentSlot,getX(),getY(),offsetX,offsetY,subtype));
     }
     private static ObjectInstance slotOccupant(ObjectServices services,int slot) {
-        for(var candidate:services.objectManager().getActiveObjects()) {
-            if(candidate instanceof AbstractObjectInstance object && !object.isDestroyed() && object.getSlotIndex()==slot) return object;
-        }
-        return null;
+        return NativeObjectQueries.liveAtSlot(services.objectManager(), slot, AbstractObjectInstance.class);
     }
 
     /** loc_80A3A: ROM-script flame; subtype 0 follows XY, floor flames follow X only. */

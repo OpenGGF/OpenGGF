@@ -709,20 +709,19 @@ class TestAudioPresentationArchitectureGuard {
     }
 
     @Test
-    void frozenRomDependencyShapeFieldHasNoRuntimeAccesses() {
+    void managerDoesNotDuplicateRomStateOutsideTheBaseSourceTuple() {
         JavaClasses classes = new ClassFileImporter()
                 .importClasses(AudioManager.class);
-        List<String> runtimeAccesses = classes.get(AudioManager.class)
-                .getField("rom")
-                .getAccessesToSelf().stream()
-                .filter(access -> !access.getOrigin().isConstructor())
-                .map(access -> access.getOrigin().getFullName())
+        List<String> managerRomFields = classes.get(AudioManager.class)
+                .getFields().stream()
+                .filter(field -> field.getRawType().getName()
+                        .equals("com.openggf.data.Rom"))
+                .map(field -> field.getFullName())
                 .sorted()
                 .toList();
 
-        assertEquals(List.of(), runtimeAccesses,
-                "the frozen AudioManager -> Rom field is architecture-only; "
-                        + "runtime ROM state must come from BaseAudioSource");
+        assertEquals(List.of(), managerRomFields,
+                "ROM ownership belongs to the typed BaseAudioSource tuple");
     }
 
     private static Map<String, String> representativeSafeSmpsSources() {

@@ -45,7 +45,7 @@ public final class RaceClient implements RaceConnection {
     }
 
     @com.openggf.game.ModApi
-    public sealed interface InboundEvent permits Control, GhostData, Roster, Disconnected {
+    public sealed interface InboundEvent permits Control, GhostData, LobbyGhostData, Roster, Disconnected {
     }
 
     @com.openggf.game.ModApi
@@ -58,6 +58,14 @@ public final class RaceClient implements RaceConnection {
     @com.openggf.game.ModApi
     public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
         public GhostData {
+            Objects.requireNonNull(aggregate, "aggregate");
+        }
+    }
+
+    /** Nearby players' lobby poses between rounds ({@link GhostPackets#TYPE_LOBBY_AGGREGATE}). */
+    @com.openggf.game.ModApi
+    public record LobbyGhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
+        public LobbyGhostData {
             Objects.requireNonNull(aggregate, "aggregate");
         }
     }
@@ -96,6 +104,18 @@ public final class RaceClient implements RaceConnection {
             URI wsUri, PlayerIdentity identity, String displayName,
             String determinismFingerprint, String certificateSha256,
             String expectedServerId) {
+        return connect(wsUri, identity, displayName, "", determinismFingerprint, certificateSha256,
+                expectedServerId);
+    }
+
+    /**
+     * As above, announcing the player's look ({@link com.openggf.net.identity.PlayerAppearance}
+     * canonical wire form) in the signed Hello.
+     */
+    public static CompletableFuture<RaceClient> connect(
+            URI wsUri, PlayerIdentity identity, String displayName, String appearance,
+            String determinismFingerprint, String certificateSha256,
+            String expectedServerId) {
         try { NetworkEndpointPolicy.requireWebSocket(wsUri); }
         catch (IllegalArgumentException invalid) { return CompletableFuture.failedFuture(invalid); }
         if ((certificateSha256 == null) != (expectedServerId == null)
@@ -116,7 +136,7 @@ public final class RaceClient implements RaceConnection {
             return CompletableFuture.failedFuture(invalid);
         }
         ClientHandshake handshake = new ClientHandshake(
-                identity, displayName, determinismFingerprint, expectedServerId,
+                identity, displayName, appearance, determinismFingerprint, expectedServerId,
                 AuthenticationTranscript.Role.ROOM_DIRECT,
                 tls == null ? () -> AuthenticationTranscript.LOCAL_PLAINTEXT : tls::binding);
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
@@ -157,6 +177,9 @@ public final class RaceClient implements RaceConnection {
                         if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
                             client.enqueueInbound(ws, new GhostData(
                                     GhostPackets.decodeAggregate(packet)));
+                        } else if (type == GhostPackets.TYPE_LOBBY_AGGREGATE) {
+                            client.enqueueInbound(ws, new LobbyGhostData(
+                                    GhostPackets.decodeLobbyAggregate(packet)));
                         } else if (type == GhostPackets.TYPE_ROSTER) {
                             client.enqueueInbound(ws, new Roster(GhostPackets.decodeRoster(packet)));
                         } else {

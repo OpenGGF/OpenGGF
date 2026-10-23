@@ -1,14 +1,17 @@
 package com.openggf.tests;
 
+import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.library.freeze.TextFileBasedViolationStore;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.StringReader;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -17,7 +20,9 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
  * Source-text architectural invariants that are intentionally not bytecode
@@ -37,16 +42,18 @@ class TestArchitecturalReviewGuard {
     private static final Path PROJECT_ROOT = resolveProjectRoot();
     private static final Pattern DOCUMENTED_BASELINE_COUNT = Pattern.compile(
             "^- `([^`]+)`: (\\d+)\\s*$", Pattern.MULTILINE);
-    private static final Pattern STORED_RULE_BASELINE_COUNT = Pattern.compile(
-            "frozen baseline: (\\d+) violations?");
     private static final Pattern DOCUMENTED_CYCLE_CLUSTER = Pattern.compile("`cycle:([a-z0-9_-]+)`");
-    private static final Map<String, String> DOCUMENTED_FROZEN_RULE_DESCRIPTIONS = Map.of(
+    private static final Map<String, ArchRule> DOCUMENTED_FROZEN_RULES = Map.of(
             "low_level_layers_do_not_depend_on_runtime_layers",
-            "audio, graphics, and data layers should not depend on runtime gameplay layers",
+            TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers,
             "shared_layers_do_not_depend_on_game_specific_packages",
-            "shared level and game layers should not depend on game-specific packages",
+            TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages,
             "per_game_packages_do_not_cross_depend",
-            "per-game packages should not cross-depend");
+            TestArchUnitRules.per_game_packages_do_not_cross_depend,
+            "runtime_owned_framework_packages_do_not_access_global_service_roots",
+            TestArchUnitRules.runtime_owned_framework_packages_do_not_access_global_service_roots,
+            "runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots",
+            TestArchUnitRules.runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots);
 
     private static Path resolveProjectRoot() {
         String basedir = System.getProperty("project.basedir");
@@ -82,7 +89,93 @@ class TestArchitecturalReviewGuard {
         Map<String, Integer> frozenCounts = frozenBaselineCounts();
 
         assertEquals(frozenCounts, documentedCounts,
-                "docs/architecture/archunit-exceptions.md published baseline counts must match stored.rules");
+                "Published allowances must count store records, not historical description labels or physical lines");
+    }
+
+    @Test
+    void frozenRecordCountsIgnoreHistoricalDescriptionLabels(@TempDir Path storeDirectory) throws IOException {
+        ArchRule rule = noClasses().should().bePublic()
+                .because("historical count; frozen baseline: 97 violations");
+        Properties index = new Properties();
+        index.setProperty(rule.getDescription(), "violations");
+        try (var output = Files.newOutputStream(storeDirectory.resolve("stored.rules"))) {
+            index.store(output, "Accounting fixture with a stale label");
+        }
+        Files.writeString(storeDirectory.resolve("violations"), "one stored record\n");
+
+        assertEquals(Map.of("sample", 1),
+                frozenBaselineCounts(storeDirectory, Map.of("sample", rule)));
+        RuntimeException updateFailure = assertThrows(RuntimeException.class,
+                () -> readOnlyFrozenStore(storeDirectory).save(rule, List.of("replacement")));
+        assertTrue(updateFailure.getMessage().contains("Updating frozen violations is disabled"));
+        assertEquals("one stored record\n", Files.readString(storeDirectory.resolve("violations")));
+    }
+
+    @Test
+    void frozenRecordCountsKeepEscapedMultilineRecordsGrouped(@TempDir Path storeDirectory) throws IOException {
+        ArchRule firstRule = noClasses().should().bePublic().as("sample rule")
+                .because("first reason; frozen baseline: 97 violations");
+        ArchRule secondRule = noClasses().should().bePublic().as("sample rule")
+                .because("different reason; frozen baseline: 83 violations");
+        Properties index = new Properties();
+        index.setProperty(firstRule.getDescription(), "grouped");
+        index.setProperty(secondRule.getDescription(), "single");
+        try (var output = Files.newOutputStream(storeDirectory.resolve("stored.rules"))) {
+            index.store(output, "Accounting fixture with full description keys");
+        }
+        Files.writeString(storeDirectory.resolve("grouped"),
+                "Slice first depends on Slice second:\\\r\n"
+                        + "Field <first.field> has type <second.Type>\\\r\n"
+                        + "Method <first.call()> calls method <second.call()>\r\n"
+                        + "\r\n"
+                        + "Slice second depends on Slice third:\\\r\n"
+                        + "Constructor <second.Type()> calls constructor <third.Type()>");
+        Files.writeString(storeDirectory.resolve("single"), "one stored record\n");
+
+        assertEquals(Map.of("grouped", 2, "single", 1), frozenBaselineCounts(storeDirectory,
+                Map.of("grouped", firstRule, "single", secondRule)));
+        List<String> groupedRecords = readOnlyFrozenStore(storeDirectory).getViolations(firstRule);
+        assertEquals(List.of(
+                "Slice first depends on Slice second:\n"
+                        + "Field <first.field> has type <second.Type>\n"
+                        + "Method <first.call()> calls method <second.call()>",
+                "Slice second depends on Slice third:\n"
+                        + "Constructor <second.Type()> calls constructor <third.Type()>"), groupedRecords);
+        assertEquals(3, sliceMemberDependencyCount(groupedRecords),
+                "Slice headers are grouping metadata, not member dependencies");
+        ArchRule unknownReason = firstRule.as("sample rule").because("unregistered reason");
+        assertThrows(IllegalArgumentException.class,
+                () -> frozenBaselineCounts(storeDirectory, Map.of("missing", unknownReason)),
+                "A shared description prefix must not select a different .because key");
+    }
+
+    @Test
+    void archUnitDocumentedCrossGameMemberCountMatchesGroupedRecords() throws IOException {
+        Matcher documented = Pattern.compile(
+                "\\| `per_game_packages_do_not_cross_depend` \\| (\\d+) member dependencies in")
+                .matcher(readSource("docs/architecture/archunit-exceptions.md"));
+        assertTrue(documented.find(), "Cross-game decay accounting must name member-dependency units");
+        List<String> records = readOnlyFrozenStore(frozenStoreDirectory())
+                .getViolations(TestArchUnitRules.per_game_packages_do_not_cross_depend);
+
+        assertEquals(sliceMemberDependencyCount(records), Long.parseLong(documented.group(1)),
+                "Cross-game member counts must exclude slice headers and count every stored detail");
+    }
+
+    @Test
+    void archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances()
+            throws IOException, ReflectiveOperationException {
+        Matcher documented = Pattern.compile(
+                "`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: (\\d+) allowed\\s+"
+                        + "source/target top-level package pairs")
+                .matcher(readSource("docs/architecture/archunit-exceptions.md"));
+        assertTrue(documented.find(), "Publish package-pair permissions separately from measured live edges");
+        var field = TestArchUnitRules.class.getDeclaredField("CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES");
+        field.setAccessible(true);
+        Set<?> allowedPairs = (Set<?>) field.get(null);
+
+        assertEquals(allowedPairs.size(), Integer.parseInt(documented.group(1)),
+                "Document the executable permission set without evaluating or pruning live dependencies");
     }
 
     @Test
@@ -92,8 +185,10 @@ class TestArchitecturalReviewGuard {
         String storedRules = readSource("src/test/resources/archunit/frozen/stored.rules");
         Set<String> documentedClusters = documentedCycleClusters(docs);
 
-        assertTrue(docs.contains("`package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster"),
-                "Cycle ratchet docs should publish the current cluster count");
+        int cycleRecords = readOnlyFrozenStore(frozenStoreDirectory())
+                .getViolations(TestArchUnitRules.package_slices_are_free_of_cycles).size();
+        assertTrue(docs.contains("`package_slices_are_free_of_cycles`: " + cycleRecords + " committed cycle records"),
+                "Cycle accounting must reflect stored records after explicit pair ignores");
         assertTrue(docs.contains("`cycle:core-runtime`"),
                 "Cycle ratchet docs should name the current core runtime cluster");
         assertFalse(archUnitRules.contains(".ignoreDependency(inCoreRuntimeCycleCluster(), inCoreRuntimeCycleCluster())"),
@@ -132,38 +227,49 @@ class TestArchitecturalReviewGuard {
         Map<String, Integer> counts = new LinkedHashMap<>();
         while (matcher.find()) {
             String ruleName = matcher.group(1);
-            if (DOCUMENTED_FROZEN_RULE_DESCRIPTIONS.containsKey(ruleName)) {
+            if (DOCUMENTED_FROZEN_RULES.containsKey(ruleName)) {
                 counts.put(ruleName, Integer.parseInt(matcher.group(2)));
             }
         }
         return counts;
     }
 
-    private static Map<String, Integer> frozenBaselineCounts() throws IOException {
-        Properties storedRules = new Properties();
-        storedRules.load(new StringReader(readSource("src/test/resources/archunit/frozen/stored.rules")));
+    private static Map<String, Integer> frozenBaselineCounts() {
+        return frozenBaselineCounts(frozenStoreDirectory(), DOCUMENTED_FROZEN_RULES);
+    }
 
+    private static Map<String, Integer> frozenBaselineCounts(Path storeDirectory, Map<String, ArchRule> rules) {
+        TextFileBasedViolationStore store = readOnlyFrozenStore(storeDirectory);
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (Map.Entry<String, String> documentedRule : DOCUMENTED_FROZEN_RULE_DESCRIPTIONS.entrySet()) {
-            String ruleName = documentedRule.getKey();
-            String ruleDescription = documentedRule.getValue();
-            counts.put(ruleName, storedBaselineCount(storedRules, ruleDescription));
+        for (var rule : rules.entrySet()) {
+            counts.put(rule.getKey(), store.getViolations(rule.getValue()).size());
         }
         return counts;
     }
 
-    private static int storedBaselineCount(Properties storedRules, String ruleDescription) {
-        for (Object keyObject : storedRules.keySet()) {
-            String storedRule = keyObject.toString();
-            if (!storedRule.startsWith(ruleDescription)) {
-                continue;
-            }
-            Matcher matcher = STORED_RULE_BASELINE_COUNT.matcher(storedRule);
-            if (matcher.find()) {
-                return Integer.parseInt(matcher.group(1));
-            }
+    private static Path frozenStoreDirectory() {
+        return PROJECT_ROOT.resolve("src/test/resources/archunit/frozen");
+    }
+
+    private static TextFileBasedViolationStore readOnlyFrozenStore(Path storeDirectory) {
+        Properties configuration = new Properties();
+        configuration.setProperty("default.path", storeDirectory.toString());
+        configuration.setProperty("default.allowStoreCreation", "false");
+        configuration.setProperty("default.allowStoreUpdate", "false");
+        TextFileBasedViolationStore store = new TextFileBasedViolationStore();
+        store.initialize(configuration);
+        return store;
+    }
+
+    private static long sliceMemberDependencyCount(List<String> records) {
+        long count = 0;
+        for (String record : records) {
+            List<String> lines = record.lines().toList();
+            assertTrue(!lines.isEmpty() && lines.getFirst().matches("Slice .+ depends on Slice .+:"),
+                    "Expected an ArchUnit slice record with a dependency-group header");
+            count += lines.stream().skip(1).filter(line -> !line.isBlank()).count();
         }
-        throw new AssertionError("No frozen baseline count found for stored rule: " + ruleDescription);
+        return count;
     }
 
     private static Set<String> documentedCycleClusters(String docs) {

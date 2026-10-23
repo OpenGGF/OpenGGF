@@ -1,6 +1,7 @@
 package com.openggf.mods.run;
 
 import com.openggf.game.ModApi;
+import com.openggf.net.identity.PlayerAppearance;
 
 import java.util.Objects;
 
@@ -14,14 +15,22 @@ import java.util.Objects;
  * @param pose          where and how to draw it
  * @param nameplate     optional label drawn above the ghost, or null
  * @param opacity       0 (invisible) to 1 (the engine's normal ghost translucency)
+ * @param appearance    the player's colours; {@link PlayerAppearance#STOCK} draws the usual
+ *                      desaturated ghost, any other look draws it in that palette
  */
 @ModApi
 public record GhostPose(String slotId, String characterCode, PlayerPose pose, String nameplate,
-                        float opacity) {
+                        float opacity, PlayerAppearance appearance) {
     public GhostPose {
         Objects.requireNonNull(slotId, "slotId");
         Objects.requireNonNull(characterCode, "characterCode");
         Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(appearance, "appearance");
         opacity = Math.clamp(opacity, 0f, 1f);
+    }
+
+    /** A stock-coloured ghost. */
+    public GhostPose(String slotId, String characterCode, PlayerPose pose, String nameplate, float opacity) {
+        this(slotId, characterCode, pose, nameplate, opacity, PlayerAppearance.STOCK);
     }
 }

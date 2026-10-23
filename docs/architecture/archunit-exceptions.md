@@ -6,9 +6,9 @@ bridges or debt that should not expand while the project migrates toward clearer
 ownership boundaries.
 
 Freeze baselines live under `src/test/resources/archunit/frozen`. The store is
-configured by `src/test/resources/archunit.properties` with store creation
-disabled after baseline generation, so adding a new frozen rule requires an
-explicit baseline update.
+configured by `src/test/resources/archunit.properties` with store creation and
+updates disabled during normal runs. Adding or changing committed allowances
+requires an explicit, reviewed store update.
 
 ## Policy
 
@@ -22,37 +22,63 @@ explicit baseline update.
 
 ## Decay Targets
 
-Targets are observable (tied to specific migrations), not calendar-bound. When
-a target is hit, refresh the baseline in a dedicated commit and pick the next
-target rather than walking back the assertion.
+Targets are tied to specific migrations, not calendar-bound. Counts below are
+committed allowances read from the freeze store, not newly measured live
+violations. When a target is hit, review the resolved records in a dedicated
+baseline-update commit and pick the next target rather than weakening the rule.
 
-| Rule | Baseline | Target | Trigger |
-|------|----------|--------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| Rule | Committed allowance and unit | Target in that unit | Trigger |
+|------|------------------------------|---------------------|---------|
+| `low_level_layers_do_not_depend_on_runtime_layers` | 187 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
+| `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=10 member dependencies | Initial <=20 target reached by shared preview/validation extraction; next extract the four menu-animator members while preserving ten explicit host-donation members |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
 declares the read and the per-game profiles perform it through
 `com.openggf.game.audio.SegaPcmRomReader`, which lives in the runtime layer and
 may depend on `com.openggf.data`. The rule description keeps its original
-baseline wording because the freeze store is keyed by that text.
-| `shared_layers_do_not_depend_on_game_specific_packages` | 9 | 0 | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
+baseline wording because the freeze store is keyed by that full text.
+
+2026-10-22: private audio-source typing replaces the null `AudioManager.rom`
+sentinel allowance with the actual `BaseAudioSource` ROM field, constructor
+parameter and accessor return type, plus the private same-source helper's ROM
+parameter. This reviewed identity migration changes 184 committed records to
+187; it does not demonstrate semantic debt growth or removal. The immutable
+tuple remains the single volatile publication, and the public
+`GameAudioProfile.loadSegaPcm(Object)` interface and game-owned ROM reads are
+unchanged.
+
+The historical cross-game count of 37 counted physical lines: 3 slice headers
+plus 34 member dependencies. The initial target used <=20 **member dependencies**.
+Shared selected-slot conversion, its result type, and common payload validation
+moved to `game.dataselect` on 2026-10-22, removing 20 member dependencies and
+the entire S2-to-S1 group.
+The remaining allowance is 14 members in 2 groups. Neither physical lines nor
+grouped records can be substituted for member dependencies when evaluating
+this migration. The next target is <=10 members, closing the four shared
+menu-animator dependencies while preserving explicit host-ROM donation.
 
 ## Source Ratchets
 
 Some review findings are source-shape constraints rather than ArchUnit bytecode
-rules. These live in `TestArchitecturalSourceGuard` and use shrink-only budgets:
-the current count is the maximum, and reductions do not require a baseline
-refresh unless this document is updated to publish a lower target.
+rules. These live in `TestArchitecturalSourceGuard`. The figures below are
+executable maximum budgets, not measurements of the current source. A passing
+guard proves the source stays within its cap; reductions do not automatically
+change these constants. Lower a cap explicitly when publishing a tighter budget.
 
-| Rule | Baseline | Target | Trigger |
+| Rule | Enforced cap (not measured usage) | Target | Trigger |
 |------|----------|--------|---------|
 | Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 3, `GameLoop.java`: 15 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 180, `Engine.display`: 174, `GameLoop.stepInternal`: 207, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 101, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 91, `GameLoop.enterBonusStage`: 86 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
-| Object lifecycle raw calls in production object packages | `setDestroyed(true)`: 585, `addDynamicObject(...)`: 136 | 0 | New lifecycle work routes through `ObjectLifetimeOps`, `spawnChild(...)`, `spawnFreeChild(...)`, or `ObjectManager.createDynamicObject(...)`; shared lifecycle owner/wrapper classes remain exempt |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 181, `Engine.display`: 228, `GameLoop.stepInternal`: 235, `GameLoop.doExitBonusStage`: 142, `GameLoop.updateSpecialStageInput`: 105, `GameLoop.loadEndingDemoZone`: 95, `GameLoop.enterTitleCardFromResults`: 66, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
+
+The former aggregate lifecycle figures (`setDestroyed(true)`: 585,
+`addDynamicObject(...)`: 136) were historical source inventories, not executable
+caps. Current aggregate usage is unmeasured here; the migrated-file guard does
+not enforce a global raw-call total.
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a
@@ -122,29 +148,50 @@ New S3K gameplay object, event, palette-cycle, boss, or badnik palette writes
 should not be added to these exceptions. Route them through ownership claims so
 normal and underwater surfaces compose consistently.
 
-## Published Baseline Counts
+## Published Frozen Record Counts
 
-These counts are mechanically checked against `src/test/resources/archunit/frozen/stored.rules`
-by `TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore`.
-When a frozen baseline shrinks or grows intentionally, update the matching count
-in the same commit.
+`TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore`
+checks these committed allowances through ArchUnit 1.4.2's
+`TextFileBasedViolationStore.getViolations`. A record can span multiple escaped
+physical lines. The lookup uses each rule's complete description, including its
+`.because(...)` text. Historical `frozen baseline: N` labels remain part of those
+keys; they are not the accounting source. These counts do not evaluate the live
+production dependency graph. Update the matching documentation when committed
+records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 209
+- `low_level_layers_do_not_depend_on_runtime_layers`: 187
 - `shared_layers_do_not_depend_on_game_specific_packages`: 9
-- `per_game_packages_do_not_cross_depend`: 37
+- `per_game_packages_do_not_cross_depend`: 2
+- `runtime_owned_framework_packages_do_not_access_global_service_roots`: 1
+- `runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`: 2
+
+For cross-game slices, the same stored records contain **14 member
+dependencies** (16 physical lines including headers); the decay target above
+uses member dependencies. Low-level, framework-root, and registry-construction
+labels still say 209, 13, and 4 respectively. Correcting their published counts
+to 184, 11, and 2 records neither removed an allowance nor proved a live violation
+was resolved by that accounting change. The later private audio-source identity
+migration above accounts for the current low-level allowance of 187 records.
+The installed-owner rewind change removes 10 framework-root records, leaving
+the 1 record listed above.
 
 ## Package Cycle Ratchets
 
-`package_slices_are_free_of_cycles`: 1 frozen top-level package cycle cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 160 accepted
-top-level dependency edge pairs inside or adjacent to that cluster.
+`package_slices_are_free_of_cycles`: 0 committed cycle records after the
+explicit dependency-pair ignores below. This does not prove the full dependency
+graph is acyclic; the rule description still names one historical core-runtime cluster.
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 160 allowed
+source/target top-level package pairs inside or adjacent to that cluster.
+`TestArchitecturalReviewGuard` checks this permission count against the executable
+set. It is not a newly measured count of live edges, and unused permissions are
+not pruned by this accounting check.
 
 - `cycle:core-runtime`: 16 top-level slices (`audio`, `camera`, `control`,
   `data`, `debug`, `editor`, `game`, `graphics`, `level`, `physics`, `sprites`,
   `testmode`, `timer`, `tools`, `trace`, `util`). Owner package: shared runtime
   architecture. Intended direction: split runtime service roots and tooling/debug
-  edges out of gameplay/data/graphics ownership loops. Current debt is ratcheted
-  as explicit source/target top-level dependency edges in
+  edges out of gameplay/data/graphics ownership loops. Allowed directions are
+  explicit source/target top-level package pairs in
   `CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES`; new internal or adjacent edge pairs
   are not covered by a cluster-wide ignore. First decay target: remove at least
   one edge from that set when its dependency direction is eliminated.
@@ -253,19 +300,22 @@ Target direction:
 
 Rule: `per-game packages should not cross-depend`
 
-Frozen violations fall into these categories:
+The 2 committed grouped records contain 14 member dependencies across these
+categories:
 
-- S2 data-select preview loading reuses S1 preview loader and common payload
-  validator code.
-- S3K data-select and host-preview presentation reuses S1/S2 preview loaders,
-  cached preview managers, S1 special-stage palette extraction, and S2 selected
-  slot previews.
+- S3K host-preview presentation uses the S1/S2 cached preview managers and S1
+  special-stage palette extraction for explicit host ROM donation.
 - S3K level select reuses the S2 menu background animator.
+
+The selected-slot converter, `LoadedPreview` result, and common payload validator
+now belong to `com.openggf.game.dataselect`. Both host paths consume that converter
+directly; the pass-through S2 preview loader was deleted. This removes 7 S2-to-S1,
+11 S3K-to-S1, and 2 S3K-to-S2 member dependencies without adding replacement
+cross-game allowances. ROM title previews remain outside this migration.
 
 Target direction:
 
-- Extract shared data-select preview loading, payload validation, and menu
-  animation helpers out of per-game packages.
+- Extract the shared menu animation helper out of the remaining per-game path.
 - Keep cross-game donation explicit when reuse is intentional and ROM-accurate
   host presentation depends on older-game assets.
 
@@ -273,15 +323,12 @@ Target direction:
 
 Rule: `runtime-owned framework packages should not access GameServices, SessionManager, or EngineServices directly`
 
-Frozen violations fall into these categories:
-
-- `ScriptFramesApplyStrategy` resolves `GameServices.graphics()` at apply time
-  as a bridge for existing animated tile script paths.
-- `LiveRewindManager` reaches `GameServices.audio()`,
-  `GameServices.fadeOrNull()`, and `SessionManager.getCurrentGameplayMode()`
-  while the live rewind presentation path is still process-service driven.
-- `LiveRewindStepper` reaches `GameServices` optional accessors for the
-  current sprites, level, and camera during replay stepping.
+The 1 committed record is `ScriptFramesApplyStrategy` resolving
+`GameServices.graphics()` at apply time as a bridge for existing animated tile
+script paths. Live rewind now binds its installed gameplay owner, registered
+special-stage provider and fade explicitly, with engine-owned audio injected.
+The 10 former manager/stepper root-access records were removed rather than
+relocated.
 
 Target direction:
 
@@ -294,13 +341,14 @@ Target direction:
 
 Rule: `runtime-owned registries and controllers should only be constructed by runtime composition roots`
 
-Frozen violations:
+The 2 committed records are:
 
 - `Sonic2PaletteCycler` and `Sonic3kPaletteCycler` create fallback
   `PaletteOwnershipRegistry` instances for standalone/test paths when no
   runtime registry is supplied.
-- `DefaultObjectServices` creates fallback `ZoneRuntimeRegistry` and
-  `ZoneLayoutMutationPipeline` instances in its legacy constructor.
+
+The historical `DefaultObjectServices` fallback-constructor allowances are no
+longer present in this store. This is a store inventory, not a new live check.
 
 Target direction:
 
@@ -347,7 +395,14 @@ annotations, or additional tooling classes.
 
 When a frozen violation is removed:
 
-1. Run `mvn test "-Dtest=TestArchUnitRules,TestArchUnitTestRules"`.
-2. Let ArchUnit remove obsolete lines from the relevant freeze file.
-3. Review the diff to confirm only resolved violations disappeared.
-4. Update this document if the exception category or target direction changed.
+1. Run the affected rules through the queued Maven wrapper with normal store
+   updates disabled, for example
+   `python3 tools/testing/maven_queue.py -Dmse=off -Pguards "-Dtest=TestArchUnitRules,TestArchUnitTestRules,TestArchitecturalReviewGuard" test -B`.
+2. If a baseline update is separately authorized, remove only demonstrated
+   resolved records in that reviewed change; do not routinely refreeze.
+3. Review full records, including multiline groups, and preserve complete rule
+   description keys. Keep `freeze.store.default.allowStoreUpdate=false` for
+   normal runs.
+4. Update record counts, member-dependency counts, and affected exception prose
+   in this document. Keep committed allowances separate from measured live
+   violations and package-pair permissions.

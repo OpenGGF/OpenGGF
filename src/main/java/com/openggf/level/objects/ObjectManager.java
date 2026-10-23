@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.game.ModApi;
 import com.openggf.game.session.EngineServices;
-import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
@@ -21,8 +20,6 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.GLCommandGroup;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -90,7 +87,7 @@ public class ObjectManager {
     // Cached spawn-order comparators (built lazily; placement is constructor-set).
     private Comparator<ObjectSpawn> forwardSpawnOrder;
     private Comparator<ObjectSpawn> backwardSpawnOrder;
-    private final List<GLCommand> renderCommands = new ArrayList<>();
+    private final ObjectRenderParts objectRenderParts;
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
@@ -168,6 +165,7 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
     private final ObjectCollisionResponseList collisionResponseList = new ObjectCollisionResponseList();
     private boolean activeObjectsCacheDirty = true;
+    private final NativeObjectIndex nativeObjectIndex = new NativeObjectIndex();
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final ObjectManagerRuntimeState runtimeState = new ObjectManagerRuntimeState();
@@ -257,6 +255,7 @@ public class ObjectManager {
         this.objectServices = objectServices;
         this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
+        this.objectRenderParts = new ObjectRenderParts(objectCallbacks, objectServices, graphicsManager);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.windowingStrategy = registry != null
                 ? registry.objectWindowingStrategy()
@@ -455,7 +454,8 @@ public class ObjectManager {
         slotRetirement.clearOwners();
         Arrays.fill(playerCentreAtSlotStartValid, false);
         cachedActiveObjects.clear();
-        activeObjectsCacheDirty = true;
+        nativeObjectIndex.clear();
+        markActiveObjectCachesDirty();
         bucketsDirty = true;
         frameCounter = 0;
         dynamicObjectIdCounter = 0;
@@ -553,7 +553,8 @@ public class ObjectManager {
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
         clearActiveObjects();
         cachedActiveObjects.clear();
-        activeObjectsCacheDirty = true;
+        nativeObjectIndex.clear();
+        markActiveObjectCachesDirty();
         bucketsDirty = true;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.replaceSpawnsAndReset(newSpawns);
@@ -1114,7 +1115,7 @@ public class ObjectManager {
             deferredDynamicExecThisFrame.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
             }
         }
 
@@ -1313,7 +1314,7 @@ public class ObjectManager {
             processedInExecLoopScratch.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
             }
         }
     }
@@ -1418,7 +1419,7 @@ public class ObjectManager {
             }
             registerActiveObject(spawn, instance);
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
             return true;
         } else {
             releaseSlot(preSlot);
@@ -1561,20 +1562,7 @@ public class ObjectManager {
 
         enableVerticalWrapIfNeeded();
         try {
-            renderCommands.clear();
-            for (ObjectRenderParts.RenderEntry entry : entries) {
-                if (callback != null) {
-                    callback.beforeDraw(entry.instance(), entry.high());
-                }
-                objectCallbacks.run(entry.instance(),
-                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices));
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
+            objectRenderParts.drawBucket(entries, bucket, callback);
         } finally {
             graphicsManager.disableVerticalWrapAdjust();
         }
@@ -1607,12 +1595,6 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int idx = RenderPriority.clamp(bucket) - RenderPriority.MIN;
 
-        // The BatchedPatternRenderer uses a single tile-occlusion uniform for
-        // the entire batch — it cannot vary per-instance. The helper flushes
-        // at every mask transition while retaining SST slot order.
-        // (The InstancedPatternRenderer bakes priority per-instance and doesn't
-        // need the flush, but it's harmless — empty flushes are no-ops.)
-
         drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
     }
 
@@ -1624,28 +1606,7 @@ public class ObjectManager {
 
         enableVerticalWrapIfNeeded();
         try {
-            renderCommands.clear();
-            // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
-            // The cached lists use reverse order for ordinary painter drawing.
-            boolean collectingSat = gfx.isSpriteSatCollectionActive();
-            for (int i = 0; i < entries.size(); i++) {
-                ObjectRenderParts.RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
-                objectCallbacks.run(entry.instance(), () -> {
-                    int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
-                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        gfx.flushPatternBatch();
-                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        gfx.beginPatternBatch();
-                    }
-                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
-                });
-            }
-
-            if (!renderCommands.isEmpty()) {
-                graphicsManager.enqueueDebugLineState();
-                graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-                graphicsManager.enqueueDefaultShaderState();
-            }
+            objectRenderParts.drawBucketWithPriority(entries, bucket, gfx);
         } finally {
             graphicsManager.disableVerticalWrapAdjust();
         }
@@ -1784,6 +1745,20 @@ public class ObjectManager {
                 cachedActiveObjects, cachedSolidProviderObjects, cachedTouchResponseObjects);
     }
 
+    private void markActiveObjectCachesDirty() {
+        activeObjectsCacheDirty = true;
+        nativeObjectIndex.invalidate();
+    }
+
+    void invalidateNativeObjectIndex() { nativeObjectIndex.invalidate(); }
+
+    NativeObjectIndex nativeObjectIndex() {
+        // Native queries need a stable raw snapshot, not the general slot-sorted
+        // rendering/collision caches or callbacks on unrelated object types.
+        nativeObjectIndex.prepare(activeObjects.values(), dynamicObjects, objectCallbacks);
+        return nativeObjectIndex;
+    }
+
     public int getFrameCounter() {
         return frameCounter;
     }
@@ -1906,7 +1881,10 @@ public class ObjectManager {
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
         return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, dynamicOwnership.nonRewindableObjects(), execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
     }
-    void markRewindAdoptionDirty() { bucketsDirty = activeObjectsCacheDirty = true; }
+    void markRewindAdoptionDirty() {
+        bucketsDirty = true;
+        markActiveObjectCachesDirty();
+    }
 
     /**
      * Constructs an object in a ROM-selected dynamic SST slot.
@@ -1981,12 +1959,14 @@ public class ObjectManager {
         }
         objectCallbacks.runAndUnregister(object, object::onUnload);
         bucketsDirty = true;
-        activeObjectsCacheDirty = true;
+        markActiveObjectCachesDirty();
     }
 
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
+            // Removal callbacks and later slots may query before the pass tail.
+            markActiveObjectCachesDirty();
             // Every delete routine zeroes the whole SST slot, status(a0) latch
             // bits included -- S3K Delete_Current_Sprite/Delete_Referenced_Sprite
             // (docs/skdisasm/sonic3k.asm:36148-36165), S2 DeleteObject
@@ -2118,7 +2098,8 @@ public class ObjectManager {
         registerInheritedCallbackOwner(object);
         if (objectCallbacks.call(object,
                 () -> dynamicOwnership.addNonRewindable(object, objectServices, dynamicObjects))) {
-            bucketsDirty = activeObjectsCacheDirty = true;
+            bucketsDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -2137,7 +2118,8 @@ public class ObjectManager {
                 () -> dynamicOwnership.addRewindable(object, objectServices, dynamicObjects,
                         deferredDynamicExecThisFrame, updating,
                         candidate -> assignRewindObjectId(candidate, candidate.getSpawn())))) {
-            bucketsDirty = activeObjectsCacheDirty = true;
+            bucketsDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -2216,7 +2198,7 @@ public class ObjectManager {
             }
         }
         bucketsDirty = true;
-        activeObjectsCacheDirty = true;
+        markActiveObjectCachesDirty();
     }
 
     /**
@@ -2304,7 +2286,7 @@ public class ObjectManager {
                 object, slotAllocator, slotLayout, execOrder,
                 updating, slotsFreedDuringObjectPass)) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -2368,7 +2350,7 @@ public class ObjectManager {
             }
         }
         bucketsDirty = true;
-        activeObjectsCacheDirty = true;
+        markActiveObjectCachesDirty();
     }
 
     /**
@@ -2387,7 +2369,7 @@ public class ObjectManager {
         assignRewindObjectId(ring, ring.getSpawn());
         dynamicObjects.add(ring);
         bucketsDirty = true;
-        activeObjectsCacheDirty = true;
+        markActiveObjectCachesDirty();
     }
 
     /**
@@ -2650,7 +2632,7 @@ public class ObjectManager {
                     }
                 }
                 bucketsDirty = true;
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
                 return;
             }
         }
@@ -2891,7 +2873,7 @@ public class ObjectManager {
                 activeObjects, instanceToSpawn, dynamicObjects);
         if (transferred) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
         return transferred;
     }
@@ -2910,7 +2892,7 @@ public class ObjectManager {
         if (placement.releaseSpawnForRespawn(transformedInstance, spawn,
                 activeObjects, instanceToSpawn, dynamicObjects)) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -3221,7 +3203,7 @@ public class ObjectManager {
 
         if (changed) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
         */
     }
@@ -3258,7 +3240,7 @@ public class ObjectManager {
         }
         if (changed) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -3545,7 +3527,7 @@ public class ObjectManager {
             twoAxisCameraYCoarse = currentYCoarse;
             if (changed) {
                 bucketsDirty = true;
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
             }
             return;
         }
@@ -3633,7 +3615,7 @@ public class ObjectManager {
 
         if (changed) {
             bucketsDirty = true;
-            activeObjectsCacheDirty = true;
+            markActiveObjectCachesDirty();
         }
     }
 
@@ -3779,6 +3761,7 @@ public class ObjectManager {
     private void registerActiveObject(ObjectSpawn spawn, ObjectInstance instance) {
         objectCallbacks.register(instance, spawn);
         activeObjects.put(spawn, instance);
+        markActiveObjectCachesDirty();
         instanceToSpawn.put(instance, spawn);
         assignRewindObjectId(instance, spawn);
     }
@@ -3786,6 +3769,7 @@ public class ObjectManager {
     private void removeActiveObject(ObjectSpawn spawn) {
         ObjectInstance removed = activeObjects.remove(spawn);
         if (removed != null) {
+            markActiveObjectCachesDirty();
             objectCallbacks.unregister(removed);
             instanceToSpawn.remove(removed);
             // ROM parity: an object's per-player pushing bits live in its SST
@@ -3820,6 +3804,7 @@ public class ObjectManager {
     private void clearActiveObjects() {
         objectCallbacks.unregisterAll(activeObjects.values());
         activeObjects.clear();
+        markActiveObjectCachesDirty();
         instanceToSpawn.clear();
     }
 
@@ -4130,7 +4115,7 @@ public class ObjectManager {
                 currentExecSlot = s.currentExecSlot();
                 slotAllocator.restorePeakSlotCount(s.peakSlotCount());
                 bucketsDirty = s.bucketsDirty();
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
                 // Restore the object-id counter so any new objects spawned after restore
                 // (in replay or fresh gameplay) do not alias the restored objects' ids.
                 dynamicObjectIdCounter = s.dynamicObjectIdCounter();
@@ -4324,7 +4309,7 @@ public class ObjectManager {
                     if (entry.rewindableAuxiliary()) {
                         dynamicOwnership.markRestoredRewindable(aoi);
                     }
-                    activeObjectsCacheDirty = true;
+                    markActiveObjectCachesDirty();
                     int execIdx = execIndexForSlot(objectCallbacks.call(aoi, aoi::getSlotIndex));
                     if (execIdx >= 0 && execIdx < execOrder.length) {
                         execOrder[execIdx] = aoi;
@@ -4433,7 +4418,7 @@ public class ObjectManager {
                 dynamicOwnership.restoreCapturedOrder(dynamicObjects, rewindObjectIds::get);
 
                 bucketsDirty = true;
-                activeObjectsCacheDirty = true;
+                markActiveObjectCachesDirty();
             }
         };
     }

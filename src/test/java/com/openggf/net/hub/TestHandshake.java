@@ -39,7 +39,7 @@ class TestHandshake {
 
         HostHandshake wrongVersion = new HostHandshake("srv", FP);
         assertInstanceOf(HostHandshake.Reject.class, wrongVersion.onHello(
-                new ControlMessage.Hello(Protocol.VERSION + 1, hello.pubKeyBase64(), "x", FP)));
+                new ControlMessage.Hello(Protocol.VERSION + 1, hello.pubKeyBase64(), "x", FP, "")));
 
         HostHandshake wrongRom = new HostHandshake("srv", "0.6:deadbeef");
         assertInstanceOf(HostHandshake.Reject.class, wrongRom.onHello(hello));

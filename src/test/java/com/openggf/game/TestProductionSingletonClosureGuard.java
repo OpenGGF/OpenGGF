@@ -224,6 +224,9 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/tools/HeadlessGameBoot.java",
             "com/openggf/tools/TraceCaptureTool.java",
             "com/openggf/tools/TraceBenchmarkTool.java",
+            // The display-free Time Attack capture driver boots a standalone
+            // configuration over the same process owners.
+            "com/openggf/tools/TimeAttackVideoCaptureTool.java",
             // next's FBZ visual-capture harness is the same kind of headless
             // composition root as the trace CLI tools above.
             "com/openggf/tools/fbzvisual/HiddenGlCaptureSession.java"

@@ -3,6 +3,7 @@ package com.openggf.net.hub;
 import com.openggf.net.ghost.GhostFrame;
 import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.ProtocolViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -123,6 +124,24 @@ class TestGhostHub {
     }
 
     @Test
+    void directRoomRelaysFinishedSendersBufferedTailThenOnlyRunningSenders() {
+        hub.onBinary(0, GhostPackets.encodeFrames(1, 0, frames(100, 3)));
+        hub.onAttemptReset(0, 1);
+        hub.onAttemptFinished(0, 1);
+        hub.onBinary(1, GhostPackets.encodeFrames(1, 0, frames(500, 3)));
+        hub.tick();
+        assertEquals(List.of(0, 1), GhostPackets.decodeAggregate(c.binary.get(0)).entries()
+                .stream().map(GhostPackets.AggregateEntry::playerSlot).toList());
+
+        now += 50;
+        hub.onBinary(1, GhostPackets.encodeFrames(1, 3, frames(506, 3)));
+        hub.tick();
+        assertEquals(List.of(1), GhostPackets.decodeAggregate(c.binary.get(1)).entries()
+                .stream().map(GhostPackets.AggregateEntry::playerSlot).toList());
+        assertEquals(1, b.binary.size(), "the silent sender has nothing more to relay");
+    }
+
+    @Test
     void perEntryFrameCapLeavesRemainderPending() {
         for (int i = 0; i < 15; i++) {
             hub.onBinary(0,
@@ -139,5 +158,29 @@ class TestGhostHub {
                 second.entries().get(0).frameCount());
         assertEquals(GhostPackets.MAX_AGGREGATE_FRAMES_PER_ENTRY,
                 second.entries().get(0).startFrameIndex());
+    }
+
+    @Test
+    void transportProtocolViolationPropagatesWithoutSplittingOrRetryingSend() {
+        ProtocolViolationException failure = new ProtocolViolationException("aggregate exceeds binary cap");
+        int[] sends = {0};
+        FakeHubConnection recipient = new FakeHubConnection() {
+            @Override public void sendBinary(byte[] packet) {
+                sends[0]++;
+                throw failure;
+            }
+        };
+        GhostHub subject = new GhostHub(() -> now, TrackValidationProfileSource.none(),
+                (slot, fingerprint, kind, detail) -> { });
+        subject.addPlayer(0, "sender-a", new FakeHubConnection());
+        subject.addPlayer(1, "sender-b", new FakeHubConnection());
+        subject.addPlayer(2, "recipient", recipient);
+        subject.onAttemptStart(0, 1);
+        subject.onAttemptStart(1, 1);
+        subject.onBinary(0, GhostPackets.encodeFrames(1, 0, frames(100, 3)));
+        subject.onBinary(1, GhostPackets.encodeFrames(1, 0, frames(500, 3)));
+
+        assertSame(failure, assertThrows(ProtocolViolationException.class, subject::tick));
+        assertEquals(1, sends[0], "a transport failure must not resubmit aggregate fragments");
     }
 }

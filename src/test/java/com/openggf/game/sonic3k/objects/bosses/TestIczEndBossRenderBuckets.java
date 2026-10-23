@@ -49,6 +49,54 @@ class TestIczEndBossRenderBuckets {
     }
 
     @Test
+    void nativeEffectOrderAndStablePublicOrderSurviveGroupedExpiry() throws Exception {
+        var boss = new IczEndBossInstance(spawn());
+        boss.setServices(new StubObjectServices());
+        emitFrostPuffs(boss);
+        var childrenField = IczEndBossInstance.class.getDeclaredField("effectChildren");
+        childrenField.setAccessible(true);
+        @SuppressWarnings("unchecked") var children = (List<Object>) childrenField.get(boss);
+        var original = List.copyOf(children);
+        assertTrue(children.size() >= 3);
+        var manager = mock(ObjectManager.class);
+        boss.setServices(new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+        });
+        // Reverse execution order relative to the public append order. Every
+        // child except index 1 expires in this pass, releasing slots immediately.
+        var released = new ArrayList<Integer>();
+        org.mockito.Mockito.doAnswer(call -> { released.add(call.getArgument(0)); return null; })
+                .when(manager).releaseDynamicSlot(org.mockito.ArgumentMatchers.anyInt());
+        for (int i = 0; i < children.size(); i++) {
+            var child = children.get(i);
+            var slot = child.getClass().getDeclaredField("nativeSlot"); slot.setAccessible(true);
+            slot.setInt(child, 70 - i);
+            var finished = child.getClass().getDeclaredField("finished"); finished.setAccessible(true);
+            finished.setBoolean(child, i != 1);
+            var visible = child.getClass().getDeclaredField("visible"); visible.setAccessible(true); visible.setBoolean(child, true);
+            var frame = child.getClass().getDeclaredField("frame"); frame.setAccessible(true); frame.setInt(child, i);
+        }
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var draw = IczEndBossInstance.class.getDeclaredMethod("drawFrostPuffs", com.openggf.level.render.PatternSpriteRenderer.class);
+        draw.setAccessible(true);
+        draw.invoke(boss, renderer);
+        var painter = org.mockito.Mockito.inOrder(renderer);
+        for (int i = 0; i < original.size(); i++) {
+            painter.verify(renderer).drawFrameIndexWithPaletteBase(org.mockito.ArgumentMatchers.eq(i),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.eq(1));
+        }
+        var update = IczEndBossInstance.class.getDeclaredMethod("updateEffectChildren", PlayableEntity.class);
+        update.setAccessible(true); update.invoke(boss, new Object[]{null});
+        var expected = new ArrayList<Integer>();
+        for (int i = original.size() - 1; i >= 0; i--) if (i != 1) expected.add(70 - i);
+        assertEquals(expected, released, "expiry releases retain ascending native SST execution");
+        assertEquals(List.of(original.get(1)), children, "stable compaction preserves surviving public list order");
+        update.invoke(boss, new Object[]{null});
+        assertEquals(expected, released, "expired slots are never released twice");
+    }
+
+    @Test
     void topChildAndFrostPuffsReportTheirOwnBuckets() throws Exception {
         IczEndBossInstance boss = new IczEndBossInstance(spawn());
         boss.setServices(new StubObjectServices());

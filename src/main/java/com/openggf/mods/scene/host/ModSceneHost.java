@@ -4,6 +4,7 @@ import com.openggf.control.InputActionMasks;
 import com.openggf.audio.StreamedMusicPort;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.MenuInput;
 import com.openggf.control.MenuRepeat;
 import com.openggf.control.MouseWheel;
 import com.openggf.control.PlayerInputState;
@@ -157,6 +158,32 @@ public final class ModSceneHost {
     }
 
     /**
+     * Draws the scene over a run it plays behind: a canvas of the run's screen size, rendered at
+     * once above whatever the frame has drawn. Null {@code projection} records without rendering.
+     */
+    public void drawOver(int canvasWidth, int canvasHeight, float[] projection, int[] viewport) {
+        if (scene == null || context == null || exiting || suspended) return;
+        RecordingCanvas canvas = new RecordingCanvas(canvasWidth, canvasHeight, font);
+        try {
+            scene.draw(context, canvas);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
+        if (projection == null || viewport == null) {
+            return;
+        }
+        try {
+            if (!renderer.initialized()) {
+                renderer.init();
+            }
+            renderer.render(canvas.ops(), projection, canvasWidth, canvasHeight, viewport);
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
+        }
+    }
+
+    /**
      * True while the open scene claims keyboard text input. Polled from the presentation frame,
      * so a failing scene is closed and sent back to the master title instead of rethrowing.
      */
@@ -281,6 +308,7 @@ public final class ModSceneHost {
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
+        private String typed = "";
         private ManagedSceneMusic music;
         private SceneDonorMusic donorMusic;
         private final ManagedSceneNetwork network = new ManagedSceneNetwork();
@@ -320,6 +348,11 @@ public final class ModSceneHost {
                         com.openggf.mods.run.RunSpec spec, com.openggf.mods.run.RunHost host) {
                     requireLiveVisit();
                     return services.gameplay().launch(spec, host);
+                }
+                @Override public com.openggf.mods.run.RunHandle launchBehind(
+                        com.openggf.mods.run.RunSpec spec, com.openggf.mods.run.RunHost host) {
+                    requireLiveVisit();
+                    return services.gameplay().launchBehind(spec, host);
                 }
             };
             this.art = new SceneArt() {
@@ -411,6 +444,7 @@ public final class ModSceneHost {
 
         void resetInput() {
             input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
+            typed = "";
             heldButtons = pressedButtons = repeatedButtons = 0;
             repeat = new MenuRepeat(); mouse = SceneMouse.none();
         }
@@ -427,6 +461,9 @@ public final class ModSceneHost {
         void beginTick(InputHandler handler) {
             input = handler;
             physical = handler == null ? PhysicalInput.neutral() : handler.capturePhysicalInput();
+            // GLFW character events since the last frame edge; nothing else reads the menu text
+            // buffer while a scene is the active mode, and InputHandler.update() clears it anyway.
+            typed = handler == null ? "" : MenuInput.consumeText(handler);
             LogicalInputSnapshot raw = handler == null ? LogicalInputSnapshot.neutral() : handler.logical();
             heldButtons = buttons(raw.player1(), true);
             pressedButtons = buttons(raw.player1(), false);
@@ -572,6 +609,11 @@ public final class ModSceneHost {
         @Override
         public boolean keyPressed(int key) {
             return input != null && input.isKeyPressed(key);
+        }
+
+        @Override
+        public String typedText() {
+            return typed;
         }
 
         @Override

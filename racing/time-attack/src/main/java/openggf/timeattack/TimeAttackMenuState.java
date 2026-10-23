@@ -19,13 +19,39 @@ public final class TimeAttackMenuState {
     /** Ghosts raced alongside the player, in addition to the auto-loaded best. */
     static final int MAX_GHOSTS_RACED = 7;
 
-    public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW }
+    public enum Row { GAME, TRACK, CHARACTER, MODE, POLICY, WINDOW, POOL }
+
+    /**
+     * The saved custom vote pools a hosted room can use, and the one chosen per game (the
+     * scene backs it with {@link TimeAttackSettings}).
+     */
+    public interface PoolChoices {
+        /** Saved pool names of {@code gameId}, in order. */
+        List<String> names(String gameId);
+
+        /** The chosen pool of {@code gameId}; empty for the game's default pool. */
+        String chosen(String gameId);
+
+        /** Records the choice (empty selects the default pool). */
+        void choose(String gameId, String name);
+
+        /** No saved pools: every room uses its game's default pool. */
+        static PoolChoices none() {
+            return new PoolChoices() {
+                @Override public List<String> names(String gameId) { return List.of(); }
+                @Override public String chosen(String gameId) { return ""; }
+                @Override public void choose(String gameId, String name) { }
+            };
+        }
+    }
     public enum Mode { SOLO, HOST_LAN, JOIN_LAN, BROWSE }
 
     private final int[] WINDOW_MINUTES = {1, 2, 5, 10};
 
     private final List<String> games;
     private final GhostStore ghostStore;
+    private final PoolChoices pools;
+    private boolean poolEditorRequested;
     private int gameIndex;
     private int trackIndex;
     private int characterIndex;
@@ -39,6 +65,12 @@ public final class TimeAttackMenuState {
     private int importCount;
 
     public TimeAttackMenuState(List<String> availableGameIds, String initialGameId, GhostStore ghostStore) {
+        this(availableGameIds, initialGameId, ghostStore, PoolChoices.none());
+    }
+
+    public TimeAttackMenuState(List<String> availableGameIds, String initialGameId, GhostStore ghostStore,
+                               PoolChoices pools) {
+        this.pools = Objects.requireNonNull(pools, "pools");
         this.games = List.copyOf(Objects.requireNonNull(availableGameIds, "availableGameIds"));
         if (this.games.isEmpty()) {
             throw new IllegalArgumentException("At least one ROM-available game is required");
@@ -72,7 +104,11 @@ public final class TimeAttackMenuState {
             adjust(1);
         }
         if (keys.accept()) {
-            pressGo();
+            if (focusedRow == Row.POOL) {
+                poolEditorRequested = true;
+            } else {
+                pressGo();
+            }
         }
     }
 
@@ -84,7 +120,7 @@ public final class TimeAttackMenuState {
 
     List<Row> visibleRows() {
         return mode() == Mode.HOST_LAN || mode() == Mode.BROWSE
-                ? List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE, Row.POLICY, Row.WINDOW)
+                ? List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE, Row.POLICY, Row.WINDOW, Row.POOL)
                 : List.of(Row.GAME, Row.TRACK, Row.CHARACTER, Row.MODE);
     }
 
@@ -116,6 +152,12 @@ public final class TimeAttackMenuState {
             case MODE -> modeIndex = wrap(modeIndex + delta, Mode.values().length);
             case POLICY -> policyIndex = wrap(policyIndex + delta, 2);
             case WINDOW -> windowIndex = wrap(windowIndex + delta, WINDOW_MINUTES.length);
+            case POOL -> {
+                List<String> names = pools.names(currentGameId());
+                int index = names.indexOf(currentPoolName()) + 1; // 0 = the default pool
+                int next = wrap(index + delta, names.size() + 1);
+                pools.choose(currentGameId(), next == 0 ? "" : names.get(next - 1));
+            }
         }
     }
 
@@ -230,6 +272,19 @@ public final class TimeAttackMenuState {
 
     public String lockedCharacter() {
         return policyIndex == 0 ? null : currentCharacter();
+    }
+
+    /** The custom pool hosted rooms of the current game vote from; empty for the default pool. */
+    public String currentPoolName() {
+        String chosen = pools.chosen(currentGameId());
+        return pools.names(currentGameId()).contains(chosen) ? chosen : "";
+    }
+
+    /** True once after the player confirms the pool row (the scene opens the pool editor). */
+    public boolean consumePoolEditorRequested() {
+        boolean result = poolEditorRequested;
+        poolEditorRequested = false;
+        return result;
     }
 
     public int windowSeconds() {

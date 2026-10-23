@@ -64,11 +64,8 @@ public final class SszMechaProjectile extends AbstractObjectInstance
         }
         // loc_7C756 continues refresh/draw even when Animate_Raw switches its code pointer.
         animator().animateNoSst(animation, animation.script, this::finishCharge);
-        SszMechaSonicObjectInstance parent = null;
-        for (var object : services().objectManager().getActiveObjects()) {
-            if (object instanceof SszMechaSonicObjectInstance mecha && mecha.getSlotIndex() == parentSlot
-                    && !mecha.isDestroyed()) { parent = mecha; break; }
-        }
+        SszMechaSonicObjectInstance parent = com.openggf.level.objects.NativeObjectQueries.liveAtSlot(
+                services().objectManager(), parentSlot, SszMechaSonicObjectInstance.class);
         flipped = parent != null && parent.renderFlippedForTest();
         int x = ((parent == null ? 0 : parent.getX()) + (flipped ? 7 : -7)) & 0xFFFF;
         int y = ((parent == null ? 0 : parent.getY()) - 8) & 0xFFFF;

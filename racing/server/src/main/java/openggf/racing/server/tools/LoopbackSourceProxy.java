@@ -19,6 +19,7 @@ final class LoopbackSourceProxy implements AutoCloseable {
     private final ServerSocket listener;
     private final int targetPort;
     private final int connectionBudget;
+    private final int sourceBlock;
     private final AtomicInteger accepted = new AtomicInteger();
     private final Set<Socket> sockets = ConcurrentHashMap.newKeySet();
     // Retain the bounded thread handles until close so every started pump is joined.
@@ -30,14 +31,23 @@ final class LoopbackSourceProxy implements AutoCloseable {
     private volatile IOException failure;
 
     LoopbackSourceProxy(int targetPort, int connectionBudget) throws IOException {
+        this(targetPort, connectionBudget, 71);
+    }
+
+    LoopbackSourceProxy(int targetPort, int connectionBudget, int sourceBlock) throws IOException {
+        if (sourceBlock < 1 || sourceBlock > 254 || connectionBudget < 1 || connectionBudget > 65535) {
+            throw new IllegalArgumentException("bounded distinct loopback source range required");
+        }
         this.targetPort = targetPort;
         this.connectionBudget = connectionBudget;
+        this.sourceBlock = sourceBlock;
         listener = new ServerSocket();
         listener.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
         acceptor = Thread.ofVirtual().name("racing-stress-proxy-accept").start(this::accept);
     }
 
     int port() { return listener.getLocalPort(); }
+    int acceptedConnections() { return accepted.get(); }
     long upstreamBytes() { return upstreamBytes.sum(); }
     long downstreamBytes() { return downstreamBytes.sum(); }
     int openSockets() { return sockets.size(); }
@@ -55,7 +65,7 @@ final class LoopbackSourceProxy implements AutoCloseable {
                 }
                 target = new Socket();
                 // Linux routes the entire 127/8 block locally. Unsupported hosts fail explicitly.
-                byte[] address = {127, 71, (byte) (ordinal >>> 8), (byte) ordinal};
+                byte[] address = {127, (byte) sourceBlock, (byte) (ordinal >>> 8), (byte) ordinal};
                 target.bind(new InetSocketAddress(InetAddress.getByAddress(address), 0));
                 target.connect(new InetSocketAddress("127.0.0.1", targetPort), 3_000);
                 client.setTcpNoDelay(true);

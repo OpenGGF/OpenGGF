@@ -47,7 +47,7 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         for(int i=0;i<fragmentX.length;i++){int subtype=i*2,x=getX()+fragmentX[i];spawnChild(()->new Fragment(new ObjectSpawn(x,getY()-8,0,subtype,0,false,0)));}
     }
     public boolean opened(){return opened;}
-    @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x2B,0x18,0x18);}
+    @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x2B,0x18,0x18);}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false,true,false);}
     @Override public boolean isSolidFor(PlayableEntity p){return entries>=2;}
     @Override public int getPriorityBucket(){return 3;}
@@ -63,7 +63,7 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         private Button(ObjectSpawn spawn,SozHyudoroCapsuleObjectInstance parent,boolean recessed){super(spawn,"SOZHyudoroCapsuleButton");parentRef=parent;this.recessed=recessed;}
         @Override public void update(int vIntRunCount,PlayableEntity p){entries++;if(parentRef==null||parentRef.isDestroyed())ObjectLifetimeOps.deleteNoRespawn(this);}
         @Override public void onSolidContact(PlayableEntity p,SolidContact c,int vIntRunCount){if(!recessed&&c.standing()&&parentRef!=null){recessed=true;parentRef.triggered=true;}}
-        @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x1B,4,6);}
+        @Override public SolidObjectParams getSolidParams(){return SolidObjectParams.of(0x1B,4,6);}
         @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false,true,false);}
         @Override public boolean isSolidFor(PlayableEntity p){return entries>=2;}
         @Override public int getPriorityBucket(){return 4;}

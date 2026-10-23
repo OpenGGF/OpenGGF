@@ -114,6 +114,8 @@ class TestDirectConnectEndToEnd {
         guest.sendControl(new ControlMessage.Chat("gl hf"));
         await(host, event -> isMessage(event, ControlMessage.ChatBroadcast.class), 10_000);
 
+        // Readiness has its own tests; nobody waits under AUTO.
+        host.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         host.sendControl(new ControlMessage.RoundConfigure(
                 new ControlMessage.RoundConfig("s3k", 0, 0, 4, "OPEN", null)));
         await(host, event -> isMessage(event, ControlMessage.RoundStart.class), 10_000);
@@ -190,8 +192,8 @@ class TestDirectConnectEndToEnd {
 
         guest.close();
         await(host, event -> event instanceof RaceClient.Control control
-                        && control.message() instanceof ControlMessage.RoomState state
-                        && state.players().size() == 1,
+                        && control.message() instanceof ControlMessage.PlayerLeft left
+                        && left.slot() == guest.joinAccepted().playerSlot(),
                 10_000);
         host.close();
     }

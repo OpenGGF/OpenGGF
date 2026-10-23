@@ -18,27 +18,25 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
 
     private final LiveRewindInputSource inputs;
     private final Supplier<InputHandler> inputHandlerSupplier;
-    private final Supplier<SpecialStageProvider> providerSupplier;
-    private final Supplier<GameplayModeContext> gameplayModeSupplier;
+    private final SpecialStageProvider provider;
+    private final GameplayModeContext owner;
 
     SpecialStageStepper(LiveRewindInputSource inputs,
                         Supplier<InputHandler> inputHandlerSupplier,
-                        Supplier<SpecialStageProvider> providerSupplier,
-                        Supplier<GameplayModeContext> gameplayModeSupplier) {
+                        SpecialStageProvider provider,
+                        GameplayModeContext owner) {
         this.inputs = Objects.requireNonNull(inputs, "inputs");
         this.inputHandlerSupplier = Objects.requireNonNull(inputHandlerSupplier, "inputHandlerSupplier");
-        this.providerSupplier = Objects.requireNonNull(providerSupplier, "providerSupplier");
-        this.gameplayModeSupplier =
-                Objects.requireNonNull(gameplayModeSupplier, "gameplayModeSupplier");
+        this.provider = Objects.requireNonNull(provider, "provider");
+        this.owner = Objects.requireNonNull(owner, "owner");
     }
 
     @Override
     public LevelFrameResult step(Bk2FrameInput input) {
         InputHandler liveInput = inputHandlerSupplier.get();
-        SpecialStageProvider provider = providerSupplier.get();
-        GameplayModeContext gameplayMode = gameplayModeSupplier.get();
-        if (liveInput == null || provider == null || gameplayMode == null) {
-            return LevelFrameResult.PAUSED;
+        GameplayModeContext gameplayMode = owner;
+        if (liveInput == null) {
+            throw new IllegalStateException("installed live rewind input is unavailable");
         }
         return gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                 gameplayMode.getFadeManager()::update,

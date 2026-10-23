@@ -2,6 +2,7 @@ package openggf.racing.server.master;
 
 import com.openggf.net.host.ConnectionHygiene;
 import openggf.racing.server.master.BundledProfileSource;
+import openggf.timeattack.TimeAttackTrackCatalog;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.Protocol;
 import io.netty.bootstrap.ServerBootstrap;
@@ -137,7 +138,8 @@ public final class MasterServer implements AutoCloseable {
                     config, verificationJobs, verdictConsequences, verifiers);
             RoomBroker broker = new RoomBroker(masterIdentity, config, registry, store,
                     ladder, cache, clock, relays, tunnels,
-                    key -> profileExists(profiles, key), verifiers);
+                    key -> TimeAttackTrackCatalog.isEligibleKey(key) && profileExists(profiles, key),
+                    verifiers);
             ConnectionHygiene.ConnectionCounter counter =
                     new ConnectionHygiene.ConnectionCounter(MAX_CONNECTIONS_PER_IP);
             SslContext ssl = sslContext(config);
@@ -181,7 +183,12 @@ public final class MasterServer implements AutoCloseable {
             List<ScheduledFuture<?>> scheduledTasks = new ArrayList<>();
             scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(broker::tick,
                     1, 1, TimeUnit.SECONDS));
-            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(relays::tickAll,
+            long[] nextRelayTick = {System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(50)};
+            scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
+                RelayTimingEvents.dispatch(nextRelayTick[0]);
+                nextRelayTick[0] += TimeUnit.MILLISECONDS.toNanos(50);
+                relays.tickAll();
+            },
                     50, 50, TimeUnit.MILLISECONDS));
             scheduledTasks.add(brokerGroup.next().scheduleAtFixedRate(() -> {
                 relays.voidExpiredUploads();

@@ -8,12 +8,6 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomIdentity;
 import com.openggf.data.RomImageCatalogue;
-import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
-import com.openggf.game.sonic1.audio.Sonic1Music;
-import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
-import com.openggf.game.sonic2.audio.Sonic2Music;
-import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
-import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -114,10 +108,10 @@ public final class HubMusicController implements AutoCloseable {
 
     static Session openRomSession(String gameId, SonicConfigurationService config, boolean noDevice) throws Exception {
         RomIdentity identity = switch (gameId) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-        GameAudioProfile profile = switch (gameId) {
-            case "s1" -> new Sonic1AudioProfile(); case "s2" -> new Sonic2AudioProfile(); default -> new Sonic3kAudioProfile();
-        };
-        int titleId = switch (gameId) { case "s1" -> Sonic1Music.TITLE.id; case "s2" -> Sonic2Music.TITLE.id; default -> Sonic3kMusic.TITLE.id; };
+        GameId stockGame = switch (gameId) { case "s1" -> GameId.S1; case "s2" -> GameId.S2; default -> GameId.S3K; };
+        var source = GameModuleRegistry.createStockMenuAudio(stockGame);
+        GameAudioProfile profile = source.profile();
+        int titleId = source.titleMusicId();
         try (Rom rom = Rom.fromReader(RomImageCatalogue.forCurrentWorkingDirectory(config).open(identity), "hub " + gameId)) {
             SmpsLoader loader = profile.createSmpsLoader(rom);
             var music = loader.loadMusic(titleId);

@@ -44,13 +44,18 @@ final class FrameAssembler {
     }
 
     byte[] onBinaryPart(ByteBuffer data, boolean last) {
-        if (binary.size() + data.remaining() > maxBinaryBytes) {
+        if ((long) binary.size() + data.remaining() > maxBinaryBytes) {
             binary.reset();
             throw new ProtocolViolationException(
                     "fragmented binary exceeds " + maxBinaryBytes);
         }
         byte[] bytes = new byte[data.remaining()];
         data.get(bytes);
+        // A whole message already has its own array; fragmented messages alone
+        // need the accumulation buffer and its final defensive copy.
+        if (last && binary.size() == 0) {
+            return bytes;
+        }
         binary.writeBytes(bytes);
         if (!last) {
             return null;

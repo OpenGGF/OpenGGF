@@ -432,7 +432,18 @@ class TestRoomBroker {
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s2:0:0"),
                 DIRECT_CERT_PIN)));
-        assertInstanceOf(ControlMessage.RoomCreateRejected.class, lastMessage(host));
+        assertEquals("invalid vote track pool: s2:0:0 is not a s3k act",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1", "s3k:12:0"),
+                DIRECT_CERT_PIN)));
+        assertEquals("invalid vote track pool: s3k:12:0 is not an eligible Time Attack act",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
+        broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
+                descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1", "s3k:0:1"),
+                DIRECT_CERT_PIN)));
+        assertEquals("invalid vote track pool: duplicate track key",
+                ((ControlMessage.RoomCreateRejected) lastMessage(host)).reason());
         broker.onText(host, ControlCodec.encode(token, new ControlMessage.RoomCreate(
                 descriptor, "DIRECT", 27888, "0.6:cafe", List.of("s3k:0:1"),
                 DIRECT_CERT_PIN)));
