@@ -232,7 +232,7 @@ public final class TimeAttackCapacityVideoTool {
         capture.frames(90);
         for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN);
         for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_RIGHT);
-        for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN);
+        for (int i = 0; i < 4; i++) capture.tap(GLFW_KEY_DOWN); // past policy, window and vote pool
         capture.tap(GLFW_KEY_ENTER);
         await(() -> state().equals("BROWSING"), 1200, "server browser");
         chapter("Server browser");

@@ -212,7 +212,7 @@ public final class TimeAttackLobbyVideoTool {
         if (!gameId.equals(call(menu, "currentGameId"))) throw new IllegalStateException("game " + gameId + " not offered");
         for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN); // MODE
         capture.tap(GLFW_KEY_RIGHT);                             // HOST LAN
-        for (int i = 0; i < 3; i++) capture.tap(GLFW_KEY_DOWN); // past policy and window
+        for (int i = 0; i < 4; i++) capture.tap(GLFW_KEY_DOWN); // past policy, window and vote pool
         capture.tap(GLFW_KEY_ENTER);                             // CREATE LAN ROOM
         await(() -> state().equals("LOBBY"), 1200, "the lobby");
         chapter("Lobby level loading");
