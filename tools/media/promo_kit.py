@@ -1126,6 +1126,67 @@ class Edit:
                             f"{s.clip.path.name} (holds last frame)")
             prev = s
         warn += self.pacing()[1]
+        warn += self.sound_balance()
+        return warn
+
+    def sound_balance(self, quiet_db=9.0, side_db=12.0):
+        """Each stinger against the bed at the moment it plays. Both films of the 2026-10-23
+        Time Attack A/B mixed ROM stingers 8-16 dB under full-level music, and the user heard the
+        music as "way louder than the SFX": in the game, music and effects share one driver at
+        comparable levels. A stinger can also sound from one speaker only, because some ROM
+        effects are hard-panned. The S1 ring is right-only; S3K alternates its right and left ring
+        sounds ($33/$34) on every ring, and a promo using $33 alone put every ring on the right.
+        Compares the loudest 100 ms of each stinger (with its gain) with the beds under it.
+        Returns warnings."""
+        spf = SR // self.fps
+        win = SR // 10
+        wavs = {}
+
+        def load(path):
+            if path not in wavs:
+                wavs[path] = read_wav(path)
+            return wavs[path]
+
+        def level(a):
+            return 20 * np.log10(max(float(np.sqrt((a ** 2).mean())) if len(a) else 0.0, 1e-9))
+
+        def bed_under(at, n):
+            under = np.zeros((n, 2), np.float32)
+            for wav, b_at, gain, src, length, fin, fout in self.beds:
+                offset = at - b_at * spf
+                if offset < 0 or (length is not None and offset >= length * SR):
+                    continue
+                seg = load(wav)[int(src * SR) + offset:int(src * SR) + offset + n]
+                under[:len(seg)] += seg * gain
+            return under
+
+        warn, sided = [], []
+        for f, wav, gain, length in sorted(self.sfx, key=lambda x: x[0]):
+            a = load(wav)
+            if length is not None:
+                a = a[:int(length * SR)]
+            if len(a) == 0:
+                continue
+            power = (a ** 2).mean(axis=1)
+            n = min(win, len(a))
+            i = int(np.argmax(np.convolve(power, np.ones(n) / n, mode="valid")))
+            loud = a[i:i + n] * gain
+            name, when = Path(wav).name, f"{f} ({f / self.fps:.2f}s)"
+            sting, bed = level(loud), level(bed_under(f * spf + i, n))
+            if bed > -60 and sting < bed - quiet_db:
+                warn.append(f"stinger {name} at {when} is {bed - sting:.0f} dB under the music: "
+                            f"raise its gain or lower the bed")
+            left, right = level(loud[:, 0]), level(loud[:, 1])
+            if abs(left - right) > side_db:
+                sided.append((f, "left" if left > right else "right", name, when))
+        # A run that alternates sides within a couple of seconds is the game's own pairing (S3K
+        # rings), not a stuck speaker.
+        for k, (f, side, name, when) in enumerate(sided):
+            near = [o for o in (sided[k - 1] if k else None, sided[k + 1] if k + 1 < len(sided) else None)
+                    if o is not None and abs(o[0] - f) <= 2 * self.fps]
+            if not any(o[1] != side for o in near):
+                warn.append(f"stinger {name} at {when} plays from the {side} speaker only: "
+                            f"use the game's paired sound or centre it")
         return warn
 
     def bare_stretches(self, max_s=4.0):
