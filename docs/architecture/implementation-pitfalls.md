@@ -2154,3 +2154,13 @@ dispatch and discard that table. Keep legacy-only overrides on their existing
 route. Exercise the real holder, not only a standalone codec fixture, across
 release/restore and participant recreation. See the
 [repair evidence](plans/2026-10-21-stageplay-live-world-plan.md#interrupted-smoke-repair-resumed-2026-10-23).
+
+
+The production callback router must use that same dispatch resolver. Testing the
+cache directly can pass while ObjectManager's callback boundary still has a
+second legacy-only detector that drops the table. Keep capture/restore delegation
+inside the existing callback fault boundary and exercise the real router with
+ordinary state, legacy-only overrides and explicit context wrappers. The full HPZ
+ceremony, LRZ2 gateway, sanctuary origin-return and pedestal matrices reproduced
+2,293 errors through that missed route, then passed all 2,295 cases after sharing
+the resolver. The two additional cases already passed in the broad snapshot.

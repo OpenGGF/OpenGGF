@@ -2274,7 +2274,7 @@ These dispositions describe the complete round (`d8e441fbf`, `2dcd4dffa`,
 | F3 | Fixed: placed identities carry game/zone/act; source transitions require another shot; stale materialization is rejected. |
 | F4 | Fixed: native player-only release precedes suspension/removal; acquired-player ownership, hidden-player handoffs and queued poses rewind by stable identities. Central codec/policy and holder/story/capsule tests cover the repair. |
 | F5 | Fixed: placed-object map resolves placements; shared scoped identity replaces tuple scans over dynamic children. |
-| F6 | Fixed: materialization/retirement, admission, graph, capture, draw and rewind have collaborators. Rejected undoing the verified verbatim plane-switcher extraction: restoring it gives 3,198 effective facade lines versus the unchanged 3,086 budget. Current facade is 3,019; no budget increase or source compaction. |
+| F6 | Fixed: materialization/retirement, admission, graph, capture, draw and rewind have collaborators. Rejected undoing the verified verbatim plane-switcher extraction: restoring it gives 3,199 effective facade lines versus the unchanged 3,086 budget after the one-line source-identity repair. Current facade is 3,020; no budget increase or source compaction. |
 | F7 | Fixed: speculative catalogue observations, duplicate role/version and dead forwarder/return removed. |
 | F8 | Fixed: LoadPolicy alone owns persistent placement removal and clear state; authored visibility remains timeline state. |
 | F9 | Fixed: observation guards precede capture lambda construction; nullable cached activation policy skips ordinary-gameplay service lookup. |
@@ -2368,3 +2368,126 @@ inspect exact failures/skips and acknowledge diagnostics; any new or worsened
 failure blocks handback as qualified. No full-suite selection is requested.
 Doc/skill mirrors and `git diff --check` passed. No visual algorithm changed;
 round-2 captures remain accepted with their original provenance.
+
+
+### Completed once-only smoke and the callback-router correction
+
+Run `20261023T022509Z-503104a2` completed on clean `0a13b84ab`, with the
+requested `python3 -u tools/testing/run_categories.py --base 7d35d4a7b --run
+--max-minutes 360` in the documented EGL/Java25/Lua5.4 environment. All 73
+ordinary batches completed: **37,839 tests, 2 failures, 2,295 errors, 97 skips**,
+5,968.31 seconds execution. The fresh guard lane completed **718 tests,
+4 failures, zero errors/skips**, 269.79 seconds execution. Rounded queue waits
+reported by the wrapper sum to 3,603 seconds, additional to execution; this is
+not total delivery time. Preparation passed in 26.74 seconds.
+
+All new guard regressions are cleared. The four guard failures exactly match
+both MenuAudioProbeTool singleton methods at line 41 and both HubMusic
+constructor/package ArchUnit rules. Ordinary HCZ native-pixel failure still
+matches its GLFW initialization assertion at line 53. The remaining 2,293
+identity-table errors occur in the HPZ ceremony, LRZ2 seven-chaos gateway,
+sanctuary origin-return and pedestal lifecycle matrices. The first 1,000
+failure records were capped (1,297 omitted overall), so the two later boot
+dimension errors and extra audio CLI failure require bounded confirmation,
+not attribution from matching counts alone. Skips include missing platform
+opportunities, unavailable GLFW checks, explicitly opt-in pictures/measurements,
+optional fixture jars and soak profiles; no missing required ROM was inferred
+as a pass.
+
+The first repair fixed the cached dispatcher but missed production's second
+implementation in ObjectCallbackRouter. That router still detected any legacy
+wrapper and invoked it without the manager's prepared identity context.
+HPZSSEntryControlObjectInstance therefore lost the table even though its direct
+context-aware tests passed. Capture and restore now delegate to the one cached
+ObjectRewindTypeSafety resolver inside their existing callback call/run fault
+boundaries; the duplicate reflection dispatcher is removed. A router-path
+regression covers default snapshot state, legacy-only overrides, and explicit
+context beside convenience wrappers, cold and warm. No per-object exception,
+annotation, native routine, identity value or comparison fixture is added.
+
+The failed broad snapshot is not a green qualification of this later change.
+Following the repository's red-smoke policy and the task's once-only broad
+request, qualification continues with all four entire affected production
+classes, callback/ownership regressions and fresh guards. Environment-sensitive
+cases are checked separately with the original grouped setup and a clean
+isolated setup. Results follow after execution. No presentation algorithm or
+forward-motion take changes in this correction.
+
+
+### Final bounded qualification of the callback correction
+
+The correction passed **2,591 tests, zero failures/errors, one skip** (the
+explicitly opt-in dispatch timing measurement). All four entire affected native
+classes executed with no skips: HPZ ceremony **285**, LRZ2 gateway **4**, sanctuary
+origin return **580**, pedestal lifecycle **1,426**. These **2,295** cases include
+all **2,293** previously failing sanctuary cases plus two gateway cases that
+already passed. The first 20-class ownership/codec/object-manager/rendering
+selection also reran, including required S3K checks, alongside the new actual
+callback-router default/legacy/context test. Maven execution including lifecycle
+setup was 10 minutes 46 seconds; this request waited 405 seconds.
+
+Fresh guards on the same corrected source: **718 tests, four recorded baseline
+failures, zero errors/skips**, Maven 6 minutes 44 seconds including recompilation,
+zero seconds admission wait. Exact failures remain:
+
+- TestProductionSingletonClosureGuard.productionCodeDoesNotUseForbiddenProcessSingletonsOutsideEngineServices,
+  MenuAudioProbeTool.java:41 / AudioManager.getInstance.
+- TestProductionSingletonClosureGuard.productionCodeOnlyUsesRawGetInstanceAtEngineServicesBootstrapBridge,
+  the same MenuAudioProbeTool.java:41 singleton call.
+- TestArchUnitRules.shared_code_does_not_construct_concrete_sonic_provider_classes,
+  the same three HubMusic audio-profile constructor edges.
+- TestArchUnitRules.shared_layers_do_not_depend_on_game_specific_packages,
+  the same nine HubMusic provider/package edges.
+
+The environment reproduction completed **18 tests, one failure, two errors,
+zero skips**, Maven 27.227 seconds, request wait 1,093 seconds. Both
+TraceCaptureBootDimensionsTest.realBootKeepsNativeGameplayCameraAndWidePresentationCaches
+parameter rows fail with Unable to initialize GLFW at line 41 after
+TestSurfacelessEglContext clears the backend property. The audio failure is
+TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput
+at line 182: the fresh child stderr must start with PRODUCER_UNAVAILABLE, but
+JAVA_TOOL_OPTIONS prepends its launcher notice. These match the previously
+recorded baseline identities, assertions and causes, not merely totals.
+
+The clean isolated check, without that environment variable and with explicit
+surfaceless EGL, passed **15 tests, zero failures/errors/skips** (two dimension
+rows and all thirteen audio CLI tests), Maven 28.464 seconds, request wait
+1,052 seconds. These per-request waits overlap; their sum is not delivery time.
+No unrelated backend, singleton or hub policy was changed to make counts green.
+
+Exact qualification command recipe (run from the authorized engine worktree;
+the variables only abbreviate the literal arguments):
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5
+ENGINE_WORKTREE="$PWD"
+TEST_ENV=(env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u MAVEN_ARGS -u JAVA_TOOL_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 "PATH=$HOME/.local/bin:$PATH")
+ROM_FLAGS=(
+  "-Dsonic1.rom.path=$ENGINE_WORKTREE/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$ENGINE_WORKTREE/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$ENGINE_WORKTREE/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dkis2.rom.path=$ENGINE_WORKTREE/kis2.gen"
+)
+FOCUS='com.openggf.game.rewind.TestRewindInPlaceObjectRestore,com.openggf.game.rewind.schema.TestRewindPlayerReferenceCodecs,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.mutators.TestNativeMutatorRuntime,com.openggf.game.sonic3k.objects.TestStageplayCapsuleControlRelease,com.openggf.game.sonic3k.objects.TestStageplayIntroControlRelease,com.openggf.game.sonic3k.objects.TestStageplayLateHolderRelease,com.openggf.game.sonic3k.objects.TestStageplayStoryControlRelease,com.openggf.level.TestLevelLostRingSpawnCoordinator,com.openggf.level.TestLevelRingfallIntegration,com.openggf.level.TestMutatorStageAdmission,com.openggf.level.objects.TestObjectManagerLifecycle,com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance,com.openggf.level.objects.TestStageplayObjectDirection,com.openggf.mods.code.TestNativeObjectFieldCallbacks,com.openggf.stageplay.runtime.TestStageplayLiveWorldRendering,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestS3kHpzSanctuaryLifecycleProduction,com.openggf.tests.TestS3kLrz2SevenChaosGiantRingGateway,com.openggf.tests.TestS3kSanctuaryOriginReturnLifecycle,com.openggf.tests.TestS3kSanctuaryPedestalLifecycle'
+"${TEST_ENV[@]}" JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 -u tools/testing/maven_queue.py -Dmse=off "-Dtest=$FOCUS" "${ROM_FLAGS[@]}" test -B
+"${TEST_ENV[@]}" python3 -u tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+"${TEST_ENV[@]}" JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 -u tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=com.openggf.tools.TestSurfacelessEglContext,com.openggf.tools.TraceCaptureBootDimensionsTest,com.openggf.tools.audio.completerun.TestCompleteRunAudioCli' "${ROM_FLAGS[@]}" test -B
+"${TEST_ENV[@]}" python3 -u tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.tools.TraceCaptureBootDimensionsTest,com.openggf.tools.audio.completerun.TestCompleteRunAudioCli' "${ROM_FLAGS[@]}" test -B
+```
+
+The broad run is retained as a red historical snapshot at 0a13b84ab. It was not
+repeated after this small correction, honoring the requested single broad run
+and repository policy to verify red-smoke repairs narrowly. The final corrected
+candidate has no remaining newly failing affected checks; this is bounded
+qualification, not a fully green re-run of all smoke and not a release full-suite
+pass. Both category diagnostic directories were acknowledged and deleted.
+The final source/record commit IDs are recorded below and in the task STATUS.
+No forward-rendering algorithm changed; the prior a605 round-2 films retain
+their original source provenance. Rewind ownership restoration is established
+by the production lifecycle matrices, not inferred from those earlier films.
