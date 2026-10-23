@@ -23,8 +23,8 @@ decomposition or blanket lifecycle-call replacement is authorized by this scope.
   pstack roles; both belong to the same model family.
 - [x] Agree: record the selected caller usage and types; proceed under existing
   authorization without another routine checkpoint.
-- [ ] Implement: fill in the selected ownership changes and guard repairs.
-- [ ] Scrap check: redesign if implementation repeatedly needs ownership
+- [x] Implement: fill in the selected ownership changes and guard repairs.
+- [x] Scrap check: redesign if implementation repeatedly needs ownership
   workarounds, duplicated representations or public-contract escape hatches.
 - [ ] Verify, integrate, push only `develop`, and account for owned worktrees
   before removing merged task branches.
@@ -65,74 +65,96 @@ batched smoke plus guards, never release-only full-suite. Attribute disputed
 failures with matched narrow baseline/current checks. Do not duplicate unchanged
 completed coverage or retain consumed diagnostic directories.
 
-## Combined coverage decision (pending composed diff review)
+## Combined coverage decision
 
-The initial planner selects every smoke class solely because structural guard
-files are shared test infrastructure. The implementation is bounded: guards do
-not run in gameplay; menu animation is a package move; AniPLC changes only the
-execution-time collaborator; sprite expansion keeps its arithmetic and order
-while moving to one owner. Candidate API signatures must remain identical.
+The final change-based dry plan selects all 3621 smoke classes because shared
+animation code, guard infrastructure and inventories trigger shared/unclassified
+rules. Review confirms bounded behavior: menu animation is a package move;
+AniPLC selects its existing graphics collaborator at execution time; geometry
+arithmetic, admission and replay order are unchanged under a new owner. API pins
+are unchanged. Guard helpers never run in gameplay. Independent final production
+review found no actionable defects. The initial 3616-class observation preceded
+the five new ordinary test classes.
 
-If final review confirms those bounds, use the affected ordinary smoke controls,
-required S3K bootstrap/loading/decoding/AIZ checks, the S2 ROM animator adapter,
-actual EGL SAT pixels and the complete fresh-JVM structural guard profile.
-Compile all consumers. This replaces the disproportionate all-category launch;
-it is not a full smoke-inventory pass, an exhaustive trace sweep, or certification
-of other levels/platforms. Any behavioral algorithm change or unresolved shared
-risk reopens the change-based selection. Exact final selectors and results belong
-in this plan after composition, not in a separate pass cache.
+Use 25 focused ordinary classes plus the complete fresh-JVM guard profile
+(90 source candidates). This replaces the disproportionate all-category
+launch under the repository's proportionate-validation policy. Compile all
+consumers; cover the required four S3K loading/bootstrap/decoding/AIZ classes,
+S2 ROM animator integration, real EGL SAT pixels, CPU masking/ghost/head replay,
+API signatures and guard-parser negative controls. Expected execution is a few
+minutes from isolated checks, with queue delay unknown. Stop on failures, attribute
+and repair narrowly; do not widen to release-only full-suite. This is bounded
+validation, not a full smoke-inventory pass or exhaustive trace sweep.
 
-## Review checkpoint
+Tool preflight initially rejected ambient Lua; it passed with installed
+`LUA_BIN=/usr/bin/lua5.4`, JDK 25.0.5 and PowerShell. Both preflights ran before
+any combined test execution.
 
-One independent read-only review found two identity-substitution gaps. Parent
-source guards now retain class/signature identities, preserve duplicate large
-owners in a list, reject ambiguous named budget targets and require the declared
-root owner; overload/nested negative controls cover the repair. All 76 source-guard checks passed with no skips. The worker lifecycle scanner still needs deterministic lexical
-identity for same-type anonymous declarations and same-named local declarations
-in separate blocks. Fix and test that after the active worker hands off; do not
-edit its working files concurrently. No other blocking findings were reported.
+Commands use the actual launch environment (`ROM_ROOT` denotes the absolute
+main-checkout ROM directory; its existing S1 REV01, S2 REV01 and S3&K files
+were verified against the repository identity table):
 
-## Checkpoint
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py --base b979916808b7f9379ede2b5dcdde1bcdc8bf8357 --preflight
 
-Parent remains at the pinned integration base with uncommitted source-guard
-regressions/parser repair, measured-package stale-permission check and this
-plan/design, exception-guide queue and changelog draft. A new
-`TestSpriteSatReplayPixels` controls the actual SAT submission/replay path through
-owned EGL (direct/instanced geometry and native scanline masks). Java probe
-completed on JDK 25.0.5. The two initial scanner
-negative controls failed as expected (2 failures, no skips): multiline bodies
-were absent and a string brace truncated a method. Their follow-up plus the
-package-edge attempt `12549` stopped at test compilation: the new pixel fixture
-omitted the checked `IOException` from graphics initialization. The declaration
-is fixed; no guard assertions ran in that attempt. Replacement session `83118` completed: 76 source checks passed; the 27-rule
-ArchUnit run had one expected stale-permission failure naming seven unused
-pairs. Only those pairs were pruned (159 → 152), pending combined verification.
-Session `58708` passed the new SAT pixel characterization on original production
-code (1 test, no skips) before composing the rendering cut. Its queue wait was
-694 seconds; Maven execution took 30.524 seconds. No test jobs remain live in
-the parent.
+# Ordinary checks, one queued invocation in the composed parent tree:
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dsonic1.rom.path=${ROM_ROOT}/s1.gen \
+  -Dsonic2.rom.path=${ROM_ROOT}/s2.gen \
+  -Ds3k.rom.path=${ROM_ROOT}/s3k.gen \
+  '-Dtest=TestSpritePiece,TestSpritePieceRendererSatPreparation,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestSpriteSatMaskPostProcessor,TestSatGhostLayering,TestPlayerHeadPresentation,TestSpritePresentation,TestSpritePreparationSnapshots,TestPlayableMutatorPresentation,TestModApiSignatureSurface,TestS3kSpriteMaskSupport,TestPresentationSpritePixels,TestSpriteSatReplayPixels,TestMenuBackgroundAnimator,TestScriptFramesApplyStrategyGraphicsRebind,TestAniPlcScriptStateSnapshot,TestSonic2PatternAnimatorGraphAdapter,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestObjectLifecycleCallAudit,TestRewindFieldDispositionAudit,TestS3kIczSegmentColumnGraphRewind' test -B
 
-T3 isolated implementation tasks (stable request IDs):
+# Separate fresh guard JVM, same Java/Lua environment:
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
 
-- `architecture-ratchet-rewind-lifecycle-20261023-r1`: rewind/lifecycle guards.
-- `architecture-ratchet-sprite-ownership-20261023-r1`: selected graphics value
-  ownership, exact low-level store delta, signature preservation and CPU controls.
-- `architecture-ratchet-menu-animation-20261023-r1`: completed as
-  `b2170f274c0106040298bf5fcb4d81ddc082cc7d`, local branch
-  `bugfix/ai-shared-menu-animation-20261023`, clean worktree
-  `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-659f1ba8`. Four focused classes
-  (`TestMenuBackgroundAnimator`, `TestScriptFramesApplyStrategyGraphicsRebind`,
-  `TestAniPlcScriptStateSnapshot`, `TestSonic2PatternAnimatorGraphAdapter`)
-  passed 18 tests with no failures/errors/skips, using the verified absolute
-  S2 REV01 ROM and queued `-Dmse=off -Dtest=<those classes> test -B`.
-  Framework store 1 → 0; cross-game 14 → 10 members, host donations unchanged.
-  Parent composition and combined guards remain pending.
+## Review and implementation evidence
 
-Workers own their focused tests and local commits; coordinator owns shared prose,
-source/package guards, composition and delivery validation. No production changes
-are integrated yet. Main is untouched. Next: complete the parent guard census,
-compose reviewed worker changes and run actual launch preflight. The initial
-change-based dry plan selects all 3616 smoke candidate classes because either
-structural guard file is classified as shared test infrastructure. This is a
-selection observation, not a launch or passing result; final combined coverage
-will be chosen from the completed ownership diff and documented proportionately.
+Source budget identities now distinguish class/signature, reject ambiguous names,
+and require the root owner. The independent guard reviewer also found anonymous/
+local caller collisions. The composed lifecycle scanner assigns ordinals per
+caller and type name to every declaration, including declarations without calls.
+Two swap controls require removed/new identities at an unchanged total; comments
+and formatting preserve keys. No current baseline keys needed relocation.
+
+- `30d5a3119`: source/parser budgets and package census. The initial two scanner
+  controls failed as expected; all 76 source checks then passed. The live ArchUnit
+  census found exactly seven stale permissions (159 → 152), explicitly pruned.
+  One earlier attempt stopped at compilation due to a missing throws declaration
+  in the new pixel fixture; fixed before running assertions.
+- Original-runtime pixel characterization: `TestSpriteSatReplayPixels` passed
+  1 test, zero skips at the pinned base with the new test. Queue wait 694 seconds,
+  Maven execution 30.524 seconds. It traverses actual submission, SAT and GPU replay.
+- `b2170f274c0106040298bf5fcb4d81ddc082cc7d`: shared menu and injected graphics;
+  18 tests across four classes passed without failures/errors/skips. Framework
+  store 1 → 0; cross-game 14 → 10 members, host donations unchanged.
+- `bac8446dc65c77210d58e00ec9ca5486bd815226`: graphics-owned geometry/replay;
+  126 tests across 13 classes passed without failures/errors/skips, including
+  API signatures and existing EGL pixels. Low-level store 187 → 181: exactly
+  23 identities removed and 17 ingress accessor identities added.
+- `cdf524af2085221fa48f2cf59ab573ec7db6fe08`: 41 stale rewind field exemptions
+  pruned (64 → 23), obsolete ICZ recreate exclusion removed, 582 destroy/10 add
+  calls pinned to 513 identities. Final seven-class worker run passed 57 tests,
+  zero skips. An intermediate 49-test run had three intended negative failures
+  and two incorrect fixture assertions; corrected before the final pass.
+- `19181819103d6f43aa494ef1893a637489099741`: conflict-free composition of all
+  three isolated worker commits. Parent follow-up fixes the reviewed local/
+  anonymous identity gap and updates the measured documentation.
+
+T3 task IDs end in `architecture-ratchet-menu-animation-20261023-r1`,
+`architecture-ratchet-sprite-ownership-20261023-r1`, and
+`architecture-ratchet-rewind-lifecycle-20261023-r1`; all completed with clean,
+retained owned worktrees. Native read-only reviewers are finished. No idle CLI
+workers or native-session fallback registry was created.
+
+## Delivery checkpoint
+
+Combined checks are pending. Main advanced independently to `aebb390ed` through
+tooling/evidence changes outside this diff; retain them during integration.
+Only the coordinator integrates and pushes `develop`. No main branch switch,
+worktree-branch push or cleanup of foreign work is authorized.

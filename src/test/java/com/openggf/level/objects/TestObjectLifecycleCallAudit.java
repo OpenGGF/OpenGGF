@@ -115,7 +115,7 @@ class TestObjectLifecycleCallAudit {
     void anonymousMembersAndLambdasKeepTheirEnclosingCallerIdentity() throws IOException {
         assertEquals(Map.of(
                 "Sample.java#Sample#update()->setDestroyed(true)", 1,
-                "Sample.java#Sample#update()#<anonymous:Child>#run()->setDestroyed(true)", 1), scan("""
+                "Sample.java#Sample#update()#<anonymous:Child:1>#run()->setDestroyed(true)", 1), scan("""
                 class Sample {
                     void update() {
                         Runnable expire = () -> setDestroyed(true);
@@ -125,6 +125,49 @@ class TestObjectLifecycleCallAudit {
                     }
                 }
                 """));
+    }
+
+    @Test
+    void sameTypeAnonymousDeclarationsCannotExchangeDebt() throws IOException {
+        String template = """
+                class Sample {
+                    void update() {
+                        Child first = new Child() { void run() { %s } };
+                        Child second = new Child() { void run() { %s } };
+                    }
+                }
+                """;
+        assertDeclarationSwapIsDetected(template, "<anonymous:Child:1>", "<anonymous:Child:2>");
+    }
+
+    @Test
+    void sameNamedLocalDeclarationsInSiblingBlocksCannotExchangeDebt() throws IOException {
+        String template = """
+                class Sample {
+                    void update() {
+                        { class Child { void run() { %s } } }
+                        { class Child { void run() { %s } } }
+                    }
+                }
+                """;
+        assertDeclarationSwapIsDetected(template, "<local:Child:1>", "<local:Child:2>");
+    }
+
+    private static void assertDeclarationSwapIsDetected(String template, String first, String second)
+            throws IOException {
+        String original = template.formatted("setDestroyed(true);", "");
+        Map<String, Integer> before = scan(original);
+        Map<String, Integer> after = scan(template.formatted("", "setDestroyed(true);"));
+        String prefix = "Sample.java#Sample#update()#";
+        String suffix = "#run()->setDestroyed(true)";
+        assertEquals(Map.of(prefix + first + suffix, 1), before);
+        assertEquals(Map.of(prefix + second + suffix, 1), after);
+        assertEquals(List.of(
+                prefix + first + suffix + " observed=0 baseline=1 (resolved debt: tighten baseline)",
+                prefix + second + suffix + " observed=1 baseline=0 (new/increased debt)"),
+                ObjectLifecycleCallAudit.differences(after, before));
+        assertEquals(before, scan("/* declaration order ignores comments */\n\n"
+                + original.replace("{", "{\n // formatting only\n")));
     }
 
     @Test

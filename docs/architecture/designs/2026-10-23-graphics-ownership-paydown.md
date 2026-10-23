@@ -156,4 +156,12 @@ shared validation. Tests must map all 17 fields with distinct values, exercise
 palette banks above three and priority OR. Pair CPU SAT collection/replay controls
 with identified offscreen pixel coverage: `TestPresentationSpritePixels` alone
 does not traverse SAT collection/replay and cannot establish GPU SAT parity.
-Implementation is in progress; no ownership-validation pass is claimed yet.
+Implementation follows candidate B in `bac8446dc65c77210d58e00ec9ca5486bd815226`;
+menu/injection landed in `b2170f274c0106040298bf5fcb4d81ddc082cc7d`.
+The low-level store moves 187 → 181 by removing 23 exact identities and adding
+17 ingress accessor calls; frozen rule descriptions/settings and API pins are
+unchanged. Isolated graphics validation passed 126 tests across 13 classes
+(including signatures and existing EGL pixels); menu/injection passed 18 tests.
+All had zero skips. A new actual SAT replay pixel control also passed on the
+original base before composition. Combined checks and delivery evidence are
+recorded in the [plan](../plans/2026-10-23-architecture-ratchet-paydown.md).

@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -37,7 +38,9 @@ import java.util.stream.Collectors;
  * Uses the JDK parser without type attribution or loading gameplay classes.
  * Keys retain the file, lexical type/member chain (including overload types),
  * and operation. Lambdas belong to their enclosing member; anonymous types
- * retain their constructed type and enclosing member. Counts within a caller
+ * retain their constructed type and enclosing member. Local/anonymous declarations
+ * also retain a lexical ordinal per enclosing caller and type name, independent
+ * of whitespace and whether that declaration currently contains a call. Counts within a caller
  * are explicit, so deleting one call cannot buy an unrelated new caller.
  */
 final class ObjectLifecycleCallAudit {
@@ -72,11 +75,32 @@ final class ObjectLifecycleCallAudit {
             for (CompilationUnitTree unit : task.parse()) {
                 String path = paths.get(unit.getSourceFile().toUri());
                 new TreePathScanner<Void, Void>() {
+                    private final Map<ClassTree, String> typeNames = new IdentityHashMap<>();
+                    private final Map<String, Integer> declarationCounts = new TreeMap<>();
+
+                    @Override
+                    public Void visitClass(ClassTree type, Void unused) {
+                        TreePath parentPath = getCurrentPath().getParentPath();
+                        var parent = parentPath == null ? null : parentPath.getLeaf();
+                        String name = type.getSimpleName().toString();
+                        if (!(parent instanceof CompilationUnitTree) && !(parent instanceof ClassTree)) {
+                            String base = name.isEmpty()
+                                    ? "anonymous:" + (parent instanceof NewClassTree creation
+                                        ? creation.getIdentifier().toString().replaceAll("\\s+", "") : "unknown")
+                                    : "local:" + name;
+                            int ordinal = declarationCounts.merge(caller(parentPath, typeNames) + "#" + base,
+                                    1, Integer::sum);
+                            name = "<" + base + ":" + ordinal + ">";
+                        }
+                        typeNames.put(type, name);
+                        return super.visitClass(type, unused);
+                    }
+
                     @Override
                     public Void visitMethodInvocation(MethodInvocationTree call, Void unused) {
                         String operation = operation(call);
                         if (operation != null) {
-                            counts.merge(path + "#" + caller(getCurrentPath()) + "->" + operation, 1, Integer::sum);
+                            counts.merge(path + "#" + caller(getCurrentPath(), typeNames) + "->" + operation, 1, Integer::sum);
                         }
                         return super.visitMethodInvocation(call, unused);
                     }
@@ -145,7 +169,7 @@ final class ObjectLifecycleCallAudit {
         return null;
     }
 
-    private static String caller(TreePath path) {
+    private static String caller(TreePath path, Map<ClassTree, String> typeNames) {
         List<String> scopes = new ArrayList<>();
         for (TreePath current = path; current != null; current = current.getParentPath()) {
             var leaf = current.getLeaf();
@@ -159,13 +183,7 @@ final class ObjectLifecycleCallAudit {
                         .map(parameter -> parameter.getType().toString().replaceAll("\\s+", ""))
                         .collect(Collectors.joining(",")) + ")");
             } else if (leaf instanceof ClassTree type) {
-                String name = type.getSimpleName().toString();
-                if (name.isEmpty()) {
-                    name = parent instanceof NewClassTree creation
-                            ? "<anonymous:" + creation.getIdentifier().toString().replaceAll("\\s+", "") + ">"
-                            : "<anonymous>";
-                }
-                scopes.add(name);
+                scopes.add(typeNames.get(type));
             } else if (leaf instanceof VariableTree field && parent instanceof ClassTree) {
                 scopes.add("field:" + field.getName());
             } else if (leaf instanceof BlockTree block && parent instanceof ClassTree) {

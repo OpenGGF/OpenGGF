@@ -33,9 +33,9 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 187 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 181 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
-| `per_game_packages_do_not_cross_depend` | 14 member dependencies in 2 grouped slice records | <=10 member dependencies | Initial <=20 target reached by shared preview/validation extraction; next extract the four menu-animator members while preserving ten explicit host-donation members |
+| `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
 solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
@@ -58,10 +58,10 @@ plus 34 member dependencies. The initial target used <=20 **member dependencies*
 Shared selected-slot conversion, its result type, and common payload validation
 moved to `game.dataselect` on 2026-10-22, removing 20 member dependencies and
 the entire S2-to-S1 group.
-The remaining allowance is 14 members in 2 groups. Neither physical lines nor
+After that extraction the allowance was 14 members in 2 groups. Neither physical lines nor
 grouped records can be substituted for member dependencies when evaluating
-this migration. The next target is <=10 members, closing the four shared
-menu-animator dependencies while preserving explicit host-ROM donation.
+this migration. On 2026-10-23, moving menu animation to `game.menu` removed the four
+animator members, meeting the target of 10 while preserving explicit host-ROM donation.
 
 ## Active Migration Queue
 
@@ -74,8 +74,8 @@ continues those cuts rather than treating the inventory as untouched.
 
 | Slice / owner | Expected change | Completion evidence | Status |
 |---|---|---|---|
-| Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Current campaign |
-| Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Current campaign; not a claim of complete graphics-layer isolation |
+| Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Implemented; combined guard verification pending |
+| Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Implemented; low-level records 187 → 181; combined verification pending |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K preview behavior and donor/host selection remain ROM-backed; no concrete type checks in shared preview orchestration | Next bounded slice, not delivered in this campaign |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
 
@@ -111,10 +111,21 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 | Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
-The former aggregate lifecycle figures (`setDestroyed(true)`: 585,
-`addDynamicObject(...)`: 136) were historical source inventories, not executable
-caps. Current aggregate usage is unmeasured here; the migrated-file guard does
-not enforce a global raw-call total.
+`TestObjectPhysicsStandardizationGuard` now compares parsed lifecycle calls with
+`architecture/object-lifecycle-call-baseline.txt`: 582 `setDestroyed(true)` calls
+in 503 caller identities and 10 dynamic-add calls in 10 identities. Each key
+retains file, lexical type/member signature and operation, with its exact count
+and migration/bridge reason. Both growth and stale allowances fail. Local and
+anonymous declarations retain per-caller lexical ordinals, so moving a call to
+another declaration cannot spend removed debt; formatting does not change keys.
+This inventory covers the guarded object packages, not all application calls.
+The older figures 585/136 counted a different historical source scope.
+
+The rewind field-disposition census pruned 41 already-resolved exemptions
+(64 → 23) and now fails stale keys as well as new gaps. The ICZ segment-column
+recreation exclusion is gone. The justified recreate-throw baseline remains
+13 files / 14 occurrences; static-state coverage retains its three existing
+exceptions. These are enforcement repairs, not newly implemented rewind state.
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a
@@ -195,21 +206,32 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 187
+- `low_level_layers_do_not_depend_on_runtime_layers`: 181
 - `shared_layers_do_not_depend_on_game_specific_packages`: 9
 - `per_game_packages_do_not_cross_depend`: 2
-- `runtime_owned_framework_packages_do_not_access_global_service_roots`: 1
+- `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
 - `runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`: 2
 
-For cross-game slices, the same stored records contain **14 member
-dependencies** (16 physical lines including headers); the decay target above
+For cross-game slices, the same stored records contain **10 member
+dependencies** (12 physical lines including headers); the decay target above
 uses member dependencies. Low-level, framework-root, and registry-construction
 labels still say 209, 13, and 4 respectively. Correcting their published counts
 to 184, 11, and 2 records neither removed an allowance nor proved a live violation
 was resolved by that accounting change. The later private audio-source identity
-migration above accounts for the current low-level allowance of 187 records.
-The installed-owner rewind change removes 10 framework-root records, leaving
-the 1 record listed above.
+migration above raised the allowance to 187. The canonical sprite ownership
+cut on 2026-10-23 removed 23 member identities and added exactly 17 accessor
+identities at the unchanged public submission boundary, leaving 181 records.
+The retained compatibility dependency is explicit: `GraphicsManager` accepts
+`SpritePieceRenderer.PreparedPiece` and copies it once into `graphics.SpritePiece`.
+SAT storage and replay use the graphics value and its single expansion owner.
+This is a reviewed identity relocation, not a prune-only update or complete
+isolation of graphics from runtime packages.
+
+The installed-owner rewind change removed 10 framework-root records, leaving
+one. Injecting execution-time graphics selection into `ScriptFramesApplyStrategy`
+removed that last record. The S2 composition supplies `GameServices::graphics`,
+so rebinding after installation remains visible; `ChannelContext` and API pins
+are unchanged.
 
 ## Package Cycle Ratchets
 
@@ -233,8 +255,8 @@ published allowance count.
   edges out of gameplay/data/graphics ownership loops. Allowed directions are
   explicit source/target top-level package pairs in
   `CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES`; new internal or adjacent edge pairs
-  are not covered by a cluster-wide ignore. First decay target: remove at least
-  one edge from that set when its dependency direction is eliminated.
+  are not covered by a cluster-wide ignore. The first decay target is met by the seven measured unused permissions above;
+  future removals require a live dependency census too.
 - Phase 2 consciously adds `mods -> game` for creator `GamePatch` registration and
   the engine-owned `PatchOwner`/`RegisteredPatch`/`ModuleResolutionService` freeze,
   plus `mods -> level` solely for the canonical shared `ObjectFactory` contract.
