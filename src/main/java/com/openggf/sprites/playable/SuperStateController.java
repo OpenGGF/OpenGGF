@@ -222,7 +222,7 @@ public abstract class SuperStateController {
     }
 
     protected final void reconcileRewindPhysicsAndAnimationProfile(boolean activeSuper) {
-        player.applyExternalPhysicsProfile(activeSuper ? getSuperProfile() : getNormalProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, activeSuper ? getSuperProfile() : getNormalProfile());
         SpriteAnimationProfile current = player.getAnimationProfile();
         if (normalAnimProfile == null && current instanceof ScriptedVelocityAnimationProfile) {
             normalAnimProfile = current;
@@ -405,7 +405,7 @@ public abstract class SuperStateController {
         // frame uses them. Installing the profile at animation completion
         // instead left the transform frame on the normal constants, an ordinary
         // $18 step rather than the ROM's $60.
-        player.applyExternalPhysicsProfile(getSuperProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, getSuperProfile());
         // S2 Sonic_CheckGoSuper does NOT write Super_Sonic_frame_count, so the
         // first Sonic_Super pass decrements whatever it already held -- zero --
         // and drains a ring on the transformation frame itself before reloading
@@ -500,7 +500,7 @@ public abstract class SuperStateController {
         // Clear transformation freeze in case revert happens during transformation
         ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
-        player.applyExternalPhysicsProfile(getNormalProfile());
+        PlayableSpriteInternalAccess.installSuperPhysicsProfile(player, this, getNormalProfile());
         restoreNormalAnimProfile();
         onRevertStarted();
         state = SuperState.NORMAL;

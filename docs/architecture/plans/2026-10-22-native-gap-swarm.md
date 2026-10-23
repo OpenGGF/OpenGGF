@@ -1745,3 +1745,174 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+### S2 effective speed words — isolated implementation scope, 2026-10-23
+
+The implementation starts from `659b02c98` in the NEW T3-isolated
+`bugfix/ai-s2-native-speed-words-20261023` worktree. Root retains delivery and
+common smoke ownership; this task has at most two normal focused requests and
+one fresh affected guard request. No route, native observation, capture, Lua,
+provider activation, Main, PR or push work is included. Work stops at 14:30Z,
+review/cleanup at 15:00Z, and the task expires at 15:30Z.
+
+Pinned reference `docs/s2disasm` is `34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`.
+The REV01 source writers are `Obj01_Init` (s2.asm:36187-36189), `Obj02_Init`
+(s2.asm:38907-38909), `super_shoes` (s2.asm:25926-25944), `Obj01_ChkShoes`
+(s2.asm:36314-36321), `Obj02_ChkShoes` (s2.asm:39050-39052), Sonic's water entry
+and exit (s2.asm:36387-36394,36411-36418), Tails' water entry and exit
+(s2.asm:39555-39557,39573-39575), `Sonic_CheckGoSuper` (s2.asm:37483-37485),
+`Sonic_RevertToNormal` (s2.asm:37535-37542), and `ObjB2_Move_Leader_edge`
+(s2.asm:79137-79139). These are literal unsigned words; flag-derived priority
+cannot reproduce pickup while already wet/Super or dry expiry while underwater.
+`Obj01_UpdateSpeedOnGround` (s2.asm:36772-36776) separately overrides neutral
+friction with literal `$C` for the actual Super flag. Tails has no such override.
+The `if 0` question-mark Super monitor is not a retail writer.
+
+The approved seams are a per-actor package-private native bank, existing internal
+access primitives, a new unannotated policy supplied by the stock S2 physics
+provider, six existing getter calculations extracted to the existing value
+resolver, neutral ground friction before traction, real shared water/shoes
+writer dispatch, S2 Super start/revert/profile reconciliation, WFZ edge reset,
+and an engine-only aggregate in the existing object-extra snapshot slot. The
+aggregate preserves the pending-insta payload and restores the bank after the
+controller's physics reconciliation. Public/custom profile writes invalidate;
+profile binding does not initialize. Zero is known data, not an unknown sentinel.
+
+Rejected: flag recomputation, seeding at profile binding or generic reset,
+encoding words in unrelated snapshot fields, API/pin/budget changes, palette-end
+rewrites, and treating an unused compatible swap primitive as production fidelity.
+The lifecycle audit additionally proves `Level_ClrRam` (s2.asm:4806-4811) clears
+Sonic's bank through `Misc_Variables`, while Tails' bank is outside these ranges
+(s2.constants.asm:1748-1752). CPU Tails respawn directly returns to routine 2;
+it does not run `Obj02_Init` and must retain the bank. The current ordinary S2
+engine has no explicit routine-0 dispatcher. An S2-owned assembly hook would
+coalesce initialization rather than establish exact first-dispatch timing; that
+extra owner proposal was sent to Root before edits. The native competition swap
+facade has no production `NativeState` implementation, so native teleport remains
+an explicit ownership limit. None of this attributes ARZ2 or any other frontier.
+
+The coordinator approved the actual native Host loop-tail initializer separately
+from the ordinary coalesced step. Stock ordinary assembly has no intervening bank
+consumer: `GameplayTeamBootstrap` constructs/registers the actors; movement
+constructors read slope/roll constants only; `LevelLoadAttempt` executes the
+ordered load steps synchronously; camera materialization constructs/registers
+objects without updates/collision; S2 event initialization resets local state.
+Qualification excludes extensible compositions: exact stock provider and actors,
+canonical profiles, no custom character specification or active donor; ordinary
+exact stock module and no owning-world policies. The genuine native world instead
+requires its actual final Host service, identical owning world, exact stock root
+and roster membership. A service from another world and a non-roster actor convey
+no authority. No shared policy scaffolding was added.
+
+The ordinary step follows `SpawnSidekick` and precedes `RequestTitleCard`, and is
+absent from previews and unassembled loads. It is coalesced participant assembly,
+not exact native routine-0/clear/first-dispatch timing. Generic reset and loss of
+native policy eligibility invalidate knowledge only. They publish neither zero
+nor init words. Actual hurt/death/recovery and CPU routine-2 respawn retain the
+last writer. Unsupported native RAM clear and teleport ownership remain open.
+
+Red request `48626` completed on the unchanged parent production source:
+`TestNativePlayerSpeedWords.shoesOverwriteAlreadyWetSonicAndTailsWithoutChangingWaterGravity`
+failed expected3072/actual768; **1 test, 1 failure, 0 errors, 0 skips**. Normal
+queue wait568 seconds, Maven1:20. The consumed XML/text had no dumps. A build-only
+`test-compile` first found a missing PM import/private modifier access, then two
+test fixture calls to a nonexistent sidekick adder. The import and explicit
+modifier argument were corrected, and tests now use CPU flag plus actual
+`addSprite`. The final build-only compile completed in32.370 seconds with no
+checks executed. These compile failures are implementation work, not baseline
+engine failures.
+
+Frozen affected request `5309` used the current absolute Main Maven wrapper from
+this worktree, `--normal -Dmse=off`, Java25.0.5, surfaceless EGL and all three
+identity-verified original root ROM paths. Its unchanged 29-class selection
+covered the new native bank, S2 Super writers and publication/rewind controls,
+ordinary/native assembly, WFZ, shared profiles/movement, API11 and the required
+S3K keepers. Source fingerprint
+`c1e1f3afc4d1dfb5c4d55d6cc6066e522b83ddc791b903573e13bc7b1da47b9f`
+remained frozen through completion: **527 tests, 1 failure, 6 errors, 0 skips**;
+queue813 seconds, Maven43.703 seconds, no JVM dumps. This is red bounded
+qualification, not a common-smoke or green-delivery result.
+
+Three inherited errors are the existing
+`TestSonic2SuperTransformationStartEffects` methods
+`pendingRestoreMatchesTheCapturedOwnerAndRejectsUnsupportedSpawnerWithoutConsuming`,
+`capturedMonitorStarsRecreateAfterDestructiveSuperRestoreAndReplayForward`, and
+`overriddenFactoryAndConstructionFailurePreservePendingNativeEntryWithoutFallbackMint`.
+All stop in `capturedEntry` with `NoSuchElementException`: the owner-role migration
+captures `playerOwnerId`/`mainPlayer`, while the unchanged helper still filters
+the null raw owner. Root assigned the owner-role helper and the separately
+identified private pending-return retry defect to a distinct isolated child.
+This implementation does not modify that binding/restore collaborator or OM.
+
+The remaining red cases are new fixture mistakes: the three-game pending real
+InstaShield control used temporary construction services after construction,
+and the destructive Host control compared record history arrays by identity.
+The first now attaches the existing services handle without registering the
+pending shield; the second uses the existing recursive `RewindSnapshotDiff`
+across the full snapshot. The printed Host scalar state and native bank were
+identical in the red result; array contents still require corrected execution.
+Only these two test regions and an ambiguous coalesced-init citation comment
+changed after request5309. The corrected 21-Java fingerprint is
+`e7df8d8446485bb66569b6f37eb0922da8d9814a9ccfcdfbd9f49ef53bf01d80`.
+Pinned citation comparison against659 finds no new hard or stale citations;
+the existing90 stale/one missing-file findings are unchanged.
+
+Root prospectively amended the two-focus limit with exactly one bounded
+correction request after the pending-return prerequisite is qualified and its
+exact source receipt agreed. The original affected selection, including the
+entire Super start/publication controls, remains proposed unchanged; no third
+ordinary request has been submitted at this checkpoint. The separately
+allocated fresh seven-class source/architecture/rewind guard request is22081;
+it contains no behavior tests and has one owning observer. Consumed focus
+XML/text and temporary logs were inspected and removed, with results retained
+here rather than archived.
+
+A final read-only ownership audit found a material limit in that frozen source:
+`currentGameModule()` and `currentLevelManagerIfAvailable()` delegate to current
+global services when an actor has no `PlayableRuntimeContext`. Native Host
+participants are plain Sonic/Tails constructions, so the subsequent exact Host,
+world and roster checks do not by themselves meet the strict no-global-alias
+requirement. Request22081 remains attributable to its original source only.
+No ownership correction has been applied at this checkpoint. The proposal sent
+to Root uses the existing actual `LevelLoadAttempt` world/sprites and the Host
+context at birth/recreation, with a live structural per-actor owner binding;
+the immutable bank snapshot would retain only words/knownness. Unbound direct
+restores would remain UNKNOWN. This needs acceptance of the exact additional
+load-context/attempt and native roster-recreation hunks and fresh qualification;
+it is not silently treated as a compatible completed helper.
+
+Root accepted the concrete correction in the bank/policy/access seams and four
+existing additional owners: `LevelLoadContext`, `LevelLoadRuntimeAccess`,
+`LevelLoadAttempt`, and `Sonic2CompetitionSession.prepareRestore`. Guard22081
+first completed at the unchanged e7df pin: **114 tests, 0 failures/errors/skips**,
+seven classes, queue1156 seconds and Maven1:30, no dumps. No new field
+disposition was required; no inventory or source budget was raised. That pass
+does not qualify the later ownership correction, and the rejected alias-based
+eligibility remains explicitly recorded above.
+
+The live bank now holds a structural `ownerWorld`; its immutable snapshot
+remains exactly three short words and knownness. A changed binding forgets
+knowledge. Policy lookup uses only that bound world's module/provider. Host
+birth binds then performs the approved native init. Native roster restoration
+rebinds current/recreated actors before art/profile/APS restoration and performs
+no speed write. Unbound raw restoration immediately stays UNKNOWN; bound direct
+restoration can recover captured words; old payloads remain UNKNOWN.
+
+The ordinary coalesced step receives the actual load context's world and sprite
+manager. `LevelLoadAttempt` supplies both through the existing engine-only
+runtime bridge; the original world identity guard remains intact, conflicting
+manager identity is rejected, and decode/preview paths can initially omit a
+manager. Only assembled participant init requires one explicitly. The tests
+cover these actual attempt paths, binding without a write, changed-owner
+invalidation, direct bound/unbound/legacy restore, and independence from the
+current global module. The final affected proposal is the original29 whole
+classes plus `TestLevelLoadAttempt`; Root also allocated one new fresh owning
+guard for this changed source. Both final requests still await the qualified
+pending-return prerequisite's agreed exact source receipt.
+
+The owner-corrected26-Java source fingerprint is
+`814befb6429f839af27c8dcde519cd0c56e34de2fed08c938ff5397cb618b9c1`.
+Build-only request87216 completed `test-compile` successfully in1:15; no tests
+ran. A read-only review of the ten affected production files found no further
+concrete ownership/restore issue. Final behavior/guard qualification is still
+pending and cannot be inferred from this compile or the earlier guard pin.

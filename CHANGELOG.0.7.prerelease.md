@@ -68,8 +68,9 @@ Unreleased. The earlier development themes remain in
   death. Transformation stars, timed-invincibility clear and audio requests occur
   at transform start, and captured normal stars survive Super rewind restoration.
   It preserves native balance, reversion animation and invincibility timing, and
-  keeps the speed constants written by an underwater transformation until their
-  next native writer. Ordinary special-stage entry presents its loading hold
+  keeps the literal speed, acceleration and deceleration words written by water,
+  shoes, Super and Wing Fortress events across rewind, including shoes expiring
+  while still underwater. Ordinary special-stage entry presents its loading hold
   without duplicating replay timing. Special-stage player pieces use ROM mappings
   and resolve each tile through their DPLC requests, preserving whole native
   sprite footprints even when the source art is scattered. Curved-track player

@@ -113,10 +113,16 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
                 recreated = true;
             }
         }
+        if (recreated) {
+            var sonic = (AbstractPlayableSprite) sprites.getSprite(players[0].getCode());
+            var tails = (AbstractPlayableSprite) sprites.getSprite(players[1].getCode());
+            bindPlayers(sonic, tails);
+        }
+        for (var player : players) {
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindNativeSpeedOwner(
+                    player, context.getWorldSession());
+        }
         if (!recreated) return;
-        var sonic = (AbstractPlayableSprite) sprites.getSprite(players[0].getCode());
-        var tails = (AbstractPlayableSprite) sprites.getSprite(players[1].getCode());
-        bindPlayers(sonic, tails);
         // Same ROM-backed initializer used by native entry. Both actor resources
         // must exist before canonical sprite/auxiliary RAM and object references
         // are restored; no captured gameplay value is passed through this hook.

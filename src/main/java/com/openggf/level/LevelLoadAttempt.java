@@ -43,7 +43,7 @@ final class LevelLoadAttempt {
     }
 
     void execute(Supplier<GameModule> moduleSource, int levelIndex) {
-        if (world != null) com.openggf.game.LevelLoadRuntimeAccess.bindWorld(context, world);
+        if (world != null) com.openggf.game.LevelLoadRuntimeAccess.bindParticipants(context, world, sprites);
         try (var physicalLoad = com.openggf.game.internal.NativePhysicalLevelLoad.begin(
                 java.lang.invoke.MethodHandles.lookup(), world, context, mode)) {
             WorldSessionPolicyAccess.beforeAssembly(world, admissionCause);

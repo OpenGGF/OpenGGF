@@ -39,6 +39,7 @@ import com.openggf.audio.NativeAudioEffectCues;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.PlayableSpriteInternalAccess;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.game.PhysicsProfile;
@@ -3043,7 +3044,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short runAccel = sprite.getRunAccel();
 		short runDecel = motionMutators == null ? sprite.getRunDecel() : motionMutators.traction(sprite, sprite.getRunDecel());
-		short friction = motionMutators == null ? sprite.getFriction() : motionMutators.traction(sprite, sprite.getFriction());
+		short frictionBase = PlayableSpriteInternalAccess.neutralGroundFrictionBase(sprite);
+		short friction = motionMutators == null ? frictionBase : motionMutators.traction(sprite, frictionBase);
 		short max = sprite.getMax();
 		Camera camera = playerCameraBiasController();
 
@@ -3217,11 +3219,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.getAnimationManager().captureGroundMovementAnimSpeed((short) gSpeed);
 
 		// Friction
-		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
+		// Obj01_UpdateSpeedOnGround (s2.asm:36772-36776): the literal Super override was selected before traction.
 		if (!inputRawLeft && !inputRawRight) {
-			short effectiveFriction = sprite.isSuperSonic()
-					? (motionMutators == null ? (short) 0x0C : motionMutators.traction(sprite, (short) 0x0C)) : friction;
-			gSpeed = applyFriction(gSpeed, effectiveFriction);
+			gSpeed = applyFriction(gSpeed, friction);
 		}
 
 		if (motionMutators != null) {

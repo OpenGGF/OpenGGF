@@ -1,5 +1,16 @@
 # Level test coverage backlog
 
+S2 effective speed words (2026-10-23): the
+[native-gap implementation record](../architecture/plans/2026-10-22-native-gap-swarm.md#s2-effective-speed-words--isolated-implementation-scope-2026-10-23)
+tracks stock Sonic/Tails water, shoes, Super and WFZ writer controls, raw
+zero/unknown ownership, direct and destructive registered restore/forward, and
+non-S2/custom/donor/local-fluid negatives. This is a shared-player contract
+increment, not a level or route certificate. Ordinary initialization is explicitly
+coalesced at participant assembly; pre-init RAM clear, exact first-dispatch timing,
+full teleport swap and all unresolved ARZ2/other trace frontiers remain open.
+Validation results are recorded in the linked task record.
+
+
 SSZ rotating post/carrier support (2026-10-21): the [ID76 component increment](../architecture/validation/levels/s3k-ssz-act1.md#r16-positive-control-rotating-solid-component-contract--2026-10-21)
 adds real-manager/manual-checkpoint P1 and CPU P2 held-control, fresh-jump release
 and signed-bit7 contact coverage for both owners. Final focused197 checks pass;

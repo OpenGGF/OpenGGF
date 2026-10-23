@@ -121,9 +121,30 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
                     }
                 }));
         if (ctx.isIncludePostLoadAssembly()) {
-            steps.addAll(postLoadAssemblySteps(ctx));
+            for (InitStep step : postLoadAssemblySteps(ctx)) {
+                steps.add(step);
+                if (!isPreviewCapture(ctx) && step.name().equals("SpawnSidekick")) {
+                    steps.add(new InitStep("InitNativePlayerSpeedWords",
+                            "S2 coalesced participant assembly: Obj01_Init / Obj02_Init",
+                            () -> initializeParticipantSpeedWords(ctx)));
+                }
+            }
         }
         return List.copyOf(steps);
+    }
+
+    private void initializeParticipantSpeedWords(LevelLoadContext ctx) {
+        // Stock assembly is synchronous and has no speed-word consumer before this point.
+        // Coalesces Obj01_Init (s2.asm:36187-36189) and
+        // Obj02_Init (s2.asm:38907-38909);
+        // it does not model pre-init RAM clear or exact first-RunObjects dispatch timing.
+        var world = com.openggf.game.LevelLoadRuntimeAccess.requireWorld(ctx);
+        var sprites = com.openggf.game.LevelLoadRuntimeAccess.requireSprites(ctx);
+        var leader = sprites.getMainPlayable();
+        if (leader != null) com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(leader, world);
+        for (var follower : sprites.getSidekicks()) {
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(follower, world);
+        }
     }
 
     @Override

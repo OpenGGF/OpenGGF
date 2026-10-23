@@ -152,6 +152,7 @@ class TestSonic2NativeCompetitionHost {
                     if (zone[0] == 0) verifyNativePauseAndContinuation(driver, menus, screen, views);
                     assertEquals(savedCharacter, configuration.getString(SonicConfiguration.MAIN_CHARACTER_CODE));
                     if (zone[0] == 0) verifyRegistryRestoreAndForwardReplay(driver);
+                    if (zone[0] == 0) verifySpeedWordsAcrossDestructiveRestore(driver);
                     verifyNativeRingCollection(driver);
                     if (zone[0] == 0) verifyNativeP2DeathAndRespawn(driver);
                     if (zone[0] == 0) earnP1BadnikScoreForOverallTie(driver);
@@ -343,6 +344,7 @@ class TestSonic2NativeCompetitionHost {
         assertSame(session.player(0), host.context().getCamera().getFocusedSprite());
         for (int slot = 0; slot < 2; slot++) {
             var actor = session.player(slot);
+            assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
             assertNotNull(actor.getAnimationProfile(), "ROM animation logic must be installed for each human");
             assertNotNull(actor.getAnimationSet());
             assertNotNull(actor.getSpindashDustController());
@@ -596,6 +598,67 @@ class TestSonic2NativeCompetitionHost {
         driver.ticks(32, directions(AbstractPlayableSprite.INPUT_RIGHT, AbstractPlayableSprite.INPUT_LEFT));
         driver.ticks(16, NEUTRAL);
         assertEquals(expected, state(driver), "restored world must reproduce the same forward input segment");
+    }
+
+    private static void assertNativeSpeedWords(AbstractPlayableSprite actor, int max, int accel, int decel) {
+        assertEquals(max, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(actor));
+        assertEquals(accel, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeAccelerationWord(actor));
+        assertEquals(decel, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeDecelerationWord(actor));
+        assertEquals(max, actor.getMax()); assertEquals(accel, actor.getRunAccel()); assertEquals(decel, actor.getRunDecel());
+    }
+
+    private static void verifySpeedWordsAcrossDestructiveRestore(Driver driver) {
+        var mode = driver.host.context();
+        var registry = mode.getRewindRegistry();
+        var original = registry.capture();
+        try {
+            var outsider = new com.openggf.sprites.playable.Sonic("probe", (short) 100, (short) 200);
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.publishNativeSpeedWords(outsider, 0, 0, 0);
+            assertEquals(-1, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(outsider),
+                    "a non-roster actor cannot acquire this Host's authority");
+            for (int slot = 0; slot < 2; slot++) {
+                var actor = driver.session.player(slot);
+                actor.setHurt(false); actor.setDead(false);
+                assertFalse(actor.isSuperSonic(), "this writer replay has a normal native control precondition");
+                actor.updateWaterState(actor.getCentreY() - 1);
+                actor.giveSpeedShoes(8);
+                assertEquals(8, actor.captureRewindState().playerExtra().speedShoesRemainingTicks());
+                assertNativeSpeedWords(actor, 0xC00, 0x18, 0x80);
+            }
+            var before = registry.capture();
+            List<com.openggf.level.objects.PerObjectRewindSnapshot> expected = null;
+            for (int pass = 0; pass < 2; pass++) {
+                var abandonedOne = driver.session.player(0);
+                var abandonedTwo = driver.session.player(1);
+                if (pass != 0) {
+                    mode.getSpriteManager().removeSprite(abandonedOne.getCode());
+                    mode.getSpriteManager().removeSprite(abandonedTwo.getCode());
+                    registry.restore(before);
+                    assertNotSame(abandonedOne, driver.session.player(0));
+                    assertNotSame(abandonedTwo, driver.session.player(1));
+                    assertRestoredRoster(driver);
+                }
+                for (int slot = 0; slot < 2; slot++) {
+                    var actor = driver.session.player(slot);
+                    assertNativeSpeedWords(actor, 0xC00, 0x18, 0x80);
+                    actor.updateWaterState(actor.getCentreY());
+                    assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
+                    assertTrue(actor.hasSpeedShoes());
+                    actor.updateWaterState(actor.getCentreY() - 1);
+                    assertNativeSpeedWords(actor, 0x300, 6, 0x40);
+                    for (int tick = 0; tick < 8; tick++) actor.currentTimerManager().updateDisplayPhaseTimersFor(actor);
+                    assertNativeSpeedWords(actor, 0x600, 0xC, 0x80);
+                    assertTrue(actor.isInWater()); assertEquals(0x10, actor.getEffectiveGravity());
+                    assertFalse(actor.hasSpeedShoes());
+                    if (pass != 0) assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                            "player", expected.get(slot), actor.captureRewindState()),
+                            "destructive registered restore must reproduce the full forward player state");
+                }
+                if (pass == 0) expected = List.of(driver.session.player(0).captureRewindState(),
+                        driver.session.player(1).captureRewindState());
+            }
+        } finally { registry.restore(original); }
+        assertRestoredRoster(driver);
     }
 
     private static void verifyNativeRingCollection(Driver driver) {

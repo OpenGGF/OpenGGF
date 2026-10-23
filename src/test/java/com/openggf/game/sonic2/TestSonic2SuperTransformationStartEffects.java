@@ -94,6 +94,10 @@ class TestSonic2SuperTransformationStartEffects {
     private static void assertStarted(HeadlessTestFixture fixture) {
         assertEquals(SuperState.TRANSFORMING, owner(fixture).getState());
         assertTrue(fixture.sprite().isSuperSonic());
+        assertEquals(0xA00, com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativeMaximumSpeedWord(fixture.sprite()),
+                "the literal native WORD write precedes both audio requests and descriptive profile installation");
+        assertEquals(0x30, fixture.sprite().getRunAccel());
+        assertEquals(0x100, fixture.sprite().getRunDecel());
         assertTrue(fixture.sprite().getInvulnerable(), "secondary invincibility protection is already active");
         assertEquals(0, fixture.sprite().getInvincibleFrames(), "the old monitor timer is cleared at start");
         assertNotNull(stars(), "Obj7E ID is published at the fixed SST before either audio request");

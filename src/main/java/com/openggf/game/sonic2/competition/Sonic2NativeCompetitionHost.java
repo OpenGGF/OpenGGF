@@ -478,6 +478,8 @@ public final class Sonic2NativeCompetitionHost implements Sonic2CompetitionHost,
             // Obj01_Init_Continued (s2.asm:36201-36221), Obj02_Init_Continued (s2.asm:38934-38947).
             player.resetPositionAndStatTableHistoryAtCentre((short) (slot == 0 ? start.x() - 0x20 : 0),
                     (short) (slot == 0 ? start.y() + 4 : 0));
+            // Obj01_Init/Obj02_Init own the effective words, independent of profile binding.
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.initializeNativeSpeedWords(player, context().getWorldSession());
         }
         context().getLevelManager().refreshPlayablePowerUpSpawners();
     }
