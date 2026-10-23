@@ -836,3 +836,102 @@ changed; executable production/test statements remained unchanged. Whitespace
 and staged-path review passed. The native child workers finished with no owned
 Maven process left; registry expiry remains 2026-10-23 08:46 UTC and its shared
 file was read without modification.
+
+
+## S2 physical video admission prerequisite
+
+The live interlace producer is still unbound. Its CPU page construction, VInt
+VRAM publication, HInt publication and drawing need distinct source boundaries.
+The existing software `VIntRunCounter` delegates to ObjectManager during a level;
+it is not a physical field identity or parity seed. A generic `LAG` phase also
+cannot distinguish Vint_Lag from Vint_CtrlDMA or a represented mid-handler
+closure. Neither ordinary frame parity nor comparison metadata may fill that gap.
+
+Current lifecycle order is material: `latchBeforeFadeUpdate` constructs a token
+and can immediately claim an outgoing blocking fade; only afterward does the
+before-fade callback run. `claim` services PLC before `dispatchGameVBlank`.
+Consequently a constructor identity synthesized from the logical iteration, or
+an extra callback at game-VBlank dispatch, would neither prove physical admission
+nor place native S2 SAT uploads before its actual DMA work. A physical permit
+must exist before that first claim, supplied by the existing live/headless
+admission owner. That contract is currently absent. No EngineContext, timing,
+frame-token, GameLoop admission or generic carrier scaffolding was authored here.
+These shared surfaces remain parent-owned for a separate architecture unit.
+
+The native ordering to preserve is VSRAM/Hint_flag and palette, Plane A C000 and
+H-scroll, P1 SAT to F800, existing queued DMA/audio, then camera/scroll/P2 HInt
+copies (Vint_Level, s2.asm:698-808). HInt clears Hint_flag at handler entry,
+then selects Plane A A000 and publishes the retained P2 VSRAM and old P2 RAM
+SAT to that same F800 hardware table (H_Int, s2.asm:1181-1220). The clear is not
+mainline resumption: the interrupt retains the CPU through H_Int_Done/RTE
+(s2.asm:1234-1235). A parked builder continuation may resume only after an
+explicit completed-handler/CPU-resume event, after the old P2 upload; observing
+the cleared memory flag alone is insufficient (BuildSprites_2P,
+s2.asm:30987-31246). It resumes only P2 and must not rerun actors, deformation
+or P1. There is no shipped S2 SAT
+page flip. The global H-scroll table already contains the lower segment.
+
+Any future field seed must come from an explicit video-reset contract or a full
+captured carrier restore. Unknown physical arrival, partially written SAT RAM,
+and HInt display-off duration remain unsupported rather than becoming two fixed
+112-line views. The independent read-only admission bridge and CPU VRAM word
+transaction can be tested without supplying those missing physical facts. This
+disposition does not complete video parity or authorize provider activation.
+
+
+## Selective S2 transfer speed-word prerequisite
+
+The selective actor primitive cannot safely swap Java base speed fields and a
+water latch. Direct source review shows absolute writes by super_shoes
+(s2.asm:25924-25949) and both shoes-expiry owners (s2.asm:36307-36329,
+39042-39056), independent of an underwater status that may remain set. The
+proposed native three-effective-WORD bank therefore needs explicit writer,
+getter, neutral-friction and rewind ownership before full swap qualification.
+Base profiles, Java friction, init-physics and Super remain actor-attached;
+the word bank is not reconstructed by inverting those flags. The appended actor
+private-field/tilt primitive remains held for that semantic owner, exact raw S2
+routine access and the parent's qualified class-size extraction. No APS or
+movement source was added for this proposal. The reusable pitfall is mirrored
+as S2 P90; P89 is already used by the parent's native palette-timer work.
+
+
+## Retained S3K view consumer and destructive framebuffer replay
+
+The internal `S3kCompetitionViews` consumer uses the domain's authoritative plane
+geometry and uploaded sprite-page pair. It does not rebuild the native queue or
+transcribe art. Each mapping freezes only its used ROM pattern versions and uses
+the default SAT source ownership/replay path. The two raster segments retain the
+full 224-line H-scroll table, separately latched P1/P2 vertical words and race
+backdrop CRAM line 2, color 0. Preparation binds owners; drawing reads retained
+publication without ticking actors, cameras, pages, animation or clocks.
+`S3kCompetitionViewRegisters` captures the distinct normal, lag and fade latch
+rules. Resource teardown retires the arena and graphics resources while their
+owned GL context is still current.
+
+Original domain leaf `ed363156fc0c813e3867c385fd1b6c1aa53b2830` applied cleanly
+on the full original `cb6bbece6` reconstruction stack. Its 66 focused tests passed
+without failures, errors or skips (397 seconds waiting; 1:23 Maven execution).
+The unchanged full-registry comparisons exposed and then verified three genuine
+domain corrections: native shoe state no longer activates a campaign timer;
+generic HUD recreation retains the complete captured `ObjectSpawn`; and LF0
+load initialization selects the existing native parallax handler without
+advancing its state. Missing-P2/both-human cases cover matching and differing
+characters, retained IDs/slots/counters, current fixed-dust wiring and forward
+replay. No filters, timer cleanup or snapshot rewriting were used.
+
+On composed root `0b1204fb8` plus the same four frozen GPU source/test files, the
+retained stronger check completed with command exit 0:
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Ds3k.rom.path=<absolute existing locked S3K ROM>' '-Dtest=TestS3kCompetitionArenaPixels#actualAlzRetainsPublishedPixelsThroughDestructiveHumanRestore' test -B`.
+Surefire XML confirms that exact one test, zero failures/errors/skips, Java
+25.0.5 and the requested ROM/EGL properties. Queue wait was 5 seconds, Maven
+execution 1:28. After removing both humans, canonical full-registry restoration
+recreated them; four forward steps reproduced player state, retained view
+registers and every 320x224 framebuffer pixel. Prior six register cases, the
+five-arena draw check and actual ALZ countdown/independent-controller check are
+reused only for their unchanged covered behavior.
+
+This commits a bounded internal consumer, not provider activation. Native audio,
+shield/star presentation, independent native color/scanline corroboration and
+all-five-arena race/route qualification remain open. S2 physical admission,
+three-effective-WORD speed ownership and full synchronous swap are separate
+prerequisites. No aggregate smoke or whole-session parity is claimed here.
