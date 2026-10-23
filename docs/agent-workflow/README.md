@@ -54,6 +54,10 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   executes bounded line transforms over caller-owned Word RAM. Opt-in
   `TestCdStampNativeContinuations` checks complete external RAM payloads;
   scheduling and ownership remain outside the transform. Origin: 2026-10-23 CD-05.
+- [CD stamp graphics service](../../src/main/java/com/openggf/game/soniccd/service/graphics/CdStampGraphicsService.java)
+  advances stable production submissions from explicit CD clocks and RAM ownership.
+  `TestCdStampOwnerLedgerSourceModel` compares external native scalar boundaries;
+  it does not supply runtime timing or certify physical hardware. Origin: 2026-10-23 CD-05.
 - [CD PCM sample device](../../src/main/java/com/openggf/game/soniccd/device/pcm/CdPcmDevice.java)
   owns integer chip state and bounded sample work. The
   [PCM source oracle](../../tools/soniccd/pcm_oracle_check.py) checks constructed
