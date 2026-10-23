@@ -299,6 +299,17 @@ public final class StageplayLiveWorld implements AutoCloseable {
         ObjectDirectionAccess.activationWindows(owned.getLevelManager().getObjectManager(), windows);
     }
 
+    /** Production route button adapter, also used by isolated native-input replays. */
+    public static com.openggf.stageplay.route.StageplayRouteSteering.Buttons routeInput(
+            PuppetCommand command, int elapsed, com.openggf.sprites.playable.PlayablePuppet.Observation actor,
+            boolean jump, boolean returning, int approach, double targetX) {
+        var facts = new com.openggf.stageplay.route.StageplayRouteSteering.Motion(actor.x(), actor.xSpeed(),
+                actor.groundSpeed(), actor.runAccel(), actor.runDecel(), actor.friction(), actor.maxSpeed(),
+                actor.slopeImpulse(), actor.airborne(), actor.crouching(), actor.spindash());
+        return com.openggf.stageplay.route.StageplayRouteSteering.input(command, elapsed, facts,
+                jump, returning, approach, targetX);
+    }
+
     private PlayerInputState input(Performer p, int frame) {
         if (p.wait != null && waitSatisfied(p)) { event(p, frame, "WAIT_SATISFIED", p.wait.condition().name()); p.wait = null; p.status = PuppetStatus.SATISFIED; }
         if (p.wait != null && frame >= p.deadline) { event(p, frame, "WAIT_TIMED_OUT", p.wait.condition().name()); p.wait = null; p.status = PuppetStatus.TIMED_OUT; }
@@ -325,7 +336,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var kind = goal.kind();
             boolean move = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO || kind == PuppetCommandKind.GLIDE_TO;
             double[] target = move ? target(p, goal) : new double[]{p.sprite.getCentreX(),p.sprite.getCentreY()};
-            var buttons = com.openggf.stageplay.route.StageplayRouteSteering.input(goal, frame-p.goalStart,
+            var buttons = routeInput(goal, frame-p.goalStart,
                     com.openggf.sprites.playable.PlayablePuppet.observe(p.sprite), jump,
                     p.routeReturning, p.routeApproach, kind == PuppetCommandKind.SPINDASH ? goal.x() : target[0]);
             p.routeReturning = buttons.returning();

@@ -3113,3 +3113,43 @@ execution 41.011s (not summed with overlapping jobs as delivery elapsed time).
 Desktop chrome **17 passed**, zero skips, on 146e076 with the final packaged
 engine; enabled desktop picture **1 passed**, refreshed against that same jar.
 Mandatory S3K + enabled engine picture is running; once-only guards are queued.
+
+
+### Architecture qualification correction (2026-10-23)
+
+Once-only guards on 294196b83: **720 tests, 713 passes, seven failures**, zero
+errors/skips. Four match the established baseline (two singleton assertions at
+MenuAudioProbeTool:41, two HubMusicController ArchUnit assertions). Three are
+owned regressions: `package_slices_are_free_of_cycles`,
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`, and
+`stageplay_boundaries_have_explicit_owners`. The shared-helper extraction put
+sprite/physics reads in route policy and added sprites→stageplay edges. That
+approach is rejected by the existing ownership contract; no guard is widened.
+
+Correction: `PlayablePuppet.observe()` is the sole native view (rolling drag,
+deceleration and slope facts). LIVE's production `routeInput` adapter copies
+scalar facts into a pure route-policy Motion value; the replay test uses that
+same adapter. The steering kernel has no sprite/physics/service dependencies.
+Affected native/Puppet/LIVE tests and TestArchUnitRules are queued. All 12
+rehearsal states and canonical command sources will be compared across this
+structural change; no extra broad guards run is requested. Prior bounded passes:
+110 focused, 60 mandatory S3K + one enabled HUD picture, 17 desktop chrome + one
+enabled desktop picture, all zero skips. Both editor clips and four motion clips
+were watched at 1x; full decode passes. The apparent HUD media-format problem was
+a stopped loopback evidence server, confirmed by ERR_CONNECTION_REFUSED; the
+original encoded file plays after restart. No codec/runtime repair was needed.
+
+
+Boundary recheck completed: **69 tests, 67 passed, two inherited failures**,
+zero errors/skips. All **37** affected native tests pass (planner 17, motion ROM
+3, LIVE ROM 7, Puppet 9, Puppet ROM 1). ArchUnit is **30/32**; only the existing
+HubMusicController provider constructors and music dependencies fail. All three
+owned architecture assertions now pass without a guard/allowlist change.
+Exact selector: `TestStageplayRoutePlanner,TestStageplayRouteMotionRom,TestStageplayLiveWorldRom,TestPlayablePuppet,TestPlayablePuppetRom,TestArchUnitRules`.
+Queue wait 1507s; Maven execution 46.400s. Twelve canonical rehearsal scenes and
+twelve complete per-frame state streams (JSON key order normalized), plus the
+two frontend source scenes, are unchanged across the scalar-adapter refactor:
+**26 compared, zero changed**. Existing watched captures therefore retain their
+recorded native motion. No broad guards or mandatory-bootstrap rerun was added
+for this pure observation-boundary repair. Desktop chrome passes 17/17 again
+against the newly packaged engine. No live task jobs remain.

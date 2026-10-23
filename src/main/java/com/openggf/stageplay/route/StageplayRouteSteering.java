@@ -4,18 +4,6 @@ import static com.openggf.stageplay.StageplayDocument.*;
 
 /** Directing policy expressed only as native buttons, shared by search and LIVE replay. */
 public final class StageplayRouteSteering {
-    public static int deceleration(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
-        return actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel();
-    }
-
-    public static int friction(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
-        // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is acceleration / 2.
-        return actor.getRolling() ? actor.getRunAccel() / 2 : actor.getFriction();
-    }
-
-    public static int slopeImpulse(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
-        return (actor.getSlopeRunning() * com.openggf.physics.TrigLookupTable.sinHex(actor.getAngle() & 0xFF)) >> 8;
-    }
     // Authoring choice: 1.5 px/tick ($180), one quarter of normal native top speed.
     // SAnim_WalkRun (s2.asm:38449-38487) switches only at $600, also the normal
     // Sonic_top_speed initialization (s2.asm:36187); just below $600 still looks like running.
@@ -40,8 +28,7 @@ public final class StageplayRouteSteering {
         if (motion.travelSpeed() == TravelSpeed.WALK && (Math.abs(predictedSpeed) > cap || Math.abs(xSpeed) > cap))
             return speed < 0 ? 1 : -1;
         if (motion.endingAction() != EndingAction.GENTLE_STOP &&
-                !(motion.endingAction() == EndingAction.OVERSHOOT && returning))
-            {
+                !(motion.endingAction() == EndingAction.OVERSHOOT && returning)) {
             int direction = StageplayMovementIntent.direction(x, xSpeed, accel, decel, cap, airborne, goal, 1);
             // Every Walk ending needs acceleration headroom, including double air acceleration.
             // Opposing input remains available for native braking.
@@ -60,11 +47,16 @@ public final class StageplayRouteSteering {
         return Math.abs(predictedSpeed) + accel <= cap ? toward : 0;
     }
 
+    /** Native facts copied by the LIVE adapter; this policy never reads a sprite or service. */
+    public record Motion(double x, int xSpeed, int groundSpeed, int runAccel, int runDecel,
+                         int friction, int maxSpeed, int slopeImpulse, boolean airborne,
+                         boolean crouching, boolean spindash) { }
+
     public record Buttons(int direction, boolean down, boolean jump, boolean returning, boolean finished) { }
 
     /** Shared production command kernel. Command scheduling and waits stay with their world owner. */
     public static Buttons input(PuppetCommand command, int elapsed,
-            com.openggf.sprites.playable.PlayablePuppet.Observation actor, boolean jump,
+            Motion actor, boolean jump,
             boolean returning, int approach, double targetX) {
         int direction = 0;
         boolean down = false, finished = false;
@@ -102,8 +94,8 @@ public final class StageplayRouteSteering {
 
     /** Fixed charge window, with a native-state-gated fresh jump edge.
      * Sonic_CheckSpindash (s2.asm:37555-37581) reads Duck before ground movement.
-     * Sonic_SlopeResist (s2.asm:37709-37732) skips zero inertia: brake the facing
-     * tap to zero before holding down, then wait for native Duck before pressing jump.
+     * Sonic_SlopeResist (s2.asm:37709-37732) skips zero inertia: settle the facing
+     * tap while holding down, then wait for native Duck before pressing jump.
      * Sonic_UpdateSpindash (s2.asm:37591-37688) owns release speed; fixBugs=0 remains active.
      */
     public static Buttons charge(double x, double targetX, int elapsed, int groundSpeed,

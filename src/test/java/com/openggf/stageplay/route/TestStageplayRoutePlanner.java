@@ -448,7 +448,7 @@ class TestStageplayRoutePlanner {
             }
             var before = probe.sample();
             var buttons = goal == null ? new StageplayRouteSteering.Buttons(0,false,frame<jumpEnd,returning,false)
-                    : StageplayRouteSteering.input(goal,frame-goalStart,before,frame<jumpEnd,returning,approach,goal.x());
+                    : com.openggf.stageplay.runtime.StageplayLiveWorld.routeInput(goal,frame-goalStart,before,frame<jumpEnd,returning,approach,goal.x());
             returning=buttons.returning();
             if(buttons.finished()) goal=null;
             probe.tick(buttons.direction()<0,buttons.direction()>0,buttons.down(),buttons.jump(),frame);
