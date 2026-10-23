@@ -74,6 +74,25 @@ final class SyntheticCdImages {
         return bytes;
     }
 
+    static byte[] isoWithNestedDirectories(int count) {
+        int payloadBlock = 21 + count;
+        byte[] bytes = Arrays.copyOf(iso(), (payloadBlock + 1) * BLOCK);
+        both32(bytes, 16 * BLOCK + 80, payloadBlock + 1);
+        byte[] root = record(new byte[] {0}, 20, BLOCK, true);
+        System.arraycopy(root, 0, bytes, 16 * BLOCK + 156, root.length);
+        Arrays.fill(bytes, 20 * BLOCK, bytes.length, (byte) 0);
+        for (int level = 0; level <= count; level++) {
+            int sector = 20 + level;
+            directory(bytes, sector,
+                    record(new byte[] {0}, sector, BLOCK, true),
+                    record(new byte[] {1}, level == 0 ? sector : sector - 1, BLOCK, true),
+                    level < count ? record("D", sector + 1, BLOCK, true)
+                            : record("LEAF.BIN;1", payloadBlock, 1, false));
+        }
+        bytes[payloadBlock * BLOCK] = 73;
+        return bytes;
+    }
+
     static void descriptor(byte[] bytes, int sector, int type) {
         int start = sector * BLOCK;
         bytes[start] = (byte) type;

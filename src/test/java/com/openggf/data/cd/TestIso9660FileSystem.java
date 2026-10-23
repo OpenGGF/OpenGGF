@@ -153,6 +153,48 @@ class TestIso9660FileSystem {
     }
 
     @Test
+    void sequentialStreamReadsPreservePatternAcrossMultipleRefillsAndEof() throws IOException {
+        byte[] expected = new byte[2 * 65536 + 317];
+        for (int i = 0; i < expected.length; i++) {
+            expected[i] = (byte) (i * 7 + (i >>> 8) * 13 + (i >>> 16) * 29);
+        }
+        int blocks = 24 + (expected.length + BLOCK - 1) / BLOCK;
+        byte[] bytes = Arrays.copyOf(iso(), blocks * BLOCK);
+        both32(bytes, 16 * BLOCK + 80, blocks);
+        Arrays.fill(bytes, 20 * BLOCK + 68, 22 * BLOCK, (byte) 0);
+        directoryAt(bytes, 20 * BLOCK + 68, record("PATTERN.BIN;1", 24, expected.length, false));
+        System.arraycopy(expected, 0, bytes, 24 * BLOCK, expected.length);
+        try (CueDiscImage disc = CueDiscImage.open(writeDisc(directory, bytes, true))) {
+            Iso9660FileSystem fs = Iso9660FileSystem.open(disc, 1);
+            try (InputStream stream = fs.openFile("PATTERN.BIN")) {
+                assertArrayEquals(Arrays.copyOfRange(expected, 0, 65531), stream.readNBytes(65531));
+                assertArrayEquals(Arrays.copyOfRange(expected, 65531, 65544), stream.readNBytes(13));
+                assertArrayEquals(Arrays.copyOfRange(expected, 65544, 131067), stream.readNBytes(65523));
+                assertArrayEquals(Arrays.copyOfRange(expected, 131067, 131080), stream.readNBytes(13));
+                assertArrayEquals(Arrays.copyOfRange(expected, 131080, expected.length), stream.readNBytes(1000));
+                assertEquals(0, stream.available());
+                assertEquals(-1, stream.read());
+                assertEquals(-1, stream.read(new byte[9], 2, 3));
+                assertEquals(0, stream.read(new byte[1], 0, 0));
+            }
+        }
+    }
+
+    @Test
+    void eightDirectoryLevelsIncludingRootAreReadableButANinthIsRejected() throws IOException {
+        String deepest = "/D".repeat(7);
+        try (CueDiscImage disc = CueDiscImage.open(writeDisc(directory, isoWithNestedDirectories(7), false))) {
+            Iso9660FileSystem fs = Iso9660FileSystem.open(disc, 1);
+            assertEquals(List.of(deepest + "/LEAF.BIN;1"),
+                    fs.listDirectory(deepest).stream().map(Iso9660FileSystem.Entry::path).toList());
+            assertArrayEquals(new byte[] {73}, fs.readFile(deepest + "/LEAF.BIN"));
+        }
+        try (CueDiscImage disc = CueDiscImage.open(writeDisc(directory, isoWithNestedDirectories(8), false))) {
+            assertThrows(IOException.class, () -> Iso9660FileSystem.open(disc, 1));
+        }
+    }
+
+    @Test
     void invalidVolumeDescriptorsAndBothEndianFieldsAreRejected() throws IOException {
         List<Consumer<byte[]>> corruptions = List.of(
                 b -> b[16 * BLOCK + 1] = 'X',

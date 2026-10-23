@@ -762,3 +762,228 @@ A separate read-only observer investigation continues under task
 `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-observer-20261023-r1`.
 It owns only `device_observer_*` tools and external evidence. No engine gameplay
 uses these observations. No Sonic CD game module or playable route is admitted yet.
+
+### Next local units
+
+The verified foundation is committed locally as `9152f2ef2`. The commit passed
+the installed policy hooks; machine-local paths in this plan were replaced by
+environment variables after the first resource-policy rejection. No hook was
+bypassed. Source changes were not repeated or retested for that prose-only fix.
+The branch remains unpublished and the main checkout remains on `develop`.
+
+Program-local MMD asset access and whole-disc observed identity are the next
+consumer of the reader and catalogue. Task
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-program-assets-20261023-r1`
+owns only the new `game.soniccd.media` package and a developer inspection tool.
+It does not add stock admission, a CPU interpreter, or creator asset authority.
+
+Task
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-disc-regressions-20261023-r1`
+owns the three existing synthetic reader test/helper files to add buffer-refill,
+reverse mixed-sector and depth-threshold cases. Production reader changes
+require evidence from a failing case. These units and the device observer use
+separate files; the lead remains the sole Maven owner. The 143-test pass belongs
+to the foundation commit, not to later uncommitted source or tests.
+
+The regression-fixture worker returned three test-only cases: a patterned
+131,389-byte sequential stream spanning both 64 KiB refill boundaries; a shared
+2352-to-2048 transition with stored gap and distinct boundary data; and depth
+acceptance at eight levels including root versus rejection at nine. Production
+is unchanged. Their focused JUnit validation remains pending while the program
+asset worker owns source edits. No duplicate Maven job is queued.
+
+Whole-disc provenance research runs separately under
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-media-provenance-20261023-r1`.
+It may match public checksum metadata to the supplied full track set, but cannot
+turn a header, mirror or repeatable emulator boot into pressing certification.
+Its output belongs in Downloads research; no commercial media is acquired.
+
+The provenance result matches all 35 tracks by size, CRC32 and SHA-1 for each
+supplied region against the current primary Redump DAT: USA record
+[29188](https://redump.info/disc/29188), Europe
+[8302](https://redump.info/disc/8302), and Japan
+[1632](https://redump.info/disc/1632). The lead repeated the inventory-to-DAT
+comparison. US/European CUE bytes match the primary exports; Japan differs
+only in filename capitalization. The DAT includes each CUE as well as its
+35 BIN entries. No numeric revision is supplied by these records. The four
+other catalogued USA retail variants share the data track but differ at audio
+track 13. A data-track-only identity would therefore lose a real content variant.
+
+The primary export's uncompressed SHA-256 is
+`6910bd275ab99049147bb43367f9dfa149e164bf1dd0486acb96523e740f4fea`.
+The Downloads report preserves metadata pins, track/index comparisons and
+physical acquisition limits. Content matching does not establish a physical
+pressing, firmware contract or game parity.
+
+Task
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-retail-content-20261023-r1`
+owns a new `game.soniccd.release` matcher. It binds source-verified whole-disc
+layout/content identities to known content records, separately from the source
+region enum. Its expected fingerprints are derived from the matched metadata,
+not a trusted header or a fitted gameplay observation. Validation is pending.
+
+### Asset and device observation checkpoint
+
+The program-asset and retail-content workers returned stable source. The
+retail reproducer matched all 105 public-metadata track triples and independently
+derived the normalized fingerprints used by the Java asset tests and matcher.
+Six reproducer Python tests passed. The reader's three new boundary fixtures
+remain in the same combined validation unit.
+
+The lead queued this focused Java command from the local worktree at `9152f2ef2`
+plus those new files. Its result is pending; the preceding 143-test pass does
+not cover them.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCueDiscImage,TestIso9660FileSystem,TestCdMmdImage,TestCdObservedMediaIdentity,TestCdProgramAssets,TestSonicCdProgramMedia,TestSonicCdMediaInspectTool,TestCdRetailReleases,TestSonicCdRetailMedia' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} test -B
+```
+
+Asset review task:
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-asset-review-20261023-r1`.
+Observer review task:
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-observer-review-20261023-r1`.
+Both are read-only, on stable scoped files.
+
+The observer worker proved read-only device access through pinned ELF symbols
+and the existing Waterbox monitor, with source-derived structure offsets and
+exported-RAM anchors. It captured PCM, CDDA, CDD/CDC, ownership, graphics and
+timer fields without invoking device read handlers. Two repeated USA boots,
+observer-free and debugger-callback controls, and four restored continuations
+preserved native AV and state. Six Python tests and two real identity/layout
+rejection experiments passed. All producer hashes and limits are in Downloads
+`Sonic-CD/research/device-observer.md` and its final manifest. Frame-boundary
+sampling still misses transient service edges; CD-02 remains open.
+
+The first combined Java run compiled successfully and executed 60 tests with
+zero assertion failures, one error and zero skips. The error was
+`TestSonicCdMediaInspectTool.realMainWritesExplicitExternalJsonAndRefusesToReplaceIt`:
+the tool treated an unrelated Git marker on a user-home ancestor as an OpenGGF
+source checkout. The test already used an external Downloads directory. Root
+inspection confirmed that ancestor had neither the project POM nor source tree.
+The fix recognizes an actual OpenGGF source root, retaining media, symlink and
+new-file protections; its new regressions cover all three regional CLI options.
+Fix task: `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-cli-fix-20261023-r1`.
+
+Asset review also found an identity-provenance mismatch not covered by that run:
+the helper could combine one open disc's track hashes with another supplied
+CUE's file records, or re-resolve a retargeted BIN symlink. The fix keeps frozen
+CUE bytes and bounded source views on the open owner, hashes its retained file
+handles, and rejects the wrong-CUE compatibility call. Normalized identity
+semantics and the three retail fingerprints are unchanged. Wrong-owner,
+symlink-retarget and source lifecycle tests are added. Fix task:
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-provenance-fix-20261023-r1`.
+The same affected nine-class selector is running again after these source fixes;
+the final result remains pending. This is an affected rerun, not a duplicate pass.
+
+Observer review passed its five files and source/runtime/artifact bindings at
+fingerprint `fe4ac9ad0777ce63a917fc6f667022a5199f65a676bcda38b82f67f87523a3ce`.
+It confirmed read-only memory access and the recorded repetition/control/restore
+evidence, retaining the one-disc x86-64, frame-boundary and wrap limits.
+
+Two separate native investigations continue on new tool prefixes. Stamp input
+and output fixtures are owned by
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-stamp-fixtures-20261023-r1`;
+exact service-event observation is owned by
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-service-events-20261023-r1`.
+They do not write Java source or the shared Maven target while validation runs.
+
+The affected rerun executed 68 tests with zero assertion failures, three errors
+and zero skips. Both provenance regressions passed. Only the three new
+`cliAllowsExternalJsonUnderUnrelatedAncestorGit` parameterizations errored: their
+synthetic fixtures lived inside the real worktree's generated target directory,
+so the source-checkout guard correctly found that ancestor. The real external
+CLI invocation passed. This is a test/output-contract mismatch, not another
+home-Git misclassification.
+
+The lead chose an explicit output contract for the undelivered diagnostic tool:
+protect media, existing files and project source; permit temporary diagnostic
+JSON under the generated `target/` tree, as required for Maven-owned test output.
+Canonical symlink resolution must prevent a target alias from granting writes
+into source. Nested real source roots stay protected. This avoids external
+test scratch, test skips and extra output-policy flags. Fix task:
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-cli-target-policy-20261023-r1`.
+Only the affected CLI class needs rerunning after that fix; the 65 other passing
+invocations are retained on unchanged source.
+
+The generated-output fix returned stable CLI source and boundary tests. The
+lead is running only `TestSonicCdMediaInspectTool` through the shared lean queue
+with the explicit regional media root. Its live command session is `73622`;
+there is no other task-owned Maven job. The two native investigations remain
+active and own only their tool prefixes and external build/capture directories.
+
+Before committing the observer tooling, its task-specific output-root literal
+must become a portable default or explicit parameter. The currently verified
+observer producer stays frozen while both native consumers use it. No installed
+binary, probe payload or layout is to be changed for that portability cleanup.
+The observer files remain accounted-for local work, not an accepted Git unit.
+
+### Verified media assets and retail content checkpoint
+
+The CLI-only run above finished with 13 tests, six errors and zero skips.
+All six errors were generated-output positives. A linked worktree sits below
+the main source checkout, so checking every source ancestor assigned two owners
+to the same output. The final contract uses the nearest canonical source root.
+Its target directory is allowed; its source remains protected even when that
+checkout itself sits in an outer target directory. This replaces the earlier
+all-ancestor interpretation. Source/media symlinks and existing-file replacement
+remain rejected.
+
+The final affected command at `9152f2ef2` plus the completed asset/release unit
+passed 14 tests, zero failures, errors or skips. Maven took 1 minute 18 seconds;
+queue admission reported zero seconds of waiting. Session `37225` is finished.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestSonicCdMediaInspectTool -Dsoniccd.media.root=${SCD_MEDIA_ROOT} test -B
+```
+
+The preceding combined run's other eight classes passed all 60 invocations,
+including real media for each region and both owner-bound provenance regressions.
+Their source has not changed since that run. The completed unit therefore has
+74 distinct passing invocations across these two runs, not a single 74-test
+run or a broad smoke pass. Six retail-profile Python tests also passed.
+The earlier 143-test foundation result remains separate. There is no live
+task-owned Maven job. New device Java is excluded from this verified unit.
+
+Known retail content keys are `redump-29188` (USA), `redump-8302` (Europe)
+and `redump-1632` (Japan). All 105 metadata triples match the pinned primary
+DAT, and actual-reader tests reproduce the complete layout/content fingerprints.
+The API keeps region, content record and source provenance separate. A forced
+known key rejects a different disc. This is not stock game admission, physical
+pressing provenance, firmware certification or gameplay parity.
+
+### Native continuation and service observation handoff
+
+Both native investigations returned stable new tool prefixes and stopped all
+owned processes. Service callbacks produced repeated/control/restore evidence
+for the title and a normal-button route visibly reaching Palmtree Panic.
+The source audit corrected the earlier scope assumption: S68K shares the
+callbacks advertised as `M68K BUS`. CPU identity and access width are unknown
+in that adapter. Sector forwarding is paired and preserves original results.
+Graphics launch is bracketed before any lines complete, but busy clear, final
+output completion and ownership return remain distinct boundaries. Eleven
+Python checks passed. Exact owner events and clock epochs keep CD-02 open.
+
+Six native title fixtures retain full 256 KiB ingress and egress Word RAM,
+with partial progress explicit. Exact continuation comparisons match every RAM
+byte and the complete 12,288-byte image. The observed subset is mode 7, normal
+priority, 256 by 96 pixels; rotation, mirroring, wrapping and other modes are
+not proven by these captures. Twelve Python checks, repeated boots, an
+observer-free AV control and restored continuations passed. Egress is a
+pre-consumption ownership poll, not an exact completion timestamp. Commercial
+payloads stay outside Git in the Downloads task directory. These diagnostic
+schemas are not V5 or engine-input authority.
+
+Fresh scoped tasks now own the next units:
+
+- `sonic-cd-stamp-device-20261023-r1` implements pure device semantics and
+  synthetic plus opt-in exact continuation JUnit tests in the new device package.
+- `sonic-cd-native-tools-review-20261023-r1` reviews only the new service and
+  fixture tools and their evidence, read-only.
+- `sonic-cd-native-owner-ledger-20261023-r1` prepares a separate pinned native
+  core build and bounded owner instrumentation. Installed cores and frozen
+  helpers remain unchanged.
+
+Each task ID uses the existing delegated-task command prefix recorded above.
+The parent retains Git, Java compilation, Maven target and delivery ownership.
+All implementation remains on the local feature branch with no upstream,
+integration or push. No playable Sonic CD module is implemented yet.

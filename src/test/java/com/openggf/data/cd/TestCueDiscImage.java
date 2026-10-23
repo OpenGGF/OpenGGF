@@ -18,6 +18,39 @@ class TestCueDiscImage {
     Path directory;
 
     @Test
+    void boundSourceViewsKeepWholeFileBytesAndTheirOriginalOwner() throws IOException {
+        byte[] bytes = audioFrames(4);
+        Path binary = Files.write(directory.resolve("shared.bin"), bytes);
+        Path cue = cue(directory, "FILE \"shared.bin\" BINARY\n TRACK 01 AUDIO\n INDEX 00 00:00:00\n"
+                + " INDEX 01 00:00:01\n TRACK 02 AUDIO\n INDEX 01 00:00:02\n");
+        CueDiscImage disc = CueDiscImage.open(cue);
+        var source = disc.sourceFiles().getFirst();
+        try (CueDiscImage other = CueDiscImage.open(cue)) {
+            assertEquals(1, disc.sourceFiles().size());
+            assertThrows(UnsupportedOperationException.class, () -> disc.sourceFiles().clear());
+            assertEquals(binary.toRealPath(), source.path());
+            assertEquals(bytes.length, source.bytes());
+            assertArrayEquals(bytes, source.read(0, bytes.length));
+            assertArrayEquals(Arrays.copyOfRange(bytes, bytes.length - 17, bytes.length),
+                    source.read(bytes.length - 17, 17));
+            assertThrows(IllegalArgumentException.class, () -> source.read(-1, 0));
+            assertThrows(IllegalArgumentException.class, () -> source.read(bytes.length, 1));
+            assertThrows(IllegalArgumentException.class, () -> source.read(0, CueDiscImage.MAX_READ_BYTES + 1));
+            byte[] frozenCue = disc.readCueBytes();
+            assertArrayEquals(Files.readAllBytes(cue), frozenCue);
+            frozenCue[0] ^= 1;
+            assertArrayEquals(Files.readAllBytes(cue), disc.readCueBytes());
+            disc.close();
+            assertThrows(IOException.class, () -> source.read(0, 0));
+            assertThrows(IOException.class, disc::readCueBytes);
+            assertThrows(IOException.class, disc::sourceFiles);
+            assertArrayEquals(bytes, other.sourceFiles().getFirst().read(0, bytes.length));
+        } finally {
+            disc.close();
+        }
+    }
+
+    @Test
     void rawMode1ReadsStripHeadersAcrossSectorBoundariesAndPreserveRawBytes() throws IOException {
         byte[] cooked = new byte[3 * BLOCK];
         for (int i = 0; i < cooked.length; i++) {
@@ -127,6 +160,51 @@ class TestCueDiscImage {
     }
 
     @Test
+    void sharedRawThenCookedTracksKeepStoredGapAndPhysicalBoundaries() throws IOException {
+        byte[] first = new byte[2 * BLOCK];
+        Arrays.fill(first, 0, BLOCK, (byte) 0x21);
+        Arrays.fill(first, BLOCK, first.length, (byte) 0x32);
+        byte[] firstRaw = raw(first);
+        byte[] following = new byte[3 * BLOCK];
+        Arrays.fill(following, 0, BLOCK, (byte) 0x43);
+        Arrays.fill(following, BLOCK, 2 * BLOCK, (byte) 0x54);
+        Arrays.fill(following, 2 * BLOCK, following.length, (byte) 0x65);
+        byte[] shared = Arrays.copyOf(firstRaw, firstRaw.length + following.length);
+        System.arraycopy(following, 0, shared, firstRaw.length, following.length);
+        Files.write(directory.resolve("shared.bin"), shared);
+        Path cue = cue(directory, """
+                FILE "shared.bin" BINARY
+                  TRACK 01 MODE1/2352
+                    INDEX 01 00:00:00
+                  TRACK 02 MODE1/2048
+                    INDEX 00 00:00:02
+                    INDEX 01 00:00:03
+                """);
+        try (CueDiscImage disc = CueDiscImage.open(cue)) {
+            assertEquals(2, disc.track(1).programFrames());
+            assertEquals(2, disc.track(2).programFrames());
+            assertEquals(1, disc.track(2).filePregapFrames());
+            assertEquals(0, disc.track(2).syntheticPregapFrames());
+            assertEquals(3, disc.track(2).discIndex01Frame());
+            assertArrayEquals(firstRaw, disc.readRawFrames(1, 0, 2));
+            assertArrayEquals(first, disc.readMode1Bytes(1, 0, first.length));
+            assertArrayEquals(following, disc.readRawFrames(2, -1, 3));
+            assertArrayEquals(Arrays.copyOfRange(following, BLOCK, following.length),
+                    disc.readRawFrames(2, 0, 2));
+            assertArrayEquals(Arrays.copyOfRange(following, BLOCK, following.length),
+                    disc.readMode1Bytes(2, 0, 2 * BLOCK));
+            assertArrayEquals(new byte[] {0x54, 0x65}, disc.readMode1Bytes(2, BLOCK - 1, 2));
+            assertThrows(IllegalArgumentException.class, () -> disc.readRawFrames(1, 1, 2));
+            assertThrows(IllegalArgumentException.class, () -> disc.readMode1Bytes(1, first.length - 1, 2));
+            assertThrows(IllegalArgumentException.class, () -> disc.readRawFrames(2, -2, 1));
+            assertThrows(IllegalArgumentException.class, () -> disc.readRawFrames(2, 1, 2));
+            assertThrows(IllegalArgumentException.class, () -> disc.readMode1Bytes(2, -1, 1));
+            assertThrows(IllegalArgumentException.class, () -> disc.readMode1Bytes(2, 2 * BLOCK - 1, 2));
+            assertArrayEquals(new byte[0], disc.readRawFrames(2, 2, 0));
+        }
+    }
+
+    @Test
     void boundsAndCloseAreEnforcedIncludingEmptyReads() throws IOException {
         Path cue = writeDisc(directory, new byte[BLOCK], false);
         CueDiscImage disc = CueDiscImage.open(cue);
@@ -150,8 +228,11 @@ class TestCueDiscImage {
         Path cue = writeDisc(directory, new byte[2 * BLOCK], false);
         Path bin = directory.resolve("data.bin");
         try (CueDiscImage disc = CueDiscImage.open(cue)) {
+            var source = disc.sourceFiles().getFirst();
             Files.setLastModifiedTime(bin, FileTime.fromMillis(Files.getLastModifiedTime(bin).toMillis() + 10000));
             assertThrows(IOException.class, () -> disc.readMode1Bytes(1, 0, 1));
+            assertThrows(IOException.class, () -> source.read(0, 0));
+            assertThrows(IOException.class, disc::sourceFiles);
         }
         try (CueDiscImage disc = CueDiscImage.open(cue)) {
             Files.write(bin, new byte[BLOCK]);

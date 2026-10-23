@@ -38,6 +38,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   CUE/BIOS boots without display or audio devices. These diagnostic observations
   are separate from canonical TraceChaser V5 recording. Origin and limits are in
   the [local implementation plan](../architecture/plans/2026-10-23-sonic-cd-implementation.md#local-implementation-checkpoint-23-october-2026).
+- [Sonic CD media inspection](../../src/main/java/com/openggf/tools/SonicCdMediaInspectTool.java)
+  reads complete supplied-media identities and program-local MMD views;
+  [retail profile reproduction](../../tools/soniccd/retail_profiles.py) binds the
+  known content records to primary checksum metadata. Header agreement and
+  content matching do not certify physical provenance or gameplay parity.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

@@ -23,6 +23,18 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**An MMD relocation may copy resident Word RAM beyond the file.** Sonic CD's
+`RunMMD` (`scddisasm/src/CD Initial Program/IPX.asm:1323-1340`) checks the full
+entry long, then copies an unsigned DBF count from Word RAM plus the 256-byte
+MMD header to a nonzero origin. Some shipped programs, including the title,
+declare more copied bytes than remain in their file. The tail belongs to
+previous Word RAM state; a file-backed view must not invent zero padding.
+Retain original and relocated address domains, the raw 32-bit header fields,
+the 24-bit bus address and the unresolved tail separately. An entry of zero
+returns before relocation, interrupt changes and ownership flags. The
+[local implementation evidence](plans/2026-10-23-sonic-cd-implementation.md#asset-and-device-observation-checkpoint)
+records the bounded component checks.
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot

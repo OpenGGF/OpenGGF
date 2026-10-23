@@ -24,7 +24,8 @@ import java.util.regex.Pattern;
  * Read-only, positional access to a finite BINARY CUE/BIN image.
  * Raw MODE1 layout follows ECMA-130, second edition, sections 14 to 14.2.
  * CUE gaps follow GNU libcdio's documented INDEX 00 versus PREGAP distinction.
- * Content identity is a separate concern. Size, modification time and file-key checks detect ordinary media changes.
+ * Content identity is a separate concern. Size, modification time and file-key checks detect ordinary media changes,
+ * not hostile timestamp spoofing. Source paths and handles stay bound to their canonical targets at open.
  *
  * @see <a href="https://ecma-international.org/wp-content/uploads/ECMA-130_2nd_edition_june_1996.pdf">ECMA-130</a>
  * @see <a href="https://libcdio.github.io/libcdio.html">GNU libcdio, Track pre-gaps</a>
@@ -72,17 +73,21 @@ public final class CueDiscImage implements AutoCloseable {
 
     private final Path cuePath;
     private final Stamp cueStamp;
+    private final byte[] cueBytes;
     private final List<Source> sources;
+    private final List<SourceFile> sourceFiles;
     private final List<DiscTrack> tracks;
     private final int[] sourceByTrack;
     private final long[] index01ByteByTrack;
     private boolean closed;
 
-    private CueDiscImage(Path cuePath, Stamp cueStamp, List<Source> sources,
+    private CueDiscImage(Path cuePath, Stamp cueStamp, byte[] cueBytes, List<Source> sources,
                          List<DiscTrack> tracks, int[] sourceByTrack, long[] index01ByteByTrack) {
         this.cuePath = cuePath;
         this.cueStamp = cueStamp;
+        this.cueBytes = cueBytes;
         this.sources = List.copyOf(sources);
+        this.sourceFiles = sources.stream().map(SourceFile::new).toList();
         this.tracks = List.copyOf(tracks);
         this.sourceByTrack = sourceByTrack;
         this.index01ByteByTrack = index01ByteByTrack;
@@ -97,14 +102,15 @@ public final class CueDiscImage implements AutoCloseable {
             throw new IOException("CUE exceeds size limit");
         }
         String text;
+        byte[] cueBytes;
         try (InputStream input = Files.newInputStream(cuePath)) {
-            byte[] bytes = input.readNBytes(MAX_CUE_BYTES + 1);
-            if (bytes.length > MAX_CUE_BYTES) {
+            cueBytes = input.readNBytes(MAX_CUE_BYTES + 1);
+            if (cueBytes.length > MAX_CUE_BYTES) {
                 throw new IOException("CUE exceeds size limit");
             }
-            text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
+            text = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(cueBytes)).toString();
         }
-        if (!cueStamp.equals(Stamp.read(cuePath))) {
+        if (cueBytes.length != cueStamp.size() || !cueStamp.equals(Stamp.read(cuePath))) {
             throw new IOException("CUE changed while opening");
         }
         List<Source> sources = new ArrayList<>();
@@ -169,7 +175,7 @@ public final class CueDiscImage implements AutoCloseable {
             if (!cueStamp.equals(Stamp.read(cuePath))) {
                 throw new IOException("CUE changed while opening");
             }
-            return new CueDiscImage(cuePath, cueStamp, sources, tracks, sourceByTrack, index01ByteByTrack);
+            return new CueDiscImage(cuePath, cueStamp, cueBytes, sources, tracks, sourceByTrack, index01ByteByTrack);
         } catch (IOException | RuntimeException failure) {
             for (Source source : sources) {
                 try {
@@ -297,6 +303,58 @@ public final class CueDiscImage implements AutoCloseable {
 
     public List<DiscTrack> tracks() {
         return tracks;
+    }
+
+    /** Canonical CUE selected at open. Retargeting a supplied symlink does not rebind this owner. */
+    public synchronized Path cuePath() throws IOException {
+        checkOpen();
+        return cuePath;
+    }
+
+    /** Exact bounded bytes parsed at open, detached from this owner's copy. */
+    public synchronized byte[] readCueBytes() throws IOException {
+        checkOpen();
+        return cueBytes.clone();
+    }
+
+    /** Rejects a redundant CUE argument that no longer identifies this owner's canonical CUE. */
+    public synchronized void requireCue(Path cue) throws IOException {
+        checkOpen();
+        if (!cuePath.equals(Objects.requireNonNull(cue).toRealPath())) {
+            throw new IOException("CUE does not match the open disc owner");
+        }
+    }
+
+    /** Whole BINARY files in declaration order, including bytes outside a track's program area. */
+    public synchronized List<SourceFile> sourceFiles() throws IOException {
+        checkOpen();
+        for (Source source : sources) {
+            source.check();
+        }
+        return sourceFiles;
+    }
+
+    /** An immutable source binding whose bounded reads share this disc's lifecycle and retained channel. */
+    public final class SourceFile {
+        private final Source source;
+
+        private SourceFile(Source source) {
+            this.source = source;
+        }
+
+        public Path path() { return source.path; }
+        public long bytes() { return source.stamp.size(); }
+
+        public byte[] read(long offset, int length) throws IOException {
+            synchronized (CueDiscImage.this) {
+                checkRange(offset, length, bytes());
+                checkOpen();
+                source.check();
+                byte[] result = readStored(source, offset, length);
+                source.check();
+                return result;
+            }
+        }
     }
 
     public DiscTrack track(int number) {
