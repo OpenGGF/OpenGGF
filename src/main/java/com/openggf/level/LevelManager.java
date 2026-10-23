@@ -319,6 +319,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     ZoneFeatureProvider zoneFeatureProvider;
     private TouchResponseTable touchResponseTable;
     ObjectRenderManager objectRenderManager;
+    boolean authoringView;
     HudRenderManager hudRenderManager;
     private HudProfile activeHudProfile = HudProfile.stock();
     AnimatedPatternManager animatedPatternManager;
@@ -881,6 +882,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * resume.
      */
     public void restoreEditorLevelView(Level editorLevel) {
+        authoringView = true;
         Level restoredLevel = editorLevel != null ? editorLevel : worldSession.getCurrentLevel();
         if (restoredLevel == null) {
             return;
@@ -1805,6 +1807,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             objectRenderManager = new ObjectRenderManager(provider);
             // Register level-tile-based object art (must be after level load)
             provider.registerLevelTileArt(level, artZoneIndex);
+            LevelObjectArt.publish(level, provider);
             if (patternAtlas != null) {
                 patternAtlas.registerRange(PatternAtlasRange.OBJECTS);
             }

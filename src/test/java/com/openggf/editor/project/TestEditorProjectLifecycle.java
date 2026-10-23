@@ -308,7 +308,7 @@ class TestEditorProjectLifecycle {
         var controller = engine.getLevelEditorController();
         saveAs(workspace, temporary.resolve("family.ogfproject"));
         controller.objectPalette().setObjectId(3);
-        assertTrue(controller.objectPalette().selectedLabel().contains("AIZHollowTree"));
+        assertTrue(controller.objectPalette().selectedLabel().contains("AIZ Hollow Tree"));
         assertFalse(controller.isModified());
         var level = controller.currentLevel();
 
@@ -321,15 +321,15 @@ class TestEditorProjectLifecycle {
         assertSame(level, controller.currentLevel());
         assertEquals(com.openggf.game.modzone.ModObjectZoneSet.SKL, document.metadata().objectZoneSet());
         assertEquals(3, controller.objectPalette().selectedObjectId());
-        assertTrue(controller.objectPalette().selectedLabel().contains("MHZTwistedVine"));
+        assertTrue(controller.objectPalette().selectedLabel().contains("MHZ Twisted Vine"));
         assertTrue(controller.isModified(), "family-only metadata changes must mark the complete document dirty");
         controller.undo();
         assertEquals(com.openggf.game.modzone.ModObjectZoneSet.S3KL, document.metadata().objectZoneSet());
-        assertTrue(controller.objectPalette().selectedLabel().contains("AIZHollowTree"));
+        assertTrue(controller.objectPalette().selectedLabel().contains("AIZ Hollow Tree"));
         assertFalse(controller.isModified());
         controller.redo();
         assertEquals(com.openggf.game.modzone.ModObjectZoneSet.SKL, document.metadata().objectZoneSet());
-        assertTrue(controller.objectPalette().selectedLabel().contains("MHZTwistedVine"));
+        assertTrue(controller.objectPalette().selectedLabel().contains("MHZ Twisted Vine"));
     }
 
     @Test

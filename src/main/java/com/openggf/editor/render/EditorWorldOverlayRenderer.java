@@ -84,14 +84,13 @@ public class EditorWorldOverlayRenderer {
             return;
         }
         List<GLCommand> commands = new ArrayList<>();
-        appendWorldCommands(commands,cursorInCameraDomain(editorMode.getCursor(),editorMode.getCamera()));
-        SpawnOverlay spawnOverlay = currentSpawnOverlay(editorMode);
-        commands.addAll(spawnOverlay.markerCommands());
+        if (controller == null || !controller.isSpawnEditing())
+            appendWorldCommands(commands,cursorInCameraDomain(editorMode.getCursor(),editorMode.getCamera()));
         appendCollisionOverlayCommands(commands, currentCollisionOverlay(editorMode));
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
-        renderSpawnLabels(spawnOverlay.labels(), editorMode.getCamera());
+        // Placements are drawn by the window-resolution chrome, using detached ROM poses.
     }
 
     protected EditorCursorState cursorInCameraDomain(EditorCursorState cursor,Camera camera) {

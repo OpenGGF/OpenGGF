@@ -87,7 +87,7 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider {
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic3k.Sonic3kEditorPalettePolicy.isEditable(line, color);
     }
@@ -118,7 +118,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     }
     @Override public List<String> browsableObjectKeys() { return java.util.stream.Stream.concat(super.browsableObjectKeys().stream(), java.util.stream.Stream.of(S3kAuthoredGoalInstance.OBJECT_KEY)).toList(); }
     @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
-        return hasHostObjectKey(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
+        return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
+    }
+
+    @Override public com.openggf.level.metadata.ObjectPreview objectPreview(ObjectSpawn spawn) {
+        if (spawn.objectKey() != null) return editorPreviewArtKey(spawn.objectKey())
+                .map(key -> com.openggf.level.metadata.ObjectPreview.frame(key, 0))
+                .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
+        return Sonic3kObjectPreviews.preview(spawn);
     }
 
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {

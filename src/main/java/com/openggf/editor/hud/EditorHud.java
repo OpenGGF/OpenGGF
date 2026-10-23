@@ -70,6 +70,30 @@ public final class EditorHud {
     // Library sheet
     LibraryKind libraryKind = LibraryKind.NONE;
     int libraryCursor;
+    boolean showInternalObjects;
+    java.util.List<Integer> objectLibrary;
+    void setObjectLibrary(java.util.List<Integer> indices) {
+        boolean first = objectLibrary == null;
+        objectLibrary = java.util.List.copyOf(indices);
+        if (first && controller.currentLevel() != null) {
+            seedObjectHotbar(controller.currentLevel());
+            hotbar.adopt(LibraryKind.OBJECT, currentBrush(LibraryKind.OBJECT));
+        }
+    }
+    private void seedObjectHotbar(MutableLevel level) {
+        if (controller.objectPaletteOrNull() == null) return;
+        int count = controller.objectPalette().entries().size();
+        int[] use = new int[count];
+        for (ObjectSpawn spawn : level.getObjects()) if (spawn.objectKey() == null) use[spawn.objectId()]++;
+        var indices = objectLibrary == null ? java.util.stream.IntStream.range(0, count).boxed().toList() : objectLibrary;
+        int[] ranked = indices.stream().sorted(java.util.Comparator.<Integer>comparingInt(id -> -use[id]).thenComparingInt(id -> id))
+                .limit(EditorHudHotbar.SLOTS).mapToInt(Integer::intValue).toArray();
+        hotbar.seed(LibraryKind.OBJECT, ranked);
+    }
+    int libraryValue(LibraryKind kind, int index) {
+        return kind == LibraryKind.OBJECT && objectLibrary != null && index >= 0 && index < objectLibrary.size()
+                ? objectLibrary.get(index) : index;
+    }
     float libraryScroll;
     int libraryColumns = 8;
     int libraryVisibleRows = 4;
@@ -350,12 +374,19 @@ public final class EditorHud {
         }
         libraryKind = kind;
         int current = currentBrush(kind);
+        if (kind == LibraryKind.OBJECT && objectLibrary != null) current = objectLibrary.indexOf(current);
         libraryCursor = Math.max(0, Math.min(libraryCount(kind) - 1, current < 0 ? 0 : current));
         notePointer();
         modal = Modal.LIBRARY;
     }
 
     private void updateLibrary(InputHandler input, boolean click) {
+        if (libraryKind == LibraryKind.OBJECT && (pad.pressed(WEST) || input.isKeyPressed(GLFW_KEY_X))) {
+            showInternalObjects = !showInternalObjects;
+            libraryCursor = 0;
+            libraryScroll = 0;
+            return;
+        }
         int count = libraryCount(libraryKind);
         if (count == 0) { closeModal(); return; }
         int dx = pad.navX(), dy = pad.navY();
@@ -373,8 +404,9 @@ public final class EditorHud {
         if (click && hit != null && hit.kind() == HIT_LIBRARY) libraryCursor = hit.index();
         boolean choose = pad.pressed(SOUTH) || MenuInput.accept(input) || (click && hit != null && hit.kind() == HIT_LIBRARY);
         if (choose) {
-            hotbar.put(libraryKind, libraryCursor);
-            applyBrush(libraryKind, libraryCursor);
+            int value = libraryValue(libraryKind, libraryCursor);
+            hotbar.put(libraryKind, value);
+            applyBrush(libraryKind, value);
             closeModal();
             return;
         }
@@ -391,7 +423,7 @@ public final class EditorHud {
             case BLOCK -> Math.min(256, level.getBlockCount());
             case CHUNK -> Math.min(1024, level.getChunkCount());
             case PATTERN -> Math.min(0x800, level.getPatternCount());
-            case OBJECT -> controller.objectPaletteOrNull() == null ? 0 : controller.objectPaletteOrNull().entries().size();
+            case OBJECT -> controller.objectPaletteOrNull() == null ? 0 : objectLibrary == null ? controller.objectPaletteOrNull().entries().size() : objectLibrary.size();
             case NONE -> 0;
         };
     }
@@ -750,16 +782,7 @@ public final class EditorHud {
                     if (pattern >= 0 && pattern < patterns) patternUse[pattern]++;
                 }
         hotbar.seed(LibraryKind.PATTERN, ranked(patternUse));
-        EditorStockObjectPalette palette = controller.objectPaletteOrNull();
-        if (palette != null) {
-            int[] objectUse = new int[palette.entries().size()];
-            for (ObjectSpawn spawn : level.getObjects()) {
-                if (spawn.objectKey() == null && spawn.objectId() >= 0 && spawn.objectId() < objectUse.length) {
-                    objectUse[spawn.objectId()]++;
-                }
-            }
-            hotbar.seed(LibraryKind.OBJECT, ranked(objectUse));
-        }
+        seedObjectHotbar(level);
         // The brush already in hand stays highlighted without pushing out a most-used entry.
         for (LibraryKind kind : LibraryKind.values()) {
             if (kind != LibraryKind.NONE) hotbar.adopt(kind, currentBrush(kind));

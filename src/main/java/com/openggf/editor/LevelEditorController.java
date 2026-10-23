@@ -201,6 +201,10 @@ public final class LevelEditorController {
     public void setSpawnEditMode(EditorSpawnEditMode mode) {
         finishPendingEdits();
         spawnEditMode = Objects.requireNonNull(mode, "mode");
+        if (mode == EditorSpawnEditMode.OBJECTS && objectPalette != null && !objectPalette.selectedIsKeyed()
+                && objectPalette.selectedObjectId() == 0)
+            objectPalette.entries().stream().filter(entry -> entry.stockObjectId() != null && entry.previewArtKey() != null)
+                    .findFirst().ifPresent(entry -> objectPalette.setObjectId(entry.stockObjectId()));
         if(mode!=EditorSpawnEditMode.TILES&&depth!=EditorHierarchyDepth.WORLD) {
             depth=EditorHierarchyDepth.WORLD;focusRegion=EditorFocusRegion.WORLD_CANVAS;
             selection=new EditorSelectionState(blockBrushIndex,null);
@@ -218,6 +222,9 @@ public final class LevelEditorController {
     }
     /** The object palette, or null before spawn editing is configured. */
     public EditorStockObjectPalette objectPaletteOrNull() { return objectPalette; }
+    public boolean isPlaceableObject(EditorStockObjectPalette.Entry entry) {
+        return entry.objectKey() != null || spawnFactory != null && spawnFactory.canCreateObject(entry.stockObjectId());
+    }
 
     public void cycleSpawnEditMode() {
         setSpawnEditMode(switch (spawnEditMode) {
@@ -432,7 +439,10 @@ public final class LevelEditorController {
         if(selectedObjectSpawn!=null)return "Selected #"+selectedObjectSpawn.layoutIndex()+" "+selectedObjectSpawn.x()+","+selectedObjectSpawn.y()
                 +" :%02X F%d R%s".formatted(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked()?"1":"0");
         if(selectedRingSpawn!=null)return "Ring #"+selectedRingSpawn.placementId()+" "+selectedRingSpawn.x()+","+selectedRingSpawn.y();
-        return "Block "+selection.selectedBlock()+" Chunk "+selection.selectedChunk()+" cell "+selectedBlockCellX+","+selectedBlockCellY+" / "+selectedChunkCellX+","+selectedChunkCellY;
+        if (spawnEditMode == EditorSpawnEditMode.RINGS) return "Click to place a ring. Right-click to select one.";
+        if (spawnEditMode == EditorSpawnEditMode.OBJECTS) return "Right-click a placement to inspect it.";
+        if (selection.selectedBlock() == null) return "Choose a block from the library.";
+        return "Block " + selection.selectedBlock() + (selection.selectedChunk() == null ? "" : " / Chunk " + selection.selectedChunk());
     }
 
     private EditorSpawnFactory requireSpawnFactory() {

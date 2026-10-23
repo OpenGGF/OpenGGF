@@ -186,3 +186,33 @@ fallback, all 1,401 affected rewind/architecture cases passed with no skips.
 The preceding selection also passed the settings/export/project/mod-zone cases,
 lifecycle/no-shim/API guards and all 60 required S3K cases. No unchanged broad
 smoke coverage was repeated after these bounded corrections.
+
+
+## Visual polish (2026-10-23)
+
+Use the existing SpriteMappingRasterizer with detached sheets published during the
+normal ROM load. LevelObjectArt owns a transient catalogue inherited by MutableLevel
+and editor project copies; opening persisted data resolves its ROM library again.
+Rejected requesting a fresh provider during draw: Sonic1GameModule intentionally
+returns a new provider on every request, so that yielded no S1 previews. Retaining
+live gameplay objects or loading art during UI drawing would also violate preview
+ownership. CPU tiles and mapping records are copied once; the GL front end owns a
+bounded texture cache, keyed by mapping pose and flips and invalidated by palette
+changes and library identity. Compound static poses reuse the same rasterizer.
+
+The shared window-space placement scene culls before materializing sprite pixels.
+Both chrome implementations draw sprites above terrain deliberately so designers
+can see and select placements obscured by foreground tiles; this is an authoring
+view, not gameplay priority certification. Selection/hover edges and ghost alpha
+are screen-space; typed regions have translucent fills and compact label chips.
+No debug ROM-font labels are emitted by the world pass. Static poses preserve
+native origins, subtype frames and flips; stateful assemblies use named markers.
+
+Rejected reading a split parent as the central canvas: it could still include the
+inspector. The desktop uses the actual panel edges and fits the picture inside
+that span, including fractional scale for narrow docks. The viewer pass also
+exposed parked Plane A VScroll: editor cameras move without gameplay deformation
+updates. The authoring render view uses its own camera Y for terrain, preserving
+native gameplay scroll ownership. The offscreen fixture exercises GHZ1, EHZ1 and
+AIZ1 through both real front ends, with no-device audio and no desktop connection.
+Final evidence and validation are recorded in the task handoff outside the repo.

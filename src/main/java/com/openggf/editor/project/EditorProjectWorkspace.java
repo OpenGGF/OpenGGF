@@ -292,8 +292,12 @@ public final class EditorProjectWorkspace {
 
     private void publishProject(EditorProjectDocument candidate) throws IOException {
         host.selectGame(candidate.metadata().gameId());
+        if (com.openggf.level.LevelObjectArt.sheets(candidate.level()).isEmpty()) {
+            Level library = host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct());
+            com.openggf.level.LevelObjectArt.inherit(candidate.level(), library);
+        }
         replaceDocument(candidate);
-        host.status("Opened " + candidate.path());
+        host.status("Opened " + (candidate.path() == null ? candidate.metadata().name() : candidate.path()));
     }
 
     /** Parsed assets are self-contained; no archive or input file survives this handoff. */

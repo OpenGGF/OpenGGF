@@ -293,6 +293,25 @@ with the selected stock act. They scroll your background layout; choosing a sour
 does not import that zone's art. Water uses existing ROM-backed underwater palette
 providers with a fixed authored surface, without stock-zone water events.
 
+### Browse and place by picture
+
+Both editors show objects using ROM-loaded mapping frames and the level's current palette.
+The desktop library pairs thumbnails with readable names; the HUD hotbar and **Tab** library
+use the same art. The default library shows placeable objects with available source art and
+authoring gizmos. Use **All / internal IDs** on desktop, or **X** in the HUD object library,
+to reveal system IDs and objects whose art needs a different level or live runtime state.
+
+Placements keep their native origins, subtype pose and flips. A translucent brush shows where
+an object will land; selection and hover outlines identify existing sprites. Camera, music,
+warp and Stageplay regions use translucent bounds and small labels that stay legible at every
+zoom. Logic-only placements use compact named markers. The desktop canvas fits between its
+panels, including narrow docks; nearest-neighbour sampling keeps sprite edges clear.
+
+Source art is detached during the normal ROM load and retained with the editor's library.
+Viewing thumbnails or moving a ghost never creates gameplay objects or changes undo/rewind
+state. Reopening a saved project reloads its source ROM library for these transient previews;
+projects and exports contain no bundled stock sprite images.
+
 ### Semantic gizmos
 
 Place `openggf:authored-goal` to finish any authored act through its native results

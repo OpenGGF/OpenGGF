@@ -57,7 +57,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider {
+public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider {
     @Override public boolean hasHostObjectKey(String key) {
         return SignpostObjectInstance.AUTHORED_GOAL_KEY.equals(key) || super.hasHostObjectKey(key);
     }
@@ -82,6 +82,13 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
     @Override public com.openggf.level.metadata.ObjectPropertySchema objectProperties(int stockObjectId) {
         return Sonic2ObjectProperties.schema(stockObjectId);
     }
+    @Override public com.openggf.level.metadata.ObjectPreview objectPreview(ObjectSpawn spawn) {
+        if (spawn.objectKey() != null) return editorPreviewArtKey(spawn.objectKey())
+                .map(key -> com.openggf.level.metadata.ObjectPreview.frame(key, 0))
+                .orElseGet(com.openggf.level.metadata.ObjectPreview::empty);
+        return Sonic2ObjectPreviews.preview(spawn);
+    }
+
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
             case Sonic2ObjectIds.MONITOR -> java.util.Optional.of(com.openggf.level.objects.ObjectArtKeys.MONITOR);

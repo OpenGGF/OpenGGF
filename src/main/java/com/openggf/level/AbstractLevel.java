@@ -20,6 +20,8 @@ import java.util.List;
 public abstract class AbstractLevel implements Level {
 
     protected static final int PALETTE_COUNT = 4;
+    java.util.Map<String, com.openggf.level.objects.ObjectSpriteSheet> objectPreviewSheets = java.util.Map.of();
+    java.util.Set<Integer> objectPreviewSourceIds = java.util.Set.of();
 
     protected Palette[] palettes;
     protected Pattern[] patterns;

@@ -61,6 +61,14 @@ preserves vertices; the path picker now does so with `finally` cleanup. A warm
 font or short labels can hide the problem. The shared immediate renderer was
 outside this menu-only fix (2026-10-15 master-title usability review).
 
+**Authoring art and terrain share one origin.** Retain detached ROM sheets from the
+normal asset load; requesting a new module provider during drawing can return an
+unloaded provider (S1 does this deliberately). A free editor camera has no live
+parallax/deformation update, so use its own Y for foreground placement rather
+than the parked Plane A VScroll. Inspect both sprites and floor pixels. Capture
+each ROM in a fresh JVM when reusing native palette-publication resources across
+boots would contaminate the picture (October 2026 visual-polish viewer pass).
+
 **Editor rendering uses editor-owned managers.** Once an authored document enters
 `EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
 mode and reject the call. Offscreen editor examples use the active

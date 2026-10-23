@@ -29,6 +29,7 @@ final class EditorHudPainter implements AutoCloseable {
     private static final int SLOT_GAP = 4;
     private final EditorTileAtlas atlas = new EditorTileAtlas();
     private final EditorTileAtlas ghostAtlas = new EditorTileAtlas();
+    private final com.openggf.editor.render.EditorObjectPreviewCache objectArt = new com.openggf.editor.render.EditorObjectPreviewCache();
     private List<Hit> hits;
     // Free span of the top bar between the breadcrumb and the chips, for status messages.
     private float topBarFreeLeft;
@@ -46,8 +47,17 @@ final class EditorHudPainter implements AutoCloseable {
         }
         Integer patternRaw = controller.selectedPatternRaw();
         atlas.refresh(level, patternRaw == null ? 0 : (patternRaw >>> 13) & 3);
+        objectArt.refresh(level, controller.objectPaletteOrNull());
+        if (controller.objectPaletteOrNull() != null) {
+            var indices = new java.util.ArrayList<Integer>();
+            var entries = controller.objectPalette().entries();
+            for (int i = 0; i < entries.size(); i++)
+                if (hud.showInternalObjects || controller.isPlaceableObject(entries.get(i)) && (entries.get(i).objectKey() != null || objectArt.available(entries.get(i)))) indices.add(i);
+            hud.setObjectLibrary(indices);
+        }
         backdrop(c, layout);
         canvasFrame(c, layout.game(), hud.tick);
+        if (layout.workbench() == null) placements(c, layout, controller);
         if (layout.workbench() == null && level != null && hud.modal != Modal.MENU) worldCursor(c, layout, controller, level, hud.tick);
         if (level != null && layout.workbench() == null) region(c, layout, controller, level);
         topBar(c, layout, controller);
@@ -235,13 +245,51 @@ final class EditorHudPainter implements AutoCloseable {
             if (cell != null) c.image(cell.texture(), x, y, size, size, cell.u0(), cell.v0(), cell.u1(), cell.v1(), 1);
             return;
         }
-        // Objects: the stock id as a badge; names are shown beside the selection.
         EditorStockObjectPalette palette = controller.objectPaletteOrNull();
-        if (palette == null || value >= palette.entries().size()) return;
-        EditorStockObjectPalette.Entry entry = palette.entries().get(value);
-        String badge = entry.stockObjectId() != null ? "%02X".formatted(entry.stockObjectId()) : "MOD";
-        c.rect(x, y, size, size, ACCENT_DARK, 1);
-        c.text(badge, x + (size - EditorHudCanvas.textWidth(badge, Size.BODY)) / 2f, y + size / 2f - 5, Size.BODY, TEXT, 1);
+        if (palette == null || value < 0 || value >= palette.entries().size()) return;
+        var entry = palette.entries().get(value);
+        boolean selected = value == (palette.selectedIsKeyed() ? -1 : palette.selectedObjectId());
+        var sprite = objectArt.sprite(palette.previewSpawn(entry, selected ? palette.selectedSubtype() : 0,
+                selected ? palette.renderFlags() : 0));
+        if (sprite != null) {
+            float scale = Math.min(3, (size - 4) / Math.max(sprite.width(), sprite.height()));
+            float w = sprite.width() * scale, h = sprite.height() * scale;
+            c.image(sprite.texture(), x + (size - w) / 2, y + (size - h) / 2, w, h, 0, 0, 1, 1, 1);
+        } else {
+            c.pill(x + 2, y + 2, size - 4, size - 4, ACCENT_DARK, 1);
+            c.frame(x + 7, y + 7, size - 14, size - 14, 1, ACCENT, .7f);
+            c.text(entry.objectKey() == null ? "?" : "+", x + size / 2 - 3, y + size / 2 - 5, Size.BODY, TEXT, 1);
+        }
+    }
+
+    private void placements(EditorHudCanvas c, EditorHudLayout layout, LevelEditorController controller) {
+        var editor = com.openggf.game.session.SessionManager.getCurrentEditorMode();
+        if (editor == null) return;
+        var g = layout.game();
+        c.clip(g);
+        try {
+            float unit = layout.gameViewport()[4] / (float) layout.uiScale() * controller.canvasView().zoom();
+            com.openggf.editor.render.EditorPlacementScene.draw(controller, objectArt,
+                    new com.openggf.editor.render.EditorPlacementScene.Painter() {
+                public void image(com.openggf.editor.render.EditorObjectPreviewCache.Sprite sprite,
+                                  float x, float y, float w, float h, float alpha) {
+                    c.image(sprite.texture(), x, y, w, h, 0, 0, 1, 1, alpha);
+                }
+                public void rectangle(float x, float y, float w, float h, int color, float alpha, boolean fill) {
+                    if (fill) c.rect(x, y, w, h, color, alpha);
+                    else c.frame(x, y, w, h, 1, color, alpha);
+                }
+                public void chip(String label, float x, float y, int color, float alpha) {
+                    String text = EditorHudCanvas.fit(label, Math.min(125, g.w() - 20), Size.SMALL);
+                    float w = EditorHudCanvas.textWidth(text, Size.SMALL) + 16;
+                    x = Math.clamp(x, g.x() + 2, g.right() - w - 2);
+                    y = Math.clamp(y, g.y() + 2, g.bottom() - 16);
+                    c.pill(x, y, w, 14, PANEL, .94f * alpha);
+                    c.rect(x + 4, y + 5, 3, 3, color, alpha);
+                    c.text(text, x + 11, y + 3, Size.SMALL, TEXT, alpha);
+                }
+            }, g.x(), g.y(), g.w(), g.h(), unit, editor.getCamera().getXCopy(), editor.getCamera().getYCopy());
+        } finally { c.unclip(); }
     }
 
     private void toast(EditorHudCanvas c, EditorHudLayout layout, EditorHud hud) {
@@ -444,8 +492,13 @@ final class EditorHudPainter implements AutoCloseable {
                     if (tile != null) c.image(tile.texture(), sx, sy, cell, cell, tile.u0(), tile.v0(), tile.u1(), tile.v1(), .6f);
                     c.frame(sx, sy, cell, cell, 1, GOOD, .8f);
                 }
-                for (var object : ghost.objects()) c.frame(g.x() + (object.x() - cameraX) * unit - 4,
-                        g.y() + (object.y() - cameraY) * unit - 4, 8, 8, 1, ACCENT, 1);
+                for (var object : ghost.objects()) {
+                    var sprite = objectArt.sprite(object);
+                    if (sprite != null) c.image(sprite.texture(),
+                            g.x() + (object.x() - cameraX - sprite.originX()) * unit,
+                            g.y() + (object.y() - cameraY - sprite.originY()) * unit,
+                            sprite.width() * unit, sprite.height() * unit, 0, 0, 1, 1, .5f);
+                }
                 for (var ring : ghost.rings()) c.frame(g.x() + (ring.x() - cameraX) * unit - 3,
                         g.y() + (ring.y() - cameraY) * unit - 3, 6, 6, 1, GOLD, 1);
             } catch (IllegalArgumentException invalid) {
@@ -610,7 +663,7 @@ final class EditorHudPainter implements AutoCloseable {
         LibraryKind kind = hud.libraryKind;
         int count = hud.libraryCount(kind);
         c.text(kindTitle(kind), sheet.x() + 12, sheet.y() + 8, Size.LARGE, TEXT, 1);
-        String countText = count + " in this level's library";
+        String countText = count + (kind == LibraryKind.OBJECT ? " objects · X: all / internal" : " in this level's library");
         c.text(countText, sheet.x() + 18 + EditorHudCanvas.textWidth(kindTitle(kind), Size.LARGE), sheet.y() + 16,
                 Size.SMALL, TEXT_DIM, 1);
         float detailW = Math.min(170, sheet.w() * .3f);
@@ -621,9 +674,9 @@ final class EditorHudPainter implements AutoCloseable {
             case BLOCK -> 52;
             case CHUNK -> 40;
             case PATTERN -> 32;
-            default -> 150;
+            default -> 92;
         };
-        float cellH = objects ? 24 : cellW;
+        float cellH = objects ? 72 : cellW;
         int columns = Math.max(1, (int) (grid.w() / cellW));
         int rows = Math.max(1, (int) (grid.h() / cellH));
         hud.libraryColumns = columns;
@@ -649,15 +702,15 @@ final class EditorHudPainter implements AutoCloseable {
                 if (index >= count) break;
                 float x = offsetX + column * cellW, y = grid.y() + (row - hud.libraryScroll) * cellH;
                 if (index == hud.libraryCursor) { focusX = x; focusY = y; focusVisible = true; continue; }
-                libraryTile(c, kind, index, x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, index));
+                libraryTile(c, kind, hud.libraryValue(kind, index), x + 2, y + 2, cellW - 4, cellH - 4, hud.controller(), contains(bar, hud.libraryValue(kind, index)));
                 hit(new Rect(x, y, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, index);
             }
         }
         if (focusVisible) {
             float grow = 3;
             c.rect(focusX - grow + 3, focusY - grow + 4, cellW + 2 * grow - 4, cellH + 2 * grow - 4, SHADOW, .5f);
-            libraryTile(c, kind, hud.libraryCursor, focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
-                    cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryCursor));
+            libraryTile(c, kind, hud.libraryValue(kind, hud.libraryCursor), focusX - grow + 2, focusY - grow + 2, cellW + 2 * grow - 4,
+                    cellH + 2 * grow - 4, hud.controller(), contains(bar, hud.libraryValue(kind, hud.libraryCursor)));
             float pulse = .75f + .25f * (float) Math.sin(hud.tick * .12);
             c.frame(focusX - grow, focusY - grow, cellW + 2 * grow, cellH + 2 * grow, 2, GOLD, pulse);
             hit(new Rect(focusX, focusY, cellW, cellH), grid, Modal.LIBRARY, EditorHud.HIT_LIBRARY, hud.libraryCursor);
@@ -678,7 +731,8 @@ final class EditorHudPainter implements AutoCloseable {
         c.rect(x, y, w, h, TILE, 1);
         if (kind == LibraryKind.OBJECT) {
             EditorStockObjectPalette.Entry entry = controller.objectPalette().entries().get(index);
-            c.fittedText(entry.label(), x + 5, y + (h - 8) / 2f, w - 10, Size.SMALL, TEXT, 1);
+            thumbnail(c, kind, index, x + (w - 46) / 2, y + 2, 46, controller);
+            c.fittedText(EditorStockObjectPalette.displayName(entry.label()), x + 5, y + h - 13, w - 10, Size.SMALL, TEXT, 1);
         } else {
             thumbnail(c, kind, index, x + 1, y + 1, w - 2, controller);
             String label = hex(index);
@@ -692,7 +746,7 @@ final class EditorHudPainter implements AutoCloseable {
 
     private void libraryDetail(EditorHudCanvas c, Rect detail, LibraryKind kind, EditorHud hud, MutableLevel level) {
         c.rect(detail.x(), detail.y(), detail.w(), detail.h(), PANEL_RAISED, 1);
-        int index = hud.libraryCursor;
+        int index = hud.libraryValue(kind, hud.libraryCursor);
         float preview = Math.min(detail.w() - 20, 132);
         float px = detail.x() + (detail.w() - preview) / 2f, py = detail.y() + 10;
         c.rect(px - 2, py - 2, preview + 4, preview + 4, SHADOW, .7f);
@@ -990,5 +1044,6 @@ final class EditorHudPainter implements AutoCloseable {
     public void close() {
         atlas.close();
         ghostAtlas.close();
+        objectArt.close();
     }
 }

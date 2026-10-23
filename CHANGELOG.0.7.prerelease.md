@@ -151,7 +151,10 @@ Unreleased. The earlier development themes remain in
   export data-only playable campaigns; project-contained PNG/sheet imports install
   native art and optional palettes in one undo step. A controller-first HUD drawn at
   window resolution frames the level with a brush hotbar, a full-screen library
-  of ROM-art thumbnails, a tools wheel, block and chunk workbenches and button
+  of ROM-art thumbnails, native sprite placements and translucent brush previews.
+  Picture-based object browsing hides internal IDs by default, while compact gizmo
+  labels and a dock-fitted desktop canvas keep the level readable. A tools wheel,
+  block and chunk workbenches and button
   prompts for the pad in use. It is the sole built-in editor UI, with world-space
   editing guides underneath; a separate OpenGGF-Editor provider can replace it
   through the window-chrome extension. Stock Emerald Hill can be adopted, playtested

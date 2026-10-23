@@ -64,6 +64,7 @@ public class MutableLevel extends AbstractLevel implements com.openggf.level.obj
                          java.util.Map<Integer, Set<Integer>> blockToMapCells) {
         super(zoneIndex);
         this.sourceLevel = sourceLevel;
+        LevelObjectArt.inherit(this, sourceLevel);
         this.blockPixelSize = sourceLevel.getBlockPixelSize();
         this.chunksPerBlockSide = sourceLevel.getChunksPerBlockSide();
         this.ringSpriteSheet = sourceLevel.getRingSpriteSheet();
