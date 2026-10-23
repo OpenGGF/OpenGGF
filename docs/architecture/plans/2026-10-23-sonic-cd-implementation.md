@@ -1319,3 +1319,64 @@ against partially authored Java. The pending comparison checks every represented
 chip scalar, all wave RAM, every sample/delta and Java capture/restore, without
 claiming a native active-PCM restoration interval. Commercial payloads remain
 outside Git and are never a runtime data source.
+
+The reviewed PCM tools are committed locally as `144cc091d`; their core patch
+joins the existing exact-context whitespace attribute policy. The parent owns
+three uncommitted test-only additions in `device.pcm`: `PcmNativeBlock`,
+`TestPcmNativeBlock` and `TestCdPcmNativeContinuations`. The opt-in property is
+`soniccd.pcm.fixtures`, pointing to the original controls-startup-jumps-r1 root.
+Admission checks the complete binary extent, channel fields, service-counter
+metadata, unity host volume, all RAM, every sample/delta and unused storage.
+The comparisons use the pinned manifest and both repeated payload sets, then
+exercise Java state restoration separately. Compilation/JUnit remain pending.
+No Maven job is queued or running; future combined focused validation waits
+for stable `level` and `service.graphics` handoffs. No pass is claimed for
+these new Java test files.
+
+The graphics-service unit returned six stable Java/test files, calling the
+production transform and preserving explicit clock domains, busy-clear/wake/IRQ
+ordering and RAM/cursor snapshots. Offline scalar calculations matched all
+1,052 R4 operations and 1,800 rebases with zero mismatches. These calculations
+are not Java/JUnit execution or hardware timing proof. Fresh task
+`sonic-cd-stamp-service-pcm-tests-review-20261023-r1` is read-only on these six
+files plus the parent's three PCM comparison/admission tests. The R11A loader
+writer was asked to announce a stable Java freeze before remaining external
+checks if possible, so one combined focused compile/test run can overlap them.
+No Maven command has started; the parent still owns target and validation.
+
+### Native music-preview and pending Java checkpoint
+
+The controller-only Sound Test route succeeded on its first discovery schedule.
+Pinned source derives Down, Down, Down, Left, Right, A; native UI shows PCM NO.10.
+Its source command loads the Palmtree Panic PCM bank and queues Past music.
+All nine fresh controls match retail Sound Test entry/current instruction bytes
+and PC `FF3C30`. The read-only state search requires the entire public 68K RAM
+hash, not an assumed savestate offset or authoritative gameplay value.
+
+Eight main music blocks contain 1,623 nonzero samples, seven channel masks,
+varied envelope/pan values and six natural loops. The checkpoint is active;
+all 120 following native calls contain active PCM. Exactly 21,568 integer
+summaries match after restoration. Four complete forward/replay blocks contain
+526 nonzero samples and match across both enabled cold boots. All nine fresh
+AV/picture/public CPU/RAM controls and complete same-binary raw states match.
+The existing nineteen PCM producer tests passed without skips on the new capture.
+No clipping sample occurred. This is retail music-preview evidence, not an
+in-level audio, physical timing, full sound-driver or resampling certificate.
+
+Fresh review `sonic-cd-pcm-music-evidence-review-20261023-r1` returned bounded
+PASS on the read-only checker and actual new evidence. The lead checked its
+unchanged source identity and all repeated main/forward/replay payload bindings.
+Checker SHA256 is
+`08d24f1b241ede033dbba59c9e96f5aa6744c5d6170acb478c5eccbf5d5f3825`;
+manifest SHA256 is
+`a0b1355233f41659545f778f044ae39dfa0de55a5ff7a5a8293070036e27661b`.
+
+The prior nine-file Java review also returned bounded PASS for the six graphics
+service files and three startup PCM comparison/admission files. It independently
+reproduced the 1,052 graphics-operation/1,800-rebase scalar boundaries and
+validated all sixteen startup payloads plus mutation controls. This is static
+review/calculation evidence; Java execution remains pending. The parent then
+added `TestCdPcmNativeMusic`, using `soniccd.pcm.musicFixtures`, to compare all
+eight music blocks and the four active native restore blocks through the same
+test-only binary admission helper. The original nine reviewed files are unchanged.
+Combined focused validation still awaits a stable R11A loader source handoff.

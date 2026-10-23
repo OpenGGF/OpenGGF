@@ -76,6 +76,10 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   [checker](../../tools/soniccd/pcm_native_check.py) validates full state, RAM,
   samples, provenance and controls. Captures are comparison-only; startup
   coverage is distinct from active gameplay and resampling. Origin: 2026-10-23 CD-06.
+- [Retail Sound Test PCM route](../../tools/soniccd/pcm_route_soundtest_check.py)
+  checks controller-authored music selection, loaded program identity and active
+  native restoration against immutable captures. Music preview remains distinct
+  from in-level parity. Origin: 2026-10-23 CD-06.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 
