@@ -33,15 +33,9 @@ import java.util.function.Supplier;
 public final class RaceLobbyView {
     private static final int BACKGROUND = 0x101830;
     private static final int TITLE = 0xFFFFE070;
-    private static final int LABEL = 0xFFB0C8E8;
     private static final int VALUE = 0xFFFFFFFF;
     private static final int DIM = 0xFF8C8C8C;
-    private static final int VERIFIED = 0xFF99CCFF;
-    private static final int UNVERIFIED = 0xFFFFCC4C;
-    private static final int FOCUS = 0x803060C0;
     private static final int HINT = 0xFF8090B0;
-    private static final int ACTION_HEIGHT = 11;
-    private static final int READY_COLOUR = 0xFF80FF90;
 
     private enum Focus { PLAYERS, HISTORY, READY, START, RULE, CHAT, PROFILE, LEAVE }
 
@@ -61,6 +55,8 @@ public final class RaceLobbyView {
     private String notice;
     private Consumer<ReadyRules> readyRuleChosen = rule -> { };
     private boolean levelBehind;
+    /** Players on one page of the roster card, from the last drawn screen height. */
+    private int playersPerPage = RaceLobbyScreen.playersPerPage(224, true);
 
     /**
      * @param shareCode the LAN invite template a LAN host shares, or null
@@ -155,7 +151,7 @@ public final class RaceLobbyView {
         if (delta != 0) focus = choices.get(Math.floorMod(choices.indexOf(focus) + delta, choices.size()));
         int horizontal = input.left() ? -1 : input.right() ? 1 : 0;
         if (focus == Focus.PLAYERS) playerPage = Math.clamp(playerPage + horizontal, 0,
-                Math.max(0, (coordinator.session().players().size() - 1) / 2));
+                Math.max(0, (coordinator.session().players().size() - 1) / playersPerPage));
         if (focus == Focus.HISTORY) chatPage = Math.clamp(chatPage + horizontal, 0,
                 Math.max(0, coordinator.session().chatLines().size() - 1));
         if (focus == Focus.RULE && horizontal != 0) changeReadyRule(horizontal);
@@ -325,95 +321,162 @@ public final class RaceLobbyView {
             drawDetails(canvas);
             return;
         }
-        int width = canvas.width();
-        canvas.clear(BACKGROUND);
-        ControlMessage.RoomDescriptor room = coordinator.session().room();
-        canvas.text("RACE LOBBY", 10, 10, TITLE);
-        if (room == null) {
-            canvas.text("Connecting...", 10, 24, HINT);
-        } else {
-            NameFont.draw(canvas, NameFont.fit(room.name(), width - 20), 10, 22, HINT);
-        }
-        List<ControlMessage.PlayerInfo> players = coordinator.session().players();
-        playerPage = Math.min(playerPage, Math.max(0, (players.size() - 1) / 2));
-        if (focus == Focus.PLAYERS) canvas.fill(8, 37, width - 16, 59, FOCUS);
-        canvas.text("PLAYERS  < " + (playerPage + 1) + "/" + Math.max(1, (players.size() + 1) / 2) + " >",
-                12, 40, LABEL);
-        for (int i = playerPage * 2; i < Math.min(players.size(), playerPage * 2 + 2); i++) {
-            ControlMessage.PlayerInfo player = players.get(i);
-            int y = 51 + (i % 2) * 22;
-            String character = player.character() == null ? "?" : player.character().toUpperCase();
-            int characterX = width - 12 - canvas.textWidth(character);
-            NameFont.draw(canvas, NameFont.fit(player.displayName(), characterX - 20), 12, y,
-                    nameColour(player.slot()));
-            canvas.text(character, characterX, y + 1, VALUE);
-            String fingerprint = player.fingerprint() == null ? "????"
-                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
-            String badge = i == 0 ? " HOST" : player.newPlayer() ? " NEW" : "";
-            // Below the name's descenders (row 12 of its line box), so marks like the dot in ị stay visible.
-            String tag = "#" + fingerprint + badge;
-            canvas.text(tag, 20, y + 12, DIM);
-            if (coordinator.session().isReady(player.slot())) {
-                canvas.text("READY", 20 + canvas.textWidth(tag) + 8, y + 12, READY_COLOUR);
-            }
-        }
-        drawHistoryOrVote(canvas, width);
-        canvas.text(fit(canvas, readyLine(), width - 20), 10, 126, LABEL);
-        boolean verified = room != null && room.verified();
-        if (notice != null) {
-            canvas.text(fit(canvas, notice, width - 20), 10, 137, TITLE);
-        } else {
-            canvas.text(fit(canvas, (verified ? "VERIFIED" : "UNVERIFIED TIMES") + " / "
-                    + coordinator.session().phase(), width - 20), 10, 137, verified ? VERIFIED : UNVERIFIED);
-        }
-        int y = 150;
-        boolean ready = coordinator.session().isLocalReady();
-        for (Focus item : choices()) {
-            switch (item) {
-                case READY -> action(canvas, item, ready ? "READY - SELECT TO UNREADY" : "READY UP", y,
-                        betweenRounds());
-                case START -> {
-                    boolean startable = canStart() && everyoneReadyEnough();
-                    action(canvas, item, startable ? "START ROUND" : canStart() ? "START ROUND (WAITING)"
-                            : "WAITING FOR ROUND", y, startable);
-                }
-                case RULE -> action(canvas, item, "READY RULE  < " + ruleLabel(coordinator.session().readyRule())
-                        + " >", y, betweenRounds());
-                case CHAT -> action(canvas, item, "WRITE CHAT MESSAGE", y, true);
-                case PROFILE -> action(canvas, item, "PROFILE: NAME AND LOOK", y, canEditProfile());
-                case LEAVE -> action(canvas, item, "LEAVE ROOM", y, true);
-                case PLAYERS, HISTORY -> { continue; }
-            }
-            y += ACTION_HEIGHT;
-        }
-        if (y <= 205) {
-            String hint = levelBehind && ready ? "Start/Enter play  A select  B leave"
-                    : "Up/Down select  Left/Right page  B leave";
-            canvas.text(fit(canvas, hint, width - 20), 10, 210, HINT);
-        } else if (levelBehind && ready) {
-            // No room below the owner's actions: the play hint moves beside the title.
-            String hint = "Start: play";
-            canvas.text(hint, width - 10 - canvas.textWidth(hint), 10, HINT);
-        }
+        // Over the lobby level only the cards are drawn, so the level stays in view around them.
+        if (!(canvas instanceof openggf.timeattack.ui.OverLevelCanvas)) canvas.clear(BACKGROUND);
+        RaceLobbyScreen.draw(canvas, screen(canvas.width(), canvas.height()));
     }
 
-    /** One line for everyone: the room's ready rule and, while it waits, who is not ready. */
-    private String readyLine() {
+    /** The main page as measured cards (tests read its text). */
+    RaceLobbyScreen.Screen screen(int width, int height) {
         ClientRaceSession race = coordinator.session();
-        String rule = "READY: " + ruleLabel(race.readyRule());
+        ControlMessage.RoomDescriptor room = race.room();
+        List<ControlMessage.PlayerInfo> players = race.players();
+        List<RaceLobbyScreen.Player> rows = new ArrayList<>();
+        for (int i = 0; i < players.size(); i++) {
+            ControlMessage.PlayerInfo player = players.get(i);
+            String character = player.character() == null ? "?"
+                    : player.character().toUpperCase(java.util.Locale.ROOT);
+            rows.add(new RaceLobbyScreen.Player(player.displayName(), nameColour(player.slot()),
+                    race.isReady(player.slot()), player.slot() == race.localSlot(),
+                    i == 0 ? "HOST" : player.newPlayer() ? "NEW" : "", character));
+        }
+        boolean secondaryCard = true;
+        playersPerPage = RaceLobbyScreen.playersPerPage(height, secondaryCard);
+        playerPage = Math.min(playerPage, Math.max(0, (players.size() - 1) / playersPerPage));
+
+        List<RaceLobbyScreen.Note> status = new ArrayList<>();
         if (!race.readyRequired()) {
-            return rule + " - NOBODY WAITS";
+            status.add(new RaceLobbyScreen.Note("NOBODY WAITS", HudTextLayout.MUTED, false));
+        } else if (race.playersNotReady().isEmpty()) {
+            status.add(new RaceLobbyScreen.Note("EVERYONE IS READY", RaceLobbyScreen.READY, false));
+        } else {
+            StringBuilder names = new StringBuilder();
+            for (ControlMessage.PlayerInfo player : race.playersNotReady()) {
+                if (!names.isEmpty()) names.append(", ");
+                names.append(player.displayName());
+            }
+            status.add(new RaceLobbyScreen.Note("WAITING FOR", HudTextLayout.GOLD, false));
+            status.add(new RaceLobbyScreen.Note(names.toString(), HudTextLayout.WHITE, true));
         }
-        List<ControlMessage.PlayerInfo> waiting = race.playersNotReady();
-        if (waiting.isEmpty()) {
-            return rule + " - ALL READY";
+        if (notice != null) status.add(new RaceLobbyScreen.Note(notice, HudTextLayout.GOLD, false));
+
+        boolean ready = race.isLocalReady();
+        List<RaceLobbyScreen.Action> actions = new ArrayList<>();
+        for (Focus item : choices()) {
+            switch (item) {
+                case READY -> actions.add(action(item, ready ? "CANCEL READY" : "READY UP", betweenRounds()));
+                case START -> {
+                    boolean startable = canStart() && everyoneReadyEnough();
+                    actions.add(action(item, startable ? "START ROUND" : canStart() ? "START - WAITING"
+                            : "WAITING FOR ROUND", startable));
+                }
+                case RULE -> actions.add(action(item, "RULE < " + ruleLabel(race.readyRule()) + " >",
+                        betweenRounds()));
+                case CHAT -> actions.add(action(item, "CHAT", true));
+                case PROFILE -> actions.add(action(item, "NAME AND LOOK", canEditProfile()));
+                case LEAVE -> actions.add(action(item, "LEAVE ROOM", true));
+                case PLAYERS, HISTORY -> { }
+            }
         }
-        StringBuilder names = new StringBuilder();
-        for (ControlMessage.PlayerInfo player : waiting) {
-            if (!names.isEmpty()) names.append(", ");
-            names.append(player.displayName());
+        long readyCount = players.stream().filter(player -> race.isReady(player.slot())).count();
+
+        String hint = "UP/DOWN  A OK  B LEAVE";
+        if (race.phase() == ClientRaceSession.Phase.VOTE) hint = "1-3 VOTE  " + hint;
+        if (levelBehind && ready) hint += "  START PLAY";
+        RaceLobbyScreen.Model model = new RaceLobbyScreen.Model(
+                room == null ? "Connecting..." : room.name(), nextTrack(room), phaseLabel(),
+                phaseColour(), room != null && room.verified(), rows, room == null ? 0 : room.maxPlayers(),
+                playerPage, focus == Focus.PLAYERS, secondary(), "READY " + ruleLabel(race.readyRule()),
+                readyCount + "/" + players.size(), status, actions, hint);
+        return RaceLobbyScreen.layout(model, width, height);
+    }
+
+    private RaceLobbyScreen.Action action(Focus item, String label, boolean enabled) {
+        return new RaceLobbyScreen.Action(label, focus == item, enabled);
+    }
+
+    /** The card under the players: the vote while one runs, the last round's podium, else the chat. */
+    private RaceLobbyScreen.Secondary secondary() {
+        ClientRaceSession race = coordinator.session();
+        boolean focused = focus == Focus.HISTORY;
+        if (race.phase() == ClientRaceSession.Phase.VOTE) {
+            List<String> options = race.voteOptions();
+            List<ControlMessage.VoteCount> counts = race.voteCounts();
+            int total = counts.stream().mapToInt(ControlMessage.VoteCount::votes).sum();
+            List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+            for (int index = 0; index < Math.min(3, options.size()); index++) {
+                String key = options.get(index);
+                int votes = counts.stream().filter(count -> count.trackKey().equals(key))
+                        .mapToInt(ControlMessage.VoteCount::votes).findFirst().orElse(0);
+                rows.add(new RaceLobbyScreen.Choice(index + 1, MultiplayerHudRenderer.trackLabel(key), votes, total));
+            }
+            return new RaceLobbyScreen.Secondary("NEXT TRACK", Math.max(0, race.voteRemainingMillis() / 1000) + "S",
+                    rows, focused, -1);
         }
-        return rule + " - WAITING: " + names;
+        if (race.phase() == ClientRaceSession.Phase.ROUND_END && !race.podiumTop(3).isEmpty()) {
+            List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+            ControlMessage.RoundConfig config = race.roundConfig();
+            String policy = config == null ? null : config.characterPolicy();
+            for (ControlMessage.StandingsRow row : race.podiumTop(3)) {
+                rows.add(new RaceLobbyScreen.Note(HudTextLayout.standingsLine(row, policy),
+                        HudTextLayout.WHITE, true));
+            }
+            return new RaceLobbyScreen.Secondary("RESULTS", "", rows, focused, -1);
+        }
+        List<String> history = race.chatLines();
+        chatPage = Math.min(chatPage, Math.max(0, history.size() - 1));
+        List<RaceLobbyScreen.Row> rows = new ArrayList<>();
+        for (String line : history) rows.add(chatRow(line));
+        if (rows.isEmpty()) {
+            rows.add(new RaceLobbyScreen.Note(shareCode == null ? "NO MESSAGES YET" : "OPEN FOR THE LAN INVITE",
+                    RaceLobbyScreen.DISABLED, false));
+        }
+        String right = focused ? "A: OPEN" : chatPage > 0 ? "OLDER" : "";
+        return new RaceLobbyScreen.Secondary(shareCode == null ? "CHAT" : "CHAT + INVITE", right, rows,
+                focused, history.isEmpty() ? -1 : chatPage);
+    }
+
+    /** A {@code name: text} chat line, with the sender coloured when exactly one player has that name. */
+    private RaceLobbyScreen.Row chatRow(String line) {
+        int colon = line.indexOf(": ");
+        if (colon > 0) {
+            String sender = line.substring(0, colon);
+            List<ControlMessage.PlayerInfo> matches = coordinator.session().players().stream()
+                    .filter(player -> sender.equals(player.displayName())).toList();
+            int colour = matches.size() == 1 ? nameColour(matches.getFirst().slot()) : VALUE;
+            return new RaceLobbyScreen.Chat(sender, colour, line.substring(colon + 2));
+        }
+        return new RaceLobbyScreen.Chat("", VALUE, line);
+    }
+
+    /** What happens next: the voted track, else the room's own. */
+    private static String nextTrackKey(ControlMessage.RoomDescriptor room, String voted) {
+        if (voted != null) return voted;
+        return room == null ? null : room.gameId() + ":" + room.zone() + ":" + room.act();
+    }
+
+    private String nextTrack(ControlMessage.RoomDescriptor room) {
+        if (coordinator.session().phase() == ClientRaceSession.Phase.VOTE) return "NEXT  TRACK BY VOTE";
+        String key = nextTrackKey(room, coordinator.session().lastVoteResultTrackKey());
+        if (key == null) return "";
+        String game = key.substring(0, Math.max(0, key.indexOf(':'))).toUpperCase(java.util.Locale.ROOT);
+        return "NEXT  " + game + "  " + MultiplayerHudRenderer.trackLabel(key);
+    }
+
+    private String phaseLabel() {
+        ClientRaceSession race = coordinator.session();
+        return switch (race.phase()) {
+            case LOBBY -> "LOBBY";
+            case VOTE -> "VOTE";
+            case ROUND_END -> "ROUND OVER";
+            case COUNTDOWN -> "STARTING";
+            case RUNNING -> "ROUND RUNNING";
+        };
+    }
+
+    private int phaseColour() {
+        return coordinator.session().phase() == ClientRaceSession.Phase.LOBBY ? HudTextLayout.ACCENT
+                : HudTextLayout.GOLD;
     }
 
     private static String ruleLabel(String rule) {
@@ -429,31 +492,6 @@ public final class RaceLobbyView {
     /** The colour a player chose for their name ({@link com.openggf.net.identity.PlayerAppearance#nameArgb}). */
     private int nameColour(int slot) {
         return coordinator.session().appearance(slot).nameArgb();
-    }
-
-    private void drawHistoryOrVote(SceneCanvas canvas, int width) {
-        if (coordinator.session().phase() == ClientRaceSession.Phase.VOTE) {
-            List<String> lines = HudTextLayout.voteLines(coordinator.session().voteOptions(),
-                    coordinator.session().voteCounts(), coordinator.session().voteRemainingMillis(),
-                    MultiplayerHudRenderer::trackLabel);
-            int y = 98;
-            for (String line : lines.subList(0, Math.min(3, lines.size()))) {
-                canvas.text(fit(canvas, line, width - 24), 12, y, TITLE);
-                y += 10;
-            }
-            return;
-        }
-        List<String> history = coordinator.session().chatLines();
-        chatPage = Math.min(chatPage, Math.max(0, history.size() - 1));
-        if (focus == Focus.HISTORY) canvas.fill(8, 97, width - 16, 27, FOCUS);
-        canvas.text((shareCode == null ? "CHAT HISTORY" : "LAN INVITE / CHAT") + "  < " + (chatPage + 1) + " >",
-                12, 100, LABEL);
-        int last = Math.max(0, history.size() - chatPage);
-        int first = Math.max(0, last - 1);
-        for (int i = first; i < last; i++) {
-            chatLine(canvas, history.get(i), 12, 111 + (i - first) * NameFont.LINE_HEIGHT, width - 24);
-        }
-        if (history.isEmpty()) canvas.text("No messages yet", 12, 112, DIM);
     }
 
     /**
@@ -507,6 +545,23 @@ public final class RaceLobbyView {
             canvas.text(line, 12, y, VALUE);
             y += 11;
         }
+        // Each player's identity tag, which tells two players with the same name apart.
+        y += 4;
+        if (y <= 180) {
+            canvas.text("PLAYERS", 10, y, TITLE);
+            y += 13;
+        }
+        for (ControlMessage.PlayerInfo player : coordinator.session().players()) {
+            if (y > 180) break;
+            String fingerprint = player.fingerprint() == null ? "????"
+                    : player.fingerprint().substring(0, Math.min(4, player.fingerprint().length()));
+            String tag = "#" + fingerprint + (player.newPlayer() ? " NEW" : "");
+            int tagWidth = com.openggf.mods.ui.CompactFont.width(tag, 1);
+            NameFont.draw(canvas, NameFont.fit(player.displayName(), width - 32 - tagWidth), 12, y,
+                    nameColour(player.slot()));
+            com.openggf.mods.ui.CompactFont.draw(canvas, tag, width - 12 - tagWidth, y + 3, 1, DIM);
+            y += NameFont.LINE_HEIGHT;
+        }
         if (!history.isEmpty()) y += 4;
         for (String message : history) {
             for (String line : TextEntry.wrapPixels(message, width - 24)) {
@@ -518,12 +573,4 @@ public final class RaceLobbyView {
         canvas.text("Enter or B to return", 10, 208, HINT);
     }
 
-    private void action(SceneCanvas canvas, Focus item, String label, int y, boolean enabled) {
-        if (focus == item) canvas.fill(8, y - 2, canvas.width() - 16, ACTION_HEIGHT, FOCUS);
-        canvas.text(label, 12, y, enabled ? VALUE : DIM);
-    }
-
-    private static String fit(SceneCanvas canvas, String text, int maxWidth) {
-        return TextLayout.ellipsis(text == null ? "" : text, Math.max(0, maxWidth), canvas::textWidth);
-    }
 }

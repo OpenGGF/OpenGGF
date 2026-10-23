@@ -106,11 +106,15 @@ and restarts its act on completion; a death reloads at once at the fence spawn w
 counter, game over or countdown. A
 room's lobby that cannot load or faults falls back to the menu on its own for that room.
 
-The menu owns the controller while it is shown (`RunHandle.holdControls`). It draws on a dark
-translucent backing panel in the multiplayer HUD's panel style (`HudTextLayout.FILL` alpha), so
-the level stays visibly alive behind it, and covers the level (`RunHandle.setLevelCovered`): the
-stock HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). **READY UP** marks the
-player ready (`SetReady`; the room shows a READY badge and a ready line). Once ready, Start or Enter
+The menu owns the controller while it is shown (`RunHandle.holdControls`). It is a set of cards
+in the multiplayer HUD's panel style (`RaceLobbyScreen`): a header with the room, the next track
+and whether times are verified; the players with a ready box, HOST/NEW badge and character; the
+chat (or, between rounds, the track vote or the last round's podium); and the menu, headed by the
+ready rule with who the room is still waiting for. Cards size to their content, so the level
+stays in view around them, and the menu covers the level (`RunHandle.setLevelCovered`): the stock
+HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). Each
+player's identity tag, which tells two players with one name apart, is on the chat and invite
+page. **READY UP** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
 because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active
