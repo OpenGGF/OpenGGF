@@ -80,6 +80,12 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   checks controller-authored music selection, loaded program identity and active
   native restoration against immutable captures. Music preview remains distinct
   from in-level parity. Origin: 2026-10-23 CD-06.
+- [R11A asset loader](../../src/main/java/com/openggf/game/soniccd/level/CdR11aAssetLoader.java)
+  authenticates supplied media before decoding immutable native stage data.
+  [Reference checks](../../tools/soniccd/r11a_asset_check.py) independently
+  compare decompression output and bounded native fields against R2 metadata.
+  This supports R11A assets, not a playable module or other stage paths.
+  Origin: 2026-10-23 CD-04/CD-10.
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 

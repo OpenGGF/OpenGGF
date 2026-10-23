@@ -45,6 +45,17 @@ read bounds to the owning consumer and actual media; keep source blobs, file
 reads and resident RAM separate. See the
 [stage-inventory correction](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-source-and-consumer-inventory).
 
+**Decoder lookahead is distinct from required compressed bits.** The existing
+Nemesis reader's eight-bit lookup consumes one real adjacent file byte after
+R11A's level-tile stream. An independent prefix decoder needs no bits from it;
+00/55/AA/FF controls preserve decoded output. Keep the matched source blob and
+the bounded reader-input view distinct, and use the actual media byte instead
+of invented EOF padding. Native CD chunk words also use different drawing
+(`0x3FF`) and collision (`0x7FF`) masks. Validate references used by the layout;
+unreferenced words can address unavailable resident data and must not create
+zero-filled blocks. See the
+[R11A loader checkpoint](plans/2026-10-23-sonic-cd-implementation.md#verified-r11a-loader-graphics-service-and-pcm-comparisons).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot

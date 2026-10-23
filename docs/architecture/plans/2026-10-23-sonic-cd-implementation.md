@@ -1380,3 +1380,48 @@ added `TestCdPcmNativeMusic`, using `soniccd.pcm.musicFixtures`, to compare all
 eight music blocks and the four active native restore blocks through the same
 test-only binary admission helper. The original nine reviewed files are unchanged.
 Combined focused validation still awaits a stable R11A loader source handoff.
+
+### Verified R11A loader, graphics service and PCM comparisons
+
+At `92825f5b1` plus the frozen new units, the lead ran this combined focused
+command. It compiled 4,232 production and 4,341 test sources, then passed all
+87 tests across thirteen classes, with zero failures, errors or skips. Maven
+took 1 minute 28 seconds; queue admission reported zero wait. Session `20024`
+is finished and there is no live Maven job. This is bounded focused validation,
+not a broad smoke/full-suite pass or stock game integration. The new packages
+have no existing runtime callers; the shared Nemesis implementation is unchanged.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCdBoundedAssets,TestCdObjectPlacements,TestCdR11aLoadPlan,TestCdR11aRetailAssets,TestCdR11aTerrain,TestCdShieldArt,TestCdSonicVisualAssets,TestCdStampOperationRequest,TestCdStampGraphicsService,TestCdStampOwnerLedgerSourceModel,TestPcmNativeBlock,TestCdPcmNativeContinuations,TestCdPcmNativeMusic' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} -Dsoniccd.stamp.ownerLedger=${SCD_OWNER_LEDGER} -Dsoniccd.pcm.fixtures=${SCD_PCM_STARTUP} -Dsoniccd.pcm.musicFixtures=${SCD_PCM_MUSIC} test -B
+```
+
+The R11A unit's 26 invocations include actual supplied USA/Japan/Europe media.
+Authentication precedes decode; known whole-disc content, variant, stage/file
+join, original Word RAM domain and exact immutable MMD bytes are checked.
+Decoded blocks/tiles, layouts, collision, palettes, placements, load metadata,
+Sonic visual views and bounded raw shield copies are detached immutable data.
+Actual Java decoder cursors and complete output hashes match the independent
+reference. Unknown resident tails and other 207 regional stage paths remain
+unsupported. Eight Python reference tests and all three regional checks passed
+separately. Fresh review `sonic-cd-r11a-assets-review-20261023-r1` returned
+bounded PASS on twenty files. The lead verified its unchanged aggregate SHA256
+`0c1de79bc575b3a2467f0dd06024171a02848da6873eba1304d976c3f67418ca`.
+
+The graphics service's 39 invocations include the explicit source-model ledger
+check over 1,052 operations and 1,800 rebases. Request/clock/ownership validation,
+ceil/ahead service, finish ordering, stale handles, RAM snapshots and replay
+passed. The model retains native contention/alignment approximations; this is
+not physical timing, full register mutation semantics or firmware certification.
+
+The PCM consumer's 22 invocations cover two binary admission checks, eight
+startup/stop blocks, eight music blocks and four active native restore blocks.
+All 5,309 distinct captured integer samples/deltas, complete represented chip
+state and wave RAM match Java exactly. Java checkpoint replay also passed.
+This establishes the bounded startup and retail music-preview device comparisons,
+not in-level audio, clipping, resampling or full-driver scheduling parity.
+
+Task `sonic-cd-stock-admission-audit-20261023-r1` is read-only on actual launch,
+module, media and API obligations for the next real disc consumer. It writes
+only external research. The next integration still needs a deliberate engine
+adapter and stock bootstrap; no GameId.SCD or playable game module exists yet.
+All implementation remains local with no merge, push or main-workspace mutation.
