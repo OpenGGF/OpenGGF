@@ -212,7 +212,7 @@ class TestNativeSpriteResolvedAdmissions {
         @Override public int getPriorityBucket() { return bucket; }
         @Override public int getLiveObjectId() { return liveId; }
         @Override public boolean isPersistent() { return true; }
-        @Override public void update(int frame, PlayableEntity player) { ticks++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { ticks++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) { draws++; }
     }
 

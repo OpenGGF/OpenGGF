@@ -3902,6 +3902,58 @@ Consumed own XML, text and logs are removed after this evidence readback;
 compiled output and useful source checkouts remain. Main, provider activation,
 historical SOZ/MHZ observation gates and candidate-wide smoke stay separate.
 
+## Remaining common guard inputs: bounded receiving correction — 2026-10-23
+
+After all old659 smoke/guard diagnostics are inspected and acknowledged,
+Root corrects only the three remaining inputs in the separate receiving
+candidate at `e1887c774fa664f67f6a831a599c2cca06f2aade`:
+
+- FZ visual reconstruction uses `ObjectConstructionContext.construct` with
+  `ctx.objectServices()` around its existing spawn-only constructor, then the
+  unchanged parent assignment. Captured ROM metadata follows through the
+  existing restore. No ROM-row initialization, SST allocation or update is
+  replayed; nested construction context/slot cleanup remains the existing helper.
+- The14 leading `update` parameters in11 named failing test files become
+  `vIntRunCount`; only two corresponding `super.update` arguments also change.
+  Token inverses reconstruct all eleven original files. Assertions and clock
+  values are unchanged.
+- `TestHudSatProjection#setup` uses the existing S3K module fixture lifecycle
+  instead of opening an ambient bootstrap context. Graphics reinitialization,
+  headless setup, cleanup and every native geometry/capacity assertion remain.
+
+No graph baseline rows, exclusions, count thresholds or API pins change.
+The graph declarations are already backed by5079728e's exact live tests;
+b196fe0b's separate lifecycle correction remains closed. First validation is
+the five whole affected classes `TestS1FzBossGraphRewind`,
+`TestS1FzNativeComponents`, `TestObjectConstructionContextScope`,
+`TestObjectServicesConstructionContext`, `TestHudSatProjection`. Then run the
+four whole owning guard classes `TestParentDependentGraphCoverageGuard`,
+`TestObjectUpdateClockTerminologyGuard`, `TestNoServicesInObjectConstructors`,
+`TestSingletonLifecycleGuard` once with `-Pguards`. Both use the current main
+queue wrapper, normal admission, `-Dmse=off`, explicit surfaceless EGL,
+Java25/Lua5.4/null audio and three verified original ROM paths with ambient
+display/JVM overrides unset. No full smoke, route or native observation is
+duplicated for this bounded correction. Source freezes through each request;
+results will be attributed after actual terminal identity/skip readback.
+
+The frozen `cadf0e2447a1e8f62745163d9f5fa0f32124f3178396112d5ceafb7404ef2526`
+source completes both requests without edits. Affected62092 exits0 with32
+distinct tests across5 XML suites (FZ graph6/native12, construction scope2/
+services8, HUD4),0 failures/errors/skips; queue436s, Maven1:26. All17 nested
+streams4992B are inspected;32 FAST-to-NONE warnings only, no dumps.
+Fresh owning31140 exits0 with21 distinct tests across4 XML suites: graph1,
+clock terminology1, managed-construction11, singleton lifecycle8;0F/E/S,
+queue760s, Maven1:49. Its clock subprocess takes66.056s; no timeout or bypass.
+The one2111B stream contains existing generic probe warnings for HtzFireShooter,
+MCZ Brick, unbound animal render managers and unknown-zone CollapsingBridge;
+it does not qualify those probe routes. Both requests' exact identities,
+source framing, Java25.0.5/owned cwd/classpath, original ROM properties and
+surfaceless-EGL flags are read back. No field/pin/baseline or threshold changes.
+Independent actual13-file diff review finds no material issue. Consumed own
+XML/text/log/runtime diagnostics are removed after readback; compiled output
+is retained. This closes the remaining old guard inputs by bounded evidence,
+not a new combined-smoke pass or a route/native qualification.
+
 ## Frozen common659 smoke terminal readback — 2026-10-23
 
 Root request71076/run `20261023T113630Z-441d7e8b` finishes exit1 on unchanged

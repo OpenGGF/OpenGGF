@@ -678,7 +678,7 @@ class TestS3kCompetitionNativeHost {
     }
     private static final class ProbeObject extends AbstractObjectInstance {
         ProbeObject() { super(new ObjectSpawn(0,0,0,0,0,false,0),"NativeHostAllocationProbe"); }
-        @Override public void update(int count,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 }

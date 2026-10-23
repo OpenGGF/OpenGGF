@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
@@ -81,10 +82,10 @@ public final class FZBossVisualComponent extends AbstractObjectInstance implemen
     public FZBossVisualComponent recreateForRewind(RewindRecreateContext ctx) {
         return RewindRecreateObjectLinks.nearestObjectUnbounded(ctx, Sonic1FZBossInstance.class, true)
                 .map(owner -> {
-                    // Generic recreation is outside ObjectConstructionContext. All
-                    // ROM-derived metadata and animation fields follow from capture;
-                    // construction here must not request ROM services or allocate SSTs.
-                    FZBossVisualComponent restored = new FZBossVisualComponent(ctx.spawn());
+                    // Supply the restoring owner's services without replaying ROM-row
+                    // initialization or allocating SSTs; captured fields follow below.
+                    FZBossVisualComponent restored = ObjectConstructionContext.construct(
+                            ctx.objectServices(), () -> new FZBossVisualComponent(ctx.spawn()));
                     restored.parent = owner;
                     return restored;
                 }).orElse(null);
