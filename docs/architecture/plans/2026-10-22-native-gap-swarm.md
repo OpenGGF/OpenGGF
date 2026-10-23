@@ -2549,3 +2549,48 @@ scratch are deleted after inspection; compiled outputs and the unmerged local
 branch/worktree are retained for parent delivery. The final local commit is made
 through normal hooks with all seven policy trailers and the exact requested
 final co-author parsed before committing.
+
+### CNZ viewport fixture: execute the requested EGL path (2026-10-23)
+
+Common-source smoke on `659b02c98` skipped the ordinary
+`TestCNZSlotMachineViewport.reelsStayAtGameCoordinatesAcrossViewportChanges`
+fixture at its legacy `glfwInit` assumption despite the explicit surfaceless-EGL
+launch. This supplies no viewport pixel result. The isolated test-only correction
+uses the existing `PresentationOffscreenTestContext` when explicitly requested;
+unavailable EGL fails visibly with no desktop retry or assumption skip. Other
+platforms retain the hidden OpenGL 4.1 window path.
+
+The production renderer, shader, synthetic all-one ROM art and white palette are
+unchanged. All five native, pillarbox, letterbox, fractional and return viewports
+keep their original inside/outside game-coordinate pixel assertions. The fixture
+requires actual OpenGL 4.1 and checks the GL error after each viewport; renderer,
+texture and program cleanup precede owned context disposal. No production,
+projection, native SAT, palette, allocator or API implementation changes.
+
+One focused check selects `TestCNZSlotMachineViewport`,
+`TestGraphicsProjectionScope` and `TestSurfacelessEglContext` in that worktree,
+using the current main-workspace queue wrapper with `--lean -Dmse=off`, explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, Java 25, Lua 5.4, null audio and no desktop
+or Java launcher environment variables. The bounded 960x800 synthetic readback
+fits the lean lane; no source/resource limit is overridden. The exact command
+uses `$QUEUE` for the current main-workspace wrapper path:
+
+```bash
+python3 "$QUEUE" --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.game.sonic2.slotmachine.TestCNZSlotMachineViewport,com.openggf.graphics.TestGraphicsProjectionScope,com.openggf.tools.TestSurfacelessEglContext' test -B
+```
+
+Request 73314 exits 0: 13 distinct identities across three XMLs, zero
+failures/errors/skips (CNZ 1, projection 9, context 3). Queue waiting was 1459s;
+Maven build/execution time was 1:37. The CNZ body actually executed its real
+shader and all five viewport assertions. All properties and streams were read:
+Java 25.0.5, explicit EGL, the owned cwd and compiled classpath, empty test
+streams and no dumps. The exact tested two-file diff and Java bytes matched
+before this factual result append. Independent source review found no material
+mismatch in context cleanup or the unchanged original pixel assertions.
+
+This is bounded fixture coverage, not native-ROM visual parity, another
+platform's context qualification or a route claim. No additional engine or
+unchanged structural sweep was needed for this test-only change. Consumed raw
+Maven/XML/text diagnostics are removed after inspection; compiled outputs and
+the useful unmerged local worktree are retained. Root's `659` smoke attribution
+and Main/PR/observation gates are unchanged.
