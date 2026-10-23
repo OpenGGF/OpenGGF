@@ -213,16 +213,22 @@ class TestMultiplayerHudLayout {
     }
 
     @Test
-    void aTightPackSpreadsInRaceOrderAboutWhereItReallyIsAndLoneMarkersStayPut() {
-        List<int[]> pack = List.of(new int[]{103, 1, 0}, new int[]{100, 2, 0}, new int[]{101, 3, 1},
-                new int[]{102, 4, 0}, new int[]{200, 5, 0});
-        int[] xs = MultiplayerHudRenderer.spread(pack, 10, 300);
-        assertEquals(List.of(94, 99, 104, 109), List.of(xs[1], xs[2], xs[3], xs[0]),
-                "five pixels apart, in race order (100, 101, 102, 103), centred on the pack's mean x (101)");
-        assertEquals(200, xs[4], "a marker with room keeps its true position");
-        int[] edge = MultiplayerHudRenderer.spread(List.of(new int[]{11, 1, 0}, new int[]{12, 2, 0}), 10, 300);
-        assertEquals(10, edge[0], "a pack at the start stays on the track");
-        assertEquals(15, edge[1]);
+    void racersAtTheSamePlaceStackSoTheColumnCountsThemAndNobodyMoves() {
+        // {x on the track, slot, local}
+        List<int[]> pack = List.of(new int[]{101, 4, 0}, new int[]{100, 2, 0}, new int[]{102, 3, 1},
+                new int[]{103, 1, 0}, new int[]{150, 5, 0});
+        var placed = MultiplayerHudRenderer.stack(pack);
+        java.util.Map<Integer, int[]> bySlot = new java.util.HashMap<>();
+        for (int[] p : placed) bySlot.put(pack.get(p[0])[1], p);
+        int column = 100 / MultiplayerHudRenderer.STACK_BIN * MultiplayerHudRenderer.STACK_BIN;
+        for (int slot : new int[]{1, 2, 3, 4}) {
+            assertEquals(column, bySlot.get(slot)[1], "slot " + slot + " stays at its own place, within one column");
+        }
+        assertEquals(0, bySlot.get(3)[2], "the local player is at the bottom of their column");
+        assertEquals(List.of(1, 2, 3), List.of(bySlot.get(1)[2], bySlot.get(2)[2], bySlot.get(4)[2]),
+                "the others stack above in slot order: the column is four high for four racers");
+        assertEquals(150 / MultiplayerHudRenderer.STACK_BIN * MultiplayerHudRenderer.STACK_BIN, bySlot.get(5)[1]);
+        assertEquals(0, bySlot.get(5)[2], "a racer alone is a single segment where they are");
     }
 
     private static int indexOfColour(List<int[]> fills, int argb) {

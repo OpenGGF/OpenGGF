@@ -39,10 +39,11 @@ hundredth (`0:00.00`), in each game's own HUD digits. Time Attack lays the nativ
 racing (`RunHandle.setHudProfile`): TIME on the top row and RINGS beneath it, with no score or
 lives, and its own panel with the best time and the latest split sits directly under them, lined
 up with their labels (`LevelOverlayCanvas.hudOriginX`). In a room, the room panel takes the
-top-right corner, and a progress bar spans the bottom of the screen: every racer is a marker in
-their name colour, in race order (a tight pack spreads apart about where it really is), with
-yours taller and outlined in white. A racer's marker flashes red, shakes and grows while they are
-hurt and briefly after; other players' hurt state travels in their ghost frames.
+top-right corner, and a progress bar spans the bottom of the screen: every racer is a segment in
+their name colour at their true place, and racers at the same place stack upwards, so a column's
+height counts them; yours is outlined in white at the bottom of its column. A racer's segment
+flashes red and shakes while they are hurt and briefly after; other players' hurt state travels
+in their ghost frames.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
 A best save validates the ghost and its input recording before publication. The
