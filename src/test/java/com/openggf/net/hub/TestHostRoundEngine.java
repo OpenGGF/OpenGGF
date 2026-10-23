@@ -62,6 +62,51 @@ class TestHostRoundEngine {
     }
 
     @Test
+    void countdownExpiryAdmitsStartBeforeScheduledTick() {
+        assertTrue(engine.startRound(config));
+        long startsAt = engine.snapshot().countdownEndsAtHubMillis();
+
+        now = startsAt - 1;
+        assertFalse(engine.mayStartAttempt());
+        assertEquals(HostRoundEngine.Phase.COUNTDOWN, engine.phase());
+
+        now = startsAt;
+        assertTrue(engine.mayStartAttempt(), "a due countdown cannot depend on timer callback ordering");
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        assertEquals("RUNNING", engine.snapshot().phase());
+        assertEquals(1, broadcast.size(), "admission must not duplicate RoundStart");
+    }
+
+    @Test
+    void countdownExpiryAdmitsFinishBeforeScheduledTick() {
+        assertTrue(engine.startRound(config));
+        long startsAt = engine.snapshot().countdownEndsAtHubMillis();
+
+        now = startsAt - 1;
+        assertNull(engine.onAttemptFinish(0, "A", "sonic", finish(1, 1), false));
+        now = startsAt;
+        assertNotNull(engine.onAttemptFinish(0, "A", "sonic", finish(1, 1), false));
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        assertEquals(1, engine.standings().size());
+    }
+
+    @Test
+    void lazyCountdownAdmissionPreservesDeadlineAndFinishGrace() {
+        assertTrue(engine.startRound(config));
+        long deadline = engine.snapshot().deadlineHubMillis();
+
+        now = deadline;
+        assertTrue(engine.mayStartAttempt());
+        now++;
+        assertFalse(engine.mayStartAttempt(), "grace permits finishes, never new attempts");
+        assertNotNull(engine.onAttemptFinish(0, "A", "sonic", finish(1, 4000), false));
+        now = deadline + HostRoundEngine.FINISH_GRACE_MILLIS;
+        assertNotNull(engine.onAttemptFinish(1, "B", "sonic", finish(1, 4000), false));
+        now++;
+        assertNull(engine.onAttemptFinish(2, "C", "sonic", finish(1, 4000), false));
+    }
+
+    @Test
     void standingsRankImprovementsAndIgnoreSlower() {
         engine.startRound(config);
         now += HostRoundEngine.COUNTDOWN_MILLIS;

@@ -867,3 +867,12 @@ Four native alias-word writes remain separate; definition0 emptiness and native
 route descriptor/pixel/clock equality are unproven. No new route product, native
 capture, broad/full suite, campaign or Hyper/Kos budget qualification follows.
 [Source hashes, exact commands and failed hypotheses](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#dez-screeninit-unused-encoded-layout-owner-source-and-independent-red-design--2026-10-17).
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Beam particles, fireball emitters/fragments and dying fingers use live owned-slot dereferences, preserving empty-slot zero positions, replacement occupants, animation/lifetime and rewind behavior. The affected focused owners are `TestDezFinalMouthSequence`, `TestDezFinalFireball` and `TestDezFinalHand`.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

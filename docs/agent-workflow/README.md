@@ -100,6 +100,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 - [Live Maven queue dashboard](../../tools/testing/queue_dashboard.py): `python3 tools/testing/maven_queue.py --dashboard` serves a read-only browser view of running jobs, waiting priority and existing resource samples on loopback (2026-10-16 throughput follow-up).
 - [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
+- [Sprite Tile reuse probe](../../src/main/java/com/openggf/tools/SpriteTileReuseProbe.java): `--verify-only` checks seven fresh-frame scenes using an owned headless graphics host; paired CPU/allocation timing requires the pinned historical hint experiment and isolated admission. Current production explicitly refuses that timing comparison (2026-10-22 sprite-Tile task; [protocol and limits](../architecture/audits/performance/2026-10-22-sprite-tile-reuse.md)).
 - [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
 - [Streaming JFR test summary](../../tools/testing/java/com/openggf/tools/JfrTestSummary.java): `java -Xmx128m --source 21 tools/testing/java/com/openggf/tools/JfrTestSummary.java target/recording.jfr [test-class-prefix ...]` separates sampled threads, test owners and capture phases without expanding event JSON; weights estimate churn, native samples include waiting (2026-10-08 SOZ test-throughput follow-up).
 
@@ -268,16 +269,17 @@ Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
 `docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
 Separately, the repository-wide ROM-like asset rule rejects added or modified
-paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The sole
-reviewed authored-content exception is the two-act Tide fixture's 22 original
-assets, pinned by exact canonical path, mode `100644`, byte length and SHA-256 in
-[the authored-fixture manifest](../../.githooks/authored-fixtures.json).
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The reviewed
+authored-content exceptions are Tide Circuit's 22 original assets and Clover
+Valley's 11 original assets, pinned by exact canonical path, mode `100644`, byte
+length and SHA-256 in [the Tide manifest](../../.githooks/authored-fixtures.json)
+and [the Clover Valley manifest](../../.githooks/authored-clover-valley-assets.json).
 [The shared verifier](../../.githooks/authored_fixture_policy.py) checks Git blobs
 in staged, historical-commit and delivered-snapshot admission; it never runs a
 candidate generator. Changed bytes, moved/case-varied paths, other binaries,
 executable files and symlinks receive no exception. Prefer the existing
 `binary-assets.properties` text-source convention for future authored fixtures;
-this manifest is not a directory or filename-pattern exemption.
+neither manifest is a directory or filename-pattern exemption.
 
 The policy also rejects absolute symlink targets anywhere in the repository. If a broad
 `git add` includes one, unstage it, keep or recreate the local link only in the
@@ -384,6 +386,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
 
 - `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Exclusive test admission precedes a separate active-build lease; idle retained category worktrees do not block it (2026-10-16 queue liveness correction).
+- `tools/performance/MultiplayerJfrSummary.java`: streams real multiplayer JFR recordings into bounded component/thread attribution, with explicit traffic/capture windows, separate Java/native samples, estimated allocation weights and thresholded socket observations (2026-10-21 Time Attack capacity investigation). Compile before acquiring a measurement lease; run the prebuilt summary class with a bounded heap.
 
 - [Native published-video diagnostic port](../../tools/tracechaser/bizhawk-headless/README.md#diagnostic-rendered-frames): opt-in rendered GPGX frames with owned pixels/VDP domains and stale-generation guards; explicit ROM/movie/scene inputs, no canonical fixture publication (2026-10-14 S3K visual parity task).
 
@@ -393,6 +396,9 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - [Cold Knuckles terminal capture](../../src/main/java/com/openggf/tools/S3kKnucklesTerminalCaptureTool.java): original LRZ/HPZ/shipped-SSZ2 route and one declared after-Mecha Emerald inlet, then canonical controller suffix at actual terminal-init offsets; fresh private preferences, one image, and source/runtime/input provenance. Promoted from the 2026-10-17 ending-pal diagnostic; [offset619 evidence](../architecture/plans/2026-10-13-s3k-playable-completion.md#2026-10-17-cold-knuckles-eyecatch-offset-619).
 
 - [Ground-wall sensor witness](../../src/test/java/com/openggf/physics/GroundWallSensorWitness.java): test-only passive lexical wall-owner observer; live collision/playable and copied-data sink, exact pooled FG/BG/combined results before pure terrain lookups, unchanged real return and other probe callers. Origin: [HCZ R8 selected-plane observation, 2026-10-17](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#r8-lexical-wall-owner-observer-and-actual7134-bg-result--2026-10-17); no standalone test or gameplay API.
+
+- `TimeAttackCapacityVideoTool` (`racing-server capture-video`): display-free actual first boot, master browser, full relay lobby and ROM-backed natural GHZ1 completion beside authenticated simulated peers; video/PCM, chapters and observed state are written to an owned external capture directory (2026-10-21 capacity demonstration).
+- `TimeAttackLobbyVideoTool` (`racing-server capture-lobby OUTPUT ROOT s1|s2|s3k`): display-free first boot into a hosted LAN room's lobby level with three loopback peers (international names/looks, lobby presence replaying the player's own poses at an offset); records the menu over the level, ready, hidden-menu play, menu return and the round hand-over as stills, `lobby.mp4` and `state.csv` with received lobby ghost positions (2026-10-22 lobby-level lane).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
 support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)

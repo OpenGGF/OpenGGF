@@ -4,6 +4,10 @@ import com.openggf.audio.AudioBackend;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.HeadlessSmpsAudioBackend;
+import com.openggf.audio.output.AudioPresentationSink;
+import com.openggf.audio.output.NoDeviceAudioSink;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -125,6 +129,60 @@ class TestEngineConfiguredHeadlessStartup {
         engine.closeConfiguredHeadlessSession();
         engine.closeConfiguredHeadlessSession();
         assertFalse(input.hasLogicalOverride());
+    }
+
+    @Test
+    void launchPreparationRetainsTheSuppliedBackendAndRebuildsItsNoDeviceSink() throws Exception {
+        StartupProbeEngine engine = new StartupProbeEngine(context());
+        TrackingBackend backend = new TrackingBackend();
+        engine.initializeConfiguredHeadlessSession(new InputHandler(), backend);
+        var prepare = Engine.class.getDeclaredMethod("preparePresentationForLaunch", GameModule.class);
+        prepare.setAccessible(true);
+        GameModule module = mock(GameModule.class);
+        try (var capture = audio.beginLiveCaptureAudio(60)) {
+            for (int launch = 0; launch < 2; launch++) {
+                audio.resetState(); // the real launch owner resets runtime audio first
+                assertEquals(true, prepare.invoke(engine, module));
+                assertSame(backend, audio.getBackend());
+                assertTrue(audio.hasInstalledBackend(backend));
+                assertTrue(backend.lastSink instanceof NoDeviceAudioSink);
+                assertEquals(launch + 2, backend.sinkCreations,
+                        "each reset rebuilds only the retained backend's no-device sink");
+                audio.presentFrame(PresentationMode.FORWARD);
+                short[] packet = new short[capture.maxStereoFramesPerPacket() * 2];
+                assertTrue(capture.drainPresentationFrame(packet) > 0,
+                        "offline capture still receives the production presentation packet");
+            }
+            assertEquals(1, backend.initCalls);
+            assertEquals(0, backend.destroyCalls, "launch must never replace the supplied backend");
+        } finally {
+            engine.closeConfiguredHeadlessSession();
+        }
+    }
+
+    @Test
+    void productionOfflineBackendRemainsInstalledWhenALaunchRebuildsPresentation() throws Exception {
+        EngineContext services = context();
+        StartupProbeEngine engine = new StartupProbeEngine(services);
+        var backend = new HeadlessSmpsAudioBackend(config, services.profiler());
+        engine.initializeConfiguredHeadlessSession(new InputHandler(), backend);
+        var prepare = Engine.class.getDeclaredMethod("preparePresentationForLaunch", GameModule.class);
+        prepare.setAccessible(true);
+        try {
+            audio.resetState();
+            assertEquals(true, prepare.invoke(engine, mock(GameModule.class)));
+            assertTrue(audio.hasInstalledBackend(backend));
+            try (var sink = backend.createPresentationSink(failure -> { throw new AssertionError(failure); }, ignored -> { })) {
+                assertTrue(sink instanceof NoDeviceAudioSink);
+            }
+            try (var capture = audio.beginLiveCaptureAudio(60)) {
+                audio.presentFrame(PresentationMode.FORWARD);
+                assertTrue(capture.drainPresentationFrame(new short[capture.maxStereoFramesPerPacket() * 2]) > 0);
+                assertTrue(audio.hasInstalledBackend(backend));
+            }
+        } finally {
+            engine.closeConfiguredHeadlessSession();
+        }
     }
 
     @Test
@@ -463,6 +521,9 @@ class TestEngineConfiguredHeadlessStartup {
     private static class TrackingBackend extends NullAudioBackend {
         private final InputHandler trackedInput;
         private boolean initialized;
+        private int initCalls;
+        private int sinkCreations;
+        private AudioPresentationSink lastSink;
         private int destroyCalls;
         private boolean logicalOverridePresentDuringDestroy;
 
@@ -477,6 +538,15 @@ class TestEngineConfiguredHeadlessStartup {
         @Override
         public void init() {
             initialized = true;
+            initCalls++;
+        }
+
+        @Override
+        public AudioPresentationSink createPresentationSink(
+                java.util.function.Consumer<Throwable> failureHandler,
+                java.util.function.Consumer<String> warningHandler) {
+            sinkCreations++;
+            return lastSink = new NoDeviceAudioSink(outputSampleRate());
         }
 
         @Override

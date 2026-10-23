@@ -107,6 +107,28 @@ results supersede the earlier unclosed-new-ring blocker, while fullaux, four
 native debris, broader SST/configuration/cold/BK2 and Root's composed validation
 remain open. Prior R1–R6 numbers retain their historical source/coverage limits.
 
+Object-pipeline performance follow-up (2026-10-22, local candidate): the
+[query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)
+and linked wave records track native owned-slot, FBZ/SOZ collision-allocation and
+shared presentation work. Affected CNZ, LRZ boss, DEZ final boss, SSZ, FBZ and SOZ
+matrices record local ownership/lifetime/rewind obligations. Focused evidence and
+pending combined smoke/domain checks remain distinct; these optimizations do not
+certify an act or close inherited viewport/donor/team, lifecycle or native
+audiovisual products. The same [CPU wave record](../architecture/audits/performance/2026-10-22-fbz-soz-cpu-performance.md)
+records 88 ROM-free OOZ snapshot/participation checks, including nested unload,
+exception cleanup, larger teams and restore/forward replay. No OOZ act matrix
+exists in the current catalogue; cold route, viewport/donor/team and native
+presentation breadth remain inherited gaps.
+
+Object pipeline optimization (2026-10-22): the [bounded performance record](../architecture/audits/performance/2026-10-22-object-pipeline-performance.md)
+qualifies HCZ water-column selection/replacement, ICZ frost execution/painter
+order and graph restoration, and SSZ owned-slot dereferences. Existing
+[HCZ2](../architecture/validation/levels/s3k-hcz2.md),
+[ICZ2](../architecture/validation/levels/s3k-icz-act2.md) and
+[SSZ2](../architecture/validation/levels/s3k-ssz-act2.md) obligations retain their
+inherited route, viewport/donor/roster, native presentation and lifecycle gaps;
+these local semantics-preserving checks certify no new act product.
+
 S3K horizontal spring terrain gate (2026-10-16): focused object fixtures sample
 real collision tiles for positive/zero/negative foot distances and a slope with
 only one penetrating foot; absent services, empty terrain and underwater descent
@@ -189,6 +211,8 @@ Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validat
 tracks native solo-Sonic opening play, configuration/load boundaries, selective
 presentation and effective-state rewind. Execution and audiovisual evidence are
 pending; this does not certify an act-clear, teams, donors or other viewports.
+
+Emerald Remix example (2026-10-21): the [remix and Clover Valley matrix](../architecture/validation/levels/emerald-remix.md) records the recipe-built EHZ1 structure, an uninterrupted Sonic solo run of the remixed act and of the original Clover Valley to native results, EHZ2 → Clover Valley → CPZ1 progression, and editor import/project/export/playtest of both levels. Characters, teams, viewports, donors, rewind and respawn remain open; this does not certify stock EHZ.
 
 Tide Circuit creator fixture (2026-10-07): the [two-act matrix](../architecture/validation/levels/tide-circuit.md) records actual runtime consumers, original floor traversal, tagged saves, event and world rewind, fresh loads and results-driven handoff. Execution and viewport/donor/character/team breadth remain explicit; the fixture does not certify stock receiving acts.
 

@@ -15,7 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Envelope codec for control messages: {@code {"v":2,"token":...,"msg":{...}}}.
+ * Envelope codec for control messages: {@code {"v":3,"token":...,"msg":{...}}}.
  *
  * <p>Each connection owner may retain one codec; instances are thread-safe once
  * constructed. The JSON implementation stays private to this typed protocol API.
@@ -28,7 +28,8 @@ public final class ControlJsonCodec {
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
             .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
-            .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES);
+            .enable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
+            .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES);
     private final Set<String> envelopeFields = Set.of("v", "token", "msg");
     private final Map<String, Class<? extends ControlMessage>> messageTypes =
             Arrays.stream(ControlMessage.class.getPermittedSubclasses())
@@ -139,6 +140,8 @@ public final class ControlJsonCodec {
     private static void validateClientState(ControlMessage message) {
         switch (message) {
             case ControlMessage.RoomState state -> validatePlayers(state.players());
+            case ControlMessage.PlayerUpsert upsert -> validatePlayer(upsert.player());
+            case ControlMessage.PlayerLeft left -> validateSlot(left.slot());
             case ControlMessage.JoinAccepted accepted -> {
                 requireText(accepted.sessionToken(), "session token");
                 boolean masterAdmission = accepted.playerSlot() == -1
@@ -185,14 +188,33 @@ public final class ControlJsonCodec {
 
     private static void validatePlayers(java.util.List<ControlMessage.PlayerInfo> players) {
         requireItems(players, "players");
-        for (ControlMessage.PlayerInfo player : players) {
-            if (player.slot() < 0 || player.slot() >= Protocol.MAX_PLAYERS_RELAY) {
-                throw new ProtocolViolationException("invalid player slot");
-            }
-            requireText(player.fingerprint(), "player identity");
-            requireText(player.displayName(), "player name");
-            requireText(player.character(), "player character");
+        if (players.size() > Protocol.MAX_PLAYERS_RELAY) {
+            throw new ProtocolViolationException("too many players");
         }
+        Set<Integer> slots = new java.util.HashSet<>();
+        Set<String> identities = new java.util.HashSet<>();
+        for (ControlMessage.PlayerInfo player : players) {
+            validatePlayer(player);
+            if (!slots.add(player.slot()) || !identities.add(player.fingerprint())) {
+                throw new ProtocolViolationException("duplicate player slot or identity");
+            }
+        }
+    }
+
+    private static void validateSlot(int slot) {
+        if (slot < 0 || slot >= Protocol.MAX_PLAYERS_RELAY) {
+            throw new ProtocolViolationException("invalid player slot");
+        }
+    }
+
+    private static void validatePlayer(ControlMessage.PlayerInfo player) {
+        if (player == null) {
+            throw new ProtocolViolationException("missing player");
+        }
+        validateSlot(player.slot());
+        requireText(player.fingerprint(), "player identity");
+        requireText(player.displayName(), "player name");
+        requireText(player.character(), "player character");
     }
 
     private static void validateRoundConfig(ControlMessage.RoundConfig config) {

@@ -39,11 +39,19 @@ class TestFbzSandopolisTimelineHeadless {
             var live = (LiveRewindManager) field(loop, "liveRewindManager");
             var boundaries = new ArrayList<RewindBoundary>();
             var levelLoadFrames = new ArrayList<Integer>();
-            fixture.gameplayMode().setRewindBoundaryReporter(boundary -> {
+            var observedLoop = loop;
+            com.openggf.GameLoopRewindTestAccess.observeBoundaries(loop, live, boundary -> {
                 boundaries.add(boundary);
-                live.markBoundary(boundary);
-                if (boundary == RewindBoundary.LEVEL_LOAD)
-                    levelLoadFrames.add(fixture.gameplayMode().getRewindController().currentFrame());
+                if (boundary == RewindBoundary.LEVEL_LOAD) {
+                    var owner = com.openggf.GameLoopRewindTestAccess.owner(observedLoop);
+                    var controller = owner.getRewindController();
+                    if (controller == null) {
+                        assertTrue(owner.getLevelManager().hasPendingFreshLevelTransitionBoundary(),
+                                "the raw load retires history until destination assembly completes");
+                    } else {
+                        levelLoadFrames.add(controller.currentFrame());
+                    }
+                }
             });
             for (int i=0; i<12; i++) loop.step();
             var outgoing = fixture.gameplayMode().getRewindController();
@@ -62,10 +70,12 @@ class TestFbzSandopolisTimelineHeadless {
             assertEquals(0, GameServices.level().getRequestedAct());
             for (int i=0; i<300 && (GameServices.level().getCurrentZone()!=Sonic3kZoneIds.ZONE_SOZ
                     || loop.getCurrentGameMode()!=GameMode.LEVEL
-                    || fixture.gameplayMode().getFadeManager().isActive()); i++) loop.step();
+                    || fixture.gameplayMode().getFadeManager().isActive()
+                    || GameServices.level().hasPendingFreshLevelTransitionBoundary()); i++) loop.step();
             assertEquals(Sonic3kZoneIds.ZONE_SOZ, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
             assertTrue(boundaries.contains(RewindBoundary.LEVEL_LOAD));
             assertFalse(boundaries.contains(RewindBoundary.SEAMLESS_LEVEL_TRANSITION));
             assertEquals(java.util.List.of(0), levelLoadFrames, "fresh StartNewLevel resets frame-zero timeline");

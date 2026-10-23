@@ -22,6 +22,10 @@ import java.util.List;
  * visible scanline window per entry). The pair itself is not drawn. Not modelled:
  * the 20-sprites/line and 320-pixel/line limits, and GPGX's carry of a previous
  * line's pixel overflow, which also arms masking on the next line.</p>
+ *
+ * <p>Gameplay ghost entries ({@link SpriteSatEntry#isGhost()}) are not in the ROM's sprite
+ * table. A mask clips them like any later entry, as it would clip the player they stand for,
+ * but they never arm a mask or form a marker pair, so real sprites mask exactly as without them.</p>
  */
 public final class SpriteSatMaskPostProcessor {
 
@@ -91,6 +95,9 @@ public final class SpriteSatMaskPostProcessor {
             return false;
         }
         SpriteSatEntry entry = entries.get(index);
+        if (entry.isGhost() || entries.get(index + 1).isGhost()) {
+            return false;
+        }
         return entry.tileWordLow11() == MASK_TILE_WORD
                 && !entry.hFlip()
                 && !entry.vFlip()
@@ -127,6 +134,9 @@ public final class SpriteSatMaskPostProcessor {
                 continue;
             }
             SpriteSatEntry earlier = entries.get(j);
+            if (earlier.isGhost()) {
+                continue; // not a ROM sprite: it cannot arm the VDP's mask
+            }
             if (line >= earlier.y() && line < earlier.endYExclusive()) {
                 return true;
             }

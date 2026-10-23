@@ -95,7 +95,7 @@ final class GameLoopSpecialStageLifecycle {
         presentation.update(provider, fadeManager, playStageMusic, gameplayMode.plcFrameLifecycle());
         if (session != null) session.advanceSpecialStageTraceCursorIfActive(input);
         if (rewindable.getAsBoolean() && session == null) {
-            rewind.recordExternalFrame(currentMode, false, input);
+            rewind.recordExternalFrame(gameplayMode, currentMode, provider, false, input, false);
         }
         if (provider.isFinished() && (session == null || !session.isSpecialStageSession())) {
             if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {

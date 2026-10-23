@@ -1256,7 +1256,7 @@ public final class LevelRenderer {
             underlay.run();
         }
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null
+        if (options.includeHud() && lm.hudRenderManager != null && !com.openggf.level.objects.HudProfileAccess.coveredByHost(lm.hudRenderManager)
                 && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             if (LevelSpritePresentation.enabled(lm)) {
@@ -1767,7 +1767,9 @@ public final class LevelRenderer {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
                 if (spriteManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                    // Ghosts join the table behind their layer's players; a sprite mask clips
+                    // them like the players they stand for but never arms on them.
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
                 }
                 if (objectManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);

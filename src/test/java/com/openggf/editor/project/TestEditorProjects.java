@@ -121,6 +121,31 @@ class TestEditorProjects {
         assertDoesNotThrow(() -> EditorProjectLevel.blank(remapped, 3, 2));
     }
 
+    /** Stock S2 Emerald Hill defines 32 such references, all in chunks no placed block uses. */
+    @Test
+    void cloneKeepsUnplacedChunksWithUnavailableArtButRejectsPlacedOnes() {
+        Fixture library = new Fixture(GameId.S2) {
+            {
+                chunks = new Chunk[] {chunks[0], chunks[1], new Chunk()}; chunkCount = 3;
+                chunks[2].restoreState(new int[] {0x2005, 0x0001, 0, 0, 1, 1});
+                blocks = new Block[] {blocks[0], blocks[1], new Block(side)}; blockCount = 3;
+                blocks[2].setChunkDesc(0, 0, new ChunkDesc(0x3002));
+            }
+        };
+        EditorProjectLevel clone = EditorProjectLevel.copyOf(library);
+        assertEquals(3, clone.getChunkCount(), "chunk identities stay stable");
+        assertEquals(0, clone.getChunk(2).getPatternDesc(0, 0).getPatternIndex(), "the unavailable tile draws transparent");
+        assertEquals(0, clone.getPattern(0).getPixel(0, 0));
+        assertEquals(1, clone.getChunk(2).getPatternDesc(1, 0).getPatternIndex(), "available tiles are untouched");
+        assertEquals(1, clone.getChunk(2).getSolidTileIndex());
+        assertEquals(0x3002, clone.getBlock(2).getChunkDesc(0, 0).get());
+        assertEquals(library.getMap().getValue(0, 1, 1), clone.getMap().getValue(0, 1, 1));
+
+        Fixture placed = new Fixture(GameId.S2) { { chunks[1].restoreState(new int[] {0x1809, 0, 1, 0, 1, 0}); } };
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> EditorProjectLevel.copyOf(placed));
+        assertTrue(error.getMessage().contains("Placed chunk 1"), error.getMessage());
+    }
+
     static EditorProjectMetadata metadata(GameId game, Level source) {
         return new EditorProjectMetadata(game, "Example " + game.code(), 2, 1, "rom-sha1-example", 64, 64,
                 source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY(),

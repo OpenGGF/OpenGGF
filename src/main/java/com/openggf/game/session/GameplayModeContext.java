@@ -170,6 +170,7 @@ public final class GameplayModeContext implements ModeContext {
     private RewindRegistry rewindRegistry;
     private RewindController rewindController;
     private PlaybackController playbackController;
+    private SpecialStageProvider registeredSpecialStageProvider;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
     private Runnable scheduledPlaybackInputPublisher;
     private final Set<String> levelEventExtraRewindKeys = new LinkedHashSet<>();
@@ -410,6 +411,9 @@ public final class GameplayModeContext implements ModeContext {
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         WorldSessionPolicyAccess.bindRoster(worldSession, spriteManager);
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
+        com.openggf.level.LevelRewindBoundaryAccess.bind(levelManager, boundary -> {
+            if (this.levelManager == levelManager) markRewindBoundary(boundary);
+        });
         maybeCreateBackgroundPlaneCollisionProvider();
         // ROM V_int_run_count keeps counting through this session: the level's
         // object clock owns the per-V-blank tick while a level is attached.
@@ -1147,13 +1151,20 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry == null) {
             return;
         }
+        registeredSpecialStageProvider = provider;
         rewindRegistry.deregister(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY);
         if (provider != null && provider.supportsRewind()) {
             provider.rewindAdapter().ifPresent(rewindRegistry::register);
         }
     }
 
+    /** Exact provider whose state belongs to this registry's special-stage segment. */
+    public SpecialStageProvider getRegisteredSpecialStageProvider() {
+        return registeredSpecialStageProvider;
+    }
+
     public void deregisterSpecialStageAdapter() {
+        registeredSpecialStageProvider = null;
         if (rewindRegistry != null) {
             rewindRegistry.deregister(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY);
         }
@@ -1191,6 +1202,14 @@ public final class GameplayModeContext implements ModeContext {
                 profiler);
         this.playbackController = new PlaybackController(rewindController);
         return playbackController;
+    }
+
+    /** Retires only the caller's installation; another playback owner may already have replaced it. */
+    public void uninstallPlaybackController(RewindController expected) {
+        if (rewindController == expected) {
+            rewindController = null;
+            playbackController = null;
+        }
     }
 
     /** Returns the installed {@link RewindController}, or {@code null} if not yet installed. */
@@ -1371,6 +1390,7 @@ public final class GameplayModeContext implements ModeContext {
         activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
         rewindController = null;
         playbackController = null;
+        registeredSpecialStageProvider = null;
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         levelEventExtraRewindKeys.clear();
         contributedZoneRewindKeys.clear();

@@ -141,7 +141,7 @@ public final class FbzEggPrisonInstance extends AbstractObjectInstance
         }
     }
 
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x18, 0x18); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x2B, 0x18, 0x18); }
     @Override public SolidRoutineProfile getSolidRoutineProfile() {
         // sub_89D9C tail-calls S3K SolidObjectFull. Its unsigned BHI width
         // check accepts relX == d1*2, retaining the pushing bits while Sonic

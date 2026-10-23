@@ -65,6 +65,8 @@ class TestSpotCheck {
             String oldToken = last(oldConnection,
                     ControlMessage.JoinAccepted.class).sessionToken();
             access.room().onText(oldConnection, ControlCodec.encode(oldToken,
+                    new ControlMessage.SetReady(true)));
+            access.room().onText(oldConnection, ControlCodec.encode(oldToken,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 10, "OPEN", null))));
             now[0] += 3_000;
@@ -122,6 +124,9 @@ class TestSpotCheck {
             Connection secondConnection = admit(manager, access, entry.roomId(), second, "B");
             String firstToken = last(firstConnection,
                     ControlMessage.JoinAccepted.class).sessionToken();
+            // Small rooms wait for everyone to be ready under the default rule.
+            access.room().onText(firstConnection, ControlCodec.encode(firstToken,
+                    new ControlMessage.SetReadyRule("AUTO")));
             access.room().onText(firstConnection, ControlCodec.encode(firstToken,
                     new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                             "s3k", 0, 0, 10, "OPEN", null))));

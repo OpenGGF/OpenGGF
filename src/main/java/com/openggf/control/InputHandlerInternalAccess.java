@@ -6,6 +6,10 @@ public final class InputHandlerInternalAccess {
     public static void publishNativeStagePlayers(InputHandler handler, PlayerInputState p1, PlayerInputState p2) {
         handler.publishNativeStagePlayers(p1, p2);
     }
+    /** Releases only the raw override this host owner actually published. */
+    public static boolean clearLogicalOverrideIfSame(InputHandler handler, LogicalInputSnapshot expected) {
+        return handler != null && handler.clearLogicalOverrideIfSame(expected);
+    }
     public static void retainGameplayInput(InputHandler handler, PlayerInputState player1, PlayerInputState player2) {
         handler.retainGameplayInputForNextRefresh(player1, player2);
     }

@@ -325,7 +325,9 @@ function Get-ModApiSurfaceText([string]$Text) {
                 & $addDeclaration $first $i $id
                 $owner = $id
             } else {
-                $keep = $owner -gt 0 -and ($supported -or $types[$owner].Kind -cne 'class')
+                # Records and interfaces may own private implementation members.
+                $keep = $owner -gt 0 -and $h -cnotmatch '(?:^|[^A-Za-z0-9_$])private\s' -and
+                        ($supported -or $types[$owner].Kind -cne 'class')
                 if ($keep -and -not ($c -ceq '{' -and $types[$owner].Kind -ceq 'enum')) { & $addDeclaration $first $i $owner }
                 if ($c -ceq '{') { $body = 1; if ($types[$owner].Kind -ceq 'enum') { $bodyFirst = $first } }
             }

@@ -52,6 +52,14 @@ import java.util.function.BooleanSupplier;
  * Production clients, authentication, room actors and transports own all protocol behavior.
  */
 public final class RacingSocketStressTool {
+    /** Optional diagnostic boundary; disabled unless an external JFR recording enables it. */
+    @jdk.jfr.Name("openggf.RacingStressWindow")
+    @jdk.jfr.Label("Measured socket traffic through accepted finishes and standings")
+    @jdk.jfr.StackTrace(false)
+    public static final class TrafficWindow extends jdk.jfr.Event {
+        public String transport;
+        public int players;
+    }
     public enum Transport { RELAY, JDK, NETTY }
     public enum Mix { NORMAL, MIXED }
 
@@ -248,12 +256,14 @@ public final class RacingSocketStressTool {
             stage = "control warmup";
             warmup();
             stage = "countdown";
+            // Load peers never ready up; nobody waits under AUTO.
+            peers.getFirst().control(new ControlMessage.SetReadyRule("AUTO"), totals);
             peers.getFirst().control(new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                     "s3k", 0, 0, config.durationSeconds() + 2, "OPEN", null)), totals);
             await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "round start for every peer");
             long countdown = peers.getFirst().countdownEndsAt;
             checkRoundStartAgreement();
-            await(() -> System.currentTimeMillis() >= countdown + 80, "wall-clock countdown");
+            await(() -> System.currentTimeMillis() >= countdown, "wall-clock countdown");
             stage = "measured traffic";
             traffic();
             stage = "round end";
@@ -369,6 +379,10 @@ public final class RacingSocketStressTool {
                 peer.goalFrames = Math.max(30, config.durationSeconds() * (idle ? FPS / 2 : FPS));
             }
             Measurement measurement = new Measurement(proxy);
+            TrafficWindow recordingWindow = new TrafficWindow();
+            recordingWindow.transport = config.transport().name();
+            recordingWindow.players = config.players();
+            recordingWindow.begin();
             totals.measuring = true;
             try {
                 long deadline = started + duration + TimeUnit.SECONDS.toNanos(config.timeoutSeconds());
@@ -405,6 +419,8 @@ public final class RacingSocketStressTool {
             } finally {
                 totals.measuring = false;
                 measurement.finish(proxy, totals);
+                recordingWindow.end();
+                recordingWindow.commit();
             }
         }
 
@@ -491,6 +507,8 @@ public final class RacingSocketStressTool {
             // Results reserve wire slots through round end, including all 256 slots at capacity.
             // A real next-round control transition clears that authority before any replacement.
             peers.forEach(peer -> peer.roundStarted = false);
+            // Load peers never ready up; nobody waits under AUTO.
+            peers.getFirst().control(new ControlMessage.SetReadyRule("AUTO"), totals);
             peers.getFirst().control(new ControlMessage.RoundConfigure(new ControlMessage.RoundConfig(
                     "s3k", 0, 0, config.durationSeconds() + 2, "OPEN", null)), totals);
             await(() -> peers.stream().allMatch(peer -> peer.roundStarted), "next-round reset");
@@ -579,6 +597,7 @@ public final class RacingSocketStressTool {
                                 if (totals.measuring) totals.receivedGhostFrames += entry.frameCount();
                             }
                         }
+                        case RaceClient.LobbyGhostData ignored -> { }
                         case RaceClient.Roster roster -> {
                             if (totals.measuring) {
                                 totals.receivedBinary++;
@@ -613,6 +632,25 @@ public final class RacingSocketStressTool {
                     }
                     peer.roomMembers = Set.copyOf(fingerprints);
                     peer.roomRoster = Map.copyOf(roster);
+                }
+                case ControlMessage.PlayerUpsert upsert -> {
+                    ControlMessage.PlayerInfo player = upsert.player();
+                    int index = Integer.parseInt(player.displayName().substring(1));
+                    check(index >= 0 && index < config.players(), "unexpected room participant");
+                    ownerBySlot.put(player.slot(), index);
+                    Map<Integer, MemberIdentity> roster = new HashMap<>(peer.roomRoster);
+                    roster.put(player.slot(), new MemberIdentity(player.fingerprint(), player.displayName()));
+                    Set<String> fingerprints = new HashSet<>();
+                    roster.values().forEach(info -> check(fingerprints.add(info.fingerprint()), "duplicate room identity"));
+                    peer.roomMembers = Set.copyOf(fingerprints);
+                    peer.roomRoster = Map.copyOf(roster);
+                }
+                case ControlMessage.PlayerLeft left -> {
+                    Map<Integer, MemberIdentity> roster = new HashMap<>(peer.roomRoster);
+                    check(roster.remove(left.slot()) != null, "departure for unknown room slot");
+                    peer.roomRoster = Map.copyOf(roster);
+                    peer.roomMembers = roster.values().stream().map(MemberIdentity::fingerprint)
+                            .collect(java.util.stream.Collectors.toUnmodifiableSet());
                 }
                 case ControlMessage.RoundStart start -> {
                     ControlMessage.RoundConfig expected = new ControlMessage.RoundConfig(

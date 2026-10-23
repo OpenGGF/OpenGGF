@@ -6,10 +6,15 @@ import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackRuntime;
 import com.openggf.net.client.ClientRaceSession;
 import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.client.LobbyPosePublisher;
 import com.openggf.net.client.RaceClient;
 import com.openggf.net.client.RemoteGhostRegistry;
 import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.identity.DisplayNames;
+import com.openggf.net.identity.PlayerAppearance;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.ReadyRules;
+import com.openggf.mods.run.PlayerPose;
 import com.openggf.mods.run.GhostPose;
 import com.openggf.mods.run.RunLevelStart;
 import com.openggf.mods.scene.SceneKeys;
@@ -18,9 +23,6 @@ import com.openggf.mods.ui.LevelOverlayCanvas;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Comparator;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.Objects;
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -41,6 +43,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private final RaceTransport transport;
     private final ClientRaceSession session;
     private final RemoteGhostRegistry registry = new RemoteGhostRegistry();
+    /** Lobby presence: other players in the lobby level between rounds. */
+    private final RemoteGhostRegistry lobbyRegistry = new RemoteGhostRegistry();
+    private LobbyPosePublisher lobbyPublisher;
+    private List<GhostPose> lobbyGhosts = List.of();
     private final LongSupplier clockMillis;
     private final AttemptRecordingVault recordingVault;
     private final RecordingUploader recordingUploader;
@@ -58,8 +64,15 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     private int localRank = -1;
     private List<ControlMessage.StandingsRow> topStandings = List.of();
     private List<ControlMessage.StandingsRow> aroundYouStandings = List.of();
-    private int lastLocalFrameX;
     private int roundsStarted;
+    /** {@link #roundsStarted} when the runtime was attached: the round its run belongs to. */
+    private int attachedRound;
+    /**
+     * The host has closed the latest round ({@code RoundEnd}, a vote offer or a vote result).
+     * Unlike {@link ClientRaceSession#phase()}, this never comes from the estimated hub clock.
+     */
+    private boolean latestRoundClosed;
+    private boolean leaveRequested;
     private boolean showMinimap = true;
     private Consumer<RunLevelStart> levelReadyHook;
     /** Spectator pan speed in pixels per held frame after the local attempt has finished. */
@@ -95,6 +108,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         detachRuntime();
         this.runtime = runtime;
         this.publisher = new GhostStreamPublisher(transport::sendBinary);
+        attachedRound = roundsStarted;
+        leaveRequested = false;
         runtime.setAttemptListener(this);
         runtime.setExtraGhostSupplier(this::remoteActiveGhosts);
         runtime.setFrameCompanion(this);
@@ -115,6 +130,7 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         }
         publisherActive = false;
         pendingAttemptOrdinal = -1;
+        leaveRequested = false;
         publisher = null;
         remoteGhosts = List.of();
     }
@@ -131,19 +147,37 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     session.onControl(control.message());
                     if (control.message() instanceof ControlMessage.RoomState state) {
                         registry.onRoomState(state.players());
+                        lobbyRegistry.onRoomState(state.players());
+                    } else if (control.message() instanceof ControlMessage.PlayerUpsert upsert) {
+                        registry.onPlayerUpsert(upsert.player());
+                        lobbyRegistry.onPlayerUpsert(upsert.player());
+                    } else if (control.message() instanceof ControlMessage.PlayerLeft left) {
+                        registry.onPlayerLeft(left.slot());
+                        lobbyRegistry.onPlayerLeft(left.slot());
                     } else if (control.message() instanceof ControlMessage.RoundStart) {
                         roundsStarted++;
+                        latestRoundClosed = false;
                         registry.reset();
+                        lobbyRegistry.reset();
+                        lobbyGhosts = List.of();
                         remoteGhosts = List.of();
                         localRank = -1;
                         topStandings = List.of();
                         aroundYouStandings = List.of();
                     } else if (control.message() instanceof ControlMessage.StandingsDelta delta) {
+                        boolean wasInTop = topStandings.stream()
+                                .anyMatch(row -> row.slot() == session.localSlot());
                         topStandings = List.copyOf(delta.rows());
-                        delta.rows().stream()
+                        var localRow = delta.rows().stream()
                                 .filter(row -> row.slot() == session.localSlot())
-                                .findFirst()
-                                .ifPresent(row -> localRank = row.rank());
+                                .findFirst();
+                        if (localRow.isPresent()) {
+                            localRank = localRow.get().rank();
+                        } else if (wasInTop) {
+                            // Pushed out of the top ten (the host's RankUpdate follows on
+                            // this ordered connection) or the only result was removed.
+                            localRank = -1;
+                        }
                         maybeRequestAroundYouPage();
                     } else if (control.message() instanceof ControlMessage.RankUpdate rank) {
                         localRank = rank.rank();
@@ -151,17 +185,21 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                     } else if (control.message() instanceof ControlMessage.StandingsPage page) {
                         applyAroundYouPage(page.rows());
                     } else if (control.message() instanceof ControlMessage.RoundEnd) {
+                        latestRoundClosed = true;
                         recordingVault.onRoundEnd();
+                    } else if (control.message() instanceof ControlMessage.TrackVoteOffer
+                            || control.message() instanceof ControlMessage.TrackVoteResult) {
+                        latestRoundClosed = true;
                     } else if (control.message() instanceof ControlMessage.RecordingRequest request) {
                         uploadRequestedRecording(request);
                     }
                 }
                 case RaceClient.GhostData ghost -> registry.onAggregate(ghost.aggregate());
+                case RaceClient.LobbyGhostData lobby -> lobbyRegistry.onAggregate(lobby.aggregate());
                 case RaceClient.Roster roster -> registry.onRoster(roster.entries());
                 case RaceClient.Disconnected ignored -> connectionLost = true;
             }
         }
-        activatePendingAttemptIfRunning();
         maybePing();
         recordingVault.evictExpired();
     }
@@ -170,15 +208,56 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         pump();
     }
 
+    /**
+     * Holds the attached run during its own round's countdown and once it has asked to leave. A
+     * newer round's countdown never freezes an older run, such as its finished results tally.
+     */
     public boolean holdGameplay() {
-        return runtime != null && session.phase() == ClientRaceSession.Phase.COUNTDOWN;
+        return runtime != null && (leaveRequested || (roundsStarted == attachedRound
+                && session.phase() == ClientRaceSession.Phase.COUNTDOWN));
     }
 
     @Override
     public boolean admit(com.openggf.mods.run.RunInput input) {
         pump();
+        leaveIfRoundOver();
         pollLocalInput(input);
         return !holdGameplay();
+    }
+
+    /** An open window turns a completed act into the next attempt; a closed one ends the run. */
+    @Override
+    public boolean continueAfterActCompletion() {
+        return runtime != null && isAttachedRoundCurrent() && session.isWindowOpen();
+    }
+
+    /** Retries restart the act only while the attached round can still take an attempt. */
+    @Override
+    public boolean mayRetry() {
+        return runtime != null && isAttachedRoundCurrent()
+                && (session.phase() == ClientRaceSession.Phase.COUNTDOWN || session.isWindowOpen());
+    }
+
+    private boolean isAttachedRoundCurrent() {
+        return !leaveRequested && roundsStarted == attachedRound;
+    }
+
+    /**
+     * An unfinished run outlives its round once the host has closed it or a newer one has
+     * started: leave it so the lobby can take over. Only the host's messages count here: the
+     * lobby never relaunches a round, so leaving on the estimated deadline would lock out a
+     * player whose clock runs ahead of the hub, while that estimate only voids the attempt. A
+     * finished attempt keeps its results tally; the run then ends when the tally exits because
+     * the window is closed.
+     */
+    private void leaveIfRoundOver() {
+        if (runtime == null || leaveRequested || runtime.isAttemptFinished()) {
+            return;
+        }
+        if (roundsStarted != attachedRound || latestRoundClosed) {
+            leaveRequested = true;
+            runtime.leaveRun();
+        }
     }
 
     @Override
@@ -196,7 +275,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     /** Draws the multiplayer HUD (countdown, window, standings, votes, minimap) over the run. */
     @Override
     public void drawOverlay(LevelOverlayCanvas canvas, int levelWidth, int localCentreX) {
-        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap);
+        MultiplayerHudRenderer.render(canvas, hudState(), levelWidth, localCentreX, showMinimap,
+                runtime != null && runtime.isAttemptFinished());
     }
 
     /** Called on the engine thread when an attached run's level is ready (launch and retry). */
@@ -221,8 +301,8 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         if (runtime != null && !session.isWindowOpen() && runtime.isAttemptActive()) {
             runtime.voidCurrentAttempt();
         }
-        remoteGhosts = presentRemoteGhosts(
-                registry.advanceAll(session.localSlot()), lastLocalFrameX);
+        remoteGhosts = presentRemoteGhosts("net:",
+                registry.advanceAll(session.localSlot()), session::appearance);
     }
 
     public List<GhostPose> remoteActiveGhosts() {
@@ -254,7 +334,17 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                 config == null ? null : config.characterPolicy(),
                 session.voteOptions(), session.voteCounts(), session.voteRemainingMillis(),
                 session.lastVoteResultTrackKey(), session.podiumTop(3),
-                local == null ? localRank : local.rank());
+                local == null ? localRank : local.rank(), nameColours());
+    }
+
+    /** Name colours of the players whose look is not stock, by slot. */
+    private java.util.Map<Integer, Integer> nameColours() {
+        java.util.Map<Integer, Integer> colours = new java.util.HashMap<>();
+        for (ControlMessage.PlayerInfo player : session.players()) {
+            PlayerAppearance look = session.appearance(player.slot());
+            if (!look.isStock()) colours.put(player.slot(), look.nameArgb());
+        }
+        return colours;
     }
 
     public ClientRaceSession session() {
@@ -263,6 +353,70 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
 
     public void sendChat(String text) {
         transport.sendControl(new ControlMessage.Chat(text));
+    }
+
+    /**
+     * Asks the host to rename this player and change its look without a new identity. The
+     * host accepts it only in the lobby; the change arrives back as PlayerUpsert/PlayerLook.
+     */
+    public void updateProfile(String displayName, PlayerAppearance appearance) {
+        transport.sendControl(new ControlMessage.UpdateProfile(DisplayNames.sanitize(displayName),
+                appearance.encode()));
+    }
+
+    /** Tells the room this player is (or is no longer) ready; the host answers with PlayerReady. */
+    public void setReady(boolean ready) {
+        transport.sendControl(new ControlMessage.SetReady(ready));
+    }
+
+    /** The room owner's ready rule; the host ignores it from anyone else. */
+    public void setReadyRule(ReadyRules rule) {
+        transport.sendControl(new ControlMessage.SetReadyRule(rule.name()));
+    }
+
+    // ── Lobby presence (between rounds, in the lobby level) ──────────────
+
+    /** A lobby level was loaded: start a new presence stream from its spawn. */
+    public void beginLobbyPresence() {
+        if (lobbyPublisher == null) {
+            lobbyPublisher = new LobbyPosePublisher(transport::sendBinary);
+        }
+        lobbyPublisher.beginStream();
+    }
+
+    /** One executed lobby frame's pose; sent only between rounds, where the host relays it. */
+    public void publishLobbyPose(PlayerPose pose) {
+        if (lobbyPublisher == null || !betweenRounds() || !transport.isOpen()) {
+            return;
+        }
+        lobbyPublisher.onFrame(new GhostFrame(pose.centreX(), pose.centreY(), pose.mappingFrame(),
+                pose.hFlip(), pose.vFlip(), false, pose.priorityBucket(), pose.highPriority()));
+    }
+
+    /** The lobby level ended. */
+    public void endLobbyPresence() {
+        if (lobbyPublisher != null) {
+            lobbyPublisher.end();
+        }
+        lobbyGhosts = List.of();
+    }
+
+    /** Advances the other players' lobby playback by one frame. */
+    public void advanceLobbyGhosts() {
+        lobbyGhosts = presentRemoteGhosts("lobby:", lobbyRegistry.advanceAll(session.localSlot()),
+                session::appearance);
+    }
+
+    /** The other players near this one in the lobby level, named and in their looks. */
+    public List<GhostPose> lobbyGhosts() {
+        return lobbyGhosts;
+    }
+
+    private boolean betweenRounds() {
+        return switch (session.phase()) {
+            case LOBBY, ROUND_END, VOTE -> true;
+            case COUNTDOWN, RUNNING -> false;
+        };
     }
 
     public void sendRoundConfigure(ControlMessage.RoundConfig config) {
@@ -302,25 +456,39 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         transport.close();
     }
 
+    /**
+     * Records the attempt as pending. Its {@code AttemptStart} waits for the first sampled frame,
+     * so the reload fade and title card never count against the host's pacing check.
+     */
     @Override
     public void onAttemptBegan(int attemptOrdinal) {
         requirePublisher();
-        if (session.phase() == ClientRaceSession.Phase.RUNNING) {
-            startPublisher(attemptOrdinal);
-        } else {
-            pendingAttemptOrdinal = attemptOrdinal;
+        if (publisherActive) {
+            // The runtime voids before every reload, so this is defensive: never throw here.
+            int stale = publisher.currentAttemptId();
+            LOGGER.warning("Attempt " + attemptOrdinal + " began while attempt " + stale
+                    + " was still published; resetting it");
+            publisher.abandonAttempt();
+            publisherActive = false;
+            transport.sendControl(new ControlMessage.AttemptReset(stale));
         }
+        pendingAttemptOrdinal = attemptOrdinal;
     }
 
     @Override
     public void onFrameSampled(int attemptOrdinal, GhostFrame frame) {
         requirePublisher();
-        activatePendingAttemptIfRunning();
+        if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
+            if (session.phase() != ClientRaceSession.Phase.RUNNING) {
+                // Outside the window the attempt can never count; afterLevelFrame voids it.
+                return;
+            }
+            startPublisher(attemptOrdinal);
+        }
         if (!publisherActive || publisher.currentAttemptId() != attemptOrdinal) {
             throw new IllegalStateException(
-                    "attempt frame sampled before authoritative RUNNING phase");
+                    "frame sampled for attempt " + attemptOrdinal + " that never began");
         }
-        lastLocalFrameX = frame.x();
         publisher.onFrame(frame);
     }
 
@@ -330,6 +498,11 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
                                   byte[] inputRecordingSha256,
                                   AttemptInputRecording recording) {
         requirePublisher();
+        if (!publisherActive && pendingAttemptOrdinal == attemptOrdinal) {
+            // Every frame was dropped outside the window, so the host never saw this attempt.
+            pendingAttemptOrdinal = -1;
+            return;
+        }
         publisher.finishAttempt();
         publisherActive = false;
         String recordingHash = HexFormat.of().formatHex(inputRecordingSha256);
@@ -360,13 +533,6 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
             throw new IllegalStateException("no runtime attached");
         }
         return publisher;
-    }
-
-    private void activatePendingAttemptIfRunning() {
-        if (pendingAttemptOrdinal >= 0
-                && session.phase() == ClientRaceSession.Phase.RUNNING) {
-            startPublisher(pendingAttemptOrdinal);
-        }
     }
 
     private void startPublisher(int attemptOrdinal) {
@@ -413,19 +579,18 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
     }
 
     static List<GhostPose> presentRemoteGhosts(
-            List<RemoteGhostRegistry.RemoteGhost> ghosts, int localCentreX) {
-        Set<Integer> named = ghosts.stream()
-                .sorted(Comparator.comparingInt(ghost -> Math.abs(
-                        ghost.state().frame().x() - localCentreX)))
-                .limit(4).map(RemoteGhostRegistry.RemoteGhost::slot)
-                .collect(Collectors.toUnmodifiableSet());
+            List<RemoteGhostRegistry.RemoteGhost> ghosts, java.util.function.IntFunction<PlayerAppearance> looks) {
+        return presentRemoteGhosts("net:", ghosts, looks);
+    }
+
+    static List<GhostPose> presentRemoteGhosts(String slotPrefix,
+            List<RemoteGhostRegistry.RemoteGhost> ghosts, java.util.function.IntFunction<PlayerAppearance> looks) {
         List<GhostPose> active = new ArrayList<>(ghosts.size());
         for (RemoteGhostRegistry.RemoteGhost ghost : ghosts) {
             float finishedScale = ghost.state().frame().finished() ? 0.55f : 1f;
-            active.add(new GhostPose("net:" + ghost.slot(), ghost.character(),
-                    TimeAttackRuntime.poseOf(ghost.state().frame()), named.contains(ghost.slot())
-                    ? ghost.displayName() : null,
-                    ghost.state().opacityScale() * finishedScale));
+            active.add(new GhostPose(slotPrefix + ghost.slot(), ghost.character(),
+                    TimeAttackRuntime.poseOf(ghost.state().frame()), ghost.displayName(),
+                    ghost.state().opacityScale() * finishedScale, looks.apply(ghost.slot())));
         }
         return List.copyOf(active);
     }

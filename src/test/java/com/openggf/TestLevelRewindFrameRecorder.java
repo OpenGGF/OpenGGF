@@ -17,9 +17,9 @@ class TestLevelRewindFrameRecorder {
         InputHandler input = new InputHandler();
 
         LevelRewindFrameRecorder.record(
-                null, live, GameMode.LEVEL, false, input, true);
+                null, live, null, GameMode.LEVEL, false, input, true);
 
-        verify(live).recordExternalFrame(GameMode.LEVEL, false, input, true);
+        verify(live).recordExternalFrame(null, GameMode.LEVEL, null, false, input, true);
     }
 
     @Test
@@ -28,10 +28,12 @@ class TestLevelRewindFrameRecorder {
         LiveRewindManager live = mock(LiveRewindManager.class);
 
         LevelRewindFrameRecorder.record(
-                trace, live, GameMode.LEVEL, false, new InputHandler(), true);
+                trace, live, null, GameMode.LEVEL, false, new InputHandler(), true);
 
         verify(trace).recordExternalRewindFrame(true);
         verify(live, never()).recordExternalFrame(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyBoolean(),
                 org.mockito.ArgumentMatchers.any(),

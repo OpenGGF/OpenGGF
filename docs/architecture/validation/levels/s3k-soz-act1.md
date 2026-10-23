@@ -771,3 +771,12 @@ Its4824 draws/34974 skipped draws preserve the existing maintained drawing
 policy; worker full ordinary witnesses remain separate. Act2 deaths12288/24051
 and later idle-tail death35039 limits stay open.
 [Exact command, hashes and composition](../../plans/2026-10-13-s3k-playable-completion.md#root-composed-soz1-knuckles-qualification--2026-10-22).
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Spring-vine generation and display writes reuse unchanged derived inputs and invalidate on restore. The display follows its raw saved owned slot, including pending deletion/replacement. Signed single-byte sampling avoids a bulk copy while `getSlopeData()` stays defensive; `TestSozSpringVine` covers bounds, signed bytes, replacement and restore. SOZ solid getters use the established bounded immutable parameter factory.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

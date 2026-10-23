@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the exact reviewed Tide Circuit blobs recorded in authored-fixtures.json.
+"""Verify exact reviewed original mod assets against their manifests.
 
 Inputs are trusted hook policy and Git index/commit blobs, never working-tree
 assets or executable candidate generators. Origin: 2026-10-07 creator readiness,
@@ -16,6 +16,9 @@ import sys
 
 MANIFEST = Path(__file__).with_name('authored-fixtures.json')
 FIXTURE_ROOT = 'src/test/resources/mods/sample-two-act-campaign-src/project/'
+CLOVER_MANIFEST = Path(__file__).with_name('authored-clover-valley-assets.json')
+CLOVER_ROOT = 'examples/emerald-remix/src/main/resources/levels/clover-valley/'
+CLOVER_GENERATOR = 'examples/emerald-remix/tools/generate_clover_valley.py'
 
 
 @lru_cache(maxsize=1)
@@ -45,9 +48,33 @@ def reviewed_fixtures():
     return entries
 
 
+@lru_cache(maxsize=1)
+def reviewed_assets():
+    entries = reviewed_fixtures().copy()
+    manifest = json.loads(CLOVER_MANIFEST.read_text(encoding='utf-8'))
+    generator = manifest.get('generator', {})
+    if (manifest.get('schema') != 1 or generator.get('path') != CLOVER_GENERATOR
+            or not re.fullmatch(r'[0-9a-f]{64}', generator.get('sha256', ''))):
+        raise ValueError('Invalid Clover Valley asset provenance')
+    assets = manifest.get('assets')
+    if not isinstance(assets, list) or len(assets) != 11:
+        raise ValueError('Reviewed Clover Valley inventory must contain exactly 11 entries')
+    for entry in assets:
+        path = entry.get('path', '')
+        name = path.removeprefix(CLOVER_ROOT)
+        if (not path.startswith(CLOVER_ROOT) or '/' in name
+                or not re.fullmatch(r'[a-z]+(?:-[a-z]+)*\.bin', name)
+                or path in entries or entry.get('mode') != '100644'
+                or type(entry.get('size')) is not int or not 0 < entry['size'] < 1_048_576
+                or not re.fullmatch(r'[0-9a-f]{64}', entry.get('sha256', ''))):
+            raise ValueError('Invalid or duplicate Clover Valley asset entry')
+        entries[path] = entry
+    return entries
+
+
 def approved_fixture_blob(path, mode, size, read_blob):
     """Admit only an exact manifest path, regular mode, length and content digest."""
-    entry = reviewed_fixtures().get(path)
+    entry = reviewed_assets().get(path)
     if entry is None or mode != entry['mode'] or size != entry['size']:
         return False
     content = read_blob()
@@ -60,7 +87,7 @@ def git(*args):
 
 def approved_git_fixture(ref, path):
     """Inspect the index or a commit; the caller cannot substitute local bytes."""
-    if path not in reviewed_fixtures():
+    if path not in reviewed_assets():
         return False
     if ref == 'INDEX':
         records = git('ls-files', '--stage', '-z', '--', path).split(b'\0')

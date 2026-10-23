@@ -332,3 +332,11 @@ The maintained 2292 movie, strict oracle and its qualification remain unchanged.
 Boss/full-act, incoming history, roster/donor/viewport breadth and native
 timing/pixels remain open. A future checkpoint before platform285 releases its
 rider still needs actual ground, fresh-press and restorability evidence.
+
+## Object pipeline optimization — 2026-10-22
+
+ICZ frost child ordering retains native lifetime/replacement and rewind ownership while
+removing repeated query/order work. See the [performance evidence](../../audits/performance/2026-10-22-object-pipeline-performance.md)
+for exact focused commands, results and structural counts. This local component
+change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
+product beyond the obligations already recorded above.

@@ -61,8 +61,8 @@ class TestMasterEndToEnd {
         PlayerIdentity guest3Identity = PlayerIdentity.loadOrCreate(dir.resolve("guest3"));
         MasterClient guest3Master = connect(guest3Identity, "G3");
         await(host, event -> event instanceof RaceClient.Control control
-                && control.message() instanceof ControlMessage.RoomState state
-                && state.players().size() == 3, 10_000);
+                && control.message() instanceof ControlMessage.PlayerUpsert upsert
+                && upsert.player().displayName().equals("G2"), 10_000);
         controlled.publishPlayerCounts(roomId);
         ControlMessage.RoomListResult listed = guest3Master.listRooms("s3k", 0)
                 .get(10, TimeUnit.SECONDS);
@@ -71,6 +71,8 @@ class TestMasterEndToEnd {
         RaceConnection guest3 = guest3Master.joinRoom(roomId, guest3Identity, "G3", FP)
                 .get(15, TimeUnit.SECONDS);
 
+        // Readiness has its own tests; nobody waits under AUTO.
+        host.sendControl(new ControlMessage.SetReadyRule("AUTO"));
         host.sendControl(new ControlMessage.RoundConfigure(
                 new ControlMessage.RoundConfig("s3k", 0, 0, 20, "OPEN", null)));
         awaitControl(host, ControlMessage.RoundStart.class, 10_000);
@@ -95,8 +97,8 @@ class TestMasterEndToEnd {
 
         guest3.close();
         await(host, event -> event instanceof RaceClient.Control control
-                && control.message() instanceof ControlMessage.RoomState state
-                && state.players().size() == 3, 10_000);
+                && control.message() instanceof ControlMessage.PlayerLeft left
+                && left.slot() == guest3.joinAccepted().playerSlot(), 10_000);
         PlayerIdentity attackerIdentity = PlayerIdentity.loadOrCreate(dir.resolve("attacker"));
         MasterClient attackerMaster = connect(attackerIdentity, "BAD");
         RaceConnection attacker = attackerMaster.joinRoom(

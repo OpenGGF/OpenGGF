@@ -55,6 +55,30 @@ class PixelScaling(unittest.TestCase):
         self.assertEqual(out.size, (1920, 1080))
 
 
+class Layouts(unittest.TestCase):
+    class Solid:
+        def __init__(self, colour, size=(800, 224)):
+            self.img = Image.new('RGB', size, colour)
+
+        def frame(self, i):
+            return self.img
+
+    def test_stacked_split_shows_full_width_strips_after_sliding_in(self):
+        e = SmallEdit()
+        panes = [(0, self.Solid((200, 0, 0)), 0, None, None), (0, self.Solid((0, 0, 200)), 0, None, None)]
+        out = kit.stacked_split(e, 16, panes, divider_px=4, bg=np.zeros((90, 160, 3), np.float32))
+        sh = (90 - 4) // 2
+        np.testing.assert_allclose(out[:sh, :, 0], 200, atol=1)
+        np.testing.assert_allclose(out[sh + 4:sh + 4 + sh, :, 2], 200, atol=1)
+        np.testing.assert_allclose(out[sh:sh + 4], np.broadcast_to(np.array(kit.YELLOW, np.float32), (4, 160, 3)), atol=1)
+
+    def test_stacked_split_strip_is_off_screen_before_its_start(self):
+        e = SmallEdit()
+        panes = [(0, self.Solid((200, 0, 0)), 0, None, None), (30, self.Solid((0, 0, 200)), 0, None, None)]
+        out = kit.stacked_split(e, 10, panes, divider_px=4, bg=np.zeros((90, 160, 3), np.float32))
+        self.assertEqual(out[50:, :, 2].max(), 0)
+
+
 class Transitions(unittest.TestCase):
     def setUp(self):
         self.e = SmallEdit()
@@ -90,6 +114,21 @@ class Typography(unittest.TestCase):
         colours = {tuple(c) for c in img[img[..., 3] > 0][:, :3].astype(int)}
         self.assertIn(kit.WHITE, colours)
         self.assertIn(kit.NAVY, colours)
+
+    def test_bitmap_font_effects_stay_on_the_glyph_grid(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'font.txt'
+            p.write_text('= A\n.#+\n#.+\n###\n')
+            f = kit.BitmapFont(p)
+        img = f.render('A', scale=9, outline=(0, 0, 0), outline_px=1, drop=(10, 10, 10), drop_px=1, drop_dx=1,
+                       shades={'+': (182, 182, 182)})
+        h, w = img.shape[:2]
+        self.assertEqual((h % 9, w % 9), (0, 0))
+        blocks = img.reshape(h // 9, 9, w // 9, 9, 4)
+        self.assertTrue((blocks == blocks[:, :1, :, :1]).all(), 'every effect is whole glyph pixels')
+        colours = {tuple(c) for c in img[img[..., 3] > 0][:, :3].astype(int)}
+        self.assertIn((182, 182, 182), colours)
+        self.assertIn(kit.WHITE, colours)
 
     @unittest.skipUnless(has_font(), 'no TTF installed')
     def test_tracking_widens_text_and_stroke_adds_ink(self):
@@ -131,6 +170,38 @@ class EditChecks(unittest.TestCase):
         self.assertEqual(stats['shots'], 30)
         self.assertTrue(any('rushed' in w for w in warn))
         self.assertTrue(any('mean shot' in w for w in warn))
+
+    def test_bare_gameplay_is_flagged_and_continuation_cuts_do_not_hide_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 300, clip, hold=0))
+            e.S(kit.Game(300, 900, clip, src=300, hold=0))
+            stats, warn = e.pacing()
+        self.assertTrue(any('boring' in w for w in warn))
+        self.assertEqual(stats['longest_bare_s'], 15.0)
+
+    def test_accompanied_gameplay_is_not_bare(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 900, clip, hold=0))
+            for k in range(0, 900, 200):
+                e.O(kit.Flash(k, 6))
+            stats, warn = e.pacing()
+        self.assertFalse(any('boring' in w for w in warn))
+
+    def test_captions_alone_are_not_accompaniment_and_dense_captions_are_flagged(self):
+        with tempfile.TemporaryDirectory() as d:
+            clip = self.frames(d)
+            e = SmallEdit()
+            e.S(kit.Game(0, 900, clip, hold=0))
+            word = np.zeros((4, 4, 4), np.float32)
+            for k in range(0, 900, 150):
+                e.O(kit.Txt(k, k + 140, word, 10, 10))
+            stats, warn = e.pacing()
+        self.assertTrue(any('boring' in w for w in warn))
+        self.assertTrue(any('over-captioned' in w for w in warn))
 
     def test_render_frame_composites_shot_overlay_and_transition(self):
         with tempfile.TemporaryDirectory() as d:

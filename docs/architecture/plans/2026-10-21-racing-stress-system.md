@@ -142,3 +142,295 @@ These are single local observations, not throughput thresholds. Server, clients 
 source proxy share the JVM; synthetic poses do not run the engine or ROM playback.
 The relay result certifies one full room. It does not establish a global master-room
 limit, external-network behavior, sustained soak stability or isolated server cost.
+
+## Full-capacity video follow-up
+
+The 2026-10-21 video request uses an isolated worktree based on `02325fd02`.
+`TimeAttackCapacityVideoTool` drives the real Engine through its legal screen,
+master title, Extras entry, Time Attack setup, master browser, relay lobby,
+countdown and stock GHZ1 run. A fresh external working directory owns identity,
+ghosts, settings, saves and all capture output. Surfaceless EGL and direct input
+handler events keep the shared desktop outside the capture.
+
+The one rendered player consumes only P1 controller input from the maintained
+`src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2`, starting at row 840.
+There are no position, clock, ring or completion seeds and no trace-state reads.
+A separate cold route check consumed 3,966 inputs without death, reached the
+signpost at frame 3,229 and rendered the native 0:53 results. The remaining 255
+real authenticated relay connections publish delayed cosmetic copies of the
+visible player's observed poses and synthetic, unverified finish claims. This
+is one engine simulation beside 255 protocol clients, not 256 independently
+completed ROM simulations. Established identity admission is seeded for the
+owned server, as in the capacity harness; production address/room caps remain.
+
+The end-to-end recording uncovered gaps hidden by lower-level tests:
+
+- Before any game had loaded, mod-scene updates dereferenced a missing world timer
+  and drawing dereferenced a missing camera. Both now respect the absence of a
+  gameplay world; a real title-entry scene regression covers update/input/draw.
+- The generic gameplay reset retired the Time Attack scene during hosted launch
+  and return. The runtime-only reset now retains that owner; ordinary title and
+  stock-game transitions continue retiring it. The regression exercises repeated
+  failed launches, return and explicit retirement on the real Engine owner path.
+- A client could reach the advertised countdown expiry before the host's next
+  scheduled tick. Its valid start was rejected, and subsequent ghost packets
+  caused disconnection. Start/finish admission now advances countdown state from
+  the host clock. Tests cover exact expiry before a tick and unchanged deadline
+  and grace limits. The socket harness no longer adds an 80 ms delay that masked
+  this boundary.
+- Ordinary Engine launch preparation replaced an injected headless audio backend
+  with LWJGL, leaking sound to desktop devices. The owned recording was stopped
+  when reported. Configured headless sessions now retain the exact supplied
+  backend and rebuild only its no-device sink; the capture checks its identity
+  around every frame. Regressions exercise repeated resets/launch preparation,
+  the actual headless backend, no-device sinks and offline PCM packets.
+
+The first offscreen prototype used a 960x672 GL context whose fixed-function
+projection did not match the Engine's 320x224 shader projection; its gameplay HUD
+was visibly misplaced. The retained recording uses native 320x224 rendering and
+FFmpeg nearest-neighbour scaling. Gameplay-only capture was useful for route
+qualification, but the actual Engine presentation owner is required to record
+startup, scenes, hosted HUD, fades and production audio together.
+
+The tool records a 30 fps silent MP4, presentation-aligned stereo PCM, chapter
+positions, native stills and observed state. It requires every accepted standings
+row and checks owned socket/proxy shutdown before marking cleanup complete.
+Timing includes rendering, encoding and colocated peers and is not a benchmark.
+
+Final focused verification used Java 25 and:
+
+```sh
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestFirstBootModScene,TestEngineConfiguredHeadlessStartup,TestEngine,TestMenuScreenModeController,TestSceneRunLauncher,TestHostedRunController,TestModEngineWiringSeams,TestHostRoundEngine,TestHostRoundEngineVote,TestHostRoundEngineVerified,TestRacingSocketStress' test
+```
+
+It passed 113 tests with zero failures, errors or skips. The final tool-only
+constructor-failure cleanup adjustment compiled independently with `javac --release
+25`; it changes no recording or gameplay behavior. The server CLI rebuilt with
+`python3 racing/server/build.py --skip-engine`. Change-based planning selected all
+3,523 smoke classes and guards. Focused owner/consumer checks replace that broad
+selection here: runtime reset consumers, fresh scenes, configured audio ownership,
+round timing/verification/votes and all socket stress transports are covered;
+no initialized gameplay algorithm or ROM behavior changes.
+
+The completed recording has 5,137 presentations (85.616 seconds), 4,302 consecutive
+presentations at 256 admitted connections, a natural player finish after 3,230
+movie inputs, and all 256 accepted unverified standings rows. It received 2,214,259
+ghost entries, then closed all owned peer/server/proxy resources successfully.
+The final 1280x720/30 fps MP4 has chapter markers and offline stereo 48 kHz AAC.
+The backend log contains only Null then Headless SMPS initialization; exact-owner
+checks remained active across every presented frame. Selected lobby, gameplay and
+native results frames were inspected. The audio track is non-silent and peaks at
+-9.4 dBFS. These are capture observations, not server performance measurements.
+
+The recording and selected stills live outside the repository under
+`$CAPTURE_ROOT/timeattack-capacity-video-20261021/`.
+This follow-up leaves its branch local for integration; it does not mutate or
+push the main checkout.
+
+## Mid-pack recording and component analysis follow-up
+
+The first recording at `731307ac4` put the live player ahead of every delayed
+copy. The follow-up records a fresh independent ROM-backed controller playback
+before network setup, then pairs faster/slower cosmetic timelines around the live
+player. Smooth periodic surges exercise production near/far selection and actual
+viewport departures/returns without reversing or jumping the recorded route.
+Ahead poses cannot be derived from the live player's not-yet-observed future;
+this separate playback avoids injecting trace state or moving the live player.
+Bot claims remain synthetic and unverified.
+
+The capture now requires a middle accepted rank and counts rendered-ghost and
+viewport-eligible transitions only during stepped gameplay, including the natural
+completion presentation. An initial counter implementation continued through the
+results tail; read-only review rejected that as evidence of gameplay visibility
+churn, and the counters were restricted before recording. Viewport eligibility
+uses the native camera rectangle with sprite margins; it is not pixel occlusion
+proof. The runtime's actual eight-ghost list supplies the observed identities.
+
+The HUD now reserves the stock upper-left and lives areas, uses a compact right
+column with at most three nearby rows, marks coarse progress as an estimate, and
+moves finished-run panels clear of the stock act card. Pure layout tests check
+containment and phase-specific separation across supported viewport widths.
+
+Component measurements use prebuilt executables under one exclusive test/build
+activity lease. The [component audit](../audits/performance/2026-10-21-multiplayer-component-performance.md)
+records exact workload boundaries, sampling limits, scaling and unmeasured paths.
+In particular, colocated socket/video process CPU cannot establish dedicated
+server or pure-client capacity, and cosmetic accepted finishes do not exercise the
+ROM replay verifier. Raw diagnostic recordings are consumed after interpretation.
+
+Focused verification for this follow-up passed 63 tests, with no failures, errors
+or skips, using Java 25 and the exact selector below:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostPackSchedule,TestMultiplayerHudLayout,TestHudTextLayout,TestMinimapLayout,TestMultiplayerRaceCoordinator,TestRemoteGhostPresentation,TestTimeAttackRuntime,TestTimeAttackRuntimeMultiplayerSeams,TestRacingSocketStress,TestHostRoundEngine' test
+```
+
+Change-based inspection against `731307ac4` selected all 3,525 smoke classes and
+guards because the racing subtree and standalone profiling helper have no narrower
+selection rule. Focused tests and the actual rendered route replace that broad
+selection for this bounded follow-up: no shared gameplay, physics, protocol,
+parser, transport or build contract changes; production behavior changes are HUD
+layout and its existing finished-state argument. The other executable changes are
+capture/scheduling tools and optional diagnostic events.
+
+The first mid-pack capture exposed a scheduler error: a two-pose skip during fast
+vertical movement produced `delta 10,34 exceeds 32`, after which production stream
+contiguity correctly rejected later batches and disconnected the offenders. That
+failed capture is discarded. The scheduler now retains original intermediate
+poses when necessary, using the unchanged global speed ceiling; it never edits
+recorded coordinates or relaxes server admission. A steep-route regression sends
+the resulting frames through `GhostStreamValidator`. A bounded analysis of the
+actual 3,230-pose export found a maximum original one-frame delta of 30, required
+59 intermediate-pose decisions across 255 schedules, and predicted a live finish
+near rank 129 (ties remain production-ordered).
+
+The follow-up regression command passed all three scheduler tests without
+failures, errors or skips:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostPackSchedule' test
+```
+
+Read-only review also identified that WebSocket `FrameAssembler` had initially
+been grouped with ghost presentation in the JFR analyzer. The classifier was
+corrected and all five existing recordings were reprocessed. Whole-recording and
+marked-window event counts, Java/native/allocation sample counts and total
+allocation weights were identical before and after; only attribution labels
+changed. No unchanged socket workload was rerun to repair its offline summary.
+
+The corrected recording completed with the live player ranked 130/256, all 256
+accepted unverified finishes, 181 distinct rendered ghost identities, 771 entries
+and 763 exits from the actual runtime ghost list, and 518 viewport entries / 516
+exits / 390 returns during stepped gameplay. Peak rendered remote ghosts stayed
+at eight. It retained 256 connections for 4,935 presentations, completed the live
+route naturally after 3,230 controller inputs, and closed owned resources cleanly.
+The 5,770-presentation video is 96.167 seconds, 1280x720 at 30 fps with synchronized
+48 kHz stereo AAC and chapter markers. Gameplay, stock act-clear card and final
+panels were visually inspected; the latter leave the act card and lives clear.
+Audio initialization was Null then Headless SMPS with exact-owner checks around
+every frame; the offline track is non-silent and peaks at -8.8 dBFS. No desktop
+playback was used for inspection.
+
+The revised video, selected stills, state/chapter CSVs and standalone interpreted
+performance report are under `$CAPTURE_ROOT/timeattack-midpack-20261021/`. The
+[component audit](../audits/performance/2026-10-21-multiplayer-component-performance.md)
+contains the five socket profiles and successful rendered route's bounded JFR
+observations. Raw recordings, expanded diagnostic summaries, temporary scripts,
+PCM, local identities and server data are consumed rather than archived.
+
+Final pixel inspection caught unsupported `#` glyphs in the new compact rank
+labels. The renderer now uses plain local-rank digits and periods in standings
+rows; the existing legacy text-composition API is unchanged. The final focused
+check passed all eight tests without failures, errors or skips:
+
+```sh
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestMultiplayerHudLayout,TestHudTextLayout' test
+```
+
+The demonstration is regenerated after this label-only correction without JFR.
+The performance audit retains the earlier isolated build's exact fingerprint and
+observations; no result is reassigned to the revised wording. Profiled state and
+chapter CSVs remain distinguishable from the final demonstration's metadata.
+
+The final wording capture also completed at rank 130/256 with all 256 finishes
+accepted and clean shutdown. It observed 181 ghost identities, 763 runtime entries
+/ 755 exits and 510 viewport entries / 508 exits / 383 returns, with an eight-ghost
+peak. It contains 5,768 presentations (96.133 seconds); the muxed H.264/AAC streams
+have matching duration, 1280x720/30 fps video and stereo 48 kHz audio. Final rank
+text and stock act-clear separation were inspected in the actual final MP4; the
+audio is non-silent with -9.0 dBFS peak. This is the delivered video. The preceding
+390-return metrics belong specifically to the isolated profiled recording.
+
+
+## Nine-player name rendering follow-up (2026-10-22)
+
+A nine-player version of the same real relay/ROM route uses eight named protocol
+peers: `Q`, `Dash`, `A Very Long Player Name`, `[SPEED]+`, `@Miles_99`, `$100%!?`,
+`Δelta×2`, and `雪🚀Runner`. The fixture changes names and screenshot cadence only;
+the live player remains the ordinary GHZ1 movie run, and peer claims remain
+synthetic and unverified. Sources and final media live outside the repository at
+`$CAPTURE_ROOT/timeattack-names-20261022/`.
+
+The first recording at `d59ea164d` admitted all nine participants, accepted all nine
+finishes, completed 3,230 controller inputs naturally, observed all eight ghost
+identities and closed owned resources cleanly. Pixel inspection nevertheless
+showed names in the lobby/HUD without visible overhead labels. The prior
+nearest-four selection fix therefore did not establish visible nameplate rendering.
+`GhostRenderer` drew font quads immediately while preparing deferred world sprite
+commands; the later world draw overwrote the text. Nameplates now collect during
+sprite preparation and draw in the hosted-run overlay after the world, before
+the host HUD. Repeated preparation replaces each slot's pending label, each overlay
+consumes its labels, and unload discards pending labels. This also removes GL font
+drawing from CPU sprite preparation.
+
+Unsupported glyphs in the compact lobby/HUD font display as question marks; the
+nameplate bitmap font has a different supported character set. The Unicode/emoji
+case intentionally exposes that existing font limitation. This task does not
+claim arbitrary Unicode font coverage.
+
+Focused regression verification in `.worktrees/nameplate-demo` (base `d59ea164d`
+with the renderer/overlay changes) passed 23 tests, zero failures/errors/skips:
+
+```sh
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestGhostRendererLayerSelection,TestHostedRunController,TestRemoteGhostPresentation' test
+```
+
+Java 25 / Lua 5.4 preflight also passed. The change-based planner selected all
+3,580 smoke classes because the renderer/racing paths are unclassified. Focused
+nameplate/lifecycle checks and the rendered relay route replace that broad
+selection for this bounded draw-order change; gameplay, physics, transport and
+selection policy are unchanged. This is not a full-suite result.
+
+The corrected recording completed with nine accepted finishes, live rank 5/9,
+all eight rendered ghost identities, 64 viewport returns and an eight-ghost peak.
+The live player completed naturally after 3,230 controller inputs. All 4,980
+presentations retained the no-device audio owner and owned resources closed
+cleanly. Gameplay PNGs at presentations 1620, 1800, 2160, 2520, 3240 and 3600
+show overhead labels after the correction. Crowded labels can still overlap;
+there is no collision-avoidance layout. Missing Unicode/emoji glyphs remain a
+font limitation, not evidence that the name was lost in the protocol.
+
+`nameplate-demo.mp4` is a 45-second gameplay excerpt (source seconds 20–65);
+`full-run.mp4` retains the 83-second startup/lobby/route/results recording.
+Both use native 320x224 production rendering scaled to 960x672 and offline
+stereo 48 kHz audio. `fixture.patch` preserves the name/capture-only edits outside
+Git; those temporary server-tool edits are discarded after recording.
+
+## HUD footprint and nameplate legibility follow-up (2026-10-22)
+
+The nine-player recording at `1c7e412f4` showed two problems: the opaque 176-pixel
+right-hand panels plus a 20-pixel progress box covered over half of the native
+view, and nameplates drawn with the debug pixel font at scale 0.5 were about four
+native pixels tall and unreadable.
+
+Nameplates now draw through the hosted-run `LevelOverlayCanvas` in `CompactFont`
+at scale 1 on a 0xD8 plate, fitted to eleven glyphs, faded with the ghost and
+stepped upward when tags would overlap. A first pass used the HUD's 0xB0 plate;
+the recording showed scenery breaking up the glyphs, so the plate is denser. The
+HUD column is capped at 140 pixels, shrinks to its text, uses 9-pixel lines and a
+0xC8 fill, and shows one unranked rival either side instead of the nearest three.
+Both recordings used a 0xB0 HUD fill; the final one showed ghosts and nameplates
+behind the room panel breaking up its text, so the fill was raised afterwards
+without another recording.
+The progress strip is a 9-pixel bar beside the lives counter. `@`, `$` and `#`
+were added to `CompactFont`; other unsupported glyphs still display as `?`.
+
+Evidence: the same fixture patch and `TimeAttackCapacityVideoTool OUT ROOT 9 180`
+recipe, recorded twice outside the repository at
+`$CAPTURE_ROOT/timeattack-hud-20261022/` (first pass and final). Focused checks:
+`TestGhostRendererLayerSelection`, `TestMultiplayerHudLayout`, `TestHudTextLayout`,
+`TestMinimapLayout`, `TestHostedRunController`, `TestRemoteGhostPresentation`,
+`TestCreatorUi`, `TestModApiPinPolicy` and `TestModApiReleasePolicy` passed 73
+tests with no failures or skips after the final fill change. The change-based
+planner selected all 3,580 smoke classes because renderer/racing paths are
+unclassified; the bounded overlay/font change used these focused checks and the
+two recordings instead. This is not a smoke or full-suite result.

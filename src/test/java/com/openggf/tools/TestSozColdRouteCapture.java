@@ -1,6 +1,7 @@
 package com.openggf.tools;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.GameLoopRewindTestAccess.owner;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.playback.Bk2FrameInput;
@@ -10,6 +11,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.BonusStageType;
 import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.objects.SozColdRouteObservations;
@@ -87,6 +89,9 @@ class TestSozColdRouteCapture {
         long bonusInteriorGeneration = -1, bonusReturnedGeneration = -1;
         int bonusReleaseFrame = -1;
         boolean bonusReturnTitleReleased = false;
+        RewindController outgoingBonusController = null, retiredBonusController = null;
+        boolean awaitingBonusHistory = false;
+        int incomingBonusHistories = 0;
         var drawing = new RouteFrameDrawing("openggf.soz.drawEveryFrame");
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
@@ -111,7 +116,15 @@ class TestSozColdRouteCapture {
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
                 var beforeLevel = GameServices.level().getCurrentLevel();
                 var beforeMode = session.loop().getCurrentGameMode();
-                var beforeHistory = SessionManager.getCurrentGameplayMode().getRewindController();
+                if (bonusRoute && frame >= 3100 && frame < 3753
+                        && (session.loop().getCurrentGameMode() == GameMode.LEVEL
+                            || session.loop().getCurrentGameMode() == GameMode.BONUS_STAGE)) {
+                    var installed = owner(session.loop()).getRewindController();
+                    if (installed != null) outgoingBonusController = installed;
+                }
+                // The native fade can retire the installation before the load.
+                // Retain this world's admitted handle and pre-load cursor.
+                var beforeHistory = outgoingBonusController;
                 long beforeHistoryFrame = beforeHistory == null ? 0 : beforeHistory.currentFrame();
                 var pendingSpots = new HashSet<String>();
                 var input = input(movie, frame);
@@ -119,10 +132,15 @@ class TestSozColdRouteCapture {
                 drawing.afterStep(session);
                 if (bonusRoute && frame >= 3100 && frame < 3753
                         && beforeLevel != GameServices.level().getCurrentLevel()) {
+                    assertNotNull(beforeHistory, "each bonus exit has its own admitted outgoing history");
                     assertTrue(beforeHistoryFrame > 10, "outgoing bonus boundary history at " + frame);
-                    var afterHistory = SessionManager.getCurrentGameplayMode().getRewindController();
+                    var afterHistory = owner(session.loop()).getRewindController();
                     assertTrue(afterHistory == null || afterHistory.currentFrame() < beforeHistoryFrame,
                             "bonus boundary clears outgoing timeline at " + frame);
+                    assertRetiredHistory(session, beforeHistory);
+                    retiredBonusController = beforeHistory;
+                    outgoingBonusController = null;
+                    awaitingBonusHistory = true;
                     bonusLoads++;
                     var loaded = GameServices.level();
                     if (bonusLoads == 1) {
@@ -148,6 +166,23 @@ class TestSozColdRouteCapture {
                         assertEquals(act, loaded.getCurrentAct());
                         assertBonusReplayScene(session, bonusReturnedLevel, bonusReturnedGeneration,
                                 GameMode.TITLE_CARD, BonusStageType.NONE, RunLevelLoadCause.INTERIOR_RETURN);
+                    }
+                }
+                if (bonusRoute && awaitingBonusHistory
+                        && (session.loop().getCurrentGameMode() == GameMode.LEVEL
+                            || session.loop().getCurrentGameMode() == GameMode.BONUS_STAGE)) {
+                    var context = owner(session.loop());
+                    var incomingLevel = context.getLevelManager();
+                    var installed = context.getRewindController();
+                    if (!incomingLevel.hasPendingFreshLevelTransitionBoundary()
+                            && !incomingLevel.isLevelInactiveForTransition()
+                            && !context.getFadeManager().hasPendingCompletion() && installed != null) {
+                        assertNotSame(retiredBonusController, installed);
+                        assertEquals(0, installed.earliestAvailableFrame());
+                        assertTrue(installed.currentFrame() <= 1,
+                                "each released bonus destination starts a new frame-zero history");
+                        incomingBonusHistories++;
+                        awaitingBonusHistory = false;
                     }
                 }
                 assertFalse(session.player().getDead(), "cold death at " + frame);
@@ -199,7 +234,7 @@ class TestSozColdRouteCapture {
                             pendingSpots.add(mode);
                     }
                     if (act == 1 && capsule) {
-                        var history = SessionManager.getCurrentGameplayMode().getRewindController();
+                        var history = owner(session.loop()).getRewindController();
                         if (history != null)
                             outgoingHistory = Math.max(outgoingHistory, history.currentFrame());
                     }
@@ -208,7 +243,7 @@ class TestSozColdRouteCapture {
                                                : level.getCurrentZone() == 9 && level.getCurrentAct() == 0;
                 if (destination && act == 1 && !isolatedHistory) {
                     assertTrue(outgoingHistory > 10, "outgoing history exists before LRZ");
-                    var history = SessionManager.getCurrentGameplayMode().getRewindController();
+                    var history = owner(session.loop()).getRewindController();
                     assertTrue(history == null || history.currentFrame() < outgoingHistory,
                             "LRZ resets the outgoing timeline at load");
                     isolatedHistory = true;
@@ -278,6 +313,8 @@ class TestSozColdRouteCapture {
                 assertTrue(semanticChecked.contains("bonus-interior-release"), "first playable interior window");
                 assertTrue(semanticChecked.contains("bonus-interior-next-window"), "second distinct interior window");
                 assertTrue(semanticChecked.contains("bonus-return-released"), "saved-origin released window");
+                assertEquals(2, incomingBonusHistories, "both replacement worlds install their own live history");
+                assertFalse(awaitingBonusHistory);
             }
             assertTrue(bossSeen, "cold route reaches its real boss");
             assertTrue(resultsSeen && resultsFinished, "actual results sequence finishes");
@@ -303,7 +340,7 @@ class TestSozColdRouteCapture {
                 assertTrue(semanticChecked.contains("capsule-open"));
                 assertTrue(semanticChecked.contains("results-start"));
                 assertTrue(isolatedHistory, "observed the actual LRZ load and outgoing-history reset");
-                assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
+                assertNotNull(owner(session.loop()).getRewindController());
             }
             System.out.println("SOZ" + (act + 1) + (paired ? " cold pair: ready=" : " cold " + main + " solo: ready=") + readyFrame
                     + ", width=" + width + ", replay windows=" + checked.size() + ", semantic=" + semanticChecked
@@ -325,6 +362,21 @@ class TestSozColdRouteCapture {
         assertEquals(level.getRomZoneId(), receipt.identity().romZone());
         assertEquals(level.getCurrentAct(), receipt.identity().act());
     }
+    private static void assertRetiredHistory(GameplayCaptureSession session, RewindController outgoing) {
+        var context = owner(session.loop());
+        assertNotSame(outgoing, context.getRewindController());
+        int frame = outgoing.currentFrame();
+        var level = context.getLevelManager();
+        int worldFrame = level.getFrameCounter();
+        var objects = level.getObjectManager();
+        outgoing.step();
+        outgoing.seekTo(0);
+        assertFalse(outgoing.stepBackward(), "retired bonus-boundary history rejects replay");
+        assertEquals(frame, outgoing.currentFrame());
+        assertEquals(worldFrame, level.getFrameCounter());
+        assertSame(objects, level.getObjectManager());
+    }
+
     private static Bk2FrameInput input(com.openggf.debug.playback.Bk2Movie movie, int frame) {
         return frame < movie.getFrameCount() ? movie.getFrame(frame)
                                              : new Bk2FrameInput(frame, 0, 0, false, "");

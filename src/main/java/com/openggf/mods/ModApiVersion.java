@@ -45,6 +45,9 @@ public final class ModApiVersion {
      * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
+     * Unicode display names (NameFont, DisplayNames, typed scene text), player looks
+     * (PlayerAppearance, CharacterLooks, coloured ghost poses, RunHandle player
+     * appearance) and protocol v4 profile messages extend the candidate.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music. Drowning rules state whether running out of air installs
      * a dedicated player routine that skips the water check (S3K routine $C). Owned patch scenes can play their validated audio-manifest
@@ -66,8 +69,10 @@ public final class ModApiVersion {
      * Hub preferences include optional title music, its volume, last focused game,
      * and per-game last-act/leader history for zone-start Continue.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
-     * identity, bounded ghost transport and protocol messages/codecs. Operator servers
-     * and verifier tools remain separate and outside the creator API.
+     * identity, bounded ghost transport and protocol messages/codecs. Protocol v3 uses
+     * explicit player upsert/leave deltas after the joining client's initial room snapshot;
+     * remote ghost registries expose the same incremental membership operations. Operator
+     * servers and verifier tools remain separate and outside the creator API.
      * Broker-pinned direct-room TLS wire fields are part of the race protocol.
      * A session-scoped gameplay run policy governs special/bonus stage entry, act
      * completion handing control back to the run's host, live rewind and editor entry.

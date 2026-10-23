@@ -464,6 +464,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param index slot index (0-127 for ROM-matching slots, may exceed 127 for overflow)
      */
     public void setSlotIndex(int index) {
+        if (this.slotIndex != index && services != null && services.objectManager() != null) {
+            services.objectManager().invalidateNativeObjectIndex();
+        }
         this.slotIndex = index;
     }
 

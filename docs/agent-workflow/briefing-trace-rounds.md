@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A matching patch preimage does not establish owning dependency closure
+(2026-10-23, PR223/develop reconciliation). The four terminal-input files
+matched their leaf parent, but the imported regression also assumed an implicit
+level-entry policy outside that diff. Two player-art regressions likewise depended
+on a separate VBlank phase model. Read the actual caller, selected policy and
+fixture setup in the composed source; preserve upstream caller choices rather
+than importing an ancestor wholesale or weakening the journal. The initial six
+failures and bounded corrections are recorded in the
+[S3K completion plan](../architecture/plans/2026-10-13-s3k-playable-completion.md).
+
 A horizontal animation marker is not a general movement permission (2026-10-21,
 MHZ Knuckles ledge). `PlayableSpriteMovement` writes `movementInputActive` from
 `inputLeft || inputRight`; valid Up-only climbing therefore clears it. A private
@@ -85,6 +95,19 @@ fields do not prove that later guard was evaluated. Preserve the original order
 and unknown operands. A subsequent cold continuation may evaluate its current
 boundary once, but cannot fill the earlier run's missing values. See the
 [R18 record](../architecture/plans/2026-10-13-s3k-playable-completion.md#mhz-knuckles-ledge-approachjump-glide-ordinary-question-r18--2026-10-21).
+
+Different virtual pattern IDs do not imply different physical atlas pages
+(2026-10-22, object-pipeline batching). A page-barrier seam incorrectly expected
+separate commands for two IDs that the allocator placed on the same page. Use
+`PatternAtlas.Entry.atlasIndex()` as the oracle and a deliberately small atlas
+when the test needs forced physical page transitions.
+
+An injected offline audio backend can be replaced at a later launch boundary
+(2026-10-21, full Time Attack capture). EGL and `java.awt.headless` isolate no
+audio devices. Ordinary Engine launch preparation previously replaced the supplied
+headless backend with LWJGL. Verify exact backend and no-device sink ownership
+through startup, level launch and return, and check the production PCM packets;
+startup identity alone does not establish isolation for the recording.
 
 A live scene can simulate correctly and render valid scenery while every actor is
 outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima

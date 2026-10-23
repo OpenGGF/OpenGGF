@@ -35,11 +35,13 @@ class TestDynamicArtDmaServiceModel {
      * VBlank_Paused (985-989) never runs on a lag frame.
      */
     @Test
-    void sonic1ServicesEveryVBlankClaimExceptLag() {
+    void sonic1ServicesEveryVBlankClaimExceptLagAndPaletteFade() {
         var model = DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX;
 
         assertFalse(model.services(null));
         assertFalse(model.services(PlcLifecyclePhase.LAG));
+        assertFalse(model.services(PlcLifecyclePhase.PALETTE_FADE),
+                "VBlank_PaletteFade calls StandardTransfers/ProcessPLC_9Tiles without Sonic buffer DMA");
         assertTrue(model.services(PlcLifecyclePhase.ORDINARY_LEVEL));
         assertTrue(model.services(PlcLifecyclePhase.SPECIAL_STAGE));
         assertTrue(model.services(PlcLifecyclePhase.LEVEL_TITLE_CARD));

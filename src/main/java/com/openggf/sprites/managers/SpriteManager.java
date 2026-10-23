@@ -1725,13 +1725,24 @@ public class SpriteManager implements PlayableSstDispatcher {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(high);
 				gfx.beginPatternBatch();
-				if (hook != null && !(high ? highHookDrawn : lowHookDrawn)) {
+				// Painter order: a layer's hook draws just behind its first player sprite.
+				if (!collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)) {
 					hook.beforePriorityLayer(bucket, high);
 					if (high) highHookDrawn = true; else lowHookDrawn = true;
 					gfx.setCurrentSpriteHighPriority(high);
 					gfx.beginPatternBatch();
 				}
 				sprite.draw();
+				// SAT order is front to back (earlier entries win), so the same layering puts the
+				// hook's entries straight after that layer's last player sprite.
+				if (collectingSat && hook != null && !(high ? highHookDrawn : lowHookDrawn)
+						&& lastOfLayer(instances, instances.size() - 1 - i, high)) {
+					hook.beforePriorityLayer(bucket, high);
+					if (high) highHookDrawn = true; else lowHookDrawn = true;
+					gfx.flushPatternBatch();
+					gfx.setCurrentSpriteHighPriority(high);
+					gfx.beginPatternBatch();
+				}
 			}
 			if (bucket == RenderPriority.MIN && !nonPlayableSprites.isEmpty()) {
 				gfx.flushPatternBatch();
@@ -1742,6 +1753,14 @@ public class SpriteManager implements PlayableSstDispatcher {
 		} finally {
 			if (wrapEnabled) disableVerticalWrap();
 		}
+	}
+
+	/** Whether no sprite before {@code index} in painter order shares its priority layer. */
+	private static boolean lastOfLayer(List<AbstractPlayableSprite> instances, int index, boolean high) {
+		for (int j = 0; j < index; j++) {
+			if (instances.get(j).isHighPriority() == high) return false;
+		}
+		return true;
 	}
 
 	/**

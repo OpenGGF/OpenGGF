@@ -731,3 +731,11 @@ pixels/timing, full-route and remaining lifecycle products stay open.
 The [dated plan](../../plans/2026-10-13-s3k-playable-completion.md#root-hcz2-snake-coarse-cull-respawn-correction--2026-10-22)
 preserves commands, original counterexamples, the rejected partial correction and
 actual terminal comparisons. This is focused validation, not smoke certification.
+
+## Object pipeline optimization — 2026-10-22
+
+HCZ column selection retains native lifetime/replacement and rewind ownership while
+removing repeated query/order work. See the [performance evidence](../../audits/performance/2026-10-22-object-pipeline-performance.md)
+for exact focused commands, results and structural counts. This local component
+change adds no cold-route, donor/roster, viewport, native-picture or lifecycle
+product beyond the obligations already recorded above.

@@ -96,6 +96,7 @@ class TestVerifiedRoomEndToEnd {
 
             race = hostMaster.joinRoom(roomId, host, "HOST", FINGERPRINT)
                     .get(10, TimeUnit.SECONDS);
+            race.sendControl(new ControlMessage.SetReadyRule("AUTO"));
             race.sendControl(new ControlMessage.RoundConfigure(
                     new ControlMessage.RoundConfig("s3k", 0, 0, 5, "OPEN", null)));
             await(race, event -> message(event, ControlMessage.RoundStart.class), 10_000);

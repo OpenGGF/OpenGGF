@@ -288,7 +288,9 @@ mod_api_surface_text() {
                     typeRefs[id] = h
                     declaration(first,i - 1,id); owner = id
                 } else {
-                    keep = owner > 0 && (supported(h) || kinds[owner] != "class")
+                    # Records and interfaces may own private implementation members.
+                    keep = owner > 0 && h !~ /(^|[^A-Za-z0-9_$])private[[:space:]]/ &&
+                        (supported(h) || kinds[owner] != "class")
                     # Field declarations retain every name/dimension, never values.
                     # Retain compact-constructor annotations and annotation defaults;
                     # exclude executable bodies except conservative enum bodies.

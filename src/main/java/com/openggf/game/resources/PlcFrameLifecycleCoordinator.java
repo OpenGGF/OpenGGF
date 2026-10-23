@@ -155,6 +155,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return iteration.apply(frame);
         } catch (RuntimeException | Error failure) {
             primaryFailure = failure;
+            frame.failed = true;
+            frame.completionActions = null;
             throw failure;
         } finally {
             try {
@@ -228,6 +230,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             return result;
         } catch (RuntimeException | Error failure) {
             primaryFailure = failure;
+            frame.failed = true;
+            frame.completionActions = null;
             throw failure;
         } finally {
             try {
@@ -333,7 +337,25 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         representedIterationDefersLoopTailPreparation = true;
     }
 
+    /**
+     * Captures completed live history after this consumed iteration publishes.
+     * Pre-tick assembly and callers outside an iteration complete immediately.
+     */
+    public void afterConsumedIteration(Runnable completion) {
+        Objects.requireNonNull(completion, "completion");
+        PlcLifecycleFrame frame = activeFrame;
+        if (frame != null && !frame.finished && frame.owner != null) {
+            if (!frame.failed) {
+                if (frame.completionActions == null) frame.completionActions = new java.util.ArrayDeque<>();
+                frame.completionActions.addLast(completion);
+            }
+        } else {
+            completion.run();
+        }
+    }
+
     public void reset() {
+        if (activeFrame != null) activeFrame.completionActions = null;
         if (externalComparisonSegmentOpenDeferred
                 && dynamicArtLifecycle != null
                 && dynamicArtLifecycle.isComparisonSegmentReserved()) {
@@ -450,6 +472,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private PlcLifecyclePhase owner;
         private boolean prepared;
         private boolean finished;
+        private boolean failed;
+        private java.util.ArrayDeque<Runnable> completionActions;
         private boolean consumedHeldLoopTailPreparation;
         private PlcLifecyclePhase heldPatternPreparation;
         private boolean gameVblankDispatched;
@@ -645,6 +669,23 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
 
         public void finish() {
             requireOpen();
+            try {
+                finishPublication();
+            } catch (RuntimeException | Error failure) {
+                failed = true;
+                completionActions = null;
+                throw failure;
+            }
+            // Detach before calling out: a callback may replay another iteration
+            // or throw, but none of this frame's work may run again later.
+            var completed = completionActions;
+            completionActions = null;
+            if (!failed && completed != null) {
+                while (!completed.isEmpty()) completed.removeFirst().run();
+            }
+        }
+
+        private void finishPublication() {
             if (heldPatternPreparation != null)
                 throw new IllegalStateException("missing physical VBlank before held Nemesis Init");
             if (service != null && owner != null

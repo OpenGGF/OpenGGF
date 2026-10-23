@@ -32,6 +32,8 @@ may need stable speech panels, longer reactions and intentional silence.
 | Sitar Hero edit-v1 | A 1.5 s silent count-in | Dead air removed. |
 | Starpost Valley first cuts | 800×448, uniform crossfades, a caption on nearly every shot | Larger cards, cinema crops, the diagonal gallery and a slower bed. |
 | Chaos Mode revision 3 | "retain a coherent HCZ soundtrack…; do not fade into the ghost source's DEZ music… omit minigames and related challenge/chat spoilers" | One bed throughout, curated effects and no spoilers. |
+| Emerald Remix rough cut (coached Sol draft, 2026-10-22, 41 s) | "it's use of palettes with the text is horrible, particularly around the drop shadow" | Keep the ROM glyph's own colours, and sample the shadow from the native card. Effects go in whole glyph pixels, with no invented outline. `BitmapFont` now enforces the grid. |
+| Same draft | "the video is just very... boring... very lazy with long stretches of level showcased without any accompaniment" (14 s of bare Clover Valley) | Round 4 answered with a filler caption every four beats and a small static tile panel. User: "minimal effort has been put in to achieve the goals". Accompany with the footage's own events, then counters and layout changes, and cut long takes down. Captions are at most one per chapter. Give the mod's idea a memorable beat. `check` ignores captions for bare stretches and flags caption density. |
 | Second Strike reels (flat reference) | DejaVu `drawtext` at `x=40`, a solid pad, hard concat, a text-only end card | Use this as the counter-example when choosing type and composition. |
 
 ## Stageplay dialogue revision
@@ -126,7 +128,27 @@ within their scope and do not establish creative acceptance.
 For a conceptual tutorial, connect each directing choice to its visible result.
 Use a coherent sample, show the actual settings and allow time to read them while
 the performance continues. Label editorial notes and track diagrams honestly; do
-not imitate controls the editor does not have. Finish with the complete scene so
-viewers can judge the relationships and pacing without instructional interruptions.
-Keep an editable sample and a direct path from the lesson to opening it. A first
-lesson does not need every available ability or a second unrelated showcase.
+not imitate controls the editor does not have. Let viewers judge the complete scene
+without instructional interruptions; its position in the film should serve the
+lesson. Keep an editable sample and a direct path from the lesson to opening it.
+A first lesson does not need every available ability or a second unrelated showcase.
+
+An Opus 5.5 aesthetic review found that revision seven repeated the same short
+action under seven lessons before showing the story, used small static notes, and
+stepped up roughly 7–8 LU at the story boundary. The approved revision-eight
+direction leads with the short, follows it with one continuous annotated pass,
+and changes one actual setting for a measured comparison. Enlarge the game and
+use one readable note per beat. Label any instructional freeze; do not silently
+retime native movement. A new moving tail can carry the invitation without
+replaying the climax. This is a response to this production, not a mandatory
+sequence for every tutorial.
+
+Performance details matter: acknowledge a character ability when its omission
+would undermine the premise (Tails can fly), give a listener a visible native
+reaction, and synchronize a count with actual takeoff rather than its authored
+command alone. Check dialogue against the whole jump arc and supporting surfaces;
+blindly moving every panel into the top band can obscure an apex. Use one music
+owner with genuine SFX stems and measure the encoded sections, since a whole-film
+loudness average can conceal a jump in level. The aesthetic review used sampled
+frames and source/audio measurements, not full-motion playback or physical hearing;
+its proposals still require those applicable checks and user creative acceptance.

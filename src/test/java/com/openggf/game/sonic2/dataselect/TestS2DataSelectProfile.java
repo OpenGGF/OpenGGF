@@ -30,6 +30,23 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestS2DataSelectProfile {
 
+    @Test
+    void payloadValidation_keepsSevenEmeraldsAndCommonSubsetRequirement() {
+        var payload = new java.util.LinkedHashMap<String, Object>(Map.of(
+                "zone", 10, "act", 0, "mainCharacter", "sonic", "sidekicks", List.of(),
+                "chaosEmeralds", List.of(6), "superEmeralds", List.of(6)));
+        S2DataSelectProfile profile = new S2DataSelectProfile();
+        assertTrue(profile.isPayloadValid(payload));
+        payload.put("superEmeralds", List.of(0));
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("superEmeralds", List.of());
+        payload.put("chaosEmeralds", List.of(7));
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("chaosEmeralds", List.of());
+        payload.put("act", 3);
+        assertFalse(profile.isPayloadValid(payload));
+    }
+
     @BeforeAll
     static void configureEngineServices() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());

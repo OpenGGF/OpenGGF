@@ -105,11 +105,27 @@ already-active attempt may deliver its finish during the two-second transit grac
 before the host finalizes the round. The protocol does not supply a trusted
 predeadline completion timestamp, and the client sends a finish whatever its local
 phase estimate, so in practice an attempt running at the deadline may complete up
-to two seconds after it and still be credited. Departed members' track votes are removed
+to two seconds after it and still be credited. A player may submit any number of
+attempts inside the window and the best valid run counts: while the window is open the
+client follows each finish's results tally with a fresh attempt, sends each
+`AttemptStart` immediately before that attempt's first sampled frame (so a retry's
+reload and title card never count against pacing), and leaves an unfinished run for
+the lobby once the host closes the round. A start refused only because the window is
+not open is not a violation; that attempt's frames, reset and finish are dropped
+quietly. The hub shows a finished or reset sender as `FINISHED` or `IDLE` in the
+roster until its next accepted batch and, once its buffered tail is relayed, stops
+offering it as another recipient's nearby sender. Departed members' track votes are removed
 from the live tally, including when their slot is reused. Ghost-stream and
 finish-evidence strikes apply the same connection-close threshold. A finish is
 one-shot: its input hash must be a SHA-256 digest,
-and a pending verifier verdict remains bound to that exact claim. JSON control envelopes
+and a pending verifier verdict remains bound to that exact claim. In verified rooms
+every unresolved improvement remains a candidate: the shown best is the fastest of the
+verified fallback and the pending candidates, a superseded claim's pass becomes the
+fallback when faster, a fail or void removes only its own claim, and round-end expiry
+(or a round started before the previous linger ended) voids every remaining claim's
+route. A participant pushed out of the broadcast top ten receives its new rank
+privately. Verifier workers log a failed cycle and retry after a bounded back-off,
+and a refused verdict for a voided or re-leased job counts as processed. JSON control envelopes
 reject duplicate and unknown fields. The in-memory verification queue holds at most
 4,096 tracked jobs. Uploaded jobs still queued or leased after one hour become durable
 `VOID_VERIFIER_UNAVAILABLE` verdicts without a cheating sanction; a late worker result
@@ -166,10 +182,9 @@ path for list, create, and join must still reply. A
 failed `RelayAttach` is answered with `RoomJoinRejected` on the already-attached
 socket; that frame goes to the relay handshake, not the join queue, and fails the
 handshake immediately with the broker's reason. A
-pre-wave-3 version-2 browser treats the negative list sentinel as an empty
-successful page until its next refresh; it does not crash, but may show a
-misleading empty-room state. Protocol compatibility is tracked for the next
-audit rather than claimed solved here.
+Protocol version 3 incorporates the negative list sentinel and membership-delta
+contract. Earlier experimental clients fail the exact-version handshake instead
+of presenting a rate-limited response as an empty successful page.
 
 Operator commands:
 
@@ -191,8 +206,19 @@ base64url code contains both 32-byte pins. Manual join decodes those pins, requi
 sending any proof. A bare address or `ws://` has no safe identity source and is rejected.
 The code is a trust-on-sharing capability: guests must receive it through a trusted
 channel and should not accept an invite edited by an untrusted party.
-This required wire-field change uses protocol version 2; version 1 clients and
-servers cannot mix on control connections.
+These wire fields and the initial-snapshot/`PlayerUpsert`/`PlayerLeft` membership
+contract use protocol version 5. Version 4 added the player's look to the signed
+`Hello` (transcript tag `client-auth/v2`), a lobby-only `UpdateProfile` for renaming
+or recolouring without a new identity, and a per-player `PlayerLook`; looks stay out
+of `RoomState` so a 256-player roster still fits one frame. Version 5 adds readiness
+(`SetReady`, per-player `PlayerReady`, `ReadyReset`, the owner's `SetReadyRule` and
+the host's `ReadyRule`: `REQUIRED`, `AUTO` or `DEFAULT_BY_SIZE`, required up to five
+players) and between-round lobby presence: binary `TYPE_LOBBY_FRAMES` up and
+`TYPE_LOBBY_AGGREGATE` down, in the ghost frame and aggregate layouts, validated
+(forward-only streams, rate and per-frame movement caps) and relayed to each player's
+eight nearest senders in relay rooms. Hosts and the master
+accept only `DisplayNames`-canonical names. Earlier experimental clients and servers
+cannot mix on control connections; no deployed compatibility path exists.
 
 Direct-room fallback tunnels check the receiving `HubConnection.queuedBytes()`
 before forwarding either text or binary in either direction. Above the shared

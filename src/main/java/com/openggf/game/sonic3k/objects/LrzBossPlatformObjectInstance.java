@@ -119,9 +119,8 @@ public final class LrzBossPlatformObjectInstance extends AbstractObjectInstance
     private boolean breakAgainstBoss() {
         int slot=state().bossSlot();
         if(slot<0) return false;
-        var boss=services().objectManager().getActiveObjects().stream()
-                .filter(o->o instanceof AbstractObjectInstance a && a.getSlotIndex()==slot && !a.isDestroyed())
-                .findFirst().orElse(null);
+        var boss=NativeObjectQueries.liveAtSlot(services().objectManager(), slot,
+                AbstractObjectInstance.class);
         if(boss==null || ((getX()-boss.getX()+0x40)&65535)>=0x80
                 || ((getY()-boss.getY()+0x40)&65535)>=0x80) return false;
         // ChildObjDat_7A1BC: ten repeated links, first failure ends the suffix.

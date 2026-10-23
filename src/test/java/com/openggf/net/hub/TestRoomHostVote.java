@@ -50,6 +50,8 @@ class TestRoomHostVote {
                 PlayerIdentity.loadOrCreate(dir.resolve("member")), "MEMBER");
         ControlMessage.RoundConfig first = new ControlMessage.RoundConfig(
                 "s3k", 0, 0, 2, "OPEN", null);
+        // The vote flow is under test, not readiness: nobody waits under AUTO.
+        room.onText(host, ControlCodec.encode(hostToken, new ControlMessage.SetReadyRule("AUTO")));
         room.onText(host, ControlCodec.encode(hostToken,
                 new ControlMessage.RoundConfigure(first)));
         now[0] += HostRoundEngine.COUNTDOWN_MILLIS + 2001

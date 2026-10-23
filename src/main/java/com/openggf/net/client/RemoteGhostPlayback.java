@@ -52,6 +52,9 @@ public final class RemoteGhostPlayback {
             extrapolated = 0;
             velocityX = 0;
             velocityY = 0;
+            // The old attempt's end ran dry and grew the delay; a retry is
+            // fresh jitter evidence, not a reason to show it up to 30 frames late.
+            delay = INITIAL_DELAY_FRAMES;
             cleanStreak = 0;
             stalled = false;
         }
@@ -93,6 +96,15 @@ public final class RemoteGhostPlayback {
 
     public boolean isStalled() {
         return stalled;
+    }
+
+    /**
+     * Frames of the current attempt are buffered ahead of the cursor. A late
+     * tail can arrive while {@link #isStalled()} is still set, because only
+     * the next {@link #advance()} clears the stall.
+     */
+    boolean hasPendingFrames() {
+        return newestIndex > cursor;
     }
 
     private Optional<RenderState> clean(int index, boolean snapped) {

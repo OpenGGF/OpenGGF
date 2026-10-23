@@ -1,0 +1,13 @@
+formatVersion: 1
+id: emerald-remix
+name: Emerald Remix
+version: 1.0.0
+authors: [OpenGGF]
+description: Sonic 2 with a remixed Emerald Hill Act 1 built from your own ROM's layout, and an original zone, Clover Valley, after Emerald Hill.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s2
+entrypoint: remix.EmeraldRemixMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

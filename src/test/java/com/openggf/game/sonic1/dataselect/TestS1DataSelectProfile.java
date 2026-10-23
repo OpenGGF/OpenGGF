@@ -40,6 +40,23 @@ class TestS1DataSelectProfile {
     }
 
     @Test
+    void payloadValidation_keepsS1ZoneAndSixEmeraldLimits() {
+        var payload = new java.util.LinkedHashMap<String, Object>(Map.of(
+                "zone", 6, "act", 2, "mainCharacter", "sonic", "sidekicks", List.of(),
+                "chaosEmeralds", List.of(5), "superEmeralds", List.of(5)));
+        S1DataSelectProfile profile = new S1DataSelectProfile();
+        assertTrue(profile.isPayloadValid(payload));
+        payload.put("zone", 7);
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("zone", 6);
+        payload.put("chaosEmeralds", List.of(6));
+        payload.put("superEmeralds", List.of());
+        assertFalse(profile.isPayloadValid(payload));
+        payload.put("chaosEmeralds", List.of(5, 5));
+        assertFalse(profile.isPayloadValid(payload));
+    }
+
+    @Test
     void gameCode_returnsS1() {
         assertEquals("s1", new S1DataSelectProfile().gameCode());
     }

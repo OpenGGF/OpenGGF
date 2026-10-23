@@ -355,3 +355,12 @@ above only for that bounded edge; full-act/breadth/native limits remain open.
 Actual identities, environment, source fingerprint, timings, cleanup and broader
 red smoke disposition are in the
 [Root composition record](../../plans/2026-10-13-s3k-playable-completion.md#root-icz-cnz-composition-and-smoke-disposition-2026-10-21).
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+The shared CNZ fan execution lookup uses adjacent owned SST queries with stable duplicate-occupant filtering. It retains layout/overlap and pending-deletion semantics; the shared fan checks apply independently of act loading.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

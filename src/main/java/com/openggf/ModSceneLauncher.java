@@ -132,6 +132,14 @@ final class ModSceneLauncher {
         return (wx, wy) -> com.openggf.graphics.LogicalMouse.map(window, graphics, wx, wy, logicalWidth, logicalHeight);
     }
 
+    /** Draws the open scene over a run it plays behind, at the run's screen size. */
+    static void drawOver(GameLoop gameLoop, GraphicsManager graphics, int width, int height) {
+        int[] viewport = {graphics.getViewportX(), graphics.getViewportY(), graphics.getViewportWidth(),
+                graphics.getViewportHeight()};
+        gameLoop.modSceneHost.drawOver(width, height,
+                graphics.isGlInitialized() ? graphics.getProjectionMatrixBuffer() : null, viewport);
+    }
+
     /** Draws the open scene in screen space. */
     static void draw(GameLoop gameLoop, GraphicsManager graphics, float[] projection) {
         int[] viewport = {graphics.getViewportX(), graphics.getViewportY(), graphics.getViewportWidth(),

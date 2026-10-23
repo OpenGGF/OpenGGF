@@ -35,6 +35,7 @@ final class GameLoopSuspension {
     private boolean parked;
     private boolean preparing;
     private boolean userPausedWhenParked;
+    private com.openggf.game.session.GameplayModeContext parkedOwner;
 
     GameLoopSuspension(GameLoop loop) {
         this.loop = Objects.requireNonNull(loop, "loop");
@@ -47,6 +48,8 @@ final class GameLoopSuspension {
     boolean parked() {
         return parked;
     }
+
+    com.openggf.game.session.GameplayModeContext parkedOwner() { return parkedOwner; }
 
     /** The Escape hold's completion: suspend when the run allows it, otherwise return as before. */
     void leave() {
@@ -94,6 +97,7 @@ final class GameLoopSuspension {
         loop.getEscapeToMasterTitleController().reset();
         userPausedWhenParked = loop.isUserPaused();
         if (userPausedWhenParked) loop.toggleUserPause();
+        parkedOwner = loop.resolveGameplayModeContext();
         parked = true;
         loop.refreshRuntimeBindings();
         return changeMode(GameMode.MASTER_TITLE_SCREEN);
@@ -102,7 +106,8 @@ final class GameLoopSuspension {
     /** Binds the game again and returns to the mode it was suspended from. */
     void unpark(GameMode mode) {
         parked = false;
-        loop.refreshRuntimeBindings();
+        loop.setGameplayMode(parkedOwner);
+        parkedOwner = null;
         changeMode(mode);
         if (userPausedWhenParked) loop.toggleUserPause();
         userPausedWhenParked = false;
@@ -112,6 +117,7 @@ final class GameLoopSuspension {
     void discard() {
         if (!parked) return;
         parked = false;
+        parkedOwner = null;
         userPausedWhenParked = false;
         loop.retireModScene();
         loop.tearDownGameplayForReturn();

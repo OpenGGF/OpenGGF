@@ -473,6 +473,25 @@ class TestCollisionSystemAirLanding {
         };
     }
 
+    @Test
+    void speedDefinitionCanPublishGroundStateBeforeControllerConstruction() {
+        class ConstructionProbe extends AbstractPlayableSprite {
+            boolean groundStateCallback;
+
+            ConstructionProbe() { super("sonic", (short) 0, (short) 0); }
+
+            @Override protected void defineSpeeds() { setAir(true); }
+            @Override protected void createSensorLines() { }
+            @Override public void draw() { }
+            @Override protected void onGroundStateChanged(boolean airborne) {
+                groundStateCallback = airborne;
+            }
+        }
+        var sprite = new ConstructionProbe();
+        assertTrue(sprite.groundStateCallback, "constructor hooks retain scoped ground-state publication");
+        assertTrue(sprite.getAir());
+    }
+
     private static SensorResult[] exactSurfaceContactResults() {
         return new SensorResult[] {
                 new SensorResult((byte) 0x08, (byte) 0x00, 14, Direction.DOWN),

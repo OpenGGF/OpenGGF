@@ -447,6 +447,14 @@ public class InputHandler {
 		logicalOverride = null;
 	}
 
+    boolean clearLogicalOverrideIfSame(LogicalInputSnapshot expected) {
+        if (expected == null || logicalOverride != expected) {
+            return false;
+        }
+        clearLogicalOverride();
+        return true;
+    }
+
 	public boolean hasLogicalOverride() {
 		return logicalOverride != null;
 	}

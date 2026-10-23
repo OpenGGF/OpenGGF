@@ -3,6 +3,7 @@ package com.openggf.net.hub;
 import com.openggf.net.protocol.ControlMessage;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +41,20 @@ public final class HostRoundEngine {
                         String verifyState) {
     }
 
+    /** Standings order: faster time first, then the earlier accepted improvement. */
+    private static final Comparator<Best> STANDING_ORDER = Comparator
+            .comparingInt(Best::timeFrames).thenComparingLong(Best::achievedOrder);
+
     private final LongSupplier hubClockMillis;
     private final Consumer<ControlMessage> broadcaster;
+    // Shown best per participant. In a verified room it is always the fastest of
+    // the participant's verified fallback and its unresolved pending candidates.
     private final Map<String, Best> bests = new LinkedHashMap<>();
     private final Map<String, Best> verifiedBests = new LinkedHashMap<>();
+    // Every accepted improvement still awaiting a verdict, in acceptance order. A
+    // superseded claim keeps its candidate: its job still runs, and its PASS can
+    // become the fallback when a later, faster claim fails.
+    private final Map<String, List<Best>> pendingCandidates = new LinkedHashMap<>();
     private final Map<String, Integer> lastFinishedAttemptByParticipant = new LinkedHashMap<>();
     private final List<String> voteTrackPool = new ArrayList<>();
     private final Map<Integer, String> votesBySlot = new LinkedHashMap<>();
@@ -75,7 +86,9 @@ public final class HostRoundEngine {
     }
 
     boolean mayStartAttempt() {
-        return phase == Phase.RUNNING && hubClockMillis.getAsLong() <= deadline;
+        long now = hubClockMillis.getAsLong();
+        advanceCountdown(now);
+        return phase == Phase.RUNNING && now <= deadline;
     }
 
     public boolean startRound(ControlMessage.RoundConfig newConfig) {
@@ -83,6 +96,9 @@ public final class HostRoundEngine {
                 && (phase != Phase.ROUND_END || !voteTrackPool.isEmpty())) {
             return false;
         }
+        // A round started before the previous linger finished still holds
+        // unresolved claims; void their verification routes before forgetting them.
+        expirePendingCandidates();
         long now = hubClockMillis.getAsLong();
         config = newConfig;
         countdownEndsAt = now + COUNTDOWN_MILLIS;
@@ -99,9 +115,7 @@ public final class HostRoundEngine {
 
     public void onTick() {
         long now = hubClockMillis.getAsLong();
-        if (phase == Phase.COUNTDOWN && now >= countdownEndsAt) {
-            phase = Phase.RUNNING;
-        }
+        advanceCountdown(now);
         // Keep accepted attempts alive for finishes in transit. The protocol has no
         // trusted completion timestamp, so the host cannot prove a finish happened
         // before the deadline; RoomHost separately stops new attempts at deadline.
@@ -117,20 +131,7 @@ public final class HostRoundEngine {
                     + pendingHoldMillis) {
                 return;
             }
-            if (pendingVerdictCount() > 0) {
-                List<Map.Entry<String, Best>> expired = bests.entrySet().stream()
-                        .filter(entry -> "PENDING".equals(entry.getValue().verifyState()))
-                        .toList();
-                for (Map.Entry<String, Best> entry : expired) {
-                    // Map.Entry is live: restoring the fallback replaces its value.
-                    Best best = entry.getValue();
-                    restoreVerifiedBest(entry.getKey());
-                    pendingExpiryListener.accept(best.slot(), best.finish().attemptId());
-                    pendingResultExpiryListener.accept(new Result(best.slot(),
-                            best.participantId(), best.fingerprint(), best.displayName(),
-                            best.character(), best.timeFrames(), best.finish(),
-                            best.verifyState()));
-                }
+            if (expirePendingCandidates()) {
                 broadcaster.accept(new ControlMessage.StandingsDelta(
                         broadcastStandings()));
             }
@@ -142,6 +143,15 @@ public final class HostRoundEngine {
         }
         if (phase == Phase.VOTE && now >= voteEndsAt) {
             closeVote();
+        }
+    }
+
+    private void advanceCountdown(long now) {
+        // Socket messages and scheduled ticks share the host clock but can arrive
+        // in either order. Admit the announced start boundary even when its tick
+        // callback has not run yet; deadline/grace checks remain with each owner.
+        if (phase == Phase.COUNTDOWN && now >= countdownEndsAt) {
+            phase = Phase.RUNNING;
         }
     }
 
@@ -182,6 +192,7 @@ public final class HostRoundEngine {
         pendingResultExpiryListener = listener == null ? result -> { } : listener;
     }
 
+    /** Participants whose shown best still awaits a verdict; holds the round end. */
     public int pendingVerdictCount() {
         return (int) bests.values().stream()
                 .filter(best -> "PENDING".equals(best.verifyState())).count();
@@ -198,45 +209,95 @@ public final class HostRoundEngine {
     }
 
     List<Result> results() {
-        return sortedBests().stream().map(best -> new Result(best.slot(),
-                best.participantId(), best.fingerprint(), best.displayName(),
-                best.character(), best.timeFrames(), best.finish(), best.verifyState()))
-                .toList();
+        return sortedBests().stream().map(HostRoundEngine::result).toList();
+    }
+
+    private static Result result(Best best) {
+        return new Result(best.slot(), best.participantId(), best.fingerprint(),
+                best.displayName(), best.character(), best.timeFrames(), best.finish(),
+                best.verifyState());
     }
 
     public void onVerdict(int slot, int attemptId, boolean pass) {
-        Best best = bests.values().stream().filter(value -> value.slot() == slot
-                && value.finish().attemptId() == attemptId).findFirst().orElse(null);
-        if (best != null) {
-            onVerdictForParticipant(best.participantId(), attemptId,
-                    best.finish().inputRecordingHashHex(), pass);
+        Best candidate = pendingCandidates.values().stream().flatMap(List::stream)
+                .filter(value -> value.slot() == slot
+                        && value.finish().attemptId() == attemptId)
+                .findFirst().orElse(null);
+        if (candidate != null) {
+            onVerdictForParticipant(candidate.participantId(), attemptId,
+                    candidate.finish().inputRecordingHashHex(), pass);
         }
     }
 
     void onVerdictForParticipant(String participantId, int attemptId,
                                  String recordingHash, boolean pass) {
-        Best best = bests.get(participantId);
-        if (best == null || !"PENDING".equals(best.verifyState())
-                || best.finish().attemptId() != attemptId
-                || !best.finish().inputRecordingHashHex().equals(recordingHash)) {
+        List<Best> candidates = pendingCandidates.get(participantId);
+        Best candidate = candidates == null ? null : candidates.stream()
+                .filter(value -> value.finish().attemptId() == attemptId
+                        && value.finish().inputRecordingHashHex().equals(recordingHash))
+                .findFirst().orElse(null);
+        if (candidate == null) {
             return;
         }
-        if (pass) {
-            Best verified = new Best(best.slot(), best.participantId(),
-                    best.fingerprint(), best.displayName(), best.character(),
-                    best.timeFrames(), best.achievedOrder(), best.finish(), "VERIFIED");
-            bests.put(participantId, verified);
-            verifiedBests.put(participantId, verified);
-        } else {
-            restoreVerifiedBest(participantId);
+        candidates.remove(candidate);
+        if (candidates.isEmpty()) {
+            pendingCandidates.remove(participantId);
         }
-        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
+        if (pass) {
+            Best verified = new Best(candidate.slot(), candidate.participantId(),
+                    candidate.fingerprint(), candidate.displayName(), candidate.character(),
+                    candidate.timeFrames(), candidate.achievedOrder(), candidate.finish(),
+                    "VERIFIED");
+            Best fallback = verifiedBests.get(participantId);
+            // A superseded claim that passes replaces a slower fallback; a stale
+            // pass slower than the current fallback changes nothing.
+            if (fallback == null || STANDING_ORDER.compare(verified, fallback) < 0) {
+                verifiedBests.put(participantId, verified);
+            }
+        }
+        // A verdict on the shown claim always changes its row (state or time),
+        // even outside the broadcast cap; one on a hidden claim changes nothing.
+        if (showBest(participantId)) {
+            broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings()));
+        }
     }
 
-    private void restoreVerifiedBest(String participantId) {
-        Best verified = verifiedBests.get(participantId);
-        if (verified == null) bests.remove(participantId);
-        else bests.put(participantId, verified);
+    /** Recomputes a verified room's shown best; returns whether it changed. */
+    private boolean showBest(String participantId) {
+        Best shown = verifiedBests.get(participantId);
+        for (Best candidate : pendingCandidates.getOrDefault(participantId, List.of())) {
+            if (shown == null || STANDING_ORDER.compare(candidate, shown) < 0) {
+                shown = candidate;
+            }
+        }
+        Best previous = shown == null ? bests.remove(participantId)
+                : bests.put(participantId, shown);
+        return !Objects.equals(previous, shown);
+    }
+
+    /**
+     * Expires every unresolved claim and shows each participant's verified
+     * fallback. Both listeners fire once per claim, so the relay voids every
+     * verification route. Returns whether any shown best changed.
+     */
+    private boolean expirePendingCandidates() {
+        if (pendingCandidates.isEmpty()) {
+            return false;
+        }
+        Map<String, List<Best>> expired = new LinkedHashMap<>(pendingCandidates);
+        pendingCandidates.clear();
+        boolean changed = false;
+        for (String participantId : expired.keySet()) {
+            changed |= showBest(participantId);
+        }
+        for (List<Best> candidates : expired.values()) {
+            for (Best candidate : candidates) {
+                pendingExpiryListener.accept(candidate.slot(),
+                        candidate.finish().attemptId());
+                pendingResultExpiryListener.accept(result(candidate));
+            }
+        }
+        return changed;
     }
 
     void sendVoteState(Consumer<ControlMessage> recipient) {
@@ -266,6 +327,7 @@ public final class HostRoundEngine {
                                   String character, ControlMessage.AttemptFinish finish,
                                   boolean attemptFlagged) {
         long now = hubClockMillis.getAsLong();
+        advanceCountdown(now);
         if (phase != Phase.RUNNING || now > deadline + FINISH_GRACE_MILLIS
                 || attemptFlagged || finish.timeFrames() <= 0
                 || finish.attemptId() <= lastFinishedAttemptByParticipant
@@ -278,17 +340,25 @@ public final class HostRoundEngine {
             return null;
         }
         lastFinishedAttemptByParticipant.put(participantId, finish.attemptId());
+        // Compare with the shown best: each accepted improvement is strictly faster
+        // than everything the participant has on display, so one job per improvement.
         Best existing = bests.get(participantId);
         if (existing != null && existing.timeFrames() <= finish.timeFrames()) {
             return null;
         }
-        bests.put(participantId, new Best(slot, participantId, fingerprint,
+        Best improved = new Best(slot, participantId, fingerprint,
                 displayName, character, finish.timeFrames(),
-                achievedCounter++, finish, verifiedRoom ? "PENDING" : "NONE"));
-        List<ControlMessage.StandingsRow> rows = standings();
-        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(rows)));
-        int rank = results().stream()
-                .map(Result::participantId).toList().indexOf(participantId) + 1;
+                achievedCounter++, finish, verifiedRoom ? "PENDING" : "NONE");
+        if (verifiedRoom) {
+            pendingCandidates.computeIfAbsent(participantId, ignored -> new ArrayList<>())
+                    .add(improved);
+        }
+        bests.put(participantId, improved);
+        List<Best> sorted = sortedBests();
+        // Keep every finish notification: clients outside the cap also use it
+        // to refresh their around-you page. Reuse this ordering for private rank.
+        broadcaster.accept(new ControlMessage.StandingsDelta(broadcastStandings(sorted)));
+        int rank = sorted.indexOf(improved) + 1;
         return new FinishOutcome(slot, rank, rank > STANDINGS_BROADCAST_CAP,
                 finish.attemptId());
     }
@@ -301,7 +371,10 @@ public final class HostRoundEngine {
     }
 
     public List<ControlMessage.StandingsRow> standings() {
-        List<Best> sorted = sortedBests();
+        return standings(sortedBests());
+    }
+
+    private static List<ControlMessage.StandingsRow> standings(List<Best> sorted) {
         List<ControlMessage.StandingsRow> rows = new ArrayList<>(sorted.size());
         for (int index = 0; index < sorted.size(); index++) {
             Best best = sorted.get(index);
@@ -313,12 +386,7 @@ public final class HostRoundEngine {
 
     private List<Best> sortedBests() {
         List<Best> sorted = new ArrayList<>(bests.values());
-        sorted.sort((left, right) -> {
-            int byTime = Integer.compare(
-                    left.timeFrames(), right.timeFrames());
-            return byTime != 0 ? byTime : Long.compare(
-                    left.achievedOrder(), right.achievedOrder());
-        });
+        sorted.sort(STANDING_ORDER);
         return sorted;
     }
 
@@ -349,13 +417,13 @@ public final class HostRoundEngine {
     }
 
     private List<ControlMessage.StandingsRow> broadcastStandings() {
-        return broadcastStandings(standings());
+        return broadcastStandings(sortedBests());
     }
 
     private static List<ControlMessage.StandingsRow> broadcastStandings(
-            List<ControlMessage.StandingsRow> rows) {
-        return List.copyOf(rows.subList(0,
-                Math.min(STANDINGS_BROADCAST_CAP, rows.size())));
+            List<Best> sorted) {
+        return standings(sorted.subList(0,
+                Math.min(STANDINGS_BROADCAST_CAP, sorted.size())));
     }
 
     private void beginVote() {

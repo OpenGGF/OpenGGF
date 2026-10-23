@@ -5,6 +5,7 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectGameProfile;
+import com.openggf.game.dataselect.DataSelectPayloadValidators;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic3k.Sonic3kZoneRegistry;
@@ -122,8 +123,7 @@ public final class S3kDataSelectProfile implements DataSelectGameProfile {
                 normalized = new java.util.LinkedHashMap<>(payload);
                 normalized.put("zone", Sonic3kZoneIds.ZONE_AIZ);
             }
-            boolean commonValid = com.openggf.game.sonic1.dataselect.DataSelectPayloadValidators
-                    .validateCommonPayload(normalized, STOCK_ZONE_COUNT - 1, 7);
+            boolean commonValid = DataSelectPayloadValidators.validateCommonPayload(normalized, STOCK_ZONE_COUNT - 1, 7);
             if (!commonValid) {
                 return false;
             }

@@ -379,6 +379,24 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    protected void updateWait() {
+        // Got_Wait only advances the routine on expiry and displays the card
+        // (docs/s1disasm/_incObj/3A Got Through Card.asm:112-119). Got_NextLevel
+        // performs its restart or special-stage write on the following pass
+        // (:175-211), after another ordinary VBlank can service Sonic_LoadGfx.
+        // SBZ2's callback already only arms Got_SBZ2_MoveOut (:227-236); its
+        // first movement belongs to that following pass, with no extra delay.
+        // Keep the non-native host-return policy's existing expiry boundary.
+        if (services().runPolicy().returnsToHostOnActCompletion()
+                || (!specialStageAfter && isSBZ2())) {
+            super.updateWait();
+        } else if (stateTimer > getWaitDuration()) {
+            state = STATE_EXIT;
+            onExitReady();
+        }
+    }
+
+    @Override
     protected void onExitReady() {
         // Not a ROM branch: a run whose GameplayRunPolicy returns to its host on
         // act completion ends here instead of any of the below. This matters most
@@ -710,15 +728,25 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             }
         }
 
-        // Write time bonus digits at index 0, ring bonus digits at index 8
-        writeBonusValue(patterns, 0, timeBonus, digitPatterns);
-        writeBonusValue(patterns, Sonic1Constants.S1_RESULTS_BONUS_DIGIT_GROUP_TILES, ringBonus, digitPatterns);
-        writeScoreValue(patterns, scoreValue, digitPatterns);
-
-        // Push updated digit patterns to GPU
         var graphicsManager = services().graphicsManager();
-        renderer.updatePatternRange(graphicsManager, 0, Sonic1Constants.S1_RESULTS_BONUS_DIGIT_TILES);
-        renderer.updatePatternRange(graphicsManager, SCORE_DIGITS_START_INDEX, SCORE_DIGIT_TILES);
+        int group = Sonic1Constants.S1_RESULTS_BONUS_DIGIT_GROUP_TILES;
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            if (timeBonus != lastTimeBonus) {
+                writeBonusValue(patterns, 0, timeBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, 0, group);
+            }
+            if (ringBonus != lastRingBonus) {
+                writeBonusValue(patterns, group, ringBonus, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, group, group);
+            }
+            if (scoreValue != lastScoreValue) {
+                writeScoreValue(patterns, scoreValue, digitPatterns);
+                renderer.updatePatternRange(graphicsManager, SCORE_DIGITS_START_INDEX, SCORE_DIGIT_TILES);
+            }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
+        }
 
         lastTimeBonus = timeBonus;
         lastRingBonus = ringBonus;

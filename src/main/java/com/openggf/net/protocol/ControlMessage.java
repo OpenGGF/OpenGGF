@@ -39,9 +39,14 @@ public sealed interface ControlMessage {
                        String routing, boolean verified) {
     }
 
+    /**
+     * Join request. {@code appearance} is the canonical {@link
+     * com.openggf.net.identity.PlayerAppearance} wire form for the player's current character
+     * ({@code ""} for the stock look); it is part of the signed transcript.
+     */
     @com.openggf.game.ModApi
     record Hello(int protocolVersion, String pubKeyBase64, String displayName,
-                 String determinismFingerprint) implements ControlMessage {
+                 String determinismFingerprint, String appearance) implements ControlMessage {
     }
 
     @com.openggf.game.ModApi
@@ -70,8 +75,71 @@ public sealed interface ControlMessage {
     record RoomState(List<PlayerInfo> players) implements ControlMessage {
     }
 
+    /** Replaces metadata for one occupied slot after the initial RoomState. */
+    @com.openggf.game.ModApi
+    record PlayerUpsert(PlayerInfo player) implements ControlMessage {
+    }
+
+    /** Removes one occupied slot after the initial RoomState. */
+    @com.openggf.game.ModApi
+    record PlayerLeft(int slot) implements ControlMessage {
+    }
+
     @com.openggf.game.ModApi
     record SelectCharacter(String character) implements ControlMessage {
+    }
+
+    /**
+     * Client to host, lobby only: replaces the sender's display name and look without a new
+     * identity. Both fields are canonical ({@link com.openggf.net.identity.DisplayNames},
+     * {@link com.openggf.net.identity.PlayerAppearance}); the host answers with
+     * {@link PlayerUpsert} and {@link PlayerLook}.
+     */
+    @com.openggf.game.ModApi
+    record UpdateProfile(String displayName, String appearance) implements ControlMessage {
+    }
+
+    /**
+     * Host to clients: one player's look. Sent per player rather than inside {@link RoomState},
+     * which must hold a full 256-player roster in one frame; a stock look is {@code ""}.
+     */
+    @com.openggf.game.ModApi
+    record PlayerLook(int slot, String appearance) implements ControlMessage {
+    }
+
+    /**
+     * Client to host between rounds: the sender is ready (or no longer ready). Ready is a
+     * visible signal; under a {@link ReadyRule} that requires it, the room owner's round start
+     * waits for every present player. The host answers with {@link PlayerReady}.
+     */
+    @com.openggf.game.ModApi
+    record SetReady(boolean ready) implements ControlMessage {
+    }
+
+    /** Host to clients: one player's ready state. {@link RoundStart} clears everyone's. */
+    @com.openggf.game.ModApi
+    record PlayerReady(int slot, boolean ready) implements ControlMessage {
+    }
+
+    /** Host to clients: every present player's ready state becomes {@code ready} at once. */
+    @com.openggf.game.ModApi
+    record ReadyReset(boolean ready) implements ControlMessage {
+    }
+
+    /**
+     * Room owner to host between rounds: the room's ready rule, one of
+     * {@link com.openggf.net.protocol.ReadyRules} by name. Anything else is ignored.
+     */
+    @com.openggf.game.ModApi
+    record SetReadyRule(String rule) implements ControlMessage {
+    }
+
+    /**
+     * Host to clients: the room's ready rule and whether, with the players present now, the
+     * owner's round start waits for every player to be ready.
+     */
+    @com.openggf.game.ModApi
+    record ReadyRule(String rule, boolean required) implements ControlMessage {
     }
 
     @com.openggf.game.ModApi

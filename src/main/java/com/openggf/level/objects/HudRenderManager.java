@@ -17,6 +17,8 @@ import java.util.function.Supplier;
 
 @com.openggf.game.ModApi
 public class HudRenderManager {
+    /** A hosted run's scene covers the level with its menu: the HUD is not drawn (the timer runs). */
+    boolean coveredByHost;
     com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =

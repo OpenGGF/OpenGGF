@@ -53,4 +53,27 @@ class TestVoteRoundTrip {
         assertTrue(engine.startRound(next));
         assertEquals(HostRoundEngine.Phase.COUNTDOWN, engine.phase());
     }
+
+    @Test
+    void aCustomPoolOffersItsOwnBossActsAndNeverTheActJustRaced() {
+        long[] now = {0};
+        ClientRaceSession client = new ClientRaceSession(() -> now[0]);
+        HostRoundEngine engine = new HostRoundEngine(() -> now[0], client::onControl);
+        List<String> pool = openggf.timeattack.mp.VoteTrackPools.keysOf("s2",
+                new openggf.timeattack.VotePool("Boss acts", List.of("0:1", "1:1", "2:1", "7:2")));
+        assertTrue(openggf.timeattack.mp.VoteTrackPools.rejection("s2", pool, null).isEmpty());
+        engine.setVoteTrackPool(pool, openggf.timeattack.TimeAttackTrackCatalog::isEligibleKey);
+
+        assertTrue(engine.startRound(new ControlMessage.RoundConfig("s2", 0, 1, 60, "OPEN", null)));
+        now[0] += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        now[0] += 60_000 + HostRoundEngine.FINISH_GRACE_MILLIS + 1;
+        engine.onTick();
+        now[0] += HostRoundEngine.ROUND_END_LINGER_MILLIS;
+        engine.onTick();
+
+        assertEquals(ClientRaceSession.Phase.VOTE, client.phase());
+        assertEquals(List.of("s2:1:1", "s2:2:1", "s2:7:2"), client.voteOptions(),
+                "three options from the custom pool, skipping EMERALD HILL 2 just raced");
+    }
 }

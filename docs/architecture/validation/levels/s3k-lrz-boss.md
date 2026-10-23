@@ -642,3 +642,12 @@ passes in `54296` at16:40:51UTC, .107s. That full invocation is **72/1F/0E/0S**:
 This green slice changes no runtime or public API and does not certify ICZ,
 new route/configuration products, native pixels or the whole campaign.
 [Exact commands, source epochs and limits](../../plans/2026-10-13-s3k-playable-completion.md#r9-green-lrzddz-split-and-r10-icz-evidence-boundary--2026-10-17).
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Boss platform break checks and the platform stream dereference their existing saved owned slots with the previous live-occupant predicate. Empty/reset-vector handling and replacement types remain unchanged. `TestLrzEndBossEncounterHeadless` is the focused encounter owner.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

@@ -4659,3 +4659,12 @@ Frozen R35 leaf/runtime `9bfdae0f`/`d454376ea`; no maintained test/movie/oracle/
 One fresh Right+A clears the obstruction to first free ground18513 at2991/492,28rings/3lives. A private guard-order failure precedes its scheduled pickup jump; corrected short-jump continuation misses the public geometric contact window. These failures remain explicit.
 Actual MANUAL carry of bound P1 publishes18699 during ordinary P2 descent, without a new P1jump/reset/seed;307 carry rows lead to19005 P1(3119,344)/P2(3119,316),VY−64,28rings/3lives/unhurt. Fuel0 is terminal; P1 remains carried, not a free-ground inlet. No wrap/lower pad/Mecha/DEZ or receiver/collision/native cause is qualified.
 All four are **0JUnit/skips N/A**, with full pads/script/ZIP/prefix proof and normal drawing; no R35/baseline/broad/native replay. Four ordinary requests spent; conditional two final cold replays/one focused request unused. Old46/48/11664 and strict rewind predicates stay unchanged. [Exact failures, source/input hashes, commands, timings and limits](../../plans/2026-10-13-s3k-playable-completion.md#r36-ordinary-obstruction-jump-and-actual-manual-carry--2026-10-22).
+
+## Object-pipeline performance follow-up (2026-10-22)
+
+Death Egg trails use raw owned-slot dereference: pending-deletion positions remain readable until removal, empty slots supply zero, and a new occupant of any type supplies its position. `TestSszDeathEggCutscene` adds the raw/removal/replacement boundary; trail animation continues to own lifetime.
+
+The [query/allocation audit](../../audits/performance/2026-10-22-native-object-query-performance.md)
+and its companion implementation records own exact tested states, commands and
+remaining delivery checks. These local checks do not close inherited viewport,
+donor/team, full-route, load/respawn, audiovisual or whole-world rewind products.

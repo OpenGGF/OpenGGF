@@ -59,11 +59,14 @@ public class PatternSpriteRenderer {
         headProfileResolved=false;
         Pattern[] patterns = spriteSheet.getPatterns();
         int end = Math.min(patterns.length, startIndex + count);
-        for (int i = Math.max(0, startIndex); i < end; i++) {
-            graphicsManager.updatePatternTexture(patterns[i], patternBase + i);
-            if (i >= 0 && i < patternBoundsCache.length) {
+        graphicsManager.beginPatternAtlasBatch();
+        try {
+            for (int i = Math.max(0, startIndex); i < end; i++) {
+                graphicsManager.updatePatternTexture(patterns[i], patternBase + i);
                 patternBoundsCache[i] = null;
             }
+        } finally {
+            graphicsManager.endPatternAtlasBatch();
         }
     }
 

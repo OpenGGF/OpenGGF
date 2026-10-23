@@ -1,52 +1,46 @@
 package openggf.timeattack;
 
-import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.LevelOverlayCanvas;
+import openggf.timeattack.mp.HudTextLayout;
 
-/**
- * Top-right HUD for solo time attack: current time, best time, split delta and a new-record
- * callout, drawn over the level through the run host's overlay canvas.
- */
+import java.util.ArrayList;
+import java.util.List;
+
+/** Compact run clock, with a single bottom strip while the stock act-clear card is visible. */
 public final class TimeAttackHud {
-    private static final int MARGIN = 4;
-    private static final int TOP_Y = 4;
-    private static final int LINE_HEIGHT = 8;
-    private static final int WHITE = 0xFFFFFFFF;
-    private static final int GREY = 0xFFC0C0C0;
-    private static final int GREEN = 0xFF60FF60;
-    private static final int RED = 0xFFFF6060;
-    private static final int YELLOW = 0xFFFFFF40;
-    private static final int SHADOW = 0xC0000000;
-
-    private TimeAttackHud() {
-    }
+    private TimeAttackHud() { }
 
     public static void draw(LevelOverlayCanvas canvas, TimeAttackHudState state) {
-        if (state == null || !state.active()) {
-            return;
+        HudTextLayout.Panel panel = layout(canvas.width(), canvas.height(), state);
+        if (panel != null) HudTextLayout.drawPanel(canvas, panel);
+    }
+
+    public static HudTextLayout.Panel layout(int width, int height, TimeAttackHudState state) {
+        if (state == null || !state.active()) return null;
+        if (state.finished()) {
+            String line = "TIME " + TimeAttackTimeFormat.frames(state.elapsedDisplayFrames())
+                    + (state.newBest() ? "  NEW BEST" : "  FINISHED");
+            if (!state.saveNotice().isEmpty()) {
+                line = TimeAttackTimeFormat.frames(state.elapsedDisplayFrames()) + "  " + state.saveNotice();
+            }
+            return HudTextLayout.panel(width, HudTextLayout.finishStripTop(height), 220,
+                    List.of(new HudTextLayout.Line(line,
+                            state.newBest() ? HudTextLayout.GOLD
+                                    : state.saveNotice().isEmpty() ? HudTextLayout.WHITE : 0xFFFF8E83)),
+                    state.newBest() ? HudTextLayout.GOLD : HudTextLayout.ACCENT);
         }
-        int y = TOP_Y;
-        drawRight(canvas, TimeAttackTimeFormat.frames(state.elapsedDisplayFrames()), y, WHITE);
-        y += LINE_HEIGHT;
+        List<HudTextLayout.Line> lines = new ArrayList<>();
+        lines.add(new HudTextLayout.Line("TIME "
+                + TimeAttackTimeFormat.frames(state.elapsedDisplayFrames()), HudTextLayout.WHITE));
         if (state.bestTimeFrames() >= 0) {
-            drawRight(canvas, "BEST " + TimeAttackTimeFormat.frames(state.bestTimeFrames()), y, GREY);
-            y += LINE_HEIGHT;
+            lines.add(new HudTextLayout.Line("BEST " + TimeAttackTimeFormat.frames(state.bestTimeFrames()),
+                    HudTextLayout.MUTED));
         }
         String delta = TimeAttackTimeFormat.delta(state.lastSplitDelta());
         if (!delta.isEmpty()) {
-            drawRight(canvas, delta, y, state.lastSplitDelta() < 0 ? GREEN : RED);
-            y += LINE_HEIGHT;
+            lines.add(new HudTextLayout.Line("SPLIT " + delta,
+                    state.lastSplitDelta() < 0 ? 0xFF79E5A8 : 0xFFFF8E83));
         }
-        if (state.finished() && state.newBest()) {
-            drawRight(canvas, "NEW RECORD", y, YELLOW);
-            y += LINE_HEIGHT;
-        }
-        if(state.finished() && !state.saveNotice().isEmpty())drawRight(canvas,state.saveNotice(),y,
-                state.newBest() ? YELLOW : RED);
-    }
-
-    private static void drawRight(LevelOverlayCanvas canvas, String line, int y, int argb) {
-        int x = canvas.width() - MARGIN - CompactFont.width(line, 1);
-        CompactFont.shadowed(canvas, line, x, y, 1, argb, SHADOW);
+        return HudTextLayout.panel(width, 4, HudTextLayout.PANEL_WIDTH, lines, HudTextLayout.ACCENT);
     }
 }

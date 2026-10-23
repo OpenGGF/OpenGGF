@@ -36,11 +36,14 @@ public final class LiveRewindInputSource implements InputSource {
     void appendFrame(InputHandler input, SonicConfigurationService config, LiveRewindPacingFrame pacing) {
         Objects.requireNonNull(input, "input");
         Objects.requireNonNull(config, "config");
-        int frameIndex = baseFrame + size;
+        appendFrame(captureFrame(input, config), pacing);
+    }
+
+    static Bk2FrameInput captureFrame(InputHandler input, SonicConfigurationService config) {
         PlayerInputState p1 = input.logical().player1();
         PlayerInputState p2 = input.logical().player2();
-        append(new Bk2FrameInput(
-                frameIndex,
+        return new Bk2FrameInput(
+                0,
                 p1.heldMask(),
                 p1.actionHeldMask(),
                 p1.startHeld(),
@@ -52,7 +55,16 @@ public final class LiveRewindInputSource implements InputSource {
                 input.isControlDown(),
                 input.isAltDown(),
                 input.isSuperDown(),
-                "live:" + frameIndex), pacing);
+                "live");
+    }
+
+    void appendFrame(Bk2FrameInput captured, LiveRewindPacingFrame pacing) {
+        int frameIndex = baseFrame + size;
+        append(new Bk2FrameInput(frameIndex,
+                captured.p1InputMask(), captured.p1ActionMask(), captured.p1StartPressed(),
+                captured.p2InputMask(), captured.p2ActionMask(), captured.p2StartPressed(),
+                captured.debugModeTogglePressed(), captured.debugShiftDown(), captured.debugControlDown(),
+                captured.debugAltDown(), captured.debugSuperDown(), "live:" + frameIndex), pacing);
     }
 
     public void discardAfter(int frame) {

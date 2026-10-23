@@ -1,0 +1,389 @@
+{
+  "formatVersion": 1,
+  "zoneName": "CLOVER VALLEY",
+  "zoneIndex": 64,
+  "levelIndex": 1024,
+  "blockGridSide": 8,
+  "width": 40,
+  "height": 6,
+  "bounds": {
+    "minX": 0,
+    "maxX": 4800,
+    "minY": 0,
+    "maxY": 544
+  },
+  "start": {
+    "x": 96,
+    "y": 544
+  },
+  "music": {
+    "stockId": 145
+  },
+  "assets": {
+    "patterns": "patterns.bin",
+    "chunks": "chunks.bin",
+    "blocks": "blocks.bin",
+    "foregroundMap": "fg-map.bin",
+    "backgroundMap": "bg-map.bin",
+    "solidHeights": "solid-heights.bin",
+    "solidWidths": "solid-widths.bin",
+    "solidAngles": "solid-angles.bin",
+    "collisionPrimary": "collision-primary.bin",
+    "collisionSecondary": "collision-secondary.bin",
+    "palettes": "palettes.bin"
+  },
+  "objects": [
+    {
+      "x": 1032,
+      "y": 528,
+      "stockObjectId": 38,
+      "subtype": 5,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33296,
+      "placementId": 1
+    },
+    {
+      "x": 1384,
+      "y": 528,
+      "stockObjectId": 38,
+      "subtype": 4,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33296,
+      "placementId": 2
+    },
+    {
+      "x": 1448,
+      "y": 528,
+      "stockObjectId": 38,
+      "subtype": 6,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33296,
+      "placementId": 3
+    },
+    {
+      "x": 1832,
+      "y": 568,
+      "stockObjectId": 65,
+      "subtype": 2,
+      "renderFlags": 0,
+      "respawnTracked": false,
+      "rawYWord": 568,
+      "placementId": 4
+    },
+    {
+      "x": 2408,
+      "y": 456,
+      "stockObjectId": 121,
+      "subtype": 1,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33224,
+      "placementId": 5
+    },
+    {
+      "x": 3208,
+      "y": 512,
+      "stockObjectId": 38,
+      "subtype": 4,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33280,
+      "placementId": 6
+    },
+    {
+      "x": 5016,
+      "y": 544,
+      "stockObjectId": 13,
+      "subtype": 0,
+      "renderFlags": 0,
+      "respawnTracked": true,
+      "rawYWord": 33312,
+      "placementId": 7
+    }
+  ],
+  "rings": [
+    {
+      "placementId": 0,
+      "x": 200,
+      "y": 560
+    },
+    {
+      "placementId": 1,
+      "x": 232,
+      "y": 560
+    },
+    {
+      "placementId": 2,
+      "x": 264,
+      "y": 560
+    },
+    {
+      "placementId": 3,
+      "x": 296,
+      "y": 560
+    },
+    {
+      "placementId": 4,
+      "x": 328,
+      "y": 560
+    },
+    {
+      "placementId": 5,
+      "x": 584,
+      "y": 496
+    },
+    {
+      "placementId": 6,
+      "x": 616,
+      "y": 496
+    },
+    {
+      "placementId": 7,
+      "x": 648,
+      "y": 496
+    },
+    {
+      "placementId": 8,
+      "x": 680,
+      "y": 496
+    },
+    {
+      "placementId": 9,
+      "x": 712,
+      "y": 496
+    },
+    {
+      "placementId": 10,
+      "x": 744,
+      "y": 496
+    },
+    {
+      "placementId": 11,
+      "x": 984,
+      "y": 504
+    },
+    {
+      "placementId": 12,
+      "x": 1000,
+      "y": 504
+    },
+    {
+      "placementId": 13,
+      "x": 1016,
+      "y": 492
+    },
+    {
+      "placementId": 14,
+      "x": 1032,
+      "y": 492
+    },
+    {
+      "placementId": 15,
+      "x": 1048,
+      "y": 492
+    },
+    {
+      "placementId": 16,
+      "x": 1064,
+      "y": 504
+    },
+    {
+      "placementId": 17,
+      "x": 1080,
+      "y": 504
+    },
+    {
+      "placementId": 18,
+      "x": 1864,
+      "y": 384
+    },
+    {
+      "placementId": 19,
+      "x": 1896,
+      "y": 384
+    },
+    {
+      "placementId": 20,
+      "x": 1928,
+      "y": 384
+    },
+    {
+      "placementId": 21,
+      "x": 1960,
+      "y": 384
+    },
+    {
+      "placementId": 22,
+      "x": 1992,
+      "y": 384
+    },
+    {
+      "placementId": 23,
+      "x": 2024,
+      "y": 384
+    },
+    {
+      "placementId": 24,
+      "x": 2056,
+      "y": 384
+    },
+    {
+      "placementId": 25,
+      "x": 2088,
+      "y": 384
+    },
+    {
+      "placementId": 26,
+      "x": 2120,
+      "y": 384
+    },
+    {
+      "placementId": 27,
+      "x": 2152,
+      "y": 384
+    },
+    {
+      "placementId": 28,
+      "x": 2184,
+      "y": 384
+    },
+    {
+      "placementId": 29,
+      "x": 2216,
+      "y": 384
+    },
+    {
+      "placementId": 30,
+      "x": 2248,
+      "y": 384
+    },
+    {
+      "placementId": 31,
+      "x": 2568,
+      "y": 400
+    },
+    {
+      "placementId": 32,
+      "x": 2600,
+      "y": 400
+    },
+    {
+      "placementId": 33,
+      "x": 2632,
+      "y": 400
+    },
+    {
+      "placementId": 34,
+      "x": 2664,
+      "y": 400
+    },
+    {
+      "placementId": 35,
+      "x": 2696,
+      "y": 400
+    },
+    {
+      "placementId": 36,
+      "x": 2744,
+      "y": 408
+    },
+    {
+      "placementId": 37,
+      "x": 2760,
+      "y": 424
+    },
+    {
+      "placementId": 38,
+      "x": 2776,
+      "y": 440
+    },
+    {
+      "placementId": 39,
+      "x": 2792,
+      "y": 456
+    },
+    {
+      "placementId": 40,
+      "x": 2808,
+      "y": 472
+    },
+    {
+      "placementId": 41,
+      "x": 2824,
+      "y": 488
+    },
+    {
+      "placementId": 42,
+      "x": 2840,
+      "y": 504
+    },
+    {
+      "placementId": 43,
+      "x": 2856,
+      "y": 520
+    },
+    {
+      "placementId": 44,
+      "x": 3400,
+      "y": 560
+    },
+    {
+      "placementId": 45,
+      "x": 3432,
+      "y": 560
+    },
+    {
+      "placementId": 46,
+      "x": 3464,
+      "y": 560
+    },
+    {
+      "placementId": 47,
+      "x": 3496,
+      "y": 560
+    },
+    {
+      "placementId": 48,
+      "x": 3528,
+      "y": 560
+    },
+    {
+      "placementId": 49,
+      "x": 3560,
+      "y": 560
+    },
+    {
+      "placementId": 50,
+      "x": 4168,
+      "y": 560
+    },
+    {
+      "placementId": 51,
+      "x": 4232,
+      "y": 560
+    },
+    {
+      "placementId": 52,
+      "x": 4296,
+      "y": 560
+    },
+    {
+      "placementId": 53,
+      "x": 4360,
+      "y": 560
+    },
+    {
+      "placementId": 54,
+      "x": 4424,
+      "y": 560
+    },
+    {
+      "placementId": 55,
+      "x": 4488,
+      "y": 560
+    }
+  ]
+}

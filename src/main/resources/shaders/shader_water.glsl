@@ -27,6 +27,10 @@ in float v_paletteLine;
 
 out vec4 FragColor;
 
+// Ghost effect, as in the sprite shaders: 1 desaturates, 2 keeps colours; both scale alpha.
+uniform int GhostMode;
+uniform float GhostAlpha;
+
 uniform float PresentationHue = 0.0;
 uniform float PresentationOpacity = 1.0;
 
@@ -117,6 +121,12 @@ void main()
         }
     }
 
+    if (GhostMode == 1) {
+        float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+        color = vec4(vec3(gray), color.a * clamp(GhostAlpha, 0.0, 1.0));
+    } else if (GhostMode == 2) {
+        color.a *= clamp(GhostAlpha, 0.0, 1.0);
+    }
     FragColor = color;
     FragColor.rgb = presentationColour(FragColor.rgb);
     FragColor.a *= PresentationOpacity;

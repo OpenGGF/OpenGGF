@@ -149,7 +149,7 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }
     @Override public int getPriorityBucket() { return 3; }
-    @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 8, 9); }
+    @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x1B, 8, 9); }
     @Override public SolidRoutineProfile getSolidRoutineProfile() {
         // SolidObject_cont rejects relX only with unsigned BHI, so the exact
         // right boundary (relX == d1 * 2) remains solid.

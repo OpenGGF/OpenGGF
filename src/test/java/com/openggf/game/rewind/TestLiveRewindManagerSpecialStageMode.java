@@ -48,9 +48,9 @@ class TestLiveRewindManagerSpecialStageMode {
     void specialStageModeIsRejectedWhenProviderDoesNotSupportRewind() {
         GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                () -> GameMode.SPECIAL_STAGE,
-                () -> NoOpSpecialStageProvider.INSTANCE);
+                config, com.openggf.audio.AudioManager.getInstance(), () -> GameMode.SPECIAL_STAGE);
+        gameplayMode.registerSpecialStageAdapter(NoOpSpecialStageProvider.INSTANCE);
+        manager.bindOwner(gameplayMode, false, GameMode.SPECIAL_STAGE);
 
         manager.recordExternalFrame(GameMode.SPECIAL_STAGE, false, new InputHandler());
 
@@ -61,9 +61,9 @@ class TestLiveRewindManagerSpecialStageMode {
     void unsupportedSpecialStageBoundariesDoNotInstallController() {
         GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                () -> GameMode.SPECIAL_STAGE,
-                () -> NoOpSpecialStageProvider.INSTANCE);
+                config, com.openggf.audio.AudioManager.getInstance(), () -> GameMode.SPECIAL_STAGE);
+        gameplayMode.registerSpecialStageAdapter(NoOpSpecialStageProvider.INSTANCE);
+        manager.bindOwner(gameplayMode, false, GameMode.SPECIAL_STAGE);
 
         manager.markBoundary(RewindBoundary.LEVEL_LOAD);
         assertNull(gameplayMode.getRewindController());
@@ -76,9 +76,9 @@ class TestLiveRewindManagerSpecialStageMode {
     void suppliedModeControlsActivationWhenPassedModeDisagrees() {
         GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                () -> GameMode.SPECIAL_STAGE,
-                () -> NoOpSpecialStageProvider.INSTANCE);
+                config, com.openggf.audio.AudioManager.getInstance(), () -> GameMode.SPECIAL_STAGE);
+        gameplayMode.registerSpecialStageAdapter(NoOpSpecialStageProvider.INSTANCE);
+        manager.bindOwner(gameplayMode, false, GameMode.SPECIAL_STAGE);
 
         manager.recordExternalFrame(GameMode.LEVEL, false, new InputHandler());
 
@@ -89,9 +89,9 @@ class TestLiveRewindManagerSpecialStageMode {
     void supportedSpecialStageModeInstallsController() {
         GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                () -> GameMode.SPECIAL_STAGE,
-                RewindableProvider::new);
+                config, com.openggf.audio.AudioManager.getInstance(), () -> GameMode.SPECIAL_STAGE);
+        gameplayMode.registerSpecialStageAdapter(new RewindableProvider());
+        manager.bindOwner(gameplayMode, false, GameMode.SPECIAL_STAGE);
 
         manager.recordExternalFrame(GameMode.SPECIAL_STAGE, false, new InputHandler());
 
@@ -104,9 +104,9 @@ class TestLiveRewindManagerSpecialStageMode {
         RewindableProvider provider = new RewindableProvider();
         InputHandler input = new InputHandler();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                () -> GameMode.SPECIAL_STAGE,
-                () -> provider);
+                config, com.openggf.audio.AudioManager.getInstance(), () -> GameMode.SPECIAL_STAGE);
+        gameplayMode.registerSpecialStageAdapter(provider);
+        manager.bindOwner(gameplayMode, false, GameMode.SPECIAL_STAGE);
 
         manager.recordExternalFrame(GameMode.SPECIAL_STAGE, false, input);
         RewindController controller = gameplayMode.getRewindController();
@@ -125,9 +125,9 @@ class TestLiveRewindManagerSpecialStageMode {
         AtomicReference<GameMode> mode = new AtomicReference<>(GameMode.LEVEL);
         InputHandler input = new InputHandler();
         LiveRewindManager manager = new LiveRewindManager(
-                config,
-                mode::get,
-                RewindableProvider::new);
+                config, com.openggf.audio.AudioManager.getInstance(), mode::get);
+        gameplayMode.registerSpecialStageAdapter(new RewindableProvider());
+        manager.bindOwner(gameplayMode, false, GameMode.LEVEL);
 
         manager.recordExternalFrame(GameMode.LEVEL, false, input);
         RewindController levelController = gameplayMode.getRewindController();

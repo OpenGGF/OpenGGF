@@ -31005,3 +31005,123 @@ python3 $ROOT/tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless
 Two focused requests were planned, with zero route/broad/native requests. The first affected lifecycle waited653s then stopped at compile49.268s with no tests/XML: the new bridge call lacked an import. Only its reference was corrected to the fully qualified form already used by slide get-up. One additional affected request was registered prospectively before submission for this changed-source compilation prerequisite; the original two-request history remains recorded. There was one queued lifecycle and one Root observer per request, and no unchanged-source duplicate. Source manifests stayed frozen through execution; owned diagnostic namespaces were read and consumed. The compiler prerequisite failure is preserved here separately from the actual test results.
 
 **The current maintained MHZ negative remains open and delivery-blocking:** runtime372 failed at death26853 versus earlier37752. No first differing executed owner, receiver, writer, death state or cause was retained. This independent callback contract correction does not attribute or waive that failure. The new callback source has no new maintained MHZ/Act2/FBZ or combined-smoke qualification, and no route data/assertion was adapted. Main remains unchanged; delivery is only to the existing draftPR223 branch.
+
+
+## PR223 develop reconciliation and owning prerequisites — 2026-10-23
+
+This is local source reconciliation of draft PR223 head
+`3726718113335e2255ada420c94eb85dd239eafe` with pinned develop
+`fa160d81832382f11bcddb23511a73c7bffcdd53`, in the separate
+`parity-develop-reconcile-20261023` worktree and
+`feature/ai-s3k-parity-develop-reconcile-20261023` branch. Main and the peer's
+native-gap aggregate remain separately owned. The merge base is `7d35d4a7`.
+All 17 textual conflicts were resolved by source intent; no whole PM/APS or
+aggregate ancestry was substituted. The local merge remains uncommitted at this
+checkpoint, and no Main integration or push is authorized by these results.
+
+Engine keeps the exact configured headless backend and presentation sink even
+with synthesis disabled. The held-Nemesis physical-VBlank check belongs inside
+`finishPublication`, so the existing failure wrapper cancels completion callbacks.
+A new regression proves that later closing the same failed frame cannot revive
+that cancelled callback, while a later valid completion still runs. Detached
+callback draining remains intact. The policy hooks retain the complete declaration
+lexer and initializer-body handling, with explicit private record members omitted
+consistently in SH and PowerShell. SOZ's source union retains both scene-generation
+and retired/fresh loop-history checks, every route resource, and its existing
+ready+180 endpoint; this is not a new composed SOZ route result.
+
+Pending prerequisites were absent from both merge parents, rather than lost in
+conflict resolution. Compose only the owning runtime/tests of a072360c2 (ending
+fade guard), d90cc4160 (terminal dispatch/input identity), 70728afb0 (full-load
+readiness clear) and 753413aa0 (results wait/next-routine separation). The initial
+read-only audits incorrectly treated exact touched-file preimages as sufficient
+closure. Their later concrete failures exposed two external assumptions:
+
+- Current Main intentionally preserves the caller's immediate `deactivateLevelNow`
+  choice. Do not restore the older implicit `BlockingLevelEntryFade` profile gate.
+  707's intended blocking full-load setup explicitly requests `true`, retaining all
+  inactivity, fade, readiness and history assertions. d90's blocking case also
+  explicitly requests `true`; new `false` controls through both launcher modes
+  retain the continuation discriminator, physical driver, row, input-edge,
+  publication, cursor and payload-close checks. The whole adapted terminal test
+  SHA256 is `82bf5df86e788d22a4d3f92412a51c1a880bc0e7c5fb74a8170fffa3a4c50b71`.
+- S1's palette-fade VBlank omits the Sonic C800 buffer DMA. Import only a839af474's
+  enum, existing model test and seven-case ROM-backed phase regression. Its only
+  runtime change excludes `PALETTE_FADE` from `SONIC_1_VBLANK_SONIC_GFX`; no
+  load-clear expansion, journal filtering or other model/phase changes. Pinned
+  28872a46 `VBlank_PaletteFade` (sonic.asm:967–970) calls StandardTransfers and
+  ProcessPLC_9Tiles; StandardTransfers (1006–1023) omits Sonic's buffer, unlike
+  VBlank_Levels (832–835). The verified REV01 ROM's F9A bytes
+  `610000d23ab8f62460000696` corroborate those calls. This is source/byte evidence,
+  not a new emulator capture. Main results-art batching remains unchanged.
+
+Validation uses the original absolute Main wrapper, `--normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl`, isolated target namespaces, and the three
+original absolute verified ROM paths. JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS,
+_JAVA_OPTIONS, MAVEN_OPTS, DISPLAY, WAYLAND_DISPLAY and inherited GL driver
+overrides were unset; Java25, Lua5.4, null audio and EGL surfaceless were explicit.
+Actual Java25.0.5, GL and all three ROM properties were read from XML. Exact argv,
+selectors and framed whole-source hashes remain in the existing task status;
+no pass cache or raw-log archive was created.
+
+| Source step and lifecycle | Actual result | Limits and timing |
+| --- | --- | --- |
+| First merged components plus a072, session43617, source `2e06e6f5…` | 481 distinct tests, 0F/0E/0S; 27 selected classes including nested suites | New PLC regression, backend, movement/callback, rewind/API and S3K keepers; Maven1:27, last printed queue wait482s |
+| Exact d90/707/753 initial closure, session17100, source `9123183e…` | 148 tests, 6F/0E/0S | Two terminal blocking-policy cases; two707 readiness/journal cases; two753 fade-journal cases. Maven1:22, no queue wait printed. This is a failed composed source, not an inherited baseline waiver. |
+| Phase prerequisite and explicit caller-policy tests, session35657, source `089e3cbc…` | 162 distinct tests in17 actual suites, 0F/0E/0S | Terminal class12, palette class7, model5, 707class3 and753class6 all pass, plus direct consumers. Source rehash matched afterward. Maven1:23, no queue wait printed. |
+
+The initial policy safety run had82 tests and two subtest failures for the same
+private-record case in SH/PowerShell. The corrected mirrored hooks pass15 affected
+cases with0skips (66.757s); shell syntax and owned whitespace checks pass. Independent
+source reviews found no material issue in the exact Engine/PLC/ending union or the
+final caller-policy test. The 16-selector middle run included a helper class with
+no runnable cases; it is not claimed as extra test coverage and was removed from
+the corrected selection. These test counts overlap; do not sum them as a unique
+suite or elapsed work. Individual compiler and parent durations are unknown.
+
+The separate fresh `-Pguards` lifecycle44501 completed723 distinct tests across
+89 actual XML suites:722passed/1failure/0errors/0skips. The sole failure was
+`TestArchitecturalSourceGuard.releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+AbstractPlayableSprite3263 effective lines against its unchanged3258 budget.
+Maven printed7:47 and queue wait0s. This red remains part of the source history.
+
+Extract only private ground-transition publication into a package-private STATIC
+helper in the existing PlayableSpriteController. Pass the same sprite, changed,
+landed, captured airborne value and original typed callback invoker. Keep one
+scope around ordered onGroundStateChanged then conditional onLanded, with no
+reset, new state, API change, catch or callback-write overwrite. APS now delegates
+in three effective lines; the ratchet is unchanged. Static delegation matters:
+virtual defineSpeeds can publish a ground-state change before the controller
+instance is constructed. A new constructor control covers that path. Independent
+source review caught the instance-helper hazard before implementation and found
+no issue in the actual static extraction; native floor and S2 restore regions
+remain untouched.
+
+Affected10-class lifecycle99357 at source `0c1ca516…` passes259 distinct tests,
+0F/0E/0S, including all72 architectural guards, the constructor control, owned
+character scopes, climb/slide callback contracts, two registered restore/forward
+cases and API signatures. The source rehash matched. Maven printed1:29; no wait
+was printed. Do not describe the old723-test lifecycle as green or add its counts
+to this overlapping focused result. The remaining structural selection was not
+repeated because the repair changes only callback publication in existing
+collaborators, introduces no state/API/dependency edge, and its affected guards,
+owners and behavior were exercised directly.
+
+A strict citation check on the six owning S1 source/test files reported five stale
+anchors, each an identical comment line in BOTH merge parents (three older S2
+anchors in DynamicArtLifecycleService, its pre-main-loop S1 comment, and results'
+ClearPLC comment). None was introduced by these changes. They remain explicit
+inherited citation debt; the new palette handler citation passed. Foreign
+working disassembly checkouts differ from indexed research pins and were not
+modified. AGENTS/CLAUDE remain byte-identical; owned diff whitespace passes.
+The upstream legal-font licence whitespace is retained byte-for-byte.
+
+Change-based smoke planning against pinned fa160 selects3705 candidate classes
+plus guards due to shared runtime and policy changes. That broad selection has NOT run here; the
+peer coordinator owns combined smoke and the Main window. No MHZ observation,
+native capture or maintained gameplay route was run during this reconciliation.
+The maintained MHZ death26853 versus earlier37752 remains unattributed and
+delivery-blocking; the callback correction and these components do not waive it.
+The two SOZ2 deaths12288/24051 and other existing route/parity/coverage limits stay
+open. Historical passive-source packages and their execution-false gates remain
+unchanged. The goal is active, and neither complete parity nor delivery is claimed.
