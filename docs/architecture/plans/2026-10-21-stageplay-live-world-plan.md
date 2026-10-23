@@ -2884,3 +2884,122 @@ from the native observation adapters as an integer; steering stays value-only.
 Native rolling coast drag also reads live acceleration / 2, per
 `Sonic_RollSpeed` (s2.asm:37009-37013). Only the affected ArchUnit and native ROM
 selection is being rechecked, with no repeated broad guards or smoke run.
+
+
+### Final route-motion handback (2026-10-23)
+
+Implementation is local on the two requested feature worktrees, with no merge,
+push or PR. Engine source is `d29514a89`; desktop source/fixture is `8c5d6b4`.
+Engine slices are `7e780144d`, `71e128275`, `f6ce13498`, `c4710109c`,
+`e09f74950`, `9f61bd788`, `f6b405068`, `d29514a89`; desktop slices are
+`7833420`, `aca3592`, `8c5d6b4`. The qualification commit changes prose only.
+An already-reached point keeps one motion-bearing MOVE_TO and a later STOP;
+a STOP-only special case was rejected because replanning recovers settings from
+the MOVE_TO. Budget-limit chrome now retains the planner's Run/Spindash advice.
+
+Completed bounded validation, all through the Maven queue from the intended tree:
+
+- Schema/document/compiler/decompiler/API selection: **36 passed**, zero skips.
+  Selector: `TestStageplayRouteMotionDocument,TestStageplayDocument,TestStageplayScriptCompiler,TestStageplayScriptDecompiler,TestModApiSignatureSurface`.
+- Final planner/native selection on the delivered source content: **14 passed**,
+  zero failures/errors/skips: `TestStageplayRoutePlanner,TestStageplayRouteMotionRom`.
+  The ROM test checks nine variants: Walk, Run/Gentle, Run/Hard, Run/Overshoot,
+  Jump start, Spindash start, actual EHZ downhill Walk and both final facings.
+  The 13 synthetic/native-physics checks include a real collision gap requiring
+  Run/jump, downhill cap control, all endings/facings, deterministic replay,
+  budget/cancellation, parent-world/audio ownership and already-arrived commands.
+- Workspace/settings recheck: **9 passed**; controller **4**, protocol **3**,
+  input snapshot **1**, route contract **2** also passed in the focused selection.
+  Final overlay/advice selection: **7 passed**, zero failures/errors/skips.
+  The earlier red selections and causal fixes are recorded above; these are not
+  added together as a unique total or described as a full-suite pass.
+- Mandatory S3K four: **60 passed**, zero failures/errors/skips, using
+  `TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+- Explicitly enabled HUD/picture selection: **12 passed**; desktop/picture/chrome:
+  **18 passed**, zero skips. Final picture-only refreshes: **1 passed each**,
+  with actual entered destination, four motion settings and two-second form hold.
+- Once-only guards: **720 tests, 715 passed, five failures, zero errors/skips**.
+  The one owned Stageplay boundary failure was corrected. Narrow
+  `TestArchUnitRules,TestStageplayRouteMotionRom` recheck: **33 tests, 31 passed,
+  two inherited HubMusicController failures, zero errors/skips**; the Stageplay
+  owner boundary and nine ROM variants pass. The other two inherited singleton
+  failures remain exactly as recorded above. No repeated broad guard run.
+- Stable build-only packaging, including candidate SDK/Javadoc, passed. The
+  desktop private dependency was refreshed from that task engine jar. Tool
+  preflight passed with Java 25, Lua 5.4 and PowerShell; no tests ran in preflight.
+  The explicit-policy live-ring-run screenplay compiles to its exact maintained
+  canonical scene. Modified JSON, diff whitespace and skill mirrors were checked.
+
+Exact final launch shapes (ROM variables refer to the existing verified images;
+`MOTION` is the task's external evidence directory):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off "-Dsonic2.rom.path=$S2_ROM" -Dopenggf.stageplay.motionEvidence="$MOTION" '-Dtest=TestStageplayRoutePlanner,TestStageplayRouteMotionRom' test
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestStageplayRouteOverlay' test
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+python3 tools/testing/maven_queue.py -Dmse=off "-Dsonic2.rom.path=$S2_ROM" -Dopenggf.stageplay.motionEvidence="$MOTION" '-Dtest=TestArchUnitRules,TestStageplayRouteMotionRom' test
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.hudPictures=true -Dopenggf.stageplay.routeEvidence="$MOTION" "-Dsonic2.rom.path=$S2_ROM" '-Dtest=TestStageplayRouteOverlayPictures' test
+# Desktop cwd: same wrapper by absolute task-engine path; desktopPictures=true replaces hudPictures.
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+```
+
+The initial broad citation checker reports inherited stale/missing/unverifiable
+references elsewhere in the repository. Only the task's S2 labels/ranges were
+manually verified against pinned `34fc7f130a96`; unrelated citation debt was not
+changed. S2 CRC32/SHA-1 and locked-on S3K CRC32/SHA-1 match the repository table.
+
+Evidence lives in the task's external `motion/` directory:
+
+- `walk-vs-run.mp4`: 1920x540, 60 fps, seven seconds / 420 frames.
+- `ending-actions.mp4`: 1920x360, 60 fps, seven seconds / 420 frames.
+- `spindash.mp4`: 960x540, 60 fps, seven seconds / 420 frames, native offline audio.
+- `engine-route-overlay.mp4`, `desktop-route-overlay.mp4`: 1280x720, 60 fps,
+  ten seconds / 600 frames each; real frontend settings, proposal, Apply/native
+  walk, failed attempt/advice and pan. Both retain opaque-film redraw assertions.
+- Lossless FFV1/FLAC raw takes (`walk`, `run-gentle`, `run-hard`,
+  `run-overshoot`, `spindash`), their canonical sources and per-frame native
+  telemetry remain beside the comparisons. Raw takes are 960x540, 60 fps,
+  seven seconds with 48 kHz stereo audio. Comparison labels/goal guides are
+  post-production marks; they are absent from the scene and raw film.
+
+Capture command shape, once per named canonical source:
+
+```bash
+python3 tools/stageplay/stageplay.py render --scene "$MOTION/walk.stageplay" --out "$MOTION/walk.mkv" --scale 2 --s2-rom "$S2_ROM"
+ffmpeg -v error -xerror -i "$MOTION/walk.mkv" -f null -
+```
+
+All ten final movie files passed FFprobe metadata inspection and complete
+FFmpeg `-xerror` decoding. All five presentation clips were watched at 1x to
+completion in the owned browser, with sequential observations of charge, burst,
+walk/run, coast/brake/return, form readability, drawn path and actual cross.
+Walk reads as a slow stroll; Run accelerates visibly. Gentle coasts, Hard stops
+sharply, Overshoot visibly passes and turns back. The S2 default Walk/Dowhill
+peak is exactly `$180`, with zero skid samples; the default native spindash peak
+is `$800`, not a director-written velocity. Final Left/Right taps shift the
+centre by one native acceleration quantum (`0.046875` pixel) and hold facing.
+The native point tolerance is six horizontal / twelve vertical pixels; default
+EHZ Walk settles at x397.80078125 for x400, reverse downhill at x95.94921875 for
+x100. Unsupported physical combinations fail with advice rather than forcing
+motion. Search is bounded, higher-speed advice is advisory, walking-object
+behavior is unchanged and multi-waypoints remain deferred. Current Stageplay
+stock-cast/asset limits remain; the ability declaration contract can extend to
+future mod actors. No broad smoke/full-suite or all-zone certification is claimed.
+
+
+Native raw Walk/Run/ending takes used packaged `c4710109c` source content;
+Spindash used packaged `e09f74950` minimum-charge content. Later observation
+relocation preserves their input decisions, and the delivered `d29514a89` native
+replay selection checks the same canonical routes. Final frontend takes use the
+delivered engine content and desktop `8c5d6b4`. Scene sources and telemetry stay
+with the clips; comparisons can be regenerated from those inputs in minutes.
+
+Consumed task Maven logs/reports, scratch diagnostics and the task-generated
+desktop config example were removed. The owned review browser tab and loopback
+server were closed; process inspection found no remaining task-tree Java workers
+or Maven requests. No category execution run was created, so no run-id needs
+acknowledgment. Build outputs and the editor's private dependency remain in their
+own worktrees for the lead. Both local task branches/worktrees are preserved;
+no unknown or user-authored files, main checkouts or prohibited checkout were
+changed. The only remaining red checks are the four inherited guard identities.
