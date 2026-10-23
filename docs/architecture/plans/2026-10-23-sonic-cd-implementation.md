@@ -600,3 +600,165 @@ read-only design tasks. No engine code, POM, test selection, or queue policy
 changes are part of this delivery. Its verification uses gitlink/configuration,
 reference structure, documentation links/mirrors, policy, and checkout scenarios.
 Engine parity and native media validation remain future phase work.
+
+## Local implementation checkpoint, 23 October 2026
+
+Implementation is authorized on `feature/ai-sonic-cd-local` only. The starting
+commit is `63222aab395db19d3a3b12f797fb7803876898bd`; the retained worktree is
+`.worktrees/ai-sonic-cd-local`. Do not integrate or push this work to `develop`.
+The earlier planning commit was reverted on `develop`; its public history is
+not erased. The current task does not change that delivery boundary.
+
+The user supplied three regional CUE/BIN archives and a BIOS archive in
+Downloads. Extraction preserved their contents and all four original archives.
+All 121 extracted files matched archive sizes and CRC32 values. Each disc has
+35 tracks, comprising one MODE1/2352 data track and 34 audio tracks. CUE file
+references, indexes, sector-sized files, and U/E/J header fields passed checks.
+`~/Downloads/Sonic-CD/media-inventory.json` records archive and per-file
+SHA-1/SHA-256 identities and the supplied CUE layouts. These checks establish
+available inputs, not pressing authenticity, firmware certification, physical
+read offsets, native boot, or game parity.
+
+The first implementation units have separate writers. The lead owns this
+checkpoint, review, combined validation, and local commits.
+
+| Unit | Owned implementation | Exit check | Current state |
+| --- | --- | --- | --- |
+| Disc source | `com.openggf.data.cd` and its tests | Synthetic malformed/layout/lifecycle cases and actual file reads from all three discs | In progress |
+| Native catalogue | `com.openggf.game.soniccd` and its tests | All 70 valid stage payloads per region, invalid combinations rejected, source dispatch and component facts checked | In progress |
+| Reference oracle | Task-owned `tools/soniccd/oracle_*` and Downloads captures | Verified BIOS selection, native USA CUE boot, observable memory domains, repeated bounded capture | In progress |
+
+The first code shape uses one closeable CUE owner, immutable track facts, and
+bounded ISO file extents. A generic machine or cartridge address adapter would
+hide the disc's separate tracks and lifetimes. The catalogue uses a shared
+finite source table with release-bound views. Duplicating 70 stage entries for
+each region would obscure which facts differ by release. Traversal stages and
+boss stages have distinct valid period combinations.
+
+The native oracle and pure media/catalogue work proceed independently. Gameplay
+parity remains behind CD-02's native evidence gate. Focused media/catalogue
+tests can establish their own behavior without certifying the later game.
+Workers do not run concurrent Maven jobs in this worktree. The lead uses the
+current main-workspace queue wrapper with this worktree as its working directory
+and owns the single command session for each validation job.
+
+Next checkpoint records actual source state, exact commands, failures, skips,
+and native capability limits before the next dependent unit starts. Decision
+and evidence updates stay in this dated plan, following repository guidance.
+
+### Recovery after the app restart
+
+The worktree still has the partial disc reader and native catalogue. The earlier
+workers and queued Java version probe did not survive; no completed Java or
+native boot check is claimed. Fresh app-owned delegates continue the same owned
+paths from those files. Their task IDs are recorded here so a later restart can
+recover the actual tasks instead of starting duplicate work.
+
+- Reader: `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-resume-reader-20261023-r1`.
+- Catalogue: `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-resume-catalogue-20261023-r1`.
+- Native oracle: `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-resume-oracle-20261023-r1`.
+
+The copied category runner selects the repository containing its own script.
+Use this worktree's `tools/testing/run_categories.py` when inspecting changes.
+The queue wrapper explicitly uses the caller's working directory and can be
+invoked from the main workspace as documented. A plan from the main checkout
+does not validate this development tree.
+
+The replacement version probe completed through the shared queue with no wait.
+`python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py -v`,
+from this worktree, reported Maven 3.10.0 and Java 25.0.5.0.2. This is environment
+verification only. Source compilation and focused behavior tests remain pending.
+
+### First unit and native boot evidence
+
+The catalogue worker completed its source unit. Its rerunnable source audit
+passed at reference pin `1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff`:
+`python3 -B tools/soniccd/catalogue.py --check`. The focused Python command
+`python3 -B -m unittest discover -s tools/soniccd -p test_catalogue.py -v`
+passed 17 tests with no skips. JUnit selectors `TestCdStageKey,TestCdProgramCatalogue`
+and the actual-reader integration remain pending. The source inventory has 216
+nonzero dispatch slots, including unnamed invalid slot 39, alongside the 215
+named SCMD declarations. These are different counts of the same source table.
+
+The catalogue covers a shared set of 70 stage payloads per release, all 127
+file IDs, and 33 nonstage load bindings. Data streams, unused prototype copies,
+payload aliases and files without an SPX load binding have explicit dispositions.
+Source review found R33's R3PCM driver and R83's BOSSPCM load boundary, the dummy
+commands' MCSONIC payload, and Time Attack's main-only SPX loader. Independent
+review task: `node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-catalogue-review-20261023-r1`.
+
+The native worker's initial 2,400-frame USA run reached the title screen. Its
+`~/Downloads/Sonic-CD/native/usa-initial-2400/summary.json` records BizHawk
+2.11.0.0, Genesis Plus GX, Mega CD mode, and a successful 120-frame native
+save/restore forward-replay snapshot comparison. The supplied US Model 1 v1.10
+BIOS matches an acceptable firmware-database entry at SHA-1
+`f4f315adcef9b8feb0364c21ab7f0eaf5457f3ed`. The contact image was inspected.
+The core exposes main RAM, CD program/Word/backup RAM, VRAM, and main/sub CPU
+bus domains. Repeated boots, regional probes, and the exact observability
+limits are still being checked. This is native oracle capability evidence;
+it does not close the complete CD-02 timing/capture gate or any engine parity gate.
+
+The catalogue review found two material omissions before Java validation.
+Seventeen sound-test commands may load a PCM driver; their audio disposition
+must not erase that conditional file dependency. `SPCmd_TestR3BMus` and
+`LoadPCMDriver` (SPX.asm:2393-2397,2456-2464) show the path. The Python audit
+also accepted a mutation changing the stage-disposition return to AUDIO,
+because it substituted its expected classification. Both findings are accepted
+after source inspection. Fix task:
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-catalogue-fixes-20261023-r1`.
+The earlier source-audit pass is bounded by these findings, not a catalogue
+acceptance. The fix adds native PCM dependency facts and mutation regressions;
+the Java behavior checks remain authoritative for the executed catalogue API.
+
+### Verified foundation unit
+
+Both catalogue findings are fixed. The source audit passes and its focused
+Python suite now passes 24 tests, including mutations of PCM targets and
+disposition branches. The audit checks source correspondence; executed Java
+behavior remains covered by JUnit. Independent reader review found no material
+defect at fingerprint `a8f1453762f14c94baadc4dc5fabf0e34442c199881bbfe3cbcbd9e1d6833e0b`.
+It proposed additional buffer-refill, reverse mixed-sector and depth-limit
+fixtures for the next media unit.
+
+From this worktree at `63222aab` plus the foundation source, the lead ran:
+
+Here `OPENGGF_MAIN` identifies the main checkout and `SCD_MEDIA_ROOT` identifies
+the supplied regional media directory in Downloads. The external checkpoint
+retains the machine-specific invocation.
+
+```bash
+python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCueDiscImage,TestIso9660FileSystem,TestSonicCdDiscMedia,TestCdStageKey,TestCdProgramCatalogue,TestRomImageClassifier,TestRomImageCatalogue,TestRomLocationResolver' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} test -B
+```
+
+The run passed 143 tests, with zero failures, errors or skips. It compiled all
+4,203 production and 4,312 test source files under Java 25. The selection includes
+24 synthetic disc tests, three real regional disc invocations, 72 catalogue/key
+invocations and 44 existing cartridge catalogue/classifier/location invocations.
+Queue admission was immediate; Maven reported 1 minute 23 seconds. Compiler
+deprecation warnings and test startup's missing FAST manifest warning did not
+produce a failure. This is a focused pass, not a broad smoke or full-suite pass.
+
+The local category plan selected 3,621 smoke candidates because the new package
+and tools have no narrow change rule. Focused coverage replaces that broad run
+for this unit: it adds isolated, currently unregistered libraries and diagnostic
+tools without changing existing runtime callers, shared algorithms, physics,
+timing, public API pins, build policy or configuration behavior. Stock admission
+and later shared integration still require their affected smoke coverage.
+
+The final native probe source and wrapper produced two matching cold boots in
+each of USA, Japan and Europe, with 1,800 observed hardware frames per boot and
+a 120-frame save/restore audio/video continuation check. Selected BIOS SHA-1s
+are USA `f4f315adcef9b8feb0364c21ab7f0eaf5457f3ed`, Japan
+`4846f448160059a7da0215a5df12ca160f26dd69`, and Europe
+`f891e0ea651e2232af0c5c4cb46a0cae2ee8f356`. Five Python wrapper tests passed.
+The final captures, source/runtime manifests and limits are under Downloads in
+`Sonic-CD/native/{usa,japan,europe}-title-final-1800` and
+`Sonic-CD/research/native-oracle.md`.
+
+Managed bus peeks intentionally hide handled device I/O with FF; only the main
+CPU bus advertises memory callbacks. Boot repeatability therefore does not prove
+PCM/CDDA cursors, Word RAM ownership, graphics readiness or service timing.
+A separate read-only observer investigation continues under task
+`node:delegated-task:command%3Amcp%3A21b3a84c-8f4f-4e36-af09-5662834858be%3Adelegate-task%3Asonic-cd-observer-20261023-r1`.
+It owns only `device_observer_*` tools and external evidence. No engine gameplay
+uses these observations. No Sonic CD game module or playable route is admitted yet.
