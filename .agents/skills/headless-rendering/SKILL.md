@@ -100,10 +100,14 @@ repository; `target/` is disposable.
 
 Pass the graphics property on Maven's command line so it reaches Surefire tests.
 `MAVEN_OPTS` alone does not establish propagation to the fork.
+For category batches, `run_categories.py --headless-gl surfaceless-egl` forwards
+the supported CLI property to preparation and every ordinary/guard batch.
 `JAVA_TOOL_OPTIONS`/`JDK_JAVA_OPTIONS` can propagate it, but add launcher notices
-that affect child-stderr assertions. A reused test JVM can also lose the property:
-`TestSurfacelessEglContext` clears it during teardown. Inspect the actual failing
-owner and run order; preserve required graphics settings. See the
+that affect child-stderr assertions. The JVM property remains mutable after launch.
+`TestSurfacelessEglContext` formerly cleared it during teardown; its scoped fixture
+now restores the incoming value after each test to prevent reuse contamination.
+Inspect the actual failing owner and run order; preserve required graphics settings.
+See the
 [measurement hazards](../../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
 
 ## Draw, read back, and release
