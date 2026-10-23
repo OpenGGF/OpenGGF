@@ -205,9 +205,9 @@ Anywhere Java 25 and LWJGL run: Windows, macOS, and Linux. The engine uses OpenG
 (chosen for macOS compatibility). A GraalVM native image build is also supported for ahead-of-time compiled
 binaries for Windows x64, Linux x64, and macOS Apple Silicon. Intel macOS uses the JVM
 build; GraalVM 25 does not supply a macOS x64 native-image toolchain. Source builds use
-JDK 25 exactly. Third-party libraries (LWJGL, and Jackson for `config.yaml` and save files) are kept on
-advisory-free versions: a Dependabot advisory against `master` is replicated onto `develop` and
-`next` as an aligned bump rather than merged into the released line.
+JDK 25 exactly. Address dependency advisories (including LWJGL and Jackson) with aligned
+updates on `develop` and `next`, rather than merging dependency bumps into the released
+`master` line. A release snapshot is not a guarantee that its dependencies remain free of advisories.
 
 ### Did you use AI to write this? / This is AI slop!
 
