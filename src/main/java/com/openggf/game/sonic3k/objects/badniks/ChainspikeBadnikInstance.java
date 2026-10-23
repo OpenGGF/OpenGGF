@@ -395,6 +395,12 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         private static final int FIXED_HALF_SIZE = 8;
         private static final int SPIKE_HALF_WIDTH = 8;
         private static final int SPIKE_HALF_HEIGHT = 0x80;
+        /**
+         * {@code loc_91D6C} (sonic3k.asm:199364-199366) uses
+         * {@code SetUp_ObjAttributes3} (:176998-177005): {@code word_91EE6}
+         * (:199518-199520) writes height_pixels=$80, leaving the cleared y_radius byte zero.
+         */
+        private static final int SPIKE_FLOOR_PROBE_Y_RADIUS = 0;
 
         /** {@code moveq #8,d0} (:199403), negated when the parent is Y-flipped. */
         private static final int EXTEND_SPEED = 8;
@@ -532,12 +538,12 @@ public final class ChainspikeBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         /**
-         * {@code bsr.w ObjCheckFloorDist / tst.w d1 / bmi} (:199429-199430). The ROM probes
-         * from the object's own position with {@code height_pixels} as the radius.
+         * {@code loc_91DE2} (sonic3k.asm:199407-199425) calls {@code ObjCheckFloorDist}.
+         * Its shared probe reads y_radius, not height_pixels (:20087-20095).
          */
         private boolean hitFloor() {
             var floor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(
-                    anchorX(), anchorY(), SPIKE_HALF_HEIGHT);
+                    anchorX(), anchorY(), SPIKE_FLOOR_PROBE_Y_RADIUS);
             return floor.hasCollision() && floor.distance() < 0;
         }
 

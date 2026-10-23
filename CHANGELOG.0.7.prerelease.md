@@ -505,6 +505,8 @@ Unreleased. The earlier development themes remain in
   flame keep their original dispatch, animation and deletion behavior through
   rewind. Knuckles gets the EggRobo head art, and defeat explosions follow the
   ship. Death Egg Act 1's player launchers receive their missing ROM-backed art.
+  Death Egg's gravity tubes retain native rider transfers, mount velocities and
+  body-size adjustment; Chainspike's floor probe uses its native collision radius.
   Carnival Night's miniboss stays dormant until the arena camera gate and native
   wait release it, including at wide viewports. Its defeated top releases standing
   riders before deletion, preserving their status and the rewindable encounter.

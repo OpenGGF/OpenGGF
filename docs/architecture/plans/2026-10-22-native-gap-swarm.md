@@ -1745,3 +1745,196 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+
+### Bounded native DEZ successor — 2026-10-23
+
+Owner `dez` works only in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-717206a9`,
+branch `bugfix/ai-dez-native-object-fixes-20261023`, based on frozen
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`. Normal hooks are installed. Main,
+Root composition, common smoke71076, provider activation, paired MHZ/SOZ,
+routes, native capture and broad/release suites remain outside this slice.
+No fetch, parent mutation, push, PR or whole-commit import is authorized here.
+Source cutoff 16:30Z; review/cleanup 17:00Z; lifecycle expiry 17:15Z. Exact
+T3/native IDs, ownership and live handles are in the existing parent registry.
+
+The selective port uses `61d791af4f083d54f02cfa7b2476fd4b54c5eafe` only
+for the two missing tube mechanisms, and only the Chainspike field correction
+from `5979a804e3066214e2caf2180cada508ede72563`. PR208/whole commits were
+rejected as a delivery unit: their other work predates this base or belongs
+to other owners. No sibling torpedo, Spikebonker, route, manager, shared
+physics, public API, descriptor, signature pin or activation change is included.
+
+Pinned reference is `skdisasm` `8b2cf3c4178f2382f844da67798de4befc50c5e0`.
+The stale-tube gate follows previous standing-bit retirement in
+`RideObject_SetRide (sonic3k.asm:42067-42089)` and
+`sub_33C34 (sonic3k.asm:70207-70227)`. Native centre correction uses the
+pre-resize centres and signed radius delta from
+`Player_TouchFloor (sonic3k.asm:24375-24428)`, including gravity and evaluated
+angle. The older top-left-only port is insufficient to state the reversed/angled
+cases correctly; no measured position or fixture-specific constant is used.
+
+A distinct read-only source audit and Root's explicit approval after the red
+submission permit an additional bounded hunk in the same owned `setRide`:
+`sub_48F12 (sonic3k.asm:95256-95298)` calls horizontal `RideObject_SetRide`,
+which preserves X velocity, zeros angle/Y velocity, copies X to ground velocity,
+and publishes OnObj/clears InAir before conditional floor reset. Vertical
+`sub_49090 (sonic3k.asm:95407-95456)` calls `sub_33C34`, which zeros X only
+when airborne and preserves Y for the caller's ground-velocity derivation.
+Applying either helper indiscriminately was rejected from these actual callers.
+The existing support callback, live latch, limited push/jumping cleanup and
+rewind adapter remain; this slice introduces no generic/full-player floor reset.
+Additional native `Player_TouchFloor` tail/ability/bubble side effects beyond
+those existing owners are not certified or synthesized here.
+
+Chainspike retains render half-height `$80`, but its separate probe radius is
+zero. `loc_91D6C (sonic3k.asm:199364-199366)` reads
+`word_91EE6 (sonic3k.asm:199518-199520)` through
+`SetUp_ObjAttributes3 (sonic3k.asm:176998-177005)`, which writes height_pixels
+and leaves y_radius clear. `ObjCheckFloorDist (sonic3k.asm:20087-20095)` reads
+the latter byte. Parent/child identity, retirement, allocation and rewind code
+are unchanged. The former 128-pixel-ahead rebound assertion was rejected.
+The upper spike's existing signed/outbound simplification remains inherited,
+not silently expanded into this correction.
+
+All commands below run from the owned worktree. `OPENGGF_MAIN` denotes the
+existing Main checkout used for its current absolute queue wrapper and original
+root ROMs; its exact resolved value and executed command strings are retained
+in the existing external task registry, rather than committed machine-home paths. Their exact environment unsets
+JAVA_TOOL_OPTIONS/DISPLAY/WAYLAND_DISPLAY, uses Java25/Lua5.4, null audio and
+surfaceless EGL; each full invocation below includes that prefix.
+
+The original root ROMs were read in place, never copied or linked: S1 CRC32
+`AFE05EEE`/SHA1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`, S2 REV01
+`7B905383`/`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, locked-on S3K
+`63522553`/`CFBF98C36C776677290A872547AC47C53D2761D6`.
+Every test invocation appends these exact properties:
+
+```bash
+"-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+Build-only `python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+test-compile -B` passed in 1:14 before red and 1:12 after functional edits.
+The initial shell redirection failed before Maven because this new worktree
+had no target directory; creating its own target resolved it. No test request
+was spent on that shell failure. Final Maven selection compiles its final source.
+
+Ordinary request 1/2, on unchanged659 runtime plus the first discriminator test
+blobs, was exactly:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDezGravityTubeHeadless#aTubeTransferClearsTheFormerTubesRideBeforeItsLaterSlotRuns+anAirborneRollingMountAppliesTheNativeCentreRadiusDelta,TestChainspikeBadnikInstance#onlyOneSpikeExtendsAndItMovesEightPixelsAnUpdate+rewindRestoresExactParentAndKeepsRetiredParentOrphansRetired' "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+It completed exit 1: four tests, four assertion failures, zero errors/skips;
+380s admission wait, 31.890s Maven execution, finished 15:40:39Z. The old tube
+cleared OnObj after replacement ownership (expected true/actual false), its
+unroll left native centre 2260 rather than 2255, and both Chainspike extension
+and pre-recreation controls expected velocity 8 but saw -2. XML properties prove
+Java 25.0.5, this cwd/target, surfaceless EGL and all three exact ROM paths. The
+complete per-test streams contain only FAST-load fallback warnings; no dumps.
+The red failed before later restore assertions in those methods, so it proves
+the discriminators, not old-source restoration. Its exact four-source blobs
+are retained in the existing registry checkpoint, not a pass cache.
+
+After that request was terminal, Root approved the helper-order amendment.
+Final-only additions distinguish horizontal/vertical × grounded/airborne
+nonzero unequal X/Y/G velocities, incoming angle$60, retained grounded rolling,
+native centre/flag order, destructive tube recreation and matching forward
+replay. The existing airborne radius test additionally covers both gravity
+states with recreation/replay. These additions were NOT in the old-source
+red selection. Chainspike's existing exact-parent/orphan test now destructively
+recreates captured parent/child extension state and compares forward output;
+its retired-parent orphan assertions remain.
+
+Pre-final freeze runtime diff SHA256: `50e0eb01dce793999a4e060b87bf0ec635196258bab073b8a0ac9320938338bc`. Exact final four-source
+blob manifest (Git hash-object):
+
+- `src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityTubeObjectInstance.java`: `1953b62e141dd00f35c04f991a1f3f9b027eb3c3`
+- `src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java`: `567459486547e8b945bfc19acd544b482a3ffd64`
+- `src/test/java/com/openggf/tests/TestS3kDezGravityTubeHeadless.java`: `8316b1ca71636fa6adf7ca80cc67cb2dd65b545f`
+- `src/test/java/com/openggf/game/sonic3k/objects/badniks/TestChainspikeBadnikInstance.java`: `d77a41313fed0068b58036d8c9f6c51982b58d85`
+
+Ordinary request 2/2 selects complete owning classes, the existing child-roundtrip
+harness and mandatory S3K keepers (the LevelLoading selector matches both
+packages, so eight candidate classes). Expected cost is 1–3 minutes execution
+plus admission/compilation; no third ordinary request is authorized. Exact
+manifest, with the same environment and ROM properties:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kDezGravityTubeHeadless,TestChainspikeBadnikInstance,TestRewindRoundTripHarnessConstruction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+One separate fresh guard request is reserved for the actual source, field and
+rewind owners; no unrelated guards or broad run:
+
+```bash
+env -u JAVA_TOOL_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless python3 "${OPENGGF_MAIN}/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard' "-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Final ordinary request 2/2 completed exit 0 at 16:06:22Z: 99 distinct executed
+identities in 8 XML suites,0 failures/errors/skips; admission wait 971s and Maven
+execution 1:16. Breakdown: 14 tube, 10 Chainspike, 15 existing parent-linked roundtrip,
+8 AIZ keepers,36 game-package and7 headless-package LevelLoading,6 bootstrap,
+3 decoding. The original four red methods all pass now; the final-only body/helper
+and reverse-gravity controls also execute. Every XML property confirms Java 25.0.5,
+this exact cwd, explicit surfaceless EGL and all three original ROM paths. Exact
+four-source hashes remain unchanged. Complete streams contain 80 FAST-load
+fallback warnings and one deliberately malformed collision-index warning from
+TestSonic3kDecodingUtils; no failures, missing-ROM skips or dumps. Those warnings
+are not native measured-load or full-ROM-parity certification. The final raw
+XML/log namespaces were read and removed before the fresh guard request.
+
+The one fresh guard request completed exit 1 at 16:09:37Z: 52 unique identities
+across 4 XML suites, 51 passed, 1 assertion failure, 0 errors/skips; admission wait 99s,
+Maven execution 32.423s. Services 14/14, rewind architecture 4/4 and field
+disposition 1/1 pass. Physics/source standardization 32/33 pass. Exact failure:
+`TestObjectPhysicsStandardizationGuard#productionObjectLifecycleRawCallCountsDoNotGrow`,
+raw `setDestroyed(true)` count 586 against budget 582. This is not an all-green
+guard result. XML properties match Java 25.0.5, the frozen worktree, EGL and all
+three ROM paths. No dumps; the only guard stream is informational baseline-gap
+closure output. The field report has 23 inherited entries and no Tube/Chainspike
+entry. All consumed own raw XML/log/diagnostic/invocation namespaces were removed;
+compiled output is retained.
+
+A bounded static attribution (NOT a second guard/JUnit request) applies the
+unchanged guard regex, comment-only-line filtering, four package roots and
+owner exclusions to all 1,378 exact baseline/current production Java sources.
+Both scanners are byte-identical to 659 (`TestObjectPhysicsStandardizationGuard`
+blob 0b257b3fb0551474a0a5fa2ee3c0492d7ae1dd49;
+`ObjectGuardSourceScanner` blob dbfada79a581f703234d60d5f1e8033b3782faa6).
+Baseline and current have exactly the same 586 raw destruction path+line entries;
+the observed JVM failure emits that identical multiset. Its SHA256 is
+be6fb4c8eee28b5721e3b0699df083077a26bfefd4666899d691bde77b377cb8.
+The failed method's later insertion assertion is censored by the first failure;
+static counts are also unchanged 10 against budget 9. No baseline Maven rerun,
+third ordinary request, second guard request, budget alteration or unrelated
+lifetime cleanup was performed. This establishes no new/worsened source-ratchet
+input from this leaf; it does not claim an observed baseline JUnit pass/failure.
+
+Root's final scope reminder adds an inherited native-P2 limitation only.
+`loc_4906A (sonic3k.asm:95385-95404)` uses FixBugs=0: line 95401 DOES contain
+`addq.b #p2_standing_bit-p1_standing_bit,d6`; it retains possible d6 dirtiness
+after P1's Perform_Player_DPLC instead of the FixBugs=1 fresh moveq at 95397.
+The current independent RiderState pair does not model dirty support-bit
+selection/status aliasing. No FixBugs=1 behavior or wider standing-bit owner
+interface is adopted here, and these P1 component controls are not whole native
+two-player tube fidelity. A wider support-bit interface is a separate proposal.
+The reverse-gravity centre discriminator is retained unchanged.
+
+All requested Maven work is terminal (2 ordinary requests +1 fresh guard).
+The four tested source blobs and exact runtime diff remain frozen and unchanged. No category/broad/native/route job is submitted.
+`git diff --check` passes. Citation checking reports no missing/out-of-range
+references and 21 inherited stale anchors across these four files (baseline23);
+matching parsed findings against exact659 content establishes zero new stale
+or hard citations. New native statements were read at the pinned lines above.
+The short native-Sonic 320/off component checks do not qualify full routes,
+rendering, P2/donor/roster/other-character breadth or complete TouchFloor behavior.
+Raw own red XML/log namespaces were consumed and removed; compiled output is retained.
+
+
+The first normal-hook commit attempt rejected machine-local user-home paths in
+this plan. Command examples now use OPENGGF_MAIN indirection with shell-expanding
+double quotes; exact resolved execution remains in the existing registry. No
+hook bypass, source edit or repeated test run followed this documentation repair.

@@ -236,7 +236,12 @@ Emerald Remix example (2026-10-21): the [remix and Clover Valley matrix](../arch
 
 Tide Circuit creator fixture (2026-10-07): the [two-act matrix](../architecture/validation/levels/tide-circuit.md) records actual runtime consumers, original floor traversal, tagged saves, event and world rewind, fresh loads and results-driven handoff. Execution and viewport/donor/character/team breadth remain explicit; the fixture does not certify stock receiving acts.
 
-Stock parity round 3 (2026-10-08, private candidate): the [continued audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md) records native cross-game death-radius reset, S2 seventh-emerald results and [HCZ fan-child matrix follow-through](../architecture/validation/levels/s3k-hcz1-sonic.md#stock-fan-child-follow-up--2026-10-08). Root composition `84f0c20f11` against published `d740b7a0` passes 275 focused cases without failures/errors/skips. MZ1's 192 differences and the S2 results walk close in the individual normal trace lanes; returned HCZ remains unchanged. A whole fresh S1 timing fixture is withheld after downstream closure failures. Combined canonical verification completes 17 cases with four qualified assertion failures and no errors/skips, preserving the lane profiles. Candidate/actual-main ordinary and fresh guards remain pending. Existing stock act, character/team, viewport/donor, load/respawn, whole-route rewind and native presentation gaps are not certified by these local fixes. The earlier follow-ups below retain their dated scope.
+Stock parity round 3 (2026-10-08, private candidate): the [continued audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md) records native cross-game death-radius reset, S2 seventh-emerald results and [HCZ fan-child matrix follow-through](../architecture/validation/levels/s3k-hcz1-sonic.md#stock-fan-child-follow-up--2026-10-08). Root composition `84f0c20f11` against published `d740b7a0` passes 275 focused cases without failures/errors/skips. MZ1's 192 differences and the S2 results walk close in the individual normal trace lanes; returned HCZ remains unchanged. A whole fresh S1 timing fixture is withheld after downstream closure failures. Combined canonical verification completes 17 cases with four qualified assertion failures and no errors/skips, preserving the lane profiles. Candidate/actual-main ordinary and fresh guards pass 51/52 with one inherited lifecycle source-ratchet failure (586 raw
+destruction calls against budget582), no errors/skips. A matched static audit
+against frozen659 finds identical offending source; baseline JUnit was not
+rerun. Native P2 dirty-d6/status aliasing in the FixBugs=0 vertical dispatch
+remains unmodelled by independent RiderState entries; no whole two-player tube
+fidelity or FixBugs=1 adoption is claimed. Existing stock act, character/team, viewport/donor, load/respawn, whole-route rewind and native presentation gaps are not certified by these local fixes. The earlier follow-ups below retain their dated scope.
 
 Fresh stock parity recheck (2026-10-07): the [combined audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#completed-ordinary-baseline) records current failures in selected SSZ/LRZ/MHZ/DEZ cold-route and rewind tests on both baseline and candidate. The dated campaign milestones below retain their historical evidence; they are not current passing qualification for those failing test identities. Ending implementation, native presentation and supported route breadth remain separate obligations.
 
@@ -1839,3 +1844,23 @@ also preserves native cleared-frame initialization and replays after forced
 recreation. [Exact selection and limitations](../architecture/audits/2026-10-22-s1-chain-gap-closure.md#retail-grounded-roll-camera-and-fresh-fragment-animation)
 retain the remaining PLC, later-route, queue and API pin obligations; this does
 not certify a complete act matrix or complete emerald chain.
+
+
+### DEZ native tube/Chainspike component follow-up — 2026-10-23
+
+The [DEZ2 matrix](../architecture/validation/levels/s3k-dez-act2.md#native-tube-ownership-and-chainspike-probe-correction--2026-10-23)
+records a bounded successor to frozen `659b02c98`: a gravity-tube owner-transfer guard,
+native pre-resize centre correction, distinct horizontal/vertical mount-helper
+order, and Chainspike's zero floor-probe radius separate from its 128-pixel
+render bound. Short native Sonic 320/off tests add destructive owner/child
+recreation and forward replay. The original four checks are observed red on
+unchanged runtime; helper-order and reverse-gravity controls are final-only.
+Final focused validation passes 99/99 with 0 failures/errors/skips; fresh owning
+guards pass 51/52 with one inherited lifecycle source-ratchet failure (586 raw
+destruction calls against budget 582), no errors/skips. A matched static audit
+against frozen `659b02c98` finds identical offending source; baseline JUnit was not
+rerun. Native P2 dirty-d6/status aliasing in the FixBugs=0 vertical dispatch
+remains unmodelled by independent RiderState entries; no whole two-player tube
+fidelity or FixBugs=1 adoption is claimed. No long route,
+broad smoke, native capture, rendering or new act/character/roster/donor/width
+certification is claimed; inherited matrix obligations remain open.

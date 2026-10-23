@@ -40,11 +40,12 @@ import java.util.List;
  *       axis by the same cosine.</li>
  * </ul>
  *
- * <p><b>Both reverse-gravity rows are in the horizontal body.</b> {@code loc_48FBA}
+ * <p><b>Both direct reverse-gravity branches are in the horizontal body.</b> {@code loc_48FBA}
  * (:95319-95330) mirrors {@code flip_angle} about the horizontal on the way out —
  * {@code addi.b #$40 / neg.b / subi.b #$40}, which is a reflection, not a negation — and
  * XORs {@code render_flags} bit 1; {@code loc_4904A} (:95366-95369) XORs the same bit every
- * frame of the ride. The vertical body reads the flag nowhere.
+ * frame of the ride. The vertical body has no direct flag branch; an airborne rolling
+ * mount still uses {@code Player_TouchFloor}'s gravity-signed radius adjustment.
  */
 public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
@@ -140,6 +141,13 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     }
 
     private void runFor(AbstractPlayableSprite player, RiderState state, int vIntRunCount) {
+        // RideObject_SetRide (sonic3k.asm:42067-42074) and sub_33C34 (:70207-70214)
+        // clear the previous interact owner's standing bit before assigning the new one.
+        // The live latch is the engine's equivalent: an old tube must not run its exit
+        // after an earlier slot has already taken this rider.
+        if (state.riding && player.getLatchedSolidObjectInstance() != this) {
+            state.riding = false;
+        }
         if (isVertical()) {
             if (state.riding) {
                 verticalRide(player, state, vIntRunCount);
@@ -336,33 +344,57 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
     }
 
-    /** {@code sub_33C34} (:70207-70227), the ROM's {@code RideObject_SetRide}. */
+    /**
+     * Horizontal {@code RideObject_SetRide} (sonic3k.asm:42067-42089), called by
+     * {@code sub_48F12} (:95276), differs from vertical {@code sub_33C34} (:70207-70227),
+     * called by {@code sub_49090} (:95429-95430).
+     */
     private void setRide(AbstractPlayableSprite player) {
         ObjectServices objectServices = tryServices();
         if (objectServices != null && objectServices.objectManager() != null) {
             objectServices.objectManager().markObjectSupportThisFrame(player);
         }
-        if (player.getAir()) {
-            player.setXSpeed((short) 0);
+        // Both helpers first replace interact. The live non-solid latch also keeps
+        // Player_AnglePos out of terrain walk-off while Status_OnObj is set.
+        player.setLatchedSolidObject(spawn.objectId(), this);
+        boolean airborne = player.getAir();
+        if (!isVertical()) {
+            // RideObject_SetRide writes these even for an already grounded rider, then
+            // publishes OnObj and clears InAir before its conditional Player_TouchFloor.
+            player.setAngle((byte) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed(player.getXSpeed());
+            player.setOnObject(true);
+            player.setAir(false);
+        }
+        if (airborne) {
+            if (isVertical()) {
+                // sub_33C34 preserves y_vel for sub_49090's subsequent ground_vel=-y_vel.
+                player.setXSpeed((short) 0);
+            }
             if (player.getRolling()) {
-                // Player_ResetOnFloor_Part2's add.w d0,y_pos(a1), where d0 is the radius
-                // the un-roll gives back; NativePositionOps owns playable native writes.
-                int radiusDelta = player.getYRadius() - player.getStandYRadius();
+                // Player_TouchFloor (sonic3k.asm:24381-24403) adds the signed radius
+                // delta to the pre-resize native centre, with gravity/angle sign changes.
+                // setRolling changes top-left-backed dimensions, so restore both native
+                // centres explicitly rather than adding to the already resized centre.
+                int centreX = player.getCentreX();
+                int centreY = player.getCentreY();
+                int radiusDelta = (byte) (player.getYRadius() - player.getStandYRadius());
+                if (reverseGravityActive()) {
+                    radiusDelta = -radiusDelta;
+                }
+                if (((player.getAngle() + 0x40) & 0x80) != 0) {
+                    radiusDelta = -radiusDelta;
+                }
                 player.setRolling(false);
-                NativePositionOps.addYPosPreserveSubpixel(player, radiusDelta);
+                NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
+                NativePositionOps.writeYPosPreserveSubpixel(player, centreY + radiusDelta);
             }
             player.setPushing(false);
             player.setJumping(false);
         }
         player.setOnObject(true);
         player.setAir(false);
-        // move.w a0,interact(a1) (:70212). The rider's interact word points at the tube for
-        // the whole ride, which is what keeps Player_AnglePos (:18772-18777) out of the
-        // terrain probe: it returns on Status_OnObj before any FindFloor. The engine models
-        // that non-solid ownership as a latch, the same way the CNZ wire cage and barber pole
-        // do; without it the terrain walk-off detaches the rider every frame and the tube
-        // re-mounts it the next one.
-        player.setLatchedSolidObject(spawn.objectId(), this);
     }
 
     /**
