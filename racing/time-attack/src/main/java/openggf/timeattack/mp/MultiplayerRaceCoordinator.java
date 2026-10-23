@@ -225,6 +225,14 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         return !holdGameplay();
     }
 
+    /** The round-start digit the HUD draws over the attached run, or 0 outside its countdown. */
+    @Override
+    public int countdownDigit() {
+        long millis = session.remainingCountdownMillis();
+        return runtime != null && roundsStarted == attachedRound && millis > 0
+                ? (int) Math.max(1, (millis + 999) / 1000) : 0;
+    }
+
     /** An open window turns a completed act into the next attempt; a closed one ends the run. */
     @Override
     public boolean continueAfterActCompletion() {

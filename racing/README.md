@@ -30,7 +30,9 @@ Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN an
 There are no lives: after a death the animation plays (press jump after half a second to skip
 the rest), the act reloads straight from its start without a title card, and once the level is
 visible a 3-2-1 countdown holds control before the fresh attempt. Solo and room runs behave the
-same; neither the fade-in nor the countdown is part of the attempt's time. Acts start without
+same; neither the fade-in nor the countdown is part of the attempt's time. In Sonic 3 & Knuckles
+this countdown and a room's round-start countdown use Death Egg Zone's tunnel-launcher sounds: a
+ready beep as each of 3, 2 and 1 appears and the launch sound on GO. Acts start without
 their intro cutscene (Angel Island 1 begins on the beach), so the clock measures the race.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 

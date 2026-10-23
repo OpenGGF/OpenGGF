@@ -139,6 +139,8 @@ public final class TimeAttackScene implements ModScene {
         TimeAttackRuntime run = new TimeAttackRuntime(ghostStore, identityDir, () -> false);
         run.setRetryKey(settings::retryKey);
         run.setLookSource(settings::appearanceFor);
+        // The run plays through the launched game's own sound driver.
+        run.setSfxPlayer(id -> context.audio().playSfx(id));
         return run;
     }
 

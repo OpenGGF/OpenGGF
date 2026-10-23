@@ -206,8 +206,14 @@ class TestMultiplayerRaceCoordinator {
                 .noneMatch(ControlMessage.AttemptStart.class::isInstance));
 
         assertFalse(step(rig, keys(), 0, false, 10), "the countdown holds the run");
+        assertEquals(3, rig.coordinator().countdownDigit(), "the digit the HUD draws");
+        now += 1_000;
+        assertEquals(2, rig.coordinator().countdownDigit());
+        now += 1_999;
+        assertEquals(1, rig.coordinator().countdownDigit(), "1 until the count runs out");
 
-        now += 3_000;
+        now += 1;
+        assertEquals(0, rig.coordinator().countdownDigit(), "no digit once the round is running");
         rig.coordinator().pump();
         assertTrue(rig.transport().wire.isEmpty(), "RUNNING alone does not start the attempt");
         for (int frame = 0; frame < 3; frame++) {

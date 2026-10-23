@@ -115,6 +115,95 @@ class TestTimeAttackRuntime {
                 "lead-in steps carry no input and held countdown frames execute nothing: untimed");
     }
 
+    /** Drives a death restart through its lead-in and countdown, logging each sound by step. */
+    private static java.util.List<String> restartCountdownSounds(Path root, String gameId) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest(gameId, 0, 0, "sonic", java.util.List.of()));
+        java.util.List<String> sounds = new java.util.ArrayList<>();
+        int[] stepIndex = {0};
+        runtime.setSfxPlayer(id -> sounds.add(String.format("%02X@%d", id, stepIndex[0])));
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, true));
+        assertTrue(runtime.admitStep(NO_KEYS), "the spawn step");
+        runtime.afterStep(step(0, 80, false));
+        stepIndex[0] = 1;
+        while (!runtime.admitStep(NO_KEYS)) {
+            stepIndex[0]++;
+        }
+        return sounds;
+    }
+
+    @Test
+    void anS3kRestartCountdownSoundsLikeTheDeathEggTunnelLauncher(@TempDir Path root) {
+        // Obj_DEZTunnelLauncher: LaunchReady ($A7) as the count starts and on each of the next
+        // two 60-frame ticks, LaunchGo ($AD) as it releases the player.
+        assertEquals(java.util.List.of("A7@1", "A7@60", "A7@120", "AD@181"),
+                restartCountdownSounds(root, "s3k"),
+                "one ready per digit as it appears, go on the first step with control");
+    }
+
+    @Test
+    void otherGamesCountDownSilently(@TempDir Path root) {
+        assertEquals(java.util.List.of(), restartCountdownSounds(root.resolve("s1"), "s1"));
+        assertEquals(java.util.List.of(), restartCountdownSounds(root.resolve("s2"), "s2"));
+    }
+
+    @Test
+    void aRoundStartCountdownSoundsEachDigitFromThreeAndGoOnlyWhenReleased(@TempDir Path root) {
+        TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
+        runtime.armForLaunch(new TimeAttackLaunchRequest("s3k", 0, 0, "sonic", java.util.List.of()));
+        java.util.List<Integer> sounds = new java.util.ArrayList<>();
+        runtime.setSfxPlayer(sounds::add);
+        int[] digit = {5};
+        boolean[] hold = {true};
+        runtime.setFrameCompanion(new TimeAttackRuntime.FrameCompanion() {
+            @Override public boolean admit(com.openggf.mods.run.RunInput input) { return !hold[0]; }
+            @Override public void afterStep() { }
+            @Override public int countdownDigit() { return digit[0]; }
+        });
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
+        for (int d : new int[] {5, 5, 4, 3, 3, 2, 1, 1}) {
+            digit[0] = d;
+            assertFalse(runtime.admitStep(NO_KEYS), "the room holds the run at " + d);
+        }
+        assertEquals(java.util.List.of(0xA7, 0xA7, 0xA7), sounds, "only 3, 2 and 1 sound, once each");
+        digit[0] = 0;
+        assertFalse(runtime.admitStep(NO_KEYS), "the digit has gone but the room still holds the run");
+        assertEquals(3, sounds.size(), "no go before the run is released");
+        hold[0] = false;
+        assertTrue(runtime.admitStep(NO_KEYS));
+        assertTrue(runtime.admitStep(NO_KEYS));
+        assertEquals(java.util.List.of(0xA7, 0xA7, 0xA7, 0xAD), sounds, "one go as the run is released");
+
+        // Over the title card the run takes no steps, but the digits are still drawn and sound.
+        sounds.clear();
+        hold[0] = true;
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
+        com.openggf.mods.ui.LevelOverlayCanvas canvas =
+                org.mockito.Mockito.mock(com.openggf.mods.ui.LevelOverlayCanvas.class);
+        for (int d : new int[] {3, 2, 2, 1}) {
+            digit[0] = d;
+            runtime.drawOverlay(canvas);
+        }
+        digit[0] = 0;
+        runtime.drawOverlay(canvas);
+        assertEquals(java.util.List.of(0xA7, 0xA7, 0xA7), sounds, "drawn digits sound; drawing never says go");
+        hold[0] = false;
+        assertTrue(runtime.admitStep(NO_KEYS));
+        assertEquals(java.util.List.of(0xA7, 0xA7, 0xA7, 0xAD), sounds, "go on the first released step");
+
+        // A countdown left part-way through (the run is never released) never says go.
+        sounds.clear();
+        hold[0] = true;
+        runtime.onLevelReady(new com.openggf.mods.run.RunLevelStart(runtime.runSpec(), "fp", false, 0, 0, false));
+        digit[0] = 2;
+        assertFalse(runtime.admitStep(NO_KEYS));
+        digit[0] = 0;
+        for (int i = 0; i < 5; i++) {
+            assertFalse(runtime.admitStep(NO_KEYS));
+        }
+        assertEquals(java.util.List.of(0xA7), sounds);
+    }
+
     @Test
     void aLongLeadInDrainsIntoTheRoomInsideTheHostStreamLimits(@TempDir Path root) {
         TimeAttackRuntime runtime = new TimeAttackRuntime(new GhostStore(root), root.resolve("identity"), () -> false);
