@@ -20,14 +20,9 @@ import static org.lwjgl.glfw.GLFW.*;
 /** Controller and pointer authoring front end; all document edits use the shared workspace. */
 final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteOverlay.Painter {
     private EditorHudCanvas routeCanvas;
-    private float routeLabelWidth;
 
     @Override public void line(float x1, float y1, float x2, float y2, int rgb, float width) {
         routeCanvas.line(x1, y1, x2, y2, rgb, width);
-    }
-    @Override public void label(float x, float y, String text, int rgb) {
-        routeCanvas.rect(x - 3, y - 2, routeLabelWidth, 12, 0x101A2B, .92f);
-        routeCanvas.fittedText(text, x, y, routeLabelWidth - 6, Size.SMALL, rgb, 1);
     }
     enum Page { CAST, TIMELINE, COMMANDS }
     record Row(String label, String detail, int frame, Runnable action) { }
@@ -225,7 +220,6 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
         Rect game = layout.game();
         if (workspace.routeOverlay() != null) {
             routeCanvas = c;
-            routeLabelWidth = Math.max(1, game.w() - 10);
             c.clip(game);
             try { workspace.paintRouteOverlay(this, game.x(), game.y(), game.w(), game.h()); }
             finally { c.unclip(); routeCanvas = null; }
@@ -272,7 +266,10 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
                     names[i], () -> changePage(target), page == target);
         }
         List<Row> rows = rows();
-        visibleRows = Math.max(1, (int) ((panel.h() - 110) / 27));
+        var route = workspace.routeOverlay();
+        var routeLines = route == null ? List.<String>of() : wrapRouteText(route.reason(), panel.w() - 28);
+        float routeHeight = route == null ? 0 : 68 + routeLines.size() * 11;
+        visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / 27));
         selected = rows.isEmpty() ? 0 : Math.clamp(selected, 0, rows.size() - 1);
         int first = Math.max(0, Math.min(selected - visibleRows / 2, rows.size() - visibleRows));
         if (rows.isEmpty()) {
@@ -294,6 +291,17 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
+        if (route != null) {
+            float x = panel.x() + 10, y = bottom - routeHeight - 10;
+            c.rect(x - 2, y - 5, panel.w() - 16, 1, LINE, 1);
+            c.text(route.title(), x, y, Size.SMALL, route.result().success() ? GOOD : WARN, 1);
+            c.text("Cyan: walk", x, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND, 1);
+            c.text("Gold: air / takeoff", x + 85, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.AIR, 1);
+            c.text("Square: start   Diamond: goal", x, y + 26, Size.SMALL, TEXT_DIM, 1);
+            c.text(route.applied() ? "White cross: actual position" : "Red cross: stopped attempt", x, y + 37, Size.SMALL, TEXT_DIM, 1);
+            for (int i = 0; i < routeLines.size(); i++)
+                c.text(routeLines.get(i), x, y + 52 + i * 11, Size.SMALL, TEXT, 1);
+        }
         c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
         float half = (panel.w() - 18) / 2;
@@ -307,7 +315,23 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
                     labels[i], () -> workspace.invoke(action), false);
         }
-        c.fittedText(workspace.status(), panel.x() + 8, panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
+        c.fittedText(route == null ? workspace.status() : route.statusText(), panel.x() + 8,
+                panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
+    }
+
+    /** Route explanations wrap at spaces instead of passing through the HUD's ellipsis fitter. */
+    static List<String> wrapRouteText(String text, float width) {
+        var lines = new ArrayList<String>();
+        String line = "";
+        for (String word : text.split("\\s+")) {
+            String next = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && EditorHudCanvas.textWidth(next, Size.SMALL) > width) {
+                lines.add(line);
+                line = word;
+            } else line = next;
+        }
+        if (!line.isEmpty()) lines.add(line);
+        return List.copyOf(lines);
     }
 
     private void drawTimeline(EditorHudCanvas c, Rect dock, StageplayDocument document, List<Hit> nextHits) {

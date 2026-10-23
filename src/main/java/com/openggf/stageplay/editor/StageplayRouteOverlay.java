@@ -18,28 +18,48 @@ public final class StageplayRouteOverlay {
 
     public interface Painter {
         void line(float x1, float y1, float x2, float y2, int rgb, float width);
-        void label(float x, float y, String text, int rgb);
     }
 
     private final StageplayRouteResult result;
     private final boolean applied;
-    private final String legend;
+    private final String title;
     private final String reason;
 
     public StageplayRouteOverlay(StageplayRouteResult result, boolean applied) {
         this.result = Objects.requireNonNull(result);
         if (applied && !result.success()) throw new IllegalArgumentException("Cannot apply a failed route overlay");
         this.applied = applied;
-        legend = (applied ? "APPLIED" : result.success() ? "PROPOSED"
-                : result.status() == StageplayRouteResult.Status.BUDGET_EXCEEDED ? "BUDGET" : "STOPPED")
-                + " " + result.request().actorId() + " / cyan walk + gold air";
-        reason = result.success() ? "Square start / diamond goal" : result.message();
+        title = applied ? "Route applied" : result.success() ? "Route proposed" : "Route incomplete";
+        reason = switch (result.status()) {
+            case VERIFIED -> applied ? "Compare the path during playback." : "Native replay checked. Review, then Apply.";
+            case VISUAL_TERRAIN -> "Visual terrain only. Native object AI stays off.";
+            case BUDGET_EXCEEDED -> "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
+            case SEARCH_EXHAUSTED -> "No route found in this search. " + readable(result.message());
+            case UNSUPPORTED -> "This route is not supported. " + readable(result.message());
+            case CANCELLED -> "Route planning cancelled.";
+            case VERIFICATION_FAILED -> "Playback could not confirm this route. " + readable(result.message());
+            case STALE_INPUT -> "Scene or assets changed. Plan the route again.";
+        };
     }
 
     public StageplayRouteResult result() { return result; }
     public List<StageplayRoutePoint> path() { return result.path(); }
     public boolean applied() { return applied; }
-    public String legend() { return legend; }
+    public String title() { return title; }
+    public String statusText() {
+        return result.success() ? title + "." : switch (result.status()) {
+            case BUDGET_EXCEEDED -> "Route search limit reached.";
+            case CANCELLED -> "Route planning cancelled.";
+            case STALE_INPUT -> "Route needs replanning.";
+            default -> "Route could not be completed.";
+        };
+    }
+
+    /** Protocol diagnostics remain intact in the result; chrome presents ordinary words. */
+    private static String readable(String message) {
+        var matcher = java.util.regex.Pattern.compile("\\b[A-Z][A-Z_]{2,}\\b").matcher(message);
+        return matcher.replaceAll(match -> match.group().replace('_', ' ').toLowerCase(java.util.Locale.ROOT));
+    }
     public String reason() { return reason; }
 
     public static float screenX(double world, StageplayTimeline.CameraPose camera,
@@ -99,8 +119,6 @@ public final class StageplayRouteOverlay {
             stroke(painter, ax - 3, ay, ax + 3, ay, WHITE, 2);
             stroke(painter, ax, ay - 3, ax, ay + 3, WHITE, 2);
         }
-        painter.label(left + 8, top + 8, legend, result.success() ? GROUND : FAILURE);
-        painter.label(left + 8, top + 22, reason, WHITE);
     }
 
     private static void stroke(Painter painter, float x1, float y1, float x2, float y2, int rgb, float width) {

@@ -36,6 +36,16 @@ class TestStageplayHud {
         tick();
     }
 
+    @Test void routeExplanationWrapsAtWordsWithoutLosingText() {
+        String explanation = "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
+        for (int width : new int[] {260, 280, 420}) {
+            var lines = StageplayHud.wrapRouteText(explanation, width);
+            assertEquals(explanation, String.join(" ", lines));
+            assertTrue(lines.stream().allMatch(line -> EditorHudCanvas.textWidth(line, EditorHudCanvas.Size.SMALL) <= width));
+            assertFalse(lines.stream().anyMatch(line -> line.contains("...")));
+        }
+    }
+
     @Test
     void controllerCreatesActorAndEditsAKeyThroughTheSharedForms() {
         press(BUTTON_Y);

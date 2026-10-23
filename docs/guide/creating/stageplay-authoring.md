@@ -507,7 +507,9 @@ In both editors, select a cast member and use **Plan collision route**. The tran
 viewport overlay draws the result's observed `path`, never command-to-goal lines:
 cyan grounded segments, gold airborne segments/takeoff chevrons, a start square,
 and a destination diamond. Failed attempts retain their sampled prefix with a red
-terminal cross and the exact diagnostic. Missing samples break the line; a failure
+terminal cross. Route state, the colour/marker key and a wrapped, plain-language
+explanation live in the side panel (the HUD workbench or desktop Direction inspector),
+with a short status line. No route text is drawn over the game picture. Missing samples break the line; a failure
 before observations has no invented start or stop. Search-budget exhaustion is not
 reported as a proven wall or gap. Close the route menu to review before Apply.
 

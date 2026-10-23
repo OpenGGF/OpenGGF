@@ -77,6 +77,7 @@ class TestStageplayRouteOverlayPictures {
                 Files.writeString(output.resolve("engine-success-result.json"),StageplayRouteProtocol.encodeResult(success));
                 StageplayStore.write(output.resolve("engine-source.stageplay"),source);
                 assertNotNull(workspace.routeOverlay()); assertFalse(workspace.routeOverlay().applied());
+                assertEquals("Route proposed",workspace.routeOverlay().title());
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-proposed.png"):null);}
                 // The film renderer owns no route state. Redrawing its opaque view removes every
@@ -86,14 +87,20 @@ class TestStageplayRouteOverlayPictures {
                 session.draw(workspace.previewDocument(),workspace.previewFrame(),output,f->fail(f));
                 byte[] clean=read(viewport);
                 chrome.render(WIDTH,HEIGHT,WIDTH,HEIGHT);
-                assertFalse(java.util.Arrays.equals(clean,read(viewport)),"Frontend must actually paint pixels in the viewport");
+                byte[] overlaid=read(viewport);
+                assertFalse(java.util.Arrays.equals(clean,overlaid),"Frontend must actually paint pixels in the viewport");
+                int headerBytes=viewport[2]*Math.min(40,viewport[3])*4;
+                assertArrayEquals(java.util.Arrays.copyOfRange(clean,clean.length-headerBytes,clean.length),
+                        java.util.Arrays.copyOfRange(overlaid,overlaid.length-headerBytes,overlaid.length),
+                        "The top of the film must stay clear of route labels");
                 glViewport(viewport[0],viewport[1],viewport[2],viewport[3]);
                 session.draw(workspace.previewDocument(),workspace.previewFrame(),output,f->fail(f));
                 assertArrayEquals(clean,read(viewport),"Film drawing must remain free of authoring overlays");
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 session.requestRouteApply(workspace.controller().document(),output);
                 awaitApplied(workspace);
-                assertTrue(workspace.routeOverlay().applied());workspace.menu().close();
+                assertTrue(workspace.routeOverlay().applied());
+                assertEquals("Route applied",workspace.routeOverlay().title());workspace.menu().close();
                 workspace.invoke(StageplayWorkspace.Action.PLAY);
                 for(int i=0;i<300;i++) {
                     workspace.tick(new InputHandler()); draw(chrome,session,workspace);
@@ -104,6 +111,8 @@ class TestStageplayRouteOverlayPictures {
                 await(workspace,session,StageplayRouteJob.Phase.FAILED);
                 var failed=session.pollRoute().result();
                 assertFalse(failed.success());assertFalse(failed.path().isEmpty(),failed.message());
+                assertEquals("Route search limit reached.",workspace.status());
+                assertTrue(workspace.routeOverlay().reason().contains("Reachability is still unknown"));
                 Files.writeString(output.resolve("engine-failed-result.json"),StageplayRouteProtocol.encodeResult(failed));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-failed.png"):null);}

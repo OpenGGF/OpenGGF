@@ -1344,7 +1344,7 @@ public final class StageplayWorkspace {
         actions.add(action("Back", () -> { }));
         menu.showActions("Collision route",actions);
         var result = routeUpdate.result();
-        menu.setSubtitle(routeUpdate.message() + (result == null ? "" : "\n" + result.path().size() + " path samples, "
+        menu.setSubtitle((result == null ? routeUpdate.message() : new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false).reason()) + (result == null ? "" : "\n" + result.path().size() + " path samples, "
                 + result.expandedNodes() + " nodes, " + result.simulatedTicks() + " simulated ticks. "
                 + (result.nativeVerified() ? "Native input replay verified."
                         : result.status()==com.openggf.stageplay.route.StageplayRouteResult.Status.VISUAL_TERRAIN
@@ -1401,7 +1401,10 @@ public final class StageplayWorkspace {
         }
         if (next.equals(routeUpdate)) return;
         routeUpdate=next; status=next.message();
-        if (next.result()!=null) proposedOverlay=new com.openggf.stageplay.editor.StageplayRouteOverlay(next.result(),false);
+        if (next.result()!=null) {
+            proposedOverlay=new com.openggf.stageplay.editor.StageplayRouteOverlay(next.result(),false);
+            status=proposedOverlay.statusText();
+        }
         if (next.phase()==StageplayRouteJob.Phase.APPLY_READY) {
             try {
                 StageplayRouteProtocol.validatePatch(routeSource,routeRequest,next.result().fingerprint(),next.result());

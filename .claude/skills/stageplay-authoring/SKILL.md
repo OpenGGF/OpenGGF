@@ -106,7 +106,10 @@ Free initialization lead-in; the worker replays that prefix, never inserts a key
 or silently initializes a directed graph.
 In either editor, select the player or walking object in Cast and use Plan collision
 route. Close the menu to review the observed path before Apply: cyan ground, gold
-air/takeoff chevrons, start square, goal diamond, red failed endpoint plus diagnostic.
+air/takeoff chevrons, start square, goal diamond and red failed endpoint. Route
+state, colour/marker keys and plain-language explanations stay in the HUD workbench
+or desktop Direction inspector, with a short status line. No route text covers the
+picture; explanations wrap rather than cutting words.
 Do not replace missing samples or a failed prefix with an invented goal line. Apply
 retains the plan during that shot's playback, with a white actual-player-centre cross.
 Camera framing transforms the overlay; it never enters the scene or exported film.

@@ -15,11 +15,9 @@ class TestStageplayRouteOverlay {
     record Stroke(float x1, float y1, float x2, float y2, int rgb, float width) { }
     static class Painter implements StageplayRouteOverlay.Painter {
         final List<Stroke> strokes = new ArrayList<>();
-        final List<String> labels = new ArrayList<>();
         public void line(float x1, float y1, float x2, float y2, int rgb, float width) {
             strokes.add(new Stroke(x1,y1,x2,y2,rgb,width));
         }
-        public void label(float x,float y,String text,int rgb) { labels.add(text); }
     }
     private final StageplayDocument scene = StageplayDocument.empty("s2",0,0,0,0,320,224);
     private final StageplayRouteRequest request = new StageplayRouteRequest("hero",0,200,160,120);
@@ -52,9 +50,26 @@ class TestStageplayRouteOverlay {
     @Test void failureCrossIsAtLastObservedPointWithExactReasonAndSeparateDestination() {
         var painter = paint(new StageplayRouteOverlay(result(false,path),false),new StageplayTimeline.CameraPose(0,0,1));
         assertTrue(painter.strokes.contains(new Stroke(105,225,115,235,StageplayRouteOverlay.FAILURE,2)));
-        assertTrue(painter.labels.contains("BLOCKED: wall"));
+        var overlay = new StageplayRouteOverlay(result(false,path),false);
+        assertEquals("Route incomplete", overlay.title());
+        assertEquals("No route found in this search. blocked: wall", overlay.reason());
         assertTrue(painter.strokes.contains(new Stroke(420,344,426,350,StageplayRouteOverlay.FAILURE,2)));
     }
+    @Test void chromeExplainsEveryResultWithoutProtocolEnums() {
+        for (var status : StageplayRouteResult.Status.values()) {
+            boolean success = status == StageplayRouteResult.Status.VERIFIED || status == StageplayRouteResult.Status.VISUAL_TERRAIN;
+            var result = new StageplayRouteResult(status, "BLOCKED_SWEEP: no floor", "0".repeat(64), request,
+                    success ? scene : null, List.of(), List.of(), path, 1, 6, status == StageplayRouteResult.Status.VERIFIED);
+            var overlay = new StageplayRouteOverlay(result, false);
+            assertFalse((overlay.title() + overlay.reason() + overlay.statusText()).matches("(?s).*[A-Z]{2,}_[A-Z_]+.*"));
+            if (status == StageplayRouteResult.Status.BUDGET_EXCEEDED) {
+                assertTrue(overlay.reason().contains("Reachability is still unknown"));
+                assertEquals("Route search limit reached.", overlay.statusText());
+            }
+        }
+        assertEquals("Route applied", new StageplayRouteOverlay(result(true,path),true).title());
+    }
+
     @Test void emptyUnsupportedResultHasNoInventedStartOrFailureLocation() {
         var painter = paint(new StageplayRouteOverlay(result(false,List.of()),false),new StageplayTimeline.CameraPose(0,0,1));
         assertEquals(8,painter.strokes.size(),"Only goal diamond and its outline, no simulated movement");

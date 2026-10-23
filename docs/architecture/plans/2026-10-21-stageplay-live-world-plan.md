@@ -2735,3 +2735,44 @@ validation. Object paths retain visual walking limits with native AI suspended;
 only players get an actual-centre marker, not a second recorded movement trail.
 A retained applied line references the accepted attempt; external ROM/assets still
 require replanning, and it is not a certification of arbitrary future world changes.
+
+
+### Route overlay presentation polish (2026-10-23)
+
+Follow-up to engine `e5a438131` and desktop `4c4ec6d`: review rejected the
+viewport legend because it obscured the scene, clipped at the desktop top edge
+and truncated failure prose. The painter now exposes only strokes. State,
+colour/marker keys and explanations live in the HUD workbench and desktop
+Direction inspector; short status lines use ordinary language. HUD explanations
+wrap on spaces, and desktop explanations use the inspector's normal wrapping.
+The original result/protocol diagnostics remain intact for research. Budget
+exhaustion still explicitly leaves reachability unknown.
+
+Geometry, dark outlines and fixed screen-space stroke weights are unchanged.
+A draw-on animation was considered and omitted: the complete proposal is easier
+to review immediately, and native actor playback already supplies useful motion.
+The proposal, failed prefix and accepted playback remain transient editor state.
+
+The explicitly enabled engine picture/model/workspace/HUD selection passes
+25 tests; the desktop picture/chrome selection passes 18, both with zero
+failures/errors/skips. Updated picture assertions cover shared human-readable
+state, a route-label-free film header and clean film redraw. New unit coverage
+checks all result states and word wrapping without losing explanation text.
+Both picture fixtures retain the same S2 jump, failure, applied playback and
+pan/zoom source; refreshed evidence lives under the external evidence directory's
+`polish/` child. Full command lines and final commits are recorded in external
+`STATUS.md`. This is focused presentation qualification; no broad smoke or
+release suite was submitted in this follow-up.
+
+Both refreshed eight-second, 1280x720/60 fps clips passed FFprobe and complete
+`ffmpeg -v error -xerror` decoding, and were reviewed at 1x through jump, landing,
+arrival, failure and final pan/zoom in an owned browser. The route reads clearly
+against the busy Emerald Hill scenery at the HUD and desktop viewport scales;
+the dark outline holds the cyan/gold strokes and the scene stays clear of labels.
+The wrapped explanation remains readable in each frontend's own visual style.
+
+The refreshed source scenes are byte-identical to the original evidence, and all
+four success/failure path arrays and protocol messages compare equal. This polish
+changes presentation only; the before/after route observations are unchanged.
+Desktop polish is committed as `32ec954`; engine polish is committed with this
+qualification update.

@@ -31,7 +31,8 @@ Unreleased. The earlier development themes remain in
   route helper emits native movement/jump intents over actual collision terrain
   with cold LIVE verification, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,
-  with grounded/airborne segments, endpoints and failed-attempt diagnostics; applied
+  with grounded/airborne segments and endpoints over the picture, plus route state,
+  legends and readable failure explanations in editor chrome; applied
   plans remain visible during authoring playback without entering saved scenes or films.
   Centred camera pushes preserve their framing centre,
   fractional origins survive composition, and the world framebuffer is reused.
