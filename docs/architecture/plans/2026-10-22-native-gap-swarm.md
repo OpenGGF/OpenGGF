@@ -3431,3 +3431,51 @@ against `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` selects 3,922 ordinary smoke
 classes across all ten categories plus fresh guards. That candidate plan has
 not been executed. The independent leaf results do not establish a combined
 candidate pass, native parity, full routes or release-only full-suite coverage.
+
+
+## Aggregate-owned S1 lifecycle correction — 2026-10-23
+
+The DEZ leaf's failing lifecycle ratchet was unchanged against frozen659, but
+Root's delivery-wide source audit found a real aggregate regression: pre-task
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4` and pinned developf829 each contain
+582 raw destruction calls, whereas659 and receiving755a contain586. The raw
+insertion count is10 on all four sources against budget9. These are distinct
+facts: inheritance at the DEZ boundary does not waive aggregate-owned growth.
+
+The coherent owned repair changes only two S1 boss classes. All five explicit
+native deletes in the new FZBossVisualComponent use the existing
+ObjectLifetimeOps.destroyLatched helper at the same branch/return positions.
+This final, persistent component has no destruction override or native
+respawnable-offscreen writer; panel and damaged-cockpit checks explicitly retain
+permanent no-respawn deletion. The helper also clears a stale respawnable flag;
+this is the permanent-delete contract, not a claim of equivalence for arbitrary
+externally injected flags. The GHZ anchor uses spawnAfterCurrentSibling for its
+already-constructed native component. Its valid-slot, non-deferred update path
+still registers after the same root slot, preserves allocation failure/same-pass
+cadence and does not add the childSpawned notification of the owned-child helpers.
+No allocation, guard rule, exception list or budget is modified. The exact current
+scan is581 raw destruction calls and9 insertions across1,379 package sources.
+
+Root request60032 on755a plus the frozen three-file patch passes52 distinct
+identities in6 XML suites,0 failures/errors/skips: FZ graph6/native12, GHZ graph5/
+native11, lifetime10 and sibling allocation8. Java25.0.5, release25, the actual
+candidate cwd, surfaceless EGL and three original absolute ROM properties were
+read back. Queue wait22s; Maven1:25. All62 stream warnings are inherited FAST
+without-manifest fallbacks; no dumps. Exact tracked source/pom/tool framing
+SHA256 is46a3f204e3782edf176884826b72fae660e65d477cb2444d9e8a97db7d21a35b.
+
+The separate fresh request3531 executes the entire owning
+TestObjectPhysicsStandardizationGuard class:33 unique identities pass,0 failures/
+errors/skips, including BOTH the581<=582 destruction assertion and9==9 insertion
+assertion that the DEZ run could not reach. Queue wait1,022s; Maven31.321s.
+The same source fingerprint, Java/cwd/EGL and ROM properties match through
+terminal. The log contains one inherited FAST fallback warning; XML streams
+are empty and no dumps exist. This is a fresh bounded owning guard result,
+not a full candidate structural/smoke pass and not a rewritten DEZ baseline.
+
+Ordinary XML/logs were consumed after readback; guard diagnostics are consumed
+before commit, while compiled output is retained. The existing frozen659 smoke
+continues independently, with actual failures preserved. The separate Slot
+publication/order correction and absent secondary native-audio prerequisite
+remain active in their own worktrees. Main, push, activation, full routes and
+passive SOZ/MHZ execution remain closed.

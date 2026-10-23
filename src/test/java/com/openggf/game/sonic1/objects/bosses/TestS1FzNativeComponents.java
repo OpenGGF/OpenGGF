@@ -168,10 +168,12 @@ class TestS1FzNativeComponents {
         player.setCentreX((short) 0x25B0);
         panel.update(100, player);
         assertTrue(panel.isDestroyed(), "offscreen panel retires once Sonic passes it");
+        assertFalse(panel.isDestroyedRespawnable(), "native self-deletion permanently retires the panel");
         write(h.boss, "escapingInShip", true);
         h.boss.getState().hitCount = 0;
         cockpit.update(101, null);
         assertTrue(cockpit.isDestroyed(), "FixBugs=0 deletes an offscreen damaged cockpit before its follow-position write");
+        assertFalse(cockpit.isDestroyedRespawnable(), "damaged cockpit deletion must not mark an offscreen respawn");
         assertFalse(h.boss.isDestroyed());
     }
 
