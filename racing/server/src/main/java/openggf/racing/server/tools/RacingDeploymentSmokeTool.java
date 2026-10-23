@@ -132,7 +132,7 @@ public final class RacingDeploymentSmokeTool {
             RaceConnection race = master.joinRoom(roomId, identity, DISPLAY_NAME, fingerprint)
                     .get(10, TimeUnit.SECONDS);
             try {
-                Events events = new Events(master, race, roomId);
+                Events events = new Events(race);
                 race.sendControl(new ControlMessage.SetReadyRule("AUTO"));
                 int window = (attempt.frames().size() + 59) / 60 + 120;
                 race.sendControl(new ControlMessage.RoundConfigure(
@@ -260,23 +260,21 @@ public final class RacingDeploymentSmokeTool {
 
     /** Keeps the real room alive while pacing and waiting; never adjusts any server clock. */
     private static final class Events {
-        private final MasterClient master;
         private final RaceConnection race;
-        private final String roomId;
         private final List<ControlMessage> pending = new ArrayList<>();
-        private long lastHeartbeat = System.nanoTime() - TimeUnit.SECONDS.toNanos(5);
+        private long lastPing = System.nanoTime() - TimeUnit.SECONDS.toNanos(5);
 
-        Events(MasterClient master, RaceConnection race, String roomId) {
-            this.master = master;
+        Events(RaceConnection race) {
             this.race = race;
-            this.roomId = roomId;
         }
 
         private void poll() {
             long now = System.nanoTime();
-            if (now - lastHeartbeat > TimeUnit.SECONDS.toNanos(5)) {
-                master.heartbeat(roomId, 1);
-                lastHeartbeat = now;
+            if (now - lastPing > TimeUnit.SECONDS.toNanos(5)) {
+                // Relay attachment hands the socket to the room. Its token now owns
+                // keepalives; broker Heartbeat uses the obsolete browser credentials.
+                race.sendControl(new ControlMessage.Ping(now));
+                lastPing = now;
             }
             for (RaceClient.InboundEvent event : race.drainInbound()) {
                 if (event instanceof RaceClient.Disconnected gone) {
@@ -287,7 +285,8 @@ public final class RacingDeploymentSmokeTool {
                         throw new IllegalStateException("race rejected smoke attempt: " + kick.reason());
                     }
                     if (control.message() instanceof ControlMessage.RoundStart
-                            || control.message() instanceof ControlMessage.Pong
+                            || (control.message() instanceof ControlMessage.Pong pong
+                                && pong.t0ClientMillis() == 1)
                             || control.message() instanceof ControlMessage.RecordingRequest
                             || control.message() instanceof ControlMessage.StandingsDelta) {
                         pending.add(control.message());

@@ -60,91 +60,100 @@ task.
 5. Integrate into the main workspace's current `develop`, push only `develop`,
    and remove the accounted-for task worktree/branch after verification.
 
-## Checkpoint
+## Delivery evidence
 
-- Pre-task destination: `aebb390ed365b20ca0e7cd248ecb5b0761e2d729` (`develop`), fetched
-  and fast-forward pull confirmed up to date. Main-workspace dirty reference
-  submodules and unrelated untracked files are preserved.
-- Task tree: `.worktrees/ai-racing-docker`, branch `feature/ai-racing-docker`.
-- Java 25 is installed at `/usr/lib/jvm/java-25-openjdk`. Category preflight passed
-  with `JAVA_HOME` set there and `LUA_BIN=/usr/bin/lua5.4`; no tests execute during
-  that probe. The initial attempt stopped on the default Lua version.
-- Docker tooling was downloaded into an owned external scratch directory. Runtime
-  startup is blocked: running CachyOS kernel `7.2.10-1-cachyos` has no corresponding
-  installed bridge/veth modules. All attempted daemon sessions exited. The user
-  will repair/reboot the host; container runtime validation remains pending.
-- Implementation is in the task tree: portable distribution/images, Compose and
-  standalone documentation, file secrets/readiness/worker retry and drain, and a
-  real TLS/replay deployment witness. No image publication is planned.
-- Ten Python packaging regressions passed. Compose schema and two-worker identity
-  separation, published ports, TLS alias, health dependency and read-only mounts
-  passed CLI validation. Deployment shell examples parse and file links resolve.
-- Change-based planning selected all 3,618 smoke classes because `racing/` and
-  `CONFIGURATION.md` are unclassified. No engine, POM, gameplay or selection policy
-  changed. Focused server/configuration/transport/verifier consumers plus real ROM
-  replay and container execution replace that disproportionate broad engine run.
-  This is bounded validation, not a full-suite pass.
-- First queued regression job (`TestMasterConfig,TestMasterServer`, session 9547)
-  acquired admission after 524 seconds. Maven ran 81 seconds and stopped before
-  tests on a new witness compile error: `RaceConnection` is not AutoCloseable.
-  Explicit `finally` cleanup fixes that mismatch; no baseline attribution is needed.
-- Combined focused regression command session 94453 is queued, covering the two
-  original classes and 18 master/transport/verifier/witness consumers with absolute
-  S1 and S3K ROM properties. Root builds only after the worker releases target.
-- Independent review found malformed token characters could reach an HTTP error
-  that echoes its header. Sanitized printable-ASCII validation now covers file and
-  literal forms and worker tokens before header construction, with regressions in
-  the combined run. Witness success is bound to its own slot and requested attempt.
-- Actual relocated-runtime, TLS replay and container execution remain pending.
+The pre-task `develop` was `aebb390ed365b20ca0e7cd248ecb5b0761e2d729`.
+Implementation was saved locally as `8c4e27b93`, then current `develop` at
+`1f1649e86` was merged into the task branch as `97eed0f04`. The prerelease
+changelog merged automatically; no conflict resolution or gameplay change was
+needed. Main-workspace dirty reference submodules and unrelated files were
+preserved. The service sources and packaging stay in this repository; no separate
+GitHub project, registry publication or production deployment was created.
 
-### Reboot handoff
+### Validation
 
-The user has rebooted into `7.3.0-5-cachyos`, with matching modules installed. The
-old focused-test PID is absent; its interrupted request is not a passing result.
-Main-workspace `develop` advanced to `d7732f78e` and was fetched/fast-forward checked.
-Save the implementation locally and merge that upstream state into the task tree
-before restarting validation; only the prerelease changelog overlaps task files.
-Docker runtime restart is delegated to one bounded task; no system service or
-default Docker context is changed.
+- Tool preflight passed with Java 25 and `LUA_BIN=/usr/bin/lua5.4`. S1 REV01 and
+  S3K ROMs matched the repository's canonical CRC32 and SHA-1 values. Existing
+  absolute ROM paths were used; no ROM was copied into the distribution or image.
+- `python3 -m unittest discover -s racing/server -p 'test_*.py' -v`: **10 passed**.
+  Covers relocation, original identity/resources/dependency preservation,
+  generated-context exclusion, tamper/platform rejection and permissions under a
+  restrictive umask. Runtime relocation was also exercised with the real JVM.
+- Compose CLI configuration validated both workers, separate identity volumes,
+  only one published port, certificate-hostname alias, readiness dependency and
+  read-only bind mounts. Shell examples parsed and documentation links resolved.
+- The focused command below passed on `97eed0f04`: **113 tests, zero failures,
+  errors or skips**, across 20 classes, including S3K ROM-backed replay. After the
+  reboot it acquired admission immediately; Maven took 1 minute 25 seconds.
+- `JAVA_HOME=/path/to/jdk-25 python3 racing/server/build.py --distribution` passed.
+  The generated image context contained 80 runtime artifacts (about 78.5 MB),
+  without operator files or ROMs.
+- `python3 racing/deploy/build-images.py --skip-build --tag qualification` built
+  both images using the owned Docker CLI/context. The Java base used was
+  `eclipse-temurin:25-jre-noble` at
+  `sha256:3f2223fe04b750aa5a8179e29b5c9a1ddf7665fc9bb08bfe11ad01d143bc13a5`.
+- A relocated distribution, standalone containers and the committed Compose file
+  each passed a real private-CA TLS session, paced relay stream, authenticated
+  upload and independently signed worker verdict. Each completed the natural
+  GHZ1 input route: **3,230 frames simulated, 3,220 timed frames**, ghost hash
+  `443a5f624161920d75e298f95766cf8a3c755ceb9a902839c3a239b560b079fa`.
+  These runs used `97eed0f04` plus the witness keepalive correction described below;
+  the packaged engine fingerprint retained its `-dirty` marker.
+- Both container modes ran the master and two workers on an ordinary bridge
+  network. Actual worker cgroup files confirmed 4 GiB memory, two CPUs and 256
+  PIDs. UID/GID 10001, read-only roots/ROM mounts and separate persistent public
+  identities were checked. Workers stopped within their Docker grace period;
+  master/worker restarts preserved worker identities and restored master health.
+  No display, GPU or audio device was attached.
 
-All source changes are uncommitted on `feature/ai-racing-docker`; nothing has been
-integrated or pushed. The current combined focused request (session 94453, last
-observed PID 1480777) has waited at least 994 seconds without executing, with memory
-admission the last reported blocker (about 4.1 GiB short of its 7 GiB reservation).
-The service worker owns the only observer. Keep that request if it is alive; after
-a reboot, verify it ended before rerunning the same unfinished coverage. Do not
-submit a duplicate while it is merely queued.
-
-Set `REPO` to the main checkout and `TASK_SCRATCH` to the owned external scratch
-root (`$HOME/scratch/agent-tmp/codex` on this host). Run from the task worktree:
+Run the focused selection from the task tree, with `REPO` pointing to the main
+checkout's existing ROM files:
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+JAVA_HOME=/path/to/jdk-25 LUA_BIN=/path/to/lua5.4 \
 python3 tools/testing/maven_queue.py --normal -Dmse=off \
   '-Dtest=TestMasterConfig,TestMasterServer,TestHttpMasterApi,TestHttpMasterApiAgainstMaster,TestVerifierLoop,TestVerifierMain,TestVerifierShutdown,TestVerifierWorker,TestMasterHttpRoutes,TestMasterHttpAdmission,TestMasterTransportLifecycle,TestMasterEndToEnd,TestVerifiedRoomEndToEnd,TestAttemptReplayHarness,TestAttemptReplayPatchResolution,TestRacingDeploymentSmokeTool,TestRecordingBlobStore,TestVerificationJobQueue,TestVerifierRegistry,TestVerdictPersistence' \
   "-Ds3k.rom.path=${REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
   "-Dsonic1.rom.path=${REPO}/Sonic The Hedgehog (W) (REV01) [!].gen" test
 ```
 
-Both supplied ROMs were checked against the repository's canonical CRC32 and SHA-1
-values. No ROM was copied or added to the image context.
+The initial change-based plan selected all 3,618 smoke classes because racing paths
+and the configuration reference were unclassified. The task changes no engine
+algorithm, POM or test-selection policy. Focused service/transport/replay consumers,
+packaging checks and actual container runs replaced that disproportionate engine
+selection. This is bounded validation, not a full-suite or all-game/architecture
+certification. S1 completed in containers; S3K replay ran in the focused JVM tests.
 
-After the focused run releases `target/`, build with Java 25 using
-`python3 racing/server/build.py --distribution`, then
-`python3 racing/deploy/build-images.py --skip-build --tag local --context-only`.
-The task-owned scratch directory
-`${TASK_SCRATCH}/racing-docker-validation-20261023/` contains a
-prepared, syntax-checked `host-smoke.py` diagnostic (not executed). It relocates the
-actual distribution, creates an isolated private-CA TLS fixture, starts a master
-and two separate workers, requires the real GHZ1 replay/upload/verdict, and tears
-down its own processes. Inspect failures in its owned `host-*` directory and remove
-consumed diagnostics afterward. It is not a substitute for container validation.
+### Findings and corrections
 
-Docker tools/start script and blocked-runtime status are under
-`${TASK_SCRATCH}/racing-docker-runtime-20261023/`. All previous
-daemon sessions exited; a leftover socket file is not proof of a live daemon.
-After the host is repaired, restart only this owned runtime, build both images,
-and qualify standalone and Compose bridge-network launches with real TLS/replay,
-read-only ROM mounts, distinct worker identities and restart persistence. Then
-finish policy/trailer checks, integrate into the unchanged main-workspace branch,
-push only `develop`, and account for/remove task-owned worktree and scratch output.
+- The first pre-reboot test request waited 524 seconds, then compilation rejected
+  the witness's try-with-resources use of `RaceConnection` (not AutoCloseable).
+  Explicit `finally` cleanup corrected it. No tests had run in that attempt.
+- A second request waited at least 994 seconds for memory admission and was ended
+  by reboot. It was not counted as a pass or duplicated while still alive.
+- Review found malformed secret characters could reach JDK HTTP exceptions that
+  echo a header. Printable non-space ASCII validation now rejects them with a
+  sanitized error before header construction. File/literal and returned-worker
+  token regressions passed. Witness acceptance also checks its own player slot,
+  attempt ID and recording hash.
+- The first real replay reached natural completion but disconnected while pacing:
+  the probe sent broker heartbeats after relay handoff, carrying the browser token
+  into room traffic. `MasterClient.sendControl` and the room's token-strike check
+  explained the rejection. The probe now sends room-authenticated pings and
+  ignores their unsolicited pongs. All three real replay runs passed afterward;
+  server admission rules were not relaxed to make the probe pass.
+- The original running kernel lacked matching bridge/veth modules. The reboot
+  supplied kernel `7.3.0-5-cachyos`; loading its installed `br_netfilter` module
+  allowed the owned rootless daemon to start and create/remove a bridge. No global
+  Docker service/default context was changed. Docker 29.9.2, Compose 5.6.1,
+  Buildx 0.38.1, cgroups v2 and fuse-overlayfs were used for qualification.
+- Isolated verified-room fixtures seed only a new client's account trust before
+  master startup. Copying that fixture DB into the non-root Compose volume needed
+  a temporary bootstrap container with copy/chown capabilities; the application
+  services retained their capability drop. No live production database was used.
+
+The reusable witness and operator procedure are in
+[the deployment guide](../../../racing/deploy/README.md#deployment-witness).
+Temporary local orchestration, private test certificates, logs, fixtures and Docker
+resources are task-owned diagnostics; remove them after inspection rather than
+keeping validation receipts.
