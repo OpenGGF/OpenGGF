@@ -2101,9 +2101,12 @@ public class GameLoop {
         }
     }
 
-    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
-    void announceHostedRunLevelReady() {
-        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    /**
+     * Tells the hosted run its level is ready when a launch or a fast death restart
+     * ({@code deathRestart}) bypassed {@code doZoneAct}.
+     */
+    void announceHostedRunLevelReady(boolean deathRestart) {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY), deathRestart);
     }
 
     /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
@@ -4425,13 +4428,7 @@ public class GameLoop {
      * Starts the fade-to-black transition for death respawn.
      */
     private void startRespawnFade() {
-        LOGGER.info("Starting fade-to-black for respawn");
-
-        // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        audioManager.fadeOutMusic();
-
-        // Start fade-to-black, then respawn when complete
-        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, continueScreen::respawn);
+        continueScreen.startRespawn(runPolicy(), audioManager::fadeOutMusic);
     }
 
     /**

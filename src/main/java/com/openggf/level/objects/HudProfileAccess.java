@@ -35,6 +35,23 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").drawForCounterPublication(state, player, advanceTimer);
     }
 
+    /**
+     * The profile a run draws: {@code profile} itself, or with its lives rows hidden when the
+     * run's policy draws no lives counter (fast death restarts take no lives).
+     */
+    public static HudProfile forRunPolicy(HudProfile profile, com.openggf.game.session.GameplayRunPolicy policy) {
+        if (policy.livesCounter()) {
+            return profile;
+        }
+        List<HudRow> rows = new ArrayList<>(profile.rows().size());
+        for (HudRow row : profile.rows()) {
+            boolean lives = row.label() == HudLabel.LIVES || row.metric() == HudMetric.LIVES;
+            rows.add(lives ? new HudRow(false, row.label(), row.metric(), row.labelX(), row.labelY(),
+                    row.valueRightX(), row.valueY(), row.maxDigits(), row.warning()) : row);
+        }
+        return new HudProfile(rows);
+    }
+
     public static HudProfile current(HudRenderManager hud) {
         return Objects.requireNonNull(hud, "hud").currentProfile();
     }

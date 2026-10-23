@@ -50,6 +50,8 @@ final class HostedRunController {
     private int pendingHeldMask;
     private boolean pendingStartHeld;
     private boolean debugAssistThisStep;
+    /** Player input is released for the admitted step because the host asked; this run set it. */
+    private boolean inputHeld;
     private boolean retryRequested;
     private RunEndReason leaveReason;
     private boolean actCompleteSeen;
@@ -86,6 +88,11 @@ final class HostedRunController {
 
     /** The run's level is loaded (launch or retry). */
     void onLevelReady(boolean debugAssisted) {
+        onLevelReady(debugAssisted, false);
+    }
+
+    /** The run's level is loaded; {@code deathRestart} marks a fast restart after a death. */
+    void onLevelReady(boolean debugAssisted, boolean deathRestart) {
         if (host == null) {
             return;
         }
@@ -105,7 +112,8 @@ final class HostedRunController {
         stopSpectating();
         actCompleteSeen = false;
         int[] size = levelSize();
-        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1]);
+        RunLevelStart start = new RunLevelStart(spec, determinismFingerprint, debugAssisted, size[0], size[1],
+                deathRestart);
         guarded(() -> host.onLevelReady(start));
     }
 
@@ -171,6 +179,7 @@ final class HostedRunController {
             boolean admitted = host.admitStep(new FrameInput(input));
             applySpectate();
             refreshLocalLook();
+            holdPlayerInput(admitted && host.holdsPlayerInput());
             return admitted;
         } catch (RuntimeException failure) {
             abort(failure);
@@ -178,11 +187,26 @@ final class HostedRunController {
         }
     }
 
+    /**
+     * Releases player 1's controller for the admitted step at the host's request. Only a
+     * suppression this run set is cleared, so the engine's own input locks are left alone.
+     */
+    private void holdPlayerInput(boolean hold) {
+        if (hold == inputHeld) {
+            return;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (sprites != null) {
+            sprites.setInputSuppressed(hold);
+        }
+        inputHeld = hold;
+    }
+
     /** Captures player 1's admitted input for the step about to execute. */
     void beforeStep(InputHandler input) {
         var p1 = input.logical().player1();
-        pendingHeldMask = p1.heldMask();
-        pendingStartHeld = p1.startHeld();
+        pendingHeldMask = inputHeld ? 0 : p1.heldMask();
+        pendingStartHeld = !inputHeld && p1.startHeld();
     }
 
     /** A debug shortcut was used this frame; reported with the next step. */
@@ -291,6 +315,7 @@ final class HostedRunController {
             return;
         }
         RunHost ended = host;
+        holdPlayerInput(false);
         stopSpectating();
         detachRenderer();
         ghostRenderer.clearSlots();
@@ -477,6 +502,14 @@ final class HostedRunController {
         @Override
         public boolean keyPressed(int key) {
             return handler.isKeyPressed(key);
+        }
+
+        @Override
+        public boolean levelFadingIn() {
+            var level = GameServices.levelOrNull();
+            return level != null && level.getAnimatedPatternManager()
+                    instanceof com.openggf.game.internal.LevelPaletteFadeOwner owner
+                    && owner.presentsLevelFadeFromBlack();
         }
     }
 }

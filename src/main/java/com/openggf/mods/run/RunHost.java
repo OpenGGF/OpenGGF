@@ -14,7 +14,10 @@ import java.util.List;
  */
 @ModApi
 public interface RunHost {
-    /** The run's level is loaded and its first step is next (on launch and after every retry). */
+    /**
+     * The run's level is loaded and its first step is next: on launch, after every retry and
+     * after every fast death restart ({@link RunLevelStart#deathRestart()}).
+     */
     default void onLevelReady(RunLevelStart start) {
     }
 
@@ -24,6 +27,15 @@ public interface RunHost {
      */
     default boolean admitStep(RunInput input) {
         return true;
+    }
+
+    /**
+     * Asked when {@link #admitStep} admitted a step: true runs it with player 1's controller
+     * released, so the player cannot act and the {@link RunStep} reports no buttons. The world
+     * still advances (a lead-in while the level fades in).
+     */
+    default boolean holdsPlayerInput() {
+        return false;
     }
 
     /** The step just executed. */

@@ -56,9 +56,31 @@ RunHandle handle = ctx.gameplay().launch(spec, myHost);
 | `actCompletion` | `CONTINUE` (next act/zone/ending) | `RETURN_TO_HOST` |
 | `liveRewind` | yes | no |
 | `editorEntry` | yes | no |
+| `deathRestart` | `STOCK` | `STOCK` |
+| `livesCounter` | yes | yes |
+| `zoneIntros` (S3K Angel Island 1's plane intro as Sonic) | yes | yes |
 
-Objects consult the policy where the shipped game would enter a stage or leave the act, before
-any of their own state changes; nothing else about the simulation differs.
+`withFastRestarts()` turns any policy into one with unlimited attempts (Time Attack uses
+`isolatedAct().withFastRestarts()`): `deathRestart` becomes `FAST_FROM_START` and the lives
+counter is hidden. A death then takes no life and never reaches GAME OVER or TIME OVER; the
+death animation plays, and once the player has been dead for
+`GameplayRunPolicy.FAST_RESTART_SKIP_FRAMES` (30) executed steps a jump press cuts the rest
+short. The act then reloads at once from its start, star-post progress cleared and with no
+title card, and `onLevelReady` follows with `RunLevelStart.deathRestart()` set so the host can
+show a countdown (hold steps from `admitStep`). Hold after the first step if the act should be
+visible during the countdown: the reloaded act's player and objects are drawn from its first
+step, and an S3K act also fades its own palette in over its first steps, which
+`RunInput.levelFadingIn()` reports. Return `true` from `RunHost.holdsPlayerInput()` to run such
+lead-in steps with the player's controller released; their `RunStep` reports no buttons. The skip counts the player's own dead steps, so
+it lands on the same step when the same inputs are replayed.
+
+`withoutZoneIntros()` starts acts where their intro cutscene would hand the player control,
+on the first load and every reload (the engine's skip-intros start); Time Attack uses
+`isolatedAct().withFastRestarts().withoutZoneIntros()`.
+
+Objects consult the policy where the shipped game would enter a stage or leave the act, and the
+player's death routine where it would take a life, before any of their own state changes;
+nothing else about the simulation differs.
 
 ## The run host
 
@@ -67,7 +89,7 @@ A thrown exception ends the run with `ABORTED` instead of crashing the engine.
 
 | Callback | When |
 |---|---|
-| `onLevelReady(RunLevelStart)` | after the level loads, on launch and every retry; carries the spec, a determinism fingerprint (engine build + ROM), whether a debug aid was already on, and the act's size |
+| `onLevelReady(RunLevelStart)` | after the level loads, on launch, every retry and every fast death restart; carries the spec, a determinism fingerprint (engine build + ROM), whether a debug aid was already on, the act's size and whether this load is a fast death restart |
 | `admitStep(RunInput)` | before every level step; return `false` to hold the run this frame (countdowns, lobby waits). `RunInput` exposes the logical controller state and `SceneKeys` key state |
 | `afterStep(RunStep)` | after every executed step: admitted player-1 buttons, Start, the player's pose, the act-completion signal, the last star post and a debug-assist flag. Held, paused, setup-only and lag-skipped frames produce no step |
 | `ghosts()` | each frame: up to eight `GhostPose`s the engine draws translucently with stock character art in the correct sprite layer. A stock `appearance` draws a desaturated ghost; any other look draws it in that player's palette. A `nameplate` floats above it in the player's name colour (`NameFont`) and fades with it |

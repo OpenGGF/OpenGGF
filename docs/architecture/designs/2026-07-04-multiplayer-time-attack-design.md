@@ -211,7 +211,8 @@ hundreds of clients; full list is paged on demand) and the solo/best delta timer
 During a run the HUD is one translucent right-hand column at most 140 native pixels
 wide that shrinks to its text: the run clock, then the room clock, estimated
 position and either the three standings around you or one unranked rival ahead and
-one behind. A 9-pixel progress strip sits beside the stock lives counter.
+one behind. A 9-pixel progress strip runs along the bottom, right of the stock lives
+counter's area; Time Attack runs hide that counter (deaths restart fast, without lives).
 Podium shows top 3 + your rank; next-track vote offers 3 options.
 
 ### 6.4 Track votes and custom pools

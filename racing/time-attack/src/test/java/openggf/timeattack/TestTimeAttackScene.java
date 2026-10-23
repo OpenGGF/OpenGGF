@@ -102,7 +102,7 @@ class TestTimeAttackScene {
         assertEquals(1, launched.size());
         RunSpec spec = launched.get(0);
         assertEquals("s2", spec.gameId());
-        assertEquals(GameplayRunPolicy.isolatedAct(), spec.policy());
+        assertEquals(GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros(), spec.policy());
         assertInstanceOf(TimeAttackRuntime.class, hosts.get(0));
     }
 
@@ -349,7 +349,7 @@ class TestTimeAttackScene {
             ControlMessage.RoundConfig round = new ControlMessage.RoundConfig("s2", 0, 0, 60, "OPEN", null);
             assertTrue(onRoomThread(room, () -> room.room().requestStartRound(round)));
             idleUntil("the round run", () -> scene.raceSession().state() == openggf.timeattack.mp.RaceSession.State.RACING);
-            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct())), launched);
+            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros())), launched);
             host.resume(RunEndReason.ACT_COMPLETED);
             assertEquals(openggf.timeattack.mp.RaceSession.State.LOBBY, scene.raceSession().state());
 

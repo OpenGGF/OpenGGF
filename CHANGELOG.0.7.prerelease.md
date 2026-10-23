@@ -83,6 +83,13 @@ Unreleased. The earlier development themes remain in
   hosting a LAN or master-listed room. Pools hold 3-32 acts of the room's own game.
   The master and the host reject a malformed, foreign or ineligible act with the reason.
   S1 and S2 boss acts now finish a timed run at the capsule switch, where the ROM clock stops.
+  Time Attack has no lives counter and unlimited tries: after a death (skippable
+  with jump after half a second) the act reloads at once from its start with no
+  title card, then a 3-2-1 countdown over the visible level holds control before a
+  fresh attempt. Angel Island 1 starts on the beach without the plane intro.
+  `GameplayRunPolicy.withFastRestarts()` (`DeathRestart.FAST_FROM_START`, hidden
+  lives counter), `withoutZoneIntros()`, `RunLevelStart.deathRestart()`,
+  `RunInput.levelFadingIn()` and `RunHost.holdsPlayerInput()` give mods the same.
 
 - **Multiplayer services:** The master recording/verifier API bounds outstanding
   requests and copied bodies across connections, closes overlapping HTTP pipelines,
