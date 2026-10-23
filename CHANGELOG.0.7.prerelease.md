@@ -40,7 +40,9 @@ Unreleased. The earlier development themes remain in
   rings submit at their actual object slots and retain native conversion art,
   priority and independent visibility through rewind. Existing rings continue
   during player death; converted bouncers retain the animation frame copied at
-  their own dispatch through late global animation and rewind.
+  their own dispatch through late global animation and rewind. Native object-word
+  snapshots synchronize only proven words, leaving unrelated fixed-slot shield
+  helpers outside that memory projection while rejecting ambiguous native access.
 
 - **Sonic 1 level entry:** background scrolling starts from each level or credits
   demo's final camera, and lamppost returns retain the original background camera
