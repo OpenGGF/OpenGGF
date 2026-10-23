@@ -169,7 +169,6 @@ class TestArchUnitRules {
             "debug -> camera",
             "debug -> configuration",
             "debug -> control",
-            "debug -> data",
             "debug -> game",
             "debug -> graphics",
             "debug -> level",
@@ -193,7 +192,6 @@ class TestArchUnitRules {
             "tools -> stageplay",
             "stageplay -> audio",
             "stageplay -> camera",
-            "stageplay -> configuration",
             "stageplay -> physics",
             "stageplay -> control",
             "stageplay -> data",
@@ -301,7 +299,6 @@ class TestArchUnitRules {
             "sprites -> control",
             "sprites -> data",
             "sprites -> game",
-            "sprites -> ghost",
             "sprites -> graphics",
             "sprites -> level",
             "sprites -> physics",
@@ -319,7 +316,6 @@ class TestArchUnitRules {
             "testmode -> sprites",
             "testmode -> trace",
             "timer -> audio",
-            "timer -> camera",
             "timer -> game",
             "timer -> level",
             "timer -> sprites",
@@ -331,14 +327,12 @@ class TestArchUnitRules {
             "tools -> data",
             "tools -> debug",
             "tools -> game",
-            "tools -> ghost",
             "tools -> graphics",
             // Mod-support Phase 2 Task 16 keeps the SDK validator thin by reusing
             // the engine's bounded asset-root and canonical mod validation contracts.
             "tools -> io",
             "tools -> level",
             "tools -> mods",
-            "tools -> net",
             "tools -> sprites",
             "tools -> trace",
             // Offline capture provenance consumes the leaf build-identity package;
@@ -353,8 +347,7 @@ class TestArchUnitRules {
             "trace -> sprites",
             "util -> data",
             "util -> game",
-            "util -> level",
-            "util -> tools");
+            "util -> level");
     private static final String[] RUNTIME_MANAGER_SINGLETONS = {
             Camera.class.getName(),
             LevelManager.class.getName(),
@@ -562,7 +555,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("configuration"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("control"))
-                            .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("graphics"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("level"))
@@ -645,7 +637,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("testmode"), inTopLevelSlice("trace"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("audio"))
-                            .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("level"))
                             .ignoreDependency(inTopLevelSlice("timer"), inTopLevelSlice("sprites"))
@@ -671,7 +662,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("data"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("level"))
-                            .ignoreDependency(inTopLevelSlice("util"), inTopLevelSlice("tools"))
                             // @ModApi is compatibility metadata, not runtime collaboration.
                             .ignoreDependency(DescribedPredicate.alwaysTrue(), modApiMarkerType())
                             // Release tooling reads the inventory but is not runtime orchestration.
@@ -689,6 +679,12 @@ class TestArchUnitRules {
                 "core-runtime top-level dependency edges grew; route new dependencies through "
                         + "provider/service boundaries or consciously update the ratchet:\n  "
                         + String.join("\n  ", unexpectedEdges));
+
+        Set<String> staleEdges = new TreeSet<>(CORE_RUNTIME_TOP_LEVEL_DEPENDENCY_EDGES);
+        staleEdges.removeAll(currentEdges);
+        assertTrue(staleEdges.isEmpty(),
+                "core-runtime dependency permissions no longer used; prune the measured stale edges:\n  "
+                        + String.join("\n  ", staleEdges));
     }
 
     private static boolean approvedEditorHostDataDependency(String origin, String target) {

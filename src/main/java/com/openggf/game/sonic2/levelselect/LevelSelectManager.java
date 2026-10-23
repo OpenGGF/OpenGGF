@@ -8,7 +8,7 @@ import com.openggf.game.LevelSelectProvider;
 import com.openggf.game.sonic2.audio.Sonic2SoundTestCatalog;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.game.sonic2.menu.MenuBackgroundAnimator;
+import com.openggf.game.menu.MenuBackgroundAnimator;
 import com.openggf.game.sonic2.menu.MenuBackgroundDataLoader;
 import com.openggf.game.sonic2.menu.MenuBackgroundRenderer;
 import com.openggf.level.Palette;

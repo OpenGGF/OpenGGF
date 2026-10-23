@@ -1,6 +1,7 @@
 package com.openggf.level.render;
 
 import com.openggf.graphics.SpriteMaskReplayRole;
+import com.openggf.graphics.SpritePiece;
 import com.openggf.level.Pattern;
 
 import java.util.List;
@@ -33,15 +34,8 @@ public final class SpritePieceRenderer {
             String debugSource
     ) {
         public PreparedPiece {
-            if (widthTiles < 0 || heightTiles < 0) {
-                throw new IllegalArgumentException("Tile dimensions must be non-negative");
-            }
-            if (startColTile < 0 || colCountTiles < 0 || startColTile + colCountTiles > widthTiles) {
-                throw new IllegalArgumentException("Clipped columns must stay within the piece width");
-            }
-            if (startRowTile < 0 || rowCountTiles < 0 || startRowTile + rowCountTiles > heightTiles) {
-                throw new IllegalArgumentException("Clipped rows must stay within the piece height");
-            }
+            SpritePiece.validateSourceWindow(widthTiles, heightTiles,
+                    startColTile, colCountTiles, startRowTile, rowCountTiles);
         }
 
         public PreparedPiece(
@@ -286,21 +280,16 @@ public final class SpritePieceRenderer {
         if (piece == null || consumer == null) {
             return;
         }
-        for (int ty = 0; ty < piece.rowCountTiles(); ty++) {
-            int originalRow = piece.startRowTile() + ty;
-            for (int tx = 0; tx < piece.colCountTiles(); tx++) {
-                int originalCol = piece.startColTile() + tx;
-                int srcX = piece.hFlip() ? (piece.widthTiles() - 1 - originalCol) : originalCol;
-                int srcY = piece.vFlip() ? (piece.heightTiles() - 1 - originalRow) : originalRow;
-                int tileOffset = (originalCol * piece.heightTiles()) + originalRow;
-                int patternIndex = piece.firstPatternIndex() + tileOffset;
+        toGraphicsPiece(piece).forEachTile(consumer::render);
+    }
 
-                int drawX = piece.x() + (srcX * Pattern.PATTERN_WIDTH);
-                int drawY = piece.y() + (srcY * Pattern.PATTERN_HEIGHT);
-
-                consumer.render(patternIndex, piece.hFlip(), piece.vFlip(), piece.paletteIndex(), drawX, drawY);
-            }
-        }
+    // Compatibility snapshot for direct rendering; SAT ingress owns its own boundary copy.
+    private static SpritePiece toGraphicsPiece(PreparedPiece piece) {
+        return new SpritePiece(piece.x(), piece.y(), piece.widthTiles(), piece.heightTiles(),
+                piece.firstPatternIndex(), piece.rawTileWordLow11(), piece.paletteIndex(),
+                piece.hFlip(), piece.vFlip(), piece.piecePriority(), piece.globalHighPriority(),
+                piece.maskReplayRole(), piece.startColTile(), piece.colCountTiles(),
+                piece.startRowTile(), piece.rowCountTiles(), piece.debugSource());
     }
 
     public static FrameBounds computeFrameBounds(

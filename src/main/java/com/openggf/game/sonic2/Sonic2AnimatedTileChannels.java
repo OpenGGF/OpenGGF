@@ -4,17 +4,20 @@ import com.openggf.game.animation.AnimatedTileCachePolicy;
 import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.DestinationPlan;
 import com.openggf.game.animation.strategies.ScriptFramesApplyStrategy;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.animation.AniPlcScriptState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 final class Sonic2AnimatedTileChannels {
 
     private Sonic2AnimatedTileChannels() {
     }
 
-    static List<AnimatedTileChannel> fromScripts(List<AniPlcScriptState> scripts) {
+    static List<AnimatedTileChannel> fromScripts(List<AniPlcScriptState> scripts,
+                                               Supplier<? extends GraphicsManager> graphics) {
         List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size());
         for (int i = 0; i < scripts.size(); i++) {
             AniPlcScriptState script = scripts.get(i);
@@ -24,7 +27,7 @@ final class Sonic2AnimatedTileChannels {
                     ctx -> ctx.frameCounter(),
                     destinationPlan(script),
                     AnimatedTileCachePolicy.ALWAYS,
-                    new ScriptFramesApplyStrategy(script)));
+                    new ScriptFramesApplyStrategy(script, graphics)));
         }
         return channels;
     }

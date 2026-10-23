@@ -88,6 +88,15 @@ pending at act completion now reports `ABORTED` rather than `ACT_COMPLETED`.
 normalized mutable `0.7` pin changes with them; descriptor candidate `0.7.0` and
 published baselines are unchanged.
 
+`GameModule.getTitlePreviewProvider()` supplies a detached CPU-only title-preview
+capability, explicitly forwarded by `DelegatingGameModule`. Its image and sequence
+contracts describe RGBA pixels, dimensions, the still tick and reusable animation
+tokens. Providers read the supplied ROM before returning and leave live services
+untouched. The stock hub resolves its card's provider directly at the composition
+root, so gameplay patches and donor choices do not replace stock-card art.
+This is an additive unpublished 0.7 candidate change; the descriptor and
+`ModApiVersion` remain at 0.7.0, with the candidate signature pin regenerated.
+
 The exact current candidate inventory is
 `src/test/resources/mods/mod-api-signatures-0.7.txt`. `TestModApiSignatureSurface`
 requires that file to be unique, sorted canonical UTF-8 text and exactly equal to

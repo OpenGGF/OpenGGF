@@ -288,8 +288,8 @@ class TestPlayerHeadPresentation {
         SpritePresentationRenderer.replayHeadSat(graphics,headEntries,entry->{
             assertFalse(graphics.isUseSpritePriorityShader(),"native live SAT replay uses the plain shader");
             emitted.incrementAndGet();
-            var desc=new com.openggf.level.PatternDesc();desc.setPriority(entry.effectiveHighPriority());
-            SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),(id,h,v,p,x,y)->{
+            var desc=new com.openggf.level.PatternDesc();desc.setPriority(entry.piece().effectiveHighPriority());
+            entry.piece().forEachTile((id,h,v,p,x,y)->{
                 desc.setPaletteIndex(p);desc.setHFlip(h);desc.setVFlip(v);graphics.renderPatternWithId(id,desc,x,y);
             });
         });

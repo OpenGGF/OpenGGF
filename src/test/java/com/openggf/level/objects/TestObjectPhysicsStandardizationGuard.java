@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.tests.ObjectGuardSourceScanner;
 import com.openggf.tests.ObjectGuardSourceScanner.SourceText;
+import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -11,7 +12,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,10 +53,6 @@ class TestObjectPhysicsStandardizationGuard {
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
                     + "\\.allocateSlotAfter\\s*\\()");
-    private static final Pattern RAW_SET_DESTROYED_TRUE = Pattern.compile(
-            "\\b(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)?setDestroyed\\s*\\(\\s*true\\s*\\)");
-    private static final Pattern RAW_ADD_DYNAMIC_OBJECT = Pattern.compile(
-            "\\.\\s*addDynamicObject(?:AfterCurrent(?:NextFrame)?|AfterSlot|NextFrame)?\\s*\\(");
     private static final Pattern TOUCH_PROFILE_HOOK_WITHOUT_PROFILE = Pattern.compile(
             "\\bpublic\\s+(?:boolean|int|TouchRegion\\[\\]|TouchResponseProvider\\.TouchRegion\\[\\])\\s+"
                     + "(?:requiresContinuousTouchCallbacks|usesS3kTouchSpecialPropertyResponse|"
@@ -141,21 +140,10 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/level/objects/ObjectManager.java"
     );
     private static final int OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES = 250;
-    // 2026-07-02: re-ratcheted 577 -> 584 for the post-45270bed9 S2 boss/prize
-    // batch (bb69af121 merge); new implementations must still prefer
-    // ObjectLifetimeOps.destroyLatched(...)/destroyRespawnableOffscreen(...).
-    // 2026-07-13: tightened 583 -> 582 after the AIZ control/glow and
-    // screen-shake timer objects moved to the shared ObjectLifetimeOps
-    // dynamic-expiry path instead of raw destruction writes.
-    private static final int RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET = 582;
-// 2026-07-02: 10 -> 11 for the CPZ2 Obj7A trace-frontier fix (fca42ed8d),
-    // whose direct addDynamicObject insert is part of the trace-validated slot
-    // cadence; migrating it to spawnChild would change allocation order.
-    // 2026-08-20: 11 -> 10. The two water-splash spawn sites in
-    // DefaultPowerUpSpawner collapsed into one rules-driven helper when the S1
-    // splash moved to its ROM fixed SST (v_splash, slot 12) instead of
-    // consuming a level-object slot.
-    private static final int RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET = 10;
+    private static final Path LIFECYCLE_BASELINE =
+            Path.of("src/test/resources/architecture/object-lifecycle-call-baseline.txt");
+    private static final Path LIFECYCLE_CURRENT_REPORT = TestSessionOutputPaths.diagnostics("architecture")
+            .resolve("object-lifecycle-call-current.txt");
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -238,43 +226,18 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
-    void productionObjectLifecycleRawCallCountsDoNotGrow() throws IOException {
-        List<String> lifecycleViolations = scanProductionLifecycleRatchetSources();
-        List<String> rawSetDestroyed = lifecycleViolations
-                .stream()
-                .filter(violation -> violation.contains("raw setDestroyed(true)"))
-                .toList();
-        List<String> rawAddDynamicObject = lifecycleViolations
-                .stream()
-                .filter(violation -> violation.contains("raw addDynamicObject(...)"))
-                .toList();
-
-        assertTrue(lifecycleCountIsWithinBudget(rawSetDestroyed.size(),
-                        RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET),
-                "Raw setDestroyed(true) calls in object production packages must not grow beyond budget. Current count is "
-                        + rawSetDestroyed.size() + "; budget is "
-                        + RAW_SET_DESTROYED_TRUE_OBJECT_PACKAGE_BUDGET + ". "
-                        + "Prefer ObjectLifetimeOps.destroyLatched(...) or "
-                        + "ObjectLifetimeOps.destroyRespawnableOffscreen(...). Current violations:\n  "
-                        + String.join("\n  ", rawSetDestroyed));
-        assertEquals(RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET, rawAddDynamicObject.size(),
-                "Raw addDynamicObject* calls in object production packages must not grow or drift silently. Current count is "
-                        + rawAddDynamicObject.size() + "; budget is "
-                        + RAW_ADD_DYNAMIC_OBJECT_OBJECT_PACKAGE_BUDGET + ". "
-                        + "Prefer spawnChild(...), spawnFreeChild(...), or "
-                        + "ObjectManager.createDynamicObject(...). Current violations:\n  "
-                        + String.join("\n  ", rawAddDynamicObject));
-    }
-
-    @Test
-    void lifecycleRawDestroyBudgetAcceptsReductionsButStillRejectsGrowth() {
-        assertTrue(lifecycleCountIsWithinBudget(577, 582));
-        assertTrue(lifecycleCountIsWithinBudget(582, 582));
-        assertFalse(lifecycleCountIsWithinBudget(583, 582));
-    }
-
-    private static boolean lifecycleCountIsWithinBudget(int actual, int budget) {
-        return actual <= budget;
+    void productionObjectLifecycleRawCallsMatchTheirCallerBaselines() throws IOException {
+        Map<String, Integer> actual = scanProductionLifecycleRatchetSources();
+        Files.createDirectories(LIFECYCLE_CURRENT_REPORT.getParent());
+        Files.write(LIFECYCLE_CURRENT_REPORT, actual.entrySet().stream()
+                .map(entry -> entry.getKey() + "\t" + entry.getValue()).toList());
+        Map<String, Integer> baseline = ObjectLifecycleCallAudit.readBaseline(Files.readAllLines(LIFECYCLE_BASELINE));
+        List<String> differences = ObjectLifecycleCallAudit.differences(actual, baseline);
+        assertTrue(differences.isEmpty(),
+                () -> "Object lifecycle debt changed by caller/operation. Prefer ObjectLifetimeOps deletion "
+                        + "or spawnChild/spawnFreeChild; tighten resolved baseline entries.\n  "
+                        + String.join("\n  ", differences.stream().limit(30).toList())
+                        + "\nCurrent inventory: " + LIFECYCLE_CURRENT_REPORT);
     }
 
     @Test
@@ -607,7 +570,7 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
-    void lifecycleRatchetDetectsRawDestroyedAndDynamicSpawnCallsInSampleSource() {
+    void lifecycleRatchetDetectsRawDestroyedAndDynamicSpawnCallsInSampleSource() throws IOException {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class Sample {",
                 "  void update(ObjectManager objectManager, AbstractObjectInstance child) {",
@@ -621,26 +584,19 @@ class TestObjectPhysicsStandardizationGuard {
                 "  }",
                 "}"));
 
-        assertEquals(List.of(
-                        "Sample.java:3 - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
-                                + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)",
-                        "Sample.java:4 - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
-                                + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)",
-                        "Sample.java:5 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                                + "or ObjectManager.createDynamicObject(...)",
-                        "Sample.java:6 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                                + "or ObjectManager.createDynamicObject(...)",
-                        "Sample.java:7 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                                + "or ObjectManager.createDynamicObject(...)",
-                        "Sample.java:8 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                                + "or ObjectManager.createDynamicObject(...)",
-                        "Sample.java:9 - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                                + "or ObjectManager.createDynamicObject(...)"),
+        String caller = "Sample.java#Sample#update(ObjectManager,AbstractObjectInstance)->";
+        assertEquals(Map.of(
+                        caller + "setDestroyed(true)", 2,
+                        caller + "addDynamicObject", 1,
+                        caller + "addDynamicObjectAfterCurrent", 1,
+                        caller + "addDynamicObjectAfterCurrentNextFrame", 1,
+                        caller + "addDynamicObjectAfterSlot", 1,
+                        caller + "addDynamicObjectNextFrame", 1),
                 scanLifecycleRatchetSource("Sample.java", source));
     }
 
     @Test
-    void lifecycleRatchetAllowsSharedWrapperOwnerSources() {
+    void lifecycleRatchetAllowsSharedWrapperOwnerSources() throws IOException {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class ObjectLifetimeOps {",
                 "  void replace(ObjectManager objectManager, AbstractObjectInstance replacement) {",
@@ -649,7 +605,7 @@ class TestObjectPhysicsStandardizationGuard {
                 "  }",
                 "}"));
 
-        assertEquals(List.of(), scanLifecycleRatchetSource(
+        assertEquals(Map.of(), scanLifecycleRatchetSource(
                 "com/openggf/level/objects/ObjectLifetimeOps.java", source));
     }
 
@@ -781,12 +737,12 @@ class TestObjectPhysicsStandardizationGuard {
         return violations;
     }
 
-    private static List<String> scanProductionLifecycleRatchetSources() throws IOException {
+    private static Map<String, Integer> scanProductionLifecycleRatchetSources() throws IOException {
         Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
         if (srcMain == null) {
             throw new IOException("Could not locate src/main/java");
         }
-        List<String> violations = new ArrayList<>();
+        Map<String, String> sources = new TreeMap<>();
         List<Path> sourceFiles = ObjectGuardSourceScanner.javaFilesUnderPackages(
                 srcMain, ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS);
         assertTrue(sourceFiles.size() >= OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES,
@@ -795,14 +751,11 @@ class TestObjectPhysicsStandardizationGuard {
                         + OBJECT_LIFECYCLE_RATCHET_MINIMUM_SCANNED_FILES);
         for (Path sourceFile : sourceFiles) {
             String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
-            if (LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
-                continue;
+            if (!LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
+                sources.put(path, Files.readString(sourceFile));
             }
-            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
-                    Files.readAllLines(sourceFile));
-            violations.addAll(scanLifecycleRatchetSource(path, source));
         }
-        return violations;
+        return ObjectLifecycleCallAudit.scan(sources);
     }
 
     private static List<String> productionScanRelativePaths() throws IOException {
@@ -871,24 +824,9 @@ class TestObjectPhysicsStandardizationGuard {
         return violations;
     }
 
-    private static List<String> scanLifecycleRatchetSource(String path, SourceText source) {
-        if (LIFECYCLE_RATCHET_OWNER_FILES.contains(path)) {
-            return List.of();
-        }
-        List<String> violations = new ArrayList<>();
-        Matcher destroyedMatcher = RAW_SET_DESTROYED_TRUE.matcher(source.text());
-        while (destroyedMatcher.find()) {
-            violations.add(path + ":" + source.lineAt(destroyedMatcher.start())
-                    + " - raw setDestroyed(true); use ObjectLifetimeOps.destroyLatched(...) "
-                    + "or ObjectLifetimeOps.destroyRespawnableOffscreen(...)");
-        }
-        Matcher dynamicMatcher = RAW_ADD_DYNAMIC_OBJECT.matcher(source.text());
-        while (dynamicMatcher.find()) {
-            violations.add(path + ":" + source.lineAt(dynamicMatcher.start())
-                    + " - raw addDynamicObject(...); use spawnChild(...), spawnFreeChild(...), "
-                    + "or ObjectManager.createDynamicObject(...)");
-        }
-        return violations;
+    private static Map<String, Integer> scanLifecycleRatchetSource(String path, SourceText source) throws IOException {
+        return LIFECYCLE_RATCHET_OWNER_FILES.contains(path) ? Map.of()
+                : ObjectLifecycleCallAudit.scan(Map.of(path, source.text()));
     }
 
     private static boolean isObjectPhysicsStandardizationOwner(String path) {

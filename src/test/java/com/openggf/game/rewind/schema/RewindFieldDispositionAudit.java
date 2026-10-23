@@ -81,7 +81,7 @@ final class RewindFieldDispositionAudit {
         return keys;
     }
 
-    private static void auditClass(Class<?> cls, List<Gap> gaps) {
+    static void auditClass(Class<?> cls, List<Gap> gaps) {
         boolean compact;
         try {
             compact = CompactFieldCapturer.supportsDefaultObjectSubclassScalars(cls);
