@@ -1915,6 +1915,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     graphicsManager.cachePatternTexture(hudDigits[i], hudBaseIndex + i);
                 }
                 hudRenderManager.setDigitPatternIndex(hudBaseIndex);
+                HudProfileAccess.measureTimeSeparators(hudRenderManager, hudDigits);
 
                 int nextHudIndex = hudBaseIndex + hudDigits.length;
                 com.openggf.level.objects.HudProfileAccess.installSatLayout(hudRenderManager,

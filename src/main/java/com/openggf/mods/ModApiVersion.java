@@ -7,7 +7,8 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including native decoded
+     * Current unpublished compiled-mod API candidate, including run-scoped native HUD profiles,
+     * overlay HUD-origin measurement, and native decoded
      * factory binding and original-ring retention on class-preserving levels,
      * bounded S3K boss/special/bonus-stage difficulty policies, and native-owned
      * invitation, brittle-support and finite HCZ/MGZ/CNZ/ICZ/LBZ presets,

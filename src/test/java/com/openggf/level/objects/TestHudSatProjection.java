@@ -107,7 +107,7 @@ class TestHudSatProjection {
                 var frame = prepare(width, () -> { });
                 int origin = left ? 0 : (width - 320) / 2;
                 assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 21
-                        && tile.x() == origin + 88 && tile.y() == 31), "optional decimal dot");
+                        && tile.x() == origin + 88 && tile.y() == 33), "optional decimal dot");
                 assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 18
                         && tile.x() == origin + 96 && tile.y() == 24), "first hundredth");
                 assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 16

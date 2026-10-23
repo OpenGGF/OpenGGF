@@ -24,6 +24,13 @@ public class HudRenderManager {
     boolean hostTimeHundredths;
     /** A hosted run's own clock for TIME, in frames, or -1 for the act timer. Presentation only. */
     long hostTimeFrames = -1;
+    /**
+     * The colon's ink columns (first and last, shadow included) in this game's HUD art, measured
+     * from its lower tile when the art is installed; -1 until then. With hundredths the colon and
+     * the point take only their ink plus a small gap, instead of a whole eight-pixel cell.
+     */
+    int separatorInkLeft = -1;
+    int separatorInkRight = -1;
     com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =
@@ -78,6 +85,7 @@ public class HudRenderManager {
     }
 
     private HudProfile profile = HudProfile.stock();
+    private HudProfile hostProfile;
     private int viewportWidth = 320;
     private boolean screenLeftAnchorEnabled;
 
@@ -124,8 +132,15 @@ public class HudRenderManager {
         invalidateCache();
     }
 
+    void installHostProfile(HudProfile profile) {
+        if (hostProfile != profile) {
+            hostProfile = profile;
+            invalidateCache();
+        }
+    }
+
     HudProfile currentProfile() {
-        return profile;
+        return hostProfile != null ? hostProfile : profile;
     }
 
     public void setDigitPatternIndex(int digitPatternIndex) {
@@ -228,7 +243,7 @@ public class HudRenderManager {
         }
         SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD);
         if (graphicsManager.isSpriteSatCollectionActive() && nativeSatLayout != null
-                && !collectingSatFragments && (profile.equals(HudProfile.stock()) || bonusStageHudLayout
+                && !collectingSatFragments && (currentProfile().equals(HudProfile.stock()) || bonusStageHudLayout
                 || player != null && player.isDebugMode())) {
             var frame = nativeSatLayout.frame(timerWarning(levelGamestate) && flashCycle(levelGamestate),
                     levelGamestate.getRings() == 0 && flashCycle(levelGamestate), bonusStageHudLayout);
@@ -270,7 +285,7 @@ public class HudRenderManager {
                 rows = bonusStageRows();
             } else {
                 hudOrigin = nativeOrigin();
-                rows = debugMode ? HudProfile.stock().rows() : profile.rows();
+                rows = debugMode ? HudProfile.stock().rows() : currentProfile().rows();
                 drawOrdinaryRows(rows, levelGamestate, player, debugMode, hudOrigin);
             }
 
@@ -309,23 +324,39 @@ public class HudRenderManager {
 
     private void appendOptionalTimeGeometry(List<com.openggf.graphics.SpriteSatEntry> geometry,
                                             int origin, PlayableEntity player) {
-        if (bonusStageHudLayout || !(timeHundredths || hostTimeHundredths)) return;
-        int extraColumns = optionalTimeColumns(player != null && player.isDebugMode());
-        if (extraColumns == 0) return;
-        for (var row : profile.rows()) {
+        if (bonusStageHudLayout || player != null && player.isDebugMode()
+                || !(timeHundredths || hostTimeHundredths)) return;
+        for (var row : currentProfile().rows()) {
             if (!row.visible() || row.metric() != HudMetric.TIME) continue;
-            // The optional .HH readout owns one additional 3x2 SAT group.
-            // Keep every ROM footprint unchanged; this tail still consumes the
-            // same sprite/column budgets and replays only admitted fragments.
-            geometry.add(com.openggf.graphics.SpriteSatEntry.of(
-                    origin + row.valueRightX() + row.maxDigits() * 8 + camera.getXWithShake(),
-                    row.valueY() + camera.getYWithShake(), extraColumns, 2, 0,
-                    hudPatternDesc.getPaletteIndex(), false, false, true, true));
+            // Native whole-second boxes remain unchanged. Packed punctuation can
+            // straddle their edge, so added groups must own full fragment boxes,
+            // not just the ink or the nominal .HH cells. Each group is <=4 tiles.
+            int cursor = 0, start = -1, end = 0;
+            String shape = "0:00.00";
+            for (int i = 0; i < shape.length(); i++) {
+                char c = shape.charAt(i);
+                boolean separator = c == ':' || c == '.';
+                boolean packed = separatorInkLeft >= 0 && separator;
+                int cell = packed ? cursor + 2 - separatorInkLeft : cursor;
+                cursor += packed ? timeSeparatorWidth() : 8;
+                if (cell + 8 <= row.maxDigits() * 8) continue;
+                if (start >= 0 && cell + 8 - start > 32) {
+                    appendTimeGroup(geometry, row, origin, start, end);
+                    start = -1;
+                }
+                if (start < 0) start = cell;
+                end = cell + 8;
+            }
+            if (start >= 0) appendTimeGroup(geometry, row, origin, start, end);
         }
     }
 
-    private int optionalTimeColumns(boolean debug) {
-        return !bonusStageHudLayout && !debug && (timeHundredths || hostTimeHundredths) ? 3 : 0;
+    private void appendTimeGroup(List<com.openggf.graphics.SpriteSatEntry> geometry,
+                                 HudRow row, int origin, int start, int end) {
+        geometry.add(com.openggf.graphics.SpriteSatEntry.of(
+                origin + row.valueRightX() + start + camera.getXWithShake(),
+                row.valueY() + camera.getYWithShake(), (end - start + 7) / 8, 2, 0,
+                hudPatternDesc.getPaletteIndex(), false, false, true, true));
     }
 
     private void drawOrdinaryRows(List<HudRow> rows, LevelState levelGamestate, PlayableEntity player,
@@ -369,7 +400,7 @@ public class HudRenderManager {
     private List<HudRow> bonusStageRows() {
         var rows = new java.util.ArrayList<HudRow>(2);
         rows.add(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS, 16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH));
-        for (HudRow row : profile.rows()) {
+        for (HudRow row : currentProfile().rows()) {
             if (row.visible() && isLivesRow(row)) {
                 rows.add(row);
             }
@@ -384,7 +415,7 @@ public class HudRenderManager {
     List<com.openggf.game.mutators.HudPresentationRuntime.Readout> presentationReadouts() {
         var player = camera.getFocusedSprite();
         boolean debug = player != null && player.isDebugMode();
-        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : profile.rows();
+        List<HudRow> rows = bonusStageHudLayout ? bonusStageRows() : debug ? HudProfile.stock().rows() : currentProfile().rows();
         var readouts = new java.util.ArrayList<com.openggf.game.mutators.HudPresentationRuntime.Readout>();
         for (int index = 0; index < rows.size(); index++) {
             var row = rows.get(index); if (!row.visible()) continue;
@@ -401,8 +432,8 @@ public class HudRenderManager {
                 maxY = Math.max(maxY, piece.yOffset() + piece.heightTiles() * 8);
             }
             boolean hasLabel = minX != Integer.MAX_VALUE;
-            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64 : row.maxDigits() * 8;
-            if (row.metric() == HudMetric.TIME) valueWidth += optionalTimeColumns(debug) * 8;
+            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64
+                    : row.metric() == HudMetric.TIME ? timeDisplayWidth() : row.maxDigits() * 8;
             int valueHeight = row.metric() == HudMetric.LIVES ? 8 : 16;
             readouts.add(new com.openggf.game.mutators.HudPresentationRuntime.Readout(index,
                     row.labelX() + (hasLabel ? minX : 0), row.labelY() + (hasLabel ? minY : 0),
@@ -682,27 +713,55 @@ public class HudRenderManager {
     private void drawTime(int x, int y, String timeStr, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
+        // Whole seconds keep the games' own fixed eight-pixel cells. With hundredths the colon and
+        // point are packed: two pixels after the previous digit's shadow column, their ink, one
+        // pixel, then the next digit (the games leave three and two around the colon).
+        boolean packed = timeStr.indexOf('.') >= 0 && separatorInkLeft >= 0;
+        int cursor = 0;
         for (int i = 0; i < timeStr.length(); i++) {
             char c = timeStr.charAt(i);
+            boolean separator = c == '.' || c == ':';
+            int cell = cursor;
+            if (packed && separator) {
+                cell = cursor + 2 - separatorInkLeft;
+                cursor += timeSeparatorWidth();
+            } else {
+                cursor += 8;
+            }
             if (c == '.') {
                 // The games' HUD art has no point, so it is the colon's lower dot. That dot
                 // straddles the colon's two tiles (rows 7-9 of 16; the upper tile also holds the
-                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of it.
-                int px = hudOrigin + x + camX + (i * 8);
-                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 7);
-                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 8);
+                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of
+                // it, two rows lower so it sits on the digits' baseline (their ink ends on row 10,
+                // their shadow on row 11, in all three games).
+                int px = hudOrigin + x + camX + cell;
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 9);
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 10);
                 continue;
             }
             int patternIdx = (c == ':')
                     ? digitPatternIndex + 20
                     : digitPatternIndex + ((c - '0') * 2);
-            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY);
-            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY + 8);
+            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + cell, y + camY);
+            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + cell, y + camY + 8);
         }
     }
 
+    private int timeSeparatorWidth() {
+        return separatorInkLeft >= 0 ? 2 + (separatorInkRight - separatorInkLeft + 1) + 1 : 8;
+    }
+
+    private int timeDisplayWidth() {
+        return timeHundredths || hostTimeHundredths ? 5 * 8 + 2 * timeSeparatorWidth() : 4 * 8;
+    }
+
     private int nativeOrigin() {
-        int liveWidth = Math.max(viewportWidth, graphicsManager.getProjectionWidth());
+        return nativeOriginX(Math.max(viewportWidth, graphicsManager.getProjectionWidth()));
+    }
+
+    int nativeOriginX(int width) {
+        if (bonusStageHudLayout) return 0;
+        int liveWidth = Math.max(320, width);
         if (screenLeftAnchorEnabled && liveWidth > 320) {
             return 0;
         }

@@ -143,6 +143,60 @@ class TestHudHundredthsPixels {
         });
     }
 
+    @Test
+    void packedSeparatorsRetainWholeFragmentsAcrossNativeGroupEdges() throws Exception {
+        withFixture(f -> {
+            int[][] inks = {{3, 4}, {3, 5}, {0, 5}, {7, 7}};
+            int[][] glyphOffsets = {
+                    {0, 7, 13, 21, 28, 34, 42},
+                    {0, 7, 14, 22, 29, 36, 44},
+                    {0, 10, 17, 25, 35, 42, 50},
+                    {0, 3, 12, 20, 23, 32, 40}};
+            HudProfileAccess.setHostTime(f.hud, 119, true);
+            for (int i = 0; i < inks.length; i++) {
+                HudProfileAccess.measureTimeSeparators(f.hud,
+                        installArt(f.graphics, inks[i][0], inks[i][1]));
+                assertTimeAt(f.counters(false), "0:01.98", 56, 24,
+                        glyphOffsets[i], inks[i][0], inks[i][1]);
+                assertTimeAt(f.grouped(0), "0:01.98", 56, 24,
+                        glyphOffsets[i], inks[i][0], inks[i][1]);
+                assertBlankTime(f.grouped(20));
+                if (i < 2) {
+                    var widths = new java.util.ArrayList<>(Collections.nCopies(7, 4));
+                    widths.add(2);
+                    assertTimeAt(f.groupedColumns(widths), "0:01.9", 56, 24,
+                            glyphOffsets[i], inks[i][0], inks[i][1]);
+                }
+            }
+            assertEquals(0, f.state.getTimerFrames());
+        });
+    }
+
+    @Test
+    void hostedRowsUseTheirEffectiveLayoutAndRevealTheLatestZoneOnClear() throws Exception {
+        withFixture(f -> {
+            var hosted = new HudProfile(List.of(new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                    80, 64, 120, 64, 4, HudWarningPolicy.NONE)));
+            var destination = new HudProfile(List.of(new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                    80, 96, 120, 96, 4, HudWarningPolicy.NONE)));
+            HudProfileAccess.setHostTime(f.hud, 119, true);
+            HudProfileAccess.setHostProfile(f.hud, hosted);
+            assertTimeAt(f.grouped(0), "0:01.98", 120, 64,
+                    new int[]{0, 8, 16, 24, 32, 40, 48}, 3, 4);
+            HudProfileAccess.install(f.hud, destination);
+            assertEquals(hosted, HudProfileAccess.current(f.hud));
+            assertTimeAt(f.grouped(0), "0:01.98", 120, 64,
+                    new int[]{0, 8, 16, 24, 32, 40, 48}, 3, 4);
+            HudProfileAccess.setHostProfile(f.hud, null);
+            assertEquals(destination, HudProfileAccess.current(f.hud));
+            assertTimeAt(f.grouped(0), "0:01.98", 120, 96,
+                    new int[]{0, 8, 16, 24, 32, 40, 48}, 3, 4);
+            HudProfileAccess.install(f.hud, HudProfile.stock());
+            assertTime(f.grouped(0), "0:01.98");
+            assertEquals(0, f.state.getTimerFrames());
+        });
+    }
+
     private static void withFixture(CheckedFixture test) throws Exception {
         assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
         try (var context = PresentationOffscreenTestContext.open(WIDTH, HEIGHT)) {
@@ -237,7 +291,12 @@ class TestHudHundredthsPixels {
         return new SpriteMappingPiece(x, y, width, 2, tile, false, false, 1);
     }
 
-    private static void installArt(GraphicsManager graphics) {
+    private static Pattern[] installArt(GraphicsManager graphics) {
+        return installArt(graphics, 3, 4);
+    }
+
+    private static Pattern[] installArt(GraphicsManager graphics, int inkLeft, int inkRight) {
+        var digits = new Pattern[22];
         var palette = new Palette();
         palette.setColor(1, new Palette.Color((byte) 255, (byte) 0, (byte) 0));
         palette.setColor(2, new Palette.Color((byte) 0, (byte) 255, (byte) 0));
@@ -250,20 +309,24 @@ class TestHudHundredthsPixels {
             for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
                 pattern.setPixel(x, y, (byte) colorIndex((char) ('0' + digit)));
             }
+            digits[digit * 2 + half] = pattern;
             graphics.cachePatternTexture(pattern, DIGITS + digit * 2 + half);
         }
         var colonTop = new Pattern();
         var colonBottom = new Pattern();
-        for (int x : new int[]{3, 4}) {
+        for (int x = inkLeft; x <= inkRight; x++) {
             colonTop.setPixel(x, 2, (byte) 5);
             colonTop.setPixel(x, 3, (byte) 5);
             colonTop.setPixel(x, 7, (byte) 5);
             colonBottom.setPixel(x, 0, (byte) 5);
             colonBottom.setPixel(x, 1, (byte) 5);
         }
+        digits[20] = colonTop;
+        digits[21] = colonBottom;
         graphics.cachePatternTexture(colonTop, DIGITS + 20);
         graphics.cachePatternTexture(colonBottom, DIGITS + 21);
         for (int id = 300; id < 310; id++) graphics.cachePatternTexture(new Pattern(), id);
+        return digits;
     }
 
     private static int colorIndex(char glyph) {
@@ -271,16 +334,24 @@ class TestHudHundredthsPixels {
     }
 
     private static void assertTime(ByteBuffer pixels, String text) {
-        for (int y = 0; y < 16; y++) for (int x = 0; x < 56; x++) {
-            int character = x / 8;
-            int color = 0;
-            if (character < text.length()) {
-                char glyph = text.charAt(character);
-                if (Character.isDigit(glyph)) color = colorIndex(glyph);
-                else if ((x % 8 == 3 || x % 8 == 4)
-                        && (glyph == ':' && (y == 2 || y == 3) || y >= 7 && y <= 9)) color = 5;
+        assertTimeAt(pixels, text, 56, 24, new int[]{0, 8, 16, 24, 32, 40, 48}, 3, 4);
+    }
+
+    private static void assertTimeAt(ByteBuffer pixels, String text, int originX, int originY,
+                                     int[] offsets, int inkLeft, int inkRight) {
+        int[][] expected = new int[16][64];
+        for (int i = 0; i < text.length(); i++) {
+            char glyph = text.charAt(i);
+            for (int y = 0; y < 16; y++) for (int x = 0; x < 8; x++) {
+                int color = Character.isDigit(glyph) ? colorIndex(glyph) : 0;
+                if (x >= inkLeft && x <= inkRight
+                        && (glyph == ':' && (y == 2 || y == 3 || y >= 7 && y <= 9)
+                        || glyph == '.' && y >= 9 && y <= 11)) color = 5;
+                if (color != 0) expected[y][offsets[i] + x] = color;
             }
-            assertPixel(pixels, 56 + x, 24 + y, color);
+        }
+        for (int y = 0; y < 16; y++) for (int x = 0; x < 64; x++) {
+            assertPixel(pixels, originX + x, originY + y, expected[y][x]);
         }
     }
 

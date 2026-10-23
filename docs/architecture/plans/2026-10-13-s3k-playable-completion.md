@@ -31279,3 +31279,114 @@ run-scoped HUD profiles. The peer agreed to pin that SHA as the final refresh
 target, rather than silently changing queued source or chasing subsequent ref
 moves. The qualified78 checkpoint is committed first; d9's effective-profile and
 whole-fragment admission contracts require the next bounded merge and focus.
+
+
+### PR223 pinned d9 packed and hosted HUD composition — 2026-10-23
+
+The preceding78 HUD source is committed as `d0db1690f` with its60 affected and116
+fresh-guard results. The next pinned upstream is
+`d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`; the three textual conflicts are the
+versioned changelog, HudProfileAccess and HudRenderManager. Union resolution keeps
+ROM SAT installation beside incoming hosted-profile/origin access, and uses the
+incoming measured timeDisplayWidth instead of adding the old fixed tail twice.
+Incoming RunHandle.setHudProfile and LevelOverlayCanvas.hudOriginX pins are added
+to the existing union. Public candidate version remains unchanged. No peer Mode,
+GPU, wrapper or EGL-property fixture implementation is replayed here.
+
+Incoming91fd9bdd1 intentionally lowers the point to baseline rows9..11 and packs
+separators from the loaded ROM art; the pixel oracle follows that presentation
+contract. Incoming5b1155f03 keeps a run profile separate from its latest destination,
+reapplies after level-ready callbacks, clears before run-end, rejects stale handles
+and retains lives-policy filtering. Twenty incoming files were inspected; original
+native rendering/admission, per-world and callback receiving ports remain owned
+by this reconciliation, with no whole-file replacement.
+
+Actual two-method lean request70376, before the receiving correction, completes
+2T/2F/0E/0S, queue460s/Maven1:31. Packed grouped output loses the point at87,33
+(expected255/actual0), and a hosted row loses its first digit at120,64. The counter
+publication preceding the first grouped packed assertion passes. Each method stops
+at its first failure, so later wide-ink and destination-clear checks were NOT
+reached in this red run. All72 XML properties, identities, complete failures,
+streams, absence of skips/dumps and the frozen changed-file hashes were inspected.
+
+Source audit identifies two owning differences: stock grouping used the destination
+profile while drawing used the effective host profile; and replay clipping admits
+whole8px fragment boxes, so packed fragments can straddle the nominal native32px
+TIME boundary. Effective custom profiles now use their existing individually
+budgeted admission path. Effective stock profiles keep every original ROM piece;
+additional groups cover only full glyph boxes not contained in the original TIME
+box. Greedy groups remain1..4 columns, and all still pass through submitGroups and
+its original scanline/pixel ownership. The seven-character clamped format supplies
+shape only, never a gameplay clock or fitted position. An unmeasured readout needs
+one3x2 group; wide measured ink can need two groups. Metadata uses incoming packed
+width. No mask, native sprite limit, snapshot, timer or external service changes.
+
+A static design enumeration covers the unmeasured state plus all36 ordered ink
+ranges0..7, proving each whole glyph box has exactly one original/additional owner
+and at most two extra groups of at most four columns. Independent source review
+confirmed the grouping argument. This is not GPU/native behavior proof. The new
+actual EGL regression includes explicit precomputed positions for2/3-pixel ink,
+a wide crossing seconds digit and a far-right dot; exhaustion and partial-column
+controls retain admission authority. A second actual EGL case moves hosted TIME,
+changes the destination underneath it, clears the host and returns to stock.
+The affected consumer and fresh guard results follow after terminal inspection.
+
+
+Corrected request61717 completes227 distinct tests/0F/0E/0S,21 selected classes
+and23 XMLs (the HostedRunLeadIn parent reports0 while its S1/S3K nested classes
+execute3 each). Queue80s/Maven1:35. All eight actual EGL methods execute, including
+all four explicit measured-ink scenarios, exhausted and partial admission, and
+host/destination restoration. The other owning methods cover hosted lifetime and
+stale handles, policy-hidden lives, overlay anchors, numeric/mutator bounds and
+all five S3K loading/decoding/skip-bootstrap keeper classes. Every changed-file
+hash and exact tracked diff match the frozen pre-request state. All69 properties
+per XML, distinct identities, streams, skips and absence of dumps were inspected;
+all three original absolute ROM files rehash to their required SHA1 identities.
+Intentional creator callback failures remain fault-boundary controls. Synthetic
+FAST warnings and unmeasured-job estimates are not native measured-load evidence.
+
+The exact ordinary selector is the21 fully qualified classes recorded by the
+owning methods above: TestHudHundredthsPixels, TestHudSatProjection,
+TestHudRenderManager, TestHudRenderManagerWidescreen, TestHudPresentationRuntime,
+TestHostedRunController, TestCreatorUi, TestModHudProfileResolution,
+TestRunPolicyLivesCounter, TestHudViewportWiring, TestHudSatLayoutRom,
+TestHostedRunLeadIn, TestHostedRunActCompletionWiring, TestGameplayRunPolicy,
+TestModApiReleasePolicy, TestModApiPinPolicy, TestS3kAiz1SkipHeadless, both
+TestSonic3kLevelLoading packages, TestSonic3kBootstrapResolver and
+TestSonic3kDecodingUtils. It uses the preceding command shape with --normal and
+that -Dtest list, unchanged explicit EGL/three-ROM properties and isolated fresh
+reports/tmp/diagnostics. Final four fresh guard classes follow in a separate JVM.
+These checks do not repeat the peer's GPU210/111, tool258 or property-fixture19.
+
+
+Final separate request10909 passes116T/0F/0E/0S:72 source,32 ArchUnit,11 API and
+1 field-disposition case, four XMLs, queue454s/Maven45.292s. All changed-file hashes
+and the exact diff match the frozen source. All69 properties per XML, distinct
+identities, streams and absence of skips/dumps were inspected. The guard source,
+limits and candidate API version were not relaxed. Only this result/prose recording
+follows the tested source; no runtime/test edit follows the successful227+116.
+
+The following exact selector strings use the same explicit environment, three
+absolute original-ROM properties and fresh output namespace as above:
+```text
+affected: -Dtest=com.openggf.level.objects.TestHudHundredthsPixels,com.openggf.level.objects.TestHudSatProjection,com.openggf.level.objects.TestHudRenderManager,com.openggf.level.objects.TestHudRenderManagerWidescreen,com.openggf.game.mutators.TestHudPresentationRuntime,com.openggf.TestHostedRunController,com.openggf.mods.ui.TestCreatorUi,com.openggf.mods.code.TestModHudProfileResolution,com.openggf.level.TestRunPolicyLivesCounter,com.openggf.level.TestHudViewportWiring,com.openggf.game.internal.TestHudSatLayoutRom,com.openggf.TestHostedRunLeadIn,com.openggf.TestHostedRunActCompletionWiring,com.openggf.game.session.TestGameplayRunPolicy,com.openggf.mods.TestModApiReleasePolicy,com.openggf.mods.TestModApiPinPolicy,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+fresh guards: -Dtest=com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.mods.TestModApiSignatureSurface,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard
+```
+
+Current warning limits remain explicit: the S1 mapping0xE8DF/implausible768 warning
+also appears in the earlier65139 HudSatLayoutRom method, so it is not newly
+attributed to d9 or treated as native visual qualification. AizLeadIn's
+withoutZoneIntrosStartsAiz1WhereTheIntroHandsOver emits deterministic estimates
+for KOS fingerprints4767ec1feea97155923dab11e07b8485826833eec442da46480bffb3d8a98d38
+and6245bccaae3721d61bfbe915a4d7729ff99347c414746ff0544ce3a66d8bb4ee. These are
+current warning leads only; ROM spans, queue-reset epochs and native measured
+service costs were not captured. Historical14 unknown keys remain unknown.
+The deliberate collision-index negative and creator fault/security controls retain
+their original assertions. No unrelated mapping/loading fix or native job was added.
+
+Publication is limited to the explicitly authorized draft PR223 head. The peer
+receives this qualified resolved source once, then owns later common-source smoke
+and any Main integration window. Subsequent develop advances are separate epochs
+from pinned d9. Maintained route failures remain open; no full-suite, native-chain,
+whole-campaign or delivery-wide green claim is made. Raw owned diagnostics are
+consumed after readback, without archives or validation receipts.
