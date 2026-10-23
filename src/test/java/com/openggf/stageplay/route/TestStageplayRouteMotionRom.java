@@ -28,7 +28,7 @@ class TestStageplayRouteMotionRom {
         motions.put("jump",new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("spindash",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-downhill",RouteMotion.DEFAULT);
-        motions.put("spindash-downhill",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
+        motions.put("spindash-downhill",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.OVERSHOOT,EndingFacing.INHERIT));
         motions.put("walk-hard-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-overshoot-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.OVERSHOOT,EndingFacing.INHERIT));
         motions.put("face-left",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.LEFT));
@@ -38,7 +38,8 @@ class TestStageplayRouteMotionRom {
                 var motion=entry.getValue();var source=scene(entry.getKey());
                 boolean downhill=entry.getKey().endsWith("downhill") || entry.getKey().endsWith("-slope");
                 if(downhill) source=source.withActors(List.of(new Actor("hero","Sonic","s2","sonic",
-                        List.of(new ActorKey(0,400,624,0,-1,true,true,1,Interpolation.HOLD)))));
+                        List.of(new ActorKey(0,entry.getKey().equals("spindash-downhill")?340:400,
+                                entry.getKey().equals("spindash-downhill")?628:624,0,-1,true,true,1,Interpolation.HOLD)))));
                 var request=new StageplayRouteRequest("hero",0,downhill?100:400,downhill?656:624,420,1024,120000,60000,1,null,1,motion);
                 StageplayRouteResult result;
                 try(var resources=new StageplayResources(library,false)) {
@@ -53,14 +54,14 @@ class TestStageplayRouteMotionRom {
                             result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).findFirst().orElseThrow().frame());
                 var candidate=StageplayStore.decode(StageplayStore.encode(result.candidate()));
                 assertEquals(motion,candidate.puppets().getFirst().commands().stream().filter(c->c.kind()==PuppetCommandKind.MOVE_TO).findFirst().orElseThrow().motion());
-                boolean charged=false,skidded=false;double farthest=0,least=Double.POSITIVE_INFINITY;
+                boolean charged=false,chargedOnSlope=false,skidded=false;double farthest=0,least=Double.POSITIVE_INFINITY;
                 var states=new StringBuilder();
                 try(var resources=new StageplayResources(library,false);var world=StageplayLiveWorld.openOffline(library)) {
                     resources.setLiveWorld(world);StageplayTimeline.Frame last=null;
                     for(int frame=0;frame<420;frame++) {
                         last=resources.resolveFrame(candidate,StageplayTimeline.sample(candidate,frame));
                         var nativeState=world.routeMotionState("hero");
-                        charged|=nativeState.spindash();skidded|=nativeState.skidding();
+                        charged|=nativeState.spindash();chargedOnSlope|=nativeState.spindash() && nativeState.angle()!=0;skidded|=nativeState.skidding();
                         farthest=Math.max(farthest,last.actors().getFirst().x());least=Math.min(least,last.actors().getFirst().x());
                         if(motion.travelSpeed()==TravelSpeed.WALK)
                             assertTrue(Math.max(Math.abs(nativeState.groundSpeed()),Math.abs(nativeState.xSpeed()))<=StageplayRouteSteering.STROLL_CAP,entry.getKey()+" frame "+frame);
@@ -72,6 +73,7 @@ class TestStageplayRouteMotionRom {
                         assertEquals(motion.endingFacing()==EndingFacing.LEFT,world.routeMotionState("hero").facingLeft());
                     if(motion.endingAction()==EndingAction.GENTLE_STOP) assertFalse(skidded,entry.getKey());
                     if(motion.startingAction()==StartAction.SPINDASH) assertTrue(charged);
+                    if(entry.getKey().equals("spindash-downhill")) assertTrue(chargedOnSlope,"Charge must start on the actual incline");
                     if(motion.endingAction()==EndingAction.OVERSHOOT) assertTrue(downhill?least<=request.targetX()-12:farthest>=412);
                     else if(downhill) assertTrue(least>=request.targetX()-6,"Gentle downhill stop must not pass the goal");
                     else assertTrue(farthest<=request.targetX()+6,"A non-Overshoot ending must not pass the goal: "+entry.getKey());
@@ -87,6 +89,28 @@ class TestStageplayRouteMotionRom {
             }
         }
     }
+    @Test void romBackedActorCanTakeThePenalisedBackupRunup() throws Exception {
+        com.openggf.game.GameServices.graphics().initHeadless();
+        SessionManager.closeGameplaySession();
+        var terrain=TestStageplayRoutePlanner.terrain();
+        for(int x=15;x<=27;x++) terrain.put(x,16,0);
+        var request=new StageplayRouteRequest("hero",0,512,237,500,2048,240000,60000,1,null,1,RouteMotion.NATIVE);
+        try(var library=SceneRomLibrary.open(Map.of("s2",Path.of(System.getProperty("sonic2.rom.path"))));
+            var probe=com.openggf.sprites.playable.PlayablePuppet.createNativeWorldProbe(terrain.level(),
+                    library.module("s2"),0,0,library.module("s2"),"sonic",library.characterArt("s2","sonic"),224,237,0,true,false)) {
+            var entry=probe.capture();
+            assertFalse(StageplayRoutePlanner.searchPass(scene("detour"),request,probe,()->false,Long.MAX_VALUE,false).found());
+            probe.restore(entry);
+            var result=StageplayRoutePlanner.search(scene("detour"),request,probe,()->false,Long.MAX_VALUE);
+            assertTrue(result.found(),result.message());
+            assertTrue(result.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.MOVE_TO && c.x()<224));
+            probe.restore(entry);
+            var replay=TestStageplayRoutePlanner.replay(probe,request,result.commands());
+            assertTrue(Math.abs(replay.getLast().x()-512)<=6);
+            assertTrue(replay.getLast().onGround());
+        }
+    }
+
     @Test void spindashWithWalkIsRejectedBeforeSearch() {
         var error=assertThrows(IllegalArgumentException.class,()->new RouteMotion(StartAction.SPINDASH,
                 TravelSpeed.WALK,EndingAction.HARD_STOP,EndingFacing.INHERIT));

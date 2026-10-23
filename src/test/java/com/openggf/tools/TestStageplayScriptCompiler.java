@@ -71,6 +71,15 @@ class TestStageplayScriptCompiler {
                 """);
     }
 
+    @Test void screenplayRejectsSpindashWithWalkWithAnActionableMessage() throws Exception {
+        var script=puppetRecipe();
+        var action=(ObjectNode)shot(script,0).path("actions").path("hero").get(0);
+        action.putObject("motion").put("startingAction","SPINDASH").put("travelSpeed","WALK")
+                .put("endingAction","HARD_STOP").put("endingFacing","INHERIT");
+        var error=assertThrows(IOException.class,()->compile(script));
+        assertTrue(error.getMessage().contains("Spindash requires Run"),error.getMessage());
+    }
+
     @Test void currentRecipesDefaultToPhysicalPuppetsAndOffsetsIntentWithoutInventingMotion() throws Exception {
         var document = compile(puppetRecipe());
         var puppet = document.puppets().getFirst();

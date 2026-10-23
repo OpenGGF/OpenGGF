@@ -3052,3 +3052,64 @@ Checkpoint: engine commits a6fa8fdcc, 461104cab; current uncommitted source is t
 detour/diagnosis slice. Build-only test-compile passed before that slice. Focused
 selection is queued (one request, one observer); no broad smoke. Version probe is
 also queued. Final ROM/frontends/mandatory S3K/guards and motion review remain.
+
+
+### Qualification correction checkpoint (2026-10-23)
+
+The first lean selection exhausted 1 GiB after 24 completed passes (workspace
+11, motion document 2, API surface 11). The dump allocates Mockito invocation
+records while scanning synthetic terrain. The terrain mock is now stub-only;
+its behavior is unchanged and expectations use no invocation verification.
+A normal-heap rerun is required. No lean result is called passing validation.
+
+Native movement inspection also rejected unconditional opposite-input settling:
+Sonic_Move floors a sign-crossing brake at reverse $80, permitting oscillation.
+Coast while friction can erase the facing tap. If downhill slope pull defeats
+friction, brake uphill once and coast to Duck. The observed crouch/charge/release
+contract remains mandatory. A direct screenplay rejection test is added.
+Combined normal-heap focused + ROM selection is queued with stable source;
+previous pending selections were superseded before execution by these edits.
+Version probe passed Java 25.0.5; actual tool preflight passes Java/Lua/PowerShell.
+Targeted steering disassembly checks report six valid citations and one
+unverifiable short-form inherited comment; the all-repository check is red on
+existing stale/missing/unresolved references (no disassembly pin is changed).
+
+
+Normal-heap qualification completed 54 tests, 51 passes, three owned failures:
+the speed-gap proof ran out of reserved nodes; the unrestricted detour graph
+exhausted its budget; and reverse Spindash/Hard Stop could not stop before a
+short point in cold replay. No OOM with the stub-only terrain fixture. Fallback
+now chooses one run-up at the root, reaches/settles there without jumping, then
+searches toward the destination. Its penalty is once per detour, not per edge;
+visited keys distinguish active run-up goals. The speed fixture supplies the
+combined search budget and its matched Run probe uses direct steering.
+
+The downhill charge source is moved from flat x=400 to measured incline x=340,
+y=628, using Overshoot to admit the native burst's stopping distance. It must
+observe charge on a nonzero native angle. Added native jump/cap checks for every
+Walk ending, a ROM-art-backed backup-runup regression, and retained ordinary
+HOVER/CROUCH/ROLL stopping in the shared kernel. Focused affected recheck queued.
+
+
+Affected recheck: **19 passed**, zero failures/errors/skips (planner 16, ROM 3),
+including every Walk ending across native jumps, both slope endings, actual
+incline charge/release and ROM-art-backed run-up. Desktop enabled picture test
+passed; its 17-test chrome selection had one repair-path failure: a successful
+resubmission retained the earlier error string. Shared form submission now clears
+that stale error before calling validation. A negative EMPTY-art charge test and
+search-side cap-branch pruning strengthen the qualification boundary. Final
+focused/frontends/S3K/guards remain pending on this last source slice.
+
+
+Final focused selection: **110 passed**, zero failures/errors/skips, on the
+source in the final correction slice. Coverage includes route native physics,
+real ROM motion (12 rehearsals plus contract rejection and ROM-art run-up),
+negative missing-charge qualification, LIVE world replay/abilities/waits,
+workspace form recovery, controller/protocol/input/contract/overlay/job, both
+screenplay directions, document/API values and native Puppet ownership.
+Selector: `TestStageplayRoutePlanner,TestStageplayRouteMotionRom,TestStageplayLiveWorldRom,TestStageplayRouteMotionDocument,TestStageplayRouteWorkspace,TestStageplayController,TestStageplayRouteProtocol,TestStageplayRouteInputs,TestStageplayRouteContract,TestStageplayRouteOverlay,TestStageplayRouteJob,TestPlayablePuppet,TestPlayablePuppetRom,TestStageplayDocument,TestStageplayScriptCompiler,TestStageplayScriptDecompiler,TestEditorProjectMenu,TestStageplayHud`.
+All supplied S1/S2/S3K absolute ROM paths were explicit. Queue wait 755s; Maven
+execution 41.011s (not summed with overlapping jobs as delivery elapsed time).
+Desktop chrome **17 passed**, zero skips, on 146e076 with the final packaged
+engine; enabled desktop picture **1 passed**, refreshed against that same jar.
+Mandatory S3K + enabled engine picture is running; once-only guards are queued.

@@ -190,7 +190,7 @@ class TestStageplayRoutePlanner {
         var terrain=terrain();
         for(int column=20;column<=27;column++) terrain.put(column,16,0);
         for(int column=28;column<64;column++) {terrain.put(column,14,0xF001);terrain.put(column,15,0xF001);}
-        var walk=new StageplayRouteRequest("hero",0,512,205,300,128,20000,10000,1,null,1,RouteMotion.DEFAULT);
+        var walk=new StageplayRouteRequest("hero",0,512,205,300,1024,120000,60000,1,null,1,RouteMotion.DEFAULT);
         try(var probe=probe(terrain.level)) {
             var initial=probe.capture();var slow=search(probe,walk);assertFalse(slow.found());
             assertTrue(slow.message().matches("(?s).*terrain near x=[0-9]+: needs Run \\(matched native-terrain probe reaches and settles\\).*"),slow.message());
@@ -363,6 +363,36 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void aStartWithoutObservedNativeChargeCannotProduceASpindashProposal() {
+        var motion=new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
+        var request=new StageplayRouteRequest("hero",0,512,237,500,1024,120000,60000,1,null,1,motion);
+        try(var probe=probe(terrain().level)) {
+            var result=search(probe,request);
+            assertFalse(result.found());
+            assertTrue(result.commands().isEmpty());
+            assertTrue(result.message().contains("Native spindash charge and release did not occur"),result.message());
+        }
+    }
+
+    @Test void everyWalkEndingHoldsTheCapThroughTerrainJumps() {
+        for(var ending:EndingAction.values()) {
+            var terrain=terrain();
+            // A narrow gap with a raised lip requires a real native jump.
+            for(int x=20;x<=21;x++) terrain.put(x,16,0);
+            for(int x=22;x<64;x++) terrain.put(x,15,0xF001);
+            var motion=new RouteMotion(StartAction.WALK,TravelSpeed.WALK,ending,EndingFacing.INHERIT);
+            var request=new StageplayRouteRequest("hero",0,480,221,600,1024,120000,60000,1,null,1,motion);
+            try(var probe=probe(terrain.level)) {
+                var start=probe.capture();var plan=search(probe,request);assertTrue(plan.found(),ending+": "+plan.message());
+                assertTrue(plan.commands().stream().anyMatch(c->c.kind()==PuppetCommandKind.JUMP));
+                probe.restore(start);var samples=replay(probe,request,plan.commands());
+                assertNear(samples.getLast(),request);
+                assertTrue(samples.stream().allMatch(o->Math.max(Math.abs(o.groundSpeed()),Math.abs(o.xSpeed()))
+                        <=StageplayRouteSteering.STROLL_CAP),ending.toString());
+            }
+        }
+    }
+
     @Test void everyWalkEndingReservesGroundAndAirAccelerationHeadroom() {
         for(var ending:EndingAction.values()) for(boolean airborne:List.of(false,true)) {
             var motion=new RouteMotion(StartAction.WALK,TravelSpeed.WALK,ending,EndingFacing.INHERIT);
@@ -402,7 +432,7 @@ class TestStageplayRoutePlanner {
         assertTrue(Math.abs(sample.groundSpeed()) <= 64);
     }
 
-    private static List<PlayablePuppet.Observation> replay(
+    static List<PlayablePuppet.Observation> replay(
             PlayablePuppet probe, StageplayRouteRequest request, List<PuppetCommand> commands) {
         List<PlayablePuppet.Observation> result = new ArrayList<>();
         int index = 0, jumpEnd = -1;
@@ -434,7 +464,7 @@ class TestStageplayRoutePlanner {
         return chunk;
     }
 
-    private static Geometry terrain() {
+    static Geometry terrain() {
         var map = new com.openggf.level.Map(2, 8, 4);
         var blocks = new Block[32];
         for (int y = 0; y < 4; y++)
@@ -443,7 +473,7 @@ class TestStageplayRoutePlanner {
                 blocks[index] = new Block();
                 map.setValue(0, x, y, (byte) index);
             }
-        Level level = mock(Level.class);
+        Level level = mock(Level.class, withSettings().stubOnly());
         when(level.getMap()).thenReturn(map);
         when(level.getBlockPixelSize()).thenReturn(128);
         when(level.getChunksPerBlockSide()).thenReturn(8);
@@ -463,7 +493,7 @@ class TestStageplayRoutePlanner {
         return geometry;
     }
 
-    private record Geometry(Level level, Block[] blocks) {
+    record Geometry(Level level, Block[] blocks) {
         void put(int x, int y, int descriptor) {
             blocks[y / 8 * 8 + x / 8].setChunkDesc(x % 8, y % 8, new ChunkDesc(descriptor));
         }

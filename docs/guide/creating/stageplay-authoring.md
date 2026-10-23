@@ -610,7 +610,8 @@ friction, slope response and live top speed stay authoritative. Gentle steering
 predicts coasting distance from current friction and releases without an opposite
 button at speed; Hard Stop uses live native deceleration. Overshoot targets a
 24-pixel pass before returning. SPINDASH uses a fixed 24-tick preparation/charge window after a facing
-tap. It brakes the tap to zero inertia, holds down until native Duck is observed,
+tap. It coasts the tap to zero inertia (braking uphill if slope pull defeats
+friction), holds down until native Duck is observed,
 then gives a fresh jump press and releases down; native charge decay
 and launch tables own the resulting speed (`Sonic_CheckSpindash` /
 `Sonic_UpdateSpindash`, s2.asm:37555-37688). No constant replaces native launch

@@ -84,7 +84,7 @@ public final class StageplayRouteSteering {
             }
             case SPINDASH -> {
                 var charge = charge(actor.x(), targetX, elapsed, actor.groundSpeed(), actor.airborne(),
-                        actor.crouching(), actor.spindash());
+                        actor.crouching(), actor.spindash(), actor.friction(), actor.slopeImpulse());
                 direction = charge.direction(); down = charge.down(); jump = charge.jump();
                 finished = elapsed > CHARGE_FRAMES;
             }
@@ -92,6 +92,9 @@ public final class StageplayRouteSteering {
                 direction = command.kind() == PuppetCommandKind.FACE_LEFT ? -1 : 1;
                 finished = true;
             }
+            case HOVER, CROUCH, LOOK_UP, ROLL, WAIT -> direction = StageplayMovementIntent.direction(
+                    Math.floor(actor.x()), actor.xSpeed(), actor.runAccel(), actor.runDecel(),
+                    actor.maxSpeed(), actor.airborne(), actor.x(), 0);
             default -> { }
         }
         return new Buttons(direction, down, jump, returning, finished);
@@ -104,11 +107,14 @@ public final class StageplayRouteSteering {
      * Sonic_UpdateSpindash (s2.asm:37591-37688) owns release speed; fixBugs=0 remains active.
      */
     public static Buttons charge(double x, double targetX, int elapsed, int groundSpeed,
-            boolean airborne, boolean crouching, boolean spindash) {
+            boolean airborne, boolean crouching, boolean spindash, int friction, int slopeImpulse) {
         if (elapsed > CHARGE_FRAMES) return new Buttons(0, false, false, false, true);
         if (elapsed == 0) return new Buttons(targetX < x ? -1 : 1, false, false, false, false);
-        if (!spindash && groundSpeed != 0)
-            return new Buttons(groundSpeed < 0 ? 1 : -1, false, false, false, false);
+        // Coasting removes the small facing tap without the native reverse-speed
+        // floor of opposite-input braking. If downhill pull defeats friction,
+        // brake once uphill, then let slope+friction settle it into Duck.
+        if (!spindash && groundSpeed * slopeImpulse > 0 && Math.abs(slopeImpulse) >= friction)
+            return new Buttons(groundSpeed < 0 ? 1 : -1, true, false, false, false);
         return new Buttons(0, true, !airborne && crouching && !spindash, false, false);
     }
     public static boolean returning(double x, double targetX, int approach, boolean already) {

@@ -627,11 +627,11 @@ public final class StageplayLiveWorld implements AutoCloseable {
     }
     /** Read-only diagnostics for native route qualification and focused authoring checks. */
     public record MotionState(int groundSpeed, int xSpeed, int maxSpeed, boolean skidding,
-                              boolean spindash, boolean facingLeft) { }
+                              boolean spindash, boolean facingLeft, int angle) { }
     public MotionState routeMotionState(String actorId) {
         var sprite=cast.stream().filter(p->p.actor.id().equals(actorId)).findFirst().orElseThrow().sprite;
         return new MotionState(sprite.getGSpeed(),sprite.getXSpeed(),sprite.getMax(),sprite.getSkidding(),
-                sprite.getSpindash(),sprite.getDirection()==Direction.LEFT);
+                sprite.getSpindash(),sprite.getDirection()==Direction.LEFT,sprite.getAngle() & 0xFF);
     }
 
     /** Exact directed-object centre for isolated route qualification, never a native position write. */

@@ -99,7 +99,8 @@ buttons with a fixed charge, and final facing uses one native tap. Spindash sele
 Run in both editors; the shared document/screenplay contract rejects Spindash + Walk.
 Unavailable saved starts remain repairable in the route form. Every Walk ending
 reserves native acceleration headroom, including airborne steering. Spindash
-brakes to zero, waits for native Duck, then presses jump; search and cold replay
+coasts to zero (braking uphill only when slope pull defeats friction), waits for
+native Duck, then presses jump; search and cold replay
 must observe both native charge and release, or fail explicitly. The MOVE_TO
 `motion` object persists settings through save, screenplay export, edits and replan.
 Use route CLI `--start`, `--travel`, `--ending`, `--facing`; inspect cap/skid/arrival

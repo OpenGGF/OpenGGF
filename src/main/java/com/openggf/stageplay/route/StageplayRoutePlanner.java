@@ -385,7 +385,7 @@ public final class StageplayRoutePlanner {
             var motion = new RouteMotion(request.motion().startingAction(), TravelSpeed.RUN,
                     request.motion().endingAction(), request.motion().endingFacing());
             var run = searchPass(document, budget(request, request.maxNodes()-nodes,
-                    request.maxTicks()-ticks, motion), probe, cancelled, deadline, true);
+                    request.maxTicks()-ticks, motion), probe, cancelled, deadline, false);
             nodes += run.nodes(); ticks += run.ticks();
             if (run.found() && !direct.path().isEmpty()) {
                 var stall = direct.path().getLast();
@@ -432,7 +432,8 @@ public final class StageplayRoutePlanner {
                 if (preparationTicks >= request.maxTicks() || preparationTicks >= request.maxFrames() || System.nanoTime() >= deadline)
                     return rejected(BUDGET_EXCEEDED,"Spindash charge exceeded route budget",0,preparationTicks);
                 var buttons = StageplayRouteSteering.charge(initial.x(), request.targetX(), elapsed,
-                        initial.groundSpeed(), initial.airborne(), initial.crouching(), initial.spindash());
+                        initial.groundSpeed(), initial.airborne(), initial.crouching(), initial.spindash(),
+                        initial.friction(), initial.slopeImpulse());
                 probe.tick(buttons.direction()<0,buttons.direction()>0,buttons.down(),buttons.jump(),
                         request.startFrame()+preparationTicks++);
                 initial=probe.sample();
@@ -441,7 +442,7 @@ public final class StageplayRoutePlanner {
                 preparation.add(new StageplayRoutePoint(request.startFrame()+preparationTicks-1,initial.x(),initial.y(),initial.onGround()));
             }
             if (!charged || !released)
-            return new StageplayRouteProposal(SEARCH_EXHAUSTED,
+                return new StageplayRouteProposal(SEARCH_EXHAUSTED,
                     "Native spindash charge and release did not occur near x=" + Math.round(initial.x())
                             + "; could not settle and establish Duck within the charge window",
                     List.of(), List.copyOf(preparation), 0, preparationTicks);
@@ -502,15 +503,21 @@ public final class StageplayRoutePlanner {
                 return proposal(document, request, current, expanded, ticks);
             int nextFrame = current.frame + 1;
             if (nextFrame >= request.startFrame() + request.maxFrames()) continue;
-            double[] goals = detours
+            // A fallback chooses one run-up at the root and completes it before
+            // heading to the destination. It cannot branch into arbitrary waypoint noise.
+            boolean completingDetour = current.goalX != request.targetX() && current.parent != null
+                    && (Math.abs(current.observation.x()-current.goalX)>6
+                        || Math.abs(current.observation.groundSpeed())>12);
+            double[] goals = detours && current.parent == null
                     ? new double[] {request.targetX(), initial.x()-64, initial.x()+64, initial.x()-128, initial.x()+128}
-                    : new double[] {request.targetX()};
+                    : new double[] {completingDetour ? current.goalX : request.targetX()};
             int[] holds = current.parent == null && request.motion().startingAction() == StartAction.JUMP
                     ? new int[] {12}
                     : current.observation.onGround() && nextFrame > current.jumpEnd + 1
                             ? new int[] {0,6,12,24} : new int[] {0};
             for (double goal : goals)
                 for (int hold : holds) {
+                    if (goal != request.targetX() && hold > 0) continue;
                     if (goal < 0
                             || goal > 32767
                             || hold > request.startFrame() + request.maxFrames() - nextFrame) continue;
@@ -540,6 +547,14 @@ public final class StageplayRoutePlanner {
                         ticks++;
                         probe.tick(direction < 0, direction > 0, frame < jumpEnd, frame);
                         sample = probe.sample();
+                        // Discard an unsafe launch/landing branch before it can become a
+                        // proposal. Cold replay independently enforces the same Walk bound.
+                        if (request.motion().travelSpeed() == TravelSpeed.WALK
+                                && Math.max(Math.abs(sample.groundSpeed()),Math.abs(sample.xSpeed()))
+                                    > StageplayRouteSteering.STROLL_CAP) {
+                            outside = true;
+                            break;
+                        }
                         edge.add(new StageplayRoutePoint(frame, sample.x(), sample.y(), sample.onGround()));
                         if (sample.x() < minX || sample.x() > maxX || sample.y() < minY || sample.y() > maxY) {
                             outside = true;
@@ -552,10 +567,11 @@ public final class StageplayRoutePlanner {
                     }
                     if (outside) continue;
                     int last = frame - 1;
-                    Key key = key(sample, last < jumpEnd, jumpEnd - last, returning);
+                    Key key = key(sample, last < jumpEnd, jumpEnd - last, returning, goal==request.targetX()?0:(int)goal+1);
                     int elapsed = last - request.startFrame() + 1;
                     int jumpCost = current.jumpCost + (hold > 0 && request.motion().startingAction()!=StartAction.JUMP ? 2000 : 0);
-                    int detourCost = current.detourCost + (goal != request.targetX() ? 600 : 0);
+                    int detourCost = current.detourCost + (current.parent==null && goal != request.targetX()
+                            ? 600+(int)Math.abs(goal-initial.x()) : 0);
                     int cost = elapsed+jumpCost+detourCost;
                     Integer previous = visited.get(key);
                     if (previous != null && previous <= cost) continue;
@@ -906,7 +922,7 @@ public final class StageplayRoutePlanner {
                         / Math.max(1, sample.maxSpeed() / 256.0);
     }
 
-    private static Key key(PlayablePuppet.Observation sample, boolean held, int jumpRemaining, boolean returning) {
+    private static Key key(PlayablePuppet.Observation sample, boolean held, int jumpRemaining, boolean returning, int detourGoal) {
         return new Key(
                 (int) Math.floor(sample.x()),
                 (int) Math.floor(sample.y()),
@@ -917,7 +933,7 @@ public final class StageplayRoutePlanner {
                 held,
                 Math.max(0, jumpRemaining),
                 sample.xRadius(),
-                sample.yRadius(), returning);
+                sample.yRadius(), returning, detourGoal);
     }
 
     private record Key(
@@ -930,7 +946,7 @@ public final class StageplayRoutePlanner {
             boolean jump,
             int jumpRemaining,
             int radiusX,
-            int radiusY, boolean returning) {}
+            int radiusY, boolean returning, int detourGoal) {}
 
     private static final class Node {
         final Node parent;

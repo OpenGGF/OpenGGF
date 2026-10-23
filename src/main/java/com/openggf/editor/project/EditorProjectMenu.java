@@ -166,6 +166,7 @@ public final class EditorProjectMenu {
         if (submit == null) throw new IllegalStateException("No project form is active");
         var callback = submit;
         var submitted = values();
+        error = null;
         close();
         try { callback.accept(submitted); MenuFeedback.emit(MenuFeedback.Cue.CONFIRM); }
         catch (RuntimeException failure) { open = true; report(failure); }

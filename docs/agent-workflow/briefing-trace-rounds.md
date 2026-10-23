@@ -76,8 +76,13 @@ native abilities (2026-10-23, Stageplay route motion). It has no animation profi
 so down input cannot establish the Duck animation that native spindash reads.
 Use supplied-ROM art and observe the native charge flag and launch; a command,
 pose or fast arrival is insufficient. After a facing tap, allow native friction
-and crouch selection before the fresh jump edge. The first two-tick pulse caused
-an ordinary jump; the corrected warmup is verified in cold LIVE replay.
+and crouch selection before the fresh jump edge. Fixed tick warmup alone is unsafe
+on a downhill: the Duck test precedes friction, while slope resistance can retain
+inertia. Repeated opposite-input braking can also oscillate around native reverse
+`$80` floors. Coast to zero (brake uphill if slope pull defeats friction), wait
+for observed Duck, and require native charge **and release** in search and cold
+LIVE replay. The actual-incline fixture must observe a nonzero native angle;
+starting on a flat before traversing a slope does not establish this case.
 
 
 A live scene can simulate correctly and render valid scenery while every actor is

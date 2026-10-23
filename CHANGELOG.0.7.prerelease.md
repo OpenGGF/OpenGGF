@@ -29,9 +29,11 @@ Unreleased. The earlier development themes remain in
   resource discovery, validation, lossless canonical-to-screenplay round trips and
   offline filmmaking; both editors import/export the same screenplay. A bounded
   route helper preserves per-route starting action, a slow stroll or live native Run speed,
-  gentle/hard/overshoot endings and final facing,
+  gentle/hard/overshoot endings and final facing (Spindash requires Run),
   and emits native movement/jump intents over actual collision terrain
-  with cold LIVE verification, plus visual walking-object routes over slopes and
+  with observed native charge/release and cold LIVE verification, penalised back-up
+  run-ups only after direct steering fails, and location-specific speed advice
+  supported by a matched Run probe, plus visual walking-object routes over slopes and
   steps up to eight pixels. Both editors show the simulated route before Apply,
   with grounded/airborne segments and endpoints over the picture, plus route state,
   legends and readable failure explanations in editor chrome; applied
