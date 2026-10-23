@@ -34,7 +34,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 181 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 9 records | 0 records | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
 2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
@@ -76,7 +76,7 @@ continues those cuts rather than treating the inventory as untouched.
 |---|---|---|---|
 | Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Completed; affected checks and strict frozen rules passed |
 | Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
-| Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K preview behavior and donor/host selection remain ROM-backed; no concrete type checks in shared preview orchestration | Next bounded slice, not delivered in this campaign |
+| Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K pixel/token fingerprints, detached ROM views, card-owned selection, source and strict frozen guards | Completed; focused behavior/API checks and strict frozen rules passed; see the [preview plan](plans/2026-10-23-title-preview-providers.md) |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
 
 The combined guard profile has one independently reproduced pre-existing
@@ -88,6 +88,15 @@ Lifecycle calls are a separate migration inventory, not hundreds of automaticall
 safe replacements. Preserve the intentional slot/reconstruction bridges and move
 callers only with focused lifecycle behavior evidence. Ambient test setup and
 remaining low-level audio/data allowances stay outside this campaign.
+
+2026-10-23: the subsequent [title-preview migration](plans/2026-10-23-title-preview-providers.md)
+removed all nine shared-to-concrete mapping calls (S1: two, S2: one, S3K: six).
+ROM offsets, palettes, animation and composition moved with them into per-game
+providers. The source guard also rejects concrete game imports/entry switches in
+shared preview code, including constants invisible to bytecode dependency counts.
+The composition root resolves detached stock providers directly, avoiding live
+module construction and active/suspended gameplay or donor selection. The rule's
+historical `frozen baseline: 9` description remains its unchanged store key.
 
 ## Source Ratchets
 
@@ -212,7 +221,7 @@ production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 181
-- `shared_layers_do_not_depend_on_game_specific_packages`: 9
+- `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
 - `runtime_registry_controllers_are_only_constructed_by_runtime_composition_roots`: 2

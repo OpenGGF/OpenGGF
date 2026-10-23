@@ -132,3 +132,9 @@ release-only suite and native emulator parity were not run. All Java production
 and test sources compiled. `git diff --check`, changed-document relative links,
 and the unchanged AGENTS/CLAUDE mirror passed. Diagnostic output is temporary;
 no category run directory or validation receipt was created.
+
+
+Implementation and regression sources are committed as `71e5e041bf7899d0987381d6ef3a144bb6a93c8a`.
+The dedicated following baseline commit removes the nine verified identities and
+updates the published counts. Their combined source/resource state is the state
+validated above; subsequent documentation/commit metadata does not alter it.
