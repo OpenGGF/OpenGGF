@@ -240,6 +240,7 @@ public class HudRenderManager {
                         136 + camera.getYWithShake() + piece.yOffset(), piece.widthTiles(), piece.heightTiles(),
                         0, piece.paletteIndex(), piece.hFlip(), piece.vFlip(), true, true));
             }
+            appendOptionalTimeGeometry(geometry, satOrigin, player);
             collectingSatFragments = true;
             try { com.openggf.graphics.SpriteSatInternalAccess.submitGroups(graphicsManager, geometry, () -> draw(levelGamestate, player)); }
             finally { collectingSatFragments = false; }
@@ -304,6 +305,27 @@ public class HudRenderManager {
                 graphicsManager.flushPatternBatch();
             }
         }
+    }
+
+    private void appendOptionalTimeGeometry(List<com.openggf.graphics.SpriteSatEntry> geometry,
+                                            int origin, PlayableEntity player) {
+        if (bonusStageHudLayout || !(timeHundredths || hostTimeHundredths)) return;
+        int extraColumns = optionalTimeColumns(player != null && player.isDebugMode());
+        if (extraColumns == 0) return;
+        for (var row : profile.rows()) {
+            if (!row.visible() || row.metric() != HudMetric.TIME) continue;
+            // The optional .HH readout owns one additional 3x2 SAT group.
+            // Keep every ROM footprint unchanged; this tail still consumes the
+            // same sprite/column budgets and replays only admitted fragments.
+            geometry.add(com.openggf.graphics.SpriteSatEntry.of(
+                    origin + row.valueRightX() + row.maxDigits() * 8 + camera.getXWithShake(),
+                    row.valueY() + camera.getYWithShake(), extraColumns, 2, 0,
+                    hudPatternDesc.getPaletteIndex(), false, false, true, true));
+        }
+    }
+
+    private int optionalTimeColumns(boolean debug) {
+        return !bonusStageHudLayout && !debug && (timeHundredths || hostTimeHundredths) ? 3 : 0;
     }
 
     private void drawOrdinaryRows(List<HudRow> rows, LevelState levelGamestate, PlayableEntity player,
@@ -380,6 +402,7 @@ public class HudRenderManager {
             }
             boolean hasLabel = minX != Integer.MAX_VALUE;
             int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64 : row.maxDigits() * 8;
+            if (row.metric() == HudMetric.TIME) valueWidth += optionalTimeColumns(debug) * 8;
             int valueHeight = row.metric() == HudMetric.LIVES ? 8 : 16;
             readouts.add(new com.openggf.game.mutators.HudPresentationRuntime.Readout(index,
                     row.labelX() + (hasLabel ? minX : 0), row.labelY() + (hasLabel ? minY : 0),

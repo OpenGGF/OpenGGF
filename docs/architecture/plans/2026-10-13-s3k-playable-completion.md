@@ -31196,3 +31196,86 @@ Affected nine-class request1152 completed100T/0F/0E/0S across nine XMLs, queue0s
 Policy reconciliation separately passed95 Python methods, including actual Bash/PowerShell paths, after preserving the initial one-method/two-subtest enum-body lexical failure and correcting only enum constant-list scope. Upstream promo tooling passed22 tests in an owned disposable NumPy/Pillow environment after the system Python's missing-NumPy import failure; all four mirrored promo skill files match. Fresh bounded structural/API/rewind guards follow this corrected source in a separate JVM. SOZ/MHZ observation gates, source packages, route negatives and Main remain untouched; no broad smoke, route cause or native/full-game qualification follows.
 
 Fresh separate guard request94996 passes143T/0F/0E/0S across six XMLs:72 architectural source,32 ArchUnit,11 API,23 rewind policy,4 rewind architecture and1 field-disposition case. Queue570s/Maven45.431s; exact diff, properties, identities, all streams and no dumps were inspected. No guard/cap/pin was relaxed. This qualifies the bounded capture/fixture correction with the affected100 result; later develop HUD/hosted changes are a separate receiving step.
+
+
+### PR223 latest-develop HUD receiving contract — 2026-10-23
+
+The qualified capture/fixture checkpoint `b8fcf225f7f20c2e14673cfd78c95702297196d4`
+was pushed normally to the existing draft head, with the intermediate scope stated
+in the PR. Local merge `c7538af61` then receives the peer's committed GPU cohort
+`1ad7dc99eb19ea7687b3b079649455434dd286d5` by ancestry. Its four Java files remain
+byte-exact; its owning210 affected and111 fresh-guard passes are peer evidence,
+not new runs here. Merge `1456876437f9e73f37a3902961845e0d3631b39d` receives current
+`develop` `78b44b26e2ed80ec461daf0ce63f3a6b0b5d4887` once. Twenty non-overlap files
+are exact upstream, while the six receiving files retain the combined HUD,
+native-admission, profile and API contracts. The three additive API signatures
+are the two RunHandle clock defaults and the configuration enum constant.
+
+The incoming optional `.HH` drawing exceeded the immutable ROM TIME footprint
+when the native grouped HUD replay clipped its callback. Counter publication can
+draw the same digits without that group, so its pass alone would miss this seam.
+Actual pre-correction EGL request66105 produced5T/2F/0E/0S: configured and hosted
+grouped hundredths first differed at pixel96,24; three native/counter/exhaustion
+controls passed. This was a receiving-layout defect, not evidence to bypass SAT
+admission or widen every stock ROM piece.
+
+The correction appends one optional3x2 TIME group through the existing native
+submitGroups path and reports the same width to compact presentation. Ordinary
+non-debug TIME remains32 pixels by default and becomes56 for `.HH`; native ROM
+piece order, counters, timing and gameplay timer ownership stay unchanged. The
+extra columns consume existing sprite/scanline limits and replay only admitted
+fragments. Metadata and actual pixel controls cover native/400-wide anchors,
+configured and hosted clocks, batched/unbatched drawing, exhaustion and partial
+column admission. The presentation component control checks plaque widths68/92,
+viewport containment and owned capture/restore/forward equality. That is not a
+registered-world rewind or debug/bonus-format breadth certificate.
+
+Latest-develop request65139 completed156T/0F/0E/0S across14 XMLs at the optional
+geometry source before the later readout-width addition, queue558s/Maven1:38.
+Selectors were TestHostedRunController, TestLevelTimerDisplay, TestHudRenderManager,
+TestHudRenderManagerWidescreen, TestHudSatProjection, TestHudHundredthsPixels,
+TestConfigCatalog, TestSettingTiming, TestBundledConfigResource, TestTimeAttackRuntime,
+TestRaceLobbyView, TestHudViewportWiring, TestHudSatLayoutRom and
+TestHudPresentationRuntime. Hosted-clock reset/load, native mapping and config/API
+consumers remain covered by their actual identities. Intentional creator-fault
+warnings in HostedRunController are fault-boundary controls.
+
+After the readout-width correction, request3817 completed60T/0F/0E/0S across five
+XMLs, queue669s/Maven1:31. The supported explicit lean lane used1GiB JVM heaps and
+4GiB/4cores for the bounded ROM-free fixtures; no resource override was used.
+All six actual EGL pixel methods executed, and all four source hashes matched
+the pre-submission inputs. Exact distinct identities, all72 properties per XML,
+streams and absence of skips/dumps were read. Component FAST-without-manifest
+warnings are not authentic measured-cost evidence. These overlapping156/60
+results are separate source-attributed checks, not216 unique cases or one union
+run. Final structural/API guards are recorded separately after completion.
+
+Reproducible final affected selection, using the preceding original environment
+and verified absolute ROM paths (ROOT is the unchanged main tooling path, NS the
+fresh owned output namespace):
+```text
+python3 $ROOT/tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.level.objects.TestHudHundredthsPixels,com.openggf.level.objects.TestHudSatProjection,com.openggf.game.mutators.TestHudPresentationRuntime,com.openggf.level.objects.TestHudRenderManager,com.openggf.level.objects.TestHudRenderManagerWidescreen' -Dopenggf.surefire.reports=$NS/reports -Dopenggf.test.tmpdir=$NS/tmp -Dopenggf.test.diagnostics=$NS/diagnostics -Dsonic1.rom.path="$S1_ROM" -Dsonic2.rom.path="$S2_ROM" -Ds3k.rom.path="$S3K_ROM" test -B
+```
+
+The peer coordinator retains one combined smoke lead and will receive the final
+qualified successor once; GPU, tool-safety and its EGL-property fixture checks
+are not duplicated here. Main/develop mutation, SOZ/MHZ observations and native
+captures remain closed. MHZ26853 and current SOZ211787/23478 remain separate
+unattributed route blockers. No full-suite, native-pixel, complete campaign or
+delivery-wide green claim follows from this draft-head update.
+
+
+Fresh separate request30490 completes116T/0F/0E/0S across four XMLs:72 source,
+32 ArchUnit,11 API and1 field-disposition test. Queue412s/Maven44.476s. The exact
+tracked diff and four tested source hashes matched; all69 properties per XML,
+distinct identities, streams and no dumps/skips were inspected. Existing reported
+closed baseline field gaps are not a new failure or an assertion waiver. The
+readout-width source follow-up review found no issue in the shared predicate and
+single-TIME-row control. No prior GPU/tool/fixture check was repeated.
+
+A fetch during this frozen guard request found a separate develop epoch,
+`d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, adding measured packed separators and
+run-scoped HUD profiles. The peer agreed to pin that SHA as the final refresh
+target, rather than silently changing queued source or chasing subsequent ref
+moves. The qualified78 checkpoint is committed first; d9's effective-profile and
+whole-fragment admission contracts require the next bounded merge and focus.
