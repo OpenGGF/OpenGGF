@@ -652,3 +652,27 @@ failure, inspect exact cases/skips and resolve only the implicated integration
 contract. These checks address newly combined API/policy/architecture and
 hosted/audio/preview/owner dependencies; prior unrelated route matrices are not
 repeated. Integration and push wait for these results.
+
+Reconciliation verification at `2ff51d184795b9eb87a20d04ff6c2bffb7709b1e`
+completed successfully. The six structural/API classes passed 172 cases without
+failures, errors or skips. The six consumer classes ran 158 cases with no failures
+or errors and one skip: `TestS3kDataSelectPresentation`'s
+`visualCapture_selectedSaveSlotShowsRightBodyRail` could not initialize GLFW for
+visual capture. Its exact reason matches the complete smoke skip; no image
+capture is claimed. The remaining 157 consumer cases passed, including all
+seventeen owner controls. Consumer admission waited 661 seconds and Maven took
+28.264 seconds; guards took 2:05 of Maven time, with admission wait not recovered
+from the bounded final summary. All twelve XML suites and their exact cases were
+inspected, then the consumed report directory removed. No task validation jobs
+remain.
+
+A fresh fetch still reports published develop at `f1869d069`. All campaign source
+and tests retain their final child blobs; subsequent edits are engineering prose
+only. Final integration uses that exact verified executable state without
+repeating unchanged smoke coverage. Preserve the two inherited HCZ/CLI failures,
+93 explicit complete-smoke skips, the single focused visual-capture skip and the
+upstream delivery's stated limits. This evidence does not certify a release full
+suite or a wholly green combined invocation. Push only integrated develop, then
+remove the eight inspected task worktrees and ten merged local refs, preserving
+main's unrelated contents. Final delivery/cleanup status is recorded in the task
+checkpoint and completion report.
