@@ -9,6 +9,7 @@ import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.stageplay.runtime.StageplayLiveWorld;
+import com.openggf.stageplay.runtime.StageplayWorldPresentation;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.HeadlessGameBoot;
@@ -48,7 +49,7 @@ class TestStageplayDirectedBackgroundRendering {
                  var world = StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode());
                  var grabber = new GlReadPixelsGrabber(WIDTH, HEIGHT)) {
                 var scene = StageplayDocument.empty("s3k", 0, act, 1800, 700, WIDTH, HEIGHT).withDurationFrames(90);
-                var frame = world.resolve(scene, StageplayTimeline.sample(scene, 60));
+                world.resolve(scene, StageplayTimeline.sample(scene, 60));
                 errors.assertClean("native Stageplay world assembly and 60 logic frames");
                 var level = GameServices.level();
                 var renderer = level.spritePresentationRenderer();
@@ -83,12 +84,18 @@ class TestStageplayDirectedBackgroundRendering {
                 var ring = level.tilemapManager.capturePersistentBgNametableSnapshot();
                 TilemapGpuRenderer gpu = GameServices.graphics().getTilemapGpuRenderer();
                 var gpuState = gpu.captureBackgroundRenderState();
-                var view = new StageplayTimeline.CameraPose(directedX, 620, .5);
                 var tiles = new ArrayList<String>();
-                world.draw(frame, view, (x, y, width, height) -> {
-                    tiles.add(x + ":" + y + ":" + width + ":" + height);
-                    errors.assertClean("directed native tile " + x + "," + y);
-                });
+                // This fixture intentionally projects away from the native camera (and
+                // outside the live-world envelope). Exercise the same production compositor
+                // directly so framing policy cannot change the raster/scroll phase under test.
+                try (var presentation = new StageplayWorldPresentation()) {
+                    presentation.draw(GameServices.graphics(), level, directedX, 620, .5, WIDTH, HEIGHT,
+                            (x, y, width, height) -> {
+                                level.drawCinematicWorld(GameServices.sprites());
+                                tiles.add(x + ":" + y + ":" + width + ":" + height);
+                                errors.assertClean("directed native tile " + x + "," + y);
+                            });
+                }
                 errors.assertClean("completed directed composition and state restore");
                 assertEquals(List.of(directedX + ":620:350:224", (directedX + WIDTH) + ":620:350:224",
                         directedX + ":844:350:224", (directedX + WIDTH) + ":844:350:224"), tiles,

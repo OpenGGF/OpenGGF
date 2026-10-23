@@ -60,13 +60,13 @@ class TestStageplayNativeBackgroundProjection {
                  var world = StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode());
                  var grabber = new GlReadPixelsGrabber(WIDTH, HEIGHT)) {
                 var scene = StageplayDocument.empty(game, zone, act, x, y, WIDTH, HEIGHT).withDurationFrames(90);
-                var resolved = world.resolve(scene, StageplayTimeline.sample(scene, 60));
-                assertEquals(x, resolved.camera().x(), "Director framing is independent of gameplay camera-origin bounds");
-                assertEquals(y, resolved.camera().y(), "ICZ ship framing above ROM camera minimum must remain authored");
+                var authored = StageplayTimeline.sample(scene, 60);
+                var resolved = world.resolve(scene, authored);
+                assertEquals(new StageplayTimeline.CameraPose(x, y, 1), authored.camera(),
+                        "Native projection reference coordinates remain authored");
+                assertEquals(world.boundedCamera(authored.camera()), resolved.camera(),
+                        "Live-world evaluation obeys the loaded level envelope");
                 var nativeCamera = GameServices.camera().capture();
-                for (var view : java.util.List.of(new StageplayTimeline.CameraPose(-100, -256, 1),
-                        new StageplayTimeline.CameraPose(x, 10000, 1)))
-                    assertEquals(view, world.boundedCamera(view), "Above/below-layout framing is still a bounded film raster");
                 assertThrows(IllegalArgumentException.class,
                         () -> world.boundedCamera(new StageplayTimeline.CameraPose(1_048_577, 0, 1)));
                 assertEquals(nativeCamera, GameServices.camera().capture(), "Director validation never changes native locks");
@@ -83,6 +83,9 @@ class TestStageplayNativeBackgroundProjection {
                 writeEvidence(game + "-native", nativePicture);
                 var displayed = field("currentScrollPresentation");
                 var tile = field("cinematicScroll");
+                // Deliberately bypass live-world framing at the renderer seam. GHZ's tall
+                // film, EHZ's raised group and ICZ's bottom band need these exact reference
+                // coordinates, including positions outside the loaded camera envelope.
                 LevelSpritePresentation.withCinematicView(level, x, y, WIDTH, 384, () -> {
                     LevelSpritePresentation.withCinematicTile(level, 0, 0, WIDTH, HEIGHT, () -> {
                         drawBackground(renderer, read(tile, renderer));

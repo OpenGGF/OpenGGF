@@ -2657,3 +2657,74 @@ disassembly citations and moves no reference pins; those unrelated citations wer
 not rewritten. Changed-document whitespace, skill mirrors and API signature checks
 pass. No category run directory was created (preflight only); consumed task Maven
 diagnostics are removed before handback.
+
+
+#### Smoke repair after 657bbae86 (2026-10-23)
+
+The lead's change-based smoke `20261023T090056Z-4a39a6e3`, based on
+`7d35d4a7b`, exposed two missed consumer contracts. This repair is confined to
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5`; the lead retains smoke,
+integration and delivery ownership.
+
+- **SOZ rewind:** `SozEndBossInstance#visualControlOwners` and the child already
+  reach the central `PlayerControlOwnersCodec` through compact default capture.
+  The stack is that codec rejecting missing identity authority, not a missing
+  codec. The post-results test called the context-free snapshot overload after
+  acquiring P1. The independent-follower fixture supplied P2/extra through its
+  player query but inherited an empty `StubObjectServices.sidekicks()` list;
+  ObjectManager therefore could not register those acquired identities. Repair
+  the direct call with an explicit identity context and supply the canonical
+  team/focused P1 to the fixture. Retain strict rejection of missing identities;
+  do not create per-object codecs or context-free player fallbacks.
+- **Holder audit:** the net round-2 diff (`a070bbbc1^..657bbae86`) adds 61
+  `PlayerControlOwners` fields across 54 files, including nested and ending
+  controllers. All use the existing central helper type. Extend compact-policy
+  reachability enforcement to acquired-player helpers and other non-excluded
+  player-reference fields, including ending sources outside the ordinary object
+  scan roots. Negative fixtures cover excluded helper state and raw final player
+  collections omitted by the compact default schema.
+- **Background projection:** N1's loaded-envelope camera clamp is intentional and
+  remains in production. The old projection assertions instead required an
+  arbitrary authored camera to survive live-world resolution unchanged. Keep
+  the native pixel comparator at its existing explicit `withCinematicView` seam,
+  including GHZ tall-film, EHZ raised-group and ICZ bottom-band coordinates.
+  Check live evaluation against bounded framing separately. The 700x448 test
+  calls the existing production `StageplayWorldPresentation` compositor directly
+  at its deliberate off-camera coordinates; preserve its exact four-tile phase,
+  native state/GPU residency, opacity, abort and byte-identical ordinary-picture
+  assertions. No new production bypass is introduced.
+- **Selection gap:** previous holder tests populated the helper and always
+  supplied identity contexts; they did not run `TestSozEndBoss`'s native exit
+  consumers. The N1 selection exercised camera evaluation and editor pictures,
+  but omitted `TestStageplayDirectedBackgroundRendering` and
+  `TestStageplayNativeBackgroundProjection`, which also consume the changed
+  framing API. The repaired selection names those consumers explicitly and adds
+  related cinematic/live-world rendering, ownership/replay/codecs and mandatory
+  S3K checks. The structural holder hook test alone only proved hook existence.
+
+Rewind repair commit: `5c4c97daa`. The first completed repaired invocation used
+this exact common environment/ROM configuration (all commands start with an
+explicit `cd` into the authorized engine tree):
+
+```bash
+cd /mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5
+TASK_ENGINE=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-d68f46c5
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$TASK_ENGINE/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$TASK_ENGINE/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$TASK_ENGINE/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSozEndBoss,TestCapturedPolicyCompactReachabilityGuard,TestStageplayDirectedBackgroundRendering,TestStageplayNativeBackgroundProjection' test -B
+```
+
+Result: **72 tests, 0 failures, 0 errors, 0 skips** on the repair diff atop
+`657bbae86`; 61 SOZ, six reachability checks (254 production player-reference
+fields audited), two directed-raster and three native-background cases. Queue
+wait was 303 seconds; Maven execution was 30.910 seconds. CRC32/SHA-1 identities
+of all three supplied ROMs were verified against repository requirements. An
+initial invocation stopped at compilation because the new negative annotation
+fixture omitted its required `reason`; corrected before this successful run,
+with no tests executed by the failed compilation.
+
+Remaining affected selectors, the mandatory S3K four and the single guards run
+are recorded below when complete. No broad smoke is launched by this worker.
