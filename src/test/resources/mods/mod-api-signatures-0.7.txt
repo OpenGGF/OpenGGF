@@ -3808,6 +3808,7 @@ FIELD com.openggf.stageplay.StageplayDocument$ObjectMode public,static,final com
 FIELD com.openggf.stageplay.StageplayDocument$ObjectMode public,static,final com.openggf.stageplay.StageplayDocument$ObjectMode PUPPET
 FIELD com.openggf.stageplay.StageplayDocument$ObjectSourceKind public,static,final com.openggf.stageplay.StageplayDocument$ObjectSourceKind LAYOUT_OBJECT
 FIELD com.openggf.stageplay.StageplayDocument$ObjectSourceKind public,static,final com.openggf.stageplay.StageplayDocument$ObjectSourceKind RELEASED_ANIMAL
+FIELD com.openggf.stageplay.StageplayDocument$PuppetCommand public,static,final int SPINDASH_CHARGE_FRAMES
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind CROUCH
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind FACE_LEFT
 FIELD com.openggf.stageplay.StageplayDocument$PuppetCommandKind public,static,final com.openggf.stageplay.StageplayDocument$PuppetCommandKind FACE_RIGHT

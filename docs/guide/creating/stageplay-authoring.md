@@ -615,7 +615,10 @@ a single jump press and releases down; native charge decay
 and launch tables own the resulting speed (`Sonic_CheckSpindash` /
 `Sonic_UpdateSpindash`, s2.asm:37555-37688). No constant replaces native launch
 velocity, and shipped `fixBugs=0` behavior stays active. A Spindash launch can exceed
-the stroll cap; use Run when that native burst is required. Facing taps accept a
+the stroll cap, so selecting Spindash selects Run in both editors. Spindash + Walk
+is rejected by the shared document/screenplay contract before search. A saved
+unavailable start stays visible in the form until the author replaces it.
+All Walk endings reserve native ground/air acceleration headroom. Facing taps accept a
 subpixel nudge. Failed bounded Walk searches suggest Run/Spindash for possible
 speed-dependent terrain; that suggestion is not proof a different setting reaches
 through live objects/events. Only a cold successful replay receives VERIFIED.

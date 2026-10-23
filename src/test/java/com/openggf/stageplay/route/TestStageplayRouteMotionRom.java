@@ -28,12 +28,14 @@ class TestStageplayRouteMotionRom {
         motions.put("jump",new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("spindash",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-downhill",RouteMotion.DEFAULT);
+        motions.put("walk-hard-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.HARD_STOP,EndingFacing.INHERIT));
+        motions.put("walk-overshoot-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.OVERSHOOT,EndingFacing.INHERIT));
         motions.put("face-left",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.LEFT));
         motions.put("face-right",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.RIGHT));
         try(var library=SceneRomLibrary.open(Map.of("s2",Path.of(System.getProperty("sonic2.rom.path")))) ) {
             for(var entry:motions.entrySet()) {
                 var motion=entry.getValue();var source=scene(entry.getKey());
-                boolean downhill=entry.getKey().equals("walk-downhill");
+                boolean downhill=entry.getKey().equals("walk-downhill") || entry.getKey().endsWith("-slope");
                 if(downhill) source=source.withActors(List.of(new Actor("hero","Sonic","s2","sonic",
                         List.of(new ActorKey(0,400,624,0,-1,true,true,1,Interpolation.HOLD)))));
                 var request=new StageplayRouteRequest("hero",0,downhill?100:400,downhill?656:624,420,1024,120000,60000,1,null,1,motion);
@@ -69,7 +71,7 @@ class TestStageplayRouteMotionRom {
                         assertEquals(motion.endingFacing()==EndingFacing.LEFT,world.routeMotionState("hero").facingLeft());
                     if(motion.endingAction()==EndingAction.GENTLE_STOP) assertFalse(skidded,entry.getKey());
                     if(motion.startingAction()==StartAction.SPINDASH) assertTrue(charged);
-                    if(motion.endingAction()==EndingAction.OVERSHOOT) assertTrue(farthest>=412);
+                    if(motion.endingAction()==EndingAction.OVERSHOOT) assertTrue(downhill?least<=request.targetX()-12:farthest>=412);
                     else if(downhill) assertTrue(least>=request.targetX()-6,"Gentle downhill stop must not pass the goal");
                     else assertTrue(farthest<=request.targetX()+6,"A non-Overshoot ending must not pass the goal: "+entry.getKey());
                     resources.resolveFrame(candidate,StageplayTimeline.sample(candidate,20));
@@ -84,6 +86,12 @@ class TestStageplayRouteMotionRom {
             }
         }
     }
+    @Test void spindashWithWalkIsRejectedBeforeSearch() {
+        var error=assertThrows(IllegalArgumentException.class,()->new RouteMotion(StartAction.SPINDASH,
+                TravelSpeed.WALK,EndingAction.HARD_STOP,EndingFacing.INHERIT));
+        assertTrue(error.getMessage().contains("Spindash requires Run"));
+    }
+
     static StageplayDocument scene(String name) {
         return StageplayDocument.empty("s2",0,0,0,480,480,270).withName("Motion: "+name).withDurationFrames(420)
                 .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(new ActorKey(0,100,656,0,-1,false,true,1,Interpolation.HOLD)))))

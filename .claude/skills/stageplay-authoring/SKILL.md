@@ -95,7 +95,10 @@ For player route motion, choose starting action Walk/Jump/Spindash (capability-g
 travel Walk/Run, ending Gentle Stop/Hard Stop/Overshoot and facing Inherit/Left/Right.
 Planned defaults stroll at 1.5 px/tick and coast without a skid; Run reads native
 live top speed. Falling starts land first, spindash uses native down/jump/release
-buttons with a fixed charge, and final facing uses one native tap. The MOVE_TO
+buttons with a fixed charge, and final facing uses one native tap. Spindash selects
+Run in both editors; the shared document/screenplay contract rejects Spindash + Walk.
+Unavailable saved starts remain repairable in the route form. Every Walk ending
+reserves native acceleration headroom, including airborne steering. The MOVE_TO
 `motion` object persists settings through save, screenplay export, edits and replan.
 Use route CLI `--start`, `--travel`, `--ending`, `--facing`; inspect cap/skid/arrival
 failures rather than hiding a terrain-forced speed violation. A simple walk uses

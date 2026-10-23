@@ -153,11 +153,11 @@ public final class PlayablePuppet implements AutoCloseable {
                 actor.getAnimationId(), actor.getMappingFrame(), actor.getRenderHFlip(), actor.getRenderVFlip(),
                 actor.getAir(), !actor.getAir(), actor.getMax(), actor.getXRadius(), actor.getYRadius(),
                 tail == null ? null : new Tail(tail.mappingFrame(), tail.flipX(), tail.flipY()),
-                actor.getRunAccel(), actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel(),
+                actor.getRunAccel(), com.openggf.stageplay.route.StageplayRouteSteering.deceleration(actor),
                 // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is live acceleration / 2.
-                actor.getRolling() ? actor.getRunAccel() / 2 : actor.getFriction(),
+                com.openggf.stageplay.route.StageplayRouteSteering.friction(actor),
                 actor.getSkidding(), actor.getSpindash(),
-                (actor.getSlopeRunning() * com.openggf.physics.TrigLookupTable.sinHex(actor.getAngle() & 0xFF)) >> 8);
+                com.openggf.stageplay.route.StageplayRouteSteering.slopeImpulse(actor));
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */

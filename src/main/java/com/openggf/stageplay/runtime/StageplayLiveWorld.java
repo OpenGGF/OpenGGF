@@ -330,8 +330,8 @@ public final class StageplayLiveWorld implements AutoCloseable {
                         p.sprite.getCentreX(), target[0], p.routeApproach, p.routeReturning);
             int direction = move ? com.openggf.stageplay.route.StageplayRouteSteering.direction(
                     p.sprite.getCentreX(), p.sprite.getXSpeed(), p.sprite.getGSpeed(),
-                    p.sprite.getRunAccel(), p.sprite.getRolling() ? p.sprite.getRollDecel() : p.sprite.getRunDecel(), p.sprite.getRolling() ? p.sprite.getRunAccel()/2 : p.sprite.getFriction(), p.sprite.getMax(),
-                    (p.sprite.getSlopeRunning()*com.openggf.physics.TrigLookupTable.sinHex(p.sprite.getAngle() & 0xFF)) >> 8,
+                    p.sprite.getRunAccel(), com.openggf.stageplay.route.StageplayRouteSteering.deceleration(p.sprite), com.openggf.stageplay.route.StageplayRouteSteering.friction(p.sprite), p.sprite.getMax(),
+                    com.openggf.stageplay.route.StageplayRouteSteering.slopeImpulse(p.sprite),
                     p.sprite.getAir(), target[0], goal.urgency(), goal.motion(), p.routeReturning, p.routeApproach)
                     : kind == PuppetCommandKind.STOP && goal.motion().endingAction() == EndingAction.GENTLE_STOP
                             ? 0 : steer(p.sprite, p.sprite.getCentreX(), 0);

@@ -26,10 +26,15 @@ class TestStageplayRouteMotionDocument {
                 EndingAction.GENTLE_STOP,EndingFacing.INHERIT));
     }
     @Test void abilitiesBelongToEachActorAndRespectItsNativeDonor() {
-        for(var module:java.util.List.of(new Sonic1GameModule(),new Sonic2GameModule(),new Sonic3kGameModule())) {
+        var modules=java.util.List.of(new Sonic1GameModule(),new Sonic2GameModule(),new Sonic3kGameModule());
+        // Explicit agreed matrix, independent of donor rules and capability implementation.
+        boolean[][] expected={{false,false,false},{true,true,true},{true,true,true}};
+        for(int game=0;game<modules.size();game++) {
+            var module=modules.get(game);
+            int character=0;
             var registry=module.getPlayableCharacterRegistry();
             for(var key:java.util.List.of(CharacterKey.SONIC,CharacterKey.TAILS,CharacterKey.KNUCKLES)) {
-                assertEquals(module.getRules().playerCapability().spindashEnabled(),
+                assertEquals(expected[game][character++],
                         registry.movementAbilities(key,module).contains(CharacterDefinition.MovementAbility.SPINDASH));
             }
             var original=registry.find(CharacterKey.SONIC).orElseThrow();

@@ -45,6 +45,7 @@ public final class EditorProjectMenu {
     private List<Field> fields = List.of();
     private final LinkedHashMap<String, String> values = new LinkedHashMap<>();
     private Consumer<Map<String, String>> submit;
+    private java.util.function.BiConsumer<String, String> valueChanged;
     private String submitLabel;
     private MenuTextEditor textEditor;
     private String editingKey;
@@ -76,7 +77,7 @@ public final class EditorProjectMenu {
     private void reset(String title) {
         this.title = Objects.requireNonNull(title);
         subtitle = ""; actions = List.of(); fields = List.of(); values.clear();
-        submit = null; submitLabel = null; textEditor = null; editingKey = null;
+        submit = null; valueChanged = null; submitLabel = null; textEditor = null; editingKey = null;
         details = null; error = null; selected = 0; open = true;
     }
 
@@ -89,7 +90,9 @@ public final class EditorProjectMenu {
     public void setValue(String key, String value) {
         if (!values.containsKey(key)) throw new IllegalArgumentException("Unknown project field: " + key);
         values.put(key, Objects.requireNonNull(value));
+        if (valueChanged != null) valueChanged.accept(key, value);
     }
+    public void onValueChanged(java.util.function.BiConsumer<String, String> listener) { valueChanged = listener; }
     public void close() { open = false; textEditor = null; details = null; }
 
     /** Returns true whenever this frame is owned by the modal, including its closing frame. */
@@ -104,7 +107,7 @@ public final class EditorProjectMenu {
         if (textEditor != null) {
             textEditor.update(input);
             switch (textEditor.consumeResult()) {
-                case ACCEPTED -> { values.put(editingKey, textEditor.value()); textEditor = null; error = null; }
+                case ACCEPTED -> { setValue(editingKey, textEditor.value()); textEditor = null; error = null; }
                 case CANCELLED -> textEditor = null;
                 case NONE -> { }
             }
@@ -142,7 +145,7 @@ public final class EditorProjectMenu {
             Field field = fields.get(selected);
             if (!field.choices().isEmpty()) {
                 int next = (field.choices().indexOf(values.get(field.key()))+1)%field.choices().size();
-                values.put(field.key(),field.choices().get(next));
+                setValue(field.key(),field.choices().get(next));
                 MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
                 return;
             }

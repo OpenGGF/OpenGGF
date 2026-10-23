@@ -4,11 +4,23 @@ import static com.openggf.stageplay.StageplayDocument.*;
 
 /** Directing policy expressed only as native buttons, shared by search and LIVE replay. */
 public final class StageplayRouteSteering {
+    public static int deceleration(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
+        return actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel();
+    }
+
+    public static int friction(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
+        // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is acceleration / 2.
+        return actor.getRolling() ? actor.getRunAccel() / 2 : actor.getFriction();
+    }
+
+    public static int slopeImpulse(com.openggf.sprites.playable.AbstractPlayableSprite actor) {
+        return (actor.getSlopeRunning() * com.openggf.physics.TrigLookupTable.sinHex(actor.getAngle() & 0xFF)) >> 8;
+    }
     // Authoring choice: 1.5 px/tick ($180), one quarter of normal native top speed.
     // SAnim_WalkRun (s2.asm:38449-38487) switches only at $600, also the normal
     // Sonic_top_speed initialization (s2.asm:36187); just below $600 still looks like running.
     public static final int STROLL_CAP = 0x180;
-    public static final int CHARGE_FRAMES = 24;
+    public static final int CHARGE_FRAMES = PuppetCommand.SPINDASH_CHARGE_FRAMES;
     public static final double OVERSHOOT_PIXELS = 24;
     private StageplayRouteSteering() { }
 
@@ -23,14 +35,21 @@ public final class StageplayRouteSteering {
         int toward = goal < x ? -1 : 1;
         // Native Sonic_SlopeResist (s2.asm:37709-37732) precedes acceleration.
         // Predict it from the actor's live slope factor, without changing physics.
-        int drift = airborne ? 0 : slopeImpulse;
+        int drift = airborne || groundSpeed == 0 ? 0 : slopeImpulse;
         double predictedSpeed = (airborne ? xSpeed : groundSpeed) + drift;
         if (motion.travelSpeed() == TravelSpeed.WALK && (Math.abs(predictedSpeed) > cap || Math.abs(xSpeed) > cap))
             return speed < 0 ? 1 : -1;
         if (motion.endingAction() != EndingAction.GENTLE_STOP &&
                 !(motion.endingAction() == EndingAction.OVERSHOOT && returning))
-            return StageplayMovementIntent.direction(x,xSpeed,accel,decel,cap,airborne,goal,1);
-        if (airborne) return Math.abs(xSpeed) + 2 * accel < cap ? toward : 0;
+            {
+            int direction = StageplayMovementIntent.direction(x, xSpeed, accel, decel, cap, airborne, goal, 1);
+            // Every Walk ending needs acceleration headroom, including double air acceleration.
+            // Opposing input remains available for native braking.
+            if (motion.travelSpeed() == TravelSpeed.WALK && direction * predictedSpeed >= 0
+                    && Math.abs(predictedSpeed) + (airborne ? 2 : 1) * accel > cap) return 0;
+            return direction;
+        }
+        if (airborne) return Math.abs(xSpeed) + 2 * accel <= cap ? toward : 0;
         double drag = Math.max(1, friction) / 256.0;
         double coast = speed * speed / (2 * drag);
         double dx = goal - x;

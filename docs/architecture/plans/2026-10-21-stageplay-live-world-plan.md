@@ -3003,3 +3003,19 @@ acknowledgment. Build outputs and the editor's private dependency remain in thei
 own worktrees for the lead. Both local task branches/worktrees are preserved;
 no unknown or user-authored files, main checkouts or prohibited checkout were
 changed. The only remaining red checks are the four inherited guard identities.
+
+
+### Route review corrections, slice 1 (2026-10-23)
+
+Verified F1/F2/F5/F6/F7/F8 against `aa9b47470`: non-Gentle Walk delegated
+without acceleration headroom, SPINDASH+WALK had no contract rejection, the
+saved start could be absent from form choices, rolling/slope formulas were
+duplicated, capability expectations read the production donor gate, and the
+engine host indentation mixed tabs/spaces. Every Walk ending now gates native
+acceleration (double in air); both physics readers share drag/slope helpers.
+Spindash requires Run in the document contract (also screenplay compilation),
+and selecting it sets Run through the shared form model. Unavailable saved
+starts remain visible and reject submission until repaired. Explicit per-game,
+per-character expected capability values replace the circular assertion.
+Focused tests and slope Hard Stop/Overshoot ROM cases are pending qualification.
+No broad smoke is requested; the lead owns that independent run.

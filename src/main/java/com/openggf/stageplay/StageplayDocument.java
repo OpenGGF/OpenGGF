@@ -507,6 +507,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         public RouteMotion {
             require(startingAction != null && travelSpeed != null && endingAction != null && endingFacing != null,
                     "Route motion settings are required");
+            require(startingAction != StartAction.SPINDASH || travelSpeed == TravelSpeed.RUN,
+                    "Spindash requires Run travel speed; its native launch exceeds the Walk stroll cap");
         }
     }
     @ModApi public enum StartAction { WALK, JUMP, SPINDASH }
@@ -518,6 +520,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     public record PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                                 double urgency, int holdFrames, ObjectTarget target,
                                 WaitCondition condition, int timeoutFrames, RouteMotion motion) {
+        /** Fixed authored charge window; native physics owns charge and release speed. */
+        public static final int SPINDASH_CHARGE_FRAMES = 24;
         public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                              double urgency, int holdFrames) {
             this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0, RouteMotion.NATIVE);
@@ -536,7 +540,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             range(timeoutFrames, 0, MAX_DURATION_FRAMES, "timeoutFrames");
             boolean movement = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO
                     || kind == PuppetCommandKind.GLIDE_TO;
-            if (kind == PuppetCommandKind.SPINDASH) require(urgency > 0 && holdFrames == 24, "Spindash uses the fixed 24-tick charge");
+            if (kind == PuppetCommandKind.SPINDASH) require(urgency > 0 && holdFrames == SPINDASH_CHARGE_FRAMES, "Spindash uses the fixed 24-tick charge");
             else if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
             else {
                 require(x == 0 && y == 0 && urgency == 0, "Only movement has a destination and urgency");

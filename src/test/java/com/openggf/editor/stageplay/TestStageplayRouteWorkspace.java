@@ -22,7 +22,7 @@ class TestStageplayRouteWorkspace {
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())));
     }
-    private final class Host implements StageplayWorkspace.Host {
+    private class Host implements StageplayWorkspace.Host {
         StageplayRouteJob.Update update;StageplayDocument source;StageplayRouteRequest request;int applyRequests,cancelCalls;
         public StageplayDocument initialDocument(){return TestStageplayRouteWorkspace.this.source();}
         public Path initialAssetRoot(){return root;}
@@ -189,6 +189,32 @@ class TestStageplayRouteWorkspace {
         // Starting action follows actor, X, Y and frame budget.
         choose(workspace,4);assertEquals("Jump",workspace.menu().values().get("startingAction"));
         press(workspace,new InputHandler(),GLFW_KEY_ENTER);
+        assertEquals("Walk",workspace.menu().values().get("startingAction"));
+    }
+
+    @Test void selectingSpindashForcesRunAndInvalidPairIsRejected() {
+        var workspace=new StageplayWorkspace(new Host(){
+            public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor,Path root){
+                return java.util.Set.of(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH);
+            }
+        });
+        workspace.activate();workspace.invoke(ROUTE_HELPER);
+        workspace.menu().setValue("startingAction","Spindash");
+        assertEquals("Run",workspace.menu().values().get("travelSpeed"));
+        workspace.menu().setValue("travelSpeed","Walk");workspace.menu().submit();
+        assertTrue(workspace.menu().error().contains("Spindash requires Run"));
+    }
+
+    @Test void savedUnavailableSpindashCanBeRepairedInTheRouteForm() {
+        var motion=new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT);
+        var doc=source().withPuppets(List.of(new PuppetTrack("hero",false,0,List.of(new PuppetCommand(
+                "saved",0,PuppetCommandKind.MOVE_TO,150,200,1,0,ObjectTarget.none(),WaitCondition.NONE,0,motion)))));
+        var workspace=new StageplayWorkspace(new Host(){public StageplayDocument initialDocument(){return doc;}});
+        workspace.activate();workspace.invoke(ROUTE_HELPER);
+        assertTrue(workspace.menu().isOpen());
+        assertEquals("Spindash (unavailable)",workspace.menu().values().get("startingAction"));
+        workspace.menu().submit();assertTrue(workspace.menu().error().contains("unavailable"));
+        workspace.invoke(ROUTE_HELPER);choose(workspace,4);
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
 

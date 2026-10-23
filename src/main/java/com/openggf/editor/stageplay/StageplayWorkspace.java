@@ -1388,7 +1388,9 @@ public final class StageplayWorkspace {
             try {
                 if(host.movementAbilities(nativeActor,assetRoot).contains(com.openggf.game.CharacterDefinition.MovementAbility.SPINDASH)) starts.add("Spindash");
             } catch(IOException failure) { report(failure); }
-            routeFields.add(4,new EditorProjectMenu.Field("startingAction","Starting action",display(motion.startingAction()),starts));
+            routeFields.add(4,new EditorProjectMenu.Field("startingAction","Starting action",starts.contains(display(motion.startingAction())) ? display(motion.startingAction()) : "Spindash (unavailable)",
+                    starts.contains(display(motion.startingAction())) ? starts : java.util.stream.Stream.concat(
+                            java.util.stream.Stream.of("Spindash (unavailable)"),starts.stream()).toList()));
             routeFields.add(5,new EditorProjectMenu.Field("travelSpeed","Travel speed",display(motion.travelSpeed()),List.of("Walk","Run")));
             routeFields.add(6,new EditorProjectMenu.Field("endingAction","Ending action",display(motion.endingAction()),List.of("Gentle Stop","Hard Stop","Overshoot")));
             routeFields.add(7,new EditorProjectMenu.Field("endingFacing","Ending facing",display(motion.endingFacing()),List.of("Inherit","Left","Right")));
@@ -1400,6 +1402,8 @@ public final class StageplayWorkspace {
             if (!object && !entry) throw new IOException("Player routes start at a shot-entry frame");
             var footprint = object ? new StageplayRouteFootprint(integer(values,"halfWidth"),integer(values,"height"),
                     integer(values,"footOffset"),integer(values,"collisionPath")) : null;
+            if (!object && values.get("startingAction").contains("unavailable"))
+                throw new IOException("Saved Spindash start is unavailable for this actor; choose Walk or Jump");
             var request = new StageplayRouteRequest(id,frame,decimal(values,"x"),decimal(values,"y"),integer(values,"frames"),
                     integer(values,"nodes"),integer(values,"ticks"),integer(values,"millis"),1,footprint,object?decimal(values,"speed"):1,
                     object?RouteMotion.DEFAULT:new RouteMotion(StartAction.valueOf(enumValue(values,"startingAction")),
@@ -1412,7 +1416,10 @@ public final class StageplayWorkspace {
             routeSource=document; routeRoot=assetRoot; routeSelection=controller.selectedActorId(); routeRequest=request;
             routeUpdate=null; status="Route planning started in a separate logic worker. Reopen Plan collision route to cancel or review.";
         }));
-        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Cycle motion choices. Airborne actors land first.");
+        menu.onValueChanged((key, value) -> {
+            if (key.equals("startingAction") && value.equals("Spindash")) menu.setValue("travelSpeed", "Run");
+        });
+        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Spindash selects Run. Airborne actors land first.");
         status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
     }
 

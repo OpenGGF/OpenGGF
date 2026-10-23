@@ -343,6 +343,15 @@ class TestStageplayRoutePlanner {
         }
     }
 
+    @Test void everyWalkEndingReservesGroundAndAirAccelerationHeadroom() {
+        for(var ending:EndingAction.values()) for(boolean airborne:List.of(false,true)) {
+            var motion=new RouteMotion(StartAction.WALK,TravelSpeed.WALK,ending,EndingFacing.INHERIT);
+            int direction=StageplayRouteSteering.direction(100,0x174,0x180,12,128,12,0x600,
+                    -8,airborne,400,1,motion,false,1);
+            assertEquals(0,direction,ending+" airborne="+airborne);
+        }
+    }
+
     private StageplayRouteProposal search(PlayablePuppet probe, StageplayRouteRequest request) {
         return StageplayRoutePlanner.search(
                 document(),
