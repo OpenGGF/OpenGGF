@@ -24,6 +24,13 @@ public class HudRenderManager {
     boolean hostTimeHundredths;
     /** A hosted run's own clock for TIME, in frames, or -1 for the act timer. Presentation only. */
     long hostTimeFrames = -1;
+    /**
+     * The colon's ink columns (first and last, shadow included) in this game's HUD art, measured
+     * from its lower tile when the art is installed; -1 until then. With hundredths the colon and
+     * the point take only their ink plus a small gap, instead of a whole eight-pixel cell.
+     */
+    int separatorInkLeft = -1;
+    int separatorInkRight = -1;
     com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =
@@ -633,22 +640,37 @@ public class HudRenderManager {
     private void drawTime(int x, int y, String timeStr, int hudOrigin) {
         int camX = camera.getXWithShake();
         int camY = camera.getYWithShake();
+        // Whole seconds keep the games' own fixed eight-pixel cells. With hundredths the colon and
+        // point are packed: two pixels after the previous digit's shadow column, their ink, one
+        // pixel, then the next digit (the games leave three and two around the colon).
+        boolean packed = timeStr.indexOf('.') >= 0 && separatorInkLeft >= 0;
+        int cursor = 0;
         for (int i = 0; i < timeStr.length(); i++) {
             char c = timeStr.charAt(i);
+            boolean separator = c == '.' || c == ':';
+            int cell = cursor;
+            if (packed && separator) {
+                cell = cursor + 2 - separatorInkLeft;
+                cursor += 2 + (separatorInkRight - separatorInkLeft + 1) + 1;
+            } else {
+                cursor += 8;
+            }
             if (c == '.') {
                 // The games' HUD art has no point, so it is the colon's lower dot. That dot
                 // straddles the colon's two tiles (rows 7-9 of 16; the upper tile also holds the
-                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of it.
-                int px = hudOrigin + x + camX + (i * 8);
-                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 7);
-                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 8);
+                // upper dot), so the lower tile is drawn twice, one row apart, to rebuild all of
+                // it, two rows lower so it sits on the digits' baseline (their ink ends on row 10,
+                // their shadow on row 11, in all three games).
+                int px = hudOrigin + x + camX + cell;
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 9);
+                renderSafe(digitPatternIndex + 21, hudPatternDesc, px, y + camY + 10);
                 continue;
             }
             int patternIdx = (c == ':')
                     ? digitPatternIndex + 20
                     : digitPatternIndex + ((c - '0') * 2);
-            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY);
-            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + (i * 8), y + camY + 8);
+            renderSafe(patternIdx, hudPatternDesc, hudOrigin + x + camX + cell, y + camY);
+            renderSafe(patternIdx + 1, hudPatternDesc, hudOrigin + x + camX + cell, y + camY + 8);
         }
     }
 

@@ -88,6 +88,26 @@ public final class HudProfileAccess {
         hud.timeHundredths = config.getBoolean(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS);
     }
 
+    /**
+     * Measures the colon's ink columns from the game's own HUD digit art (tile 21, the colon's
+     * lower half, holding the lower dot), so TIME with hundredths can pack its separators.
+     */
+    public static void measureTimeSeparators(HudRenderManager hud, com.openggf.level.Pattern[] digits) {
+        if (hud == null || digits == null || digits.length <= 21 || digits[21] == null) return;
+        int left = -1;
+        int right = -1;
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (digits[21].getPixel(x, y) != 0) {
+                    left = left < 0 ? x : Math.min(left, x);
+                    right = Math.max(right, x);
+                }
+            }
+        }
+        hud.separatorInkLeft = left;
+        hud.separatorInkRight = right;
+    }
+
     /** See {@link com.openggf.level.LevelHudCoverAccess#setRunTime}. */
     public static void setHostTime(HudRenderManager hud, long frames, boolean hundredths) {
         if (hud == null) return;
