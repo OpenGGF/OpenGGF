@@ -71,8 +71,11 @@ Unreleased. The earlier development themes remain in
   starts), the start of Green Hill 1 (S1) or Emerald Hill 1 (S2), so nobody needs a ROM
   the room does not race. Players ready up from the menu; once ready, Start or Enter
   hides the menu and hands the controller to the character, and pressing it again
-  brings the menu back. The menu sits on a dark translucent panel with the level
-  still moving behind it; the stock HUD and ghost nameplates are hidden under it. Other players walk the lobby as named ghosts in their looks
+  brings the menu back. The menu is a set of cards in the race HUD's style (the room
+  and next track, the players with ready boxes and characters, the chat, vote or
+  podium, and the menu with who the room is waiting for), with the level moving
+  around them; the stock HUD and ghost nameplates are hidden under it. The vote shows
+  all three tracks. Other players walk the lobby as named ghosts in their looks
   (presence is streamed between rounds only, and relay rooms send each player its
   nearest eight). The room owner chooses whether the round start waits for everyone
   to be ready: always, never, or (the default) only with five or fewer players
