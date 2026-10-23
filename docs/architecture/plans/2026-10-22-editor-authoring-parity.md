@@ -216,3 +216,25 @@ updates. The authoring render view uses its own camera Y for terrain, preserving
 native gameplay scroll ownership. The offscreen fixture exercises GHZ1, EHZ1 and
 AIZ1 through both real front ends, with no-device audio and no desktop connection.
 Final evidence and validation are recorded in the task handoff outside the repo.
+
+
+The S3K viewer initially showed black terrain and incorrectly colored level-art
+thumbnails even in a fresh JVM. A diagnostic normal boot with 90 neutral native
+ticks installed AIZ's main PalPointers `$2A` palette and produced aligned floor
+and object art. That is kill evidence for a sprite decoder fault, not the final
+capture setup. Do not run gameplay to make editor previews look correct. The
+optional ROM-art preview source supplies that static palette phase to the first
+native-library copy only. Saved/authored copies retain edited colors, and a
+reopen attaches transient art without changing the saved palette. Native palette
+owners and PLC admission remain untouched. Final captures use the preview-load
+path with zero gameplay ticks. Separate per-ROM JVMs also avoid the inherited
+cross-session GPU palette-publication hazard; the fixture asserts that isolation.
+
+The palette alone did not repair intro-owned tile residency. The final source
+library reuses `Sonic3k.buildDetachedLevel(..., SKIP_INTRO)`, the existing ROM-only,
+non-publishing scene loader, then rebuilds level-backed preview sheets from that
+library. Editor entry releases the previous scene's CRAM publication latch and
+fade at `restoreEditorLevelView`; the editor has no native V-int to retire them.
+No gameplay objects are created for previews. The viewer also rejected Newtron's
+native materialization stipple as a browsing pose; its existing standing mapping
+frame is used instead. Changing tool mode retires stale object-selection status.

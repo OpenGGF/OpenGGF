@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 /** Screen-space placement composition, shared by desktop and gamepad chrome. */
 public final class EditorPlacementScene {
     private EditorPlacementScene() { }
+    private record Chip(String label, float x, float y, int color, float alpha) { }
     public interface Painter {
         void image(EditorObjectPreviewCache.Sprite sprite, float x, float y, float width, float height, float alpha);
         void rectangle(float x, float y, float width, float height, int color, float alpha, boolean fill);
@@ -17,8 +18,9 @@ public final class EditorPlacementScene {
     public static void draw(LevelEditorController controller, EditorObjectPreviewCache cache, Painter painter,
                             float left, float top, float width, float height, float unit, int cameraX, int cameraY) {
         if (controller.currentLevel() == null || controller.depth() != EditorHierarchyDepth.WORLD) return;
+        var labels = new java.util.ArrayList<Chip>();
         for (var spawn : controller.currentLevel().getObjects())
-            object(controller, cache, painter, spawn, left, top, width, height, unit, cameraX, cameraY, false);
+            object(controller, cache, painter, labels, spawn, left, top, width, height, unit, cameraX, cameraY, false);
         for (var ring : controller.currentLevel().getRings()) {
             float x = left + (short) (ring.x() - cameraX) * unit, y = top + (short) (ring.y() - cameraY) * unit;
             if (x < left - 8 || y < top - 8 || x > left + width + 8 || y > top + height + 8) continue;
@@ -36,12 +38,14 @@ public final class EditorPlacementScene {
                     && cursor.x() < controller.currentLevel().getMap().getWidth() * controller.currentLevel().getBlockPixelSize()
                     && cursor.y() < controller.currentLevel().getMap().getHeight() * controller.currentLevel().getBlockPixelSize())
                 brush = com.openggf.editor.properties.EditorGizmoPlacements.initialize(brush, controller.currentLevel());
-            object(controller, cache, painter, brush, left, top, width, height, unit, cameraX, cameraY, true);
+            object(controller, cache, painter, labels, brush, left, top, width, height, unit, cameraX, cameraY, true);
         }
+        // Labels are chrome: rings and object pictures must never obscure their text.
+        for (var chip : labels) painter.chip(chip.label(), chip.x(), chip.y(), chip.color(), chip.alpha());
         // Clipboard art is drawn by each front end alongside its terrain ghost, after destination validation.
     }
     private static void object(LevelEditorController controller, EditorObjectPreviewCache cache, Painter painter,
-                               ObjectSpawn spawn, float left, float top, float width, float height, float unit,
+                               java.util.List<Chip> labels, ObjectSpawn spawn, float left, float top, float width, float height, float unit,
                                int cameraX, int cameraY, boolean ghost) {
         float x = left + (short) (spawn.x() - cameraX) * unit, y = top + (short) (spawn.y() - cameraY) * unit;
         var properties = spawn.authoredProperties();
@@ -58,7 +62,7 @@ public final class EditorPlacementScene {
             if (x + w < left || y + h < top || x > left + width || y > top + height) return;
             painter.rectangle(x, y, w, h, accent, ghost ? .08f : .13f, true);
             painter.rectangle(x, y, w, h, accent, ghost ? .6f : .9f, false);
-            painter.chip(gizmoLabel(spawn.objectKey()), Math.max(left + 3, x + 4), Math.max(top + 3, y + 4), accent, 1);
+            labels.add(new Chip(gizmoLabel(spawn.objectKey()), Math.max(left + 3, x + 4), Math.max(top + 3, y + 4), accent, 1));
             return;
         }
         var sprite = cache.sprite(spawn);
@@ -71,7 +75,7 @@ public final class EditorPlacementScene {
         } else if (controller.isSpawnEditing() && x >= left && y >= top && x < left + width && y < top + height) {
             String name = spawn.objectKey() == null ? controller.objectPalette().entries().get(spawn.objectId()).label()
                     : EditorStockObjectPalette.displayName(spawn.objectKey());
-            painter.chip(name, x, y, selected ? 0xffd36b : 0xa8b3ce, ghost ? .5f : .9f);
+            labels.add(new Chip(name, x, y, selected ? 0xffd36b : 0xa8b3ce, ghost ? .5f : .9f));
         }
     }
     public static String gizmoLabel(String key) {

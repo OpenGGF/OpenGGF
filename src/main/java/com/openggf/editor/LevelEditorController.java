@@ -212,6 +212,11 @@ public final class LevelEditorController {
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
+        setStatus(switch (mode) {
+            case TILES -> "Terrain brush ready";
+            case OBJECTS -> "Choose an object, then place it at the cursor";
+            case RINGS -> "Ring brush ready; pick a ring to move or delete it";
+        });
     }
 
     public EditorSpawnEditMode spawnEditMode() { return spawnEditMode; }

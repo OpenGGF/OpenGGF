@@ -74,7 +74,10 @@ unloaded provider (S1 does this deliberately). A free editor camera has no live
 parallax/deformation update, so use its own Y for foreground placement rather
 than the parked Plane A VScroll. Inspect both sprites and floor pixels. Capture
 each ROM in a fresh JVM when reusing native palette-publication resources across
-boots would contaminate the picture (October 2026 visual-polish viewer pass).
+boots would contaminate the picture. AIZ's initial palette belongs to its intro;
+select the ROM-backed static authoring palette only on the first library copy,
+never by advancing gameplay or overwriting a reopened project's edited colors
+(October 2026 visual-polish viewer pass).
 
 **Editor rendering uses editor-owned managers.** Once an authored document enters
 `EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay

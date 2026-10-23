@@ -779,7 +779,8 @@ class TestEditorProjectLifecycle {
             gameplay.getCamera().setFocusedSprite(player);
             gameplay.getCamera().setFrozen(false);
             gameplay.getLevelManager().loadZoneAndAct(0, 0, LevelLoadMode.PREVIEW_CAPTURE);
-            return new Fixture(rom, module, gameplay.getLevelManager().getCurrentLevel());
+            return new Fixture(rom, module, com.openggf.level.LevelObjectArt.authoringLibrary(
+                    gameplay.getLevelManager().getCurrentLevel()));
         }
 
         @Override public void close() throws Exception { rom.close(); }

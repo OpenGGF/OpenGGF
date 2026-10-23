@@ -23,6 +23,8 @@ final class Sonic1ObjectPreviews {
             return new ObjectPreview(java.util.List.of(new ObjectPreview.Part(key, 0, 0, 0, false, type == 2 || type == 4)));
         }
 
+        // Map_Newt's frame 0 is the materializing stipple; frame 1 is its readable standing pose.
+        if (id == Sonic1ObjectIds.NEWTRON) return ObjectPreview.frame("newtron", 1);
         if (id == Sonic1ObjectIds.SPIKES) return ObjectPreview.frame("spike", Math.min(5, (spawn.subtype() >> 4) & 15));
         if (id == Sonic1ObjectIds.PLATFORM) return ObjectPreview.frame("platform", (spawn.subtype() & 15) == 10 ? 1 : 0);
         if (id == Sonic1ObjectIds.SCENERY) return ObjectPreview.frame("bridge", 1);

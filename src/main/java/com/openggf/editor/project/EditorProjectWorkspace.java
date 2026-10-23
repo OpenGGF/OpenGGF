@@ -207,6 +207,9 @@ public final class EditorProjectWorkspace {
 
     /** First entry from gameplay captures the authored layout before any runtime mode is destroyed. */
     public void adoptLoadedLevel(GameModule module, Level level, int zone, int act) throws IOException {
+        // First native entry uses complete ROM libraries; reopening authored data preserves its pixels.
+        if (!(level instanceof com.openggf.level.MutableLevel) && !(level instanceof EditorProjectLevel))
+            level = com.openggf.level.LevelObjectArt.authoringLibrary(level);
         var zones = module.getZoneRegistry();
         int[] start = zones.getStartPosition(zone, act);
         ModObjectZoneSet family = module.getGameId() == GameId.S3K
@@ -252,7 +255,7 @@ public final class EditorProjectWorkspace {
         menu.showForm("New blank level", List.of(text("name", "Name", "New Level"),
                 integer("width", "Width in blocks", 16), integer("height", "Height in blocks", 8)),
                 "Create level", values -> io(() -> {
-                    Level library = host.loadLibrary(zone, act);
+                    Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(zone, act));
                     var blank = EditorProjectLevel.blank(library, number(values, "width"), number(values, "height"));
                     ModObjectZoneSet family = module.getGameId() == GameId.S3K
                             ? ModObjectZoneSet.valueOf((library instanceof Sonic3kLevel nativeLevel
@@ -293,7 +296,7 @@ public final class EditorProjectWorkspace {
     private void publishProject(EditorProjectDocument candidate) throws IOException {
         host.selectGame(candidate.metadata().gameId());
         if (com.openggf.level.LevelObjectArt.sheets(candidate.level()).isEmpty()) {
-            Level library = host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct());
+            Level library = com.openggf.level.LevelObjectArt.authoringLibrary(host.loadLibrary(candidate.metadata().sourceZone(), candidate.metadata().sourceAct()));
             com.openggf.level.LevelObjectArt.inherit(candidate.level(), library);
         }
         replaceDocument(candidate);

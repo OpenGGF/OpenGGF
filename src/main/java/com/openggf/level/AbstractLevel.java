@@ -22,6 +22,8 @@ public abstract class AbstractLevel implements Level {
     protected static final int PALETTE_COUNT = 4;
     java.util.Map<String, com.openggf.level.objects.ObjectSpriteSheet> objectPreviewSheets = java.util.Map.of();
     java.util.Set<Integer> objectPreviewSourceIds = java.util.Set.of();
+    java.util.Map<Integer, Palette> objectPreviewPalettes = java.util.Map.of();
+    com.openggf.game.ObjectArtProvider objectPreviewProvider;
 
     protected Palette[] palettes;
     protected Pattern[] patterns;

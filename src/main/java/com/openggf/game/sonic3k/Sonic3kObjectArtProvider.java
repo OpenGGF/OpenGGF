@@ -59,7 +59,7 @@ import java.util.logging.Logger;
  * This provider builds sprite sheets from the loaded level's pattern data
  * after the level has been loaded.
  */
-public class Sonic3kObjectArtProvider implements ObjectArtProvider,
+public class Sonic3kObjectArtProvider implements ObjectArtProvider, com.openggf.level.metadata.ObjectArtPreviewSource,
         com.openggf.game.internal.RuntimeObjectArtQueue,
         com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
@@ -155,6 +155,40 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             {AnimalType.SQUIRREL, AnimalType.CHICKEN},  // 0x0C DDZ
     };
     private static final AnimalType[] DEFAULT_ANIMALS = {AnimalType.FLICKY, AnimalType.CHICKEN};
+
+    @Override public Level editorAssetLibrary(Level level) throws IOException {
+        // Reuse the ROM-only, non-publishing builder already used by scene backdrops.
+        // A project library is complete art, not the intro's temporary frontend VRAM residency.
+        return new Sonic3k(GameServices.rom().getRom()).buildDetachedLevel(level.getZoneIndex(), currentActIndex,
+                Sonic3kLoadBootstrap.Mode.SKIP_INTRO);
+    }
+    @Override public java.util.Map<String, ObjectSpriteSheet> editorPreviewSheets(Level level) throws IOException {
+        var prepared = buildLevelArtSheets(level, level.getZoneIndex(), currentActIndex,
+                RomByteReader.fromRom(GameServices.rom().getRom()));
+        var sheets = new java.util.LinkedHashMap<String, ObjectSpriteSheet>();
+        for (var entry : prepared.sheets()) sheets.put(entry.key(), entry.sheet());
+        return java.util.Map.copyOf(sheets);
+    }
+
+    @Override public java.util.Map<Integer, com.openggf.level.Palette> editorPreviewPalettes(Level level) throws IOException {
+        if (level.getZoneIndex() != com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_AIZ || currentActIndex != 0)
+            return java.util.Map.of();
+        // The AIZ1 event installs PalPointers $2A after the intro (PAL_AIZ_INDEX in
+        // Sonic3kAIZEvents). Select those same ROM colors for a detached authoring library;
+        // never execute the event, submit PLC work, or write the live palette owner here.
+        Rom rom = GameServices.rom().getRom();
+        int entry = Sonic3kConstants.PAL_POINTERS_ADDR + 0x2A * Sonic3kConstants.PAL_POINTER_ENTRY_SIZE;
+        int address = rom.read32BitAddr(entry) & 0x00ffffff;
+        int firstLine = (rom.read16BitAddr(entry + 4) & 0xff) / com.openggf.level.Palette.PALETTE_SIZE_IN_ROM;
+        int bytes = ((rom.read16BitAddr(entry + 6) & 0xffff) + 1) * 4;
+        var lines = new java.util.LinkedHashMap<Integer, com.openggf.level.Palette>();
+        for (int offset = 0; offset < bytes; offset += com.openggf.level.Palette.PALETTE_SIZE_IN_ROM) {
+            var palette = new com.openggf.level.Palette();
+            palette.fromSegaFormat(rom.readBytes(address + offset, com.openggf.level.Palette.PALETTE_SIZE_IN_ROM));
+            lines.put(firstLine + offset / com.openggf.level.Palette.PALETTE_SIZE_IN_ROM, palette);
+        }
+        return java.util.Map.copyOf(lines);
+    }
 
     @Override
     public void loadArtForZone(int zoneIndex) throws IOException {

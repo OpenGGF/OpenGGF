@@ -308,6 +308,8 @@ zoom. Logic-only placements use compact named markers. The desktop canvas fits b
 panels, including narrow docks; nearest-neighbour sampling keeps sprite edges clear.
 
 Source art is detached during the normal ROM load and retained with the editor's library.
+AIZ1 uses its ROM main-level palette for the initial library instead of the intro's
+black palette; saved palette edits take precedence when a project reopens.
 Viewing thumbnails or moving a ghost never creates gameplay objects or changes undo/rewind
 state. Reopening a saved project reloads its source ROM library for these transient previews;
 projects and exports contain no bundled stock sprite images.

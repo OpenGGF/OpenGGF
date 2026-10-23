@@ -11,6 +11,14 @@ import java.util.Map;
  */
 public final class LevelObjectArt {
     private LevelObjectArt() { }
+    /** Explicit project-library loading only. Never called by drawing or ordinary editor snapshots. */
+    public static Level authoringLibrary(Level source) throws java.io.IOException {
+        if (!(source instanceof AbstractLevel base)
+                || !(base.objectPreviewProvider instanceof com.openggf.level.metadata.ObjectArtPreviewSource extra)) return source;
+        Level detached = extra.editorAssetLibrary(source);
+        if (detached != source) publish(detached, base.objectPreviewProvider);
+        return detached;
+    }
     public static Map<String, ObjectSpriteSheet> sheets(Level level) {
         return level instanceof AbstractLevel base ? base.objectPreviewSheets : Map.of();
     }
@@ -24,16 +32,26 @@ public final class LevelObjectArt {
         }
         return target;
     }
-    static void publish(Level level, ObjectArtProvider provider) {
+    /** First native-library copy selects its static art phase; authored copies retain their edited colors. */
+    public static <T extends Level> T initialize(T target, Level source) {
+        inherit(target, source);
+        if (target instanceof AbstractLevel base && source instanceof AbstractLevel nativeSource)
+            nativeSource.objectPreviewPalettes.forEach((line, palette) -> base.palettes[line] = palette.deepCopy());
+        return target;
+    }
+    static void publish(Level level, ObjectArtProvider provider) throws java.io.IOException {
         if (!(level instanceof AbstractLevel base)) return;
+        base.objectPreviewProvider = provider;
         var sheets = new java.util.LinkedHashMap<String, ObjectSpriteSheet>();
         var sources = new java.util.LinkedHashMap<String, ObjectSpriteSheet>();
         for (var key : provider.getRendererKeys()) {
             var sheet = provider.getSheet(key);
             if (sheet != null) sources.put(key, sheet);
         }
-        if (provider instanceof com.openggf.level.metadata.ObjectArtPreviewSource extra)
+        if (provider instanceof com.openggf.level.metadata.ObjectArtPreviewSource extra) {
             sources.putAll(extra.editorPreviewSheets(level));
+            base.objectPreviewPalettes = Map.copyOf(extra.editorPreviewPalettes(level));
+        }
         for (var entry : sources.entrySet()) {
             var key = entry.getKey();
             var source = entry.getValue();

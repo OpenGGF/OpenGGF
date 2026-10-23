@@ -68,7 +68,7 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
     public static EditorProjectLevel copyOf(Level source) {
         Objects.requireNonNull(source, "source");
         rejectNativeCollisionRemaps(source);
-        return LevelObjectArt.inherit(new EditorProjectLevel(EditorProjectState.capture(source), source.getRingSpriteSheet()), source);
+        return LevelObjectArt.initialize(new EditorProjectLevel(EditorProjectState.capture(source), source.getRingSpriteSheet()), source);
     }
 
     /** A blank layout keeps the asset library and discards stock placements/native layout features. */
@@ -78,7 +78,7 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
         // Asset extraction uses authored geometry immediately: native storage/camera
         // bounds and placements belong to the layout this operation discards.
         EditorProjectState.BlankCapture captured = EditorProjectState.captureBlankLibrary(library, width, height);
-        EditorProjectLevel result = LevelObjectArt.inherit(new EditorProjectLevel(captured.state(), library.getRingSpriteSheet()), library);
+        EditorProjectLevel result = LevelObjectArt.initialize(new EditorProjectLevel(captured.state(), library.getRingSpriteSheet()), library);
         // Required empty terrain gets first claim on capacity, before optional spare slots.
         int emptyBlock = result.ensureEmptyBlock();
         result = withSpareSlots(result);

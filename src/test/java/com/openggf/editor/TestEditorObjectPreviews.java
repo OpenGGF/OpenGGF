@@ -26,6 +26,9 @@ class TestEditorObjectPreviews {
         var s3 = new Sonic3kObjectRegistry().objectPreview(spawn(7, 0x32)).parts().getFirst();
         assertEquals("s3k_spring_diagonal_yellow", s3.artKey());
     }
+    @Test void newtronUsesItsVisibleStandingPoseRatherThanMaterializationStipple() {
+        assertEquals(1, new Sonic1ObjectRegistry().objectPreview(spawn(0x42, 0)).parts().getFirst().frame());
+    }
     @Test void internalPlayersAndUnknownIdsHaveNoMisleadingSprite() {
         assertTrue(new Sonic2ObjectRegistry().objectPreview(spawn(1, 0)).parts().isEmpty());
         assertTrue(new Sonic1ObjectRegistry().objectPreview(spawn(0, 0)).parts().isEmpty());
