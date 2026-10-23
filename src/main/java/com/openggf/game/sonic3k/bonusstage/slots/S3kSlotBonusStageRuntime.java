@@ -537,7 +537,9 @@ public final class S3kSlotBonusStageRuntime {
         }
         // Only the slot layout pass is rendered here. Cage/reward objects stay on
         // the normal object pipeline so this hook matches the ROM's post-sprite pass.
-        slotLayoutRenderer.renderVisibleCells(visibleCells, camera, levelManager.getObjectRenderManager());
+        var graphics = levelManager.getObjectManager().getObjectServices().graphicsManager();
+        slotLayoutRenderer.renderVisibleCells(visibleCells, camera, levelManager.getObjectRenderManager(),
+                graphics.isSpriteSatCollectionActive());
     }
 
     public void renderSlotMachineFaceForeground() {

@@ -1745,3 +1745,135 @@ For later independent ending controls, decimal mappings 30/32 are native fr_Run1
 On 2026-10-23 Root received `534438e73c2cb6ca400ca4c6d899f6feed9f4258` once by ancestry into `1d4375d155816b7712922891ad9feb42448abfe4`. The peer successor includes the previously qualified native-human/Host/GPU source and pinned develop `d9b8edded8a9517dd7cf1bc3fcd4dcd6e53f4e0a`, with its PR-specific world PLC, ring, known-word capture and hosted HUD receiving ports. Peer reported the final exact d9 focus as 227 distinct tests, zero failures/errors/skips (21 selectors, 23 XML files; queue 80 seconds, Maven 1:35), and fresh source/ArchUnit/API/field checks as 116 tests, zero failures/errors/skips (queue 454 seconds, Maven 45.292 seconds). Earlier red pixel and SST evidence remains in the peer completion record. These are bounded peer results, not a Root union compile or combined smoke pass.
 
 The sole text conflict was `TestSurfacelessEglContext`: both sides restore the incoming backend property, and Root retained the exact already-qualified `3ce2664` fixture including its class-level lifecycle witness. Test bodies and GL cleanup are identical to the peer source. Root's category-runner headless option, property-scope guidance and S1 source audit remain present. No GPU, Python tool or fixture check was repeated just to receive the same tested source. One combined change-based smoke plan remains Root-owned and pending against the pre-task integration SHA `94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Main integration/push, provider activation and passive SOZ/MHZ observations remain closed.
+
+
+### Bounded Slot layout submission-order repair — 2026-10-23
+
+The new implementation lane starts at exact parent
+`659b02c98a16da0723ef5f222acdc60ab7b0838f`, isolated branch
+`bugfix/ai-slot-layout-native-order-20261023`, worktree `t3-d52ae42f`. No candidate branch is
+imported. Pinned disassembly `8b2cf3c4178f2382f844da67798de4befc50c5e0` shows
+`loc_4B424 / loc_4B428 (sonic3k.asm:98276-98315)` walking columns forward and
+then advancing the row; `sub_4B490 (sonic3k.asm:98324-98348)` appends until
+`d5 == $50`. The receiving production sprite pass already collects native
+entries before invoking the Slot layout. Its unconditional reverse cell walk
+therefore reverses native submission, although that walk remains correct for
+the standalone direct painter.
+
+Approved hunk manifest: keep the three-argument layout draw as direct painting;
+add an internal call-scoped collection flag and select the forward cell walk
+only while collecting. The runtime obtains that flag from its already-resolved
+level's `ObjectManager.getObjectServices().graphicsManager()`, the captured
+engine graphics owner. No global fallback, retained state, public API, shared
+graphics/mask/queue edit or capacity change is allowed. The existing actual-ROM
+black/blue pixel fixture gains collection/reversed/separated/passivity and
+78/79/80-preceding-native-entry controls; its original direct case stays.
+
+The former latency size/prefix assertion compares a native-admitted complete
+production table with an unbudgeted standalone layout render. It cannot diagnose
+a stale generation. Its replacement must retain the actual preceding immutable
+`LevelRenderer.spriteTables.prepared` Frame through test-only reflection and
+compare identity and all content with the next ordinary step's publication.
+No expected tile may be reconstructed, intersected or truncated. A separate
+layout-prefix witness must prove exact emitted mapping ownership disjoint from
+nonlayout production entries, assert ambiguity, retain nonempty witnesses and
+geometry changes, and leave every tile in the full-frame comparison.
+
+The first ordinary request, `99089`, ran unchanged production source plus the
+new collection discriminator and retained direct control, together with the old
+publication assertion. It completed exit1: three tests, two failures, zero errors
+and zero skips. The native-collection discriminator failed at buffer pixel36913
+(expected black0, actual blue102), while the retained direct-painter control
+passed. The obsolete raw-size publication assertion failed at frame1. Admission
+wait was864 seconds; Maven execution was1:30. Consumed owned raw log and XML/text
+reports were removed after inspecting the exact identities and assertions.
+
+The accepted repair adds no retained field or public API, so no new structural
+guard request is required. Runtime mode comes from the already-resolved level's
+actual captured object services. The pixel fixture asserts that this owner is
+identical to its cached ROM renderer's graphics owner and checks the no-device
+audio backend. The immutable-frame oracle compares every publication without
+excluding HUD or admission fragments. Its separate layout-prefix witness checks
+exact emitted layout mapping IDs against all other cached object mappings,
+asserts ambiguity and unknown object IDs, and requires actual player/HUD entries.
+Source review rejected a mandatory cage-tile witness before the final run:
+`S3kSlotBonusCageObjectInstance.appendRenderCommands()` intentionally emits no
+sprites; the machine face belongs to the plane. No fixture was fitted to a
+missing producer.
+
+Final ordinary request `51322` completed exit1 on this source. It uses11 candidate
+classes (the loading selector resolves two classes), normal admission, Java25,
+Lua5.4 and explicit surfaceless EGL with launcher/display variables unset.
+All three original absolute ROM paths were CRC32/SHA-1 verified. The precise
+selector is:
+
+```text
+TestS3kSlotLayoutRenderer,TestS3kSlotCellPainterPixels,TestS3kSlotPresentationParity,TestSpriteSatMaskPostProcessor,TestGraphicsManagerSpriteSatReplay,TestNativeSpriteSatGameplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Both requests run `env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u DISPLAY
+-u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+LUA_BIN=/usr/bin/lua5.4 python3
+<MAIN_WORKSPACE>/tools/testing/maven_queue.py --normal
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` from this worktree, followed
+by the stated exact selector and `test`. The RED selector is
+`TestS3kSlotCellPainterPixels#earlierOpaqueBlackCellOccludesLaterBlueAndRenderingIsPassive+earlierOpaqueBlackCellWinsDuringNativeCollectionAndCapacityKeepsSourceOrder,TestS3kSlotPresentationParity#layoutIsPublishedWithTheSpriteTableOfItsIterationBehindRenderSprites`.
+The final request also supplies all three verified original paths:
+`-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen`,
+`-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen`,
+and `-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+(the RED uses only that S3K property). Each whole `-D...` argument is shell-quoted.
+Tool preflight passed without executing tests; the owning citation check exits0
+with inherited near/unverifiable citations retained.
+
+The final result is103 distinct tests across11 classes:102 passed, one failed,
+zero errors and zero skips; admission wait509 seconds, Maven execution1:38.
+The layout renderer passed13/13, actual-ROM pixel class3/3 (including native
+collection/capacity and retained direct/foreground controls), presentation5/6,
+SAT mask14/14, SAT replay3/3, native gameplay4/4, AIZ skip8/8, bootstrap6/6,
+decoding3/3, and the two loading classes36/36 and7/7. The sole failure is
+`TestS3kSlotPresentationParity#layoutIsPublishedWithTheSpriteTableOfItsIterationBehindRenderSprites`:
+the first saved prepared Frame is empty, but the first fixture call publishes
+the player/HUD setup table. No post-initialization latency, prefix or geometry
+qualification was reached.
+
+Read-only call-path evidence explains the initialization mismatch:
+`LevelFrameStep.admit` consumes the pending initial object pass, prepares a
+production table and returns `SETUP_ONLY` (lines74–76);
+`RecordingFrameDriver` returns that result (lines292–298);
+`HeadlessTestRunner.retrySetupOnly` silently retries it before returning an
+ordinary frame (lines203–216). The current test therefore samples across
+setup plus an ordinary iteration. Root prospectively authorized the exact test-only correction before the original
+17:30 source cutoff: import `LevelFrameResult` and assert one neutral actual
+`fixture.runner().stepFrame(...)` returns `GAMEPLAY_FRAME` before the unchanged48
+strict comparisons. This is49 ordinary iterations total (one prime plus48
+samples); the initial `SETUP_ONLY` pass is not an ordinary sample and bootstrap
+latency is not qualified. No expected table is reconstructed, intersected or
+truncated; no production, phase, API or timing behavior changes.
+
+Root also prospectively amended the two-request budget by one necessary
+changed-test qualification: the entire `TestS3kSlotPresentationParity` class
+only, under the same normal queue/ROM/environment. No fourth request, guard or
+further warm-up/timing adaptation is allowed. The amended test SHA-256 is
+`c4e8a0c96276d607dd9b925e789d4689060c6aee5e3375472f4ee5c035fe08de`,
+git blob `8fccf9d0fb4406912d0f2c397e8947cd19144c27`; all other executable
+source remains byte-identical to request51322. Its102 unchanged passes retain
+that separate source attribution; the first strict-latency failure remains a
+historical new fixture defect. The entire-class qualification request `15978` uses `-Dtest=TestS3kSlotPresentationParity`
+with the same wrapper, flags and ROM properties above. Its command session
+returned143 during queue waiting, with last observed wait151 seconds and no
+slot-acquired marker or Maven output. This is unattributed external termination,
+not a source failure or validation pass. Root confirmed it issued no cancellation
+or signal. A bounded exact-owned-log/process/report check found no original
+wrapper, Maven/Surefire process, stdout holder or selected-class XML/text report.
+The original request is gone and no Maven/JUnit execution was observed. No
+lease/lock record was deleted, and no automatic replacement was submitted.
+Root's separate concrete replacement disposition is pending; the corrected
+class and complete task remain unqualified. The approved `c4e8a0c…` source and
+49-iteration window remain frozen. Consumed owned raw logs/XML were removed after
+inspection; compiled outputs and the useful unmerged worktree are retained.
+
+Source cutoff is17:30Z, review18:00Z, cleanup18:15Z, expiry18:30Z. Root owns
+combined smoke and delivery; Main, push, PR, provider and native-observation
+gates remain closed. This is bounded component/focused validation, not a
+whole-mode, route or native-RGB qualification.

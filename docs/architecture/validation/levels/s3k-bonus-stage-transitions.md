@@ -2315,3 +2315,42 @@ children's fractional/wrapped positions and restore/forward replay through
 grant and deletion. Existing slot runtime and generic recreation checks cover
 its consumer boundary. These are bounded reward checks, not additional full
 entry/return products or whole-scene native picture/audio certification.
+
+
+## Slot layout submission order and exact publication — 2026-10-23
+
+The bounded implementation starts at `659b02c98a16da0723ef5f222acdc60ab7b0838f`
+in isolated worktree `t3-d52ae42f`, branch
+`bugfix/ai-slot-layout-native-order-20261023`. The
+[native-gap plan](../../plans/2026-10-22-native-gap-swarm.md#bounded-slot-layout-submission-order-repair--2026-10-23)
+records the pinned source, old-source failures and final focused selection.
+
+| Obligation | Executable witness | Scope and remaining obligations |
+| --- | --- | --- |
+| Row-major native layout submission, opaque overlap and table capacity | `TestS3kSlotCellPainterPixels` actual ROM wall cells, black-before-blue overlap, reversed-source winner, separated cells, repeated passive drawing, and 78/79/80 explicit preceding native entries | Positioned native320 Knuckles/donor-off component in an owned EGL capture session; original direct-painter whole-image control retained. No whole-scene native RGB, other product or route qualification. |
+| Exact next-VBlank publication and behind-Render_Sprites placement | `TestS3kSlotPresentationParity` retains the actual preceding immutable production prepared Frame, then compares identity and every tile/attribute, primitive and pattern version after the ordinary step; more than40 nonempty comparisons, changing geometry and no live overlay remain required | Existing ordinary headless Slot fixture, with one asserted actual-driver priming iteration before48 strict samples (49 ordinary iterations total); initial setup is not sampled and bootstrap latency is unqualified. Independent prefix classification uses exact emitted ROM mapping IDs and disjoint nonlayout ownership with actual player/HUD witnesses; ambiguity fails. The cage deliberately emits no sprites, so an object-tile witness is required only when such entries occur. No standalone-layout size oracle or expected-value filtering. |
+| Graphics-owner and render-state isolation | Both fixtures compare the captured level object-services graphics owner with the actual cached layout renderer; the EGL case asserts the no-device `NullAudioBackend`, animation passivity and clean GL status | Call-scoped collection/direct mode; no new retained field, public API, shared mask change or budget widening. Broader capture/restore and route products inherit the existing matrix obligations. |
+
+Old-source request `99089` ran three identities: the direct-painter control
+passed; the native collection discriminator failed at buffer pixel36913
+(expected opaque black0, actual blue102); the obsolete raw-size publication
+assertion failed at frame1. There were two failures, zero errors and zero skips,
+with 864 seconds queue wait and Maven 1:30 execution. Final focused request
+`51322` completed103 distinct tests:102 passed, one failed, zero errors/skips
+(wait509 seconds, Maven1:38). All three actual-ROM pixel tests,13 renderer
+checks and all named admission/loading controls passed. The exact-frame test
+stopped on its first saved empty prepared Frame because the fixture call
+transparently runs a `SETUP_ONLY` preparation before its ordinary iteration;
+post-initialization latency/prefix/geometry checks remain unqualified. Root prospectively authorized and applied one asserted actual-driver priming
+step before the unchanged48 strict comparisons, plus one necessary qualification
+request for the entire presentation-parity class only (`15978`). That command
+was externally terminated143 during queue waiting; no Maven/JUnit execution
+was observed and exact owned process/report checks confirm the original request
+is gone. This is neither a source failure nor a pass. No automatic replacement
+or further warm-up/timing adaptation was submitted; Root disposition is pending.
+The102 unchanged passes retain their request51322 source attribution; the
+strict-frame initialization failure remains historical fixture evidence.
+Root owns the
+combined smoke and integration. Existing cold traversal, portal/return products,
+viewport/donor/character/team breadth, native pictures/audio and whole-mode
+qualification remain open.
