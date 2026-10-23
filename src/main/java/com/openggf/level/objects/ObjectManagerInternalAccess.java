@@ -17,6 +17,11 @@ import java.util.function.Supplier;
 public final class ObjectManagerInternalAccess {
     private ObjectManagerInternalAccess() { }
 
+    /** S2's locked title leave runs RunObjects without another placement pass. */
+    public static void runNativeCompetitionTitleObjectPass(ObjectManager manager) {
+        manager.runNativeCompetitionTitleObjectPass();
+    }
+
     /** Bind before reset(), whose initial placement pass seeds both native cursors. */
     public static void enableNativeCompetitionStreaming(ObjectManager manager,
                                                          NativeCompetitionObjectStreaming streaming) {

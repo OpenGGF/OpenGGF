@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.render.SpriteSlotEmission;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.IntFunction;
 
 /** Trusted engine-internal DisplaySprite port; no ObjectServices/Mod API expansion. */
@@ -13,6 +14,18 @@ public final class NativeSpriteSubmissionAccess {
 
     /** A RAM-slot reference and the bucket selected at that particular call. */
     public record Admission(int slot, int bucket) { }
+
+    /** Domain-owned read-only projection of a reserved SST without a Java object. */
+    public interface ExternalSlotSource {
+        int slot();
+    }
+
+    /** One visit per accepted pointer, including duplicate and unresolved addresses. */
+    public interface ResolvedOwnerVisitor {
+        void object(int ordinal, Admission admission, AbstractObjectInstance owner);
+        void external(int ordinal, Admission admission, ExternalSlotSource source);
+        void orphan(int ordinal, Admission admission);
+    }
 
     /** Trusted engine-owned routine for reserved SSTs without an ObjectInstance. */
     public interface ExternalSlotDispatch {
@@ -78,6 +91,38 @@ public final class NativeSpriteSubmissionAccess {
     /** Immutable call-order view, including orphan references and duplicates. */
     public static List<Admission> admissions(ObjectManager manager) {
         return manager == null ? List.of() : manager.nativeSpriteSubmissions().admissions();
+    }
+
+    /**
+     * Visits an admission snapshot in its original global call order. Each SST
+     * resolves against its current physical owner; a real owner, including ID
+     * zero, takes precedence over the caller's typed external source. Projection
+     * remains domain-owned. This read-only visit never uses the draw resolver,
+     * executes objects, or changes admission state. The visitor must not mutate
+     * the world or retain resolved owners across updates/restores.
+     */
+    public static void visitResolvedAdmissions(ObjectManager manager,
+            IntFunction<? extends ExternalSlotSource> externalResolver, ResolvedOwnerVisitor visitor) {
+        Objects.requireNonNull(visitor, "visitor");
+        var accepted = admissions(manager);
+        for (int ordinal = 0; ordinal < accepted.size(); ordinal++) {
+            var admission = accepted.get(ordinal);
+            var owner = NativeSstSlotAccess.currentOwner(manager, admission.slot());
+            if (owner != null) {
+                visitor.object(ordinal, admission, owner);
+                continue;
+            }
+            var external = externalResolver == null ? null : externalResolver.apply(admission.slot());
+            if (external == null) {
+                visitor.orphan(ordinal, admission);
+            } else {
+                if (external.slot() != admission.slot()) {
+                    throw new IllegalArgumentException("External source slot differs from admission: "
+                            + external.slot() + " != " + admission.slot());
+                }
+                visitor.external(ordinal, admission, external);
+            }
+        }
     }
 
     /**

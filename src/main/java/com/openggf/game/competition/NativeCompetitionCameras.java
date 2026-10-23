@@ -16,6 +16,17 @@ public final class NativeCompetitionCameras {
         registry.deregisterPostRestoreCallback(REFERENCES);
         var roster = NativeCompetitionRoster.from(context.getWorldSession());
         if (roster == null) return;
+        registry.deregister("camera");
+        registry.register(new RewindSnapshottable<CameraSnapshot>() {
+            @Override public String key() { return "camera"; }
+            @Override public CameraSnapshot capture() { return roster.camera(0).capture(); }
+            @Override public void restore(CameraSnapshot state) {
+                // Sprite restore has already rebound the native roster. Repair the
+                // primary reference before object/solid identity tables are rebuilt;
+                // the campaign character setting does not own either human slot.
+                roster.camera(0).restore(state, roster.player(0));
+            }
+        });
         if (roster.player(1) != null) {
             registry.register(new RewindSnapshottable<CameraSnapshot>() {
                 @Override public String key() { return SECOND_CAMERA; }

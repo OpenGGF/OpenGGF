@@ -233,28 +233,31 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
         archiveSpecialSector(specialSector, p1Rings, p2Rings);
         if (specialSector == 3) completeSpecialStage();
     }
-    /** Obj5A_VSReset runs at the hand's expiry, or immediately for the final tie. */
+    /**
+     * Obj5A_VSReset runs at the hand's expiry, or immediately for the final tie.
+     * Failed native hand allocation leaves earlier archive rows at their initial zero words.
+     */
     public void archiveSpecialSector(int sector, int p1Rings, int p2Rings) {
         requireSpecialSector(sector);
-        specialRings.set(specialSector * 2, p1Rings & 0xFFFF);
-        specialRings.set(specialSector * 2 + 1, p2Rings & 0xFFFF);
-        specialSector++;
+        specialRings.set(sector * 2, p1Rings & 0xFFFF);
+        specialRings.set(sector * 2 + 1, p2Rings & 0xFFFF);
+        specialSector = sector + 1;
         for (var state : progress) state.setRings(0);
     }
     /** Retail Obj5A's nonfinal tie bypasses VSReset: its archive stays zero and rings carry. */
     public void tieSpecialSector(int sector) {
         requireSpecialSector(sector);
         if (sector == 2) throw new IllegalArgumentException("Final tie must archive its rings");
-        specialSector++;
+        specialSector = sector + 1;
     }
     private void requireSpecialSector(int sector) {
-        if (phase != Phase.SPECIAL_STAGE || specialSector >= 3 || sector != specialSector)
+        if (phase != Phase.SPECIAL_STAGE || sector < specialSector || sector < 0 || sector > 2)
             throw new IllegalStateException("No matching competitive sector active: " + sector);
     }
     /** Publication follows RingCheckTrigger/SSClearObjs, separately from native ring archiving. */
     public void completeSpecialStage() {
-        if (phase != Phase.SPECIAL_STAGE || specialSector != 3)
-            throw new IllegalStateException("Competitive halfpipe has not archived all sectors");
+        if (phase != Phase.SPECIAL_STAGE)
+            throw new IllegalStateException("Competitive halfpipe is not active");
         int one = 0, two = 0;
         for (int i = 0; i < 6; i += 2) {
             int comparison = Integer.compare(specialRings.get(i), specialRings.get(i + 1));
@@ -287,10 +290,11 @@ public final class Sonic2CompetitionSession implements NativeCompetitionRoster,
     /**
      * Obj2E_Init already admitted content 8. teleport_monitor (s2.asm:26003-26011)
      * tests actor routines, not the HUD timers, when the rising icon awards it.
-     * The host rejects illegal/dead routines before performing the atomic swap.
+     * The host requires a live native world and rejects illegal/dead actor
+     * routines before performing the full atomic actor/camera/scroll/stream swap.
+     * A signpost can publish ACT_RESULTS earlier in this same object pass.
      */
     public boolean teleportInitializedMonitor(Sonic2CompetitionHost host) {
-        if (phase != Phase.ACT) return false;
         if (!host.swapNativeActorWorldState()) return false;
         teleportTimer = 0x40;
         host.freezeObjects(0x40);

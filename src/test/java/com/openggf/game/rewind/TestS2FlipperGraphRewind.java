@@ -2,22 +2,34 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.FlipperObjectInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
+import com.openggf.sprites.animation.SpriteAnimationScript;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestS2FlipperGraphRewind {
     private static final ObjectSpawn FLIPPER_SPAWN =
@@ -85,6 +100,90 @@ class TestS2FlipperGraphRewind {
         assertFalse(restoredSidekick.isObjectControlSuppressesMovement());
         assertTrue(restoredSidekick.getPinballMode());
         assertTrue(restoredSidekick.getSpindash());
+    }
+
+    @ParameterizedTest(name = "cold restore after trigger pass {0}")
+    @ValueSource(ints = {6, 12})
+    void nonIdleAnimationRestoresColdAndContinuesThroughItsPendingSwitch(int triggerPasses) throws Exception {
+        assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(FlipperObjectInstance.class),
+                "the production compact schema must use ObjectAnimationStateCodec for this field");
+        TestablePlayableSprite main = player("sonic");
+        Harness harness = Harness.create(main, List.of());
+        ObjectManager objectManager = harness.objectManager();
+        harness.services.withPlayerQuery(new ObjectPlayerQuery(harness.camera::getFocusedSprite, List::of));
+        SpriteAnimationSet animations = flipperAnimations();
+        ObjectArtProvider art = mock(ObjectArtProvider.class);
+        when(art.getAnimations(Sonic2ObjectArtKeys.ANIM_FLIPPER)).thenReturn(animations);
+        harness.services.renderManager = new ObjectRenderManager(art);
+        FlipperObjectInstance source = objectManager.createDynamicObject(
+                () -> new FlipperObjectInstance(FLIPPER_SPAWN, "Flipper"));
+        objectManager.update(harness.camera.getX(), main, List.of(), 0, false);
+        ObjectAnimationState sourceAnimation = animationState(source);
+        assertNotNull(sourceAnimation, "the real Flipper update must initialize its animation owner");
+        sourceAnimation.setAnimId(1);
+        for (int pass = 0; pass < triggerPasses; pass++) {
+            objectManager.update(harness.camera.getX(), main, List.of(), 0, false);
+        }
+        assertTrue(readBoolean(source, "animInitialized"));
+        assertEquals(1, sourceAnimation.getAnimId());
+        assertEquals(1, readInt(sourceAnimation, "lastAnimId"));
+        assertTrue(readInt(sourceAnimation, "frameIndex") > 0);
+        assertTrue(readInt(sourceAnimation, "frameTick") > 0);
+        assertEquals(triggerPasses == 12 ? 0 : -1, readInt(sourceAnimation, "pendingSwitchAnimId"));
+        ObjectAnimationState capturedAnimation = sourceAnimation.copyForRewind();
+        int capturedMapping = readInt(source, "mappingFrame");
+        ObjectRefId sourceId = objectId(objectManager, source);
+        RewindRegistry registry = registryFor(objectManager);
+        CompositeSnapshot snapshot = registry.capture();
+        List<AnimationStep> expectedForward = advanceAnimation(objectManager, harness.camera, main, source);
+
+        objectManager.removeDynamicObject(source);
+        FlipperObjectInstance divergent = objectManager.createDynamicObject(() -> new FlipperObjectInstance(
+                new ObjectSpawn(0x1240, 0x0440, Sonic2ObjectIds.FLIPPER, 1, 0, false, 0x87), "Flipper"));
+        registry.restore(snapshot);
+
+        FlipperObjectInstance restored = only(objectManager, FlipperObjectInstance.class);
+        assertNotSame(source, restored, "restore must recreate the removed source");
+        assertNotSame(divergent, restored, "restore must discard the post-snapshot replacement");
+        assertEquals(sourceId, objectId(objectManager, restored));
+        ObjectAnimationState restoredAnimation = animationState(restored);
+        assertNotNull(restoredAnimation, "cold restore must allocate the captured animation owner");
+        assertNotSame(sourceAnimation, restoredAnimation);
+        assertEquals(capturedAnimation, restoredAnimation,
+                "frame, tick, prior animation and pending switch must all survive the real codec");
+        assertEquals(capturedMapping, readInt(restored, "mappingFrame"));
+        assertTrue(readBoolean(restored, "animInitialized"),
+                "the captured lazy-init flag must remain consistent with its captured owner");
+        assertSame(animations, findField(ObjectAnimationState.class, "animationSet").get(restoredAnimation),
+                "the codec must retain the immutable script resource for future object passes");
+        assertEquals(expectedForward, advanceAnimation(objectManager, harness.camera, main, restored),
+                "normal object-manager passes must replay the trigger-to-idle continuation identically");
+    }
+
+    private static SpriteAnimationSet flipperAnimations() {
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        // Unit-test script resources mirror byte_2B43C (s2.asm:58664-58666)
+        // and byte_2B43F (s2.asm:58666-58667), including the deferred $FD 0.
+        animations.addScript(0, new SpriteAnimationScript(0x0F, List.of(0), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(1, new SpriteAnimationScript(3, List.of(1, 2, 1), SpriteAnimationEndAction.SWITCH, 0));
+        return animations;
+    }
+
+    private static List<AnimationStep> advanceAnimation(ObjectManager manager, Camera camera,
+            AbstractPlayableSprite main, FlipperObjectInstance flipper) throws Exception {
+        List<AnimationStep> steps = new ArrayList<>();
+        for (int pass = 0; pass < 8; pass++) {
+            manager.update(camera.getX(), main, List.of(), 0, false);
+            steps.add(new AnimationStep(readInt(flipper, "mappingFrame"), animationState(flipper).copyForRewind()));
+        }
+        assertEquals(0, animationState(flipper).getAnimId(), "forward coverage must reach the idle handoff");
+        return List.copyOf(steps);
+    }
+
+    private record AnimationStep(int mappingFrame, ObjectAnimationState animation) { }
+
+    private static ObjectAnimationState animationState(FlipperObjectInstance flipper) throws Exception {
+        return (ObjectAnimationState) findField(FlipperObjectInstance.class, "animationState").get(flipper);
     }
 
     private static void seedFlipper(
@@ -248,6 +347,7 @@ class TestS2FlipperGraphRewind {
 
     private static final class MutableServices extends StubObjectServices {
         private ObjectManager objectManager;
+        private ObjectRenderManager renderManager;
         private final Camera camera;
         private List<? extends PlayableEntity> sidekicks;
 
@@ -257,6 +357,7 @@ class TestS2FlipperGraphRewind {
         }
 
         @Override public ObjectManager objectManager() { return objectManager; }
+        @Override public ObjectRenderManager renderManager() { return renderManager; }
         @Override public Camera camera() { return camera; }
         @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
         @Override public List<PlayableEntity> sidekicks() { return List.copyOf(sidekicks); }

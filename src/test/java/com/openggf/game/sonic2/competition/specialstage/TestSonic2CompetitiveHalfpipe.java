@@ -222,6 +222,35 @@ class TestSonic2CompetitiveHalfpipe {
     }
 
     @Test
+    void actualHumanHurtAttemptsSpillOnlyAtTimerEightAndFullRamPreservesBothBanks() {
+        load(0); fadeIn();
+        for (int tick = 0; tick < 20; tick++) step(direction(AbstractPlayableSprite.INPUT_RIGHT), PlayerInputState.neutral());
+        inject(false, 10, halfpipe.player(1).getAngle());
+        step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        assertEquals(10, halfpipe.player(1).getRings());
+        inject(true, 1, halfpipe.player(1).getAngle());
+        step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        var ram = halfpipe.objectMachine().ram();
+        for (int slot = 8; slot <= 126; slot++) ram.replace(slot, new CompetitiveHalfpipeObjectMachine.Node(
+                CompetitiveHalfpipeObjectMachine.Kind.HIDDEN));
+        step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        assertTrue(halfpipe.player(1).isHurt());
+        assertEquals(0, halfpipe.player(1).getHurtTimer());
+        step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        assertEquals(8, halfpipe.player(1).getHurtTimer());
+        assertEquals(10, halfpipe.player(1).getRings(), "failed Obj5B owner allocation performs no debit");
+        ram.clear(63);
+        for (int tick = 0; tick < 40; tick++) step(PlayerInputState.neutral(), PlayerInputState.neutral());
+        assertFalse(halfpipe.player(1).isHurt());
+        assertEquals(10, halfpipe.player(1).getRings(), "a later free slot cannot retry the timer-$08 edge");
+        assertEquals(0, halfpipe.player(0).getRings());
+        assertEquals(0, events.count(Kind.BOMB));
+        assertTrue(halfpipe.objectMachine().capture().ram().slots().stream().noneMatch(slot -> slot.state() != null
+                && (slot.state().kind() == CompetitiveHalfpipeObjectMachine.Kind.SPILL
+                || slot.state().kind() == CompetitiveHalfpipeObjectMachine.Kind.SPILL_OWNER)));
+    }
+
+    @Test
     void productionSnapshotsRecreateActorsItemsAndRepeatOneHundredTwentyForwardPasses() throws Exception {
         load(4);
         while ((halfpipe.ticks() < 300 || halfpipe.objects().isEmpty()) && halfpipe.ticks() < 1500) {
@@ -296,18 +325,19 @@ class TestSonic2CompetitiveHalfpipe {
         halfpipe.step(input);
     }
 
-    /** Place actual production item snapshots into the supported recreation seam. */
+    /** Arrange actual native cells; snapshots retain the physical parent/child slot links. */
     private void inject(boolean bomb, int count, int angle) {
-        var current = halfpipe.capture();
-        List<Object> objects = new ArrayList<>();
-        for (int index = 0; index < count; index++) {
-            objects.add(CompetitiveHalfpipeItems.capture(CompetitiveHalfpipeItems.create(data, bomb, 4, angle)));
+        var ram = halfpipe.objectMachine().ram();
+        for (int slot = 8; slot <= 126; slot++) {
+            var node = ram.at(slot);
+            if (node != null && (node.kind() == CompetitiveHalfpipeObjectMachine.Kind.ITEM
+                    || node.kind() == CompetitiveHalfpipeObjectMachine.Kind.ITEM_SHADOW)) ram.clear(slot);
         }
-        halfpipe.restore(new Sonic2CompetitiveHalfpipe.Snapshot(current.phase(), current.stage(), current.ticks(),
-                current.fadeTicks(), current.lastLoadedSegment(), current.objectGroup(), current.perspectiveFrame(),
-                current.bannerY(), current.bannerRoutine(), current.bannerTimer(), current.checkpointPhrase(),
-                current.track(), current.checkpoint(), current.players(), objects, current.phrases(), current.bannerParts(),
-                current.palettes(), current.previousInput()));
+        for (int index = 0; index < count; index++) {
+            var node = new CompetitiveHalfpipeObjectMachine.Node(CompetitiveHalfpipeObjectMachine.Kind.ITEM);
+            node.item = CompetitiveHalfpipeItems.create(data, bomb, 4, angle);
+            assertTrue(ram.allocate(node) >= 8);
+        }
     }
 
     private int finalMarker(int stage) {

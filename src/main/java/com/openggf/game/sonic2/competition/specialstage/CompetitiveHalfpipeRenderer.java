@@ -188,13 +188,26 @@ public final class CompetitiveHalfpipeRenderer {
         if (tiles == null || tiles.length == 0) throw new IllegalArgumentException("Decoded track frame is required");
         List<Sprite> sprites = prepareSprites(trackFrame, players, objects, p1rings, p2rings,
                 Objects.requireNonNull(overlay, "overlay"));
+        drawSprites(tiles, bgScroll, vScroll, sprites);
+    }
+
+    /** Consumes only actual native display events, retaining their enqueue order within each bucket. */
+    public void drawNative(int[] tiles, int bgScroll, int vScroll,
+                           List<Sonic2SpecialStagePlayer> players, CompetitiveHalfpipeRenderFrame frame) {
+        if (!initialized) throw new IllegalStateException("Competitive halfpipe renderer is not initialized");
+        if (tiles == null || tiles.length == 0) throw new IllegalArgumentException("Decoded track frame is required");
+        drawSprites(tiles, bgScroll, vScroll, prepareNativeSprites(players, frame));
+    }
+
+    private void drawSprites(int[] tiles, int bgScroll, int vScroll, List<Sprite> sprites) {
         planes.draw(tiles, bgScroll, vScroll, () -> {
             SpriteSatInternalAccess.beginCollection(graphics,
                     SpriteSatMaskPostProcessor.Raster.h32(viewport.innerH32OriginX(), 0, 224));
             for (Sprite sprite : sprites) {
                 graphics.setCurrentSpriteSatBucket(sprite.bucket());
                 graphics.setCurrentSpriteSatDebugSource(sprite.piece().debugSource());
-                if (sprite.shadow()) SpriteSatInternalAccess.submitShadowPieces(graphics, () -> graphics.submitSpriteSatPiece(sprite.piece()));
+                if (sprite.shadow()) SpriteSatInternalAccess.submitShadowPieces(graphics,
+                        () -> graphics.submitSpriteSatPiece(sprite.piece()));
                 else graphics.submitSpriteSatPiece(sprite.piece());
             }
             ClipScope raster = new ClipScope(viewport.innerH32OriginX(), 0, 256, 224);
@@ -286,10 +299,7 @@ public final class CompetitiveHalfpipeRenderer {
         digits(out, p2rings, 0xE0);
         // Obj87 loc_75DE is a later multi-sprite object. FixBugs=0 displays its
         // win marks in priority bucket zero, after the existing HUD counter object.
-        for (int i = 0; i < p1SectorWins; i++) raw(out, 0, 5, false, DIGIT_MAP, 10,
-                0x20 + i * 0x10, 0x2C, 0x1FA, 2, false, false);
-        for (int i = 0; i < p2SectorWins; i++) raw(out, 0, 5, false, DIGIT_MAP, 10,
-                0xB8 + i * 0x10, 0x2C, 0x1FA, 2, false, false);
+        winCounters(out, p1SectorWins, p2SectorWins);
         for (int i = 0; i < players.size(); i++) {
             Sonic2SpecialStagePlayer player = players.get(i);
             if (player == null || !player.isSpawned()) continue;
@@ -328,10 +338,98 @@ public final class CompetitiveHalfpipeRenderer {
     List<SpriteSatEntry> satEntries(int trackFrame, List<Sonic2SpecialStagePlayer> players,
                                   List<Sonic2SpecialStageObject> objects, int p1rings, int p2rings,
                                   Overlay overlay) {
-        return prepareSprites(trackFrame, players, objects, p1rings, p2rings, overlay).stream()
+        return entries(prepareSprites(trackFrame, players, objects, p1rings, p2rings, overlay));
+    }
+
+    List<SpriteSatEntry> nativeSatEntries(List<Sonic2SpecialStagePlayer> players, CompetitiveHalfpipeRenderFrame frame) {
+        return entries(prepareNativeSprites(players, frame));
+    }
+
+    private static List<SpriteSatEntry> entries(List<Sprite> sprites) {
+        return sprites.stream()
                 .map(sprite -> SpriteSatEntry.fromPreparedPiece(sprite.piece(), sprite.bucket())
                         .withPixelOperation(sprite.shadow() ? SpriteSatEntry.PixelOperation.SHADOW_15
                                 : SpriteSatEntry.PixelOperation.NORMAL)).toList();
+    }
+
+    private List<Sprite> prepareNativeSprites(List<Sonic2SpecialStagePlayer> players,
+                                             CompetitiveHalfpipeRenderFrame frame) {
+        Objects.requireNonNull(players, "players");
+        Objects.requireNonNull(frame, "frame");
+        List<Sprite> out = new ArrayList<>();
+        int ordinal = 0;
+        for (CompetitiveHalfpipeRenderFrame.Draw draw : frame.draws()) {
+            List<Sprite> geometry = new ArrayList<>();
+            switch (draw.type()) {
+                case PLAYER -> nativePlayer(geometry, players.get(draw.owner()), draw, false);
+                case PLAYER_SHADOW -> playerShadow(geometry, players.get(draw.owner()), draw.owner());
+                case TAIL -> nativePlayer(geometry, players.get(draw.owner()), draw, true);
+                case HUD -> {
+                    raw(geometry, 0, 0, false, HUD_MAP, 0, 0x80, 0, 0x1FA, 0, false, false);
+                    raw(geometry, 0, 0, false, HUD_MAP, 2, 0x80, 0, 0x1FA, 0, false, false);
+                }
+                case COUNTERS -> {
+                    digits(geometry, draw.x(), 0x48);
+                    digits(geometry, draw.y(), 0xE0);
+                }
+                case WIN_COUNTERS -> winCounters(geometry, draw.x(), draw.y());
+                case ITEM -> nativeItem(geometry, draw);
+                case ITEM_SHADOW -> raw(geometry, draw.bucket(), 0, true, SHADOW_MAP,
+                        draw.mappingFrame(), draw.x(), draw.y(), draw.nativeArt() & 0x7FF,
+                        draw.palette(), draw.xFlip(), false);
+                case SPILL -> nativeStaticPieces(geometry, draw,
+                        Sonic2SpecialStageSpriteData.getRingPieces(draw.mappingFrame()), draw.x(), draw.y(),
+                        ringBase, 0x322, 3, "spill");
+                case BANNER -> raw(geometry, draw.bucket(), 0, false, START_MAP, draw.mappingFrame(),
+                        draw.x(), draw.y(), draw.nativeArt() == 0 ? 0x38A : draw.nativeArt() & 0x7FF,
+                        draw.palette(), draw.xFlip(), false);
+                case MESSAGE, HAND, WINGS -> raw(geometry, draw.bucket(), 0, false, MESSAGE_MAP,
+                        draw.mappingFrame(), draw.x(), draw.y(), draw.nativeArt() == 0 ? 0x1A2 : draw.nativeArt() & 0x7FF,
+                        draw.palette(), draw.xFlip(), false);
+                case RAINBOW -> nativeStaticPieces(geometry, draw,
+                        Sonic2SpecialStageSpriteData.getRingPieces(draw.mappingFrame()), draw.x(), draw.y(),
+                        ringBase, draw.nativeArt() & 0x7FF, draw.palette(), "rainbow");
+            }
+            for (Sprite sprite : geometry) {
+                out.add(new Sprite(draw.bucket(), ordinal, sprite.shadow(), sprite.piece()));
+            }
+            ordinal++;
+        }
+        // The graph has already drained native display buckets in order. Sorting physical slots
+        // here would change first-source ownership after same-pass allocation or slot reuse.
+        return List.copyOf(out);
+    }
+
+    private void nativeItem(List<Sprite> out, CompetitiveHalfpipeRenderFrame.Draw draw) {
+        int art = draw.nativeArt() & 0x7FF;
+        if (draw.item() instanceof Sonic2SpecialStageRing) {
+            nativeStaticPieces(out, draw,
+                    Sonic2SpecialStageSpriteData.getRingPieces(draw.mappingFrame()), draw.x(), draw.y(),
+                    art == 0x77F ? starsBase : ringBase, art, draw.palette(), "ring");
+        } else if (draw.item() instanceof Sonic2SpecialStageBomb) {
+            nativeStaticPieces(out, draw,
+                    Sonic2SpecialStageSpriteData.getBombPieces(draw.mappingFrame()), draw.x(), draw.y(),
+                    art == 0x2B5 ? explosionBase : bombBase, art, draw.palette(), "bomb");
+        } else throw new IllegalArgumentException("Unsupported competitive item display type");
+    }
+
+    private void nativeStaticPieces(List<Sprite> out, CompetitiveHalfpipeRenderFrame.Draw draw,
+                                     Sonic2SpecialStageSpriteData.SpritePiece[] pieces,
+                                     int x, int y, int cachedBase, int nativeBase, int palette, String name) {
+        for (Sonic2SpecialStageSpriteData.SpritePiece piece : pieces) {
+            add(out, draw.bucket(), 0, false, x, y, piece.xOffset, piece.yOffset,
+                    piece.widthTiles, piece.heightTiles, cachedBase + piece.tileIndex,
+                    nativeBase + piece.tileIndex, palette, piece.hFlip, piece.vFlip,
+                    draw.xFlip(), false, true, name);
+        }
+    }
+
+    private void winCounters(List<Sprite> out, int one, int two) {
+        if (one < 0 || one > 3 || two < 0 || two > 3) throw new IllegalArgumentException("Native sector wins must be 0..3");
+        for (int i = 0; i < one; i++) raw(out, 0, 5, false, DIGIT_MAP, 10,
+                0x20 + i * 0x10, 0x2C, 0x1FA, 2, false, false);
+        for (int i = 0; i < two; i++) raw(out, 0, 5, false, DIGIT_MAP, 10,
+                0xB8 + i * 0x10, 0x2C, 0x1FA, 2, false, false);
     }
 
     private void digits(List<Sprite> out, int rings, int x) {
@@ -339,6 +437,30 @@ public final class CompetitiveHalfpipeRenderer {
         if (value >= 100) { raw(out, 0, 4, false, DIGIT_MAP, value / 100, x, 0x20, 0x1FA, 2, false, false); x += 8; }
         if (value >= 10) { raw(out, 0, 4, false, DIGIT_MAP, value / 10 % 10, x, 0x20, 0x1FA, 2, false, false); x += 8; }
         raw(out, 0, 4, false, DIGIT_MAP, value % 10, x, 0x20, 0x1FA, 2, false, false);
+    }
+
+    private void nativePlayer(List<Sprite> out, Sonic2SpecialStagePlayer player,
+                              CompetitiveHalfpipeRenderFrame.Draw draw, boolean tail) {
+        boolean sonic = player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.SONIC;
+        int index = tail ? player.getTailsTailsMappingFrame() : player.getMappingFrame();
+        int map = tail ? 0x34DA8 : sonic ? 0x34212 : 0x34B3E;
+        var source = tail ? Sonic2SpecialStageSpriteMappings.getTailsTailsFrame(index)
+                : sonic ? Sonic2SpecialStageSpriteMappings.getSonicFrame(index)
+                : Sonic2SpecialStageSpriteMappings.getTailsFrame(index);
+        List<Piece> nativePieces = frame(map, index);
+        if (source.pieces.length != nativePieces.size()) throw new IllegalStateException("Native player DPLC piece count differs");
+        for (int i = 0; i < nativePieces.size(); i++) {
+            Piece piece = nativePieces.get(i);
+            // BuildSprites adds the whole art word to the ROM mapping word.
+            // Preserve its priority carry as well as palette and native VRAM index;
+            // the cached source offset continues to select the decoded DPLC pixels.
+            int word = (piece.word() + (draw.nativeArt() & 0x9FFF) + (draw.palette() << 13)) & 0xFFFF;
+            add(out, draw.bucket(), 0, false, player.getXPos() + geometryOffsetX,
+                    player.getYPos() + geometryOffsetY, piece.x(), piece.y(), piece.width(), piece.height(),
+                    playerBase + source.pieces[i].tileIndex, word & 0x7FF, word >>> 13 & 3,
+                    (word & 0x800) != 0, (word & 0x1000) != 0, player.isRenderXFlip(), player.isRenderYFlip(),
+                    (word & 0x8000) != 0, tail ? "tails-tail" : "player");
+        }
     }
 
     private void player(List<Sprite> out, Sonic2SpecialStagePlayer player, int order) {

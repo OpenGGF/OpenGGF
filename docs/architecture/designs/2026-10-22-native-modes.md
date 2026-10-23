@@ -419,3 +419,32 @@ down the session registry; it is not a transition pass or a rendered-route claim
 Only affected GPU work is being rerun after its correction. Competition activation
 remains gated, with native audio, S2 selective teleport/interlace and actual route
 qualification still required.
+
+
+## Read-only late sprite owner projection
+
+`NativeSpriteSubmissionAccess.visitResolvedAdmissions` walks an immutable copy of
+accepted calls and resolves each physical SST at that visit. Ordinals, selected
+buckets, duplicate pointers and orphan capacity remain intact. A current Java
+owner with ID zero blocks external fallback. The caller may supply a typed,
+slot-checked external source; ordinary draw closures are never consulted or run.
+Metadata transcription remains with each native producer. The bridge adds no
+ObjectManager fields or methods and does not alter queue admission, dispatch,
+rendering, or rewind formats.
+
+At `591e0145e` plus the frozen bridge, the queued command
+`env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestNativeSpriteResolvedAdmissions' test -B`
+passed six tests, zero failures, errors or skips. Queue wait was 440 seconds;
+Maven execution was 1:27. XML confirmed all six identities, including ID-zero
+precedence, typed external mismatch rejection, unchanged captured state/capacity,
+and destructive graph/queue restore with fresh late owners. This is a ROM-free
+input bridge, not an actual S2 sprite metadata or rendered-route qualification.
+
+The affected S3K EGL follow-up on `866491114` plus the frozen Views sources ran
+one test with one assertion failure and no errors or skips: the uploaded page
+had no miniature human entry after normal world steps. Read-only diagnosis found
+that the actor pass submits Draw calls before ObjectManager's next queue reset;
+the reset discards those calls. The domain correction must preserve the actual
+calls across that boundary. Reconstructing bodies inside Views was rejected
+because it would bypass native admission, blink, and call order. The pixel check
+and activation gates remain unresolved until that correction is composed.

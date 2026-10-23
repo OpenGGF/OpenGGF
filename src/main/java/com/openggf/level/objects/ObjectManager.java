@@ -892,6 +892,10 @@ public class ObjectManager {
         return registry;
     }
 
+    void runNativeCompetitionTitleObjectPass() {
+        initialDispatch.runNativeCompetitionTitleObjectPass(slotLayout, () -> updating);
+    }
+
     int firstDynamicSlot() {
         return slotLayout.firstDynamicSlot();
     }
@@ -1744,7 +1748,7 @@ public class ObjectManager {
         captureCollisionResponseListForNextFrame();
     }
 
-    private void captureCollisionResponseListForNextFrame() {
+    void captureCollisionResponseListForNextFrame() {
         rebuildActiveObjectCaches();
         collisionResponseList.captureForNextFrame(cachedTouchResponseObjects, objectCallbacks);
     }
@@ -2025,7 +2029,7 @@ public class ObjectManager {
      * Reserves SSTs that the player's own slot allocated during a player step the
      * engine runs before the object load (lightning-shield attracted rings).
      */
-    private void assignPendingPlayerSlotAllocations() {
+    void assignPendingPlayerSlotAllocations() {
         var rings = objectServices.ringManager();
         if (rings != null) {
             rings.assignPendingAttractedRingSlots();
