@@ -22,6 +22,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static com.openggf.tests.TestS3kSanctuaryOriginReturnLifecycle.requireHistory;
+import static com.openggf.tests.TestS3kSanctuaryOriginReturnLifecycle.assertRetiredHistory;
 
 /**
  * The LRZ2 ordinary giant ring s9 ($85, subtype 9, ($2640,$640)) under legal
@@ -105,11 +107,13 @@ class TestS3kLrz2SevenChaosGiantRingGateway {
 
             var sourceObjects = GameServices.level().getObjectManager();
             int sourceHistory = touchRing(loop, lives, fixture, ringSpawn);
+            var sourceController = requireHistory(loop, "the LRZ2 inlet owns live history before exit");
             for (int f = 0; f < 320 && GameServices.level().getObjectManager() == sourceObjects; f++) {
                 tick(loop, lives, 1);
-                sourceHistory = Math.max(sourceHistory, fixture.gameplayMode().getRewindController().currentFrame());
+                sourceHistory = Math.max(sourceHistory, sourceController.currentFrame());
             }
             assertNotSame(sourceObjects, GameServices.level().getObjectManager(), "loc_618AC restarts into $1701");
+            assertRetiredHistory(loop, sourceController, "the $1701 load rejects outgoing LRZ2 replay");
             assertNotEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode(), "not the Blue Sphere branch");
             var saved = GameServices.level().getBigRingReturn();
             assertNotNull(saved, "Save_Level_Data2 precedes the destination branch");
@@ -121,7 +125,7 @@ class TestS3kLrz2SevenChaosGiantRingGateway {
             TestS3kSanctuaryOriginReturnLifecycle.waitForReleasedWorld(loop, lives, HUB_ZONE, HUB_ACT, row);
             assertFalse(GameServices.level().getTransitions().isLastStarPostHitSet(),
                     "loc_618AC clears Last_star_post_hit for the $1701 start");
-            assertTrue(fixture.gameplayMode().getRewindController().currentFrame() < sourceHistory,
+            assertTrue(requireHistory(loop, "released $1701 owns its incoming timeline").currentFrame() < sourceHistory,
                     "the $1701 load retires the LRZ2 history");
 
             // The conversion ceremony runs under neutral input; released control ends it.
@@ -244,7 +248,7 @@ class TestS3kLrz2SevenChaosGiantRingGateway {
         var main = GameServices.sprites().getMainPlayable();
         placeForLocalContact(main, ringSpawn.x() + 8, ringSpawn.y() - 4);
         tick(loop, lives, 1);
-        return fixture.gameplayMode().getRewindController().currentFrame();
+        return requireHistory(loop, "the actual ring touch has a live origin timeline").currentFrame();
     }
 
     /** Ordinary right/left inputs cross the real band and pad; $38 bit5 is clear after conversion. */

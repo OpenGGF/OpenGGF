@@ -114,6 +114,30 @@ same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level
 transition frames reset the buffer, matching the trace-rewind rule that seeks do not
 cross committed level or act boundaries.
 
+Live history belongs to its installed `GameplayModeContext`, including the exact
+special-stage provider registered in that context. Suspending play parks the
+history for that owner; replacing or destroying the owner retires it after any
+pending reverse-audio and fade release completes. An old controller reference
+cannot advance, seek or record into a replacement owner's history. Replay builds
+a fresh frame context from the installed owner for each entry, and external
+recording identifies the owner and provider that actually executed the tick.
+
+Live recording and consumed-frame floor capture follow successful PLC frame
+publication. Input and pacing are sampled before the host consumes its input
+edges; deferred capture revalidates the installation and world before recording.
+Binding cannot seed history from an object world that is inactive for transition.
+Explicit mode-entry and completed-assembly boundaries retain their own admission.
+During replacement, the installed owner's controller can be null until assembly
+and the native fade release finish. Reacquire and require the destination's fresh
+controller once ready; retained outgoing handles remain rejected.
+
+The live manager admits controller operations before applying snapshots or
+changing the cursor. A paused gameplay result still represents an admitted
+frame; it is not a lifetime rejection. Ordinary owner-directed history edits,
+including course restoration's future invalidation, remain independent of replay
+admission. Boundary notifications identify their installation and wait until an
+active replay operation finishes before resetting that history.
+
 The playback wrapper has three states:
 
 | State | Behaviour |

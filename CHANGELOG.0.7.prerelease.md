@@ -489,6 +489,15 @@ Unreleased. The earlier development themes remain in
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices.
 
+- **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
+  input, audio and fade cleanup through suspension and replacement. Destination
+  history starts after deferred title-card assembly, and replay cannot mutate a
+  replacement owner's history. Floors and checkpoints include completed frame
+  publication; inactive outgoing worlds cannot seed new history. Audio's installed
+  source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
+  donation while consuming the same patterns, palette and mapping contract.
+
 - **Native-compatible PCM output (diagnostics):** An opt-in audio session setting
   feeds the accurate FM chip's own pin sums through a Java port of blip_buf. It
   uses BizHawk's Nuked YM2612 scale and the movie's filter, which is None,

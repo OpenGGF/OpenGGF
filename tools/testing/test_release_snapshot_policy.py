@@ -353,6 +353,20 @@ class SnapshotPolicyTests(unittest.TestCase):
                            '@ModApi public record Value(int value) { public record Nested(long x) {} }',
                            'candidate signature pin')
 
+    def test_record_nested_annotation_array_defaults_still_require_pin(self):
+        prefix = '@ModApi public record Value(int value) { public @interface Contract { '
+        suffix = ' } }'
+        for before, after in [('String[] value() default {"old"};', 'String[] value() default {"new"};'),
+                              ('int[] value() default {};', 'int[] value() default {1, 2};')]:
+            with self.subTest(before=before, after=after):
+                self.record_change(prefix + before + suffix, prefix + after + suffix,
+                                   'candidate signature pin')
+
+    def test_record_nested_default_interface_method_bodies_do_not_change_api(self):
+        before = ('@ModApi public record Value(int value) { '
+                  'public interface Nested { @SuppressWarnings("unused") default String text() { return "old"; } } }')
+        self.record_change(before, before.replace('"old"', '"new { //"'), None)
+
     def test_next_rollover_rejects_postbaseline_uncoupled_api_changes(self):
         self.next_baseline = self.base
         self.write('src/main/java/example/NewApi.java', '@ModApi\npublic interface NewApi {}\n')

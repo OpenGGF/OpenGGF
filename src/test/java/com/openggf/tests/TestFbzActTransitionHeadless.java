@@ -463,7 +463,8 @@ class TestFbzActTransitionHeadless {
                 .startPosition((short) 0x2EE1, (short) 0x0540)
                 .startPositionIsCentre()
                 .build();
-        LiveRewindManager live = new LiveRewindManager(config);
+        LiveRewindManager live = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        live.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         InputHandler input = new InputHandler();
         assertFalse(live.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
         RewindController controller = fixture.gameplayMode().getRewindController();
@@ -546,7 +547,8 @@ class TestFbzActTransitionHeadless {
                 () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 0));
         GameServices.level().getObjectManager().addDynamicObject(results);
 
-        LiveRewindManager live = new LiveRewindManager(config);
+        LiveRewindManager live = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        live.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         InputHandler input = new InputHandler();
         assertFalse(live.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
         List<RewindBoundary> observedBoundaries = new ArrayList<>();

@@ -68,7 +68,8 @@ class TestLiveRewindManagerAudioCleanup {
     @Test
     void defaultLiveRewindStepsOneFramePerHeldVisualFrame() throws Exception {
         TestEnvironment.activeGameplayMode();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
         InputHandler input = new InputHandler();
@@ -84,7 +85,8 @@ class TestLiveRewindManagerAudioCleanup {
     @Test
     void heldLiveRewindFreezesFadePresentationUntilReleaseCleanup() throws Exception {
         FadeManager fadeManager = TestEnvironment.activeGameplayMode().getFadeManager();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
         InputHandler input = new InputHandler();
@@ -106,7 +108,8 @@ class TestLiveRewindManagerAudioCleanup {
         audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
         InputHandler input = new InputHandler();
@@ -142,7 +145,8 @@ class TestLiveRewindManagerAudioCleanup {
         audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
         LiveRewindInputSource inputSource =
@@ -211,7 +215,8 @@ class TestLiveRewindManagerAudioCleanup {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 3.0);
         TestEnvironment.activeGameplayMode();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(8);
         installTestController(manager, controller);
         InputHandler input = new InputHandler();
@@ -270,7 +275,8 @@ class TestLiveRewindManagerAudioCleanup {
             audio.presentFrame(PresentationMode.SILENT);
 
             TestEnvironment.activeGameplayMode();
-            LiveRewindManager manager = new LiveRewindManager(config);
+            LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+            manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
             RewindController controller = new TestControllerBuilder().atFrame(8);
             installTestController(manager, controller);
 
@@ -305,7 +311,8 @@ class TestLiveRewindManagerAudioCleanup {
 
     @Test
     void leavingLevelWhileRewindingStopsAllPresentationAudio() throws Exception {
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new RewindController(
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
@@ -328,7 +335,8 @@ class TestLiveRewindManagerAudioCleanup {
 
     @Test
     void pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit() throws Exception {
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new RewindController(
                 new RewindRegistry(),
                 new InMemoryKeyframeStore(),
@@ -396,7 +404,8 @@ class TestLiveRewindManagerAudioCleanup {
         audio.setBackend(new NullAudioBackend());
         FadeManager fadeManager =
                 TestEnvironment.activeGameplayMode().getFadeManager();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
         LiveRewindInputSource inputSource =
@@ -467,7 +476,8 @@ class TestLiveRewindManagerAudioCleanup {
         applyAndPresentSourcePair(oldMusic, oldSfx);
 
         TestEnvironment.activeGameplayMode();
-        LiveRewindManager manager = new LiveRewindManager(config);
+        LiveRewindManager manager = new LiveRewindManager(config, com.openggf.audio.AudioManager.getInstance());
+        manager.bindOwner(com.openggf.tests.TestEnvironment.activeGameplayMode(), false, com.openggf.game.GameMode.LEVEL);
         RewindController controller =
                 new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
@@ -704,7 +714,11 @@ class TestLiveRewindManagerAudioCleanup {
     }
 
     private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
-        setField(manager, "installedGameplayMode", TestEnvironment.activeGameplayMode());
+        var owner = TestEnvironment.activeGameplayMode();
+        setField(owner, "rewindController", controller);
+        setField(manager, "boundOwner", owner);
+        setField(manager, "installedFade", owner.getFadeManager());
+        setField(manager, "installedGameplayMode", owner);
         setInstalledStepperKind(manager, "LEVEL_FRAME");
         setField(manager, "inputSource", new LiveRewindInputSource());
         setField(manager, "rewindController", controller);
