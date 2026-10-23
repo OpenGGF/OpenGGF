@@ -139,12 +139,17 @@ public final class PlayablePuppet implements AutoCloseable {
     public record Observation(double x, double y, int xSpeed, int ySpeed, int groundSpeed,
             int angle, int animation, int mappingFrame, boolean flipX, boolean flipY,
             boolean airborne, boolean onGround, int maxSpeed, int xRadius, int yRadius,
-            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeImpulse) { }
+            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeImpulse, boolean crouching) { }
 
     public record Tail(int mappingFrame, boolean flipX, boolean flipY) { }
 
     public Observation sample() {
         requireOpen();
+        return observe(actor);
+    }
+
+    /** Same native view for isolated search and production LIVE route controls. */
+    public static Observation observe(AbstractPlayableSprite actor) {
         var controller = actor.getTailsTailsController();
         var tail = controller == null ? null : controller.presentation();
         return new Observation(actor.getCentreX() + actor.getXSubpixelRaw() / 65536.0,
@@ -157,7 +162,7 @@ public final class PlayablePuppet implements AutoCloseable {
                 // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is live acceleration / 2.
                 com.openggf.stageplay.route.StageplayRouteSteering.friction(actor),
                 actor.getSkidding(), actor.getSpindash(),
-                com.openggf.stageplay.route.StageplayRouteSteering.slopeImpulse(actor));
+                com.openggf.stageplay.route.StageplayRouteSteering.slopeImpulse(actor), actor.getCrouching());
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */

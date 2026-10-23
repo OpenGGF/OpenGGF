@@ -3019,3 +3019,16 @@ starts remain visible and reject submission until repaired. Explicit per-game,
 per-character expected capability values replace the circular assertion.
 Focused tests and slope Hard Stop/Overshoot ROM cases are pending qualification.
 No broad smoke is requested; the lead owns that independent run.
+
+
+### Route review corrections, slice 2 (2026-10-23)
+
+F3 verified: production collected but never consumed `spindash()`. Fixed cadence
+could jump before Duck on a mild slope. Replaced it with native-state gating:
+brake facing-tap inertia, establish Duck, press jump, release down. Both search
+and cold LIVE replay require charge and release. Native routines and shipped
+fixBugs=0 remain authoritative. Downhill ROM rehearsal added. F6 command button
+selection now lives in one production kernel used by LIVE and the test replay;
+command scheduling remains owned by the live world (WAIT/ability/object rules).
+The named fixed charge-window constant belongs to PuppetCommand and is included
+in the normalized unpublished candidate pin. No API version/status changes.

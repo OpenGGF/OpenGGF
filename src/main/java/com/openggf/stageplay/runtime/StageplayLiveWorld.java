@@ -325,28 +325,14 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var kind = goal.kind();
             boolean move = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO || kind == PuppetCommandKind.GLIDE_TO;
             double[] target = move ? target(p, goal) : new double[]{p.sprite.getCentreX(),p.sprite.getCentreY()};
-            if (move && goal.motion().endingAction() == EndingAction.OVERSHOOT)
-                p.routeReturning = com.openggf.stageplay.route.StageplayRouteSteering.returning(
-                        p.sprite.getCentreX(), target[0], p.routeApproach, p.routeReturning);
-            int direction = move ? com.openggf.stageplay.route.StageplayRouteSteering.direction(
-                    p.sprite.getCentreX(), p.sprite.getXSpeed(), p.sprite.getGSpeed(),
-                    p.sprite.getRunAccel(), com.openggf.stageplay.route.StageplayRouteSteering.deceleration(p.sprite), com.openggf.stageplay.route.StageplayRouteSteering.friction(p.sprite), p.sprite.getMax(),
-                    com.openggf.stageplay.route.StageplayRouteSteering.slopeImpulse(p.sprite),
-                    p.sprite.getAir(), target[0], goal.urgency(), goal.motion(), p.routeReturning, p.routeApproach)
-                    : kind == PuppetCommandKind.STOP && goal.motion().endingAction() == EndingAction.GENTLE_STOP
-                            ? 0 : steer(p.sprite, p.sprite.getCentreX(), 0);
-            if (kind == PuppetCommandKind.SPINDASH) {
-                int elapsed = frame - p.goalStart;
-                direction = com.openggf.stageplay.route.StageplayRouteSteering.chargeDirection(p.sprite.getCentreX(),goal.x(),elapsed);
-                if (com.openggf.stageplay.route.StageplayRouteSteering.chargeDown(elapsed)) held |= AbstractPlayableSprite.INPUT_DOWN;
-                jump = com.openggf.stageplay.route.StageplayRouteSteering.chargeJump(elapsed);
-                if (elapsed > com.openggf.stageplay.route.StageplayRouteSteering.CHARGE_FRAMES) { p.goal = null; held = 0; }
-            }
-            if (kind == PuppetCommandKind.RELEASE) direction = 0;
-            if (kind == PuppetCommandKind.FACE_LEFT || kind == PuppetCommandKind.FACE_RIGHT) {
-                direction = kind == PuppetCommandKind.FACE_LEFT ? -1 : 1;
-                p.goal = null; // exactly one native tap; subsequent ticks coast the subpixel nudge
-            }
+            var buttons = com.openggf.stageplay.route.StageplayRouteSteering.input(goal, frame-p.goalStart,
+                    com.openggf.sprites.playable.PlayablePuppet.observe(p.sprite), jump,
+                    p.routeReturning, p.routeApproach, kind == PuppetCommandKind.SPINDASH ? goal.x() : target[0]);
+            p.routeReturning = buttons.returning();
+            int direction = buttons.direction();
+            jump = buttons.jump();
+            if (buttons.down()) held |= AbstractPlayableSprite.INPUT_DOWN;
+            if (buttons.finished()) p.goal = null;
             if (direction < 0) held |= AbstractPlayableSprite.INPUT_LEFT;
             if (direction > 0) held |= AbstractPlayableSprite.INPUT_RIGHT;
             if (kind == PuppetCommandKind.CROUCH || kind == PuppetCommandKind.ROLL) held |= AbstractPlayableSprite.INPUT_DOWN;

@@ -397,23 +397,11 @@ class TestStageplayRoutePlanner {
                 else {goal = command; goalStart=frame;approach=command.x()<probe.sample().x()?-1:1;returning=false;}
             }
             var before = probe.sample();
-            boolean moving=goal!=null && goal.kind()==PuppetCommandKind.MOVE_TO;
-            if(moving && goal.motion().endingAction()==EndingAction.OVERSHOOT)
-                returning=StageplayRouteSteering.returning(Math.floor(before.x()),goal.x(),approach,returning);
-            int direction=moving?StageplayRouteSteering.direction(Math.floor(before.x()),before.xSpeed(),before.groundSpeed(),
-                    before.runAccel(),before.runDecel(),before.friction(),before.maxSpeed(),before.slopeImpulse(),before.airborne(),goal.x(),goal.urgency(),goal.motion(),returning,approach)
-                    :goal!=null && goal.kind()==PuppetCommandKind.STOP && goal.motion().endingAction()!=EndingAction.GENTLE_STOP
-                            ?StageplayMovementIntent.direction(Math.floor(before.x()),before.xSpeed(),before.runAccel(),before.runDecel(),before.maxSpeed(),before.airborne(),before.x(),0):0;
-            boolean down=false,jump=frame<jumpEnd;
-            if(goal!=null && goal.kind()==PuppetCommandKind.SPINDASH) {
-                int elapsed=frame-goalStart;
-                direction=StageplayRouteSteering.chargeDirection(before.x(),goal.x(),elapsed);
-                down=StageplayRouteSteering.chargeDown(elapsed);jump=StageplayRouteSteering.chargeJump(elapsed);
-            }
-            if(goal!=null && (goal.kind()==PuppetCommandKind.FACE_LEFT || goal.kind()==PuppetCommandKind.FACE_RIGHT)) {
-                direction=goal.kind()==PuppetCommandKind.FACE_LEFT?-1:1;goal=null;
-            }
-            probe.tick(direction < 0, direction > 0, down,jump, frame);
+            var buttons = goal == null ? new StageplayRouteSteering.Buttons(0,false,frame<jumpEnd,returning,false)
+                    : StageplayRouteSteering.input(goal,frame-goalStart,before,frame<jumpEnd,returning,approach,goal.x());
+            returning=buttons.returning();
+            if(buttons.finished()) goal=null;
+            probe.tick(buttons.direction()<0,buttons.direction()>0,buttons.down(),buttons.jump(),frame);
             result.add(probe.sample());
         }
         return result;

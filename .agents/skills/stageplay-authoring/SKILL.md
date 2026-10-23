@@ -98,7 +98,9 @@ live top speed. Falling starts land first, spindash uses native down/jump/releas
 buttons with a fixed charge, and final facing uses one native tap. Spindash selects
 Run in both editors; the shared document/screenplay contract rejects Spindash + Walk.
 Unavailable saved starts remain repairable in the route form. Every Walk ending
-reserves native acceleration headroom, including airborne steering. The MOVE_TO
+reserves native acceleration headroom, including airborne steering. Spindash
+brakes to zero, waits for native Duck, then presses jump; search and cold replay
+must observe both native charge and release, or fail explicitly. The MOVE_TO
 `motion` object persists settings through save, screenplay export, edits and replan.
 Use route CLI `--start`, `--travel`, `--ending`, `--facing`; inspect cap/skid/arrival
 failures rather than hiding a terrain-forced speed violation. A simple walk uses

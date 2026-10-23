@@ -60,15 +60,56 @@ public final class StageplayRouteSteering {
         return Math.abs(predictedSpeed) + accel <= cap ? toward : 0;
     }
 
-    /** Fixed authored charge cadence, not a replacement for native charge/speed tables.
-     * Sonic_CheckSpindash / Sonic_UpdateSpindash (s2.asm:37555-37688) own crouch,
-     * pressed jump edges, charge decay and release speed. Shipped fixBugs=0 is unchanged.
+    public record Buttons(int direction, boolean down, boolean jump, boolean returning, boolean finished) { }
+
+    /** Shared production command kernel. Command scheduling and waits stay with their world owner. */
+    public static Buttons input(PuppetCommand command, int elapsed,
+            com.openggf.sprites.playable.PlayablePuppet.Observation actor, boolean jump,
+            boolean returning, int approach, double targetX) {
+        int direction = 0;
+        boolean down = false, finished = false;
+        switch (command.kind()) {
+            case MOVE_TO, FLY_TO, GLIDE_TO -> {
+                if (command.motion().endingAction() == EndingAction.OVERSHOOT)
+                    returning = returning(Math.floor(actor.x()), targetX, approach, returning);
+                direction = direction(Math.floor(actor.x()), actor.xSpeed(), actor.groundSpeed(),
+                        actor.runAccel(), actor.runDecel(), actor.friction(), actor.maxSpeed(),
+                        actor.slopeImpulse(), actor.airborne(), targetX, command.urgency(),
+                        command.motion(), returning, approach);
+            }
+            case STOP -> {
+                if (command.motion().endingAction() != EndingAction.GENTLE_STOP)
+                    direction = StageplayMovementIntent.direction(Math.floor(actor.x()), actor.xSpeed(),
+                            actor.runAccel(), actor.runDecel(), actor.maxSpeed(), actor.airborne(), actor.x(), 0);
+            }
+            case SPINDASH -> {
+                var charge = charge(actor.x(), targetX, elapsed, actor.groundSpeed(), actor.airborne(),
+                        actor.crouching(), actor.spindash());
+                direction = charge.direction(); down = charge.down(); jump = charge.jump();
+                finished = elapsed > CHARGE_FRAMES;
+            }
+            case FACE_LEFT, FACE_RIGHT -> {
+                direction = command.kind() == PuppetCommandKind.FACE_LEFT ? -1 : 1;
+                finished = true;
+            }
+            default -> { }
+        }
+        return new Buttons(direction, down, jump, returning, finished);
+    }
+
+    /** Fixed charge window, with a native-state-gated fresh jump edge.
+     * Sonic_CheckSpindash (s2.asm:37555-37581) reads Duck before ground movement.
+     * Sonic_SlopeResist (s2.asm:37709-37732) skips zero inertia: brake the facing
+     * tap to zero before holding down, then wait for native Duck before pressing jump.
+     * Sonic_UpdateSpindash (s2.asm:37591-37688) owns release speed; fixBugs=0 remains active.
      */
-    // One press selects the native minimum charge; repeated revs overdrive short acting routes.
-    public static boolean chargeDown(int elapsed) { return elapsed > 0 && elapsed <= CHARGE_FRAMES; }
-    public static boolean chargeJump(int elapsed) { return elapsed == 4; }
-    public static int chargeDirection(double x, double targetX, int elapsed) {
-        return elapsed == 0 ? (targetX < x ? -1 : 1) : 0;
+    public static Buttons charge(double x, double targetX, int elapsed, int groundSpeed,
+            boolean airborne, boolean crouching, boolean spindash) {
+        if (elapsed > CHARGE_FRAMES) return new Buttons(0, false, false, false, true);
+        if (elapsed == 0) return new Buttons(targetX < x ? -1 : 1, false, false, false, false);
+        if (!spindash && groundSpeed != 0)
+            return new Buttons(groundSpeed < 0 ? 1 : -1, false, false, false, false);
+        return new Buttons(0, true, !airborne && crouching && !spindash, false, false);
     }
     public static boolean returning(double x, double targetX, int approach, boolean already) {
         return already || (x - targetX) * approach >= OVERSHOOT_PIXELS - 6;

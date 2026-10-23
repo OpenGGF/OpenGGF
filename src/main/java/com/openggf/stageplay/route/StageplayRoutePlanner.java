@@ -377,16 +377,25 @@ public final class StageplayRoutePlanner {
         }
         int actionStart = request.startFrame()+preparationTicks;
         if (request.motion().startingAction() == StartAction.SPINDASH) {
-            for (int elapsed=0;elapsed<=StageplayRouteSteering.CHARGE_FRAMES;elapsed++) {
+            boolean charged = false, released = false;
+            for (int elapsed=0;elapsed<=StageplayRouteSteering.CHARGE_FRAMES+1;elapsed++) {
                 if (cancelled.getAsBoolean()) return rejected(CANCELLED,"Route charge cancelled",0,preparationTicks);
                 if (preparationTicks >= request.maxTicks() || preparationTicks >= request.maxFrames() || System.nanoTime() >= deadline)
                     return rejected(BUDGET_EXCEEDED,"Spindash charge exceeded route budget",0,preparationTicks);
-                int direction=StageplayRouteSteering.chargeDirection(initial.x(),request.targetX(),elapsed);
-                probe.tick(direction<0,direction>0,StageplayRouteSteering.chargeDown(elapsed),
-                        StageplayRouteSteering.chargeJump(elapsed),request.startFrame()+preparationTicks++);
+                var buttons = StageplayRouteSteering.charge(initial.x(), request.targetX(), elapsed,
+                        initial.groundSpeed(), initial.airborne(), initial.crouching(), initial.spindash());
+                probe.tick(buttons.direction()<0,buttons.direction()>0,buttons.down(),buttons.jump(),
+                        request.startFrame()+preparationTicks++);
                 initial=probe.sample();
+                charged |= initial.spindash();
+                released |= charged && !initial.spindash() && !buttons.down() && initial.groundSpeed()!=0;
                 preparation.add(new StageplayRoutePoint(request.startFrame()+preparationTicks-1,initial.x(),initial.y(),initial.onGround()));
             }
+            if (!charged || !released)
+            return new StageplayRouteProposal(SEARCH_EXHAUSTED,
+                    "Native spindash charge and release did not occur near x=" + Math.round(initial.x())
+                            + "; could not settle and establish Duck within the charge window",
+                    List.of(), List.copyOf(preparation), 0, preparationTicks);
         }
         if (Math.abs(request.targetX() - initial.x()) > 1536
                 || Math.abs(request.targetY() - initial.y()) > 768)
@@ -569,7 +578,7 @@ public final class StageplayRoutePlanner {
         if(request.motion().startingAction()==StartAction.SPINDASH) {
             commands.add(command(ids,"route.charge.",moveStart,PuppetCommandKind.SPINDASH,
                     request.targetX(),request.targetY(),request.urgency(),StageplayRouteSteering.CHARGE_FRAMES,request.motion()));
-            moveStart+=StageplayRouteSteering.CHARGE_FRAMES+1;
+            moveStart+=StageplayRouteSteering.CHARGE_FRAMES+2;
         }
         commands.add(command(ids,"route.move.",moveStart,PuppetCommandKind.MOVE_TO,
                 request.targetX(),request.targetY(),request.urgency(),0,request.motion()));
@@ -640,6 +649,7 @@ public final class StageplayRoutePlanner {
             long deadline) {
         List<StageplayRoutePoint> path = new ArrayList<>();
         int ticks = proposal.ticks();
+        boolean charged = false, released = false;
         int end = request.startFrame() + request.maxFrames();
         StageplayTimeline.Frame sample = null;
         int nativeZone = -1, nativeAct = -1;
@@ -751,6 +761,8 @@ public final class StageplayRoutePlanner {
                     return failure(VERIFICATION_FAILED,"Native motion cannot stop before the point with this start; choose Walk start or a farther destination",
                             fingerprint,request,proposal.nodes(),ticks,path);
                 var motionState=world.routeMotionState(request.actorId());
+                charged |= motionState.spindash();
+                released |= charged && !motionState.spindash() && motionState.groundSpeed()!=0;
                 if (request.motion().endingAction()==EndingAction.GENTLE_STOP && motionState.skidding())
                     return failure(VERIFICATION_FAILED,"Native terrain forced a skid; Gentle Stop cannot be qualified here",
                             fingerprint,request,proposal.nodes(),ticks,path);
@@ -783,6 +795,9 @@ public final class StageplayRoutePlanner {
                         request,
                         proposal.nodes(),
                         ticks, path);
+            if (request.motion().startingAction()==StartAction.SPINDASH && (!charged || !released))
+                return failure(VERIFICATION_FAILED,"Cold replay did not observe native spindash charge and release",
+                        fingerprint,request,proposal.nodes(),ticks,path);
             var finalMotion=world.routeMotionState(request.actorId());
             if (request.motion().endingFacing()!=EndingFacing.INHERIT && finalMotion.facingLeft()!=(request.motion().endingFacing()==EndingFacing.LEFT))
                 return failure(VERIFICATION_FAILED,"Native final facing did not hold",fingerprint,request,proposal.nodes(),ticks,path);

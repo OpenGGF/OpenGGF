@@ -609,9 +609,9 @@ also initialized as normal `Sonic_top_speed` (s2.asm:36187). Native acceleration
 friction, slope response and live top speed stay authoritative. Gentle steering
 predicts coasting distance from current friction and releases without an opposite
 button at speed; Hard Stop uses live native deceleration. Overshoot targets a
-24-pixel pass before returning. SPINDASH holds down for 24 ticks after a facing
-tap, allows three down ticks to establish native crouch, then gives
-a single jump press and releases down; native charge decay
+24-pixel pass before returning. SPINDASH uses a fixed 24-tick preparation/charge window after a facing
+tap. It brakes the tap to zero inertia, holds down until native Duck is observed,
+then gives a fresh jump press and releases down; native charge decay
 and launch tables own the resulting speed (`Sonic_CheckSpindash` /
 `Sonic_UpdateSpindash`, s2.asm:37555-37688). No constant replaces native launch
 velocity, and shipped `fixBugs=0` behavior stays active. A Spindash launch can exceed
@@ -623,8 +623,12 @@ subpixel nudge. Failed bounded Walk searches suggest Run/Spindash for possible
 speed-dependent terrain; that suggestion is not proof a different setting reaches
 through live objects/events. Only a cold successful replay receives VERIFIED.
 
-The default charge uses one fresh jump press after crouch warmup, retaining down
-for the fixed interval. This selects the native minimum charge, rather than a
+Search and cold qualification must both observe native charge and release.
+`Sonic_CheckSpindash` reads Duck before movement, while `Sonic_SlopeResist` skips
+zero inertia (s2.asm:37709-37732); waiting a fixed number of ticks alone is unsafe
+on downhill starts. If settling/Duck/charge fails in the window, planning reports
+that failure honestly. The default charge uses one fresh jump press after native
+crouch, retaining down for the remaining fixed interval. This selects the native minimum charge, rather than a
 maximal launch that cannot brake within a short acting route. A non-Overshoot
 ending that physically passes the point beyond tolerance fails cold qualification
 with advice to use a Walk start or a farther destination.

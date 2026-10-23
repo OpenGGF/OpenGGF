@@ -28,6 +28,7 @@ class TestStageplayRouteMotionRom {
         motions.put("jump",new RouteMotion(StartAction.JUMP,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("spindash",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-downhill",RouteMotion.DEFAULT);
+        motions.put("spindash-downhill",new RouteMotion(StartAction.SPINDASH,TravelSpeed.RUN,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-hard-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.HARD_STOP,EndingFacing.INHERIT));
         motions.put("walk-overshoot-slope",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.OVERSHOOT,EndingFacing.INHERIT));
         motions.put("face-left",new RouteMotion(StartAction.WALK,TravelSpeed.WALK,EndingAction.GENTLE_STOP,EndingFacing.LEFT));
@@ -35,7 +36,7 @@ class TestStageplayRouteMotionRom {
         try(var library=SceneRomLibrary.open(Map.of("s2",Path.of(System.getProperty("sonic2.rom.path")))) ) {
             for(var entry:motions.entrySet()) {
                 var motion=entry.getValue();var source=scene(entry.getKey());
-                boolean downhill=entry.getKey().equals("walk-downhill") || entry.getKey().endsWith("-slope");
+                boolean downhill=entry.getKey().endsWith("downhill") || entry.getKey().endsWith("-slope");
                 if(downhill) source=source.withActors(List.of(new Actor("hero","Sonic","s2","sonic",
                         List.of(new ActorKey(0,400,624,0,-1,true,true,1,Interpolation.HOLD)))));
                 var request=new StageplayRouteRequest("hero",0,downhill?100:400,downhill?656:624,420,1024,120000,60000,1,null,1,motion);
