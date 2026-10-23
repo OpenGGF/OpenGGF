@@ -273,7 +273,7 @@ class TestTimeAttackScene {
     void multiplayerWithoutAFingerprintExplainsTheMissingRom() {
         open(List.of("s2"));
         chooseMode(1); // HOST LAN
-        for (int i = 0; i < 3; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past policy and window
+        for (int i = 0; i < 4; i++) tap(org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN); // past policy, window and vote pool
         tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
         assertEquals("The S2 ROM is not available for racing", scene.status());
         assertEquals(openggf.timeattack.mp.RaceSession.State.IDLE, scene.raceSession().state());
@@ -411,8 +411,10 @@ class TestTimeAttackScene {
             tap(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
             idleUntil("the lobby level", () -> !behind.isEmpty());
             var raceSession = scene.raceSession();
-            assertEquals(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct(),
-                    openggf.timeattack.mp.LobbyAreas.forGame("s2").area()), behind.getFirst());
+            assertEquals(openggf.timeattack.mp.LobbyAreas.runSpec(
+                    openggf.timeattack.mp.LobbyAreas.forGame("s2"), "sonic"), behind.getFirst());
+            assertEquals(GameplayRunPolicy.DeathRestart.FAST_FROM_START, behind.getFirst().policy().deathRestart(),
+                    "lobby deaths reload at the lobby spawn with no lives");
             assertInstanceOf(openggf.timeattack.mp.LobbyRun.class, hosts.getLast());
             FakeHandle lobbyLevel = behindHandles.getFirst();
             assertTrue(lobbyLevel.held, "the menu owns the controller while shown");
@@ -451,7 +453,8 @@ class TestTimeAttackScene {
             idleUntil("the lobby level to leave", () -> lobbyLevel.left);
             assertTrue(launched.isEmpty(), "the round waits for the lobby level to end");
             host.resume(RunEndReason.LEFT);
-            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic", GameplayRunPolicy.isolatedAct())), launched,
+            assertEquals(List.of(new RunSpec("s2", 0, 0, "sonic",
+                    GameplayRunPolicy.isolatedAct().withFastRestarts().withoutZoneIntros())), launched,
                     "the scene launches the round as it resumes, so the hand-over stays black");
             assertEquals(openggf.timeattack.mp.RaceSession.State.RACING, raceSession.state());
 
