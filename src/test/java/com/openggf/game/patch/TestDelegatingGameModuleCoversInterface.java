@@ -24,6 +24,16 @@ import static org.mockito.Mockito.times;
 class TestDelegatingGameModuleCoversInterface {
 
     @Test
+    void titlePreviewCapabilityIsForwardedWithoutInitializingTheLiveTitle() {
+        GameModule base = mock(GameModule.class);
+        var preview = mock(com.openggf.game.preview.TitlePreviewProvider.class);
+        when(base.getTitlePreviewProvider()).thenReturn(preview);
+        DelegatingGameModule patched = new DelegatingGameModule(base, "preview-patch");
+        assertSame(preview, patched.getTitlePreviewProvider());
+        verify(base, times(1)).getTitlePreviewProvider();
+    }
+
+    @Test
     void continueFactoryPreservesFreshProvidersFromWrappedModule() {
         GameModule base = mock(GameModule.class);
         ContinueScreenProvider first = mock(ContinueScreenProvider.class);
