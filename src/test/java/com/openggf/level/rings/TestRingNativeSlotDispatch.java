@@ -1,7 +1,10 @@
 package com.openggf.level.rings;
 
 import com.openggf.camera.Camera;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameSound;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelGamestate;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.rules.GameRules;
@@ -36,14 +39,18 @@ class TestRingNativeSlotDispatch {
     private LevelManager level;
     private ObjectManager objects;
     private RingManager rings;
+    private AudioManager audio;
     private Sonic player;
     private final AtomicInteger levelClock = new AtomicInteger(100);
 
     @BeforeEach void setup() {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        var ledger = new LevelGamestate();
+        GameServices.level().resetLevelGamestate(ledger);
         graphics = GraphicsManager.getInstance();
         graphics.initHeadless();
         level = mock(LevelManager.class);
+        when(level.getLevelGamestate()).thenReturn(ledger);
         when(level.getFrameCounter()).thenAnswer(ignored -> levelClock.get());
         when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(false);
         Camera camera = mock(Camera.class);
@@ -54,7 +61,8 @@ class TestRingNativeSlotDispatch {
                 .withGraphicsManager(graphics).withGameModule(GameServices.currentOrBootstrapGameModule());
         objects = new ObjectManager(List.of(), new EmptyRegistry(), 0, null, null, graphics, camera, services);
         when(level.getObjectManager()).thenReturn(objects);
-        rings = new RingManager(List.of(new RingSpawn(144, 64)), sheet(), level, null, null);
+        audio = mock(AudioManager.class);
+        rings = new RingManager(List.of(new RingSpawn(144, 64)), sheet(), level, null, audio);
         when(level.getRingManager()).thenReturn(rings);
         rings.ensurePatternsCached(graphics, BASE);
         rings.reset(0);
@@ -65,6 +73,44 @@ class TestRingNativeSlotDispatch {
     }
 
     @AfterEach void cleanup() { TestEnvironment.resetAll(); }
+
+    @Test void pendingDeadPlayerAwardWaitsForItsVisitedNativeSlot() {
+        assertPendingAwardWaitsForItsNativeSlot(true);
+    }
+
+    @Test void pendingLivePlayerAwardWaitsForItsVisitedNativeSlot() {
+        assertPendingAwardWaitsForItsNativeSlot(false);
+    }
+
+    private void assertPendingAwardWaitsForItsNativeSlot(boolean dead) {
+        restoreRings(new RingSnapshot.AttractedRingEntry(true, 0, 144, 64,
+                0, 0, 0, 0, 0, 9, true, -1, 2, 3, 0));
+        player.setDead(dead);
+        int before = player.getRingCount();
+        var pending = rings.capture().attractedRings()[0];
+        assertEquals(2, rings.resolveNativeSlot(9).bucket(), "touch retains the old spin priority");
+        final Probe[] cutoff = new Probe[1];
+        cutoff[0] = add(4, () -> objects.overrideRemainingObjectLoopSlots(cutoff[0], 0));
+
+        step();
+        rings.update(0, player, 101, false);
+        rings.update(0, player, 101, false);
+        assertEquals(before, player.getRingCount(), "a truncated native walk cannot late-award its tail");
+        assertEquals(pending, rings.capture().attractedRings()[0]);
+        assertEquals(List.of(), admissions(objects));
+        verifyNoInteractions(audio);
+
+        objects.removeDynamicObject(cutoff[0]);
+        nextClock();
+        step();
+        assertEquals(before + 1, player.getRingCount(), "the actual ring invocation owns GiveRing");
+        assertEquals(102, rings.capture().attractedRings()[0].sparkleStartFrame());
+        assertEquals(List.of(new Admission(9, 1)), admissions(objects));
+        rings.update(0, player, 102, false);
+        assertEquals(before + 1, player.getRingCount(), "the late phase cannot repeat the same award");
+        verify(audio, times(1)).playSecondarySfx(GameSound.RING);
+        verifyNoMoreInteractions(audio);
+    }
 
     @Test void deadPlayerStillAllowsFlyingAndSparklingNativeSlotsToExecuteAndRewind() {
         restoreRings(attracted(0, 6, 144, false, 0, 0, 0),
@@ -530,7 +576,7 @@ class TestRingNativeSlotDispatch {
     private static RingSnapshot.AttractedRingEntry attracted(int pool, int slot, int x, boolean collected,
                                                               int mapping, int timer, int animationFrame) {
         return new RingSnapshot.AttractedRingEntry(true, pool, x, 64, 0, 0, 0, 0,
-                pool, slot, collected, -1, mapping, timer, animationFrame);
+                pool, slot, collected, collected ? 100 : -1, mapping, timer, animationFrame);
     }
     private static RingSnapshot with(RingSnapshot base, RingSnapshot.AttractedRingEntry[] entries) {
         return new RingSnapshot(base.collectedWords(), base.sparkleTimers(), base.placementCursorIndex(),

@@ -670,6 +670,10 @@ public class DefaultObjectServices implements ObjectServices {
 
     @Override
     public <T> T gameService(Class<T> type) {
+        if (worldSession != null) {
+            T worldService = com.openggf.game.session.WorldPlcLifecycleAccess.ownedService(worldSession, type);
+            if (worldService != null) return worldService;
+        }
         GameModule gm = gameModule();
         return gm != null ? gm.getGameService(type) : null;
     }

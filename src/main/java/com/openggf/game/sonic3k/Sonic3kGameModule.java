@@ -112,6 +112,46 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
                 S3kDataSelectManager::new);
     }
 
+    private final com.openggf.game.session.WorldPlcLifecycleFactory worldPlcFactory =
+            new com.openggf.game.session.WorldPlcLifecycleFactory() {
+                @Override public com.openggf.game.resources.PlcLifecycleService open(
+                        com.openggf.game.session.WorldSession world) {
+                    if (com.openggf.util.EngineCallerAccess.callerOutside(getClass())
+                            != com.openggf.game.session.WorldSession.class)
+                        throw new SecurityException("Native world PLC creation belongs to world construction");
+                    var owner = new Sonic3kLevelTitlePlcService(world.getDataSource());
+                    com.openggf.game.rewind.NativeRewindAdapterPublication.reserveWorldPlcCreation(world, this, owner);
+                    return owner;
+                }
+            };
+
+    private final com.openggf.game.internal.WorldRewindAdapterFactory worldDataFactory =
+            new com.openggf.game.internal.WorldRewindAdapterFactory() {
+                @Override public com.openggf.game.internal.NativePhysicalWorldData open(
+                        java.lang.invoke.MethodHandles.Lookup lookup,
+                        com.openggf.game.session.WorldSession world) {
+                    Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(getClass());
+                    if (lookup == null || !lookup.hasFullPrivilegeAccess() || lookup.lookupClass() != caller
+                            || caller != com.openggf.game.session.WorldSession.class
+                            || com.openggf.game.rewind.NativeRewindAdapterPublication.nativeRoot(
+                                    world.rootGameModule()) != Sonic3kGameModule.this)
+                        throw new SecurityException("World DATA construction belongs to the actual world constructor");
+                    var owner = com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.create(
+                            java.lang.invoke.MethodHandles.lookup(), this, world);
+                    com.openggf.game.rewind.NativeRewindAdapterPublication.reserveWorldDataCreation(
+                            java.lang.invoke.MethodHandles.lookup(), world, this, owner.dataRewindState());
+                    return owner;
+                }
+            };
+    private final com.openggf.game.internal.NativePhysicalLevelLoad.Writer worldDataWriter =
+            new com.openggf.game.internal.NativePhysicalLevelLoad.Writer() {
+                @Override public void clearFresh(com.openggf.game.internal.NativePhysicalLevelLoad.Clear invocation) {
+                    var owner = invocation.target(java.lang.invoke.MethodHandles.lookup(), this);
+                    owner.clearAtFreshLevel(invocation);
+                    invocation.handlerReturned(java.lang.invoke.MethodHandles.lookup(), this);
+                }
+            };
+
     private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
     /**
      * ROM {@code AIZ_vine_angle}, advanced by {@code ChangeRingFrame}
@@ -146,8 +186,6 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     private ObjectRegistry objectRegistry;
     private final Sonic3kBonusStageCoordinator bonusStageCoordinator = new Sonic3kBonusStageCoordinator();
     private Sonic3k activeGame;
-    private Sonic3kLevelTitlePlcService levelTitlePlcService;
-    private Sonic3kGameOverPlcService gameOverPlcService;
 
     @Override
     public String getIdentifier() {
@@ -163,14 +201,9 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     public Game createGame(Rom rom) {
         try {
             activeGame = new Sonic3k(rom, globalAnimationState);
-            var nemesisQueue = new com.openggf.level.resources.NemesisPlcServiceQueue();
-            gameOverPlcService = new Sonic3kGameOverPlcService(rom, nemesisQueue);
-            levelTitlePlcService = new Sonic3kLevelTitlePlcService(rom, nemesisQueue, gameOverPlcService);
             return activeGame;
         } catch (java.io.IOException e) {
             activeGame = null;
-            levelTitlePlcService = null;
-            gameOverPlcService = null;
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;
         }
@@ -325,7 +358,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
         // level retains native fixed SST dispatch below, but cannot inherit a
         // previously selected stock zone's camera/arrival controller.
         if (Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) {
-            levelEventManager.prepareInitialScreenObjects();
+            levelEventManager.prepareFreshScreenObjects();
         }
         InitialWaveSplashSstOwner waveOwner =
                 zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
@@ -496,7 +529,6 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
     public void resetModuleScopedState() {
         AizIntroArtLoader.reset();
         AizIntroTerrainSwap.reset();
-        if (levelTitlePlcService != null) levelTitlePlcService.resetForMissingSnapshot();
     }
 
     @SuppressWarnings("unchecked")
@@ -528,10 +560,25 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
             // second lives piece ($210E), which selects palette line 1.
             return (T) (com.openggf.game.internal.HudLivesNumberPaletteProvider) () -> 1;
         }
-        if (type == Sonic3kLevelTitlePlcService.class) return (T) levelTitlePlcService;
-        if (type == Sonic3kGameOverPlcService.class) return (T) gameOverPlcService;
-        if (type == com.openggf.game.resources.PlcLifecycleService.class)
-            return (T) levelTitlePlcService;
+        if (type == com.openggf.game.internal.WorldRewindAdapterFactory.class)
+            return type.cast(worldDataFactory);
+        if (type == com.openggf.game.internal.NativePhysicalLevelLoad.Writer.class)
+            return type.cast(worldDataWriter);
+        // No concrete owner alias: an explicit world and authenticated lifecycle are required.
+        if (type == com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.class) return null;
+        if (type == com.openggf.game.session.WorldPlcLifecycleFactory.class) {
+            return type.cast(worldPlcFactory);
+        }
+        if (type == com.openggf.game.internal.WorldTitleCardUpdate.class) {
+            return type.cast((com.openggf.game.internal.WorldTitleCardUpdate)
+                    com.openggf.game.sonic3k.titlecard.S3kTitleCardWorldAccess::update);
+        }
+        // A reused module cannot select a world. These aliases are available
+        // only through that world's injected services / explicit engine bridge.
+        if (type == Sonic3kLevelTitlePlcService.class
+                || type == Sonic3kGameOverPlcService.class
+                || type == com.openggf.game.resources.PlcLifecycleService.class)
+            return null;
         if (type == com.openggf.game.LevelInputOverlay.class) {
             return (T) (com.openggf.game.LevelInputOverlay) input -> {
                 var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
@@ -561,7 +608,7 @@ public class Sonic3kGameModule implements GameModule, com.openggf.game.internal.
 
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
-        return levelTitlePlcService == null ? List.of() : List.of(levelTitlePlcService);
+        return List.of(); // The world registers its PLC owner with core adapters.
     }
 
     @Override

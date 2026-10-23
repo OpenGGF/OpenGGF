@@ -78,6 +78,14 @@ public class HCZBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj_HCZBlock's loc_1F3CA calls SolidObjectFull2: its Player 2 dispatch
+        // has no player render_flags gate, and SolidObjectFull2_1P enters
+        // SolidObject_cont directly, bypassing the object's loc_1DF88 gate.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }

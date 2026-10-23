@@ -252,11 +252,10 @@ public class S3kSlotStageController {
     }
 
     public boolean consumeRewardRing(int carriedRingCount) {
-        if (carriedRingCount + stageState.rewardCounter() <= 0) {
+        // Obj_SlotSpike / loc_4C3CA tests live Ring_count, which already includes
+        // every prior grant/loss. rewardCounter records the net delta separately.
+        if (carriedRingCount <= 0) {
             return false;
-        }
-        if (stageState.rewardCounter() > 0) {
-            return stageState.decrementRewardCounter();
         }
         stageState.decrementRewardCounterUnchecked();
         return true;

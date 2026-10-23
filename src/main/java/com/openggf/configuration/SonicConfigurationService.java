@@ -731,6 +731,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
 		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
 		putDefault(SonicConfiguration.DISPLAY_HUD_ANCHOR, "DEFAULT");
+		putDefault(SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS, false);
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
 		putDefault(SonicConfiguration.DISPLAY_WINDOW_MODE, "WINDOWED");
 		putDefault(SonicConfiguration.DISPLAY_SCALING, "INTEGER");

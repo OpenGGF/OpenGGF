@@ -41,12 +41,16 @@ public final class CnzEggCapsuleInstance extends AbstractS3kUprightEggCapsuleIns
 
     @Override
     protected void updateAfterResultsStarted(int frameCounter, com.openggf.game.PlayableEntity player) {
-        if (services().gameState() != null && services().gameState().isEndOfLevelFlag()) {
+        if (completionContinuation == CompletionContinuation.CNZ_END_BOSS_SEQUENCE
+                && services().gameState() != null && services().gameState().isEndOfLevelFlag()) {
             // Obj_LevelResults has already published the global completion
             // state. The boss's loc_6E724 consumes that state directly; this
             // capsule callback only retires the engine continuation.
             notifyResultsComplete();
         }
+        // The Knuckles event-spawned capsule has no retained boss continuation.
+        // Native Obj_EggCapsule/Check_TailsEndPose never consumes End_of_level_flag;
+        // loc_521D2 must see the actual Obj_LevelResults publication itself.
     }
 
     @Override

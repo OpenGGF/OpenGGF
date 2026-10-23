@@ -22,14 +22,27 @@ import java.util.Objects;
 public final class Sonic3kGameOverPlcService implements PlcLifecycleService {
     private final Rom rom;
     private final NemesisPlcServiceQueue queue;
+    private final Sonic3kLevelTitlePlcService worldOwner;
 
     Sonic3kGameOverPlcService(Rom rom, NemesisPlcServiceQueue queue) {
         this.rom = Objects.requireNonNull(rom);
         this.queue = Objects.requireNonNull(queue);
+        this.worldOwner = null;
+    }
+
+    /** World-bound delegate borrows its facade's lazy ROM path and recipe-aware FIFO. */
+    Sonic3kGameOverPlcService(Sonic3kLevelTitlePlcService worldOwner) {
+        this.worldOwner = Objects.requireNonNull(worldOwner);
+        this.rom = null;
+        this.queue = null;
     }
 
     /** Clears both queued and active work, then submits the ROM's PLC3. */
     public void beginGameOver() throws IOException {
+        if (worldOwner != null) {
+            worldOwner.beginGameOverEvent();
+            return;
+        }
         var definition = Sonic3kPlcLoader.parsePlc(rom, 3);
         var patterns = NemesisPlcPatternCounts.derive(rom, definition);
         // Load_PLC_2 calls Clear_Nem_Queue, including the active decoder's
@@ -40,7 +53,7 @@ public final class Sonic3kGameOverPlcService implements PlcLifecycleService {
     }
 
     public boolean isBusy() {
-        return queue.isBusy();
+        return worldOwner != null ? worldOwner.isBusy() : queue.isBusy();
     }
 
     @Override
@@ -50,11 +63,13 @@ public final class Sonic3kGameOverPlcService implements PlcLifecycleService {
             // VInt_8 -> Do_Updates -> Process_Nem_Queue_2, three patterns.
             // Pause_Loop's VInt_10 falls into VInt_8 outside special stages
             // (sonic3k.asm:719-723, 806-815, 1572-1574, 2200-2206).
-            queue.servicePatterns(3);
+            if (worldOwner != null) worldOwner.serviceEventReadiness(3);
+            else queue.servicePatterns(3);
         } else if (phase == PlcLifecyclePhase.PALETTE_FADE) {
             // Blocking fades arm VInt_12 -> Process_Nem_Queue, six patterns
             // (sonic3k.asm:871-874, 2174-2189, 4938-4943).
-            queue.servicePatterns(6);
+            if (worldOwner != null) worldOwner.serviceEventReadiness(6);
+            else queue.servicePatterns(6);
         }
     }
 
@@ -70,7 +85,8 @@ public final class Sonic3kGameOverPlcService implements PlcLifecycleService {
             // LevelLoop prepares after Process_Sprites; blocking fade loops
             // also prepare after their VBlank. Pause_Loop has no such call
             // (sonic3k.asm:7916-7940, 4938-4943, 1572-1617).
-            queue.prepareHead();
+            if (worldOwner != null) worldOwner.prepareEventReadiness();
+            else queue.prepareHead();
         }
     }
 }

@@ -30,8 +30,13 @@ Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN an
 There are no lives: after a death the animation plays (press jump after half a second to skip
 the rest), the act reloads straight from its start without a title card, and once the level is
 visible a 3-2-1 countdown holds control before the fresh attempt. Solo and room runs behave the
-same; neither the fade-in nor the countdown is part of the attempt's time. Acts start without
+same; neither the fade-in nor the countdown is part of the attempt's time. In Sonic 3 & Knuckles
+this countdown and a room's round-start countdown use Death Egg Zone's tunnel-launcher sounds: a
+ready beep as each of 3, 2 and 1 appears and the launch sound on GO. Acts start without
 their intro cutscene (Angel Island 1 begins on the beach), so the clock measures the race.
+The game's own HUD shows that clock: its TIME counts the attempt (first input to finish), to the
+hundredth (`0:00.00`), in each game's own HUD digits, and the Time Attack panel beside it shows
+only the best time and the latest split.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
 A best save validates the ghost and its input recording before publication. The
@@ -104,11 +109,15 @@ and restarts its act on completion; a death reloads at once at the fence spawn w
 counter, game over or countdown. A
 room's lobby that cannot load or faults falls back to the menu on its own for that room.
 
-The menu owns the controller while it is shown (`RunHandle.holdControls`). It draws on a dark
-translucent backing panel in the multiplayer HUD's panel style (`HudTextLayout.FILL` alpha), so
-the level stays visibly alive behind it, and covers the level (`RunHandle.setLevelCovered`): the
-stock HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). **READY UP** marks the
-player ready (`SetReady`; the room shows a READY badge and a ready line). Once ready, Start or Enter
+The menu owns the controller while it is shown (`RunHandle.holdControls`). It is a set of cards
+in the multiplayer HUD's panel style (`RaceLobbyScreen`): a header with the room, the next track
+and whether times are verified; the players with a ready box, HOST/NEW badge and character; the
+chat (or, between rounds, the track vote or the last round's podium); and the menu, headed by the
+ready rule with who the room is still waiting for. Cards size to their content, so the level
+stays in view around them, and the menu covers the level (`RunHandle.setLevelCovered`): the stock
+HUD and ghost nameplates are not drawn under it (presentation only; the timer runs). Each
+player's identity tag, which tells two players with one name apart, is on the chat and invite
+page. **READY UP** marks the player ready (`SetReady`; their ready box fills). Once ready, Start or Enter
 on the lobby's own page hides the menu and hands the controller to the character; pressing it
 again brings the menu back, like a pause menu. While ready, A (Space) confirms menu actions,
 because Start/Enter is the toggle; text editors keep Enter. The run plays behind the still-active

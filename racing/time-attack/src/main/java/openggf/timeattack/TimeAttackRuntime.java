@@ -67,6 +67,11 @@ public final class TimeAttackRuntime implements RunHost {
         default boolean mayRetry() {
             return true;
         }
+
+        /** The companion's own countdown digit now on screen (a round's start), or 0 for none. */
+        default int countdownDigit() {
+            return 0;
+        }
     }
 
     /** Multiplayer bridge for spawn-anchored attempt lifecycle and frame streaming. */
@@ -127,6 +132,7 @@ public final class TimeAttackRuntime implements RunHost {
     private final java.util.ArrayDeque<GhostFrame> pendingFrames = new java.util.ArrayDeque<>();
     private boolean holdingFrames;
     private int catchUpCounter;
+    private final CountdownCues countdownCues = new CountdownCues();
     private java.util.function.BiFunction<String, String, com.openggf.net.identity.PlayerAppearance> lookSource =
             (gameId, character) -> com.openggf.net.identity.PlayerAppearance.STOCK;
 
@@ -242,6 +248,18 @@ public final class TimeAttackRuntime implements RunHost {
         if (handle != null && launch != null) {
             // The engine starts every run with the stock look; recolour the player's own character.
             handle.setPlayerAppearance(lookSource.apply(launch.gameId(), launch.character()));
+        }
+        if (handle != null) {
+            // The game's own HUD shows the attempt's clock, to the hundredth (0:00.00).
+            handle.setHudTimeHundredths(true);
+            publishHudTime();
+        }
+    }
+
+    /** The attempt's clock in the stock HUD's TIME (first input to finish, as the room times it). */
+    private void publishHudTime() {
+        if (handle != null) {
+            handle.setHudTime(attempt == null ? 0 : attempt.elapsedDisplayFrames());
         }
     }
 
@@ -464,11 +482,13 @@ public final class TimeAttackRuntime implements RunHost {
         voidCurrentAttempt();
         clearHeldFrames();
         restartCountdownFrames = 0;
+        countdownCues.reset();
         restartLeadIn = start.deathRestart();
         leadInSteps = 0;
         holdInputThisStep = false;
         holdingFrames = restartLeadIn;
         beginAttemptForTest(start.determinismFingerprint());
+        publishHudTime();
         if (start.debugAssisted()) {
             // An overlay already visible before spawn is as much an advantage as
             // toggling one on mid-run, so taint immediately.
@@ -479,8 +499,27 @@ public final class TimeAttackRuntime implements RunHost {
         }
     }
 
+    /** Plays the game's countdown sounds by driver ID; unset, the countdowns are silent. */
+    public void setSfxPlayer(java.util.function.IntConsumer player) {
+        countdownCues.setPlayer(player);
+    }
+
     @Override
     public boolean admitStep(RunInput input) {
+        boolean admitted = admitStepHeld(input);
+        // The lead-in admits steps with input held; only a step with control releases the run.
+        countdownCues.observe(launch == null ? null : launch.gameId(), shownCountdownDigit(),
+                admitted && !holdInputThisStep);
+        return admitted;
+    }
+
+    /** The countdown digit drawn over the run: a fast restart's, else the companion's round start. */
+    private int shownCountdownDigit() {
+        int digit = countdownDigit();
+        return digit == 0 && companion != null ? companion.countdownDigit() : digit;
+    }
+
+    private boolean admitStepHeld(RunInput input) {
         // The companion drains the network first, so a window that closed this frame refuses
         // the retry key.
         FrameCompanion partner = companion;
@@ -535,6 +574,7 @@ public final class TimeAttackRuntime implements RunHost {
         if (restartLeadIn) {
             leadInSteps++;
         }
+        publishHudTime();
         if (companion != null) {
             companion.afterStep();
         }
@@ -547,6 +587,9 @@ public final class TimeAttackRuntime implements RunHost {
 
     @Override
     public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+        // A round's count also runs over the title card, when the run takes no steps: sound each
+        // digit as it is drawn. Only a released step (admitStep) says go.
+        countdownCues.observe(launch == null ? null : launch.gameId(), shownCountdownDigit(), false);
         TimeAttackHud.draw(canvas, hudState());
         if (companion != null) {
             companion.drawOverlay(canvas, levelWidth, localCentreX);
@@ -610,6 +653,7 @@ public final class TimeAttackRuntime implements RunHost {
         attemptListener = null;
         extraGhostSupplier = null;
         restartCountdownFrames = 0;
+        countdownCues.reset();
         restartLeadIn = false;
         holdInputThisStep = false;
         clearHeldFrames();

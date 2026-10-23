@@ -1,11 +1,14 @@
 package com.openggf.level.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.objects.HCZSnakeBlocksObjectInstance;
 import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.Test;
 
+import java.util.BitSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,10 +16,95 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestObjectManagerVerticalPlacement {
+
+    @Test
+    void snakeCoarseCullReleasesPlacementForCameraReturnAndRewind() {
+        var nativeViewport = mock(SonicConfigurationService.class);
+        when(nativeViewport.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS)).thenReturn((short) 320);
+        when(nativeViewport.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS)).thenReturn((short) 224);
+        Camera camera = new Camera(nativeViewport);
+        camera.setMinY((short) 0);
+        camera.setX((short) 0x2800);
+        camera.setY((short) 0x0600);
+        ObjectSpawn spawn = new ObjectSpawn(0x2848, 0x0738, 0x67, 0xD8, 1,
+                false, 0x2738, 0);
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override public ObjectInstance create(ObjectSpawn entry) {
+                return new HCZSnakeBlocksObjectInstance(entry);
+            }
+            @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
+            @Override public String getPrimaryName(int objectId) { return "HCZSnakeBlocks"; }
+            @Override public ObjectSlotLayout objectSlotLayout() { return ObjectSlotLayout.SONIC_3K; }
+        };
+        ObjectManager manager = new ObjectManager(List.of(spawn), registry, -1, null, null,
+                null, camera, new StubObjectServices() {
+                    @Override public Camera camera() { return camera; }
+                });
+        manager.enableExecThenLoadPlacement();
+        manager.enablePermanentDestroyLatch();
+        manager.reset(0x2800);
+        var original = assertInstanceOf(HCZSnakeBlocksObjectInstance.class,
+                manager.getActiveObjects().iterator().next());
+        assertEquals(1, manager.getActiveObjects().size());
+
+        // The native saved base remains on the allowed $280 fringe, while
+        // this right-edge phase animates into the next $300 bucket. A second
+        // generic current-X cull must not override the object's base-X check.
+        camera.setX((short) 0x2600);
+        manager.update(0x2600, null, List.of(), 0, false);
+        assertEquals(0x2888, original.getX(), "actual right-edge motion phase");
+        assertFalse(original.isDestroyed(), "the native saved-base predicate still admits this object");
+        assertEquals(1, manager.getActiveObjects().size(), "animated X must not add a second lifetime gate");
+        assertTrue(manager.getActiveObjects().contains(original));
+        assertEquals(1, manager.getAllocatedSlotCount());
+
+        // ExecuteObjects runs the object's own coarse cull before Load_Sprites.
+        // HCZSnakeBlocks_DeleteAndClearRespawn clears bit7 before deleting
+        // (sonic3k.asm:50957-50964), so this is not a permanent destruction.
+        camera.setX((short) 0x2B80);
+        manager.update(0x2B80, null, List.of(), 1, false);
+        assertTrue(original.isDestroyed(), "the real snake's coarse cull must execute");
+        assertEquals(0, manager.getAllocatedSlotCount(), "the retired SST slot is released");
+        assertTrue(manager.getActiveObjects().isEmpty());
+        assertFalse(BitSet.valueOf(manager.capturePersistentRespawn().destroyedInWindowBits()).get(0),
+                "offscreen retirement must not latch the layout entry as permanently destroyed");
+        var unloaded = manager.rewindSnapshottable().capture();
+
+        int expectedX = 0, expectedY = 0, expectedSlot = -1;
+        ObjectInstance previous = original;
+        for (int cycle = 0; cycle < 3; cycle++) {
+            if (cycle > 0) {
+                camera.setX((short) 0x2B80);
+                manager.rewindSnapshottable().restore(unloaded);
+                assertTrue(manager.getActiveObjects().isEmpty(), "restored post-cull boundary");
+            }
+            camera.setX((short) 0x2800);
+            manager.update(0x2800, null, List.of(), 2, false);
+            manager.update(0x2800, null, List.of(), 3, false);
+            assertEquals(1, manager.getActiveObjects().size(), "camera return reloads exactly one snake");
+            var returned = assertInstanceOf(HCZSnakeBlocksObjectInstance.class,
+                    manager.getActiveObjects().iterator().next());
+            assertNotSame(original, returned);
+            assertNotSame(previous, returned, "the layout gets a fresh live instance");
+            assertFalse(returned.isDestroyed());
+            assertTrue(returned.getSlotIndex() >= 0);
+            if (cycle == 0) {
+                expectedX = returned.getX(); expectedY = returned.getY(); expectedSlot = returned.getSlotIndex();
+            } else {
+                assertEquals(expectedX, returned.getX(), "restored motion phase X");
+                assertEquals(expectedY, returned.getY(), "restored motion phase Y");
+                assertEquals(expectedSlot, returned.getSlotIndex(), "restored native allocation order");
+            }
+            previous = returned;
+        }
+    }
 
     @Test
     void nonCounterPlacementDefersObjectUntilCameraYWindowIncludesSpawn() {

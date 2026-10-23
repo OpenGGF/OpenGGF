@@ -829,6 +829,44 @@ class TestPlcFrameLifecycleCoordinator {
         assertFalse(events.contains("failed-publication"));
     }
 
+    @Test
+    void missingHeldPatternVblankDiscardsCompletionEvenIfTheFrameIsLaterClosed() {
+        PlcLifecycleService service = mock(PlcLifecycleService.class,
+                org.mockito.Mockito.withSettings().extraInterfaces(
+                        com.openggf.game.internal.WorldPlcPatternPublication.class));
+        when(service.hasPreparationBoundary(PlcLifecyclePhase.ORDINARY_LEVEL)).thenReturn(true);
+        var coordinator = new PlcFrameLifecycleCoordinator(service);
+        coordinator.markRepresentedIterationDefersLoopTailPreparation();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        var failedFrame = new java.util.concurrent.atomic.AtomicReference<
+                PlcFrameLifecycleCoordinator.PlcLifecycleFrame>();
+        var completions = new java.util.concurrent.atomic.AtomicInteger();
+        IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
+                coordinator.runLogicalIteration(() -> { }, frame -> {
+                    failedFrame.set(frame);
+                    frame.claim(PlcLifecyclePhase.LAG);
+                    coordinator.afterConsumedIteration(completions::incrementAndGet);
+                    return null;
+                }));
+        assertEquals("missing physical VBlank before held Nemesis Init", failure.getMessage());
+        assertEquals(0, completions.get());
+        org.mockito.Mockito.verify(service, org.mockito.Mockito.never())
+                .prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+
+        // Closing the originally failed frame later cannot revive its discarded history work.
+        failedFrame.get().dispatchGameVBlank(() -> { }, null, null);
+        failedFrame.get().finish();
+        org.mockito.Mockito.verify(service).prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertEquals(0, completions.get());
+        coordinator.afterConsumedIteration(completions::incrementAndGet);
+        assertEquals(1, completions.get(), "new completion after the closed frame remains valid");
+    }
+
     private static void observeSonicDplc(
             DynamicArtLifecycleService dynamicArt, int mappingFrame) {
         dynamicArt.observePlayerDplc(

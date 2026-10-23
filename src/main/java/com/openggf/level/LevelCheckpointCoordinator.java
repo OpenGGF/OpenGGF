@@ -69,6 +69,17 @@ final class LevelCheckpointCoordinator {
         return state;
     }
 
+    /**
+     * InitObjectSystem retains the kept table until the later camera snap.
+     * Read it for InitRings without consuming the object-placement restore.
+     * ROM sub_EB1A/loc_EB30 preserves Ring_status_table with Respawn_table_keep.
+     */
+    long[] ringStatusTableForLoad(long[] bigRingReturnRingStatusTable) {
+        return persistentRespawnForCameraSnap != null
+                ? persistentRespawnForCameraSnap.ringStatusBits()
+                : bigRingReturnRingStatusTable;
+    }
+
     PersistentRespawnState consumePersistentRespawnForCameraSnap() {
         PersistentRespawnState state = persistentRespawnForCameraSnap;
         persistentRespawnForCameraSnap = null;

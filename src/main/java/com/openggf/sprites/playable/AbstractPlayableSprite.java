@@ -2075,12 +2075,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected void onLevelReset() { }
 
         private void publishGroundTransition(boolean changed, boolean landed) {
-                if (!changed) return;
-                boolean airborne = air;
-                invokeCharacterCallback(() -> {
-                        onGroundStateChanged(airborne);
-                        if (landed) onLanded();
-                });
+                PlayableSpriteController.publishGroundTransition(this, changed, landed, air, characterCallbackInvoker);
         }
 
         private void invokeCharacterCallback(Runnable callback) {

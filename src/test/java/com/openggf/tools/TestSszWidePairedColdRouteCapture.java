@@ -253,7 +253,8 @@ class TestSszWidePairedColdRouteCapture {
                     session.step(movie.getFrame(frame + n)); drawing.draw(session);
                     assertSame(savedLevel, level.getCurrentLevel(), "same-world replay " + pending);
                     assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
-                    assertFalse(session.player().getDead());
+                    assertFalse(session.player().getDead(), "FIRST_FORWARD " + pending
+                            + " frame=" + frame + " n=" + n + " input=" + (frame + n));
                     assertTrue(GameServices.gameState().getLives() >= lives);
                     assertNativePair(session);
                 }
@@ -266,7 +267,8 @@ class TestSszWidePairedColdRouteCapture {
                         session.step(movie.getFrame(frame + n)); drawing.draw(session);
                         assertSame(savedLevel, level.getCurrentLevel());
                         assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
-                        assertFalse(session.player().getDead());
+                        assertFalse(session.player().getDead(), "REPLAY " + pending
+                                + " frame=" + frame + " n=" + n + " input=" + (frame + n));
                         assertTrue(GameServices.gameState().getLives() >= lives);
                         assertNativePair(session);
                     }

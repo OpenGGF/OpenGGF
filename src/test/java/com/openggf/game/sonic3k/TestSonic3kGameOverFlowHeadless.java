@@ -145,8 +145,8 @@ class TestSonic3kGameOverFlowHeadless {
     void pendingQueueAndCardReconstructionPreserveGameSaveOrdering() {
         GameStateManager gameState = GameServices.gameState();
         while (gameState.getLives() > 1) gameState.loseLife();
-        var plc = GameServices.level().getGameModule().getGameService(Sonic3kGameOverPlcService.class);
-        var queueOwner = GameServices.level().getGameModule().getGameService(Sonic3kLevelTitlePlcService.class);
+        var plc = GameServices.level().getObjectManager().getObjectServices().gameService(Sonic3kGameOverPlcService.class);
+        var queueOwner = GameServices.level().getObjectManager().getObjectServices().gameService(Sonic3kLevelTitlePlcService.class);
         assertNotNull(plc);
         assertNotNull(queueOwner);
         var registry = fixture.gameplayMode().getRewindRegistry();
@@ -203,8 +203,8 @@ class TestSonic3kGameOverFlowHeadless {
 
     private void assertNativeArtGate(S3kGameOverCardObjectInstance word,
                                      S3kGameOverCardObjectInstance over) {
-        var plc = GameServices.level().getGameModule().getGameService(Sonic3kGameOverPlcService.class);
-        var queueOwner = GameServices.level().getGameModule().getGameService(Sonic3kLevelTitlePlcService.class);
+        var plc = GameServices.level().getObjectManager().getObjectServices().gameService(Sonic3kGameOverPlcService.class);
+        var queueOwner = GameServices.level().getObjectManager().getObjectServices().gameService(Sonic3kLevelTitlePlcService.class);
         assertNotNull(plc);
         assertNotNull(queueOwner);
         assertEquals(new NemesisPlcQueueSnapshot.Entry(0x191DE4, 0x79C, 34, 34),

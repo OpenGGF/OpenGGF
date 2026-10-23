@@ -91,6 +91,23 @@ host's pacing clock start when the player regains control. Host finish validatio
   Supporting it needs a hub-visible respawn marker and a bounded discontinuity and pacing
   allowance, which is a protocol change.
 
+## Countdown sounds (2026-10-23)
+
+User request: in S3K the 3-2-1-GO should sound like the Death Egg Zone object that counts down and
+fires the player through the light rings. That is `Obj_DEZTunnelLauncher`: `sfx_LaunchReady` ($A7)
+when the player is grabbed and on each of the next two 60-frame ticks, then `sfx_LaunchGo` ($AD)
+as it launches (`Obj_DEZTunnelLauncher_Main`, sonic3k.asm:94270-94291; `sub_48370`,
+sonic3k.asm:94386-94393). `CountdownCues` maps that onto both countdowns: a ready as each of 3, 2
+and 1 is drawn, and go on the first step that releases the run, so leaving mid-count is silent.
+S1 and S2 have no countdown sound of their own and stay silent.
+
+- The runtime follows the digit from `admitStep` and from `drawOverlay`. A round's count also runs
+  over the title card, when the run takes no steps: the first engine capture (round start into
+  AIZ1) heard only the 1 and GO, because 3 and 2 were drawn over the card. Drawing never plays go.
+- Engine evidence (`lobby s3k profile` capture, AIZ1 round start, 48 kHz audio searched for the
+  rendered $A7/$AD): ready at frames 2242, 2279 and 2339, go at 2398; the 3 first appears at
+  frame 2241. Sounds play through the scene's `SceneAudio.playSfx`, the running game's driver.
+
 ## Known limits
 
 - First slice (superseded by the follow-up above): the S3K countdown showed the player over a

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -18,6 +19,18 @@ public class Sonic3kPointsObjectInstance extends AbstractPointsObjectInstance {
 
     public Sonic3kPointsObjectInstance(ObjectSpawn spawn, ObjectServices services, int points) {
         super(spawn, "S3KPoints", services, points);
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // Obj_EnemyScore (sonic3k.asm, pinned skdisasm 044fa46): priority(a0) = $80.
+        return RenderPriority.fromS3kWord(0x80);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // Obj_EnemyScore: make_art_tile(ArtTile_StarPost,0,1), independent of the bucket.
+        return true;
     }
 
     @Override

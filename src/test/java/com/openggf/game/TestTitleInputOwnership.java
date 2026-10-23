@@ -97,6 +97,8 @@ class TestTitleInputOwnership {
         f.input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
         f.title.update(f.input);
         f.release(GLFW_KEY_ESCAPE);
+        assertEquals(TitleHubNavigation.Zone.CARD, f.title.hubZoneForTest());
+        assertFalse(f.title.blocksGlobalShortcuts(), "Escape must return input ownership to the game card");
         assertFalse(TitleInputOwnership.routeCapture(GameMode.MASTER_TITLE_SCREEN, f.title, updateChord),
                 "Returning to game selection must not trigger a suppressed held chord");
         f.release(GLFW_KEY_C);
@@ -139,6 +141,7 @@ class TestTitleInputOwnership {
             title.update(input);
             release(GLFW_KEY_DOWN);
             assertEquals(TitleHubNavigation.Zone.ACTIONS, title.hubZoneForTest());
+            assertTrue(title.blocksGlobalShortcuts(), "The actual actions pane must own title input");
         }
 
         void release(int key) {

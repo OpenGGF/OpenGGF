@@ -19,6 +19,19 @@ class TestRewindSnapshotDiffDynamicIdentity {
     }
 
     @Test
+    void capturedPlayerRoleRemainsComparedWithoutJavaIncarnationReferences() {
+        var base = entry("Shield", 100, 1, false);
+        var p1 = new DynamicObjectEntry(base.className(), base.spawn(), base.slotIndex(), base.state(), null,
+                base.objectId(), base.ownerModId(), base.rewindableAuxiliary(),
+                com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        var p2 = new DynamicObjectEntry(base.className(), base.spawn(), base.slotIndex(), base.state(), null,
+                base.objectId(), base.ownerModId(), base.rewindableAuxiliary(),
+                com.openggf.game.rewind.identity.PlayerRefId.sidekick(0));
+        assertEquivalent(snapshot(p1), snapshot(p1));
+        assertDifferent(snapshot(p1), snapshot(p2), "playerOwnerId");
+    }
+
+    @Test
     void sameSlotMemberCannotBeDroppedOrDuplicated() {
         var insta = entry("InstaShield", 100, 1, false);
         var bubble = entry("BubbleShield", 100, 450, false);

@@ -73,6 +73,43 @@ class TestHudPresentationRuntime {
     }
     @AfterEach void cleanup() { EngineServices.configure(previous); }
 
+    @Test void optionalTimeFormatResizesTheOwnedPlaqueAndReplaysWithinItsBounds(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) {
+        HudProfileAccess.install(hud, new HudProfile(List.of(new HudRow(true,
+                HudLabel.TIME, HudMetric.TIME, 16, 24, 56, 24, 4, HudWarningPolicy.NONE))));
+        activate(BOUNCE, 7);
+        assertEquals(32, runtime.capture().pairs().getFirst().readout().valueWidth());
+        assertEquals(68, runtime.capture().plaque().width(), .001);
+
+        HudProfileAccess.setHostTime(hud, 119, true);
+        tick();
+        assertEquals(56, runtime.capture().pairs().getFirst().readout().valueWidth());
+        assertEquals(92, runtime.capture().plaque().width(), .001);
+        var frame = prepare();
+        for (int i = 0; i < 350; i++) {
+            tick();
+            assertWithinViewport(project(frame), 320);
+        }
+        var saved = runtime.capture();
+        for (int i = 0; i < 8; i++) tick();
+        var forward = runtime.capture();
+        runtime.restore(saved);
+        for (int i = 0; i < 8; i++) tick();
+        assertEquals(forward, runtime.capture(), "readout bounds retain the owned forward phase");
+
+        HudProfileAccess.setHostTime(hud, -1, false);
+        tick();
+        assertEquals(32, runtime.capture().pairs().getFirst().readout().valueWidth());
+        assertEquals(68, runtime.capture().plaque().width(), .001);
+        var config = com.openggf.configuration.SonicConfigurationService.createStandalone(directory);
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS, true);
+        HudProfileAccess.applyDisplaySettings(hud, config);
+        tick();
+        assertEquals(56, runtime.capture().pairs().getFirst().readout().valueWidth());
+        assertEquals(92, runtime.capture().plaque().width(), .001);
+        assertEquals(0, level.getTimerFrames(), "presentation cannot advance gameplay time");
+    }
+
     @Test void bounceMovesOneCompactPlaqueAndReflectsEveryRowTogetherInNativeAndWideViewports() {
         for (int width : new int[]{320,400,640}) {
             graphics.setProjectionWidth(width); hud.setViewportWidth(width);

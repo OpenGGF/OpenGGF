@@ -303,15 +303,15 @@ class TestSecondStrikeCheckpointGameplay {
                         driver.picture("native-EGGMAN-truthful-icon-visible"); eggmanVisible = true;
                     }
                 }
-                boolean effectBefore = eggman != null && (boolean) nativeValue(eggman, "effectApplied");
+                boolean effectBefore = eggman != null && eggmanContentsApplied(eggman);
                 driver.step("ordinary-original-hazard" + hazardIndex, broken ? 0 : steer(targetX), !broken && jump);
-                if (eggman != null && !effectBefore && (boolean) nativeValue(eggman, "effectApplied") && player().getDead())
+                if (eggman != null && !effectBefore && eggmanContentsApplied(eggman) && player().getDead())
                     eggmanCommittedDeath = true;
                 assertEquals(BonusStageType.NONE, GameServices.bonusStage().getActiveType(), "do not enter the earned invitation");
                 assertEquals(GameMode.LEVEL, session.loop().getCurrentGameMode());
             }
             if (eggman != null) driver.record("actual-monitor494-broken" + nativeValue(eggman, "broken")
-                    + "-effectApplied" + nativeValue(eggman, "effectApplied"), "-");
+                    + "-effectApplied" + eggmanContentsApplied(eggman), "-");
             assertTrue(player().getDead(), "ordinary original-hazard approach must cause death; inspect CSV");
             if (continuation) {
                 assertTrue(Math.abs(player().getCentreX() - ceilingSpike.getX()) <= 64);
@@ -320,7 +320,7 @@ class TestSecondStrikeCheckpointGameplay {
             } else {
                 assertNotNull(eggman); assertEquals("EGGMAN", nativeValue(eggman, "type").toString());
                 assertEquals(true, nativeValue(eggman, "broken"));
-                assertEquals(true, nativeValue(eggman, "effectApplied"), "the actual native monitor payload must have caused the death");
+                assertEquals(true, eggmanContentsApplied(eggman), "the actual native monitor payload must have caused the death");
                 assertTrue(eggmanVisible, "actual readable ROM monitor must precede its damage");
                 assertTrue(eggmanCommittedDeath, "fail if death precedes the native monitor payload commit");
                 driver.record("native-EGGMAN-effectApplied-false-to-true-death", "-");
@@ -535,6 +535,20 @@ class TestSecondStrikeCheckpointGameplay {
 
     private static int invitationStars() {
         return GameServices.level().getObjectManager().activeObjectsOfType(Sonic3kStarPostBonusStarChild.class).size();
+    }
+
+    /**
+     * Obj_MonitorContents owns the payload as an independent object
+     * (docs/skdisasm/sonic3k.asm:40645-40657); observe the contents that the
+     * actual shell allocated at its own x, never the shell's inherited state.
+     */
+    private static boolean eggmanContentsApplied(Sonic3kMonitorObjectInstance shell) throws Exception {
+        for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (object.getClass().getName().endsWith("$MonitorContentsSlot") && object.getX() == shell.getX()
+                    && "EGGMAN".equals(nativeValue(object, "type").toString())
+                    && (boolean) nativeValue(object, "effectApplied")) return true;
+        }
+        return false;
     }
 
     /** Observe the actual native producer; never edit its type, effect or timers. */

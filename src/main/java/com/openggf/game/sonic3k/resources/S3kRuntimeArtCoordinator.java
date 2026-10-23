@@ -118,15 +118,49 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
                 throw unavailable;
             return physical.enqueue(services.rom(), source, destinationVramBytes);
         }
-        // Both facades represent the same four-entry native FIFO. A full
-        // timing-only predecessor bank must reject before physical mutation.
-        if (!owner.moduleQueue.hasCapacity()) return false;
-        if (!physical.enqueue(services.rom(), source, destinationVramBytes)) return false;
-        com.openggf.game.sonic3k.Sonic3kPlcLoader.bindRuntimePatternDmaTarget(physical, services);
-        var handle = owner.moduleQueue.queue(services.rom(), source, destinationVramBytes / 32);
-        bindPatternModule(services, handle);
+        var handle = owner.queuePairedPatternModule(services, source, destinationVramBytes);
+        if (handle == null) return false;
         owner.patternTransfer.claimAutomatically(handle);
         return true;
+    }
+
+    /**
+     * Native physical request whose provider retains and claims the returned handle.
+     * Null means either native FIFO is full; no request was admitted. Unlike a
+     * global producer, this path never installs a second, automatic claim owner.
+     */
+    public static HardwareWorkHandle queueRetainedPatternModule(ObjectServices services,
+            int source, int destinationVramBytes) throws java.io.IOException {
+        return from(services).queuePairedPatternModule(services, source, destinationVramBytes);
+    }
+
+    private HardwareWorkHandle queuePairedPatternModule(ObjectServices services,
+            int source, int destinationVramBytes) throws java.io.IOException {
+        var physical = Objects.requireNonNull(services.kosinskiModuleQueue(),
+                "Native module has no physical queue");
+        if (destinationVramBytes < 0 || destinationVramBytes > 0xFFE0
+                || (destinationVramBytes & 31) != 0) {
+            throw new IllegalArgumentException("Native module destination must be a VRAM tile");
+        }
+        // Both facades represent the same four-entry native FIFO. Reject before
+        // either mutation, including timing-only predecessors with no journal.
+        if (!moduleQueue.hasCapacity() || physical.queuedArchiveCount()
+                == com.openggf.level.resources.KosinskiModuleQueue.CAPACITY) return null;
+        // ROM inspection is preparation, not physical header initialization.
+        // Its I/O/shape failures must precede physical enqueue. Later physical
+        // entries still retain raw source/destination until their native shift.
+        var prepared = moduleQueue.prepareSubmission(
+                services.rom(), source, destinationVramBytes / 32, false);
+        patternTransfer.attach(physical); // Reject a different session owner before enqueue.
+        com.openggf.game.sonic3k.Sonic3kPlcLoader.bindRuntimePatternDmaTarget(physical, services);
+        // Physical header/ROM checks precede the actual logical submission;
+        // even its ordinal-exhaustion guard cannot strand a physical entry.
+        var handle = com.openggf.level.resources.KosModuleTransferAccess.enqueuePaired(
+                physical, services.rom(), source, destinationVramBytes,
+                () -> moduleQueue.submitPrepared(prepared));
+        if (handle == null) return null;
+        patternTransfer.bind(physical, handle, prepared.descriptor());
+        return handle;
     }
 
     /** Existing VInt DMA service is the only ordinary publication authority. */

@@ -5,8 +5,10 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -29,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestAizFlippingBridgeRewind {
 
@@ -120,14 +125,108 @@ class TestAizFlippingBridgeRewind {
                 "AllocateObjectAfterCurrent must reserve the first free slot after the bridge");
     }
 
+    @Test
+    void flippingBridgeSoundUsesTheLevelClockForBothDirections() {
+        // ROM $2AAB4/$2AADC: move.b ($FE05).w,d0 / addq.b #3,d0 /
+        // andi.b #7,d0. $FE05 is Level_frame_counter's low byte. Both
+        // forward and reverse segment updates request sfx_GlideLand ($4C).
+        int[][] clockCases = {
+                {0x0105, 0x0200, 1},
+                {0x0104, 0x0205, 0},
+                {0x0106, 0x0205, 0}
+        };
+        for (int renderFlags : new int[]{0, 1}) {
+            for (int[] clocks : clockCases) {
+                LevelManager levelManager = mock(LevelManager.class);
+                when(levelManager.getFrameCounter()).thenReturn(clocks[0]);
+                List<Integer> sounds = new ArrayList<>();
+                Harness harness = Harness.create(levelManager, sounds);
+                AizFlippingBridgeObjectInstance bridge = soundBridge(harness, renderFlags);
+
+                bridge.update(clocks[1], null);
+
+                assertEquals(clocks[2] == 1 ? List.of(Sonic3kSfx.GLIDE_LAND.id) : List.of(), sounds,
+                        "level clock $" + Integer.toHexString(clocks[0])
+                                + ", V-int $" + Integer.toHexString(clocks[1])
+                                + ", render flags " + renderFlags);
+            }
+        }
+    }
+
+    @Test
+    void flippingBridgeSoundStillRequiresAnimationTimerExpiry() {
+        for (int renderFlags : new int[]{0, 1}) {
+            LevelManager levelManager = mock(LevelManager.class);
+            when(levelManager.getFrameCounter()).thenReturn(0x0104);
+            List<Integer> sounds = new ArrayList<>();
+            Harness harness = Harness.create(levelManager, sounds);
+            AizFlippingBridgeObjectInstance bridge = soundBridge(harness, renderFlags);
+            bridge.update(0x0200, null);
+            int[] advancedFrames = readIntArrayField(bridge, "segmentFrames");
+
+            // Native subtype $52 reloads the timer with 5. The next dispatch
+            // returns before segment updates and sound, even at a sound phase.
+            when(levelManager.getFrameCounter()).thenReturn(0x0105);
+            bridge.update(0x0205, null);
+
+            assertEquals(List.of(), sounds, "unexpired timer, render flags " + renderFlags);
+            assertArrayEquals(advancedFrames, readIntArrayField(bridge, "segmentFrames"));
+        }
+    }
+
+    @Test
+    void flippingBridgeSoundStillRequiresTheBridgeToBeOnscreen() {
+        for (int renderFlags : new int[]{0, 1}) {
+            LevelManager levelManager = mock(LevelManager.class);
+            when(levelManager.getFrameCounter()).thenReturn(0x0105);
+            List<Integer> sounds = new ArrayList<>();
+            Harness harness = Harness.create(levelManager, sounds);
+            AizFlippingBridgeObjectInstance bridge = soundBridge(harness, renderFlags);
+            AbstractObjectInstance.updateCameraBounds(0, 0, 0x100, 0x100, 0);
+
+            bridge.update(0x0205, null);
+
+            assertEquals(List.of(), sounds, "offscreen bridge, render flags " + renderFlags);
+        }
+    }
+
+    @Test
+    void flippingBridgeWithoutALevelManagerRetainsItsExplicitClockFallback() {
+        for (int clock : new int[]{0x0104, 0x0105}) {
+            List<Integer> sounds = new ArrayList<>();
+            Harness harness = Harness.create(null, sounds);
+            AizFlippingBridgeObjectInstance bridge = soundBridge(harness, 1);
+
+            bridge.update(clock, null);
+
+            assertEquals(clock == 0x0105 ? List.of(Sonic3kSfx.GLIDE_LAND.id) : List.of(), sounds);
+        }
+    }
+
+    private static AizFlippingBridgeObjectInstance soundBridge(Harness harness, int renderFlags) {
+        // The actual AIZ2 bridges use subtype $52 and render flag 1. This
+        // declared local position keeps visibility separate from the clock;
+        // render flag 0 additionally exercises the native forward branch.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x800, 0x500, 0);
+        return harness.objectManager().createDynamicObject(() -> new AizFlippingBridgeObjectInstance(
+                new ObjectSpawn(0x0300, 0x0200, Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
+                        0x52, renderFlags, false, 0x0200 | (renderFlags << 13))));
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
+            return create(null, new ArrayList<>());
+        }
+
+        static Harness create(LevelManager levelManager, List<Integer> sounds) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public LevelManager levelManager() { return levelManager; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+                @Override public void playSfx(int soundId) { sounds.add(soundId); }
             };
             ObjectManager objectManager = new ObjectManager(
                     List.of(),

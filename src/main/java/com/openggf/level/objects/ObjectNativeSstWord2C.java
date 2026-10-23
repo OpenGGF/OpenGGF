@@ -131,7 +131,9 @@ final class ObjectNativeSstWord2C {
     }
 
     State capture() {
-        for (int slot = 0; slot < words.length; slot++) preserve(slot);
+        // Capture synchronizes proven words; it cannot discover RAM through
+        // unrelated, unprojected Java owners sharing a legacy fixed slot.
+        for (int slot = known.nextSetBit(0); slot >= 0; slot = known.nextSetBit(slot + 1)) preserve(slot);
         List<Cell> cells = new ArrayList<>(known.cardinality());
         for (int slot = known.nextSetBit(0); slot >= 0; slot = known.nextSetBit(slot + 1))
             cells.add(new Cell(slot, words[slot]));

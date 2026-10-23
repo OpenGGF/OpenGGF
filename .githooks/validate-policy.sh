@@ -160,131 +160,174 @@ contains_mod_api_annotation() {
     printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@(com\.openggf\.game\.)?ModApi([.([:space:]]|$)'
 }
 
-# Conservative declaration projection for pre-staging pin coupling, not a Java
-# signature parser. Keep annotations attached to their declaration and carry type
-# visibility through nested bodies: a public member of a private type is private
-# implementation too. Buffer complete headers (including record components), and
-# skip member bodies lexically so braces/comments in literals cannot change owners.
-# Class/record field initializers are executable values, not signature contracts.
-# Non-private type declarations remain conservative; the exact signature snapshot
-# is authoritative for what the pin can express.
+# Source-only staging guard, mirrored by Get-ModApiSurfaceText in the PS hook.
+# Match recursiveTypes visibility: hidden nested owners contribute only when a
+# retained declaration references their name (or they carry @ModApi themselves).
+# References are followed to a fixed point; literals and implementation bodies
+# cannot make an owner public. Ambiguous names over-retain conservatively.
+# This is not Java name resolution: the compiled signature guard remains exact.
 mod_api_surface_text() {
-    # Records have private members and executable bodies too. Use one shared
-    # lexical declaration probe in Bash/PowerShell; other primary kinds fall
-    # back to the visibility-aware lexer. The exact signature pin is authoritative.
-    if command -v python3 >/dev/null 2>&1; then surface_python=python3
-    elif command -v python >/dev/null 2>&1; then surface_python=python
-    else die "Python 3 is required for Mod API record admission."; fi
-    if record_surface=$(printf '%s\n' "$1" | "$surface_python" "$POLICY_DIR/mod_api_record_surface.py"); then
-        printf '%s\n' "$record_surface"
-        return
-    else
-        surface_status=$?
-        [ "$surface_status" -eq 2 ] || die "Cannot inspect Java record declaration."
-    fi
     printf '%s\n' "$1" | awk '
-    function append(c, mask) {
-        if (bodyDepth == 0 && !initializer) { header = header c; code = code mask }
+    function supported(s) { return s ~ /(^|[^A-Za-z0-9_$])(public|protected)[[:space:]]/ }
+    function references(s, name,    count,tokens,k) {
+        count = split(s,tokens,/[^A-Za-z0-9_$]+/)
+        for (k = 1; k <= count; k++) if (tokens[k] == name) return 1
+        return 0
     }
-    function space() {
-        if (header !~ / $/) append(" ", " ")
+    function owner_path(owner,    path) {
+        path = names[owner]
+        while (parents[owner] > 0) { owner = parents[owner]; path = names[owner] "/" path }
+        return path
     }
-    function emit() {
-        sub(/^[ \t\r\n]+/, "", header); sub(/[ \t\r\n]+$/, "", header)
-        if (header != "") print header
+    function omit_initializer(first, last,    k) {
+        for (k = first; k <= last; k++) omitted[k] = 1
     }
-    function member_visible() {
-        return top > 0 && visible[top] && code !~ /(^|[^A-Za-z0-9_])private[ \t]/ &&
-            (implicit[top] || code ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/)
+    function generic_initializer_open(prefix) {
+        while (gsub(/<[^<>]*>/,"",prefix)) {}
+        return prefix ~ /[.=?:][[:space:]]*$/ || prefix ~ /->[[:space:]]*$/ ||
+            prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]*$/ ||
+            prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]+[A-Za-z0-9_$.@[:space:]]+$/
     }
-    { source = source $0 "\n" }
+    function declaration(first, last, owner,    a,b,c,k,pending) {
+        a = ""; b = ""
+        for (k = first; k <= last; k++) {
+            a = a (omitted[k] ? " " : substr(clean,k,1))
+            b = b (omitted[k] ? " " : substr(lex,k,1))
+        }
+        c = ""; pending = 0
+        for (k = 1; k <= length(a); k++) {
+            if (substr(b,k,1) ~ /[[:space:]]/) pending = (c != "")
+            else { if (pending) c = c " "; c = c substr(a,k,1); pending = 0 }
+        }
+        if (c != "") { decl[++nd] = c; refs[nd] = b; owners[nd] = owner }
+    }
+    { raw = raw $0 "\n" }
     END {
-        top = 0; parens = 0; bodyDepth = 0; defaultDepth = 0; quote = ""; escaped = 0
-        initializer = 0; initParens = 0; initBraces = 0; initBrackets = 0
-        for (i = 1; i <= length(source); i++) {
-            c = substr(source, i, 1); pair = substr(source, i, 2); triple = substr(source, i, 3)
-            if (inLine) { if (c == "\n") inLine = 0; else continue }
-            if (inBlock) {
-                if (pair == "*/") { inBlock = 0; i++ }
-                continue
-            }
-            if (quote != "") {
-                append(c, " ")
-                if (escaped) escaped = 0
-                else if (c == "\\") escaped = 1
-                else if (quote == "\"\"\"" && triple == quote) {
-                    append("\"\"", "  "); i += 2; quote = ""
-                } else if (c == quote) quote = ""
-                continue
-            }
-            if (pair == "//") { space(); inLine = 1; i++; continue }
-            if (pair == "/*") { space(); inBlock = 1; i++; continue }
-            if (c == "\"" || c == sprintf("%c", 39)) {
-                quote = c
-                if (triple == "\"\"\"") { quote = triple; append("\"\"", "  "); i += 2 }
-                append(c, " "); continue
-            }
-            if (bodyDepth > 0) {
-                if (c == "{") bodyDepth++
-                else if (c == "}") bodyDepth--
-                continue
-            }
-            if (initializer) {
-                if (initParens == 0 && initBraces == 0 && initBrackets == 0 && (c == ";" || c == ",")) initializer = 0
-                else {
-                    if (c == "(") initParens++
-                    else if (c == ")") initParens--
-                    else if (c == "{") initBraces++
-                    else if (c == "}") initBraces--
-                    else if (c == "[") initBrackets++
-                    else if (c == "]") initBrackets--
-                    continue
-                }
-            }
-            if (c == "=" && parens == 0 && stripInitializers) {
-                initializer = 1; continue
-            }
-            if (c ~ /[ \t\r\n]/) { space(); continue }
-            if (c == "{") {
-                # Annotation-element array defaults are declaration values.
-                if (defaultDepth > 0 || code ~ /(^|[^A-Za-z0-9_])default[ \t]*$/) {
-                    defaultDepth++; append(c, c); continue
-                }
-                if (parens > 0) { append(c, c); continue }
-                kind = ""
-                if (match(code, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_][A-Za-z0-9_]*/)) {
-                    t = substr(code, RSTART, RLENGTH); sub(/^[ \t]+/, "", t)
-                    split(t, parts, /[ \t]+/); kind = parts[1]
-                }
-                if (kind != "") {
-                    allowed = (top == 0 || visible[top]) && code !~ /(^|[^A-Za-z0-9_])private[ \t]/
-                    if (top == 0) stripInitializers = (kind == "class" || kind == "record")
-                    append(c, c); if (allowed) emit()
-                    top++; visible[top] = allowed; implicit[top] = (kind != "class")
+        # Java Unicode escapes precede lexing; unsupported identifiers/escapes
+        # must not make the source-only guard silently discard declarations.
+        if (raw ~ /\\u/) { printf "%s", raw; exit }
+        state = ""; escaped = 0; clean = ""; lex = ""
+        for (i = 1; i <= length(raw); i++) {
+            c = substr(raw,i,1); pair = substr(raw,i,2); triple = substr(raw,i,3)
+            if (state == "line") {
+                if (c == "\n") state = ""
+                clean = clean (c == "\n" ? c : " "); lex = lex (c == "\n" ? c : " ")
+            } else if (state == "block") {
+                if (pair == "*/") { state = ""; i++; clean = clean "  "; lex = lex "  " }
+                else { clean = clean (c == "\n" ? c : " "); lex = lex (c == "\n" ? c : " ") }
+            } else if (state != "") {
+                if (state == "text" && triple == "\"\"\"" && !escaped) {
+                    clean = clean triple; lex = lex "~~~"; i += 2; state = ""
                 } else {
-                    append(c, c); if (member_visible()) emit()
-                    bodyDepth = 1
+                    clean = clean c; lex = lex "~"
+                    if (escaped) escaped = 0
+                    else if (c == "\\") escaped = 1
+                    else if (c == state) state = ""
                 }
-                header = code = ""; continue
-            }
-            if (c == "}" && defaultDepth > 0) { defaultDepth--; append(c, c); continue }
-            if (c == "}" && parens == 0) {
-                if (top > 0) {
-                    # Enum constant lists need no terminating semicolon.
-                    if (member_visible()) emit()
-                    if (visible[top]) print "}"
-                    delete visible[top]; delete implicit[top]; top--
-                }
-                header = code = ""; continue
-            }
-            append(c, c)
-            if (c == "(") parens++
-            else if (c == ")") parens--
-            else if (c == ";" && parens == 0) {
-                if (member_visible()) emit()
-                header = code = ""
+            } else if (pair == "//" || pair == "/*") {
+                state = (pair == "//" ? "line" : "block"); i++; clean = clean "  "; lex = lex "  "
+            } else if (triple == "\"\"\"") {
+                state = "text"; clean = clean triple; lex = lex "~~~"; i += 2
+            } else {
+                clean = clean c
+                if (c == "\"" || c == sprintf("%c",39)) { state = c; lex = lex "~" }
+                else lex = lex c
             }
         }
+        if ((state != "" && state != "line") || lex ~ /[^\t\r\n -~]/) { printf "%s", raw; exit }
+        first = 1; owner = 0; parens = 0; body = 0; init = 0; initDepth = 0; bodyFirst = 0; firstInit = 0; initAngles = 0; uncertainInit = 0
+        for (i = 1; i <= length(lex); i++) {
+            c = substr(lex,i,1)
+            if (body > 0) {
+                if (c == "{") body++
+                else if (c == "}" && --body == 0) {
+                    # Enum constant subclasses are part of the sealed closure.
+                    if (bodyFirst > 0) declaration(bodyFirst,i,owner)
+                    bodyFirst = 0; first = i + 1
+                }
+                continue
+            }
+            if (c == "(") parens++
+            else if (c == ")") parens--
+            if (parens != 0) continue
+            if (init > 0) {
+                if (c == "{") initDepth++
+                else if (c == "}") initDepth--
+                if (firstInit > 0 && initDepth == 0) {
+                    if (c == "<") {
+                        prefix = substr(lex,init,i - init)
+                        if (initAngles > 0 || generic_initializer_open(prefix)) initAngles++
+                        else if (prefix ~ /(^|[^A-Za-z0-9_$])new[[:space:]]+@/) uncertainInit = 1
+                    } else if (c == ">" && initAngles > 0) initAngles--
+                    else if (c == "," && initAngles == 0) {
+                        omit_initializer(init,i - 1); init = 0; continue
+                    }
+                }
+                if (c != ";" || initDepth != 0) continue
+                if (firstInit > 0) {
+                    if (initAngles != 0) { printf "%s", raw; exit }
+                    omit_initializer(init,i - 1)
+                }
+            }
+            if (c == "=" && init == 0 && !(kinds[owner] == "@interface" &&
+                    substr(lex,first,i - first) ~ /(^|[^A-Za-z0-9_$])default([^A-Za-z0-9_$]|$)/)) {
+                init = i; if (firstInit == 0) firstInit = i; initAngles = 0; continue
+            }
+            if (c == "{" || c == ";") {
+                h = substr(lex,first,(firstInit > 0 ? firstInit : (init > 0 ? init : i)) - first)
+                # Annotation defaults (including arrays) are signature values.
+                if (c == "{" && kinds[owner] == "@interface" && h ~ /(^|[^A-Za-z0-9_$])default([^A-Za-z0-9_$]|$)/) {
+                    init = i; initDepth = 1; continue
+                }
+                if (c == "{" && match(h, /(^|[[:space:]])(class|interface|record|enum|@interface)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*/)) {
+                    t = substr(h,RSTART,RLENGTH); sub(/^[[:space:]]+/, "", t); split(t,parts, /[[:space:]]+/)
+                    id = ++nt; kinds[id] = parts[1]; names[id] = parts[2]; parents[id] = owner
+                    enumConstants[id] = (kinds[id] == "enum")
+                    exposed[id] = supported(h) || (owner > 0 && (kinds[owner] == "interface" || kinds[owner] == "@interface"))
+                    visible[id] = (owner == 0 || h ~ /@([A-Za-z0-9_$.]+[.])?ModApi([^A-Za-z0-9_$]|$)/)
+                    inferredSealed[id] = h ~ /(^|[[:space:]])sealed[[:space:]]/ && h !~ /(^|[[:space:]])permits[[:space:]]/
+                    typeRefs[id] = h
+                    declaration(first,i - 1,id); owner = id
+                } else {
+                    # Records and interfaces may own private implementation members.
+                    keep = owner > 0 && h !~ /(^|[^A-Za-z0-9_$])private[[:space:]]/ &&
+                        (supported(h) || kinds[owner] != "class")
+                    # Field declarations retain every name/dimension, never values.
+                    # Retain compact-constructor annotations and annotation defaults;
+                    # exclude executable bodies except conservative enum constant bodies.
+                    if (keep && !(c == "{" && enumConstants[owner])) declaration(first,i - 1,owner)
+                    if (c == "{") { body = 1; if (enumConstants[owner]) bodyFirst = first }
+                }
+                # Only the constant list precedes the first owner-level semicolon.
+                if (c == ";" && kinds[owner] == "enum") enumConstants[owner] = 0
+                first = i + 1; init = 0; firstInit = 0; initAngles = 0
+            } else if (c == "}") {
+                if (kinds[owner] == "enum") declaration(first,i - 1,owner)
+                owner = parents[owner]; first = i + 1
+            }
+        }
+        if (owner != 0 || parens != 0 || body != 0 || initDepth != 0 || uncertainInit) { printf "%s", raw; exit }
+        # Preserve hidden types reached by annotations, generic/signature types or
+        # sealed permits, and then their own reachable members/nested types.
+        changed = 1
+        while (changed) {
+            changed = 0
+            for (t = 1; t <= nt; t++) {
+                if (visible[t]) {
+                    # A retained descendant also depends on its binary owner name.
+                    if (parents[t] > 0 && !visible[parents[t]]) { visible[parents[t]] = 1; changed = 1 }
+                    continue
+                }
+                reach = visible[parents[t]] && exposed[t]
+                for (d = 1; d <= nd && !reach; d++)
+                    if (visible[owners[d]] && references(refs[d],names[t])) reach = 1
+                for (s = 1; s <= nt && !reach; s++)
+                    if (visible[s] && inferredSealed[s] && references(typeRefs[t],names[s])) reach = 1
+                if (reach) { visible[t] = 1; changed = 1 }
+            }
+        }
+        # Scope is part of identity: moving the same declaration changes its owner.
+        for (d = 1; d <= nd; d++) if (visible[owners[d]]) print owner_path(owners[d]) "\t" decl[d]
     }'
 }
 

@@ -147,6 +147,9 @@ class SnapshotPolicyTests(unittest.TestCase):
         yield ['sh', str(directory / 'validate-policy.sh')]
         if shutil.which('pwsh'):
             yield ['pwsh', '-NoLogo', '-NoProfile', '-File', str(directory / 'validate-policy.ps1')]
+        else:
+            with self.subTest(implementation='pwsh'):
+                self.skipTest('PowerShell policy coverage unavailable: pwsh is not installed')
 
     def assert_policy(self, baseline, before, after, branch, expected):
         for command in self.policies(baseline):
@@ -687,6 +690,513 @@ public record Rules(int value) {
                                      'S3K-Known-Discrepancies', 'Agent-Docs',
                                      'Configuration-Docs', 'Skills']))
         self.assert_policy(BASELINE, self.base, head, 'develop', 'candidate signature pin')
+
+    def assert_api_source_change(self, before, after, expected, update_pin=False):
+        # These fixture commits intentionally construct policy violations. The
+        # actual copied validators below must inspect both the index and history.
+        self.git('reset', '--hard', self.base)
+        self.write('mod-api-release-policy.properties',
+                   'currentStatus=candidate\ncurrentApi=0.7.0\npublishedBaselines=\n')
+        pin = 'src/test/resources/mods/mod-api-signatures-0.7.txt'
+        self.write(pin, 'reviewed baseline\n')
+        path = 'src/main/java/example/Api.java'
+        self.write(path, before)
+        baseline = self.commit('reviewed API baseline')
+        self.next_baseline = baseline
+        self.write(path, after)
+        if update_pin:
+            self.write(pin, 'changed candidate\n')
+        message = 'chore: exercise API policy\n\n' + '\n'.join(
+            key + ': n/a' for key in ['Changelog', 'Guide', 'Known-Discrepancies',
+                                     'S3K-Known-Discrepancies', 'Agent-Docs',
+                                     'Configuration-Docs', 'Skills'])
+        message_path = self.root / 'commit-message'
+        message_path.write_text(message)
+        for command in self.policies(baseline):
+            with self.subTest(implementation=command[0], mode='commit-msg'):
+                result = subprocess.run(command + ['commit-msg', str(message_path)], cwd=self.repo,
+                                        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if expected is None:
+                    self.assertEqual(0, result.returncode, result.stdout)
+                else:
+                    self.assertNotEqual(0, result.returncode, result.stdout)
+                    self.assertIn(expected, result.stdout)
+        head = self.commit(message)
+        self.assert_policy(baseline, baseline, head, 'develop', expected)
+
+
+    def test_package_private_nested_record_does_not_require_a_pin(self):
+        before = '@ModApi\npublic class Api {\n    public record State(int frame) {}\n}\n'
+        after = before.replace('\n}', '''
+    record EffectsRewindState(
+            int frame, int tick, int mapping, boolean active,
+            int x, int y, boolean facingLeft, int splashFrame,
+            int splashTick, boolean surfaceActive, int surfaceX,
+            int surfaceY, int surfaceTimer) {}
+}''')
+        self.assert_api_source_change(before, after, None)
+
+
+    def test_retained_nested_type_owner_movement_requires_pin(self):
+        before = '@ModApi\npublic interface Api { class A { public static class B {} } }\n'
+        after = '@ModApi\npublic interface Api { class A {} public static class B {} }\n'
+        self.assert_api_source_change(before, after, 'candidate signature pin')
+
+
+    def test_retained_nested_type_owner_movement_accepts_changed_pin(self):
+        before = '@ModApi\npublic interface Api { class A { public static class B {} } }\n'
+        after = '@ModApi\npublic interface Api { class A {} public static class B {} }\n'
+        self.assert_api_source_change(before, after, None, update_pin=True)
+
+
+    def test_retained_deep_owner_movements_guard_pin_operations(self):
+        cases = [
+            ('public nested sibling',
+             '@ModApi\npublic class Api { public static class A { public static class B { public static class C {} } } }\n',
+             '@ModApi\npublic class Api { public static class A { public static class B {} public static class C {} } }\n'),
+            ('protected record',
+             '@ModApi\npublic class Api { public static class A { protected static record State(int frame) {} } }\n',
+             '@ModApi\npublic class Api { public static class A {} protected static record State(int frame) {} }\n'),
+            ('public member under implicit interface child',
+             '@ModApi\npublic interface Api { class A { public static class B { public int value; } } }\n',
+             '@ModApi\npublic interface Api { class A { public static class B {} public int value; } }\n'),
+        ]
+        for name, nested, sibling in cases:
+            for direction, before, after in (('outward', nested, sibling), ('inward', sibling, nested)):
+                for update_pin in (False, True):
+                    with self.subTest(case=name, direction=direction, update_pin=update_pin):
+                        self.assert_api_source_change(before, after,
+                                                      None if update_pin else 'candidate signature pin',
+                                                      update_pin=update_pin)
+
+
+    def test_moving_unexposed_nested_implementation_does_not_require_pin(self):
+        before = '@ModApi\npublic class Api { static class A { record Hidden(int frame) {} } static class B {} }\n'
+        after = '@ModApi\npublic class Api { static class A {} static class B { record Hidden(int frame) {} } }\n'
+        self.assert_api_source_change(before, after, None)
+
+
+    def test_missing_powershell_reports_skips_after_shell_coverage(self):
+        # Exercise real SH policy while simulating only the missing prerequisite.
+        # Capture the nested result so the installed-platform suite itself remains
+        # fully exercised; missing-pwsh runs report these skips normally.
+        probe = SnapshotPolicyTests('test_package_private_nested_record_does_not_require_a_pin')
+        result = unittest.TestResult()
+        with patch.object(shutil, 'which', return_value=None):
+            probe.run(result)
+        self.assertEqual(1, result.testsRun)
+        self.assertEqual([], result.errors)
+        self.assertEqual([], result.failures)
+        self.assertEqual(2, len(result.skipped))  # commit-msg and ci-push coverage
+        for test, reason in result.skipped:
+            self.assertIn("implementation='pwsh'", str(test))
+            self.assertEqual('PowerShell policy coverage unavailable: pwsh is not installed', reason)
+
+
+    def test_unexposed_nested_implementations_can_be_added_changed_and_removed(self):
+        plain = '@ModApi\npublic class Api {\n    public int value() { return 0; }\n%s\n}\n'
+        for visibility in ('', 'private '):
+            for kind, header in (('class', 'static class Hidden'),
+                                 ('record', 'record Hidden(\n int frame,\n int tick\n)'),
+                                 ('interface', 'interface Hidden'),
+                                 ('enum', 'enum Hidden'),
+                                 ('annotation', '@interface Hidden')):
+                members = ('    public int count() default 1;\n' if kind == 'annotation' else
+                           '    public int count() { return 1; }\n')
+                if kind == 'interface':
+                    members = '    default int count() { return 1; }\n'
+                if kind == 'enum':
+                    members = '    ONE;\n' + members
+                hidden = '    ' + visibility + header + ' {\n' + members + '    }'
+                changed = hidden.replace('int count()', 'long count()')
+                if kind == 'record':
+                    changed = changed.replace('int tick', 'long tick')
+                for action, before, after in (('add', '', hidden), ('change', hidden, changed),
+                                               ('remove', hidden, '')):
+                    with self.subTest(visibility=visibility, kind=kind, action=action):
+                        self.assert_api_source_change(plain % before, plain % after, None)
+
+
+    def test_public_members_under_a_hidden_nested_owner_do_not_expose_it(self):
+        before = '''@ModApi
+public class Api {
+    static class Hidden {
+        @Deprecated public static record State(int frame) {}
+        public interface Factory { State make(); }
+        protected static class Helper { public int count; }
+    }
+    public int stable() { return 0; }
+}
+'''
+        after = before.replace('int frame', 'long frame').replace('public int count', 'public long count')
+        self.assert_api_source_change(before, after, None)
+
+
+    def test_public_and_protected_nested_types_still_require_the_pin(self):
+        for visibility in ('public', 'protected'):
+            for declaration in ('static class State { public int value; }',
+                                'record State(\n int frame,\n int tick\n) {}',
+                                'interface State { int value(); }',
+                                'enum State { FIRST, SECOND }',
+                                '@interface State { int value() default 1; }'):
+                nested = visibility + '\n static ' + declaration.removeprefix('static ')
+                plain = '@ModApi\npublic class Api {\n%s\n}\n'
+                changed = nested.replace('int frame', 'long frame').replace('int value', 'long value')
+                changed = changed.replace('FIRST, SECOND', 'FIRST, SECOND, THIRD')
+                for action, before, after in (('add', '', nested), ('change', nested, changed),
+                                               ('remove', nested, '')):
+                    with self.subTest(visibility=visibility, declaration=declaration, action=action):
+                        self.assert_api_source_change(plain % before, plain % after, 'candidate signature pin')
+
+
+    def test_implicitly_public_interface_nested_types_remain_guarded(self):
+        for kind in ('interface', '@interface'):
+            before = ('@ModApi\npublic ' + kind + ' Api {\n'
+                      '    record State(\n        int frame,\n        int tick) {}\n'
+                      '    class Helper { public int value; }\n}\n')
+            for after in (before.replace('int tick', 'long tick'),
+                          before.replace('public int value', 'public long value')):
+                with self.subTest(kind=kind, after=after):
+                    self.assert_api_source_change(before, after, 'candidate signature pin')
+
+
+    def test_hidden_types_referenced_by_retained_declarations_remain_guarded(self):
+        references = [
+            'public Internal leak() { return null; }',
+            'protected void accept(Internal value) {}',
+            'public java.util.List<? extends Internal> values;',
+            'public <T extends Internal> T convert(T value) { return value; }',
+            'public record State(Internal value) {}',
+            '@Uses(Internal.class) public int annotated() { return 0; }',
+            'public static class Child extends Internal {}',
+            'public sealed interface Shape permits Internal {}',
+            'public Link leak() { return null; }\n'
+            'static class Link { public Internal target; }',
+        ]
+        for reference in references:
+            # The sealed case has a valid permitted implementation; other cases
+            # deliberately use the same hidden name to exercise closure edges.
+            implementation = (' implements Shape' if 'permits' in reference else '')
+            before = ('@ModApi\npublic class Api {\n' + reference + '\n'
+                      'static final class Internal' + implementation + ' { public int value; }\n}\n')
+            if 'extends Internal' in reference:
+                before = before.replace('static final class Internal', 'static class Internal')
+            with self.subTest(reference=reference):
+                self.assert_api_source_change(before, before.replace('public int value;', 'public long value;'),
+                                              'candidate signature pin')
+
+
+    def test_explicitly_annotated_hidden_nested_type_is_retained_conservatively(self):
+        before = '@ModApi\npublic class Api {\n @ModApi private record Internal(int frame) {}\n}\n'
+        self.assert_api_source_change(before, before.replace('int frame', 'long frame'), 'candidate signature pin')
+        before = '''@ModApi
+public class Api {
+    private static class Owner {
+        @ModApi public record State(int frame) {}
+    }
+}
+'''
+        self.assert_api_source_change(before, before.replace('class Owner', 'class Renamed'), 'candidate signature pin')
+
+
+    def test_private_signatures_and_implementation_references_do_not_expose_hidden_types(self):
+        before = '''@ModApi
+public class Api {
+    private Hidden capture() { return new Hidden(1); }
+    Hidden captureInternal() { return new Hidden(2); }
+    public int stable() { Hidden local = capture(); return 0; }
+    private java.util.function.Supplier<Hidden> factory = () -> { return capture(); };
+    private static record Hidden(int frame) { public int count() { return 1; } }
+}
+'''
+        self.assert_api_source_change(before, before.replace('int frame', 'long frame'), None)
+
+
+    def test_hidden_types_respect_comments_literals_bodies_and_initializer_braces(self):
+        before = '''@ModApi
+public class Api {
+    private Object factory = new Object() { public String label() { return "}"; } };
+    static /* record Fake(public int value) { */ class Hidden {
+        public String braces() { return "} // not a comment /* {"; }
+        public char quote() { return '\\''; }
+        public String block() { return """
+            } /* public record Fake(int x) {} */ {
+            """; }
+        public static record Child(int frame) {}
+    }
+    public record State(int frame) {}
+    public int stable() { return 1; }
+}
+'''
+        self.assert_api_source_change(before, before.replace('Child(int frame)', 'Child(long frame)'), None)
+        self.assert_api_source_change(before, before.replace('State(int frame)', 'State(long frame)'),
+                                      'candidate signature pin')
+
+
+    def test_same_line_hidden_body_does_not_swallow_visible_siblings(self):
+        before = '@ModApi\npublic class Api { static class Hidden {} public record State(int frame) {} }\n'
+        self.assert_api_source_change(before, before.replace('Hidden {}', 'Hidden { public long value; }'), None)
+        self.assert_api_source_change(before, before.replace('int frame', 'long frame'), 'candidate signature pin')
+
+
+    def test_multiline_generic_and_declaration_continuations_remain_guarded(self):
+        before = '''@ModApi
+public abstract class Api<T
+        extends Number>
+        implements java.io.Serializable {
+    @Deprecated
+    public
+    abstract <R extends Number> java.util.List<R>
+            values(
+                T value)
+            throws java.io.IOException;
+    protected
+    static class State<T>
+            extends java.util.ArrayList<T>
+            implements java.io.Serializable {}
+}
+'''
+        for old, new in (('extends Number>', 'extends CharSequence>'),
+                         ('T value)', 'String value)'),
+                         ('throws java.io.IOException', 'throws java.lang.Exception'),
+                         ('extends java.util.ArrayList<T>', 'extends java.util.LinkedList<T>'),
+                         ('@Deprecated', '@Deprecated(since="1")')):
+            with self.subTest(old=old):
+                self.assert_api_source_change(before, before.replace(old, new), 'candidate signature pin')
+
+
+    def test_executable_bodies_and_field_initializers_do_not_supply_surface_declarations(self):
+        before = '''@ModApi
+public class Api {
+    private Object factory = new Object() { public int count() { return 1; } };
+    public int value() {
+        class Local { public int count() { return 1; } }
+        String text = "public record Fake(int x) {} // /*";
+        return new Local().count();
+    }
+    static { System.out.println("}"); }
+}
+'''
+        after = before.replace('int count()', 'long count()').replace('return new Local().count();', 'return 0;')
+        self.assert_api_source_change(before, after, None)
+
+
+    def test_public_field_initializer_values_do_not_require_a_pin(self):
+        # snapshotLines pins field owner/modifiers/type/name/annotations, not values.
+        before = '@ModApi\npublic class Api { public static final int VALUE = 1; }\n'
+        self.assert_api_source_change(before, before.replace('VALUE = 1', 'VALUE = 2'), None)
+
+
+    def test_record_compact_constructor_bodies_do_not_require_a_pin(self):
+        for outer in ('public record Api(int value)', 'public class Api'):
+            before = '@ModApi\n' + outer + ' {\n'
+            if outer == 'public class Api':
+                before += ' public record State(int value) { public State { if (value < 0) throw new IllegalArgumentException("}"); } }\n'
+            else:
+                before += ' public Api { if (value < 0) throw new IllegalArgumentException("}"); }\n'
+            before += '}\n'
+            with self.subTest(outer=outer):
+                self.assert_api_source_change(before, before.replace('value < 0', 'value < -1'), None)
+
+
+    def test_annotation_literal_values_and_defaults_still_require_a_pin(self):
+        before = '@ModApi\n@Label("two  spaces // /*")\npublic class Api {}\n'
+        self.assert_api_source_change(before, before.replace('two  spaces', 'two spaces'), 'candidate signature pin')
+        before = '@ModApi\npublic @interface Api { String value() default "first"; }\n'
+        self.assert_api_source_change(before, before.replace('"first"', '"second"'), 'candidate signature pin')
+        before = '@ModApi\npublic @interface Api { int[] value() default {1, 2}; }\n'
+        self.assert_api_source_change(before, before.replace('{1, 2}', '{1, 3}'), 'candidate signature pin')
+        before = '@ModApi\npublic @interface Api { boolean value() default 1 == 1; }\n'
+        self.assert_api_source_change(before, before.replace('1 == 1', '1 == 2'), 'candidate signature pin')
+
+
+    def test_compact_constructor_annotations_remain_guarded(self):
+        before = '@ModApi\npublic record Api(int frame) { @Deprecated public Api {} }\n'
+        self.assert_api_source_change(before, before.replace('@Deprecated ', ''), 'candidate signature pin')
+
+
+    def test_inferred_sealed_permits_keep_hidden_implementations_guarded(self):
+        before = '''@ModApi
+public class Api {
+    public sealed interface Shape {}
+    static final class Internal implements Shape { public int value; }
+}
+'''
+        self.assert_api_source_change(before, before.replace('public int value', 'public long value'),
+                                      'candidate signature pin')
+
+
+    def test_enum_constant_specific_bodies_remain_conservative(self):
+        before = '''@ModApi
+public enum Api {
+    FIRST { public int count() { return 1; } };
+    public int count() { return 0; }
+}
+'''
+        self.assert_api_source_change(before, before.replace('public int count()', 'public long count()'),
+                                      'candidate signature pin')
+
+
+    def test_dollar_identifiers_in_referenced_hidden_types_remain_guarded(self):
+        before = '''@ModApi
+public class Api {
+    public Internal$State state() { return null; }
+    static record Internal$State(int value) {}
+}
+'''
+        self.assert_api_source_change(before, before.replace('int value', 'long value'), 'candidate signature pin')
+
+
+    def test_existing_spindash_controller_can_add_internal_effects_rewind_state(self):
+        # Use the real annotated controller, including its existing public
+        # four-component state and Unicode punctuation in implementation comments.
+        before = (ROOT / 'src/main/java/com/openggf/sprites/managers/SpindashDustController.java').read_text()
+        body, close = before.rsplit('}', 1)
+        after = body + '''
+    record EffectsRewindState(
+            int frame, int tick, int mapping, boolean active,
+            int x, int y, boolean facingLeft, int splashFrame,
+            int splashTick, boolean surfaceActive, int surfaceX,
+            int surfaceY, int surfaceTimer) {}
+    EffectsRewindState captureEffects() { return null; }
+}''' + close
+        self.assert_api_source_change(before, after, None)
+
+
+    def test_candidate_pin_changes_still_require_a_real_detectable_surface_change(self):
+        before = '@ModApi\npublic class Api {\n public record State(int frame) {}\n}\n'
+        after = before.replace('\n}', '\n private record Internal(int frame) {}\n}')
+        self.assert_api_source_change(before, after, 'candidate signature-pin content changes require', update_pin=True)
+        self.assert_api_source_change(before, before.replace('int frame', 'long frame'), None, update_pin=True)
+
+
+    def test_unicode_escape_sources_are_retained_conservatively(self):
+        before = '@ModApi\npublic class Api {\\u0070ublic record State(int value) {} }\n'
+        self.assert_api_source_change(before, before.replace('int value', 'long value'), 'candidate signature pin')
+
+
+    def test_annotation_default_arrays_at_punctuation_boundaries_remain_pin_content(self):
+        for declaration in ('int[] value() default', 'int[] value()default',
+                            'int[] value()default/* separator */'):
+            before = '@ModApi\npublic @interface Api { ' + declaration + '{1, 2}; }\n'
+            after = before.replace('{1, 2}', '{1, 3}')
+            for update_pin in (False, True):
+                with self.subTest(declaration=declaration, update_pin=update_pin):
+                    self.assert_api_source_change(before, after,
+                                                  None if update_pin else 'candidate signature pin',
+                                                  update_pin=update_pin)
+
+
+    def test_public_field_declarators_annotations_and_dimensions_remain_guarded(self):
+        before = '''@ModApi
+public class Api {
+    @Deprecated
+    public static final int FIRST = call(1, 2),
+            SECOND[] = {3, 4}, THIRD[][] = {{5}};
+}
+'''
+        changes = [
+            before.replace('SECOND[]', 'RENAMED[]'),
+            before.replace('SECOND[] = {3, 4}, ', ''),
+            before.replace('final int FIRST', 'final long FIRST'),
+            before.replace('public static final', 'public static'),
+            before.replace('public static final', 'protected static final'),
+            before.replace('THIRD[][] = {{5}}', 'THIRD[] = {5}'),
+            before.replace('@Deprecated', '@Deprecated(since="1")'),
+        ]
+        for after in changes:
+            for update_pin in (False, True):
+                with self.subTest(after=after, update_pin=update_pin):
+                    self.assert_api_source_change(before, after,
+                                                  None if update_pin else 'candidate signature pin',
+                                                  update_pin=update_pin)
+
+
+    def test_generic_initializer_commas_and_comparisons_preserve_field_boundaries(self):
+        before = '''@ModApi
+public class Api {
+    public static final java.util.Map<String, java.util.List<Integer>> FIRST =
+            new java.util.HashMap<String, java.util.List<Integer>>(),
+            SECOND = java.util.Collections.<String, java.util.List<Integer>>emptyMap();
+    public static boolean LESS = 1 < 2, MORE = 3 > 2, EQUAL = 1 == 1;
+    public static int UNSET, VALUE = call(1, 2), OTHER[];
+    private void hidden() { System.out.println("public class Fake {}"); }
+    public int following() { return 1; }
+}
+'''
+        after = before.replace('HashMap', 'TreeMap').replace('Collections.', 'Map.').replace('emptyMap()', 'of()')
+        after = after.replace('1 < 2', '3 < 4').replace('3 > 2', '5 > 4').replace('1 == 1', '2 == 2')
+        after = after.replace('call(1, 2)', 'call(4, 5)').replace('return 1;', 'return 2;')
+        self.assert_api_source_change(before, after, None)
+        changed = before.replace(', OTHER[]', ', OTHER[][]')
+        self.assert_api_source_change(before, changed, 'candidate signature pin')
+        removed = before.replace(',\n            SECOND = java.util.Collections.<String, java.util.List<Integer>>emptyMap()', '')
+        self.assert_api_source_change(before, removed, None, update_pin=True)
+
+
+    def test_field_initializer_references_do_not_expose_hidden_implementation_types(self):
+        before = '''@ModApi
+public class Api {
+    public static final Object VALUE = new Hidden();
+    private static class Hidden { public int value; }
+}
+'''
+        self.assert_api_source_change(before, before.replace('public int value', 'public long value'), None)
+        exposed = before.replace('final Object VALUE', 'final Hidden VALUE')
+        self.assert_api_source_change(before, exposed, 'candidate signature pin')
+        self.assert_api_source_change(before, exposed, None, update_pin=True)
+
+
+    def test_explicit_constructor_type_arguments_do_not_expose_hidden_implementation_types(self):
+        before = '''@ModApi
+public class Api {
+    public static final Object VALUE = new <String, Hidden> Box();
+    private static class Box { <A, B> Box() {} }
+    private static class Hidden { public int value; }
+}
+'''
+        for prefix in ('new ', 'new', 'new/* constructor type arguments */\n            '):
+            source = before.replace('new ', prefix)
+            with self.subTest(prefix=prefix):
+                self.assert_api_source_change(source, source.replace('public int value', 'public long value'), None)
+        changed = before.replace('<String, Hidden> Box()', '<Integer, Object> Box()')
+        self.assert_api_source_change(before, changed, None)
+        self.assert_api_source_change(before, changed, 'candidate signature-pin content changes require',
+                                      update_pin=True)
+
+
+    def test_explicit_constructor_nested_generics_preserve_following_field_declarators(self):
+        before = '''@ModApi
+public class Api {
+    public static final Object FIRST =
+            new <java.util.Map<String, java.util.List<Hidden>>, Hidden[]> Box<Hidden>(1),
+            SECOND = new <String, Hidden> Box<Hidden>(2),
+            THIRD[] = {new <String, Hidden> Box<Hidden>(3)};
+    private static class Box<T> { <A, B> Box(int value) {} }
+    private static class Hidden { public int value; }
+    public Object following() { return null; }
+}
+'''
+        changed = before.replace('Hidden', 'Internal').replace('Box<Internal>(1)', 'Box<Internal>(4)')
+        changed = changed.replace('public int value', 'public long value')
+        self.assert_api_source_change(before, changed, None)
+        changes = [
+            before.replace('SECOND =', 'RENAMED ='),
+            before.replace('            SECOND = new <String, Hidden> Box<Hidden>(2),\n', ''),
+            before.replace('final Object FIRST', 'final Box FIRST'),
+            before.replace('public static final Object', 'protected static final Object'),
+            before.replace('public static final Object', 'public static Object'),
+            before.replace('public Object following()', 'public String following()'),
+            before.replace('THIRD[] = {new <String, Hidden> Box<Hidden>(3)}',
+                           'THIRD[][] = {{new <String, Hidden> Box<Hidden>(3)}}'),
+        ]
+        for after in changes:
+            for update_pin in (False, True):
+                with self.subTest(after=after, update_pin=update_pin):
+                    self.assert_api_source_change(before, after,
+                                                  None if update_pin else 'candidate signature pin',
+                                                  update_pin=update_pin)
+
 
     def test_published_release_can_promote_to_next_but_later_debt_is_rejected(self):
         self.write('released.txt', 'published master work')

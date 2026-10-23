@@ -25,6 +25,18 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").setSatLayout(layout);
     }
 
+    /** A run's presentation override; null reveals the current destination's profile. */
+    public static void setHostProfile(HudRenderManager hud, HudProfile profile) {
+        if (hud != null) hud.installHostProfile(profile);
+    }
+
+    /** Native HUD origin for the overlay's logical viewport, without changing HUD state. */
+    public static int nativeOriginX(GraphicsManager graphics, int width) {
+        var pipeline = graphics.getUiRenderPipeline();
+        var hud = pipeline == null ? null : pipeline.getHudRenderManager();
+        return hud == null ? Math.max(0, (width - 320) / 2) : hud.nativeOriginX(width);
+    }
+
     public static void setScreenLeftAnchorEnabled(HudRenderManager hud, boolean enabled) {
         Objects.requireNonNull(hud, "hud").setScreenLeftAnchorEnabled(enabled);
     }
@@ -83,6 +95,48 @@ public final class HudProfileAccess {
     }
 
     public static boolean coveredByHost(HudRenderManager hud) { return hud != null && hud.coveredByHost; }
+
+    /** Display settings read when a level's HUD is built: the widescreen anchor and hundredths in TIME. */
+    public static void applyDisplaySettings(HudRenderManager hud,
+                                            com.openggf.configuration.SonicConfigurationService config) {
+        if (hud == null || config == null) return;
+        hud.setScreenLeftAnchorEnabled("LEFT_EDGE".equals(
+                config.getString(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_ANCHOR)));
+        hud.timeHundredths = config.getBoolean(com.openggf.configuration.SonicConfiguration.DISPLAY_HUD_TIME_HUNDREDTHS);
+    }
+
+    /**
+     * Measures the colon's ink columns from the game's own HUD digit art (tile 21, the colon's
+     * lower half, holding the lower dot), so TIME with hundredths can pack its separators.
+     */
+    public static void measureTimeSeparators(HudRenderManager hud, com.openggf.level.Pattern[] digits) {
+        if (hud == null || digits == null || digits.length <= 21 || digits[21] == null) return;
+        int left = -1;
+        int right = -1;
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (digits[21].getPixel(x, y) != 0) {
+                    left = left < 0 ? x : Math.min(left, x);
+                    right = Math.max(right, x);
+                }
+            }
+        }
+        hud.separatorInkLeft = left;
+        hud.separatorInkRight = right;
+    }
+
+    /** See {@link com.openggf.level.LevelHudCoverAccess#setRunTime}. */
+    public static void setHostTime(HudRenderManager hud, long frames, boolean hundredths) {
+        if (hud == null) return;
+        hud.hostTimeFrames = frames;
+        hud.hostTimeHundredths = hundredths;
+    }
+
+    public static long hostTimeFrames(HudRenderManager hud) { return hud == null ? -1 : hud.hostTimeFrames; }
+
+    public static boolean timeHundredths(HudRenderManager hud) {
+        return hud != null && (hud.timeHundredths || hud.hostTimeHundredths);
+    }
     static HudPresentationRuntime runtime(GraphicsManager graphics) {
         var pipeline=graphics.getUiRenderPipeline();
         var hud=pipeline==null?null:pipeline.getHudRenderManager();

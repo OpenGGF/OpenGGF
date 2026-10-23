@@ -2,6 +2,7 @@ package com.openggf.sprites.playable;
 
 import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
 import com.openggf.game.CanonicalAnimation;
+import com.openggf.game.CharacterConstructionScope;
 import com.openggf.game.GameModule;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
@@ -247,6 +248,18 @@ public class PlayableSpriteController {
         if (module != null && module.getLevelEventProvider() != null) {
             module.getLevelEventProvider().onPlayableLandingAnimationWrite(sprite);
         }
+    }
+
+    /** Speed-definition hooks may publish before the controller instance exists. */
+    static void publishGroundTransition(AbstractPlayableSprite sprite, boolean changed,
+                                        boolean landed, boolean airborne,
+                                        CharacterConstructionScope.CallbackInvoker callbackInvoker) {
+        if (!changed) return;
+        CharacterConstructionScope.invoke(callbackInvoker, () -> {
+            sprite.onGroundStateChanged(airborne);
+            if (landed) sprite.onLanded();
+            return null;
+        });
     }
 
     boolean allowsObjectControlledSolidContact(ObjectInstance candidate) {

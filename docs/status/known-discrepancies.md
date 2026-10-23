@@ -1753,6 +1753,17 @@ path (it documents such no-codec-but-correctly-restored classes as acceptable `#
 over-approximations). Verified by `TestBossChildNoDoubleSpawnParity` (count parity) and
 `TestBossChildExactStateRewind` (exact non-init state + reference integrity).
 
+Boss-child construction ordinals additionally retain their complete per-runtime-class
+next-ordinal history in snapshots, including retired highest ordinals and classes
+with no live children. Rebuilding the counters from surviving children lost this
+history and changed future child identities on replay. Phase-2 capture/restore now
+owns the counter map; the settled hook does not reconstruct it. The narrow
+`Map<Class<?>, Integer>` codec preserves exact in-memory class identity without
+resolving class names. Short EHZ controls cover live-highest, retired-highest and
+all-retired families; LRZ's maintained fight exposed the independent future-effect
+identity difference. This is shared rewind bookkeeping, not a native child-slot or
+ordinary gameplay-clock change.
+
 **Affected children (no codec, construction-spawned, adopted in place at exact state):**
 
 - `com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance$ArticulatedChild`
@@ -3400,6 +3411,12 @@ the owning KiS2 routine in the catalogue):
   store their native X anchor in `x_sub` and detach on displacement or object carry;
   wall and ledge steps preserve the low position words. Ledge entries use the native
   six-slot animation holds and same-slot grounding, with bounded rewind checks.
+  Vertical climb probes include the signed X radius after the caller's 8/9 offset,
+  use powered one/two-pixel movement and the signed upper-bound clamp, undo the
+  first ledge pose before descending, and land only on negative floor distance
+  with the raw angle and current animation 5 while retaining the climb timer.
+  [Independent real-terrain components](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-climb-vertical-contract--2026-10-21)
+  qualify these local branches, not a complete KiS2 or CNZ route.
   Wall-grab suppression and complete rewind route coverage remain open.
 - **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
   movement and clear roll-jump/glide state. Held vines pin the player each pass;
@@ -3491,6 +3508,37 @@ recorded in the [completion plan](../architecture/plans/2026-10-13-s3k-playable-
 This shared publication repair does not certify other games' route products.
 
 
+### Knuckles glide dispatcher and slide cue components (2026-10-22)
+
+Shared glide dispatch now preserves the native unsigned camera tail, existing
+non-CPU camera owner, boundary-before-move order and states3–5 early-return
+prelude. S3K supplies the optional ROM GroundSlide cue; other profiles default
+absent. The affected22 classes qualify599 unique cases after an independently
+attributed camera-bound fixture repair, without changing any climb expectation
+or maintained route data. This does not close native waveform, live dual-plane
+route breadth or prior-source MHZ37752 attribution. See the
+[MHZ matrix](../architecture/validation/levels/s3k-mhz-act2.md#native-glide-prelude-and-groundslide-component-closure--2026-10-22).
+
+
+### Current Knuckles MHZ delivery block and climb callbacks (2026-10-22)
+
+The unchanged complete MHZ consumer on372 stops at death26853, earlier than
+prior-source37752. Cause/first executed divergent owner are unexposed and the
+new frontier blocks delivery; focused599 coverage does not certify the route.
+The separate native climb callback gap is now corrected through the existing
+native floor bridge before either landing hook, with no late overwrite of
+callback writes. All604 affected component cases pass, including14 direct
+callback controls; ledge completion and ordinary landing still clear the byte.
+This independent component correction has no new maintained MHZ qualification
+and does not attribute or waive the death26853 delivery blocker.
+[Evidence and source boundary](../architecture/plans/2026-10-13-s3k-playable-completion.md#current372-maintained-mhz-consumer-block-and-climb-source-closure--2026-10-22).
+[Callback correction and limits](../architecture/plans/2026-10-13-s3k-playable-completion.md#root-climb-native-floor-callback-correction--2026-10-22).
+
+The composed source candidates retain the powered native vertical probes, signed
+radius offsets and KiS2's distinct radii and idle-probe rules. Aggregate affected
+qualification remains pending. No controller or comparison oracle was adapted.
+See the [aggregate checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md).
+
 ## Fixed Native Sprite Capacity in Wider Presentation
 
 Gameplay SAT evaluation retains H40's native 20 pieces per scanline, 320 fetched
@@ -3507,11 +3555,3 @@ pieces. Reserved attracted rings submit at their actual object-slot phase, and
 ring visibility is filtered after admission. Explicit native FIFO entries precede
 the existing legacy SST suffix; this mixed bridge does not establish every
 object's native DisplaySprite topology. See the [design and source evidence](../architecture/designs/2026-10-22-native-sprite-scanline-budgets.md).
-
-
-The shared Knuckles climb/prelude source candidates now retain powered native
-vertical probes, signed radius offsets and native-floor callback publication,
-with KiS2's distinct radii and idle-probe rules. Their component qualification
-does not certify the maintained MHZ route: current372 dies at26853 versus the
-prior c4 result37752, and causal attribution remains open. No controller or
-comparison oracle was adapted. See the [aggregate checkpoint](../architecture/plans/2026-10-22-native-gap-swarm.md).

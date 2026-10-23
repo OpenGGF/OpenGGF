@@ -339,7 +339,7 @@ class TestAizNativeDifficultyPresets {
                 var seed = new ObjectSpawn(0, 0, spawn.objectId(), spawn.subtype(), spawn.renderFlags(),
                         spawn.respawnTracked(), spawn.rawYWord(), spawn.layoutIndex(), spawn.ownerModId(), spawn.objectKey());
                 return new DynamicObjectEntry(entry.className(), seed, entry.slotIndex(), entry.state(),
-                        entry.playerOwner(), entry.objectId(), entry.ownerModId(), entry.rewindableAuxiliary());
+                        entry.playerOwner(), entry.objectId(), entry.ownerModId(), entry.rewindableAuxiliary(), entry.playerOwnerId());
             }).toList();
             var positions = objects.getActiveObjects().stream().filter(object -> !object.isDestroyed())
                     .map(object -> List.of(((AbstractObjectInstance) object).getSlotIndex(), object.getX(), object.getY())).toList();

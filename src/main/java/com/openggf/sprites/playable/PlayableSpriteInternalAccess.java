@@ -72,6 +72,11 @@ public final class PlayableSpriteInternalAccess {
         sprite.setPreventTailsRespawn(false);
     }
 
+    /** Native bset/bclr Status_Roll, without animation, box, radii or skid side effects. */
+    public static void writeNativeRollingStatus(AbstractPlayableSprite sprite, boolean rolling) {
+        sprite.rolling = rolling;
+    }
+
     /** Native slide get-up floor reset, preserving the turn byte before landing callbacks. */
     public static void landForNativeFloorReset(AbstractPlayableSprite sprite) {
         sprite.landForNativeFloorReset();

@@ -119,6 +119,49 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void nativeWorldDataReattachmentKeepsCameraSpritesDataObjectOrderAndStableOwner() throws Exception {
+        var root = new com.openggf.game.sonic3k.Sonic3kGameModule();
+        var world = new WorldSession(root);
+        var ctx = new GameplayModeContext(world);
+        ctx.attachGameplayManagers(new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2), new DefaultSolidExecutionRegistry());
+        var ownerField = WorldSession.class.getDeclaredField("worldPhysicalData"); ownerField.setAccessible(true);
+        Object owner = ownerField.get(world);
+        var adapterField = owner.getClass().getDeclaredField("rewindAdapter"); adapterField.setAccessible(true);
+        Object adapter = adapterField.get(owner);
+        assertNotSame(owner, adapter, "The durable DATA service and runtime rewind projection have distinct owners");
+        String physical = com.openggf.game.sonic3k.render.S3kPhysicalDisplayWorld.KEY;
+        assertFalse(ctx.getRewindRegistry().capture().containsKey(physical));
+        LevelManager level = mock(LevelManager.class);
+        when(level.getTilemapManager()).thenReturn(mock(com.openggf.level.LevelTilemapManager.class));
+        when(level.levelRewindSnapshottable()).thenReturn(new LevelTestSnapshot());
+        when(level.levelTilemapRewindSnapshottable()).thenReturn(new LevelTilemapTestSnapshot());
+        ObjectManager objects = mock(ObjectManager.class);
+        @SuppressWarnings("unchecked") var objectAdapter = (RewindSnapshottable<ObjectManagerSnapshot>) mock(RewindSnapshottable.class);
+        when(objectAdapter.key()).thenReturn("object-manager");
+        when(objectAdapter.capture()).thenReturn(mock(ObjectManagerSnapshot.class));
+        when(objects.rewindSnapshottable()).thenReturn(objectAdapter);
+        when(level.getObjectManager()).thenReturn(objects);
+        for (int attachment = 0; attachment < 2; attachment++) {
+            var terrain = new TerrainCollisionManager();
+            ctx.attachLevelManagers(new WaterSystem(), new ParallaxManager(), terrain,
+                    new CollisionSystem(terrain), new SpriteManager(), level);
+            ctx.registerLevelAdapters(level); ctx.registerLevelAdapters(level);
+            var keys = new java.util.ArrayList<>(ctx.getRewindRegistry().capture().entries().keySet());
+            assertTrue(keys.indexOf("camera") < keys.indexOf("sprites"));
+            assertTrue(keys.indexOf("sprites") < keys.indexOf(physical));
+            assertTrue(keys.indexOf(physical) < keys.indexOf("object-manager"));
+            assertSame(owner, ownerField.get(world));
+        }
+        var cache = GameplayModeContext.class.getDeclaredField("worldRewindAdapter"); cache.setAccessible(true);
+        assertSame(adapter, cache.get(ctx));
+        ctx.tearDownManagers();
+        assertNull(cache.get(ctx));
+        assertSame(owner, ownerField.get(world), "Manager teardown must preserve the world's DATA owner");
+        assertSame(adapter, adapterField.get(owner), "Manager teardown must preserve the DATA projection identity");
+    }
+
+    @Test
     void contextAcceptsCompositionModuleWithoutTypedRules() {
         com.openggf.game.GameModule module =
                 mock(com.openggf.game.GameModule.class);

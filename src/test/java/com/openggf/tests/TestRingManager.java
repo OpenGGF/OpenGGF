@@ -49,6 +49,7 @@ public class TestRingManager {
     public void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.activeGameplayMode();
+        GameServices.level().resetLevelGamestate(new LevelGamestate());
     }
 
     @AfterEach
@@ -1148,23 +1149,6 @@ public class TestRingManager {
             groundSensors = new Sensor[0];
             ceilingSensors = new Sensor[0];
             pushSensors = new Sensor[0];
-        }
-
-        private int ringCount = 0;
-
-        @Override
-        public void addRings(int delta) {
-            ringCount += delta;
-        }
-
-        @Override
-        public int getRingCount() {
-            return ringCount;
-        }
-
-        @Override
-        public void setRingCount(int ringCount) {
-            this.ringCount = ringCount;
         }
 
         @Override

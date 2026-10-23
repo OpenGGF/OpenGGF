@@ -17,22 +17,21 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198737-198779): the EggRobo's gun arm, the
- * second row of {@code ChildObjDat_919D0} at {@code (-$1C,-4)}.
+ * ROM {@code loc_916EE}-{@code loc_91750} (sonic3k.asm:198704-198738): the EggRobo's gun arm,
+ * the second row of {@code ChildObjDat_919D0} at {@code (-$1C,-4)}.
  *
- * <p>{@code word_919C4} gives it priority {@code $280}, {@code $10} by {@code $C} pixels and
- * mapping frame 2. {@code sub_91930} places it from the parent's X and from {@code $32(a1)} — the
- * parent's Y from <em>two</em> frames ago, falling back to the live Y only while that slot is still
- * zero — so the arm lags the hover by a frame and the pair reads as jointed rather than rigid.
+ * <p>INIT loads {@code word_919C4} and returns without following, firing or drawing. MAIN's
+ * {@code sub_91930} uses the parent's X and its delayed {@code $32} Y, falling back to live Y
+ * only when that word is zero. When the parent arms it, the gun makes one shot allocation and
+ * selects a {@code $5F} cooldown before that attempt. The cooldown draws its latched position.
  *
- * <p>{@code loc_91712} watches bit 1 of the parent's {@code $38}. When the parent's
- * {@code Find_OtherObject} check arms it, the arm creates one {@link EggRoboShotInstance} from
- * {@code ChildObjDat_919DE} at {@code ($B,-4)}, holds for {@code $5F} frames, and then clears the
- * parent's bit — so the cadence is one shot per 96 frames, not one per alignment.
+ * <p>Both active tails test parent status bit 7 only after their own work. A retired parent
+ * therefore still supplies the final refresh or timer operands; {@code Go_Delete_Sprite}
+ * selects an undrawn delete for the next own dispatch.
  */
 public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    /** {@code dc.w $280}. */
+    /** {@code word_919C4}: {@code dc.w $280}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     /** {@code ChildObjDat_919D0} row 1: {@code dc.b -$1C,-4}. */
     static final int CHILD_DX = -0x1C;
@@ -45,14 +44,24 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
     static final int SHOT_DX = 0x0B;
     static final int SHOT_DY = -0x04;
 
+    private enum Phase { INIT, MAIN, COOLDOWN, DELETE }
+
     private EggRoboBadnikInstance parent;
     private int x;
     private int y;
     private boolean hFlip;
-    /** {@code $2E(a0)}: frames left before the parent's fire bit is cleared. */
-    private int cooldown = -1;
+    private boolean vFlip;
+    /** CreateChild1_Normal copies art_tile before this child ever executes INIT. */
+    private boolean artHigh;
+    private int mappingFrame;
+    /** Native {@code $2E}; the routine selects when this cleared word becomes a timer. */
+    private int cooldown;
+    private Phase phase = Phase.INIT;
+    private boolean drawSubmitted;
 
-    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown, boolean hFlip)
+    private record RewindExtra(ObjectRefId parentId, int x, int y, int cooldown, boolean hFlip, boolean vFlip,
+                               int mappingFrame, Phase phase, boolean drawSubmitted,
+                               boolean worldPositioned, boolean artHigh)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public EggRoboGunArmChildInstance(ObjectSpawn spawn, EggRoboBadnikInstance parent) {
@@ -60,10 +69,19 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         this.parent = parent;
         this.x = spawn.x();
         this.y = spawn.y();
-        this.hFlip = (spawn.renderFlags() & 1) != 0;
+        // CreateChild1_Normal copies mappings/art, not render flags, into the cleared SST.
+        setRomWorldPositioned(false);
     }
 
-    /** Probe/rewind constructor. */
+    /** Pure native allocation copy; public/probe constructors retain cleared art priority. */
+    static EggRoboGunArmChildInstance nativeChild(ObjectSpawn spawn, EggRoboBadnikInstance parent,
+                                                        boolean artHigh) {
+        var child = new EggRoboGunArmChildInstance(spawn, parent);
+        child.artHigh = artHigh;
+        return child;
+    }
+
+    /** Pure probe/rewind shell; restore resolves the captured exact parent. */
     public EggRoboGunArmChildInstance(ObjectSpawn spawn) {
         this(spawn, null);
     }
@@ -75,48 +93,88 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        if (parent == null || parent.isDestroyed()) {
+        drawSubmitted = false;
+        if (isDestroyed()) {
+            return;
+        }
+        if (phase == Phase.DELETE) {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
-        if (cooldown >= 0) {
-            // loc_9173A draws the latched position/flags without sub_91930.
+        if (phase == Phase.INIT) {
+            // loc_916EE: SetUp_ObjAttributes3, inherit only parent coordinate bit 2, then RTS.
+            mappingFrame = MAPPING_FRAME;
+            setRomWorldPositioned(parent != null && parent.participatesInRomWorldTransitionOffset());
+            phase = Phase.MAIN;
+            return;
+        }
+        if (parent == null) {
+            // A missing captured owner supplies no native refresh or timer-clear operands.
+            selectDelete();
+            return;
+        }
+        if (phase == Phase.COOLDOWN) {
+            // loc_9173A neither follows nor fires, including the timer-underflow entry.
             if (--cooldown < 0) {
+                phase = Phase.MAIN;
                 parent.clearGunArmed();
             }
+        } else {
+            // sub_91930 precedes the fire request and the final parent-status test.
+            hFlip = !parent.badnikFacingLeft();
+            x = (parent.getX() + (hFlip ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
+            // sub_91930 / loc_91964 (FixBugs=0): select $32/live Y first, then
+            // copy render bit 1 and negate the signed child_dy word when set.
+            int anchorY = parent.childAnchorY();
+            vFlip = parent.nativeVFlip();
+            y = (anchorY + (vFlip ? -CHILD_DY : CHILD_DY)) & 0xFFFF;
+            updateDynamicSpawn(x, y);
+            if (parent.gunArmed()
+                    && com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), parent.getX())) {
+                phase = Phase.COOLDOWN;
+                cooldown = com.openggf.game.mutators.NativeObjectPolicyAccess.firingCooldown(services(), FIRE_COOLDOWN);
+                int shotX = (x + (hFlip ? -SHOT_DX : SHOT_DX)) & 0xFFFF;
+                int shotY = (y + SHOT_DY) & 0xFFFF;
+                boolean facingLeft = !hFlip;
+                spawnChild(() -> EggRoboShotInstance.gunShot(
+                        new ObjectSpawn(shotX, shotY, 0, 0, facingLeft ? 0 : 1, false, 0), facingLeft, this, artHigh));
+            }
+        }
+        // Child_Draw_Sprite runs even on the cooldown-underflow and failed-allocation paths.
+        if (parent.isDestroyed()) {
+            selectDelete();
             return;
         }
-        // sub_91930 copies the parent's render bit, not its logical facing.
-        // Native unflipped EggRobo art faces left.
-        hFlip = !parent.badnikFacingLeft();
-        x = (parent.getX() + (hFlip ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
-        y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
-        updateDynamicSpawn(x, y);
-        if (!parent.gunArmed() || !com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), parent.getX())) {
-            return;
-        }
-        cooldown = com.openggf.game.mutators.NativeObjectPolicyAccess.firingCooldown(services(), FIRE_COOLDOWN);
-        int shotX = (x + (hFlip ? -SHOT_DX : SHOT_DX)) & 0xFFFF;
-        int shotY = (y + SHOT_DY) & 0xFFFF;
-        boolean facingLeft = !hFlip;
-        spawnChild(() -> new EggRoboShotInstance(
-                new ObjectSpawn(shotX, shotY, 0, 0, facingLeft ? 0 : 1, false, 0), facingLeft));
+        drawSubmitted = true;
     }
 
+    private void selectDelete() {
+        phase = Phase.DELETE;
+        parent = null; // The selected Delete_Current_Sprite will not read this raw link again.
+    }
+
+    @Override public boolean isHighPriority() { return artHigh; }
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
-    @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
-    @Override public int getOnScreenHalfWidth() { return 0x10; }
-    @Override public int getOnScreenHalfHeight() { return 0x0C; }
+    @Override public int getPriorityBucket() { return phase == Phase.INIT ? 0 : PRIORITY_BUCKET; }
+    @Override public int getOnScreenHalfWidth() { return phase == Phase.INIT ? 0 : 0x10; }
+    @Override public int getOnScreenHalfHeight() { return phase == Phase.INIT ? 0 : 0x0C; }
+
+    /** Child_DrawTouch_Sprite sees status7 as soon as Go_Delete_Sprite selects DELETE. */
+    boolean hasNativeRetirementStatus() {
+        return phase == Phase.DELETE || isDestroyed();
+    }
 
     public int cooldownForTest() { return cooldown; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (!drawSubmitted || phase == Phase.DELETE || isDestroyed()) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SSZ_EGG_ROBO);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(MAPPING_FRAME, x, y,
-                    hFlip, false, 0);
+            renderer.drawFrameIndexForcedPriority(mappingFrame, x, y, hFlip, vFlip, 0, artHigh);
         }
     }
 
@@ -125,7 +183,8 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context)
-                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown, hFlip));
+                .withObjectSubclassExtra(new RewindExtra(parentId, x, y, cooldown, hFlip, vFlip,
+                        mappingFrame, phase, drawSubmitted, participatesInRomWorldTransitionOffset(), artHigh));
     }
 
     @Override
@@ -136,6 +195,12 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
             y = extra.y();
             cooldown = extra.cooldown();
             hFlip = extra.hFlip();
+            vFlip = extra.vFlip();
+            artHigh = extra.artHigh();
+            mappingFrame = extra.mappingFrame();
+            phase = extra.phase();
+            drawSubmitted = extra.drawSubmitted();
+            setRomWorldPositioned(extra.worldPositioned());
             parent = extra.parentId() == null ? null
                     : (EggRoboBadnikInstance) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);

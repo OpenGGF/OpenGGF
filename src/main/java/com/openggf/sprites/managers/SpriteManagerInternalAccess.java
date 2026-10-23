@@ -39,6 +39,17 @@ public final class SpriteManagerInternalAccess {
         manager.forgetNativePlayerArt(player);
     }
 
+    /** Registers only engine-owned fixed-Dust state; the creator-facing snapshots stay unchanged. */
+    public static void registerDustEffectsRewind(SpriteManager manager,
+            com.openggf.game.rewind.RewindRegistry registry) {
+        requireEngineCaller();
+        var owner = new PlayableDustRewind(manager);
+        registry.deregister(owner.key());
+        registry.deregisterPostRestoreCallback(owner.key());
+        registry.register(owner);
+        registry.registerPostRestoreCallback(owner.key(), owner::afterRestore);
+    }
+
     public static com.openggf.game.rewind.RewindSnapshottable<?> nativePlayerArtAdapter(SpriteManager manager) {
         return manager.nativePlayerArtBindings.adapter();
     }

@@ -10,6 +10,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.level.scroll.M68KMath.unpackBG;
@@ -216,25 +217,175 @@ public class SwScrlSlotsTest {
     }
 
     @Test
-    public void slotBackgroundFreezesWhenDebugForcesRotationScalarToZero() {
-        SwScrlSlots scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+    public void backgroundEventQueuesRowsWithoutCommittingVisiblePlaneB() {
+        var scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(level.getCurrentZone()).thenReturn(Sonic3kZoneIds.ZONE_SLOT_MACHINE);
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::level).thenReturn(level);
+            scroll.updateForTest(null, new int[224], 0x300, 0x200, 0);
+            scroll.updateForTest(null, new int[224], 0x300, 0x200, 1);
+            assertEquals(2, scroll.lastBgPlaneRowUpdatesForTest().size(), "sub_4ECAA prepares two ROM rows");
+            org.mockito.Mockito.verify(level, org.mockito.Mockito.never()).copyBackgroundTileRowFromWorldToVdpPlane(
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.openggf.game.resources.PlcLifecyclePhase.class)
+    void onlyNativeDrawLevelPhasesPublishPreparedRows(com.openggf.game.resources.PlcLifecyclePhase phase) {
+        var scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        var objects = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
+        var services = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectServices.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+        var art = org.mockito.Mockito.mock(com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.class, org.mockito.Mockito.RETURNS_DEEP_STUBS);
+        org.mockito.Mockito.when(art.vintDmaLedger().romBound()).thenReturn(true);
+        org.mockito.Mockito.when(level.captureBackgroundVdpPlane()).thenReturn(new byte[64 * 32 * 4]);
+        org.mockito.Mockito.when(level.getObjectManager()).thenReturn(objects);
+        org.mockito.Mockito.when(objects.getObjectServices()).thenReturn(services);
+        org.mockito.Mockito.when(services.parallaxManager().getHandler(org.mockito.ArgumentMatchers.anyInt())).thenReturn(scroll);
+        org.mockito.Mockito.when(level.copyBackgroundTileRowFromWorldToVdpPlane(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(true);
+        scroll.updateForTest(null, new int[224], 0x300, 0x200, 0);
+        scroll.updateForTest(null, new int[224], 0x300, 0x200, 1);
+        var profile = new com.openggf.game.sonic3k.Sonic3kLevelInitProfile(null);
+        // An explicit DMA-only lag declaration is not VInt_DrawLevel authority.
+        profile.serviceQueuedPatternDma(phase, phase == com.openggf.game.resources.PlcLifecyclePhase.LAG, art, level);
+        boolean draws = switch (phase) {
+            case ORDINARY_LEVEL, CREDITS_DEMO, NORMAL_PAUSE -> true;
+            default -> false;
+        };
+        org.mockito.Mockito.verify(level, org.mockito.Mockito.times(draws ? 2 : 0)).copyBackgroundTileRowFromWorldToVdpPlane(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        if (draws) {
+            org.mockito.Mockito.verify(level).copyBackgroundTileRowFromWorldToVdpPlane(0x48, 0, 0xDFFE, 0x19);
+            org.mockito.Mockito.verify(level).copyBackgroundTileRowFromWorldToVdpPlane(0x48, 0x10, 0xE0FE, 0x19);
+            var order = org.mockito.Mockito.inOrder(art, level);
+            order.verify(art).publishPatternModuleDma();
+            order.verify(level).copyBackgroundTileRowFromWorldToVdpPlane(0x48, 0, 0xDFFE, 0x19);
+            order.verify(level).copyBackgroundTileRowFromWorldToVdpPlane(0x48, 0x10, 0xE0FE, 0x19);
+            order.verify(level).uploadBackgroundTilemap();
+            profile.serviceQueuedPatternDma(phase, false, art, level);
+            org.mockito.Mockito.verify(level, org.mockito.Mockito.times(2)).copyBackgroundTileRowFromWorldToVdpPlane(
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                    org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        }
+    }
+
+    @Test
+    void onePhysicalVBlankTokenCannotConsumeWorkPreparedAfterItsPublication() {
+        var scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        scroll.updateForTest(null, new int[224], 0x300, 0x200, 0);
+        scroll.updateForTest(null, new int[224], 0x300, 0x200, 1);
+        var coordinator = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var token = coordinator.latchBeforeFadeUpdate();
+        assertTrue(token.claim(com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL));
+        assertTrue(token.dispatchGameVBlank(() -> scroll.publishBackgroundPlaneRows(level)));
+        scroll.updateForTest(null, new int[224], 0x300, 0x200, 2);
+        var pending = scroll.captureRewindState();
+        assertTrue(!scroll.lastBgPlaneRowUpdatesForTest().isEmpty(), "a new event really prepared more rows");
+        org.junit.jupiter.api.Assertions.assertFalse(token.dispatchGameVBlank(() -> scroll.publishBackgroundPlaneRows(level)));
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll", pending, scroll.captureRewindState()));
+        org.mockito.Mockito.verify(level, org.mockito.Mockito.times(2)).copyBackgroundTileRowFromWorldToVdpPlane(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+        token.finish();
+    }
+
+    @Test
+    void immutablePublishedPlaneIsReusedUntilARealWriteOrOwnerReplacement() throws Exception {
+        var scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        var parallax = org.mockito.Mockito.mock(com.openggf.level.ParallaxManager.class);
+        var firstLevel = org.mockito.Mockito.mock(com.openggf.level.Level.class);
+        org.mockito.Mockito.when(level.getCurrentLevel()).thenReturn(firstLevel);
+        org.mockito.Mockito.when(parallax.getHandler(org.mockito.ArgumentMatchers.anyInt())).thenReturn(scroll);
+        byte[] initial = new byte[64 * 32 * 4];initial[0] = 7;
+        byte[] changed = initial.clone();changed[0] = 9;
+        org.mockito.Mockito.when(level.captureBackgroundVdpPlane()).thenReturn(initial, changed, initial);
+        org.mockito.Mockito.when(level.copyBackgroundTileRowFromWorldToVdpPlane(
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(true);
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(level);
+            services.when(com.openggf.game.GameServices::parallaxOrNull).thenReturn(parallax);
+            scroll.updateForTest(null, new int[224], 0x300, 0x200, 0);
+            Object first = publishedValue(scroll.captureRewindState());
+            initial[0] = 3;
+            assertEquals(7, publishedBytes(first)[0], "constructor owns its bytes");
+            byte[] returned = publishedBytes(first);returned[0] = 99;
+            assertEquals(7, publishedBytes(first)[0], "accessor is defensive");
+            assertSame(first, publishedValue(scroll.captureRewindState()));
+            scroll.rebuildOutput(new int[224], 0x300, 0x200, 0, 0);
+            scroll.updateForTest(null, new int[224], 0x300, 0x200, 1);
+            assertSame(first, publishedValue(scroll.captureRewindState()), "pending rows do not replace published bytes");
+            org.mockito.Mockito.verify(level).captureBackgroundVdpPlane();
+            scroll.publishBackgroundPlaneRows(level);
+            Object next = publishedValue(scroll.captureRewindState());
+            assertNotSame(first, next);assertEquals(9, publishedBytes(next)[0]);
+            assertSame(next, publishedValue(scroll.captureRewindState()));
+            org.mockito.Mockito.when(level.getCurrentLevel()).thenReturn(org.mockito.Mockito.mock(com.openggf.level.Level.class));
+            Object reloaded = publishedValue(scroll.captureRewindState());
+            assertNotSame(next, reloaded, "replacement level identity invalidates the old plane");
+            org.mockito.Mockito.verify(level, org.mockito.Mockito.times(3)).captureBackgroundVdpPlane();
+        }
+    }
+
+    private static Object publishedValue(Object state) throws Exception {
+        var accessor = state.getClass().getDeclaredMethod("publishedPlane");accessor.setAccessible(true);
+        return accessor.invoke(state);
+    }
+    private static byte[] publishedBytes(Object value) throws Exception {
+        var accessor = value.getClass().getDeclaredMethod("bytes");accessor.setAccessible(true);
+        return (byte[]) accessor.invoke(value);
+    }
+
+    @Test
+    void pendingRowsSurviveRestoreAndRebuildUntilExplicitPublication() {
+        var scroll = new SwScrlSlots(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        int[] output = new int[224];
+        scroll.updateForTest(null, output, 0x300, 0x200, 0);
+        var before = scroll.captureRewindState();
+        scroll.updateForTest(null, output, 0x300, 0x200, 1);
+        var pending = scroll.captureRewindState();
+        scroll.publishBackgroundPlaneRows(level);
+        var published = scroll.captureRewindState();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            scroll.restoreRewindState(before);
+            scroll.updateForTest(null, output, 0x300, 0x200, 1);
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll", pending, scroll.captureRewindState()));
+            scroll.restoreRewindState(pending);
+            scroll.rebuildOutput(output, 0x300, 0x200, 1, 0);
+            scroll.rebuildOutput(output, 0x300, 0x200, 1, 0);
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll", pending, scroll.captureRewindState()));
+            scroll.publishBackgroundPlaneRows(level);
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll", published, scroll.captureRewindState()));
+            scroll.publishBackgroundPlaneRows(level);
+            assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.keyEquals("slot-scroll", published, scroll.captureRewindState()));
+        }
+    }
+
+    @Test
+    public void zeroRotationScalarRunsThePositiveBackgroundStepAndBandLoop() {
+        // Slots_BackgroundEvent: tst.w scalar / bpl selects +$400 even at zero.
+        var resources = com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources();
+        var scroll = new SwScrlSlots(resources);
+        var runtime = new S3kSlotBonusStageRuntime(resources);
         runtime.bootstrap();
-
-        for (int frame = 0; frame < 20; frame++) {
-            scroll.updateForTest(runtime, 0x300, 0x200, frame);
-        }
-
-        int velocityBeforeDebug = scroll.backgroundVelocityForTest();
-        int originBeforeDebug = scroll.lastBackgroundOriginYForTest();
         runtime.stageController().setScalarIndex(0);
-
-        for (int frame = 20; frame < 40; frame++) {
-            scroll.updateForTest(runtime, 0x300, 0x200, frame);
-        }
-
-        assertEquals(velocityBeforeDebug, scroll.backgroundVelocityForTest());
-        assertEquals(originBeforeDebug, scroll.lastBackgroundOriginYForTest());
+        int[] output = new int[224];
+        scroll.updateForTest(runtime, output, 0x300, 0x200, 0); // BackgroundInit
+        scroll.updateForTest(runtime, output, 0x300, 0x200, 1); // BackgroundEvent
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertEquals(0x400, scroll.backgroundVelocityForTest(), "zero takes the positive step"),
+                () -> assertEquals(-0x40, unpackBG(output[96]), "the ROM band loop still runs"),
+                () -> assertEquals(2, scroll.lastBgPlaneRowUpdatesForTest().size(), "the event queues its ROM rows"));
     }
 
     @Test

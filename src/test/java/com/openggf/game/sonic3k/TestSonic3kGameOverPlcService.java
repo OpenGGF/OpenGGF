@@ -107,17 +107,33 @@ class TestSonic3kGameOverPlcService {
     }
 
     @Test
-    void moduleDispatcherPreservesOnePhysicalJobAcrossPhaseSwitchesAndOneRewindOwner() throws Exception {
+    void worldDispatcherPreservesOnePhysicalJobAcrossPhaseSwitchesAndOneRewindOwner() throws Exception {
         var module = new Sonic3kGameModule();
-        assertNotNull(module.createGame(TestEnvironment.currentRom()));
-        var title = module.getGameService(Sonic3kLevelTitlePlcService.class);
-        var event = module.getGameService(Sonic3kGameOverPlcService.class);
-        var dispatch = module.getGameService(PlcLifecycleService.class);
-        assertSame(title, dispatch, "the native lifecycle publication retains its existing adapter identity");
-        assertEquals(List.of(title), module.rewindAdapters(),
-                "one registered adapter captures the shared physical queue exactly once");
-        assertEquals(List.of("s3k-level-title-plc"),
-                module.rewindAdapters().stream().map(adapter -> adapter.key()).toList());
+        var rom = TestEnvironment.currentRom();
+        assertNotNull(module.createGame(rom));
+        assertNull(module.getGameService(Sonic3kLevelTitlePlcService.class));
+        assertNull(module.getGameService(Sonic3kGameOverPlcService.class));
+        assertNull(module.getGameService(PlcLifecycleService.class));
+        assertTrue(module.rewindAdapters().isEmpty(), "the module cannot select or capture another world's FIFO");
+        var source = com.openggf.game.StockGameDataSources.pinned(rom, module);
+        var world = new com.openggf.game.session.WorldSession(module, module, source, null);
+        var otherWorld = new com.openggf.game.session.WorldSession(module, module, source, null);
+        var title = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class);
+        var event = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kGameOverPlcService.class);
+        var dispatch = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, PlcLifecycleService.class);
+        var otherTitle = com.openggf.game.session.WorldPlcLifecycleAccess.require(otherWorld, Sonic3kLevelTitlePlcService.class);
+        var otherEvent = com.openggf.game.session.WorldPlcLifecycleAccess.require(otherWorld, Sonic3kGameOverPlcService.class);
+        assertSame(title, dispatch, "the world lifecycle retains its original title facade/adapter identity");
+        assertNotSame(title, otherTitle);
+        assertNotSame(event, otherEvent, "a reused module cannot share its event delegate across worlds");
+        otherEvent.beginGameOver();
+        var otherQueue = otherTitle.capture();
+        var otherRecipes = otherTitle.recipeState().capture();
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        com.openggf.game.session.WorldPlcLifecycleAccess.register(world, registry);
+        var registered = registry.capture();
+        assertEquals(1, registered.entries().keySet().stream().filter(title.key()::equals).count());
+        assertEquals(1, registered.entries().keySet().stream().filter(title.recipeState().key()::equals).count());
 
         title.beginSpecialStageResults();
         dispatch.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
@@ -141,6 +157,9 @@ class TestSonic3kGameOverPlcService {
         dispatch.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
         var prepared = title.capture();
         assertEquals(GAME_OVER, prepared.activeEntry());
+        assertEquals(Sonic3kLevelTitlePlcService.RecipePurpose.EVENT_READINESS,
+                title.recipeState().capture().activePurpose());
+        var registeredPrepared = registry.capture();
 
         // Each opportunity consumes only its native budget, with no reset,
         // second owner drain, or producer re-submission at a phase switch.
@@ -157,7 +176,7 @@ class TestSonic3kGameOverPlcService {
             assertTrue(event.isBusy());
         }
 
-        title.restore(prepared);
+        registry.restore(registeredPrepared);
         dispatch.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
         assertEquals(31, title.capture().activeEntry().remainingPatterns(),
                 "the existing title rewind adapter also restores event-owned progress");
@@ -165,10 +184,107 @@ class TestSonic3kGameOverPlcService {
         assertNull(title.capture().activeEntry());
         assertNotEquals(List.of(GAME_OVER), title.capture().queuedEntries(),
                 "the next native queue clear also replaces an event job");
-        title.restore(prepared);
+        registry.restore(registeredPrepared);
         assertTrue(event.isBusy());
+        assertNotNull(module.createGame(rom), "game recreation cannot replace a world-owned queue");
         module.resetModuleScopedState();
-        assertFalse(event.isBusy(), "module reset clears the one physical FIFO for both owners");
+        assertSame(title, com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class));
+        assertSame(event, com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kGameOverPlcService.class));
+        assertEquals(prepared, title.capture(), "module recreation/reset cannot clear this world's event");
+        assertTrue(event.isBusy());
+        assertEquals(otherQueue, otherTitle.capture(), "this world's service/restore cannot touch the other world");
+        assertEquals(otherRecipes, otherTitle.recipeState().capture());
+    }
+
+    @Test
+    void worldEventPurposeCannotArmGenericReadinessOrRetirePhysicalRecipes() throws Exception {
+        var module = new Sonic3kGameModule();
+        var source = com.openggf.game.StockGameDataSources.pinned(TestEnvironment.currentRom(), module);
+        var world = new com.openggf.game.session.WorldSession(module, module, source, null);
+        var title = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class);
+        var event = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kGameOverPlcService.class);
+        var readiness = Sonic3kLevelTitlePlcService.RecipePurpose.READINESS;
+        var physical = Sonic3kLevelTitlePlcService.RecipePurpose.PHYSICAL_PATTERNS;
+        var eventPurpose = Sonic3kLevelTitlePlcService.RecipePurpose.EVENT_READINESS;
+        // Identical original descriptors in distinct explicit roles: never infer purpose from bytes.
+        title.appendRaw(0x083D74, readiness);
+        title.appendRaw(0x083D74);
+        title.appendRaw(0x083D74, readiness);
+        var queued = title.capture();
+        assertEquals(List.of(readiness, physical, readiness), title.recipeState().capture().queuedPurposes());
+        title.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        title.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
+        assertEquals(queued, title.capture(), "ordinary/event Init cannot arm or skip generic readiness");
+        title.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        int total = title.capture().activeEntry().totalPatterns();
+        for (int remaining = total; remaining > 0; remaining -= 6)
+            title.serviceVBlank(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        title.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        var physicalActive = title.capture();
+        assertEquals(physical, title.recipeState().capture().activePurpose());
+        for (var phase : PlcLifecyclePhase.values()) {
+            title.serviceVBlank(phase);
+            event.serviceVBlank(phase);
+        }
+        assertEquals(physicalActive, title.capture(), "no readiness/event phase retires physical patterns");
+
+        event.beginGameOver();
+        assertNull(title.capture().activeEntry(), "PLC2 clears the prior physical decoder");
+        assertEquals(List.of(GAME_OVER), title.capture().queuedEntries());
+        assertNull(title.recipeState().capture().activePurpose());
+        assertEquals(List.of(eventPurpose), title.recipeState().capture().queuedPurposes(),
+                "PLC2 clears preceding active/queued purposes as well as descriptor counts");
+        title.prepareAfterLoop(PlcLifecyclePhase.NORMAL_PAUSE);
+        assertNull(title.capture().activeEntry(), "pause cannot arm an event head");
+        title.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        title.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertEquals(31, title.capture().activeEntry().remainingPatterns());
+        title.appendRaw(0x083D74);
+        assertEquals(List.of(physical), title.recipeState().capture().queuedPurposes());
+        for (int step = 0; step < 11; step++) title.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertNull(title.capture().activeEntry());
+        title.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+        var afterEvent = title.capture();
+        assertEquals(physical, title.recipeState().capture().activePurpose());
+        for (var phase : PlcLifecyclePhase.values()) title.serviceVBlank(phase);
+        assertEquals(afterEvent, title.capture(), "physical retirement still requires confirmed journal writes");
+        for (var phase : List.of(PlcLifecyclePhase.LEVEL_TITLE_CARD, PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
+                PlcLifecyclePhase.ORDINARY_LEVEL, PlcLifecyclePhase.PALETTE_FADE)) {
+            event.beginGameOver();
+            title.prepareAfterLoop(phase);
+            assertEquals(GAME_OVER, title.capture().activeEntry(), "the actual event head arms in " + phase);
+            assertEquals(eventPurpose, title.recipeState().capture().activePurpose());
+        }
+    }
+
+    @Test
+    void unavailableWorldRomFailsBeforeClearingExistingCountsOrRecipePurposes() throws Exception {
+        var module = new Sonic3kGameModule();
+        int[] romRequests = {0};
+        var missing = new com.openggf.game.GameDataSource() {
+            @Override public java.util.Optional<com.openggf.data.Rom> rom() {
+                romRequests[0]++;
+                return java.util.Optional.empty();
+            }
+            @Override public java.io.InputStream openAsset(String path) throws java.io.IOException {
+                throw new java.io.IOException("component source has no assets");
+            }
+            @Override public String identity() { return "component:missing-game-over-rom"; }
+        };
+        var world = new com.openggf.game.session.WorldSession(module, module, missing, null);
+        var title = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kLevelTitlePlcService.class);
+        var event = com.openggf.game.session.WorldPlcLifecycleAccess.require(world, Sonic3kGameOverPlcService.class);
+        assertEquals(0, romRequests[0], "world construction/delegate lookup remains ROM-free");
+        // Explicit component snapshot ingress, not a natural event or route qualification.
+        var retained = new NemesisPlcQueueSnapshot(null, List.of(GAME_OVER));
+        title.restore(retained);
+        title.recipeState().restore(new Sonic3kLevelTitlePlcService.Recipes(retained, null,
+                List.of(Sonic3kLevelTitlePlcService.RecipePurpose.EVENT_READINESS)));
+        var retainedRecipes = title.recipeState().capture();
+        assertThrows(java.io.IOException.class, event::beginGameOver);
+        assertEquals(1, romRequests[0]);
+        assertEquals(retained, title.capture());
+        assertEquals(retainedRecipes, title.recipeState().capture(), "failed source resolution cannot clear recipe state");
     }
 
     @ParameterizedTest

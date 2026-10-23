@@ -222,20 +222,7 @@ public class ObjectManager {
     // slot numbers (affecting timing gates like (v_vbla_byte + d7) & 7).
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
 
-    // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
-    // (Shield, Stars) that are NOT recreated by generic dynamic restore. The
-    // post-restore callback in
-    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore relinks a
-    // live matching shield when one exists, otherwise re-spawns via the power-up
-    // spawner. The spawner consumes the captured entry via
-    // {@link #consumePendingPlayerBoundEntry(Class)} so the new instance lands
-    // at the same slot the reference run had AND has the captured field surface
-    // restored on top of its fresh-construction state. Without that restore,
-    // animation cursors and similar non-construction-set scalars would reset to
-    // zero on every rewind.
-    private final Map<Class<?>, java.util.ArrayDeque<
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
-            pendingPlayerBoundEntries = new java.util.HashMap<>();
+    private final ObjectRewindPlayerBindings playerBoundRewind = new ObjectRewindPlayerBindings();
 
     // Rewind: in-place restore support. Matching live instances are reused by the
     // snapshot restore instead of destroy/recreate when the class passes the
@@ -489,6 +476,7 @@ public class ObjectManager {
 
     private void reset(int cameraX, PersistentRespawnState persistentRespawnState,
             boolean materializeInitialWindow) {
+        playerBoundRewind.clear();
         nativeSpriteSubmissions.clear();
         nativeSpriteExternalResolver = null;
         nativeSpriteExternalSlotDispatch = null;
@@ -601,6 +589,12 @@ public class ObjectManager {
      */
     public void resyncSpawnList(List<ObjectSpawn> newSpawns) {
         competitionStreaming.releaseUpfrontPlacementSlots();
+        // Retire only discarded placed owners and their unconsumed child reservations.
+        // Native competition already released each upfront placement's own SST above.
+        for (var entry : activeObjects.entrySet()) {
+            if (!competitionStreaming.upfrontActive()) releaseSlot(entry.getValue());
+            freeAllReservedChildSlots(entry.getKey());
+        }
         nativeSpriteSubmissions.clear();
         nativeSpriteExternalResolver = null;
         nativeSpriteExternalSlotDispatch = null;
@@ -4015,22 +4009,26 @@ public class ObjectManager {
                         continue;
                     }
                     if (inst instanceof AbstractObjectInstance aoi) {
+                        var playerOwner = playerBoundOwner(inst);
+                        var playerOwnerId = playerOwner == null ? null
+                                : rewindContext.requireIdentityTable().encodePlayer(playerOwner);
                         dynamicEntries.add(
                                 new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
                                         inst.getClass().getName(),
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
                                         objectCallbacks.captureRewind(aoi, rewindContext),
-                                        playerBoundOwner(inst),
+                                        playerOwnerId == null ? playerOwner : null,
                                         rewindObjectIds.get(inst),
                                         objectCallbacks.owner(inst),
-                                        dynamicOwnership.isRewindableAuxiliary(inst)));
+                                        dynamicOwnership.isRewindableAuxiliary(inst),
+                                        playerOwnerId));
                     }
                 }
 
                 long[] bits = captureOwnedUsedSlotBits();
                 com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactState solidContactState =
-                        solidContacts.captureRewindState();
+                        solidContacts.captureRewindState(rewindContext);
 
                 // No List.copyOf wrappers here: the ObjectManagerSnapshot
                 // compact constructor already copies its list components.
@@ -4061,6 +4059,7 @@ public class ObjectManager {
 
             @Override
             public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
+                playerBoundRewind.clear();
                 // The restore is TWO-PHASE so object-reference resolution is order-independent.
                 //   Phase 1 recreates (reuse / adopt / genericRecreate / registry) every
                 //           captured object — active and dynamic — and registers each under its
@@ -4078,6 +4077,9 @@ public class ObjectManager {
                 com.openggf.game.rewind.identity.RewindIdentityTable restoreTable =
                         new com.openggf.game.rewind.identity.RewindIdentityTable();
                 registerPlayersInto(restoreTable);
+                // Resolve structural player bindings while this restore table is live. Keep one
+                // prepared identity per original entry so parked probe retries cannot duplicate work.
+                var preparedDynamicEntries = playerBoundRewind.prepareEntries(s.dynamicObjects(), restoreTable);
                 com.openggf.game.rewind.schema.RewindCaptureContext rewindContext =
                         com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(restoreTable);
                 // Phase-2 work item: a recreated instance paired with the entry whose field
@@ -4103,7 +4105,6 @@ public class ObjectManager {
                 dynamicObjects.clear();
                 dynamicOwnership.clear();
                 Arrays.fill(execOrder, null);
-                pendingPlayerBoundEntries.clear();
                 dynamicOwnership.rememberCapturedOrder(s.dynamicObjects());
                 // Capture construction-spawned children produced while active objects are
                 // reconstructed below, so the dynamic reconciliation loop can adopt them in
@@ -4323,8 +4324,9 @@ public class ObjectManager {
                 };
                 for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
                         : s.dynamicObjects()) {
-                    if (!reconstructDynamicEntry.test(entry)) {
-                        parkedDynamicEntries.add(entry);
+                    var prepared = preparedDynamicEntries.get(entry);
+                    if (!reconstructDynamicEntry.test(prepared)) {
+                        parkedDynamicEntries.add(prepared);
                     }
                 }
                 boolean parkedPassMadeProgress = true;
@@ -4381,9 +4383,8 @@ public class ObjectManager {
                 }
 
                 // 6b. Every object's own field-blob restore (including any of its children's)
-                // is now settled, so owners that derive state FROM their children (e.g.
-                // AbstractBossInstance re-deriving its child-spawn ordinal counters from each
-                // live child's restored identity) can safely do so now -- doing it inline
+                // is now settled, so owners that derive state FROM their children
+                // can safely do so now -- doing it inline
                 // during phase 2 above would race, since restore order between a parent and
                 // its own children is not guaranteed.
                 for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
@@ -4404,7 +4405,7 @@ public class ObjectManager {
                     s2LatchedObjectManagerCameraX = s.placement().s2LatchedCameraX();
                 }
 
-                solidContacts.restoreRewindState(s.solidContactState());
+                solidContacts.restoreRewindState(s.solidContactState(), rewindContext);
                 if (planeSwitchers != null) {
                     planeSwitchers.restoreRewindState(s.planeSwitchers());
                 }
@@ -4574,16 +4575,21 @@ public class ObjectManager {
     /**
      * Registers the live player + sidekick references into {@code table} under their stable
      * {@link com.openggf.game.rewind.identity.PlayerRefId}s. Players are not part of the
-     * object set rebuilt by a restore, so the same registration is valid for both the capture
-     * context and the restore context — player-reference fields resolve to the live players
-     * either way.
+     * object set rebuilt by a restore. Resolve their current roster roles independently of
+     * camera focus, which may follow P2. Capture and restore can use different incarnations.
      */
     private void registerPlayersInto(com.openggf.game.rewind.identity.RewindIdentityTable table) {
         com.openggf.sprites.playable.AbstractPlayableSprite main = null;
         List<PlayableEntity> sidekicks = List.of();
         if (objectServices != null) {
-            var camera = objectServices.camera();
-            main = camera != null ? camera.getFocusedSprite() : null;
+            var sprites = objectServices.spriteManager();
+            if (sprites != null) {
+                main = sprites.getMainPlayable();
+            } else {
+                // Standalone services may supply a camera without a roster owner.
+                var camera = objectServices.camera();
+                main = camera != null ? camera.getFocusedSprite() : null;
+            }
             List<PlayableEntity> serviceSidekicks = objectServices.sidekicks();
             if (serviceSidekicks != null) {
                 sidekicks = serviceSidekicks;
@@ -4650,10 +4656,7 @@ public class ObjectManager {
      */
     void enqueuePendingPlayerBoundEntry(Class<?> baseType,
             com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-        if (entry == null || entry.slotIndex() < 0) return;
-        pendingPlayerBoundEntries
-                .computeIfAbsent(baseType, k -> new java.util.ArrayDeque<>())
-                .add(entry);
+        playerBoundRewind.enqueue(baseType, entry);
     }
 
     /**
@@ -4678,22 +4681,7 @@ public class ObjectManager {
     com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
             consumePendingPlayerBoundEntry(Class<?> baseType,
                     Predicate<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> matcher) {
-        java.util.ArrayDeque<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
-                queue = pendingPlayerBoundEntries.get(baseType);
-        if (queue == null || queue.isEmpty()) return null;
-        Iterator<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> iterator =
-                queue.iterator();
-        while (iterator.hasNext()) {
-            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry = iterator.next();
-            if (matcher.test(entry)) {
-                iterator.remove();
-                if (queue.isEmpty()) {
-                    pendingPlayerBoundEntries.remove(baseType);
-                }
-                return entry;
-            }
-        }
-        return null;
+        return playerBoundRewind.consume(baseType, matcher);
     }
 
     private PlayableEntity playerBoundOwner(ObjectInstance inst) {

@@ -35,6 +35,42 @@ import static org.mockito.Mockito.when;
 public class TestHudRenderManager {
 
     @Test
+    void hostedProfileOverridesWithoutLosingTheLatestZoneProfile() {
+        HudFixture fixture = hudFixture(123, "0:10", 7, 3, false, false);
+        HudProfile hosted = new HudProfile(List.of(new HudRow(true, HudLabel.TIME, HudMetric.TIME,
+                16, 8, 56, 8, 4, HudWarningPolicy.NONE)));
+        HudProfileAccess.setHostProfile(fixture.hud(), hosted);
+        fixture.hud().draw(fixture.levelState(), null);
+        assertTrue(fixture.draws().contains(new Draw(200, 56, 8)));
+        assertFalse(fixture.draws().stream().anyMatch(draw -> draw.y() == 40));
+        HudProfile zone = singleNumericRow(HudMetric.RINGS, 3);
+        HudProfileAccess.install(fixture.hud(), zone);
+        assertEquals(hosted, HudProfileAccess.current(fixture.hud()));
+        HudProfileAccess.setHostProfile(fixture.hud(), null);
+        assertEquals(zone, HudProfileAccess.current(fixture.hud()));
+    }
+
+    @Test
+    void timeReadoutMeasurementTracksPackedSeparatorsAndHostHundredths() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        assertEquals(32, fixture.hud().presentationReadouts().get(1).valueWidth());
+        HudProfileAccess.setHostTime(fixture.hud(), 60, true);
+        assertEquals(56, fixture.hud().presentationReadouts().get(1).valueWidth(),
+                "unmeasured art uses seven fixed cells");
+        fixture.hud().separatorInkLeft = 2;
+        fixture.hud().separatorInkRight = 4;
+        assertEquals(52, fixture.hud().presentationReadouts().get(1).valueWidth());
+        fixture.hud().separatorInkRight = 3;
+        assertEquals(50, fixture.hud().presentationReadouts().get(1).valueWidth(),
+                "measure the loaded art rather than assuming three ink pixels");
+        HudProfileAccess.setHostTime(fixture.hud(), -1, false);
+        fixture.hud().timeHundredths = true;
+        assertEquals(50, fixture.hud().presentationReadouts().get(1).valueWidth());
+        fixture.hud().timeHundredths = false;
+        assertEquals(32, fixture.hud().presentationReadouts().get(1).valueWidth());
+    }
+
+    @Test
     void ringDigitsReadThePublishedCounterRatherThanTheSilentGameplayWrite() {
         HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
         HudProfileAccess.install(fixture.hud(), singleNumericRow(HudMetric.RINGS, 3));
@@ -208,6 +244,50 @@ public class TestHudRenderManager {
                 new Draw(214, 80, 40), new Draw(215, 80, 48)), fixture.draws());
         assertFalse(fixture.draws().stream().anyMatch(
                 draw -> draw.patternId() == 0x28023 || draw.patternId() == 0x28025));
+    }
+
+    @Test
+    void aRunsClockInHundredthsPacksTheColonAndPointByTheArtsMeasuredInk() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(new HudRow(true, HudLabel.TIME,
+                HudMetric.TIME, 16, 24, 56, 24, 4, HudWarningPolicy.NONE))));
+        com.openggf.level.Pattern[] digits = new com.openggf.level.Pattern[22];
+        for (int i = 0; i < digits.length; i++) digits[i] = new com.openggf.level.Pattern();
+        digits[21].setPixel(3, 0, (byte) 1); // the lower dot's ink and shadow: columns 3-5
+        digits[21].setPixel(5, 1, (byte) 2);
+        HudProfileAccess.measureTimeSeparators(fixture.hud(), digits);
+        HudProfileAccess.setHostTime(fixture.hud(), 3 * 60 + 17, true);
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        List<Draw> time = fixture.draws().stream().filter(draw -> draw.patternId() >= 200
+                && draw.patternId() <= 221).toList();
+        assertEquals(List.of(
+                new Draw(200, 56, 24), new Draw(201, 56, 32),   // 0
+                new Draw(220, 63, 24), new Draw(221, 63, 32),   // : two pixels after the digit
+                new Draw(200, 70, 24), new Draw(201, 70, 32),   // 0 one pixel after the colon
+                new Draw(206, 78, 24), new Draw(207, 78, 32),   // 3
+                new Draw(221, 85, 33), new Draw(221, 85, 34),   // . the colon's lower dot, on the baseline
+                new Draw(204, 92, 24), new Draw(205, 92, 32),   // 2
+                new Draw(216, 100, 24), new Draw(217, 100, 32)), time,
+                "0:03.28 for 197 frames, with the separators packed");
+    }
+
+    @Test
+    void wholeSecondsKeepTheGamesFixedCells() {
+        HudFixture fixture = hudFixture(0, "1:05", 0, 3, false, false);
+        HudProfileAccess.install(fixture.hud(), new HudProfile(List.of(new HudRow(true, HudLabel.TIME,
+                HudMetric.TIME, 16, 24, 56, 24, 4, HudWarningPolicy.NONE))));
+        com.openggf.level.Pattern[] digits = new com.openggf.level.Pattern[22];
+        for (int i = 0; i < digits.length; i++) digits[i] = new com.openggf.level.Pattern();
+        digits[21].setPixel(3, 0, (byte) 1);
+        HudProfileAccess.measureTimeSeparators(fixture.hud(), digits);
+
+        fixture.hud().draw(fixture.levelState(), null);
+
+        assertTrue(fixture.draws().contains(new Draw(220, 64, 24)), "the colon keeps its eight-pixel cell");
+        assertTrue(fixture.draws().contains(new Draw(200, 72, 24)));
+        assertTrue(fixture.draws().contains(new Draw(210, 80, 24)));
     }
 
     @Test

@@ -4,12 +4,17 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.solid.ContactKind;
 import com.openggf.game.session.EngineContext;
+import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.managers.SpriteManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +23,8 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Integration-style tests for {@link ObjectManager#rewindSnapshottable()}.
@@ -593,6 +600,206 @@ class TestObjectManagerRewindSnapshot {
         manager.updateSolidContacts(player);
         assertTrue(manager.isRidingObject(player, solid), "precondition: player landed on the solid");
         return player;
+    }
+
+    @Test
+    void registeredContactStateRebindsAllChannelsAndReplaysTwoForwardBranches() {
+        ObjectSpawn spawn = spawn(100, 100);
+        var owners = new ContactRoster(List.of(spawn));
+        var manager = owners.manager;
+        manager.reset(0);
+        manager.update(0, null, List.of(), 1, false);
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var platform = owners.registry.instances.get(spawn);
+        var p1 = contactPlayer("sonic");
+        var p2 = contactPlayer("tails");
+        owners.roster(p1, p2);
+        // Declared unit state: exercise every hidden channel, including two cached angles.
+        manager.solidContacts().restoreRewindState(contactState(p1, p2, spawn, platform.getSlotIndex()));
+        var adapter = manager.rewindSnapshottable();
+        var a = adapter.capture();
+        var contact = a.solidContactState();
+        assertEquals(2, contact.riding().size());
+        assertEquals(2, contact.standingSnapshots().size());
+        assertEquals(4, contact.headroomSnapshots().size());
+        assertEquals(2, contact.standingBits().size());
+        assertEquals(2, contact.pushingBits().size());
+        assertEquals(2, contact.standingBitSnapshots().size());
+        assertEquals(2, contact.inlineSupportedPlayerBindings().size());
+        assertEquals(2, contact.forceAirOnStaleSupportLossPlayerBindings().size());
+        assertTrue(contact.inlineSupportedPlayers().isEmpty());
+        assertTrue(contact.forceAirOnStaleSupportLoss().isEmpty());
+        assertTrue(contact.riding().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        assertTrue(contact.standingSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        assertTrue(contact.headroomSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        assertTrue(contact.standingBits().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        assertTrue(contact.pushingBits().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        assertTrue(contact.standingBitSnapshots().stream().allMatch(entry -> entry.player() == null && entry.playerId() != null));
+        forwardContacts(manager, p1, p2);
+        var b = adapter.capture();
+        forwardContacts(manager, p1, p2);
+        var c = adapter.capture();
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            // Reverse construction order while preserving actual roster roles; camera follows P2.
+            var freshP2 = contactPlayer("tails");
+            var freshP1 = contactPlayer("sonic");
+            owners.roster(freshP1, freshP2);
+            owners.camera.setFocusedSprite(freshP2);
+            adapter.restore(a);
+            assertContactWorld(a, adapter.capture());
+            assertFalse(manager.isRidingObject(p1));
+            assertFalse(manager.isRidingObject(p2));
+            assertTrue(manager.isRidingObject(freshP1));
+            assertTrue(manager.isRidingObject(freshP2));
+            assertNotSame(platform, manager.getRidingObject(freshP1));
+            assertTrue(manager.hasObjectStandingBit(freshP1, manager.getRidingObject(freshP1)));
+            assertTrue(manager.hasObjectPushingBit(freshP2));
+            assertEquals(7, manager.latestHeadroomSnapshot(freshP1, 0));
+            assertEquals(11, manager.latestHeadroomSnapshot(freshP1, 0x40));
+            forwardContacts(manager, freshP1, freshP2);
+            assertContactWorld(b, adapter.capture());
+            forwardContacts(manager, freshP1, freshP2);
+            assertContactWorld(c, adapter.capture());
+        }
+    }
+
+    @Test
+    void missingRequiredContactRoleFailsBeforeContactMapMutation() {
+        var owners = new ContactRoster(List.of());
+        var p1 = contactPlayer("sonic");
+        var p2 = contactPlayer("tails");
+        owners.roster(p1, p2);
+        var controller = owners.manager.solidContacts();
+        controller.markObjectSupportThisFrame(p2);
+        controller.forceAirOnStaleObjectSupportLoss(p2);
+        var saved = controller.captureRewindState(owners.manager.captureIdentityContext());
+        owners.roster(contactPlayer("sonic"));
+        controller.reset();
+        controller.markObjectSupportThisFrame(p1);
+        var before = controller.captureRewindState();
+        var failure = assertThrows(IllegalStateException.class,
+                () -> controller.restoreRewindState(saved, owners.manager.captureIdentityContext()));
+        assertTrue(failure.getMessage().contains("Missing required player reference"));
+        assertEquals(before, controller.captureRewindState(), "failed role resolution must not clear contact maps");
+        assertThrows(IllegalStateException.class, () -> controller.restoreRewindState(saved),
+                "a structural snapshot cannot silently fall back to contextless raw restoration");
+        assertEquals(before, controller.captureRewindState());
+    }
+
+    @Test
+    void mixedContactMembershipBindingsRetainOrderAndStandaloneIdentity() {
+        var owners = new ContactRoster(List.of());
+        var p1 = contactPlayer("z-main");
+        var p2 = contactPlayer("a-side");
+        var standalone = contactPlayer("m-legacy");
+        owners.roster(p1, p2);
+        var controller = owners.manager.solidContacts();
+        for (var player : List.of(p1, standalone, p2)) {
+            controller.markObjectSupportThisFrame(player);
+            controller.forceAirOnStaleObjectSupportLoss(player);
+        }
+        var legacy = controller.captureRewindState();
+        assertEquals(List.of(p2, standalone, p1), legacy.inlineSupportedPlayers());
+        controller.reset();
+        controller.restoreRewindState(legacy);
+        assertEquals(legacy, controller.captureRewindState(), "original raw overload keeps exact standalone identity");
+        var context = owners.manager.captureIdentityContext();
+        var structural = controller.captureRewindState(context);
+        var expected = List.of(
+                new ObjectManagerSnapshot.SolidContactPlayerBinding(null, PlayerRefId.sidekick(0)),
+                new ObjectManagerSnapshot.SolidContactPlayerBinding(standalone, null),
+                new ObjectManagerSnapshot.SolidContactPlayerBinding(null, PlayerRefId.mainPlayer()));
+        assertEquals(expected, structural.inlineSupportedPlayerBindings());
+        assertEquals(expected, structural.forceAirOnStaleSupportLossPlayerBindings());
+        controller.reset();
+        controller.restoreRewindState(structural, context);
+        assertEquals(legacy, controller.captureRewindState(), "unchanged roster restores every mixed member in order");
+        assertEquals(structural, controller.captureRewindState(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ObjectManagerSnapshot.SolidContactPlayerBinding(p1, PlayerRefId.mainPlayer()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new ObjectManagerSnapshot.SolidContactPlayerBinding(null, PlayerRefId.nullRef()));
+    }
+
+    @Test
+    void actualRosterPlayerRolesIgnoreP2CameraFocusAndDoNotFallBackFromMissingMain() {
+        var owners = new ContactRoster(List.of());
+        var p1 = contactPlayer("sonic");
+        var p2 = contactPlayer("tails");
+        owners.roster(p1, p2);
+        owners.camera.setFocusedSprite(p2);
+        var ids = owners.manager.captureIdentityContext().requireIdentityTable();
+        assertEquals(PlayerRefId.mainPlayer(), ids.encodePlayer(p1));
+        assertEquals(PlayerRefId.sidekick(0), ids.encodePlayer(p2));
+        when(owners.sprites.getMainPlayable()).thenReturn(null);
+        ids = owners.manager.captureIdentityContext().requireIdentityTable();
+        assertNull(ids.resolvePlayer(PlayerRefId.mainPlayer(), false));
+        assertNull(ids.encodePlayer(p1));
+        assertEquals(PlayerRefId.sidekick(0), ids.encodePlayer(p2), "P2 focus cannot manufacture a missing main role");
+        when(owners.sprites.getMainPlayable()).thenThrow(new IllegalStateException("ambiguous actual roster"));
+        assertThrows(IllegalStateException.class, owners.manager::captureIdentityContext);
+    }
+
+    private static void assertContactWorld(ObjectManagerSnapshot expected, ObjectManagerSnapshot actual) {
+        assertTrue(RewindSnapshotDiff.keyEquals("object-manager", expected, actual),
+                () -> RewindSnapshotDiff.diffKey("object-manager", expected, actual).toString());
+    }
+
+    private static void forwardContacts(ObjectManager manager, Sonic p1, Sonic p2) {
+        manager.updateSolidContacts(p1);
+        manager.updateSolidContacts(p2);
+    }
+
+    private static Sonic contactPlayer(String code) {
+        var player = new Sonic(code, (short) 0, (short) 0);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 69);
+        player.setAir(false);
+        player.setOnObject(true);
+        player.setPushing(true);
+        return player;
+    }
+
+    private static ObjectManagerSnapshot.SolidContactState contactState(
+            Sonic p1, Sonic p2, ObjectSpawn spawn, int slot) {
+        var key = new ObjectManagerSnapshot.SolidContactLatchKey(spawn, slot, false);
+        var latches = List.of(new ObjectManagerSnapshot.SolidContactLatchEntry(p1, List.of(key)),
+                new ObjectManagerSnapshot.SolidContactLatchEntry(p2, List.of(key)));
+        return new ObjectManagerSnapshot.SolidContactState(17,
+                List.of(new ObjectManagerSnapshot.SolidContactRidingEntry(p1, spawn, slot, 100, 100, -1),
+                        new ObjectManagerSnapshot.SolidContactRidingEntry(p2, spawn, slot, 100, 100, -1)),
+                List.of(p1, p2), List.of(p1, p2),
+                List.of(new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p1, ContactKind.TOP, true, true),
+                        new ObjectManagerSnapshot.SolidContactStandingSnapshotEntry(p2, ContactKind.TOP, true, true)),
+                List.of(new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p1, 0, 7),
+                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p1, 0x40, 11),
+                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p2, 0, 13),
+                        new ObjectManagerSnapshot.SolidContactHeadroomSnapshotEntry(p2, 0x40, 19)),
+                latches, latches, latches);
+    }
+
+    private static final class ContactRoster extends StubObjectServices {
+        private final Camera camera = new Camera();
+        private final SpriteManager sprites = mock(SpriteManager.class);
+        private final TrackingRegistry registry = new TrackingRegistry();
+        private final ObjectManager manager;
+        private List<PlayableEntity> sidekicks = List.of();
+
+        private ContactRoster(List<ObjectSpawn> spawns) {
+            manager = new ObjectManager(spawns, registry, 0, null, null, null, camera, this);
+        }
+
+        private void roster(Sonic main, Sonic... others) {
+            when(sprites.getMainPlayable()).thenReturn(main);
+            sidekicks = List.of(others);
+            camera.setFocusedSprite(main);
+        }
+
+        @Override public Camera camera() { return camera; }
+        @Override public SpriteManager spriteManager() { return sprites; }
+        @Override public List<PlayableEntity> sidekicks() { return sidekicks; }
+        @Override public ObjectManager objectManager() { return manager; }
     }
 
 }

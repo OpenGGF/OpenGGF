@@ -1140,6 +1140,12 @@ public class GraphicsManager {
 	}
 
 	private void requestPaletteFadePublication() {
+        // Rebinding a restored owner to its displayed generation is a redraw, not
+        // new V-int work. Preserve the snapshot's pending bit, including true.
+        if (displayedPaletteFadeHeld
+                && paletteFadePresentation.mode() == publishedPaletteFade.mode()
+                && paletteFadePresentation.steps() == publishedPaletteFade.steps()
+                && paletteFadePresentation.lineMask() == publishedPaletteFade.lineMask()) return;
 		if (paletteUploadLatched || displayedPaletteFadeHeld) {
 			paletteFadePublicationPending = true;
 			return;

@@ -31,6 +31,40 @@ class TestNativeSstWord2C {
         assertTrue(manager.nativeSstWord2C().capture().cells().isEmpty());
     }
 
+    @Test void unknownUntypedOverlapDoesNotBecomeACaptureAuthority() {
+        ObjectManager manager = manager();
+        for (int i = 0; i < 2; i++) {
+            ForeignOwner owner = ObjectConstructionContext.with(manager.services(), 40,
+                    () -> new ForeignOwner(spawn()));
+            manager.addDynamicObject(owner);
+        }
+        writeWord2C(manager, 50, 0xABCD);
+        RewindRegistry registry = new RewindRegistry();
+        registerWord2CRewind(manager, registry);
+        var snapshot = registry.capture();
+        assertEquals(new ObjectNativeSstWord2C.State(List.of(new ObjectNativeSstWord2C.Cell(50, 0xABCD))),
+                snapshot.get(WORD_2C_REWIND_KEY));
+        assertThrows(IllegalStateException.class, () -> currentOwner(manager, 40));
+        assertThrows(IllegalStateException.class, () -> readWord2C(manager, 40));
+        assertThrows(IllegalStateException.class, () -> writeWord2C(manager, 40, 1));
+        assertThrows(IllegalStateException.class, () -> addWord2C(manager, 40, -1));
+        assertThrows(IllegalStateException.class, () -> clearWord2C(manager, 40));
+        assertEquals(snapshot.get(WORD_2C_REWIND_KEY), registry.capture().get(WORD_2C_REWIND_KEY));
+    }
+
+    @Test void knownWordCaptureStillRejectsDistinctLiveReceivers() {
+        ObjectManager manager = manager();
+        add(manager, 40, 5);
+        WordOwner second = ObjectConstructionContext.with(manager.services(), 40, () -> {
+            WordOwner owner = new WordOwner(spawn());
+            owner.word = 5;
+            return owner;
+        });
+        manager.addDynamicObject(second);
+        assertThrows(IllegalStateException.class, () -> manager.nativeSstWord2C().capture());
+        assertThrows(IllegalStateException.class, () -> readWord2C(manager, 40));
+    }
+
     @Test void explicitClearThenOrphanSubtractionsWrapAndDoNotAllocate() {
         ObjectManager manager = manager();
         clearWord2C(manager, 40);

@@ -12,6 +12,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
 
 import java.util.List;
+import java.util.Objects;
 
 public class AnimalObjectInstance extends AbstractObjectInstance
         implements SpawnServicesDefaultArgsRewindRecreatable {
@@ -21,7 +22,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private static final int ANIM_TIMER_INIT = 7;
     private static final int FRAMES_PER_MAPPING = 3;
     private static final int ART_VARIANT_COUNT = 2;
-    private static final int S2_RENDER_HALF_WIDTH = 8;
+    private static final int RENDER_HALF_WIDTH = 8;
     private static final int APPROX_RENDER_HALF_HEIGHT = 32;
 
     private enum State {
@@ -29,6 +30,18 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         WALK,
         FLY
     }
+
+    private enum LaunchMode {
+        POP,
+        WALK_OR_FLY
+    }
+
+    // Persist beyond the RNG gate: loc_917C0's flags5 keeps hFlip set for either X sign.
+    // Mutable scalar/enum fields use the existing generic rewind codecs, including before init.
+    private LaunchMode launchMode = LaunchMode.POP;
+    private AnimalType launchTypeA;
+    private AnimalType launchTypeB;
+    private boolean launchParentFlipX;
 
     private final PatternSpriteRenderer renderer;
     private int currentX;
@@ -69,6 +82,26 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             ObjectSpawn spawn, ObjectServices services,
             DestructionEffects.PointsFactory pointsFactory) {
         return new AnimalObjectInstance(spawn, services, 0, pointsFactory, true);
+    }
+
+    /**
+     * Defers an already-walking/flying animal launch to its own first SST dispatch.
+     * The caller supplies the two native table definitions and the consumed parent
+     * facing bit; this mode bypasses the normal zone-pair/MAIN pop initialization.
+     * S3K loc_917C0..loc_9181C (skdisasm044fa467:198774..198819) consumes one full
+     * Random_Number: low bit chooses the row, original high word the initial Y speed.
+     */
+    public static AnimalObjectInstance deferredWalkingFlyingLaunch(
+            ObjectSpawn spawn, ObjectServices services, AnimalType typeA, AnimalType typeB,
+            boolean parentFlipX) {
+        Objects.requireNonNull(typeA, "first launch profile");
+        Objects.requireNonNull(typeB, "second launch profile");
+        AnimalObjectInstance animal = new AnimalObjectInstance(spawn, services, 0, null, true);
+        animal.launchMode = LaunchMode.WALK_OR_FLY;
+        animal.launchTypeA = typeA;
+        animal.launchTypeB = typeB;
+        animal.launchParentFlipX = parentFlipX;
+        return animal;
     }
 
     /**
@@ -138,6 +171,21 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         }
         deferArtVariantRng = false;
         ObjectServices svc = services();
+        if (launchMode == LaunchMode.WALK_OR_FLY) {
+            // loc_917E2 selects word_2C7EA directly, not the current zone's animal pair.
+            int random = svc.rng().nextRaw();
+            artVariant = random & 1;
+            definition = artVariant == 0 ? launchTypeA : launchTypeB;
+            mappingSetIndex = definition.mappingSet().ordinal();
+            groundXVelocity = definition.xVel();
+            groundYVelocity = definition.yVel();
+            xVelocity = launchParentFlipX ? -groundXVelocity : groundXVelocity;
+            // swap d0 retains Random_Number's original high word; [100,1FF] then neg.w.
+            yVelocity = -Math.max(0x100, (random >>> 16) & 0x1FF);
+            animFrame = 1;
+            state = definition.flying() ? State.FLY : State.WALK;
+            return; // Existing firstDisplayFrame branch draws without moving on this pass.
+        }
         this.artVariant = svc.rng().nextBits(1);
         applyAnimalDefinition(svc.renderManager());
     }
@@ -160,6 +208,13 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     }
 
     private void updateMain() {
+        // S3K loc_2C9E0 polls the preceding Render_Sprites bit before MoveSprite;
+        // walk/fly loc_2CA68/loc_2CAD0 poll after their routine work instead
+        // (skdisasm044fa467:61139-61217). The init draw still returns above.
+        if (usesRenderFlagDeleteBounds() && usesScreenYWrapRenderBounds() && !romRenderOnScreen) {
+            setDestroyed(true);
+            return;
+        }
         objectMoveAndFall();
         if (yVelocity >= 0 && checkFloorCollision()) {
             xVelocity = groundXVelocity;
@@ -258,6 +313,13 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         return rules != null && rules.animalObjectUsesRenderFlagDeleteBounds();
     }
 
+    private boolean usesScreenYWrapRenderBounds() {
+        ObjectServices ctx = tryServices();
+        GameModule module = ctx != null ? ctx.gameModule() : null;
+        GameRules rules = module != null ? module.getRules() : null;
+        return rules != null && rules.camera().useScreenYWrapValueForVisibility();
+    }
+
     private ObjectInteractionRules animalObjectInteractionRules() {
         ObjectServices ctx = tryServices();
         GameModule module = ctx != null ? ctx.gameModule() : null;
@@ -290,7 +352,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        boolean hFlip = xVelocity < 0;
+        boolean hFlip = launchMode == LaunchMode.WALK_OR_FLY || xVelocity < 0;
         renderer.drawFrameIndex(getFrameIndex(), currentX, currentY, hFlip, false);
     }
 
@@ -315,7 +377,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getOnScreenHalfWidth() {
-        return S2_RENDER_HALF_WIDTH;
+        return RENDER_HALF_WIDTH;
     }
 
     @Override
@@ -325,6 +387,19 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         }
         // BuildSprites updates render_flags.on_screen after Obj28 has displayed.
         Camera camera = services().camera();
+        if (usesScreenYWrapRenderBounds()) {
+            // Obj_Animal sets width_pixels=8 and y_radius=$C but leaves
+            // height_pixels=0. Render_Sprites reads that zero height, copied
+            // camera words and Screen_Y_wrap_value, not the collision radius
+            // or S2's approximate 32px Y band (044fa467:61087-61110,
+            // 36376-36417). Keep this captured flag until the next render.
+            int relativeX = (short) (currentX - camera.getXCopy());
+            int relativeY = (currentY - camera.getYCopy()) & camera.screenYWrapValue();
+            romRenderOnScreen = (short) (relativeX + RENDER_HALF_WIDTH) >= 0
+                    && (short) (relativeX - RENDER_HALF_WIDTH) < viewportWidth()
+                    && relativeY < viewportHeight();
+            return;
+        }
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()

@@ -1470,3 +1470,99 @@ the old load. No runtime behaviour changed.
 
 Validation: run `probe-v1` (focused queued selectors, S3K ROM, branch
 bugfix/ai-s3k-route-behaviour-regressions on 2adfa37a7) passed the owning test, 0 skips.
+
+## Knuckles cold first gravity corridor — 2026-10-21
+
+`8c78e7762b4394b5c5d9a531ccb2b21807491028` plus the new
+[`TestDezKnucklesColdGravityRouteCapture`](../../../../src/test/java/com/openggf/tools/TestDezKnucklesColdGravityRouteCapture.java)
+qualifies one ordinary native320 solo-Knuckles corridor. The
+[`script`](../../../../src/test/resources/routes/s3k/dez2-knuckles-cold-first-gravity-320.script)
+and round-tripped BK2 contain1020 inputs, neutral P2. Public
+`GameplayCaptureSession.boot(ROM,11,1,settings)` explicitly enables the title
+from input0, donor off, empty sidekick, and every setup seed null/false.
+This is level-select-only direct entry: ROM `$1E3D34` supplies centre
+`$140,$3AC`, with foreground4/background8 retained throughout. It does not
+exercise the seamless `Player_mode == 2` transport landing at `$3B0`.
+
+The locked ROM SHA-1 is `CFBF98C36C776677290A872547AC47C53D2761D6`, CRC32
+`63522553`. Its original494-record parsed DEZ2 table binds raw record29 to
+unflipped `$5B` at `$700,$3C0`, record30 to associated `$5A/$10`, record73 to
+flipped `$5B` at `$B00,$3C0`, and record74 to its `$5A/$10`. The consumer binds
+each actual live object by that raw placement and checks the actual P1 interact
+owner, riding state and continuous eight-unit tube-angle progression. Both
+gravity changes require the same live writer's seeded side latch to change
+left-to-right with P1 inside native `sub_49228`'s signed `[Y-$20,Y+$20)` band;
+class or coordinates alone do not establish a write.
+
+| Actual input spot (zero-based, after step) | Ordinary observation / replay window |
+| --- | --- |
+|20|Title remains active through65; actual control release is85|
+|630|Record30 mounts P1, centre1669/972, normal gravity|
+|651|Record29 sets gravity0→1, centre1792/948, record30 still owns P1|
+|662|Record30 progresses in the inverted world, centre1857/975|
+|673|Record30 releases P1 beyond its span, centre1922/957, still inverted|
+|805|Record74 mounts P1 while inverted, centre2693/947|
+|826|Record73 clears gravity1→0, centre2819/971, record74 still owns P1|
+|847|Record74 releases P1 beyond its span, centre2945/960, normal gravity|
+|900|Neutral grounded follow-through beyond record74, centre3056/997|
+
+Fresh A holds begin360 and750; braking Left854–893 continues through landing,
+then all buttons release894–1019. The final centre is3056/997, all velocities
+zero,11 rings/3 lives, no death/life loss, no support or object/control lock.
+Main and camera focus remain the same real Knuckles, with zero CPU followers.
+World/level/object-manager/runtime identities, zone11/act1,320×224 viewport,
+direct FG/BG values and the complete layout bytes stay unchanged.
+
+Two separate fresh JVM invocations of
+`#coldKnucklesCrossesTheFirstGravityWritersAndTubesUninterrupted` each pass
+**1T0F0E0S**, without any branch capture/restore. Each tick uses normal production
+drawing. Their complete run-local state/owner projection hashes agree:
+`86de41e3496a471125f5a11b5bea8a211376a3cb5c39f2514b263f769f527ad9`.
+The subsequent whole-class invocation passes **2T0F0E0S**, including
+`#coldKnucklesCrossesTheFirstGravityWritersAndTubesWithWorldReplay`: all nine
+spots perform two45-input restore/replay cycles, comparing every registered
+key and restoring external held-input history. Mode changes, pending fresh
+loads and callback-bearing fades are excluded. The title check is an internal
+world-registry replay within TITLE_CARD, not a claim that live title rewind is
+supported. Its first attempted40→85 window crossed GameLoop's actual mode/history
+boundary and failed at the title PLC queue; it was replaced by20→65 with an
+explicit constant-mode guard, without changing runtime or narrowing comparison.
+
+The production `InputLogAuthorTool` checked all1020 rows through `Bk2MovieLoader`;
+the container has only Header.txt and Input Log.txt. SHA-256: script
+`8d829172e4df4bc27365dcfd04a59a84dd352890a5184c678b383562b633368c`, BK2
+`41a59a7acd7eaac84ff7e5d303c4af19f45ca7188396e4c252017dfad43a5457`, Input Log
+`1e6c29f828d56d109051ccd89d1aee2285424dad1ea98d00389be8ae69ba02a5`.
+[Commands, rejected controller choices and timing](../../plans/2026-10-13-s3k-playable-completion.md#knuckles-dez2-cold-gravity-corridor--2026-10-21)
+are recorded in the existing plan. This closes this direct native320 Knuckles
+load/play/invert slice only. Full act/boss/ending, seamless entry, wider/donor/team
+breadth, native pixels and native timing remain open; no runtime parity repair
+or whole-matrix certification follows.
+
+
+### Root composed corridor check — 2026-10-21
+
+Root adopted independently reviewed `ed910d8c` in normal merge
+`c0ef03c779a769d4de4312def0450726ddaf4793`. On that composed tree, the whole
+`TestDezKnucklesColdGravityRouteCapture` passes **2T/0F/0E/0S**: uninterrupted
+ordinary traversal and complete-world replay. Both actual method identities,
+69 properties, the full8057-byte classpath and exact Surefire duplicate,
+all stdout/stderr and TXT summary were inspected. Java25.0.4.1, required
+absolute ROMs and surfaceless EGL match the intended launch.
+
+Both methods retain title release85, the nine source-bound windows above and
+the same run-local projection
+`86de41e3496a471125f5a11b5bea8a211376a3cb5c39f2514b263f769f527ad9`.
+The observed endpoint is3056/997,11 rings/3 lives; the maintained endpoint
+oracle remains grounded, released continuation beyond the tubes with zero
+velocities and unchanged lives. The replay compares every registered key,
+two45-input cycles per spot, with drawing and restored external input history.
+No state or comparison key was removed.
+
+Maven29.763s; XML suite4.097s; queue waiting and individual compiler intervals
+are unknown. Main was up to date;4,264 test sources compiled at release25 inside
+the sole request. FAST/no-manifest and two unmeasured Kos-profile deterministic
+estimates remain warnings, not native timing observations. Source/configuration
+remained unchanged; exact owned reports and extraction temporary files were
+consumed after inspection. This is the bounded direct-entry corridor scope
+above, not an act, seamless route, boss, ending, breadth or native acceptance.

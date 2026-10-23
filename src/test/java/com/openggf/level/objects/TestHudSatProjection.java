@@ -99,6 +99,24 @@ class TestHudSatProjection {
     }
 
     @Test
+    void optionalTimeTailUsesTheSameNativeAndWideAnchorAsItsReadout() {
+        HudProfileAccess.setHostTime(hud, 119, true);
+        for (int width : new int[]{320, 400}) {
+            for (boolean left : new boolean[]{false, true}) {
+                hud.setScreenLeftAnchorEnabled(left);
+                var frame = prepare(width, () -> { });
+                int origin = left ? 0 : (width - 320) / 2;
+                assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 21
+                        && tile.x() == origin + 88 && tile.y() == 33), "optional decimal dot");
+                assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 18
+                        && tile.x() == origin + 96 && tile.y() == 24), "first hundredth");
+                assertTrue(frame.tiles().stream().anyMatch(tile -> tile.patternId() == DIGIT_BASE + 16
+                        && tile.x() == origin + 104 && tile.y() == 24), "second hundredth");
+            }
+        }
+    }
+
+    @Test
     void oneNativeNamePieceAdmitsItsManyFragmentsAsOneSprite() {
         // Native second lives piece spans x32..64, y200..216. Its label and
         // two number fragments must consume one SAT slot, not one per art tile.

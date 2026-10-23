@@ -12,10 +12,12 @@ public final class Sonic3kFreshTitleCardSst {
     private boolean installing;
 
     void prepare(LevelLoadContext context) {
-        // A host-placed/bootstrap load owns no native entry archives. The
-        // semantic fresh-art admission identifies a real Level: re-entry.
+        // A host-placed/bootstrap load owns no native entry archives. Saved-origin
+        // bonus returns still reach loc_62B6 and carry its owner to loc_64DC
+        // (docs/skdisasm/sonic3k.asm:7575-7577,7762-7767,7906-7910).
         int zone=GameServices.level().getCurrentZone(), act=GameServices.level().getCurrentAct();
-        installing=context.isQueueFreshLevelRuntimeArt()
+        installing=(context.isQueueFreshLevelRuntimeArt()
+                || GameServices.level().isBonusStageReturn())
                 && context.isIncludePostLoadAssembly()
                 && context.getLoadMode()==LevelLoadMode.FULL
                 && context.getAssemblyKind()==LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;

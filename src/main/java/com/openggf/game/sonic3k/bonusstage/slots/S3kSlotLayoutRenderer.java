@@ -215,7 +215,10 @@ public final class S3kSlotLayoutRenderer {
         if (visibleCells == null || visibleCells.isEmpty() || camera == null || renderManager == null) {
             return;
         }
-        for (int i = 0; i < visibleCells.size(); i++) {
+        // Slots_RenderLayout/sub_4B490 (skdisasm 044fa46) appends cells in row-major
+        // SAT order: earlier opaque sprites win. Slot uses the direct painter path,
+        // so paint cells in reverse; PatternSpriteRenderer owns each frame's piece order.
+        for (int i = visibleCells.size() - 1; i >= 0; i--) {
             int cellId = visibleCells.cellIdAt(i);
             if (cellId <= 0 || cellId == 0x09 || cellId >= PIECE_DEFS.length) {
                 continue;

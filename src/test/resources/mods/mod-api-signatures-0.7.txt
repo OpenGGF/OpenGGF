@@ -1541,6 +1541,7 @@ CONSTRUCTOR com.openggf.game.rules.CameraRules public  <init>(short,boolean,int,
 CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.game.CollisionModel,boolean,boolean,boolean,boolean,com.openggf.game.rules.AirCollisionRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int)
 CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.game.CollisionModel,boolean,boolean,boolean,boolean,com.openggf.game.rules.AirCollisionRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int)
+CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel,com.openggf.game.rules.PaletteWhiteFadeModel)
@@ -2346,6 +2347,7 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_COLOR_PROFILE_TOGGLE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_ANCHOR
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_HUD_TIME_HUNDREDTHS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SCALING
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_DEFAULT_PHASE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DISPLAY_SHADER_LIBRARY_ROOT
@@ -7984,6 +7986,7 @@ METHOD com.openggf.game.rules.CollisionRules public,final  boolean equals(java.l
 METHOD com.openggf.game.rules.CollisionRules public,final  int hashCode()
 METHOD com.openggf.game.rules.CollisionRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.DrowningBubbleRules public  boolean breathingBubbleDefersFirstObjectPass()
+METHOD com.openggf.game.rules.DrowningBubbleRules public  boolean drownInstallsDedicatedPlayerRoutine()
 METHOD com.openggf.game.rules.DrowningBubbleRules public  int initialDrowningCountdownFrameTimer()
 METHOD com.openggf.game.rules.DrowningBubbleRules public  int mouthBubbleRiseVelocity()
 METHOD com.openggf.game.rules.DrowningBubbleRules public  int mouthBubbleTimerBias()
@@ -12443,6 +12446,9 @@ METHOD com.openggf.mods.run.RunArea public,final  java.lang.String toString()
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason valueOf(java.lang.String)
 METHOD com.openggf.mods.run.RunEndReason public,static  com.openggf.mods.run.RunEndReason[] values()
 METHOD com.openggf.mods.run.RunHandle public  void holdControls(boolean)
+METHOD com.openggf.mods.run.RunHandle public  void setHudProfile(com.openggf.level.objects.HudProfile)
+METHOD com.openggf.mods.run.RunHandle public  void setHudTime(int)
+METHOD com.openggf.mods.run.RunHandle public  void setHudTimeHundredths(boolean)
 METHOD com.openggf.mods.run.RunHandle public  void setLevelCovered(boolean)
 METHOD com.openggf.mods.run.RunHandle public  void setPlayerAppearance(com.openggf.net.identity.PlayerAppearance)
 METHOD com.openggf.mods.run.RunHandle public,abstract  boolean isActive()
@@ -12940,6 +12946,7 @@ METHOD com.openggf.mods.ui.FocusRegions$Region public,final  boolean equals(java
 METHOD com.openggf.mods.ui.FocusRegions$Region public,final  int hashCode()
 METHOD com.openggf.mods.ui.FocusRegions$Region public,final  java.lang.String toString()
 METHOD com.openggf.mods.ui.LevelOverlayCanvas public  int height()
+METHOD com.openggf.mods.ui.LevelOverlayCanvas public  int hudOriginX()
 METHOD com.openggf.mods.ui.LevelOverlayCanvas public  int width()
 METHOD com.openggf.mods.ui.LevelOverlayCanvas public  void fill(int,int,int,int,int)
 METHOD com.openggf.mods.ui.NameFont public,static  boolean covers(int)
@@ -17374,6 +17381,7 @@ RECORD-COMPONENT com.openggf.game.rules.CollisionRules solidObjectRequiresSideki
 RECORD-COMPONENT com.openggf.game.rules.CollisionRules solidObjectTopBranchAlwaysLiftsOnUpwardVelocity boolean
 RECORD-COMPONENT com.openggf.game.rules.CollisionRules topSolidLandingAllowsZeroDist boolean
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules breathingBubbleDefersFirstObjectPass boolean
+RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules drownInstallsDedicatedPlayerRoutine boolean
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules initialDrowningCountdownFrameTimer int
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules mouthBubbleRiseVelocity int
 RECORD-COMPONENT com.openggf.game.rules.DrowningBubbleRules mouthBubbleTimerBias int
