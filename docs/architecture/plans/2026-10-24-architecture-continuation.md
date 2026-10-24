@@ -4569,3 +4569,34 @@ pre-task develop SHA and its nine inherited status entries. Final integration
 will compare the tested tree, preserve those entries, rebuild current main
 artifacts and check actual API/count discovery after removing only four obsolete
 generated classfiles. Integration, push and owned-worktree cleanup follow.
+
+### Integrated main verification
+
+Main `develop` integrated the candidate as `785ee7866ae1ebd3a334a39d4cf6e59e29242e83`.
+The merge tree exactly matched verified candidate9a295db95's tree
+`e6f590c44dd5f1cf295858c1710f262278924540`; the latter differs from tested0a841248b
+only in the plan and current-ledger wording. Main remained on develop throughout.
+Its inherited four dirty submodules and five untracked user files were preserved.
+
+Under the existing main worktree build lease, only four obsolete generated
+`target/classes/com/openggf/data/` classfiles were removed: Game, PaletteLoader,
+PlayerSpriteArtProvider and SpindashDustArtProvider. No clean of the entire main
+target was used. Build-only `package -DskipTests` passed in1:35. Main engine JAR
+and canonical Javadoc contain the new identities with all corresponding old
+identities absent; unsupported PaletteLoader is correctly absent from API docs.
+
+The post-integration command below passed32 cases: signature11, pin4,
+architectural review9 and singleton lifecycle8. Zero failures/errors/skips,
+queue wait0s, Maven execution31.409s. Java25/EGL and exact identities were
+inspected; all eight selected XML/text files consumed. The main target also
+contained2594 unrelated prior XML reports; those were left untouched and are
+not attributed to this request.
+This verifies actual main class discovery after stale-output removal; unchanged
+source coverage is reused from the exact-tree checks above. The Bash integrated
+range-policy check passed. The following checkpoint changes only this plan;
+no executable input or published count changes after verification. Push and
+owned-worktree cleanup are reported in the final task handoff, not assumed here.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
