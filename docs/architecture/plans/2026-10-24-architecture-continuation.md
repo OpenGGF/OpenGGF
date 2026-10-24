@@ -2187,3 +2187,71 @@ This is bounded fixture/guard evidence, not broad smoke, full-suite, arbitrary
 incoming-module permutations, ROM route or pixel certification. No previous
 family was rerun. This branch remains local for a later parent composition;
 integration, push and branch/worktree removal are outside this slice.
+
+
+### Event snapshot and ground-sensor fixture continuation
+
+This slice starts from `9a4f7113807abc2b33879d7906ec74e446703c2f` in isolated
+branch `bugfix/ai-sensor-event-fixtures-20261024`. It applies the independent
+source grounding of three unresolved fixture keys: close two and retain
+`TestGameLoop#setUp`. No production or shared fixture helper changes are needed.
+
+`TestSonic3kLevelEventRewindSnapshot` uses `resetAll()`: its original setup selected
+no S3K module, so selecting S3K by class name would change runtime authority. The
+local managers still initialize handlers and typed zone sidecars against camera,
+sprite and registry services. Keep their direct capture/restore and adapter
+enumeration assertions; these do not prove registration of the local manager in
+the active runtime's provider-owned registry. Its session-clear teardown stays.
+
+`TestGroundSensor` uses the explicit S2 module fixture before constructing and
+installing its static mock level override. Both reset and session disposal clear
+that override, so installing it first is invalid. Preserve the maps, sprite
+construction, sensor observations and override-clear then session-clear teardown.
+Body-level bootstrap module writes and reverse-gravity changes remain unchanged;
+the live S2 world's module still has precedence, so those names do not establish
+native cross-game execution. The existing `resetAllClearsStaticLevelManagerOverride`
+control exercises the relevant cleanup behavior. All consumer bodies/helpers and
+assertions remain byte-identical after only import/setup normalization.
+
+Retain `TestGameLoop#setUp` unchanged: it clears overrides and resolves display
+state while preserving persisted preferences. The existing reset fixtures call
+`resetToDefaults()` and also replace module/world ownership. A simple wrapper
+around its current bootstrap calls would only hide that obligation. A later
+closure needs a preference-preserving lifecycle owner with incoming-module
+capture, prior teardown/fixups and explicit replacement-world semantics, backed
+by discriminating behavior controls. This slice introduces no such fixture.
+
+Remove exactly the event-snapshot and GroundSensor guard keys. The local baseline
+changes 55 to 53; it still includes three S1 keys independently closed in the
+parent. Compose deletions by identity: parent62 minus the module component10
+minus these2 gives50. Do not copy this older branch's allowance set wholesale.
+
+Focused qualification selects the two affected classes and exact singleton
+lifecycle guard; the unchanged GameLoop class is retained rather than rerun as
+a ceremony. No ROM/display prerequisite or shared reset implementation change
+is introduced. Exact command, XML outcomes and limits remain pending.
+
+
+The focused command passed **77 cases, zero failures/errors/skips**: all38 event
+snapshot methods, all31 sensor methods and all8 singleton lifecycle guard cases.
+XML method sets match the complete source identities exactly, including
+`resetAllClearsStaticLevelManagerOverride` and the snapshot corruption/rollback
+controls. The fork reports Java25; Lua5.4 was supplied. Queue wait26 seconds;
+Maven execution1:32. No ROM/display assumption was skipped. Six XML/text reports
+were inspected and consumed; source stayed fixed throughout the queued job.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" --lean -Dmse=off \
+  '-Dtest=TestSonic3kLevelEventRewindSnapshot,TestGroundSensor,TestSingletonLifecycleGuard' \
+  test -B
+```
+
+Root compared both complete test files after only import/setup normalization:
+all69 consumer bodies, assertions and helpers are unchanged. `TestGameLoop` is
+byte-identical; only the two specified allowance lines disappear, with zero
+additions. The independent grounding's retention limits above still apply. This
+is bounded fixture evidence, not a new native cross-game, local-manager registry
+registration, full-route or pixel guarantee. No broad smoke was rerun. The local
+branch remains for later composed validation, integration, push and cleanup.
