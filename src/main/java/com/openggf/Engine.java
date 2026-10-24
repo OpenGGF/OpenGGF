@@ -511,6 +511,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void validate(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.validate(document, root); }
 			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
 			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, com.openggf.stageplay.StageplayTimeline.Frame frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
+			public com.openggf.stageplay.StageplayGround.Report ground(com.openggf.stageplay.StageplayDocument document, Path root, int frame, com.openggf.stageplay.StageplayGround.Batch batch) throws IOException { return stageplaySession.ground(document,root,frame,batch); }
 			public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return stageplaySession.objectInspection(); }
 			public void refreshResources() { stageplaySession.release(); }
 			public void play(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { stageplaySession.play(document, root, frame); }

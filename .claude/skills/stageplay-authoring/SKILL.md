@@ -88,6 +88,21 @@ Time other characters' reactions to the observed action or line. Use intentional
 pauses for emphasis or reading time. Avoid leaving the entire cast in idle loops
 through a promo whose story depends on their interaction.
 
+Find exact terrain placements with `ground --set GAME/ZONE/ACT --queries floors.json`
+(or `--scene PATH --frame N`), supplying the required ROM flags. Batch columns in
+one query file and one JVM; never sweep route prose or launch per-Y JVMs. Query
+JSON uses `id,x,top,bottom` plus `object:{halfWidth,height,footOffset,path}` or
+`player:{game,character,path}`; scene queries may use `cast` (objects still need a
+footprint). Bands contain native surface rows; returned `y` is the authored
+centre/anchor. Entry terrain excludes events/mutations and uses default wrapping;
+scene-frame answers describe the prepared, unedited document. Both exclude object
+platforms. Review all typed placements/refusals; INCOMPLETE or truncated answers
+cannot establish absence or nearest support. Respect maxMillis/maxScans and
+maxPreparationTicks. Objects prove visual support, players are native sensor
+proposals: apply, then verify actual landing in native playback. Both editors'
+Place on floor action applies one undoable edit, preserves dependent held keys,
+and rejects stale/interior-player/Free/release-to-Free/ambiguous-binding edits.
+
 Place a physical spawn centre near the floor; floor snapping defaults on at spawn,
 then native terrain collision controls contact during movement. A MOVE_TO destination
 is an attempt, and `BLOCKED` must be inspected rather than hidden with a teleport.

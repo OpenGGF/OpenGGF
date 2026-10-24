@@ -354,20 +354,10 @@ public final class StageplayObjectRoutePlanner {
 
     private static Point support(
             double x, double nearY, StageplayRouteFootprint f, RouteTerrainProbe terrain) {
-        int feet = (int) Math.round(nearY + f.footOffsetY()), y = Integer.MAX_VALUE;
-        for (int probe :
-                new int[] {
-                    (int) Math.round(x - f.halfWidth()),
-                    (int) Math.round(x),
-                    (int) Math.round(x + f.halfWidth())
-                }) {
-            var floor = terrain.floor(probe, feet, f.collisionPath());
-            if (!floor.found())
-                throw new Stop(
-                        SEARCH_EXHAUSTED, "NO_FLOOR: the walking footprint cannot cross a gap");
-            y = Math.min(y, floor.y());
-        }
-        return new Point(x, y - f.footOffsetY());
+        var support = StageplayVisualSupport.support(terrain, f, x, nearY);
+        if (support instanceof StageplayVisualSupport.Gap)
+            throw new Stop(SEARCH_EXHAUSTED, "NO_FLOOR: the walking footprint cannot cross a gap");
+        return new Point(x, ((StageplayVisualSupport.Supported) support).anchorY());
     }
 
     private static boolean withinStepClearance(Point point, Point floor) {
@@ -376,13 +366,7 @@ public final class StageplayObjectRoutePlanner {
     }
 
     private static boolean clear(Point p, StageplayRouteFootprint f, RouteTerrainProbe terrain) {
-        int feet = (int) Math.round(p.y() + f.footOffsetY());
-        return terrain.clear(
-                (int) Math.round(p.x() - f.halfWidth()),
-                feet - f.height(),
-                (int) Math.round(p.x() + f.halfWidth()),
-                feet,
-                f.collisionPath());
+        return StageplayVisualSupport.clear(terrain, f, p.x(), p.y());
     }
 
     private static void sweep(

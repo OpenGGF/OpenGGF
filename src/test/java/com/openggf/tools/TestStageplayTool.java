@@ -51,6 +51,21 @@ class TestStageplayTool {
         }
     }
 
+    @Test void groundIsQueryOnlyAndUsesTypedContextFailures() throws Exception {
+        Path queries = directory.resolve("ground.json");
+        java.nio.file.Files.writeString(queries,"""
+                {"queries":[{"id":"prop","x":100,"top":100,"bottom":300,
+                "object":{"halfWidth":8,"height":28,"footOffset":14,"path":1}}]}
+                """);
+        var result = execute("ground","--set","s1/0/0","--queries",queries.toString());
+        assertEquals(0,result.status());
+        assertEquals("ENTRY_LAYOUT",result.json().path("result").path("basis").path("kind").asText());
+        assertEquals("CONTEXT_UNAVAILABLE",result.json().path("result").path("answers").get(0).path("outcome").asText());
+        assertEquals(2,execute("ground","--set","s1/0/0","--queries",queries.toString(),"--out",directory.resolve("changed.stageplay").toString()).status());
+        assertFalse(java.nio.file.Files.exists(directory.resolve("changed.stageplay")));
+        assertEquals(2,execute("ground","--set","s1/0/0","--scene","unread.stageplay","--queries",queries.toString()).status());
+    }
+
     private static ObjectNode recipe() throws IOException { return (ObjectNode) JSON.readTree(StageplayTool.scaffold()); }
     private static ObjectNode shot(ObjectNode script) { return (ObjectNode) script.path("shots").get(0); }
     private Path script(String name, ObjectNode recipe) throws IOException {

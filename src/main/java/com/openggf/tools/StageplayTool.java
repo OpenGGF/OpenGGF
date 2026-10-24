@@ -8,6 +8,9 @@ import com.openggf.mods.scene.host.SceneRomArtFactory;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.runtime.StageplayResources;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayGround;
+import com.openggf.stageplay.runtime.StageplayLiveWorld;
+import java.util.Objects;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 
@@ -77,6 +80,7 @@ public final class StageplayTool {
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",
                         "timeline --scene film.stageplay --out authored.jsonl [--every N]",
+                        "ground --set s3k/0/1 --queries floors.json --s3k-rom PATH (or --scene film.stageplay --frame N)",
                         "simulate --scene film.stageplay --out state.jsonl --s2-rom PATH [--s1-rom PATH --s3k-rom PATH --every N]",
                         "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
@@ -140,6 +144,7 @@ public final class StageplayTool {
                         "samples", (document.durationFrames() + every - 1) / every,
                         "kind", "authored directing state; not native gameplay simulation");
             }
+            case "ground" -> ground(flags);
             case "simulate" -> simulate(flags);
             case "catalog" -> catalog(flags);
             case "level" -> inspectLevel(flags);
@@ -182,6 +187,45 @@ public final class StageplayTool {
         return Map.of("timeline", out.toAbsolutePath().toString(), "every", every,
                 "samples", (document.durationFrames() + every - 1) / every,
                 "kind", "native shared live-world gameplay");
+    }
+
+    private static Object ground(Map<String,String> flags) throws IOException {
+        allow(flags,"set","scene","frame","queries","s1-rom","s2-rom","s3k-rom");
+        if (flags.containsKey("set") == flags.containsKey("scene")) throw new IOException("Ground needs exactly one --set game/zone/act or --scene");
+        StageplayDocument scene = flags.containsKey("scene") ? StageplayStore.read(path(flags,"scene")) : null;
+        int frame = Integer.parseInt(flags.getOrDefault("frame","0"));
+        StageplayDocument.SetSource source;
+        if (scene == null) {
+            if (flags.containsKey("frame")) throw new IOException("--frame requires a scene");
+            var parts = required(flags,"set").split("/",-1);
+            if (parts.length != 3) throw new IOException("Set must be game/zone/act");
+            source = new StageplayDocument.SetSource(parts[0],Integer.parseInt(parts[1]),Integer.parseInt(parts[2]),"","");
+        } else {
+            if (frame < 0 || frame >= scene.durationFrames()) throw new IOException("Ground frame outside scene");
+            source = StageplayTimeline.sample(scene,frame).set();
+        }
+        Path queryFile = path(flags,"queries");
+        if (Files.size(queryFile) > StageplayGround.MAX_BATCH_CHARS * 4L) throw new IOException("Ground queries exceed their bound");
+        var batch = StageplayGround.Json.decodeBatch(Files.readString(queryFile),scene);
+        StageplayGround.Basis basis = scene == null ? new StageplayGround.EntryLayout(source) : new StageplayGround.SceneFrame(source,frame);
+        var paths = new LinkedHashMap<String,Path>();
+        for (String game : List.of("s1","s2","s3k")) if (flags.containsKey(game+"-rom")) paths.put(game,path(flags,game+"-rom"));
+        StageplayGround.Report report;
+        try (var library = SceneRomLibrary.open(paths); var resources = new StageplayResources(library,false)) {
+            if (scene == null) report = resources.ground(source,batch,() -> Thread.currentThread().isInterrupted());
+            else {
+                resources.setProjectRoot(path(flags,"scene").toAbsolutePath().getParent());
+                resources.setLiveWorld(StageplayLiveWorld.openOffline(library));
+                report = resources.ground(scene,frame,batch,() -> Thread.currentThread().isInterrupted());
+            }
+        } catch (IOException | RuntimeException failure) {
+            String detail = Objects.toString(failure.getMessage(),failure.getClass().getSimpleName());
+            report = new StageplayGround.Report(basis,batch.queries().stream().map(q -> new StageplayGround.Answer(q.id(),
+                    StageplayGround.Outcome.CONTEXT_UNAVAILABLE,List.of(),List.of(new StageplayGround.Refusal(q.top(),
+                    StageplayGround.Reason.CONTEXT_UNAVAILABLE,detail)),false)).toList(),
+                    new StageplayGround.Work(0,0,0,StageplayGround.StopReason.NONE));
+        }
+        return JSON.readTree(StageplayGround.Json.encode(report));
     }
 
     private static Object inspectLevel(Map<String, String> flags) throws IOException {

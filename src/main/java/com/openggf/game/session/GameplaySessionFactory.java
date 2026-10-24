@@ -45,6 +45,14 @@ public final class GameplaySessionFactory {
         return level;
     }
 
+    /** Composes private collision-only managers over the supplied engine services. */
+    public static LevelManager createCollisionOnlyLevel(GameModule module, com.openggf.level.Level terrain,
+            int zone, int act, EngineContext services) {
+        return createCollisionOnlyLevel(module, terrain, zone, act, services,
+                new Camera(services.configuration()), new SpriteManager(services.configuration()),
+                new CollisionSystem(new TerrainCollisionManager()), new WaterSystem(), new GameStateManager());
+    }
+
     public static void attachManagers(GameplayModeContext gameplayMode,
                                       EngineContext services) {
         attachManagers(gameplayMode, services, new Camera());

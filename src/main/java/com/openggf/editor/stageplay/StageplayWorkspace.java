@@ -6,6 +6,7 @@ import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayDialogue;
+import com.openggf.stageplay.StageplayGround;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.tools.StageplayScriptCompiler;
@@ -44,6 +45,10 @@ public final class StageplayWorkspace {
         default StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path assetRoot, StageplayTimeline.Frame draft) throws IOException {
             return draft;
         }
+        default StageplayGround.Report ground(StageplayDocument document, Path root, int frame,
+                                             StageplayGround.Batch batch) throws IOException {
+            throw new IOException("Place on floor is unavailable in this host");
+        }
         default List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return List.of(); }
         default void stop() { }
         default java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(Actor actor, Path root) throws IOException {
@@ -67,7 +72,7 @@ public final class StageplayWorkspace {
         EXPORT_SCREENPLAY("Export screenplay"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
-        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan collision route"), OBJECTS("ROM object cast / clear"),
+        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan collision route"), PLACE_ON_FLOOR("Place on floor"), OBJECTS("ROM object cast / clear"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
@@ -210,6 +215,7 @@ public final class StageplayWorkspace {
                 case DELETE_KEY -> deleteKey();
                 case PUPPET_ACTIONS -> puppetMenu();
                 case ROUTE_HELPER -> routeMenu();
+                case PLACE_ON_FLOOR -> groundForm();
                 case OBJECTS -> new StageplayObjectAuthoring(menu, controller, this::edit, this::previewFrame,
                         () -> { previewFrame(); return host.objectInspection(); }).show();
                 case CAMERA_MODE -> {
@@ -768,7 +774,7 @@ public final class StageplayWorkspace {
                 menu.setSubtitle("This is one undoable change. Puppet keeps shot placements and visibility; Poser starts from those placements. Undo restores all previous keys and commands.");
             } else apply.run();
         });
-        menu.setSubtitle("Puppet uses native movement and jumps. Floor snap searches near the feet, up to 128 pixels below; disable it for an airborne start. Poser controls position, animation and frames. Existing scenes keep their original mode.");
+        menu.setSubtitle("Puppet uses native movement and jumps. Floor snap attaches locally within 14 pixels of the feet; use Place on floor to search a wider band, or disable it for an airborne start. Poser controls position, animation and frames. Existing scenes keep their original mode.");
     }
 
     private static StageplayDocument withCast(StageplayDocument d,List<Actor> actors,List<PuppetTrack> puppets) {
@@ -874,7 +880,7 @@ public final class StageplayWorkspace {
             var normalized=physicalKeys(candidate,d.sceneChanges());
             return d.withActors(d.actors().stream().map(a -> a.id().equals(actor.id())?normalized:a).toList());
         }));
-        menu.setSubtitle("Placement resets the actor at the start of this shot. Floor snap searches up to 128 pixels below the feet; disable Start on floor in Actor properties for an airborne start. Use Move to destination for movement.");
+        menu.setSubtitle("Placement resets the actor at the start of this shot. Floor snap attaches locally within 14 pixels of the feet; use Place on floor for a wider search, or disable Start on floor in Actor properties for an airborne start. Use Move to destination for movement.");
     }
 
     private void puppetVisibilityForm(Actor actor) {
@@ -1332,6 +1338,152 @@ public final class StageplayWorkspace {
             return d.withAudio(values);
         }));
         menu.setSubtitle("Voice paths are relative to the saved scene. Sound seeking is not simulated; play starts cues at the playhead.");
+    }
+
+    private record GroundContext(StageplayDocument document, Path root, String actor, int frame,
+                                 long generation, double authoredY) { }
+
+    private void groundForm() {
+        var document = controller.document();
+        String id = controller.selectedActorId();
+        requireGroundPlacement(document, id, controller.frame());
+        var object = document.objectActors().stream().filter(a -> a.id().equals(id)).findFirst();
+        double x, y;
+        if (object.isPresent()) {
+            var key = groundObjectKey(object.get(), controller.frame());
+            x = key.x(); y = key.y();
+        } else {
+            var key = selectedActor().keys().stream().filter(k -> k.frame() <= controller.frame())
+                    .reduce((a, b) -> b).orElseThrow();
+            x = key.x(); y = key.y();
+        }
+        var context = new GroundContext(document, assetRoot, id, controller.frame(),
+                StageplayGround.generation(controller), y);
+        int centre = (int) Math.clamp(y, Short.MIN_VALUE + 128.0, Short.MAX_VALUE - 128.0);
+        var fields = new ArrayList<EditorProjectMenu.Field>(List.of(
+                number("x", "World X", Math.round(x)),
+                number("top", "Top native surface row (inclusive)", centre - 128),
+                number("bottom", "Bottom native surface row (inclusive)", centre + 128)));
+        if (object.isPresent()) {
+            fields.add(number("halfWidth", "Visual half-width", 8));
+            fields.add(number("height", "Visual height", 28));
+            fields.add(number("footOffset", "Anchor-to-foot offset", 14));
+            fields.add(number("collisionPath", "Object path: 0 / 1", 0));
+        }
+        menu.showForm("Place on floor: " + id + " at frame " + context.frame(), fields, "Query terrain", values -> io(() -> {
+            requireGroundFresh(context);
+            StageplayGround.Visual visual = object.isEmpty() ? null : new StageplayGround.Visual(
+                    integer(values, "halfWidth"), integer(values, "height"), integer(values, "footOffset"),
+                    StageplayGround.ObjectPath.of(integer(values, "collisionPath")));
+            var query = new StageplayGround.Query("placement", integer(values, "x"), integer(values, "top"),
+                    integer(values, "bottom"), StageplayGround.performerOf(document, id, visual), id);
+            var report = host.ground(document, context.root(), context.frame(), new StageplayGround.Batch(List.of(query), 20000));
+            requireGroundFresh(context);
+            if (!(report.basis() instanceof StageplayGround.SceneFrame basis) || basis.frame() != context.frame()
+                    || !basis.set().equals(StageplayRouteContract.source(document, context.frame())))
+                throw new IllegalArgumentException("Ground report does not describe the requested scene frame");
+            groundResults(context, query, report);
+        }));
+        menu.setSubtitle("Native floor rows. F1: details. Queries do not edit the scene. The band contains native surface rows; authored centre / anchor Y differs by the player radius or object foot offset. Terrain only: no object platforms. Review proposals before applying.");
+    }
+
+    private void groundResults(GroundContext context, StageplayGround.Query query, StageplayGround.Report report) {
+        var answer = report.answer(query.id());
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        var detail = new StringBuilder("Terrain only. F1: evidence/caveats. Outcome: " + answer.outcome() + (answer.truncated() ? " (truncated)" : "")
+                + "\nCaveats: " + report.basis().caveats() + "\n");
+        boolean complete = answer.outcome() == StageplayGround.Outcome.FOUND && !answer.truncated();
+        for (var placement : answer.placements()) {
+            String label = "X " + placement.x() + ", authored Y " + placement.y() + ", floor "
+                    + placement.surfaceY() + ", angle " + placement.angle();
+            detail.append(label).append(": ").append(placement.evidence()).append('\n');
+            actions.add(action((complete ? "Apply: " : "Review only: ") + label,
+                    () -> applyGround(context, query, answer, placement)));
+        }
+        for (var refusal : answer.refusals()) {
+            String label = "Refused floor " + refusal.surfaceY() + ": " + refusal.reason();
+            detail.append(label).append(": ").append(refusal.detail()).append('\n');
+            actions.add(action(label, () -> {
+                menu.showActions(label, List.of(action("Back to placements", () -> groundResults(context, query, report))));
+                menu.setSubtitle(refusal.detail());
+            }));
+        }
+        int selected = answer.nearest(context.authoredY()).map(answer.placements()::indexOf).orElse(actions.size());
+        actions.add(action("Query another band", this::groundForm));
+        actions.add(action("Cancel", () -> { }));
+        detail.append("Player terrain proposals need native playback verification after application. ")
+                .append("Applying changes the document described by this query. F1 shows all evidence and refusals.");
+        menu.showActions("Place on floor: " + answer.outcome(), actions, selected);
+        menu.setSubtitle(detail.toString());
+        status = "Ground query: " + answer.outcome() + ", " + answer.placements().size() + " placements, "
+                + answer.refusals().size() + " refusals" + (answer.truncated() ? "; truncated, query again before applying" : "");
+    }
+
+    private void requireGroundFresh(GroundContext context) {
+        if (StageplayGround.generation(controller) != context.generation()
+                || !controller.document().equals(context.document()) || !Objects.equals(assetRoot, context.root())
+                || !controller.selectedActorId().equals(context.actor()) || controller.frame() != context.frame())
+            throw new IllegalStateException("Stale ground result: scene, asset root, selected actor or playhead changed. Query again.");
+    }
+
+    private void applyGround(GroundContext context, StageplayGround.Query query,
+                             StageplayGround.Answer answer, StageplayGround.Placement placement) {
+        requireGroundFresh(context);
+        requireGroundPlacement(context.document(), context.actor(), context.frame());
+        if (answer.outcome() != StageplayGround.Outcome.FOUND || answer.truncated()
+                || !answer.placements().contains(placement))
+            throw new IllegalStateException("A complete ground query is required before applying a placement");
+        boolean proof = query.performer() instanceof StageplayGround.Visual
+                ? placement.evidence() instanceof StageplayGround.VisualSupport
+                : placement.evidence() instanceof StageplayGround.PlayerTerrainProposal player && player.distance() == 0;
+        if (!proof || placement.x() != query.x() || placement.surfaceY() < query.top() || placement.surfaceY() > query.bottom())
+            throw new IllegalStateException("Ground placement has no matching terrain evidence");
+        edit(document -> {
+            var actor = document.actors().stream().filter(a -> a.id().equals(context.actor())).findFirst();
+            if (actor.isPresent()) {
+                int end = StageplayRouteContract.shotEnd(document, context.frame());
+                // Every visibility key holds the shot-entry centre; moving only the boundary is invalid.
+                var keys = actor.get().keys().stream().map(key -> key.frame() < context.frame() || key.frame() >= end ? key
+                        : new ActorKey(key.frame(), placement.x(), placement.y(), key.animation(), key.pose(),
+                        key.flipX(), key.visible(), key.scale(), key.interpolation())).toList();
+                return replaceActor(document, actor.get(), keys);
+            }
+            return document.withObjectActors(document.objectActors().stream().map(object -> {
+                if (!object.id().equals(context.actor())) return object;
+                var key = groundObjectKey(object, context.frame());
+                var keys = new ArrayList<>(object.keys());
+                keys.removeIf(k -> k.frame() == context.frame());
+                keys.add(new ObjectKey(context.frame(), placement.x(), placement.y(), key.animation(), key.pose(),
+                        key.flipX(), key.visible(), key.interpolation(), key.mode(), key.parts()));
+                keys.sort(Comparator.comparingInt(ObjectKey::frame));
+                return new ObjectActor(object.id(), object.name(), object.gameId(), object.zone(), object.act(),
+                        object.objectId(), object.subtype(), object.layoutIndex(), keys, object.commands(), object.sourceKind());
+            }).toList());
+        });
+        status = "Placed " + context.actor() + " at X " + placement.x() + ", authored Y " + placement.y()
+                + " (native floor " + placement.surfaceY() + "). Verify the edited scene in playback.";
+    }
+
+    private static ObjectKey groundObjectKey(ObjectActor object, int frame) {
+        return object.keys().stream().filter(k -> k.frame() <= frame).reduce((a, b) -> b).orElseThrow();
+    }
+
+    private static void requireGroundPlacement(StageplayDocument document, String id, int frame) {
+        var actor = document.actors().stream().filter(a -> a.id().equals(id)).findFirst();
+        if (actor.isPresent()) {
+            StageplayGround.performerOf(document, id, null);
+            if (frame != 0 && document.sceneChanges().stream().noneMatch(c -> c.frame() == frame))
+                throw new IllegalArgumentException("Place physical players only at a shot boundary; use movement actions inside the shot");
+            return;
+        }
+        var object = document.objectActors().stream().filter(a -> a.id().equals(id)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Select a cast member first"));
+        int end = StageplayRouteContract.shotEnd(document, frame);
+        if (groundObjectKey(object,frame).mode() == ObjectMode.FREE
+                || object.keys().stream().anyMatch(k -> k.frame() > frame && k.frame() < end && k.mode() == ObjectMode.FREE))
+            throw new IllegalArgumentException("Place on floor cannot relocate FREE or release-to-FREE objects in this shot");
+        // StageplayDocument already rejects duplicate placed identities globally,
+        // which is stronger than rejecting overlapping bindings at this playhead.
     }
 
     private void routeMenu() {

@@ -14,7 +14,10 @@ Unreleased. The earlier development themes remain in
   Free objects, including released animals outside the main view, retain native
   appearances when switched to Puppet/Pose within their cast activation windows.
   Puppet mode follows destinations and urgency through native acceleration, terrain
-  collision and jump physics; floor snapping defaults on. Poser mode retains manual
+  collision and jump physics; floor snapping defaults on. Shared Place on floor
+  direction and a batched ground CLI enumerate exact visual support and native player
+  terrain proposals from decoded entry layouts or prepared scene frames, with bounded
+  work, typed refusals and one-step undo for safe editor placement. Poser mode retains manual
   positioning, animation and frame selection. Every scene uses one native world
   with supplied-game performers, authored terrain and common framing, binding and
   activation-window rules. Timed object clears preserve separately owned rings;

@@ -57,9 +57,16 @@ public final class EditorProjectMenu {
     private String directions = "Arrows", accept = "Enter", back = "Esc";
 
     public void showActions(String title, List<Action> actions) {
+        showActions(title, actions, 0);
+    }
+
+    /** Keeps display order while initially focusing the most useful action. */
+    public void showActions(String title, List<Action> actions, int selected) {
         reset(title);
         this.actions = List.copyOf(actions);
         if (actions.isEmpty()) throw new IllegalArgumentException("A project menu needs an action");
+        if (selected < 0 || selected >= actions.size()) throw new IllegalArgumentException("Invalid selected action");
+        this.selected = selected;
     }
 
     public void showForm(String title, List<Field> fields, String submitLabel,

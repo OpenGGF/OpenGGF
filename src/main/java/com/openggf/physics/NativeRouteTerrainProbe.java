@@ -9,8 +9,14 @@ import java.util.Objects;
 public final class NativeRouteTerrainProbe implements RouteTerrainProbe {
     private final LevelManager level;
     private final BackgroundPlaneCollisionProvider provider;
+    private final Runnable charge;
 
     public NativeRouteTerrainProbe(LevelManager level, BackgroundPlaneCollisionProvider provider) {
+        this(level, provider, () -> {});
+    }
+    /** Bounded tooling uses the same probe, with charging inside each native scan loop. */
+    public NativeRouteTerrainProbe(LevelManager level, BackgroundPlaneCollisionProvider provider, Runnable charge) {
+        this.charge = Objects.requireNonNull(charge);
         this.level = Objects.requireNonNull(level, "route terrain");
         this.provider = Objects.requireNonNull(provider, "background collision provider");
     }
@@ -23,6 +29,7 @@ public final class NativeRouteTerrainProbe implements RouteTerrainProbe {
         // Authoring search bound, not a movement/gravity constant. Each call still
         // enters the native current/adjacent 16px collision-tile state machine.
         for (int delta = -16; delta <= 16; delta += 16) {
+            charge.run();
             int origin = feetY + delta;
             var found = ObjectTerrainUtils.checkFloorDistOnLayer(level, x, origin, (byte) 0,
                     collisionPath == 1, true);
@@ -43,11 +50,13 @@ public final class NativeRouteTerrainProbe implements RouteTerrainProbe {
         // the complete body row, including an obstruction inside a wide composite.
         for (int y = top; y <= bottom; y++) {
             for (int x = left; x <= right; x += 16) {
+                charge.run();
                 var wall = ObjectTerrainUtils.routeWallDist(level, x, y, collisionPath == 1);
                 if (wall.foundSurface() && wall.distance() < Math.min(15, (long) right - x)) return false;
             }
         }
         for (int x = left; x <= right; x++) {
+            charge.run();
             var ceiling = ObjectTerrainUtils.routeCeilingDist(level, x, top, collisionPath == 1);
             if (ceiling.foundSurface() && ceiling.distance() < 0) return false;
         }

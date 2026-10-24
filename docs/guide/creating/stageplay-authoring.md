@@ -506,6 +506,71 @@ it cannot be dropped while keeping only the parent body. The catalog and the
 the owning routine. SKL's DEZ miniboss mask is one such conditional exclusion.
 Initialize and direct a different supported appearance, or keep the graph Free.
 
+## Find and apply floor placements
+
+Use **Direct → Place on floor** in either editor after selecting a cast member at
+the playhead. Review the top-first placement list, native surface rows, evidence,
+refusals and terrain caveats. The nearest complete result is initially selected.
+Applying is one undo step. Physical players move only at shot entry, together
+with their dependent held visibility keys in that shot. Free objects, objects
+released to Free later in the shot, and overlapping placement bindings are
+refused. Changing the document, selection or playhead invalidates the result,
+even if you change it back. Replay after applying: a player answer is a terrain
+proposal, and native playback must establish landing.
+
+For agents, survey many columns with one engine invocation; no scene is needed
+for decoded entry terrain:
+
+```bash
+python3 tools/stageplay/stageplay.py ground --set s1/0/0 --queries floors.json --s1-rom /absolute/s1.gen
+python3 tools/stageplay/stageplay.py ground --scene film.stageplay --frame 240 --queries floors.json --s1-rom /absolute/s1.gen
+```
+
+```json
+{"maxMillis":20000,"queries":[
+  {"id":"prop","x":512,"top":400,"bottom":900,
+   "object":{"halfWidth":8,"height":28,"footOffset":14,"path":0}},
+  {"id":"player","x":600,"top":400,"bottom":900,
+   "player":{"game":"s1","character":"sonic","path":0}},
+  {"id":"selected","cast":"hero","x":700,"top":400,"bottom":900}
+]}
+```
+
+Use `cast` only with a scene. An object cast reference also needs the explicit
+`object` footprint. Player alternate path uses native secondary solidity bits;
+object alternate path selects the alternate shape while retaining object solidity.
+Do not substitute one convention for the other. The inclusive band contains
+**native surface rows**, one pixel above the first solid row. A returned `y` is
+the authored centre for a player or visual anchor for an object; use it directly.
+
+The JSON result states `basis.kind`: `ENTRY_LAYOUT` has decoded terrain, no
+native events or mutations and default wrapping; `SCENE_FRAME` reads the prepared
+world's live terrain and wrapping after resolving the requested frame. Its
+`DESCRIBES_UNEDITED_DOCUMENT` caveat matters when applying a key changes later
+replay. Both bases are `TERRAIN_ONLY`: platforms and other object solids are
+outside this query. Active background collision, reverse gravity, low loop planes,
+non-stock cast states and surfaces requiring wall/ceiling mode have typed refusals.
+The reported angle is the raw unsigned native byte; odd angle flags request
+native cardinal snapping rather than describing a slope. Object `VISUAL_SUPPORT`
+proves the shared three-column support fixed point and body clearance used by route starts; it does not certify native object AI.
+`PLAYER_TERRAIN_PROPOSAL` uses native paired sensors, a selected geometric foot
+at distance zero and LRB standing clearance. It does not claim a landed player.
+Native floor correction preserves subpixels: compare ROM centre/foot pixels for
+support, then check full-position stability after landing.
+
+Each batch has 1–128 distinct IDs, at most 1024 inclusive rows per query, a
+1–60000 ms budget, `maxScans` (default 4000000; maximum 10000000) and
+`maxPreparationTicks` (default 6000; maximum 36000). Every integer seed in the
+padded band is inspected in-process, without player simulation in discovery.
+Answers enumerate at most 16 placements and 64 refusals, with `truncated` when
+more exist. `NONE_IN_BAND` means the whole band completed. A budget or cancellation
+interruption yields `INCOMPLETE`, including unvisited queries. Never treat it as
+absence or infer a nearest placement from it. Java `nearest(y)` also declines
+truncated lists and resolves ties toward smaller Y. Inspect `work.stopped` and
+counters; counters of `-1` mean a cancelled preview worker could not report them.
+Setup failures are `CONTEXT_UNAVAILABLE`; unsupported profiles are `UNSUPPORTED`.
+The command is query-only and accepts no `--out`; agents edit their screenplay.
+
 ## Route helper
 
 ```bash

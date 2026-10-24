@@ -85,12 +85,17 @@ public final class StageplayLiveWorld implements AutoCloseable {
     }
 
     public Frame resolve(StageplayDocument document, Frame authored) {
+        return resolve(document, authored, () -> {}, () -> {});
+    }
+
+    Frame resolve(StageplayDocument document, Frame authored, Runnable check, Runnable beforeTick) {
+        check.run();
         if (closed) throw new IllegalStateException("Live world is closed");
         int first = 0; SetSource set = document.set();
         for (var change : document.sceneChanges()) if (change.frame() <= authored.frame()) {
             first = change.frame(); set = change.set();
         }
-        if (this.document != document && !document.equals(this.document) || start != first) begin(document, set, first);
+        if (this.document != document && !document.equals(this.document) || start != first) begin(document, set, first, check);
         if (authored.frame() == cursor) return last;
         boolean replay = authored.frame() < cursor || authored.frame() > cursor + 1;
         var checkpoint = checkpoints.floorEntry(authored.frame());
@@ -101,6 +106,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         try (var silence = replay ? EngineServices.current().audio().beginRewindReplay(cursor, authored.frame(),
                 com.openggf.audio.rewind.AudioReplayReason.SEEK) : null) {
         while (cursor < authored.frame()) {
+            beforeTick.run();
             int frame = ++cursor;
             tick(frame);
             last = sample(StageplayTimeline.sample(document, frame));
@@ -113,7 +119,27 @@ public final class StageplayLiveWorld implements AutoCloseable {
         return last;
     }
 
-    private void begin(StageplayDocument document, SetSource set, int first) {
+    com.openggf.level.LevelManager groundLevel() {
+        if (owned == null) throw new IllegalStateException("Prepare a scene frame first");
+        return owned.getLevelManager();
+    }
+    com.openggf.stageplay.StageplayGround.Reason groundUnsupported(com.openggf.stageplay.StageplayGround.Query query,
+            com.openggf.sprites.playable.PlayablePlacementProfile profile) {
+        if (owned.getGameStateManager().isReverseGravityActive()) return com.openggf.stageplay.StageplayGround.Reason.REVERSE_GRAVITY;
+        if (query.cast().isEmpty()) return null;
+        for (var p : cast) {
+            if (!p.actor.id().equals(query.cast())) continue;
+            if (p.sprite.getTopSolidBit() != profile.topSolidBit() || p.sprite.getLrbSolidBit() != profile.lrbSolidBit()
+                    || p.sprite.getXRadius() != profile.xRadius() || p.sprite.getYRadius() != profile.yRadius())
+                return com.openggf.stageplay.StageplayGround.Reason.NON_STOCK_STATE;
+            if (p.sprite.isLoopLowPlane()) return com.openggf.stageplay.StageplayGround.Reason.LOOP_PLANE;
+            if (p.sprite.getRolling() || p.sprite.isSuperSonic()) return com.openggf.stageplay.StageplayGround.Reason.NON_STOCK_STATE;
+        }
+        return null;
+    }
+
+    private void begin(StageplayDocument document, SetSource set, int first, Runnable check) {
+        check.run();
         if (owned != null && SessionManager.getCurrentGameplayMode() != owned)
             throw new IllegalStateException("Offline Stageplay lost its session ownership");
         if (owned == null) requireUnoccupied();
@@ -121,6 +147,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 .mapToInt(SceneChange::frame).min().orElse(document.durationFrames());
         var performers = new ArrayList<Performer>();
         for (var track : document.puppets()) {
+            check.run();
             var actor = document.actors().stream().filter(a -> a.id().equals(track.actorId())).findFirst().orElseThrow();
             if (actor.keys().stream().noneMatch(k -> k.frame() >= first && k.frame() < end && k.visible())) continue;
             var anchor = actor.keys().stream().filter(k -> k.frame() == first).findFirst().orElseThrow();
@@ -138,6 +165,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         var suppressedPlacements = new HashSet<com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity>();
         var objectTemplates = new LinkedHashMap<String, com.openggf.level.objects.StageplayObjectDirection.VisualTemplate>();
         for (var actor : document.objectActors()) {
+            check.run();
             var anchor = actor.keys().stream().filter(key -> key.frame() == first).findFirst().orElseThrow();
             if (actor.layoutIndex() >= 0 && actor.gameId().equals(set.gameId()) && actor.zone() == set.zone() && actor.act() == set.act()
                     && (!anchor.visible() || anchor.mode() != ObjectMode.FREE))

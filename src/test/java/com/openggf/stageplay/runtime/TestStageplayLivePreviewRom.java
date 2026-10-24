@@ -88,6 +88,17 @@ class TestStageplayLivePreviewRom {
             assertNotNull(resources.livePreviewImage());
             assertEquals(320*224,resources.livePreviewImage().pixels().length);
             assertSame(frame,resources.resolveFrame(document,StageplayTimeline.sample(document,35)));
+            long previewPid = resources.previewProcessId();
+            var query = new com.openggf.stageplay.StageplayGround.Query("floor",(int)Math.round(frame.actors().getFirst().x()),0,1023,
+                    new com.openggf.stageplay.StageplayGround.Player(document.actors().getFirst().gameId(),document.actors().getFirst().character(),0),document.actors().getFirst().id());
+            var ground = resources.ground(document,35,new com.openggf.stageplay.StageplayGround.Batch(List.of(query),20000),() -> false);
+            assertEquals(new com.openggf.stageplay.StageplayGround.SceneFrame(frame.set(),35),ground.basis());
+            assertNotEquals(com.openggf.stageplay.StageplayGround.Outcome.CONTEXT_UNAVAILABLE,ground.answer("floor").outcome(),ground.toString());
+            assertNotEquals(com.openggf.stageplay.StageplayGround.Outcome.INCOMPLETE,ground.answer("floor").outcome(),ground.toString());
+            assertEquals(0,ground.work().preparationTicks());
+            assertEquals(previewPid,resources.previewProcessId(),"Floor requests reuse the exact preview worker");
+            assertSame(parent,SessionManager.getCurrentGameplayMode());
+            assertEquals(frame.world(),resources.resolveFrame(document,StageplayTimeline.sample(document,35)).world());
             var camera=new StageplayTimeline.CameraPose(frame.camera().x()+32,frame.camera().y()+16,1);
             var draft=new StageplayTimeline.Frame(frame.frame(),frame.actors(),camera,frame.captions(),frame.set(),frame.transition(),camera,frame.dialogue(),frame.puppets(),frame.world());
             var panned=resources.resolveFrame(document,draft);

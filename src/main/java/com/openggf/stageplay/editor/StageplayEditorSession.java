@@ -7,6 +7,7 @@ import com.openggf.game.GameModule;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneSurface;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayGround;
 import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.stageplay.runtime.StageplayAudio;
 import com.openggf.stageplay.runtime.StageplayRenderer;
@@ -86,6 +87,13 @@ public final class StageplayEditorSession implements AutoCloseable {
     public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame frame) throws IOException {
         ensure(root);
         return resources.resolveFrame(document, frame);
+    }
+
+    /** Uses the same isolated preview worker and prepared scene moment as frame resolution. */
+    public StageplayGround.Report ground(StageplayDocument document, Path root, int frame,
+                                        StageplayGround.Batch batch) throws IOException {
+        ensure(root);
+        return resources.ground(document, frame, batch, () -> false);
     }
 
     public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() {
