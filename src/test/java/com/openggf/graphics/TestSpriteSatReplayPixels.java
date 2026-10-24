@@ -2,6 +2,8 @@ package com.openggf.graphics;
 
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.PatternDesc;
+import com.openggf.game.GameId;
 import com.openggf.level.render.SpritePieceRenderer.PreparedPiece;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import org.joml.Matrix4f;
@@ -28,6 +30,54 @@ class TestSpriteSatReplayPixels {
     };
     // ROM mapping pieces number art down columns, not across rows.
     private static final int[][] SOURCE_GRID = {{1, 4}, {2, 5}, {3, 6}};
+
+    @Test
+    void directTypedIngressRendersCachedPaletteSevenFlipsFractionalScaleAndStrips() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (var offscreen = PresentationOffscreenTestContext.open(WIDTH, HEIGHT)) {
+            var graphics = new GraphicsManager();
+            try {
+                RenderContext.reset(); RenderContext.getOrCreateDonor(GameId.S1);
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                graphics.setViewport(0, 0, WIDTH, HEIGHT); graphics.setProjectionWidth(WIDTH);
+                graphics.setProjectionMatrixBuffer(new Matrix4f().ortho(0, WIDTH, 0, HEIGHT, -1, 1).get(new float[16]));
+                graphics.setBatchingEnabled(false);
+                var palette = new Palette();
+                for (int colour = 1; colour <= 4; colour++) {
+                    int[] rgb = COLOURS[colour];
+                    palette.setColor(colour, new Palette.Color((byte) rgb[0], (byte) rgb[1], (byte) rgb[2]));
+                }
+                graphics.cachePaletteTexture(new Palette(), 3); // Raw-word palette would render black.
+                graphics.cachePaletteTexture(palette, 7);
+                var pattern = new Pattern();
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
+                    pattern.setPixel(x, y, (byte) (1 + (x / 4) + 2 * (y / 4)));
+                int explicitId = PatternAtlasRange.OBJECTS.base();
+                graphics.cachePatternTexture(pattern, explicitId);
+                for (int flags = 0; flags < 8; flags++) {
+                    boolean h = (flags & 1) != 0, v = (flags & 2) != 0;
+                    var desc = new PatternDesc(0x6000); // The raw word disagrees with every cached attribute.
+                    desc.setPatternIndex(99); desc.setPaletteIndex(7);
+                    desc.setHFlip(h); desc.setVFlip(v); desc.setPriority((flags & 4) != 0);
+                    byte[] pixels = draw(graphics, () -> {
+                        graphics.renderPatternWithId(explicitId, desc, 16, 16);
+                        graphics.renderPatternWithIdScaled(explicitId, desc, 40.25f, 16.25f, 15.5f, 11.5f);
+                        graphics.renderStripPatternWithId(explicitId, desc, 64, 16, 0);
+                    });
+                    for (int row = 0; row < 2; row++) for (int col = 0; col < 2; col++) {
+                        int expected = 1 + (h ? 1 - col : col) + 2 * (v ? 1 - row : row);
+                        assertPixel(pixels, 18 + col * 4, 18 + row * 4, expected);
+                        assertPixel(pixels, 43 + col * 8, 18 + row * 6, expected);
+                    }
+                    assertPixel(pixels, 15, 18, 0); assertPixel(pixels, 56, 20, 0);
+                    // Strip zero samples the bottom source band, in either vertical orientation.
+                    assertPixel(pixels, 66, 16, h ? 4 : 3);
+                    assertPixel(pixels, 64, 18, 0);
+                }
+                assertEquals(GL_NO_ERROR, glGetError());
+            } finally { graphics.cleanup(); RenderContext.reset(); }
+        }
+    }
 
     @Test
     void directAndInstancedSatReplayPreserveFlippedClippedGeometryAndNativeScanlineMasks() throws Exception {
@@ -105,14 +155,18 @@ class TestSpriteSatReplayPixels {
     }
 
     private static byte[] render(GraphicsManager graphics, Runnable submit) {
-        glViewport(0, 0, WIDTH, HEIGHT);
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-        graphics.executeCapturedCommands(() -> {
+        return draw(graphics, () -> {
             graphics.beginSpriteSatCollection();
             submit.run();
             graphics.endSpriteSatCollectionAndReplay();
-        }, 0, 0, WIDTH, HEIGHT);
+        });
+    }
+
+    private static byte[] draw(GraphicsManager graphics, Runnable submit) {
+        glViewport(0, 0, WIDTH, HEIGHT);
+        glClearColor(0, 0, 0, 1);
+        glClear(GL_COLOR_BUFFER_BIT);
+        graphics.executeCapturedCommands(submit, 0, 0, WIDTH, HEIGHT);
         glFinish();
         ByteBuffer pixels = MemoryUtil.memAlloc(WIDTH * HEIGHT * 4);
         try {

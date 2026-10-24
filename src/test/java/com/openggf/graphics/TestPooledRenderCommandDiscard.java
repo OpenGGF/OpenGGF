@@ -14,9 +14,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestPooledRenderCommandDiscard {
     private static final PatternAtlas.Entry ENTRY =
@@ -159,6 +157,83 @@ class TestPooledRenderCommandDiscard {
                 "the capture target must be restored before the exception leaves executeCapturedCommands");
     }
 
+    @Test
+    void acquisitionFailuresKeepManagerBeforeEntryBeforeDescriptorAndDoNotRestorePool() throws Exception {
+        PatternRenderCommand first = (PatternRenderCommand) patternCommand(); first.recycle();
+        NullPointerException missingManager = assertThrows(NullPointerException.class,
+                () -> PatternRenderCommand.obtain(null, 11, null));
+        assertEquals("graphicsManager", missingManager.getMessage());
+        assertEquals(0, PatternRenderCommand.pooledCommandCount());
+        assertNull(getField(first, "graphicsManager"));
+        assertFalse((boolean) getField(first, "leased"));
+        PatternRenderCommand second = (PatternRenderCommand) patternCommand(); second.recycle();
+        assertThrows(NullPointerException.class,
+                () -> PatternRenderCommand.obtain(null, 11, graphics));
+        assertSame(graphics, getField(second, "graphicsManager"));
+        assertEquals(11, getField(second, "paletteTextureId"));
+        assertFalse((boolean) getField(second, "leased"));
+        second.discard(); first.discard();
+        assertEquals(0, PatternRenderCommand.pooledCommandCount());
+    }
+
+    @Test
+    void displayFailureOccursAfterLeaseAndGeometryAndCanBeRecycled() throws Exception {
+        PatternRenderCommand command = (PatternRenderCommand) patternCommand(); command.recycle();
+        IllegalStateException expected = new IllegalStateException("display height");
+        GraphicsProjectionAccess.install(graphics, new RenderProjection() {
+            public float[] getProjectionMatrixBuffer() { return null; }
+            public boolean isFBOProjectionActive() { return true; }
+            public int getCurrentDisplayHeight() { throw expected; }
+        });
+        assertSame(expected, assertThrows(IllegalStateException.class,
+                () -> {
+                    PatternRenderCommand acquired = PatternRenderCommand.obtain(ENTRY, 11, graphics);
+                    acquired.capturePalette(0);
+                    acquired.finish(false, false, false, -3.25f, 6.5f, 17.75f, 4.125f);
+                }));
+        assertTrue((boolean) getField(command, "leased"));
+        assertEquals(-3.25f, getField(command, "x"));
+        assertEquals(17.75f, getField(command, "width"));
+        assertEquals(4.125f, getField(command, "height"));
+        assertEquals(216f, getField(command, "y"), "failed display lookup leaves the previous Y untouched");
+        command.discard(); command.discard();
+        assertEquals(1, PatternRenderCommand.pooledCommandCount());
+        GraphicsProjectionAccess.install(graphics, null);
+    }
+
+    @Test
+    void deferredPaletteFailureRecyclesAndNextLeaseClearsReplayCropPresentationAndGhostState() throws Exception {
+        PatternRenderCommand command = (PatternRenderCommand) patternCommand();
+        IllegalStateException expected = new IllegalStateException("deferred palette");
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        command.paletteReplay((host, palette) -> {
+            assertSame(graphics, host); assertEquals(0, palette); calls.incrementAndGet(); throw expected;
+        });
+        command.resolveStripTextureCoordinates(ENTRY, 1);
+        setField(command, "presentationQuad", new float[8]);
+        setField(command, "presentationCount", 2);
+        setField(command, "presentationHue", .5f);
+        setField(command, "presentationOpacity", .25f);
+        setField(command, "ghostEffectActive", true);
+        setField(command, "ghostColour", true);
+        setField(command, "ghostAlpha", .125f);
+        assertEquals(0, calls.get(), "palette replay is deferred to execute");
+        assertSame(expected, assertThrows(IllegalStateException.class, () -> command.execute(0, 0, 320, 224)));
+        assertEquals(1, calls.get());
+        assertEquals(1, PatternRenderCommand.pooledCommandCount());
+        PatternRenderCommand next = (PatternRenderCommand) patternCommand();
+        assertSame(command, next);
+        assertNull(getField(next, "paletteReplay")); assertNull(getField(next, "presentationQuad"));
+        assertEquals(0, getField(next, "presentationCount"));
+        assertEquals(0f, getField(next, "presentationHue"));
+        assertEquals(1f, getField(next, "presentationOpacity"));
+        assertFalse((boolean) getField(next, "textureCoordinatesResolved"));
+        assertFalse((boolean) getField(next, "ghostEffectActive"));
+        assertFalse((boolean) getField(next, "ghostColour"));
+        assertEquals(1f, getField(next, "ghostAlpha"));
+        next.discard();
+    }
+
     private void assertBoundedDroppedFrames(BatchedPatternRenderer renderer, boolean shadow,
                                             Object expectedCommand, Object[] expectedBackings) throws Exception {
         Set<Object> commands = identitySet();
@@ -177,7 +252,10 @@ class TestPooledRenderCommandDiscard {
     }
 
     private GLCommandable patternCommand() {
-        return PatternRenderCommand.obtain(ENTRY, 1, descriptor(), 0, 0, graphics);
+        PatternRenderCommand command = PatternRenderCommand.obtain(ENTRY, 1, graphics);
+        command.capturePalette(0);
+        command.finish(false, false, false, 0, 0, 8, 8);
+        return command;
     }
 
     private static GLCommandable batchCommand(BatchedPatternRenderer renderer, boolean shadow) {

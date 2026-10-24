@@ -3,6 +3,7 @@ package com.openggf.graphics;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.PatternDesc;
+import com.openggf.level.Pattern;
 import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,6 +29,7 @@ class TestRenderProjection {
     @Test void creatorSurfaceKeepsRenderingAndCourseControlWithoutSessionOrchestration() {
         var types=com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes().stream()
                 .map(Class::getName).collect(java.util.stream.Collectors.toSet());
+        assertFalse(types.contains(PatternRenderCommand.class.getName()), "implementations of a pinned interface are not automatically supported API");
         assertFalse(types.contains("com.openggf.Engine"));
         assertFalse(types.contains("com.openggf.GameLoop"));
         assertFalse(types.contains("com.openggf.game.session.GameplayModeContext"));
@@ -65,16 +67,27 @@ class TestRenderProjection {
         config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
         var batched = new BatchedPatternRenderer(graphics, config);
         var instanced = new InstancedPatternRenderer(graphics, config);
-        var entry = new PatternAtlas.Entry(0, 0, 0, 0, 0, 0f, 0f, 1f, 1f);
         for (boolean offscreen : new boolean[]{false, true, false}) {
             projection.offscreen = offscreen;
             int height = offscreen ? 256 : 224;
             batched.beginBatch(); instanced.beginBatch();
             assertEquals(height, field(batched, "batchDisplayHeight"));
             assertEquals(height, field(instanced, "batchDisplayHeight"));
-            var command = PatternRenderCommand.obtain(entry, 0, new PatternDesc(), 8, 16, graphics);
-            try { assertEquals((float)(height - 16 - 8), field(command, "y")); }
-            finally { command.recycle(); }
+            graphics.initHeadless(); graphics.cachePatternTexture(new Pattern(), PatternAtlasRange.OBJECTS.base());
+            graphics.setHeadlessMode(false); // Command construction only; no GL execution.
+            Field palette = GraphicsManager.class.getDeclaredField("combinedPaletteTextureId");
+            palette.setAccessible(true); palette.set(graphics, 0);
+            graphics.renderPatternWithId(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), 8, 16);
+            graphics.renderPatternWithIdScaled(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), -2.25f, 16.5f, 11.75f, 3.25f);
+            graphics.renderStripPatternWithId(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), 8, 16, 2);
+            try {
+                assertEquals((float)(height - 16 - 8), field(graphics.commands.get(0), "y"));
+                assertEquals(height - 16.5f - 3.25f, field(graphics.commands.get(1), "y"));
+                assertEquals((float)(height - 16 - 2), field(graphics.commands.get(2), "y"));
+            } finally {
+                graphics.commands.forEach(GLCommandable::discard); graphics.commands.clear();
+                graphics.setHeadlessMode(true); graphics.resetState();
+            }
         }
     }
 
