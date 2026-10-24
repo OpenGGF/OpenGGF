@@ -40,6 +40,29 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
         this.sampleRate = sampleRate;
     }
 
+    /**
+     * Uses the supplied manager's current factory for subsequent legacy bindings,
+     * independently of the restore sink. The three-argument constructor retains
+     * lazy per-binding singleton selection.
+     */
+    public HeadlessSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink, AudioManager legacyConfigAuthority) {
+        this(configService, profiler, HEADLESS_SAMPLE_RATE, musicRestoreSink, legacyConfigAuthority);
+    }
+
+    HeadlessSmpsAudioBackend(
+            SonicConfigurationService configService,
+            PerformanceProfiler profiler,
+            int sampleRate,
+            MusicRestoreSink musicRestoreSink,
+            AudioManager legacyConfigAuthority) {
+        super(configService, profiler, musicRestoreSink, legacyConfigAuthority);
+        if (sampleRate <= 0) {
+            throw new IllegalArgumentException("sampleRate must be positive");
+        }
+        this.sampleRate = sampleRate;
+    }
+
     @Override
     protected int getDeviceSampleRate() {
         return sampleRate;

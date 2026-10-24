@@ -163,10 +163,36 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private long nextServiceOrdinal;
     private long nextDriverInstanceOrdinal;
     private long nextDriverAdmissionOrdinal;
+    /** Null selects the historical, lazy singleton authority separately for each binding. */
+    private final AudioManager legacyConfigAuthority;
+
+    /**
+     * Compatibility construction: resolves the current presentation singleton only
+     * when explicit-config music or SFX requests a legacy configuration binding.
+     */
     protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
             MusicRestoreSink musicRestoreSink) {
+        this(configService, profiler, musicRestoreSink, null, false);
+    }
+
+    /**
+     * Retains the manager supplying subsequent legacy configuration bindings.
+     * Each binding uses that manager's current factory, including after reset or
+     * backend replacement. Existing sources keep their recorded configuration;
+     * {@code musicRestoreSink} independently owns their restore destination.
+     * Ordinary two-argument music continues to use its profile configuration.
+     */
+    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink, AudioManager legacyConfigAuthority) {
+        this(configService, profiler, musicRestoreSink, legacyConfigAuthority, true);
+    }
+
+    private AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink, AudioManager legacyConfigAuthority, boolean explicitAuthority) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.musicRestoreSink = Objects.requireNonNull(musicRestoreSink, "musicRestoreSink");
+        this.legacyConfigAuthority = explicitAuthority
+                ? Objects.requireNonNull(legacyConfigAuthority, "legacyConfigAuthority") : null;
         this.profiler = profiler;
         // Initialize fallback mappings
         // SFX
@@ -1230,8 +1256,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     private SmpsSequencerConfig legacySequencerConfig(
             SmpsSequencerConfig config) {
-        return AudioManager.presentationOwner()
-                .bindLegacyConfigToPresentationOwner(config);
+        AudioManager authority = legacyConfigAuthority != null
+                ? legacyConfigAuthority : AudioManager.presentationOwner();
+        return authority.bindLegacyConfigToPresentationOwner(config);
     }
 
     @Override

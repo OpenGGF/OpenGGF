@@ -515,7 +515,16 @@ later WAV exports. Normal snapshot reconstruction preserves the captured sink;
 explicit dependency resolvers retain their existing override authority. Explicit
 manager restoration records `RESTORE` intent and an accepted timeline command;
 presentation-owned natural restoration retains its separate deferred publication
-path. Legacy singleton configuration binding remains a distinct contract.
+path.
+
+The appended `AudioManager` constructor argument separately fixes the authority
+for subsequent legacy explicit-config music and SFX bindings. Each request asks
+that manager's current factory, so reset/backend replacement can retire its
+handler owner without transferring the backend to a different manager. The old
+constructors retain lazy per-binding singleton selection. Ordinary two-argument
+music bypasses this binding, and existing source/snapshot config and sink references
+remain recorded. This is a composition lifetime contract; it does not isolate all
+engine roots or make the restore sink a configuration provider.
 
 Each `AudioManager` also retains a private `HeldReverseRestore` owner for the
 held logical target across selection, detached replay, preparation, producer

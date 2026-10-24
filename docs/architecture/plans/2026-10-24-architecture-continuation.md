@@ -8740,3 +8740,172 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
 The same command with `--preflight` in place of `--run` checks the actual launch
 environment before submission. No combined result or delivery is claimed at
 this checkpoint.
+
+
+### Additive legacy SMPS manager-authority binding (2026-10-24)
+
+The parent accepted baseline `9cb4e9c30b62a325f603b66b841cee4241046c92` and then
+authorized this implementation independently of its frozen suspension run. Local
+merge `a56d871e9b45353d94ffdb4f7eb331841080a8f1` composes reviewed parent
+`11db9f2945920804f308e9fa7d449b858c5e088f` with that baseline. Only the append-only
+continuation text conflicted: both complete suffixes from their common
+`4eb8e8e1a8b5dd01474d9905fae2c85256582138` base were retained. Before any injection,
+the composed audio subtree exactly equalled baseline `9cb4e9c`:
+`14cabce81b042859a039f232335f0ce6591aacac`. Engine, GameLoopSuspension and the
+accepted source guard also exactly matched reviewed parent bytes at that boundary.
+The parent worktree/target and its jobs were neither inspected nor changed. Its
+frozen validation certifies none of this new SMPS implementation.
+
+The backend now retains a private final manager reference for subsequent legacy
+configuration bindings. Null is the old-constructor compatibility sentinel; a
+private canonical discriminator rejects null for explicit construction only after
+config and restore-sink validation. Explicit headless construction validates its
+rate last. Every existing overload remains, nullable profiler remains accepted,
+and no constructor acquires a DAC requirement. Added forms are exactly protected
+Abstract(config, profiler, sink, authority), public LWJGL/Headless with that same
+appended authority, and package-private Headless(config, profiler, int rate, sink,
+authority). The two existing binding call sites and all admission/suppression/
+continuous-extension ordering remain in place. Ordinary two-argument music still
+uses profile config directly. Every explicit binding asks A's current existing
+package-private binder; it retains neither a factory nor a handler owner.
+
+Capturing A's factory/handler was rejected: reset and backend replacement retire
+those owners, and the new lifetime controls require a fresh later handler plus
+real E9 effects. Inferring authority from the receiving manager or restore sink,
+casting/expanding the sink, introducing an identity registry or another config
+owner/cache, and rebinding old snapshots were rejected. A, singleton S, root B,
+receiving manager and restore sink R remain separate roles. Existing source/
+snapshot config and sink references stay recorded; old mutable coordination state
+clears on retirement as the baseline established. Existing resolvers can still
+override config and sink. This establishes configuration authority selection,
+not general independent-root isolation. Earlier retention/source-only decisions
+above describe their pinned historical source; lazy singleton selection remains
+the compatibility contract.
+
+The nine approved production files are the three backends, Engine, HeadlessGameBoot,
+MenuAudioProbeTool, TimeAttackVideoCaptureTool, ProductionBk2AudioRunner and
+NativeGameplayCheck. All seven receiving constructions pass their existing actual
+receiving manager as the appended authority:
+
+| Receiving composition | Call sites |
+| --- | --- |
+| Engine | ensureMasterTitleAudioBackend and preparePresentationForLaunch |
+| HeadlessGameBoot | installAudioBackend |
+| MenuAudioProbeTool | main |
+| TimeAttackVideoCaptureTool | capture composition |
+| ProductionBk2AudioRunner | run composition |
+| NativeGameplayCheck | installAudio |
+
+Engine's complete diff from the reviewed composition is those two argument lists.
+Suspension and accepted engine-root/owner algorithms are unchanged. The binder,
+factory, catalog, settings/freezing, handler algorithms, snapshot formats/resolvers,
+Settings.defaults, natural deferred restoration and explicit RESTORE implementation
+are untouched. No POM, build policy, guard, descriptor, pin, terminal, store or
+permission edit was needed. Engine-map prose explains the lifetime contract;
+release prose folds into the existing 0.7 Runtime ownership entry.
+
+**Baseline accounting and new controls.** The 15-case baseline source remains
+exact blob `9a8da712962f904ba60922264522a39d5f3b28b9`. The original ROM companion
+blob `24d9b3561b9e41aed4234d997e3ecd0510262fa7` becomes
+`d73108eb8e10ae50aafa003cca16f3f3c4b75352`: its original private observer delegates
+to a package-visible overload adding explicit/distinct-manager fixture options;
+the golden accessor becomes package-visible. Original three test methods, inputs,
+assertions and pinned observations are unchanged. Separate loader caches remain.
+The original 18 executed identities still hash to
+`4900ba63adaeb3690a250b8fad9d75e823661bc1ba2683bfd65e2d30e067d682`.
+
+New `TestSmpsExplicitConfigAuthorityContract`, blob
+`da4b8ed133b04235198849f54951083791ab9bb6`, contributes 14 passing cases:
+ordered/lazy constructor rejection, real A/S/B/R/receiver separation across all
+three paths, E9 transpose/increments, ordinary-SFX and FF07 reset, A reset/backend
+replacement with old raw references and cleared old counter, default and explicit
+snapshot resolution, missing-registration/no-fallback/null-handler/ordinary-music
+bypass, actual independent R foreground restoration through RESTORE intent and
+EXPLICIT timeline cause, and six short ROM comparisons. The six cover all three
+routes with A equal to historical S and with A distinct from S/B. Each matches both
+a fresh independent factory/direct-session control and the original goldens above.
+No observation hydrates runtime state. This remains engine preservation, not
+native-emulator parity. Existing natural completion/deferred-publication and E4/
+one-up controls remain separate. TestSmpsRestoreOwnerContract changes only its
+two public-constructor-count assertions to exact old/new allowed signature sets;
+all prior compatibility/rejection/restoration assertions remain. Its tested blob
+is `c27d0bb340b49eb02d53a7e80dd21d30a2b3de58`.
+
+**Own validation.** Compilation and all focused checks passed against the same
+uncommitted implementation bytes on pre-injection HEAD `a56d871e9`; no executable
+edits followed. Production source patch SHA-256 against that HEAD is
+`2c7aae1896222af2084a90f2fae6378d2dcff7549183a4409b13056dfb59ee40`.
+The sorted `path + space + Git-blob + newline` nine-file production manifest hashes
+to `aade7f37d9e202edbefc3b5d503ccb0ffa767c5abaf96d81f11fe64364f2c42e`.
+The final local commit preserves these tested source/test fingerprints.
+
+| Owned session | Selection | Queue wait | Maven time | Result |
+| --- | --- | --- | --- | --- |
+| 36894 | fresh test-compile (4,353 main / 4,484 test sources) | build admission; not separately measured | 1m29s | exit 0 |
+| 7872 | package -DskipTests, including SDK artifacts | build admission; not separately measured | 39.431s | exit 0 |
+| 93427 | separate Java-25 native-tool compilation | 596s | 0.815s | exit 0 |
+| 28496 | audio/domain, 14 classes | 64s | 29.540s | 167 / 0 / 0 / 0 |
+| 7247 | boot/Engine/S3K bounded stability, 8 classes | 476s | 29.608s | 21 / 0 / 0 / 0 |
+| 66528 | fresh focused API/architecture guards, 10 classes | 153s | 46.087s | 75 / 0 / 0 / 0 |
+
+Case result columns are tests/failures/errors/skips. Java XML properties report
+25.0.5.0.2; all selected ROM cases executed with the original verified absolute
+S1/S2/S3K properties and the same CRC32/SHA-1 identities recorded above. No KiS2
+control was selected. Boot/stability ran with DISPLAY/WAYLAND_DISPLAY unset and
+explicit surfaceless EGL. The existing boot identity fixtures use their owned
+logic-only graphics seam; no pixel/rendering certification is claimed. The chosen
+Engine lifecycle method executes both modified installation methods. Four required
+S3K stability families are covered by the bounded methods below; no whole-zone
+matrix is claimed. The domain run includes all original requested selectors plus
+16 E4 native-program controls and three authentic one-up restore controls. No new
+fixture failed during injection. Original baseline draft failures and their limits
+remain recorded above. Neither new domain nor boot/stability logs contained a
+FileChannel message; the separate recorded S2 suspension 82-error limitation is not
+a routing-defect or repair claim.
+
+Exact sorted newline-delimited XML `classname#name` identity hashes:
+domain `4e562db96d51d2a73c9e031233a7a645406f6e0a27233c163bcd86a183422d71`;
+boot/stability `33f81b3130651b146f81a6858ee3a009f80de29e34d5b97c2ff39cb1bc7b9e13`;
+guards `295800a39bd9c864fe584b83e278c8ce8660c613ace8011d4bf79aa5fbbb22a4`. Guard XML confirmed 28 ArchUnit cases:
+its 27 fields plus the selected cycle method, rather than treating the two-name
+selector as two executed rules. All 75 actual guard cases passed without skips.
+
+Fresh compiled API checks retain 22,541 unique rows / 1,250 types. All 13 frozen
+files, including stored.rules, remain byte-identical before and after guards;
+sorted `path:SHA256 + newline` manifest SHA-256 is
+`ae4803e8096787ef94ca96320ea78432fb2c57ad068d5c20eb052b4b10166204`.
+Published/accounting guards retain 119 low-level records, ambient 6 methods / 5
+files and 151 package-pair permissions; update properties remain false. The API
+pin/platform/terminal lists and release descriptor remain exact. Source caller
+closure plus freshly compiled constructor method references cover all seven
+receiving calls, including the separately compiled NativeGameplayCheck. Existing
+compatibility callers/subclasses and performance-tagged test sources compile;
+no performance measurement, native image build or native tool runtime was run.
+
+Commands below substitute the verified original absolute ROM directory with
+`$OPENGGF_ROM_ROOT` for repository resource-policy compliance. Test selectors are
+the exact executed selections; normal admission was retained for domain/native.
+The native compiler uses the existing builders' `javac --release 25` command
+shape for the changed tool and its companion, against this worktree's freshly
+packaged engine and classes, under the Maven wrapper's admission/activity ownership.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests exec:exec -Dexec.executable=javac '-Dexec.args=--release 25 -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar:target/classes -d target/native-smps-config-classes tools/modding/native-linux/NativeGameplayCheck.java tools/modding/native-linux/NativeSceneInspection.java' -B
+roms=("-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen")
+python3 tools/testing/maven_queue.py --normal -Dmse=off '-Dtest=TestSmpsConfigAuthorityContract,TestSmpsConfigAuthorityRomContract,TestSmpsExplicitConfigAuthorityContract,TestSmpsRestoreOwnerContract,TestSmpsAssetCatalog,TestAudioManagerSfxCatalogReuse,TestDonorAudioRouting,TestSonic3kCoordFlagParity,TestSmpsDriverSnapshot,TestSmpsSessionSnapshot,TestAudioVoiceRegistry#coordFlagRuntimeStateSnapshotsRestoresAndResetsWithRegistryLifecycle,TestAudioPresentationSnapshotParity#snapshotRestoresTheSolePresentationCoordFlagCounter,TestS3kE4StopSfxPlan,TestS3kOneUpRestoreRom#theExtraLifeJingleRestoresTheLevelMusicWithoutARejectedCommand+theRestoredMusicComesBackAttenuatedAndFadesIn+oneUpSuppressionSurvivesSnapshotRestoreAndOrdinaryMusicReleasesIt' "${roms[@]}" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity,TestEngine#titleAudioBackendReinstallHonorsAudioEnabledLifecycle,TestS3kAiz1SkipHeadless#aiz1IntroSkipSpawnHasCollisionAndNoImmediatePitDeath,com.openggf.tests.TestSonic3kLevelLoading#preparedBuildUsesCapturedCharacterWithoutWorkerServiceLookups+aiz1UsesRomStartPosition+aiz1LoadsWithValidResourceReferences,com.openggf.game.sonic3k.TestSonic3kLevelLoading#headlessFreshRuntimeLoadArmsHandoffWithoutRetainingRenderedTitleCard+headlessTitleCardLoadArmsTheSameFreshRuntimeHandoffExactlyOnce,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "${roms[@]}" test -B
+python3 tools/testing/maven_queue.py --normal -Dmse=off -Pguards '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestSmpsSequencerConfigCopyCoverageGuard,TestSmpsSessionArchitectureGuard,TestAudioPresentationArchitectureGuard#lwjglBackendDoesNotOwnIndependentMusicOrSfxSources+backendHasNoSecondCoordFlagOwnerOrCompatibilityFactory+productionDoesNotBypassManagerOwnedAudioCommands+onlyProducerOwnsAudioFrameClockAndPcmHistory,TestArchitecturalSourceGuard#suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects+lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+engineDoesNotGainNewLargeMethods,TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage,TestArchitecturalReviewGuard#archUnitFrozenRulesDoNotAutoUpdateDuringNormalRuns+archUnitPublishedBaselineCountsMatchFrozenStore+archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers+core_runtime_cycle_cluster_does_not_gain_top_level_edges' test -B
+```
+
+Queue waits, execution, compilation and preparation overlap; their sum is not
+delivery elapsed time, which was not measured. Parent waiting/execution was not
+measured or inspected. No broad/full suite or composed-delivery certification is
+claimed. All six owned sessions are terminal; exact XML IDs/skips/properties and
+compact results were inspected, then XML and owned invocation logs were consumed.
+No pass cache, receipt or raw-log archive is retained. Only existing continuation
+evidence and focused tests are durable. Baseline and composition remain in
+history; the worktree/branch remain local and retained for the parent's independent
+content-matched review and composed delivery. No push, integration into main,
+subdelegation or lifecycle cleanup occurred.

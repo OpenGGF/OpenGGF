@@ -78,8 +78,16 @@ class TestSmpsRestoreOwnerContract {
         assertTrue(java.lang.reflect.Modifier.isFinal(
                 assertDoesNotThrow(() -> AbstractSmpsAudioBackend.class
                         .getDeclaredField("musicRestoreSink")).getModifiers()));
-        assertEquals(1, LWJGLAudioBackend.class.getConstructors().length);
-        assertEquals(1, HeadlessSmpsAudioBackend.class.getConstructors().length);
+        var allowed = java.util.Set.of(
+                List.of(SonicConfigurationService.class, com.openggf.debug.PerformanceProfiler.class,
+                        MusicRestoreSink.class),
+                List.of(SonicConfigurationService.class, com.openggf.debug.PerformanceProfiler.class,
+                        MusicRestoreSink.class, AudioManager.class));
+        for (var type : List.of(LWJGLAudioBackend.class, HeadlessSmpsAudioBackend.class)) {
+            assertEquals(allowed, java.util.Arrays.stream(type.getConstructors())
+                    .map(constructor -> List.of(constructor.getParameterTypes()))
+                    .collect(java.util.stream.Collectors.toSet()));
+        }
         for (var constructor : SmpsSequencer.class.getConstructors()) {
             assertTrue(List.of(constructor.getParameterTypes()).contains(MusicRestoreSink.class),
                     "every sequencer constructor needs an explicit destination");

@@ -23,6 +23,19 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
         super(configService, profiler, musicRestoreSink);
     }
 
+    /**
+     * Uses the supplied manager's current factory for subsequent legacy bindings,
+     * independently of the restore sink. The three-argument constructor retains
+     * lazy per-binding singleton selection.
+     */
+    public LWJGLAudioBackend(
+            SonicConfigurationService configService,
+            PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink,
+            AudioManager legacyConfigAuthority) {
+        super(configService, profiler, musicRestoreSink, legacyConfigAuthority);
+    }
+
     @Override
     public AudioPresentationSink createPresentationSink(
             Consumer<Throwable> failureHandler,

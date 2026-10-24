@@ -657,8 +657,11 @@ Unreleased. The earlier development themes remain in
   audio callers supply their selected profile to the reusable presentation host;
   desktop sound-test composition lives with the developer tools. SMPS backends
   keep their explicitly supplied restore-request destination for their usable
-  lifetime, including later source construction after engine-root reconfiguration;
-  SoundTest windows retain their configured destination for WAV export. Capture
+  lifetime, including later source construction after engine-root reconfiguration.
+  Production backends also retain their supplied manager as legacy configuration
+  authority, querying its current factory after resets; existing constructors keep
+  lazy singleton selection, independently of restoration. SoundTest windows retain
+  their configured destination for WAV export. Capture
   admission, rebuild continuity and retirement share one manager-owned lifetime
   boundary, preserving live recordings across presentation replacements. Held
   rewind target selection, boundary replacement and release retries share a private

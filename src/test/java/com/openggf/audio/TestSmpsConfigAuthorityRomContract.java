@@ -61,11 +61,17 @@ class TestSmpsConfigAuthorityRomContract {
     }
 
     private Observation observe(Rom rom, String route, boolean direct) throws Exception {
+        return observe(rom, route, direct, false, false);
+    }
+
+    // Shared only with additive-authority controls; the original three cases keep their inputs/assertions.
+    Observation observe(Rom rom, String route, boolean direct, boolean explicit, boolean distinct) throws Exception {
         try (var scope = new Scope()) {
             var loader = new Sonic3kSmpsLoader(rom); // Separate loader caches for the two arms.
             var profile = new RecordingProfile();
-            var s = scope.manager(profile);
-            scope.singleton(s);
+            var authority = scope.manager(profile);
+            var singletonProfile = new RecordingProfile();
+            scope.singleton(distinct ? scope.manager(singletonProfile) : authority);
             scope.configureRoot(scope.manager(new Sonic3kAudioProfile()));
             var owner = new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
             owner.register("s3k", Sonic3kCoordFlagHandler::new);
@@ -78,7 +84,12 @@ class TestSmpsConfigAuthorityRomContract {
             DacData dac = loader.loadDacData();
             assertNotNull(music);
             assertNotNull(dac);
-            var backend = scope.backend(() -> {});
+            HeadlessSmpsAudioBackend backend;
+            if (explicit) {
+                backend = new HeadlessSmpsAudioBackend(configuration(), null, () -> {}, authority);
+                scope.backends.add(backend);
+                backend.setAudioProfile(new Sonic3kAudioProfile());
+            } else backend = scope.backend(() -> {});
             backend.setChipWriteObserver(observer);
             backend.setDriverServiceObserver(observer);
             try (var stream = direct ? new OwnedSmpsAudioStream("s3k", 0,
@@ -120,12 +131,14 @@ class TestSmpsConfigAuthorityRomContract {
                                 "authentic E9/reset at frame " + frame);
                     }
                 }
+                if (distinct) assertEquals(0, singletonProfile.owner.state().spindashRevCounter(),
+                        "explicit routing never mutates the independent singleton");
                 return observer.finish();
             }
         }
     }
 
-    private static Observation expected(String route) {
+    static Observation expected(String route) {
         // Established on unchanged production 4eb8e8e1, independently compared before pinning.
         return switch (route) {
             case "music" -> new Observation(
