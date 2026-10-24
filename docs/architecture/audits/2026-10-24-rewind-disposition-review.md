@@ -40,7 +40,7 @@ obligation is not a passing test claim.
 | 13 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization finds or creates a managed pillar and records it. Generic spawn reconstruction with `initialized` restored does not run that creation path again. The public test accessor reads this inventory. | `TestLbz2RideCameoInstances` exercises production creation and cameo choreography, not destructive restoration of this list. Prove existing-pillar reuse, fresh pillar recreation, and list ownership after restore. |
 | 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization records four children. SwingChild recreation selects a nearest live cameo, without reattaching to its parent's inventory. | `TestLbz2RideCameoInstances` is named by the isolated sweep but does not perform registry capture/restore. Required evidence includes four exact child identities, parent inventory restoration, and shake/freefall replay. Do not equate that sweep label with executed graph proof. |
 | 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Retained. `spawnDebris` records managed IceDebris; FrozenPlayerBlock recreation starts an empty inventory. Current reads are the testing accessor, but the deletion and auxiliary-sidekick paths have distinct lifetimes. | [`TestS3kIczFreezerGraphRewind.iczFreezerGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) checks cloud/block/player graph links. It does not certify this nonempty debris inventory after the block breaks. Exercise the native and auxiliary-sidekick debris boundaries, including retirement and forward replay. |
-| 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Retained. This field is inherited from AbstractBossInstance, whose central policy requests identity capture. The class's actual fallback path still drops it. Its shard/orb helper arrays have their own state model, so an unconditional transient policy would hide a capture-path problem. | `TestS3kIczMinibossObject` tests encounter behavior, not complete destructive registry restoration. Required evidence includes the actual capture route, managed child identities, shard/orb state, pending defeat work, and a forward encounter replay. An empty inherited list in a default probe is insufficient. |
+| 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Closed through actual compact capture in the bounded ICZ follow-up below; no exclusion. Constructible helper-array elements and a final, preconstructed camera gate keep the existing inherited `CAPTURED` policy reachable. | [`TestIczMinibossGraphRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestIczMinibossGraphRewind.java) exercises the real manager/registry with fresh reconstruction at the camera gate, progressed orbs and pending defeat workers. [`TestIczMinibossFieldDisposition`](../../../src/test/java/com/openggf/game/rewind/schema/TestIczMinibossFieldDisposition.java) requires actual capture of the helpers, gate and inherited list. Native production leaves that list empty; orbs/shards are local helpers, and the explosion controller is a separately managed object. See the follow-up for validation and limits. |
 | 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Retained gameplay debt. It records camera/flame/boss children. `releaseExhaustFlameForBossSpawn` consumes the list to remove the flame before boss allocation, so this inventory is not merely diagnostic. Recreation does not rebuild it. | `TestLbz2RideCameoInstances` covers the allocation choreography without a rewind split. Capture with the flame live, destructively restore, then advance through release and boss allocation; compare exact slots and child retirement. Do not replace deletion semantics to make this pass. |
 | 18 | [`sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossBoxKnuxInstance.java) | Retained gameplay debt. The list owns mutable S3kBossExplosionController instances; `tickWallExplosions` advances them and DONE waits for completion. Recreating an empty list changes completion and emitted effects. | [`TestS3kLbzMinibossGraphRewind.knucklesMinibossesRestoreFreshWithRestoredBoxParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kLbzMinibossGraphRewind.java) does not populate and restore these controllers. Capture nonempty controllers with pending explosions, verify RNG/effect consumption, and replay DONE before closing this key. Managed-child identity codecs alone cannot capture these helpers. |
 | 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Retained gameplay debt. PanelState is a mutable inner helper with motion, callback, timer, detach, and deletion fields. The list is rebuilt during initialization, but its progressed state is not reconstructed from scalar parent fields. | The LBZ miniboss graph check covers the Knuckles box-parent path, not the Sonic/Tails panel ring. Capture a progressed nonempty ring, alter its timers and detach state, recreate, and compare drawing, collision, and forward dispatch. A new helper-state contract needs separate design evidence. |
@@ -249,3 +249,132 @@ The consumed XML, text reports and generated field report were inspected and
 removed. No category run or validation receipt was created. These focused checks
 do not certify rendered output, player riding-contact cleanup or the complete
 SBZ2 route. No broad or full suite was run.
+
+## ICZ miniboss progressed-helper follow-up
+
+This bounded slice starts at `0ffa7f3c727d802573f3fc954b5ce60e3c89169e` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9f0baaaf`, renamed to
+`bugfix/ai-icz-miniboss-rewind-20261024`. The parent owns composed guards,
+S3K stability, level-matrix/release prose, integration, push and worktree cleanup.
+Only row 16 and its baseline key are changed here; earlier counts describe their
+original validation slices.
+
+The complete capture path is ObjectManager's adapter -> ObjectCallbackRouter ->
+ObjectRewindTypeSafety -> AbstractObjectInstance's default subclass capture.
+The original class cannot use its compact schema: non-final `cameraGate` needs
+an existing target, while non-final helper arrays lack element reconstruction
+constructors. Generic fallback restores the stateful arrays in place. The boss's
+spawn-based reconstruction initializes eight null orb slots; populated captures
+therefore fail at `GenericFieldCapturer.restoreStatefulValue`, before forward
+execution. This is distinct from losing an inherited child inventory.
+
+The production producers are `initShards`, gate-delayed `initOrbs`, and managed
+`spawnChild` calls for defeat work. None adds ICZ objects to inherited
+`childComponents`. Its real consumers are AbstractBossInstance's update/prune,
+debug drawing, settled ordinal rebuilding and the public graph accessor, plus
+Stageplay graph consumers. The supported native invariant is an empty inherited
+inventory throughout this encounter, not an assertion that it contains the
+orbs/shards or pending explosion worker. The bounded test checks it on every
+observed dispatch. The existing central `CAPTURED` policy remains in force;
+`TestIczMinibossFieldDisposition` requires this field in the actual default schema
+and audits this class alone. This closure does not weaken a consumer contract or
+classify arbitrary nonempty inventories as diagnostic.
+
+Two designs were compared. An owner-local snapshot could preserve slot presence
+and reconstruct each helper before copying its mutable state, but would duplicate
+the existing array codec's null markers and helper construction. The selected
+shape supplies private zero-argument materialization constructors to the two
+existing helper types and makes the camera gate a final, preconstructed helper.
+The constructor still supplies a fresh gate before the first dispatch. Array decoding
+creates only captured present slots and restores all fields, including orb index
+and the shard frame/packed-velocity recipe. Normal creation remains behind
+loc_711EC (sonic3k.asm:149771-149783); no eager orb setup or RNG calls are added.
+Movement, clocks, camera writes, slot reservation, defeat allocation, deletion,
+respawn and public API signatures are unchanged. No central policy or framework
+change is needed. A blanket `TRANSIENT` disposition and eager creation of all
+orbs were rejected because they would respectively hide the capture path and
+change pre-gate initialization/render/slot semantics.
+
+The regression uses production ObjectManager updates with S3K slot layout and
+RewindRegistry capture/restore, with in-place reuse disabled. It runs real
+initialization to ticks 1, 124, 570 and 850; tick 570 positively checks collidable
+orbit routine 8. It compares null/present helper slots, every helper scalar
+(including immutable recipe fields), fresh helper/managed identities, exact
+managed roles/slots, live allocation/peak counts, V-int, touch-region output and
+ordered renderer draw inputs immediately after destructive removal/recreation.
+Each encounter capture replays 1,000 dispatches against uninterrupted execution.
+The killing hit is entered through the production attack callback with 33
+dispatches between earlier hits; defeat captures at offsets 0, 37 and 70 replay
+through controller/body retirement and palette/sign-flow allocation. Existing
+nearest-parent controller relinking is checked against the fresh owner in this
+single-family graph. Shared RNG, camera and game state are registered with the
+manager. Explosion animation reads the verified supplied ROM. The recorder
+observes boss draw inputs and emitted SFX; it does not certify GPU pixels,
+full-level palette output, snow-emitter choreography, two simultaneous boss
+families, player contact resolution, results/act transition, or viewport/donor/team
+breadth. Existing encounter tests retain their narrower evidence.
+
+Before runtime changes, the first request stopped in test compilation because
+the observer called `getSlotIndex` on the ObjectInstance interface (121 seconds
+admission wait; Maven 77 seconds). After correcting that test type, the first
+executed selection had one passing gate case, three progressed-orb null-target
+errors and three observer errors from reading coordinates on the legitimately
+spawnless palette worker (41 seconds wait; Maven 26.350 seconds). The observer was
+corrected without changing runtime. The matched baseline then ran seven tests:
+`progressedHelpersRestoreFreshAndReplayTheEncounter(int)[1]` passed (tick 1);
+its `[2]`, `[3]`, `[4]` cases (ticks 124/570/850) and all three
+`pendingDefeatWorkersRestoreFreshAndReplayHandoff(int)` cases (offsets 0/37/70)
+errored with `Cannot restore stateful rewind field
+com.openggf.game.sonic3k.objects.IczMinibossInstance#orbs because one side is null`.
+There were zero assertion failures and zero skips. This request waited 92 seconds;
+Maven reported 27.037 seconds. XML identities and errors were inspected before
+continuing. These are queue waits and Maven durations, not summed delivery time.
+
+All requests use the following environment, the main checkout's queue wrapper,
+and this worktree's own `target/`. All three existing absolute ROM files were
+verified against the repository CRC32 and SHA-1 identities; none was linked or
+copied.
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+export LUA_BIN=/usr/bin/lua5.4
+export MAIN_CHECKOUT=/path/to/existing/main-checkout
+export ROM_ROOT=/path/to/existing/ROM-directory
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestIczMinibossGraphRewind' "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+The post-fix focused command is:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestIczMinibossGraphRewind,TestIczMinibossFieldDisposition,TestIczMinibossRenderBuckets,TestS3kIczMinibossObject' "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+The initial post-fix selection passed all 34 tests (7 graph cases, 1 class-local
+field-disposition check, 3 render-bucket checks and 23 existing encounter methods),
+with zero failures, errors or skips; XML identities were inspected. It waited
+63 seconds for admission and Maven reported 83 seconds. Local review then removed
+an unnecessary constructor `reset()` introduced by the fix: the original first
+construction supplied a fresh gate without reset. Final field initialization now
+preserves that exact pre-gate helper value as well as its behavior. The same
+focused selection is repeated for that concrete source adjustment.
+
+The final unchanged-source selection again passed all 34 exact identities above,
+with zero failures, errors or skips. It waited 3 seconds for admission; Maven
+reported 83 seconds including recompilation. Final XML confirms all four
+encounter captures and all three defeat offsets ran, alongside the class-local
+capture obligation and existing render/encounter methods. The inherited list's
+baseline key is removed because compact capture is now reachable, not because
+an unused field was excluded. Only that key was removed; no other baseline or
+audit row changed. Local audit links, all three disassembly citations and
+`git diff --check` passed. Consumed Surefire XML/text reports are removed after
+inspection; no category run, pass cache or log archive is retained. No broad
+smoke, full suite, API gate or combined S3K run was submitted by this delegate.
+The task worktree and local branch remain for the parent's integration.
+
+The commit policy rejected literal home-directory paths in the audit commands;
+`MAIN_CHECKOUT` and `ROM_ROOT` above stand for the verified existing main checkout
+and ROM directory used by the invocations. The recorded selectors, flags, ROM
+filenames and working directory are unchanged. No source or test changed after
+the final successful run.
