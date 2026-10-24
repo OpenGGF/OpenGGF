@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.configuration.*;
 import com.openggf.control.InputHandler;
+import com.openggf.data.RomGame;
 import com.openggf.game.*;
 import com.openggf.game.patch.PatchContext;
 import com.openggf.game.session.*;
@@ -27,6 +28,7 @@ import static org.lwjgl.glfw.GLFW.*;
 class TestStarpostRealRuins {
     @TempDir Path temp;
     SharedLevel source;
+    RomCatalogueFixture catalogue;
     ExampleModHarness harness;
     GameLoop loop;
     GameModule effective;
@@ -37,23 +39,31 @@ class TestStarpostRealRuins {
         source = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         var config = SonicConfigurationService.getInstance();
         oldTest = config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        assertNotNull(sonic1, "Sonic 1 ROM is required for the Starpost Valley ROM catalogue");
+        catalogue = RomCatalogueFixture.bind(config, GameServices.rom(), Map.of(RomGame.S1, sonic1.toPath()));
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), temp.resolve("build"));
         effective = harness.apply(GameServices.module());
         oldResolver = ModSubsystem.current().rewindClassResolver();
         ModSubsystem.current().installRewindClassResolver(harness.rewindClassResolver());
         TestEnvironment.configureGameModuleFixture(effective);
+        catalogue.reapply();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.TEST_MODE_ENABLED,false);
         GameServices.graphics().initHeadless();
         input = new InputHandler(); loop = new GameLoop(input);
         loop.setGameMode(GameMode.MOD_SCENE);
     }
     @AfterEach void close() throws Exception {
-        if (loop != null) { loop.setGameMode(GameMode.MASTER_TITLE_SCREEN); loop.modSceneHost.cleanup(); }
-        if (harness != null) harness.close();
-        if (oldResolver != null) ModSubsystem.current().installRewindClassResolver(oldResolver);
-        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, oldTest);
-        if (source != null) source.dispose();
+        try {
+            if (loop != null) { loop.setGameMode(GameMode.MASTER_TITLE_SCREEN); loop.modSceneHost.cleanup(); }
+            if (harness != null) harness.close();
+            if (oldResolver != null) ModSubsystem.current().installRewindClassResolver(oldResolver);
+            SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, oldTest);
+            if (source != null) source.dispose();
+        } finally {
+            if (catalogue != null) catalogue.close();
+        }
     }
     void drainFade() {
         for (int i = 0; i < 400 && loop.resolveFadeManager().isActive(); i++) loop.resolveFadeManager().update();

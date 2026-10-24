@@ -4530,3 +4530,95 @@ receives it once by ancestry. Recording-audio source investigation remains
 separate. Complete f340189failure/108skip and733guard-pass evidence stays
 unchanged; this sample does not certify audio, campaigns, native parity or
 PR223 as green. Original05:37Z expiry is not revived or extended.
+
+
+### PR223 remaining LRZ/Starpost catalogue fixtures: C/D bounded qualification — 2026-10-24
+
+The accepted follow-up changes only six existing test fixtures on parent
+`71fcf491f35b69af9236f20847729c5c0fa6b09d`. Each LRZ donor invocation binds only
+its selected S1 or S2 image after the existing session reset and before the
+original fixture build; `off`/omitted donors remain unchanged and need no binding.
+The builder's transient reset preserves base configuration, so these four files
+add no reapply. Festivals and Ruins bind S1 before harness construction and
+reapply immediately after their one existing module-fixture reset. Every original
+teardown statement retains its sequence inside a narrow `try/finally` that only
+guarantees the new catalogue's final close. The accepted helper, global harness,
+production lookup, ROM/cache lifetime, configuration files, matrices, assertions,
+assumptions, controller sequences and route oracles are unchanged.
+
+Both requests use the current Main absolute queue wrapper from the owned PR
+worktree, `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`, the original
+verified absolute stock ROM properties, explicit Java25/Lua54/null-audio/EGL
+launch environment and unset ambient JVM/display overrides. Report/tmp/diagnostic
+paths are invocation-owned below `target/pr223-catalogue-followup-20261024`.
+No duplicate tool preflight, resource override or wall-time timeout was added.
+The executable/source frame (sorted tracked relative path + NUL + full bytes +
+NUL over src/main, src/test, pom.xml, .mvn and tools/testing) stayed exactly
+`139809fcc8dd79e2298aaabda8af7a24e9dc85cdc34f1f581d56fe31c75c19b1`,
+11,518 paths / 840,578,092 bytes, before and after each request. Six Java and
+protected helper/unit pins match the tested inputs. The Plan receives only this
+factual post-result append; it is outside that executable frame.
+
+C, owned session63379, EXIT0: **79 distinct / 0F / 0E / 0S**, four XMLs.
+Exact whole-class selection:
+
+```text
+com.openggf.tests.TestS3kLrzBossCameraHeadless
+com.openggf.tests.TestS3kLrzBoulderCutsceneHeadless
+com.openggf.tests.TestS3kLrzChainedPlatformsHeadless
+com.openggf.tests.TestS3kLrzTurbineHeadless
+```
+
+Actual identities: BossCamera checkpoint[1..17], fresh entry1, native entry[1..5]
+and lava1 =24; Boulder approach[1..17] plus Knuckles exclusion1 =18; Chained
+placements[1..3] plus contacts[1..17] =20; Turbine[1..17] =17. The forty selected
+donor cases are twenty S1 plus twenty S2; thirty-nine other controls retain off
+or omitted donors. The reported queue wait was0s; Maven37.800s. All79 identities,
+four property sets,79 recursive streams (12,948B), text and full command log were
+read. No caught runtime fault or dump was found. FAST/NONE and compiler
+deprecation warnings remain. Forty candidate donor cases do not reconstruct the
+historical45-error set. Warm secondary-cache hits precede catalogue lookup;
+binding/reload alone does not establish donor-image identity or retire that cache.
+
+Only after C's terminal readback/report found no unexpected issue, the unchanged
+reserved D ran as session56561, EXIT0: **67 distinct / 0F / 0E / 0S**, two XMLs.
+Exact whole-class selection:
+
+```text
+com.openggf.TestStarpostRealFestivals
+com.openggf.TestStarpostRealRuins
+```
+
+Actual Festivals nativeRouteResultAndReturn[1..30] covers its original three
+characters, two widths and five activity kinds. Actual Ruins movement[1..9],
+faint[1..9], generated exit[1..9], labyrinth[1..3], valley door[1..3] and four
+single methods total37. Every original scene/act handoff, gameplay/results,
+rewind, calendar, input, drowning and findings assertion remains. The reported
+queue wait was34s, separately from Maven02:38; suite times were Festivals93.327s
+and Ruins35.006s. All67 identities, two property sets,134 recursive streams
+(152,569B), both text reports and full command log were read. No caught exception,
+closed-ROM loader fault or dump was found. Java25.0.5.0.2, owned cwd/classpath,
+EGL, exact selectors and all three original absolute ROM paths match in every
+suite. Planning allowances10/30min were not measured costs or wall-time caps;
+queue and Maven execution are separate, not whole-delivery elapsed time.
+
+D retains a diagnostic limit: AbstractPlacementManager.getSpawnIndex reports
+`identity miss for spawn at (416,320), found via equals at index 17`. Exactly591
+XML emissions occur in Ruins chamber16 for the three farmers: parameter indices
+[2,5,8] of nativeFaintRunsExistingRules (four each),
+reachesGeneratedExitWithNativeInput (147 each), and
+nativeMovementHitReturnAndRewind (46 each). Count the XML emissions once; mirrored
+command-log copies are not additional events. Equality fallback succeeds, but
+cause/newness remain UNKNOWN. No owner/lifetime correction or warning suppression
+is inferred. FAST/NONE and compiler deprecations also remain explicit.
+
+C and D are separate bounded invocations, not a new combined-smoke pass or all97
+scene-family closure. The complete f340189 failed identities /108 skips and733
+fresh guard passes stay their original epoch. No native/campaign/aggregate green
+claim follows. All18 owned C/D report/log/native-extract files and the empty
+invocation namespace were consumed and removed after readback; compiled outputs
+and useful source/worktree stay. Two of two requests are exhausted, no live
+jobs/children remain, and original06:40Z expiry is not extended. Root authorized
+only this factual append and one normal-hook local six-test-file leaf; held
+recording-audio source composition follows only at the clean committed boundary,
+with separately qualified evidence and no new runtime edits/checks/push.
