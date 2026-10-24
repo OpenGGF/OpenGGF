@@ -3,5 +3,4 @@
 # actual capture path, not transient/deferred, not structural-final. Burn down by
 # giving fields dispositions (central policy entries preferred); never grow this.
 # Resolved keys fail the guard too: remove them so a recurrence cannot reuse debt.
-com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes
 com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned

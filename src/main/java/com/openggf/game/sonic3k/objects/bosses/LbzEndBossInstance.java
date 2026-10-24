@@ -138,7 +138,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     // constructor, before subclass field initializers) reassigns them.
     private transient List<AbstractBossChild> ownedChildren;
     private transient List<LbzEndBossPlatformChild> platformChildren;
-    private List<Integer> launchedSpikeBallRomSubtypes;
     // The Java transient keyword (not merely the rewind-transient annotation) is required:
     // the compact default-object schema only honours the transient keyword / policy table
     // for object-ref fields, so an annotated-but-non-transient ref would still be captured
@@ -204,7 +203,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         bossArtLoaded = false;
         ownedChildren = new ArrayList<>();
         platformChildren = new ArrayList<>();
-        launchedSpikeBallRomSubtypes = new ArrayList<>();
         platformLeader = null;
         runnerChild = null;
         deferredExplosionControllerChild = null;
@@ -409,10 +407,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
     public boolean spawnsCapsuleForTests() {
         return false;
-    }
-
-    public List<Integer> getLaunchedSpikeBallRomSubtypesForTests() {
-        return List.copyOf(launchedSpikeBallRomSubtypes);
     }
 
     public int getRequestedPlcIdForTests() {
@@ -825,7 +819,6 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private void launchSpikeBall() {
         playSfxIfReady(Sonic3kSfx.TUBE_LAUNCHER.id);
         int romSubtype = LAUNCH_SUBTYPE_TABLE[launchCount++ & 7];
-        launchedSpikeBallRomSubtypes.add(romSubtype);
         recordChild(spawnChild(() -> new LbzEndBossSpikeBallChild(this, romSubtype)));
     }
 
