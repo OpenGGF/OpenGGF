@@ -2,10 +2,13 @@ package com.openggf.game.soniccd.player;
 
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdObjectState;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -67,8 +70,35 @@ public final class CdPlayerMovement {
         NONE, MD_GROUND_AFTER_LEVEL_BOUND, MD_ROLL_AFTER_LEVEL_BOUND,
         MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND
     }
-    public enum Sound { FM_JUMP, FM_SKID, FM_CHARGESTOP }
-    public sealed interface Effect permits SoundRequest, ChargeEffect, KillRequest { }
+    /** Sound Drivers/FM/_Sound IDs.inc:8-38: rsset $90, including FM_SPRING=$98. */
+    public enum Sound {
+        FM_JUMP(0x92), FM_SKID(0x90), FM_CHARGESTOP(0xAB), FM_SPRING(0x98);
+        private final int nativeId;
+        Sound(int nativeId) { this.nativeId = nativeId; }
+        public int nativeId() { return nativeId; }
+    }
+    public sealed interface Effect permits SoundRequest, ChargeEffect, KillRequest, ObjectPatch { }
+    /** Borrowed call-cut input only, never authentication, retained state or a capture partition. */
+    public record ObjectContext(CdObjectPool.Snapshot slots, int standObject, int playerSlotId, int playerWidth) {
+        public ObjectContext {
+            Objects.requireNonNull(slots); byteValue(standObject); byteValue(playerSlotId); byteValue(playerWidth);
+        }
+    }
+    /** ChkFlipper's single oAnim byte store ($1C), including an executed same-value store. */
+    public record SlotPatch(CdObjectState before, CdObjectState after) {
+        public SlotPatch {
+            Objects.requireNonNull(before); Objects.requireNonNull(after);
+            // CdObjectState.equals includes real pool owner, whole slot identity and EVERY byte.
+            if (!after.equals(before.moveByte(CdObjectState.ByteField.ANIMATION,
+                    after.unsignedByte(CdObjectState.ByteField.ANIMATION)))) {
+                throw new IllegalArgumentException("Flipper patch must retain owner/slot and all bytes except ANIMATION");
+            }
+        }
+    }
+    /** Metadata in native source order; the caller owns overlay/folding and the one eventual pool commit. */
+    public record ObjectPatch(SlotPatch patch) implements Effect {
+        public ObjectPatch { Objects.requireNonNull(patch); }
+    }
     public record SoundRequest(Sound sound) implements Effect {
         public SoundRequest { Objects.requireNonNull(sound); }
     }
@@ -95,12 +125,13 @@ public final class CdPlayerMovement {
     }
     public enum UnsupportedBoundary {
         ROUTINE, SOURCE_FAMILY, MINIATURE, OBJECT_CONTROL, OBJECT_SUPPORT, CONTROL_OWNER,
-        BORED_GIVE_UP, RAMP_ENTRY, TIME_WARP_ACTIVE
+        BORED_GIVE_UP, RAMP_ENTRY, TIME_WARP_ACTIVE, RESERVED_OBJECT_SLOT, OBJECT_ADDRESS
     }
     /** A bounded missing owner, not a partially completed MODE result. */
     public static final class UnsupportedMotion extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
-        private UnsupportedMotion(UnsupportedBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
+        private UnsupportedMotion(UnsupportedBoundary boundary) { this(boundary, boundary.name()); }
+        private UnsupportedMotion(UnsupportedBoundary boundary, String detail) { super(detail); this.boundary = boundary; }
         public UnsupportedBoundary boundary() { return boundary; }
     }
     /**
@@ -194,7 +225,13 @@ public final class CdPlayerMovement {
 
     /** ObjSonic.NormalCtrl/ModeIndex (Main.asm:314-319,355-359), one admitted routine-2 MODE call. */
     public Result step(CdPlayerMotionState state, Input input, Environment environment) {
+        return step(state, input, environment, Optional.empty());
+    }
+
+    /** Same MODE with an ephemeral stood-slot cut, resolved only at an actual native dereference. */
+    public Result step(CdPlayerMotionState state, Input input, Environment environment, Optional<ObjectContext> objects) {
         Objects.requireNonNull(state); Objects.requireNonNull(input); Objects.requireNonNull(environment);
+        Objects.requireNonNull(objects);
         if (state.routine() != 2) unsupported(UnsupportedBoundary.ROUTINE);
         if (state.animation() == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
         if (environment.gates().zoneAct() != 0 || environment.gates().timeZone() != 1) {
@@ -202,10 +239,9 @@ public final class CdPlayerMovement {
         }
         if (environment.gates().miniSonic() != 0) unsupported(UnsupportedBoundary.MINIATURE);
         if ((state.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
-        if ((state.flags() & 8) != 0) unsupported(UnsupportedBoundary.OBJECT_SUPPORT);
         // Bar/pole owners change ObjMoveGrv and object control; do not simulate their active states.
         if ((state.playerControl() & 0xC) != 0) unsupported(UnsupportedBoundary.CONTROL_OWNER);
-        Cursor c = new Cursor(state, input, environment);
+        Cursor c = new Cursor(state, input, environment, objects);
         int mode = c.flags & 6;
         if (mode == 0) {
             boredom(c);
@@ -245,12 +281,19 @@ public final class CdPlayerMovement {
      *
      * <p>The checks are value consistency and admission preservation ONLY: a stop must end at its single
      * KillRequest, and fields that KillPlayer and its Player_ResetOnFloor (2295-2330) never write must
-     * match the stop, keeping step()'s object-support, control, ramp and miniature facts true for the
-     * reduced tail. They are not source or runtime ownership and not proof that a call occurred: Result
+     * match the stop. Borrowed support input must be supplied again by the caller for the
+     * reduced tail; it is never retained in a Result. They are not source or runtime ownership and not proof that a call occurred: Result
      * is publicly constructible, and the caller validates its one actual call and result.
      */
     public Result resumeAfterLevelBound(Result stopped, CdPlayerMotionState returnedState, Environment returnedEnvironment) {
+        return resumeAfterLevelBound(stopped, returnedState, returnedEnvironment, Optional.empty());
+    }
+
+    /** Resumes only the stopped tail, borrowing the caller's same call-cut support input again. */
+    public Result resumeAfterLevelBound(Result stopped, CdPlayerMotionState returnedState, Environment returnedEnvironment,
+                                        Optional<ObjectContext> objects) {
         Objects.requireNonNull(stopped); Objects.requireNonNull(returnedState); Objects.requireNonNull(returnedEnvironment);
+        Objects.requireNonNull(objects);
         if (stopped.boundary() != Boundary.KILL_PLAYER) {
             throw new IllegalArgumentException("Only a KILL_PLAYER stop has an unfinished MODE tail");
         }
@@ -259,7 +302,7 @@ public final class CdPlayerMovement {
             throw new IllegalArgumentException("A KILL_PLAYER stop ends at its single KillRequest");
         }
         requireKillPlayerUnwritten(stopped, returnedState, returnedEnvironment);
-        return afterLevelBound(new Cursor(returnedState, new Input(0, 0), returnedEnvironment), stopped.continuation());
+        return afterLevelBound(new Cursor(returnedState, new Input(0, 0), returnedEnvironment, objects), stopped.continuation());
     }
 
     /**
@@ -313,14 +356,14 @@ public final class CdPlayerMovement {
         if (c.bored >= 10800) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
     }
 
-    /** Handle3DRamp (782-831). Stop on its actual matching raw data gate, before marking entry. */
+    /** Handle3DRamp (782-831). Raw layout/table match sets only control bit 1; no new trajectory. */
     private void ramp(Cursor c) {
         int offset = ((c.y() >>> 1) & 0x380) + ((c.x() >>> 8) & 0x7F);
         int raw = terrainData.layout().ram().unsignedByte(offset);
         for (int i = 0; i < assets.rampChunks().length(); i++) {
             int id = assets.rampChunks().signedByte(i);
             if (id < 0) break;
-            if (id == raw) unsupported(UnsupportedBoundary.RAMP_ENTRY);
+            if (id == raw) { c.ctrl |= 2; return; }
         }
         boolean leaving = (c.ctrl & 2) != 0;
         c.ctrl &= ~2;
@@ -333,11 +376,35 @@ public final class CdPlayerMovement {
     /** CheckJump (1779-1861). Successful ADDQ.L #4,sp exits the containing ground/roll MODE. */
     private boolean checkJump(Cursor c) {
         if (c.charge != 0 || ((c.held & 3) != 0 && c.gv == 0) || (c.tap & ACTION) == 0) return false;
-        int headAngle = (c.angle + 0x80) & 0xFF;
-        c.pri = c.sec = headAngle;
-        if (pair(c, (headAngle + 0x20) & 0xC0).distance < 6) return false;
-        int speed = (c.flags & 0x40) == 0 ? 0x680 : 0x380;
-        var trig = math.calcSine(c.angle - 0x40);
+        int launchAngle = c.angle - 0x40, speed = 0;
+        boolean flipper = false;
+        // CheckJump:1796-1799 reaches ChkFlipper ONLY after charge/up-down/tap guards.
+        if ((c.flags & 8) != 0) {
+            CdObjectState slot = supportSlot(c, "ObjSonic_ChkFlipper");
+            if (supportId(c, slot) == 0x1E) {
+                flipper = true;
+                // ChkFlipper:3122-3124: sound, THEN exactly one animation store.
+                c.sound(Sound.FM_SPRING);
+                if (slot == null) c.anim = 1; // Stand byte0 aliases the current player, not dynamic RAM.
+                else c.effects.add(new ObjectPatch(new SlotPatch(slot, slot.moveByte(CdObjectState.ByteField.ANIMATION, 1))));
+                int objectX = supportX(c, slot), objectY = supportY(c, slot);
+                launchAngle = math.calcAngle(sw(objectX - c.x()), sw(objectY + 24 - c.y()));
+                int force = sw(c.x() - objectX + supportWidth(c, slot));
+                if ((supportFlags(c, slot) & 1) == 0) force = sw(64 - force);
+                int product = -0xA00 * force;
+                int quotient = product / 64; // DIVS.W: signed truncation toward zero, not ASR.
+                // DIVS overflow leaves the destination unchanged; ADD.W then reads the product's LOW word.
+                int divided = quotient == (short) quotient ? quotient : product;
+                speed = sw(-0xA00 + divided); // ChkFlipper:3148-3153.
+            }
+        }
+        if (!flipper) {
+            int headAngle = (c.angle + 0x80) & 0xFF;
+            c.pri = c.sec = headAngle;
+            if (pair(c, (headAngle + 0x20) & 0xC0).distance < 6) return false;
+            speed = (c.flags & 0x40) == 0 ? 0x680 : 0x380;
+        }
+        var trig = math.calcSine(launchAngle);
         c.xv = sw(c.xv + ((trig.cosine() * speed) >> 8));
         c.yv = sw(c.yv + ((trig.sine() * speed) >> 8));
         c.flags = (c.flags | AIR) & ~0x20; c.jump = 1; c.stick = 0; c.look = 0;
@@ -370,27 +437,45 @@ public final class CdPlayerMovement {
             resetScreen(c, true); settleGround(c); project(c, false); return;
         }
         if (c.gv == 0) { c.flags &= ~0x20; c.anim = 5; }
-        // Object support is rejected at admission; ordinary BalanceGround still does its centre probe.
-        c.pri = 0;
-        var balance = terrain.floor(c.x(), uw(c.y() + (byte) c.yr), 13, 0, 16, c.spr);
-        c.pri = balance.angleWrite().orElse(c.pri);
-        if (balance.distance() >= 12) {
-            c.sound(Sound.FM_CHARGESTOP); c.charge = 0; c.gv = 0;
-            boolean right = c.previousPri == 3;
-            boolean left = !right && c.previousSec == 3;
-            if (right || left) {
-                boolean facingLeft = (c.flags & 1) != 0;
-                c.anim = (right != facingLeft) ? 6 : 0x32;
-                resetScreen(c, true); settleGround(c, 13); project(c, false); return;
+        int settleAcceleration = c.env.physics().acceleration();
+        if ((c.flags & 8) != 0) {
+            // MoveGround.CheckBalance:873-902: flags FIRST, before ID/width/X.
+            CdObjectState slot = supportSlot(c, "ObjSonic_MoveGround.CheckBalance");
+            if ((byte) supportFlags(c, slot) >= 0) {
+                if (supportId(c, slot) == 0x1E) {
+                    c.anim = 0;
+                    resetScreen(c, true); settleGround(c, settleAcceleration); project(c, false); return;
+                }
+                int width = supportWidth(c, slot); // MOVEQ/MOVE.B zero-extends even $FF.
+                int distance = sw(width + c.x() - supportX(c, slot)), rightEdge = sw(2 * width - 4);
+                if (distance < 4 || distance >= rightEdge) {
+                    boolean right = distance >= 4;
+                    c.anim = (right != ((c.flags & 1) != 0)) ? 6 : 0x32;
+                    resetScreen(c, true); settleGround(c, settleAcceleration); project(c, false); return;
+                }
+            }
+        } else {
+            c.pri = 0;
+            var balance = terrain.floor(c.x(), uw(c.y() + (byte) c.yr), 13, 0, 16, c.spr);
+            c.pri = balance.angleWrite().orElse(c.pri);
+            // ObjGetFloorDist MOVEQ #$D,d5 (Collision Check.asm:170) clobbers only this path's register.
+            settleAcceleration = 13;
+            if (balance.distance() >= 12) {
+                c.sound(Sound.FM_CHARGESTOP); c.charge = 0; c.gv = 0;
+                boolean right = c.previousPri == 3;
+                boolean left = !right && c.previousSec == 3;
+                if (right || left) {
+                    boolean facingLeft = (c.flags & 1) != 0;
+                    c.anim = (right != facingLeft) ? 6 : 0x32;
+                    resetScreen(c, true); settleGround(c, settleAcceleration); project(c, false); return;
+                }
             }
         }
         var r = CdPlayerCharge.moveGroundAtCheckCharge(c.chargeState(), c.chargeInput());
         c.apply(r);
         if (r.continuation() == CdPlayerCharge.Continuation.MOVE_GROUND_RETURN) return;
         if (r.continuation() != CdPlayerCharge.Continuation.GROUND_SETTLE) throw new IllegalStateException("Ground continuation");
-        // ObjGetFloorDist MOVEQ #$D,d5 (Collision Check:170) survives its RTS.
-        // The global sonicAcceleration is unchanged; only this caller path settles by 13.
-        settleGround(c, 13); project(c, false);
+        settleGround(c, settleAcceleration); project(c, false);
     }
 
     /** MoveGndLeft/Right (1235-1338). The live d0 upper byte survives MOVE/ADD/AND.B at .Skid. */
@@ -531,16 +616,66 @@ public final class CdPlayerMovement {
         };
     }
 
-    /** ObjMove/ObjMoveGrv (Object Functions.asm:42-82,91-130), old signed Y integrates before gravity result. */
-    private static void integrate(Cursor c, boolean gravity) {
-        int oldY = c.yv;
-        c.xpos += c.xv << 8;
-        if (gravity) {
-            c.yv = sw(c.yv + 0x38);
-            if (c.yv >= 0x1000) c.yv = 0x1000;
-        }
-        c.ypos += oldY << 8;
+    /** ObjMove (Object Functions.asm:91-130), also used by Hurt; no gravity or pool mutation. */
+    public static CdPlayerMotionState moveWithoutGravity(CdPlayerMotionState state, Optional<ObjectContext> objects) {
+        var c = new Cursor(Objects.requireNonNull(state), Objects.requireNonNull(objects));
+        integrate(c, false);
+        return c.motion();
     }
+
+    /** ObjMoveGrv (Object Functions.asm:42-82); never reads the stand link, even with flag3 set. */
+    public static CdPlayerMotionState moveWithGravity(CdPlayerMotionState state) {
+        var c = new Cursor(Objects.requireNonNull(state));
+        integrate(c, true);
+        return c.motion();
+    }
+
+    /** Single native integration implementation for both public ports and all four MODE tails. */
+    private static void integrate(Cursor c, boolean gravity) {
+        int oldY = c.yv, localX = c.xv;
+        if (gravity) {
+            // BTST preserves N: BPL still tests MOVE.W old Y, not the control byte's sign.
+            boolean rampNoGravity = oldY < 0 && (c.ctrl & 2) != 0 && uw(oldY) < 0xF800;
+            if ((c.ctrl & 8) == 0 && !rampNoGravity && (c.ctrl & 4) == 0) c.yv = sw(oldY + 0x38);
+            // .NoGravity still executes the cap. Word overflow into negative is deliberately uncapped.
+            if (c.yv >= 0x1000) c.yv = 0x1000;
+        } else if ((c.flags & 8) != 0) {
+            CdObjectState slot = supportSlot(c, "ObjMove");
+            if (supportId(c, slot) == 0x1E) {
+                localX = sw(localX + ((supportFlags(c, slot) & 1) == 0 ? -0x100 : 0x100));
+            }
+        }
+        c.xpos += localX << 8; // ObjMove's resistance never writes oXVel.
+        c.ypos += oldY << 8; // OLD velocity, including every fraction bit and native long wrap.
+    }
+
+    /**
+     * Actual stood-slot dereference only. Null is the explicit player0 alias, never absence/default RAM.
+     * objects=$FFD000, stride=$40; links128..255 address outside this pool on the 24-bit bus.
+     * The borrowed Snapshot is pure input; live owner/coherence/CAS validation belongs to the caller.
+     */
+    private static CdObjectState supportSlot(Cursor c, String site) {
+        if (c.objects.isEmpty()) {
+            throw new UnsupportedMotion(UnsupportedBoundary.OBJECT_SUPPORT, site + ": missing stood-slot context");
+        }
+        int link = c.objects.orElseThrow().standObject();
+        if (link == 0) return null;
+        int address = (0xFFD000 + (link << 6)) & 0xFFFFFF;
+        if (link < 32 || link >= 128) {
+            var boundary = link < 32 ? UnsupportedBoundary.RESERVED_OBJECT_SLOT : UnsupportedBoundary.OBJECT_ADDRESS;
+            throw new UnsupportedMotion(boundary, site + ": " + boundary + " $" + String.format("%06X", address));
+        }
+        return c.objects.orElseThrow().slots().slots().get(link - 32);
+    }
+    private static int supportId(Cursor c, CdObjectState slot) {
+        return slot == null ? c.objects.orElseThrow().playerSlotId() : slot.id();
+    }
+    private static int supportFlags(Cursor c, CdObjectState slot) { return slot == null ? c.flags : slot.flags(); }
+    private static int supportWidth(Cursor c, CdObjectState slot) {
+        return slot == null ? c.objects.orElseThrow().playerWidth() : slot.unsignedByte(CdObjectState.ByteField.WIDTH);
+    }
+    private static int supportX(Cursor c, CdObjectState slot) { return slot == null ? c.x() : slot.centreX(); }
+    private static int supportY(Cursor c, CdObjectState slot) { return slot == null ? c.y() : slot.centreY(); }
     private void ground(Cursor c) {
         var r = ground.ground(new CdPlayerGroundCollision.Input(
                 new CdPlayerGroundCollision.State(c.xpos, c.ypos, c.angle, c.flags, c.prev),
@@ -570,11 +705,11 @@ public final class CdPlayerMovement {
         if (c.x() >= 0x6C8 && c.x() < 0x840) return;
         int velocity = c.xv, acceleration = sw(c.env.physics().acceleration() << 1);
         int top = c.env.physics().topSpeed();
-        if ((c.held & LEFT) != 0) {
+        if ((c.ctrl & 2) == 0 && (c.held & LEFT) != 0) {
             c.flags |= 1; velocity = sw(velocity - acceleration);
             int minimum = sw(-top); if (velocity <= minimum) velocity = minimum;
         }
-        if ((c.held & RIGHT) != 0) {
+        if ((c.ctrl & 2) == 0 && (c.held & RIGHT) != 0) {
             c.flags &= ~1; velocity = sw(velocity + acceleration); if (velocity >= top) velocity = top;
         }
         c.xv = velocity; resetScreen(c, false);
@@ -758,21 +893,24 @@ public final class CdPlayerMovement {
     private static final class Cursor {
         final CdPlayerMotionState original;
         final Environment env;
+        final Optional<ObjectContext> objects; // Invocation-local borrow only.
         final int held, tap, previousPri, previousSec;
         final List<Effect> effects = new ArrayList<>();
         OptionalInt writtenPrimary = OptionalInt.empty(), writtenSecondary = OptionalInt.empty();
         int xpos, ypos, xv, yv, gv, angle, flags, spr, xr, yr, anim, prev, jump, charge, lock, stick, ctrl;
         int look, cam, pri, sec, bored, score, debugAngle, debugShift, debugQuadrant, debugFloor;
         /**
-         * Probe-only cut: no Environment, input or Body globals exist. The three shared helpers read only
-         * these motion fields. Their d1 is independent of unwritten angle buffers; those values never
-         * leave this cursor, and no State/Environment result can be produced from this constructor.
+         * Probe/integration-only cut: no Environment, input or Body globals exist. Native probes report
+         * only their actual angle writes; integration returns only motion, preserving every other field.
          */
-        Cursor(CdPlayerMotionState state) {
-            original = state; env = null; held = tap = previousPri = previousSec = 0;
-            xpos = state.centreX16_16(); ypos = state.centreY16_16();
-            xv = state.xVelocity(); yv = state.yVelocity(); spr = state.spriteFlags();
-            xr = state.xRadius(); yr = state.yRadius();
+        Cursor(CdPlayerMotionState state) { this(state, Optional.empty()); }
+        Cursor(CdPlayerMotionState s, Optional<ObjectContext> objects) {
+            original = s; env = null; this.objects = objects; held = tap = 0;
+            xpos = s.centreX16_16(); ypos = s.centreY16_16(); xv = s.xVelocity(); yv = s.yVelocity(); gv = s.groundVelocity();
+            angle = s.angle(); flags = s.flags(); spr = s.spriteFlags(); xr = s.xRadius(); yr = s.yRadius();
+            anim = s.animation(); prev = s.previousAnimation(); jump = s.playerJump(); charge = s.charge();
+            lock = s.moveLock(); stick = s.stick(); ctrl = s.playerControl();
+            previousPri = s.previousPrimaryAngle(); previousSec = s.previousSecondaryAngle();
         }
         void seedAngles(int value) {
             pri = sec = value; writtenPrimary = writtenSecondary = OptionalInt.of(value);
@@ -783,8 +921,9 @@ public final class CdPlayerMovement {
         void writeSecondary(OptionalInt write) {
             if (write.isPresent()) { sec = write.getAsInt(); writtenSecondary = write; }
         }
-        Cursor(CdPlayerMotionState s, Input input, Environment env) {
-            original = s; this.env = env; held = input.logicalHeld(); tap = input.logicalTap();
+        Cursor(CdPlayerMotionState s, Input input, Environment env) { this(s, input, env, Optional.empty()); }
+        Cursor(CdPlayerMotionState s, Input input, Environment env, Optional<ObjectContext> objects) {
+            original = s; this.env = env; this.objects = objects; held = input.logicalHeld(); tap = input.logicalTap();
             xpos = s.centreX16_16(); ypos = s.centreY16_16(); xv = s.xVelocity(); yv = s.yVelocity(); gv = s.groundVelocity();
             angle = s.angle(); flags = s.flags(); spr = s.spriteFlags(); xr = s.xRadius(); yr = s.yRadius();
             anim = s.animation(); prev = s.previousAnimation(); jump = s.playerJump(); charge = s.charge();

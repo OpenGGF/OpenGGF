@@ -359,9 +359,26 @@ class TestCdPlayerCharge {
         assertEquals(0, idle.charge());
     }
 
+    @Test void nativeRampBitKeepsGroundChargeRollAndRollEntryAtTheirExistingOwners() {
+        // Handle3DRamp sets bit1 before all of these calls (Sonic/Main.asm:694-704,742-755).
+        // The native helpers do not consume that bit; keep the real byte, including unrelated high bits.
+        for (int control : List.of(2, 0xA2)) {
+            var body = new Body(2, control, 0);
+            var ground = moveGroundAtCheckCharge(state(0, 0, 0), new Input(body, 0x11, 0x10, 1536, 0, 0, 0, 0));
+            assertEquals(moveGroundAtCheckCharge(state(0, 0, 0), input(0x11, 0x10)), ground);
+            assertEquals(1, ground.state().charge()); assertEquals(List.of(Sound.FM_9C), sounds(ground));
+            var roll = moveRollAtNotRight(state(45, 1000, 4), new Input(body, 0, 0, 1536, 0, 0, 0, 0));
+            assertEquals(moveRollAtNotRight(state(45, 1000, 4), input(0, 0)), roll);
+            assertEquals(0, roll.state().charge()); assertEquals(List.of(Sound.FM_91), sounds(roll));
+            var entry = startRoll(state(0, 64, 0), body);
+            assertEquals(startRoll(state(0, 64, 0), NORMAL), entry);
+            assertEquals(4, entry.state().flags() & 4); assertEquals(14, entry.state().yRadius());
+        }
+    }
+
     @Test void unsupportedFamiliesAndWrongModesFailBeforeAnyTransition() {
         for (Body body : List.of(new Body(0, 0, 0), new Body(4, 0, 0), new Body(2, 1, 0),
-                new Body(2, 2, 0), new Body(2, 0, 1))) {
+                new Body(2, 3, 0), new Body(2, 0, 1))) {
             Input input = new Input(body, 0x41, 0x40, 1536, 0, 0, 0, 0);
             assertThrows(UnsupportedOperationException.class, () -> moveGroundAtCheckCharge(state(0, 0, 0), input));
             assertThrows(UnsupportedOperationException.class, () -> moveRollAtNotRight(state(1, 512, 4), input));

@@ -480,7 +480,7 @@ public final class CdPlayerBody {
 
     /** ObjSonic (56-105). No slot means no header, charge or routine work. */
     public Result step(State state, Environment environment) {
-        return step(state, environment, Optional.empty(), Optional.empty());
+        return step(state, environment, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     /**
@@ -489,7 +489,7 @@ public final class CdPlayerBody {
      * post-Animate, pre-SpecialChunks call with both native touch gates open.
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext) {
-        return step(state, environment, touchContext, Optional.empty());
+        return step(state, environment, touchContext, Optional.empty(), Optional.empty());
     }
 
     /**
@@ -499,8 +499,19 @@ public final class CdPlayerBody {
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
                        Optional<LevelContext> levelContext) {
+        return step(state, environment, touchContext, levelContext, Optional.empty());
+    }
+
+    /**
+     * Borrowed stood-slot cut for Movement and Hurt's actual ObjMove read only. No capture/partition or
+     * owner field retains it. A stopped MODE receives the SAME input on its one KillPlayer continuation.
+     * ChkFlipper's immutable ObjectPatch remains metadata; only a later admitted touch derives a local
+     * same-owner view, shared by its scanner AND response. The Runtime alone folds/commits final images.
+     */
+    public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
+                       Optional<LevelContext> levelContext, Optional<CdPlayerMovement.ObjectContext> objects) {
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
-        Objects.requireNonNull(levelContext);
+        Objects.requireNonNull(levelContext); Objects.requireNonNull(objects);
         if (state.header().slotId() == 0) {
             return new Result(state, environment, List.of(), Optional.empty(), Boundary.SLOT_ABSENT, Optional.empty());
         }
@@ -516,8 +527,8 @@ public final class CdPlayerBody {
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
-            case 2 -> { main(c, touchContext); return c.finish(Boundary.MAIN_RETURN); }
-            case 4 -> { hurt(c); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
+            case 2 -> { main(c, touchContext, objects); return c.finish(Boundary.MAIN_RETURN); }
+            case 4 -> { hurt(c, objects); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
             case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
             case 8 -> {
                 restart(c, level(levelContext, UnsupportedBoundary.RESTART_ROUTINE));
@@ -539,7 +550,8 @@ public final class CdPlayerBody {
     }
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
-    private void main(Cursor c, Optional<TouchContext> touchContext) {
+    private void main(Cursor c, Optional<TouchContext> touchContext,
+                      Optional<CdPlayerMovement.ObjectContext> objects) {
         requireBoundMapping(c);
         extendedCamera(c); waterfall(c);
         if (c.debugCheat != 0 && (c.controls.rawTap() & 0x10) != 0) unsupported(UnsupportedBoundary.DEBUG_ENTRY);
@@ -551,7 +563,7 @@ public final class CdPlayerBody {
         }
         // This branch calls TimeWarp (or MMZ clears) before .SkipControl. Neither object-control owner is admitted.
         if ((c.motion.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
-        var moved = movement.step(c.motion, new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap()), c.env.movement());
+        var moved = movement.step(c.motion, new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap()), c.env.movement(), objects);
         c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
         boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
         for (var effect : moved.effects()) {
@@ -562,7 +574,7 @@ public final class CdPlayerBody {
         if (stopped) {
             // KillPlayer's RTS returns into the DISPATCHED MODE routine (701/727/748/767): only its unfinished
             // tail runs, from the adopted actor; no dispatch, charge, ramp, slope, LevelBound or input repeats.
-            moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement());
+            moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement(), objects);
             c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
             for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
         }
@@ -579,13 +591,19 @@ public final class CdPlayerBody {
         }
         animate(c);
         if ((byte) c.motion.playerControl() >= 0 && c.motion.animation() != 0x2B) {
-            touch(c, touchContext);
+            touch(c, touchContext, objects);
         }
         specialChunks(c);
     }
 
     /** Player_ObjCollide (PP Player Object Collision.asm:7-98), exactly Main:347. */
-    private static void touch(Cursor c, Optional<TouchContext> touchContext) {
+    private static void touch(Cursor c, Optional<TouchContext> touchContext,
+                              Optional<CdPlayerMovement.ObjectContext> objects) {
+        boolean patched = c.effects.stream().anyMatch(effect -> effect instanceof ModeEffect mode
+                && mode.effect() instanceof CdPlayerMovement.ObjectPatch);
+        // An omitted later touch owner cannot be invented from support input. Keep the ordered patch
+        // metadata for the external caller; ordinary context-free/no-patch behavior stays unchanged.
+        if (patched && touchContext.isEmpty()) return;
         if (touchContext.isEmpty()) {
             if (c.env.dynamicSlots() != DynamicSlots.EMPTY_DEVELOPMENT_96) unsupported(UnsupportedBoundary.TOUCH_SCAN);
             // Existing deliberate development fallback: 96 inactive slot flag visits.
@@ -593,6 +611,27 @@ public final class CdPlayerBody {
             return;
         }
         var input = touchContext.orElseThrow();
+        if (patched) {
+            var original = objects.orElseThrow().slots();
+            // Identical selected images in a different capture do NOT establish the shared call cut.
+            if (input.snapshot() != original) {
+                throw new IllegalArgumentException("Flipper touch must use the identical borrowed object snapshot");
+            }
+            var derived = original;
+            for (var effect : c.effects) {
+                if (effect instanceof ModeEffect mode && mode.effect() instanceof CdPlayerMovement.ObjectPatch patch) {
+                    var image = patch.patch();
+                    int index = image.before().identity().dynamicIndex();
+                    // equals includes actual pool owner, whole identity and EVERY byte at this source cut.
+                    if (!image.before().equals(derived.slots().get(index))) {
+                        throw new IllegalArgumentException("Flipper patch before-image is not the current overlay image");
+                    }
+                    derived = CdObjectPool.overlay(derived, List.of(image.after()));
+                }
+            }
+            // One EXACT derived Snapshot instance goes to both scan and respond below.
+            input = new TouchContext(input.scanner(), derived, input.response());
+        }
         var selected = input.scanner().scan(new CdPlayerObjectTouch.PlayerCut(c.x(), c.y(),
                 c.motion.yRadius(), c.animation.mapFrame(), c.hurt), input.snapshot());
         if (selected instanceof CdPlayerObjectTouch.HandlerBoundary handler) {
@@ -635,9 +674,9 @@ public final class CdPlayerBody {
      * shoes servicing), ExtCamera, input copy, MODE, water, angle copy, touch or SpecialChunks call.
      * Each KillPlayer returns into this routine, so its later calls still run; DrawObject is unconditional.
      */
-    private void hurt(Cursor c) {
+    private void hurt(Cursor c, Optional<CdPlayerMovement.ObjectContext> objects) {
         requireBoundMapping(c);
-        objMove(c);
+        objMove(c, objects);
         // ADDI.W #$30 then underwater SUBI.W #$20 (2354-2357): two native word writes, no ObjMoveGrv fall cap.
         c.setYVelocity((short) (c.motion.yVelocity() + 0x30));
         if ((c.motion.flags() & 0x40) != 0) c.setYVelocity((short) (c.motion.yVelocity() - 0x20));
@@ -747,27 +786,32 @@ public final class CdPlayerBody {
         return context.orElseThrow();
     }
 
-    /** ObjMove (Object Functions.asm:91-128): both longs add the OLD velocity words shifted by 8; no gravity. */
-    private static void objMove(Cursor c) {
-        // :97-114 reads oPlayerStandObj's slot oID for the CCZ flipper; that object belongs to the pool owner.
-        if ((c.motion.flags() & 8) != 0) unsupported(UnsupportedBoundary.STANDING_OBJECT_MOVE);
-        var m = c.motion;
-        c.setCentre(m.centreX16_16() + (m.xVelocity() << 8), m.centreY16_16() + (m.yVelocity() << 8));
+    /** ObjMove (Object Functions.asm:91-128): shared pure arithmetic; retain Body's native write observations. */
+    private static void objMove(Cursor c, Optional<CdPlayerMovement.ObjectContext> objects) {
+        // Preserve Hurt's existing typed missing-owner boundary at the actual stood-slot read.
+        // With a supplied cut, reserved/outside-address errors come from the shared native owner.
+        if ((c.motion.flags() & 8) != 0 && objects.isEmpty()) unsupported(UnsupportedBoundary.STANDING_OBJECT_MOVE);
+        var moved = CdPlayerMovement.moveWithoutGravity(c.motion, objects);
+        c.setCentre(moved.centreX16_16(), moved.centreY16_16());
         c.returned(NativeCall.OBJ_MOVE);
     }
 
     /**
-     * ObjMoveGrv (Object Functions.asm:42-82), with its oPlayerCtrl branches. BTST leaves MOVE.W's N flag, so
-     * BPL tests the OLD word: bit 3 (pole) skips gravity; a negative word with bit 1 (3D ramp) skips it below
-     * -$800 unsigned; bit 2 (bar) skips it. TST.W/BMI then caps only a non-negative word at $1000 unsigned.
-     * Both longs add the OLD velocity words shifted by 8. No standing-object read exists here.
+     * ObjMoveGrv (Object Functions.asm:42-82). Movement alone supplies final motion/full-long integration.
+     * Body retains the existing ordered ActorWrite observations, including the intermediate ADDI.W
+     * before a cap (and an executed same-value cap). These are metadata, never a second physics result.
+     * Shipped FixBugs=0: BTST preserves old Y's N, and the cap also runs on .NoGravity. No stood-slot read.
      */
     private static void objMoveGravity(Cursor c) {
-        var m = c.motion; int old = m.yVelocity(), control = m.playerControl();
+        var before = c.motion;
+        var moved = CdPlayerMovement.moveWithGravity(before);
+        int old = before.yVelocity(), control = before.playerControl();
         boolean gravity = (control & 8) == 0 && (old >= 0 || (control & 2) == 0 || uw(old) >= 0xF800) && (control & 4) == 0;
-        if (gravity) c.setYVelocity((short) (old + 0x38)); // ADDI.W #$38 (:66).
-        if (c.motion.yVelocity() >= 0x1000) c.setYVelocity(0x1000); // TST.W/BMI, CMPI.W/BCS, MOVE.W (:69-73).
-        c.setCentre(m.centreX16_16() + (m.xVelocity() << 8), m.centreY16_16() + (old << 8));
+        int writtenWord = gravity ? (short) (old + 0x38) : old;
+        if (gravity) c.actor(ActorField.Y_VELOCITY, writtenWord); // Historical ADDI.W (:66), including before cap.
+        if (writtenWord >= 0x1000) c.actor(ActorField.Y_VELOCITY, moved.yVelocity()); // Historical MOVE.W (:73).
+        c.motion = moved;
+        c.setCentre(moved.centreX16_16(), moved.centreY16_16());
         c.returned(NativeCall.OBJ_MOVE_GRAVITY);
     }
 

@@ -53,7 +53,7 @@ public final class CdPlayerCharge {
         }
     }
 
-    /** Current production bytes; normal routine 2, grounded, non-mini, non-ramp only. */
+    /** Current production bytes; normal routine 2, grounded, non-mini, without external object control. */
     public record Body(int routine, int playerControl, int miniSonic) {
         public Body {
             byteValue(routine, "oRoutine");
@@ -303,9 +303,11 @@ public final class CdPlayerCharge {
     private static void requireNormalBody(State state, Body body) {
         Objects.requireNonNull(state, "state");
         Objects.requireNonNull(body, "body");
-        if (body.routine() != 2 || (body.playerControl() & 3) != 0
+        // Handle3DRamp sets control bit1 before MdGround/MoveRoll/StartRoll (Sonic/Main.asm:694-704,742-755).
+        // These native helpers never consume that bit; retain it and still reject external object-control bit0.
+        if (body.routine() != 2 || (body.playerControl() & 1) != 0
                 || body.miniSonic() != 0 || (state.flags() & AIR) != 0) {
-            throw new UnsupportedOperationException("Requires normal-sized grounded routine 2, no object control/3D ramp");
+            throw new UnsupportedOperationException("Requires normal-sized grounded routine 2 without external object control");
         }
     }
 

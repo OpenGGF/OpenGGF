@@ -924,7 +924,7 @@ class TestCdPlayerFrameRuntime {
         for (var type : List.of(CdPlayerFrameRuntime.ActorState.class, CdPlayerFrameRuntime.SharedState.class)) {
             for (var component : type.getRecordComponents()) {
                 String name = component.getGenericType().getTypeName();
-                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "Snapshot",
+                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "ObjectContext", "Snapshot",
                         "CdPlayerTouchResponse")) {
                     assertFalse(name.contains(forbidden), type.getSimpleName() + "." + component.getName() + " " + name);
                 }
@@ -1045,6 +1045,134 @@ class TestCdPlayerFrameRuntime {
         assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(display, f.display());
         assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(context)));
         assertFalse(f.closed());
+    }
+
+
+    // Per-call support arguments do not add an actor/global/capture owner.
+    @ParameterizedTest @CsvSource({"16,-1608,32210944", "0,-968,32374784"})
+    void frameSupportedFloatActionAndReleaseReplayFromTheSameActorAndSharedPartitions(int held, int velocity, int y)
+            throws IOException {
+        var f = externalTouchRuntime(); Actor actor = new Actor(f); actor.flags = 8; actor.y = 0x01ED0000;
+        actor.objectLinks = new CdPlayerBody.ObjectLinks(127, 32); actor.install(f);
+        var pool = frameSupportPool(f, 0x12, 0); var snapshot = pool.capture();
+        var objects = frameSupportContext(f, snapshot); var touch = frameSupportTouch(snapshot, false);
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0x10); var first = f.runBody(2, Optional.of(touch), Optional.empty(), objects);
+        assertEquals(-0x680, f.state().motion().yVelocity()); assertEquals(0x01F20000, f.state().motion().centreY16_16());
+        assertEquals(new CdPlayerBody.ObjectLinks(127, 32), f.state().objectLinks());
+        assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP)), first.sounds());
+        service(f, held); f.runBody(3, Optional.of(touch)); // no support context at the air cut
+        assertEquals(velocity, f.state().motion().yVelocity()); assertEquals(y, f.state().motion().centreY16_16());
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0x10); var replay = f.runBody(2, Optional.of(touch), Optional.empty(), objects);
+        assertEquals(first.sounds(), replay.sounds());
+        service(f, held); f.runBody(3, Optional.of(touch));
+        assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void frameFlipperSameSlotEnemyPreservesAnimationAndForwardsSpringPatchJumpExactlyOnce() throws IOException {
+        var f = externalTouchRuntime(); Actor actor = new Actor(f); actor.flags = 8; actor.y = 0x01ED0000;
+        actor.objectLinks = new CdPlayerBody.ObjectLinks(0, 32); actor.install(f);
+        var pool = frameSupportPool(f, 0x1E, 0x2F); var snapshot = pool.capture(); var before = pool.state(32);
+        var objects = frameSupportContext(f, snapshot); var touch = frameSupportTouch(snapshot, true);
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0x10); var p = f.runBody(2, Optional.of(touch), Optional.empty(), objects);
+        assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_SPRING),
+                new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP),
+                new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_DESTROY)), p.sounds());
+        var mode = p.result().effects().stream().filter(CdPlayerBody.ModeEffect.class::isInstance)
+                .map(CdPlayerBody.ModeEffect.class::cast).map(CdPlayerBody.ModeEffect::effect).toList();
+        assertEquals(3, mode.size());
+        assertEquals(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_SPRING), mode.get(0));
+        var patch = assertInstanceOf(CdPlayerMovement.ObjectPatch.class, mode.get(1)).patch();
+        assertEquals(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP), mode.get(2));
+        assertEquals(before, patch.before()); assertEquals(1, patch.after().unsignedByte(CdObjectState.ByteField.ANIMATION));
+        var response = frameResponse(p); assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY, response.exit());
+        assertEquals(1, response.changedSlots().size()); assertEquals(0x18, response.changedSlots().getFirst().id());
+        assertEquals(1, response.changedSlots().getFirst().unsignedByte(CdObjectState.ByteField.ANIMATION));
+        assertSame(before, pool.state(32)); assertEquals(0, before.unsignedByte(CdObjectState.ByteField.ANIMATION));
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0x10); var replay = f.runBody(2, Optional.of(touch), Optional.empty(), objects);
+        assertEquals(p, replay); assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void frameRejectsADifferentFlipperTouchCaptureWithoutPublishingAndConsumesTheSlot() throws IOException {
+        var f = externalTouchRuntime(); Actor actor = new Actor(f); actor.flags = 8; actor.y = 0x01ED0000;
+        actor.objectLinks = new CdPlayerBody.ObjectLinks(0, 32); actor.install(f);
+        var pool = frameSupportPool(f, 0x1E, 0x2F); var original = pool.capture(); var other = pool.capture();
+        var objects = frameSupportContext(f, original); var touch = frameSupportTouch(other, true);
+        assertNotSame(original, other); assertSame(original.slots().getFirst(), other.slots().getFirst());
+        service(f, 0x10); var state = f.state(); var env = f.environment(); var display = f.display(); var art = f.artState();
+        assertThrows(IllegalArgumentException.class, () -> f.runBody(2, Optional.of(touch), Optional.empty(), objects));
+        assertSame(state, f.state()); assertSame(env, f.environment()); assertEquals(display, f.display()); assertSame(art, f.artState());
+        assertEquals(original.slots(), pool.capture().slots());
+        assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(touch), Optional.empty(), objects));
+    }
+
+    @Test void frameDoesNotRetainSupportAndItsCaptureShapesDoNotAcquireBorrowedInputs() throws IOException {
+        var f = externalTouchRuntime(); Actor actor = new Actor(f); actor.flags = 8; actor.y = 0x01ED0000;
+        actor.objectLinks = new CdPlayerBody.ObjectLinks(255, 32); actor.install(f);
+        var pool = frameSupportPool(f, 0x12, 0); var snapshot = pool.capture(); var objects = frameSupportContext(f, snapshot);
+        var touch = frameSupportTouch(snapshot, false);
+        service(f, 0); f.runBody(2, Optional.of(touch), Optional.empty(), objects);
+        service(f, 0); var state = f.state(); var env = f.environment();
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT,
+                assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.runBody(3, Optional.of(touch))).boundary());
+        assertSame(state, f.state()); assertSame(env, f.environment());
+        for (var type : List.of(CdPlayerFrameRuntime.ActorState.class, CdPlayerFrameRuntime.SharedState.class,
+                CdPlayerFrameRuntime.BodyPublication.class)) {
+            for (var component : type.getRecordComponents()) {
+                assertFalse(component.getGenericType().getTypeName().contains("ObjectContext"));
+                assertFalse(component.getGenericType().getTypeName().contains("Snapshot"));
+            }
+        }
+        for (var field : CdPlayerFrameRuntime.class.getDeclaredFields()) {
+            assertFalse(field.getGenericType().getTypeName().contains("ObjectContext"));
+            assertNotEquals(CdObjectPool.Snapshot.class, field.getType());
+        }
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void frameHurtBorrowsSupportWithoutAnyTouchInputAndReplaysItsSingleActorStore() throws IOException {
+        var f = externalTouchRuntime(); Actor actor = new Actor(f); actor.routine = 4; actor.flags = 10;
+        actor.y = 0x01ED0000; actor.yv = -0x200; actor.animation = 0x1A;
+        actor.objectLinks = new CdPlayerBody.ObjectLinks(127, 32); actor.install(f);
+        var pool = frameSupportPool(f, 0x12, 0); var snapshot = pool.capture(); var objects = frameSupportContext(f, snapshot);
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0); var p = f.runBody(2, Optional.empty(), Optional.empty(), objects);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, p.result().boundary()); assertTrue(p.sounds().isEmpty());
+        assertEquals(0x01EB0000, f.state().motion().centreY16_16()); assertEquals(-0x1D0, f.state().motion().yVelocity());
+        assertEquals(new CdPlayerBody.ObjectLinks(127, 32), f.state().objectLinks());
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0); var replay = f.runBody(2, Optional.empty(), Optional.empty(), objects);
+        assertEquals(p, replay); assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    private static CdObjectPool frameSupportPool(CdPlayerFrameRuntime f, int id, int collisionType) {
+        var pool = new CdObjectPool();
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ID, id).moveByte(CdObjectState.ByteField.WIDTH, 12)
+                .moveByte(CdObjectState.ByteField.ROUTINE, 2).moveByte(CdObjectState.ByteField.SPRITE_FLAGS, collisionType == 0 ? 0 : 0x80)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, collisionType)
+                .moveWord(CdObjectState.WordField.X, f.state().motion().centreX16_16() >>> 16)
+                .moveWord(CdObjectState.WordField.Y, 0x20C));
+        return pool;
+    }
+    private static Optional<CdPlayerMovement.ObjectContext> frameSupportContext(CdPlayerFrameRuntime f, CdObjectPool.Snapshot snapshot) {
+        var s = f.state(); return Optional.of(new CdPlayerMovement.ObjectContext(snapshot, s.objectLinks().standObject(),
+                s.header().slotId(), s.header().width()));
+    }
+    private static CdPlayerBody.TouchContext frameSupportTouch(CdObjectPool.Snapshot snapshot, boolean response) {
+        var scanner = TestCdPlayerBody.touchScanner();
+        if (!response) return new CdPlayerBody.TouchContext(scanner, snapshot);
+        var owner = new CdPlayerTouchResponse(CdAssetBytes.copyOf(new byte[]{0, 10, 0, 20, 0, 50, 0, 100}));
+        return new CdPlayerBody.TouchContext(scanner, snapshot, new CdPlayerBody.ResponseContext(owner,
+                new CdPlayerBody.ContactGlobals(0, 0, 1), new CdPlayerTouchResponse.WorldGlobals(5, 3, 0, 0, 5000, 0x80)));
     }
 
     private static CdPlayerFrameRuntime externalTouchRuntime() throws IOException {

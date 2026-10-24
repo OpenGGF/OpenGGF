@@ -2,7 +2,9 @@ package com.openggf.game.soniccd.objects;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
@@ -157,5 +159,76 @@ class TestCdObjectPool {
         assertThrows(IllegalArgumentException.class, () -> pool.restore(foreign.capture()));
         assertThrows(IllegalArgumentException.class, () -> pool.write(foreign.state(32)));
         assertEquals(before.slots(), pool.capture().slots());
+    }
+
+    // Pure derived call-cut images, not a capture certificate or a live pool write.
+    @Test
+    void overlayPreservesAllNinetySixPhysicalSlotsAndTheBaseWhileReplacingFirstAndLastImages() {
+        var pool = new CdObjectPool();
+        pool.write(pool.state(32).moveByte(ID, 0x1E).moveLong(X_POSITION, 0x05B01234));
+        pool.write(pool.state(127).moveByte(ID, 0x12).moveLong(Y_POSITION, 0x020CABCD));
+        var base = pool.capture();
+        var first = base.slots().getFirst().moveByte(ANIMATION, 1);
+        var last = base.slots().getLast().moveByte(ANIMATION, 1);
+        var images = new ArrayList<>(List.of(last, first));
+        var derived = CdObjectPool.overlay(base, images);
+        images.clear();
+        assertNotSame(base, derived); assertEquals(96, derived.slots().size());
+        for (int i = 0; i < 96; i++) {
+            var expected = i == 0 ? first : i == 95 ? last : base.slots().get(i);
+            assertSame(expected, derived.slots().get(i));
+            assertEquals(i + 32, derived.slots().get(i).identity().wholeIndex());
+            assertEquals(i, derived.slots().get(i).identity().dynamicIndex());
+        }
+        assertEquals(0, base.slots().getFirst().unsignedByte(ANIMATION));
+        assertEquals(0, base.slots().getLast().unsignedByte(ANIMATION));
+        assertEquals(base.slots(), pool.capture().slots());
+        assertThrows(UnsupportedOperationException.class, () -> derived.slots().clear());
+        pool.validateRestore(derived); // SAME real owner; derived does not imply live provenance/CAS.
+        pool.validateWrite(first); pool.validateWrite(last);
+        assertThrows(IllegalArgumentException.class, () -> new CdObjectPool().validateRestore(derived));
+        assertEquals(base.slots(), pool.capture().slots(), "All preflights remain pure");
+    }
+
+    @Test
+    void overlayCanReplaceEverySlotAndChainedViewsKeepTheirOriginalPoolOwner() {
+        var pool = new CdObjectPool(); var base = pool.capture();
+        var images = new ArrayList<CdObjectState>();
+        for (int i = 95; i >= 0; i--) images.add(base.slots().get(i).moveByte(ANIMATION, 1));
+        var derived = CdObjectPool.overlay(base, images);
+        var next = CdObjectPool.overlay(derived, List.of(derived.slots().getLast().addByte(ROUTINE, 2)));
+        for (int i = 0; i < 96; i++) {
+            assertEquals(1, next.slots().get(i).unsignedByte(ANIMATION));
+            assertEquals(i == 95 ? 2 : 0, next.slots().get(i).routine());
+            assertEquals(0, base.slots().get(i).unsignedByte(ANIMATION));
+        }
+        pool.validateRestore(next);
+        assertEquals(base.slots(), pool.capture().slots());
+        assertEquals(base.slots(), CdObjectPool.overlay(base, List.of()).slots());
+    }
+
+    @Test
+    void overlayChecksEveryRealOwnerEvenForEqualBytesAtTheFirstOrLastPhysicalIdentity() {
+        var pool = new CdObjectPool(); var foreign = new CdObjectPool(); var base = pool.capture();
+        for (int whole : new int[]{32, 127}) {
+            assertEquals(pool.state(whole).identity(), foreign.state(whole).identity());
+            assertArrayEquals(pool.state(whole).copyBytes(), foreign.state(whole).copyBytes());
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPool.overlay(base,
+                    List.of(pool.state(33).moveByte(ANIMATION, 1), foreign.state(whole))));
+        }
+        assertEquals(base.slots(), pool.capture().slots());
+    }
+
+    @Test
+    void overlayRejectsDuplicatePhysicalIndicesAndAllNullInputsWithoutPublishingOrWriting() {
+        var pool = new CdObjectPool(); var base = pool.capture(); var slot = pool.state(127);
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPool.overlay(base, List.of(slot, slot)));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPool.overlay(base,
+                List.of(slot, slot.moveByte(ANIMATION, 1))));
+        assertThrows(NullPointerException.class, () -> CdObjectPool.overlay(null, List.of()));
+        assertThrows(NullPointerException.class, () -> CdObjectPool.overlay(base, null));
+        assertThrows(NullPointerException.class, () -> CdObjectPool.overlay(base,
+                Arrays.asList(pool.state(32), null)));
+        assertEquals(base.slots(), pool.capture().slots());
     }
 }

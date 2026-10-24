@@ -3,6 +3,8 @@ package com.openggf.game.soniccd.player;
 import com.openggf.game.soniccd.level.CdR11aPlayerAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdObjectState;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -10,6 +12,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -288,12 +291,25 @@ class TestCdPlayerMovement {
         assertBoundary(f, a, CdPlayerMovement.UnsupportedBoundary.BORED_GIVE_UP);
     }
 
+    @ParameterizedTest @CsvSource({"0,0,0,0", "4,384,0,4", "0,384,2,4"})
+    void rampGroundIdleRollAndRollEntryKeepTheNativeChargeCalls(int flags, int velocity, int held, int expectedRoll) {
+        Fixture f = new Fixture(false); f.fg[2 + 2 * 42 + 3] = 6;
+        Actor a = new Actor(); a.x = 0x03010000; a.y = 0x0A010000; a.flags = flags; a.gv = velocity;
+        var result = f.step(a, held, 0);
+        assertEquals(CdPlayerMovement.Boundary.KILL_PLAYER, result.boundary(), "the unchanged bottom cut follows movement");
+        assertEquals(2, result.state().playerControl()); assertEquals(expectedRoll, result.state().flags() & 4);
+    }
+
     @Test void nativeRampGateReadsDataRawChunkAndHighXByteWithY380Mask() {
         Fixture f = new Fixture(false); f.fg[2 + 2 * 42 + 3] = 6;
         Actor a = new Actor(); a.x = 0x03010000; a.y = 0x0A010000;
-        assertBoundary(f, a, CdPlayerMovement.UnsupportedBoundary.RAMP_ENTRY);
+        a.ctrl = 0xA0;
+        assertEquals(0xA2, f.step(a, 0, 0).state().playerControl());
+        f.fg[2 + 2 * 42 + 3] = (byte) 0x86;
+        assertEquals(0xA0, f.step(a, 0, 0).state().playerControl()); // Raw ID high bit is not masked.
+        f.fg[2 + 2 * 42 + 3] = 6;
         f.ramps[0] = 9; f.ramps[1] = 10; f.ramps[2] = 11; f.ramps[3] = 12; f.ramps[4] = 13;
-        assertDoesNotThrow(() -> f.step(a, 0, 0)); // No hardcoded ramp table substitute.
+        assertEquals(0xA0, f.step(a, 0, 0).state().playerControl()); // No hardcoded ramp table substitute.
     }
 
     @Test void timewarpGateIsAfterChargeGateAndHasNoInventedSafeFlag() {
@@ -1136,6 +1152,347 @@ class TestCdPlayerMovement {
         assertThrows(IllegalArgumentException.class, () -> owner.calcRoomInFront(actor, 256));
     }
 
+
+    // R11A ramp/support unit: authored and frozen before production; ALL JAVA UNRUN.
+    // Every byte fixture below is CONSTRUCTED. Source arithmetic is not live World evidence.
+
+    @Test void constructedNativeLayoutRowsDistinguishRampNeighbourAndHeightWithoutAnXOnlyFence() {
+        Fixture f = new Fixture(false);
+        f.fg[2 + 7 * 42 + 6] = 6; f.fg[2 + 7 * 42 + 5] = 0x4B; f.fg[2 + 6] = 0;
+        Actor a = airborne(); a.x = 0x600 << 16; a.y = 0x76B << 16; a.ctrl = 0x80;
+        assertEquals(0x82, f.step(a, 0, 0).state().playerControl());
+        a.x = 0x5FF << 16;
+        assertEquals(0x80, f.step(a, 0, 0).state().playerControl());
+        a.x = 0x600 << 16; a.y = 0x6B << 16;
+        assertEquals(0x80, f.step(a, 0, 0).state().playerControl());
+    }
+
+    @ParameterizedTest @CsvSource({"-2049,0,130,1536", "-2049,1,130,-1536", "-2048,0,130,291",
+            "-2047,0,130,291", "0,0,130,291", "256,0,130,291", "-2049,0,128,291"})
+    void rampExitUsesOldBitAndUnsignedF800ThresholdBeforeTheStoppedTail(
+            int yVelocity, int facing, int control, int expectedX) {
+        Actor a = airborne(); a.flags |= facing; a.x = 0x840 << 16; a.y = 0xA01 << 16;
+        a.ctrl = control; a.yv = yVelocity; a.xv = 0x123; a.jump = 1;
+        var r = new Fixture(false).step(a, 0x10, 0);
+        assertEquals(CdPlayerMovement.Boundary.KILL_PLAYER, r.boundary());
+        assertEquals(expectedX, r.state().xVelocity()); assertEquals(0x80, r.state().playerControl());
+    }
+
+    @Test void rampMoveAirSkipsAccelerationAndFacingButKeepsCameraAndDragOutsideLaunchWindow() {
+        Fixture f = new Fixture(false); f.fg[2 + 6] = 6; f.globals = globals(0x80, 80, 0, 0, 0, 9);
+        Actor a = airborne(); a.x = 0x600 << 16; a.y = 200 << 16; a.xv = 0x400; a.yv = -0x100;
+        var ramp = f.step(a, 4, 0);
+        assertEquals(0x3E0, ramp.state().xVelocity()); assertEquals(0, ramp.state().flags() & 1);
+        assertEquals(82, ramp.environment().globals().cameraYCentre());
+        assertEquals(2, ramp.state().playerControl());
+        f.fg[2 + 6] = 2;
+        var plain = f.step(a, 4, 0);
+        assertEquals(0x3C9, plain.state().xVelocity()); assertEquals(1, plain.state().flags() & 1);
+        assertEquals(82, plain.environment().globals().cameraYCentre());
+        f.fg[2 + 6] = 6; a.x = 0x6C8 << 16;
+        var locked = f.step(a, 4, 0);
+        assertEquals(0x400, locked.state().xVelocity()); assertEquals(80, locked.environment().globals().cameraYCentre());
+        assertEquals(0, locked.state().flags() & 1);
+        f.fg[2 + 8] = 6; a.x = 0x840 << 16;
+        assertEquals(0x3E0, f.step(a, 4, 0).state().xVelocity());
+    }
+
+    @ParameterizedTest @CsvSource({"2,-3072,-3072,-786432", "2,-2048,-1992,-524288",
+            "2,-2047,-1991,-524032", "2,3072,3128,786432", "0,4095,4096,1048320",
+            "0,4096,4096,1048576", "0,32760,-32720,8386560", "4,-3072,-3072,-786432",
+            "8,-2048,-2048,-524288", "12,4352,4096,1114112", "10,-3072,-3072,-786432",
+            "6,-2048,-2048,-524288", "0,-32768,-32712,-8388608", "0,0,56,0"})
+    void sharedGravityUsesOldWordsControlGatesSignedOverflowAndTheNewWordCap(
+            int control, int oldY, int storedY, int literalDelta) {
+        var before = new CdPlayerMotionState(0x05B01234, 0x01EDABCD, 0x180, oldY, -7, 6, 0x9A, 0xFF, 0xBC,
+                7, 14, 0x1A, 0x1D, 1, 0x2E, -2, 0x80, control, 0x41, 0x52);
+        var expected = with(with(with(before, 0, 0x05B19234), 1, 0x01EDABCD + literalDelta), 3, storedY);
+        assertEquals(expected, CdPlayerMovement.moveWithGravity(before));
+    }
+
+    @Test void sharedMovementPreservesFractionCarryAndWrapWithoutChangingAnyUnownedField() {
+        var before = new CdPlayerMotionState(0xFFFFFEFF, 0xFFFFBEEF, 2, 1, -7, 4, 0x9A, 0xC1, 0xBC,
+                7, 14, 0x1A, 0x1D, 1, 0x2E, -2, 0x80, 0xFF, 0x41, 0x52);
+        var expected = with(with(before, 0, 0x000000FF), 1, 0xFFFFBFEF);
+        assertEquals(expected, CdPlayerMovement.moveWithoutGravity(before, Optional.empty()));
+        assertEquals(expected, CdPlayerMovement.moveWithGravity(before)); // Pole/bar bits skip gravity.
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,95523380", "18,0,95523380", "30,0,95457844", "30,1,95588916"})
+    void objMoveReadsActualIdAndUsesFlipperLocalResistanceWithoutStoringXVelocity(int id, int flags, int expectedX) {
+        var pool = new CdObjectPool(); putSupport(pool, 32, id, flags, 12, 0x5B0, 0x20C);
+        Actor a = supported(); a.x = 0x05B01234; a.y = 0x01EDABCD; a.xv = 0x180; a.yv = -0x200;
+        var before = a.state(); var cut = context(pool, 32);
+        var r = CdPlayerMovement.moveWithoutGravity(before, cut);
+        assertEquals(with(with(before, 0, expectedX), 1, 0x01EBABCD), r);
+        assertEquals(0x180, r.xVelocity()); assertEquals(32, cut.orElseThrow().standObject());
+    }
+
+    @Test void objMoveFlipperLocalWordOverflowsBeforeSignExtension() {
+        var pool = new CdObjectPool(); putSupport(pool, 127, 0x1E, 1, 12, 0x5B0, 0x20C);
+        Actor a = supported(); a.x = 0x05B0FFFE; a.xv = 0x7FFF;
+        var moved = CdPlayerMovement.moveWithoutGravity(a.state(), context(pool, 127));
+        assertEquals(0x0531FEFE, moved.centreX16_16()); // local $80FF = -32513, not +33023.
+        assertEquals(0x7FFF, moved.xVelocity());
+    }
+
+    @ParameterizedTest @CsvSource({"1,FFD040,RESERVED_OBJECT_SLOT", "31,FFD7C0,RESERVED_OBJECT_SLOT",
+            "128,FFF000,OBJECT_ADDRESS", "191,FFFFC0,OBJECT_ADDRESS", "192,000000,OBJECT_ADDRESS",
+            "255,000FC0,OBJECT_ADDRESS"})
+    void reachedObjectMoveRejectsReservedOr24BitAddressesWithoutWrappingToDynamicSlots(
+            int link, String address, CdPlayerMovement.UnsupportedBoundary boundary) {
+        var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> CdPlayerMovement.moveWithoutGravity(supported().state(), context(new CdObjectPool(), link)));
+        assertEquals(boundary, ex.boundary()); assertTrue(ex.getMessage().contains(address));
+        assertTrue(ex.getMessage().contains("ObjMove"));
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1", "31", "32", "127", "128", "191", "192", "255"})
+    void rawLinksAreRetainedAndDoNotRequireReadsInAirOrWhenSupportBitIsClear(int link) {
+        var pool = new CdObjectPool(); var cut = context(pool, link); Fixture f = new Fixture(false);
+        Actor a = airborne(); a.flags |= 8; a.y = 200 << 16;
+        var owner = f.owner(); var input = new CdPlayerMovement.Input(0, 0);
+        assertEquals(owner.step(a.state(), input, f.environment()), owner.step(a.state(), input, f.environment(), cut));
+        assertEquals(link, cut.orElseThrow().standObject());
+        a.flags &= ~8;
+        assertEquals(a.state(), CdPlayerMovement.moveWithoutGravity(a.state(), cut));
+    }
+
+    @Test void missingContextStopsAtTheFirstActualJumpBalanceOrMoveReadAndNeverAtAdmission() {
+        Fixture f = new Fixture(false); var owner = f.owner(); Actor a = supported();
+        var jump = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> owner.step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment()));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, jump.boundary());
+        assertTrue(jump.getMessage().contains("ChkFlipper"));
+        var balance = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.step(a, 0, 0));
+        assertTrue(balance.getMessage().contains("CheckBalance"));
+        a.lock = 1;
+        var move = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.step(a, 0, 0));
+        assertTrue(move.getMessage().contains("ObjMove"));
+        Actor held = rolled(); held.flags |= 8; held.charge = 20; held.gv = 1800;
+        assertDoesNotThrow(() -> f.step(held, 2, 0)); // CheckJump's charge guard; roll skips ObjMove.
+        Actor air = airborne(); air.flags |= 8; air.y = 200 << 16;
+        assertDoesNotThrow(() -> f.step(air, 0, 0));
+    }
+
+    @ParameterizedTest @CsvSource({"1", "31", "128", "192", "255"})
+    void reachedJumpAndBalanceCutsHaveTheSameTypedAddressGuards(int link) {
+        Fixture f = new Fixture(false); var cut = context(new CdObjectPool(), link); var owner = f.owner();
+        for (int tap : new int[]{0, 0x10}) {
+            var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> owner.step(supported().state(), new CdPlayerMovement.Input(0, tap), f.environment(), cut));
+            assertEquals(link < 32 ? CdPlayerMovement.UnsupportedBoundary.RESERVED_OBJECT_SLOT
+                    : CdPlayerMovement.UnsupportedBoundary.OBJECT_ADDRESS, ex.boundary());
+            assertTrue(ex.getMessage().contains(tap == 0 ? "CheckBalance" : "ChkFlipper"));
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"16,-1608,32210944", "0,-968,32374784"})
+    void nonflipperSupportJumpKeepsStandLinkAndRunsNativeHeldOrReleasedAirNextCall(
+            int heldNext, int expectedVelocity, int expectedY) {
+        Fixture f = new Fixture(false); var pool = new CdObjectPool();
+        putSupport(pool, 32, 0x12, 0, 12, 0x5B0, 0x20C); var cut = context(pool, 32);
+        Actor a = supported(); a.x = 0x5B0 << 16; a.y = 0x1ED << 16;
+        var owner = f.owner(); var jumped = owner.step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment(), cut);
+        assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, jumped.boundary());
+        assertEquals(a.x, jumped.state().centreX16_16()); assertEquals(0x1F2 << 16, jumped.state().centreY16_16());
+        assertEquals(-0x680, jumped.state().yVelocity()); assertEquals(14, jumped.state().flags());
+        assertEquals(1, jumped.state().playerJump()); assertEquals(7, jumped.state().xRadius());
+        assertEquals(14, jumped.state().yRadius()); assertEquals(32, cut.orElseThrow().standObject());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP)), jumped.effects());
+        var next = owner.step(jumped.state(), new CdPlayerMovement.Input(heldNext, 0), jumped.environment(), Optional.empty());
+        assertEquals(expectedVelocity, next.state().yVelocity()); assertEquals(expectedY, next.state().centreY16_16());
+        assertEquals(8, next.state().flags() & 8); assertEquals(32, cut.orElseThrow().standObject());
+    }
+
+    @ParameterizedTest @CsvSource({"1447,0,0,12,50", "1448,0,0,12,5", "1464,0,0,12,6",
+            "1447,1,0,12,6", "1464,1,0,12,50", "1456,0,0,255,5", "1447,0,128,12,5"})
+    void supportBalanceUsesBothSignedWordEdgesFacingNegativeFlagsAndUnsignedWidth(
+            int playerX, int facing, int objectFlags, int width, int expectedAnimation) {
+        Fixture f = new Fixture(false); var pool = new CdObjectPool();
+        putSupport(pool, 32, 0x12, objectFlags, width, 0x5B0, 0x20C);
+        Actor a = supported(); a.x = playerX << 16; a.y = 0x1ED << 16; a.flags |= facing;
+        var r = f.owner().step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), context(pool, 32));
+        assertEquals(expectedAnimation, r.state().animation()); assertEquals(8, r.state().flags() & 8);
+        assertEquals(a.y, r.state().centreY16_16()); assertEquals(0, r.environment().globals().primaryAngle());
+        assertEquals(0, r.environment().globals().secondaryAngle());
+    }
+
+    @Test void supportBalanceFlagsGuardPrecedesFlipperIdAndSkipsTerrainCentreProbe() {
+        Fixture f = new Fixture(false); Arrays.fill(f.fg, 2, f.fg.length, (byte) 0xF9);
+        var pool = new CdObjectPool(); putSupport(pool, 32, 0x1E, 0x80, 0xFF, 0xFFFF, 0xFFFF);
+        var owner = f.owner(); var input = new CdPlayerMovement.Input(0, 0); Actor a = supported();
+        var hazardous = owner.step(a.state(), input, f.environment(), context(pool, 32));
+        assertEquals(5, hazardous.state().animation()); // Negative flags branch to CheckCharge, before ID.
+        putSupport(pool, 32, 0x1E, 0, 0xFF, 0xFFFF, 0xFFFF);
+        assertEquals(0, owner.step(a.state(), input, f.environment(), context(pool, 32)).state().animation());
+        assertEquals(a.pri, hazardous.state().previousPrimaryAngle());
+        assertEquals(0, hazardous.environment().globals().primaryAngle());
+        assertEquals(0, hazardous.environment().globals().secondaryAngle()); // GroundCol support bypass.
+    }
+
+    @Test void supportBalanceKeepsAccelerationTwelveWhileTerrainProbeClobbersOnlyD5ToThirteen() {
+        Fixture f = new Fixture(); var pool = new CdObjectPool(); putSupport(pool, 32, 0x12, 0, 12, 64, 96);
+        Actor a = supported(); a.charge = 30; a.gv = 0xC00;
+        var supported = f.owner().step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), context(pool, 32));
+        assertEquals(0xBF4, supported.state().groundVelocity()); assertEquals(0xBF4, supported.state().xVelocity());
+        a.flags = 0; var terrain = f.step(a, 0, 0);
+        assertEquals(0xBF3, terrain.state().groundVelocity()); assertEquals(0xBF3, terrain.state().xVelocity());
+        assertEquals(12, supported.environment().physics().acceleration());
+    }
+
+    @ParameterizedTest @CsvSource({"0,0,-4640", "1,0,-3040", "0,1,-4640"})
+    void completeFlipperJumpUsesCalcAngleSignedForceOneAnimationPatchAndOrderedNativeSounds(
+            int objectFlags, int oldAnimation, int expectedVelocity) {
+        Fixture f = new Fixture(false); Arrays.fill(f.fg, 2, f.fg.length, (byte) 0xF9); // Headroom would fail.
+        var pool = new CdObjectPool(); putSupport(pool, 32, 0x1E, objectFlags, 12, 0x5B0, 0x20C);
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ANIMATION, oldAnimation));
+        var before = pool.state(32); var cut = context(pool, 32);
+        Actor a = supported(); a.x = 0x5B0 << 16; a.y = 0x1ED << 16;
+        var r = f.owner().step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment(), cut);
+        var patch = new CdPlayerMovement.SlotPatch(before, before.moveByte(CdObjectState.ByteField.ANIMATION, 1));
+        assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, r.boundary());
+        assertEquals(0, r.state().xVelocity()); assertEquals(expectedVelocity, r.state().yVelocity());
+        assertEquals(0x1F2 << 16, r.state().centreY16_16()); assertEquals(14, r.state().flags());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_SPRING),
+                new CdPlayerMovement.ObjectPatch(patch), new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP)), r.effects());
+        assertEquals(0x98, CdPlayerMovement.Sound.FM_SPRING.nativeId());
+        assertEquals(before, pool.state(32)); assertEquals(before, cut.orElseThrow().slots().slots().get(0));
+    }
+
+    @Test void flipperLaunchUsesSuppliedCalcAngleAndSineAssetsRatherThanAnAssumedCardinalLaunch() {
+        Fixture f = new Fixture(false);
+        // Valid monotonic, endpoint-preserving table: vector (7,55) indexes32, now8 instead of4.
+        // CalcAngle gives $40-8=$38. Force64-(12-7)=59 gives speed-$1338.
+        for (int i = 32; i < 64; i++) f.atan[i] = 8;
+        f.sine(0x38, 128); f.sine(0x78, 64);
+        var pool = new CdObjectPool(); putSupport(pool, 32, 0x1E, 0, 12, 0x5B0, 0x20C);
+        Actor a = supported(); a.x = 0x5A9 << 16; a.y = 0x1ED << 16;
+        var r = f.owner().step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment(), context(pool, 32));
+        assertEquals(-0x4CE, r.state().xVelocity()); assertEquals(-0x99C, r.state().yVelocity());
+    }
+
+    @ParameterizedTest @CsvSource({"819,30216", "820,-4608", "-820,-512"})
+    void flipperDivsOverflowRetainsProductLowWordBeforeTheFinalSpeedAdd(int force, int expectedSpeed) {
+        Fixture f = new Fixture(false);
+        // CONSTRUCTED constant sine/cosine table exposes d2 unchanged by angle selection, not a native table.
+        for (int i = 0; i < 320; i++) word(f.sine, i * 2, 256);
+        var pool = new CdObjectPool(); putSupport(pool, 32, 0x1E, 1, 12, 0x5B0, 0x20C);
+        Actor a = supported(); a.x = (0x5B0 + force - 12) << 16; a.y = 0x1ED << 16;
+        var r = f.owner().step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment(), context(pool, 32));
+        assertEquals(expectedSpeed, r.state().xVelocity()); assertEquals(expectedSpeed, r.state().yVelocity());
+    }
+
+    @Test void standZeroAliasesCurrentCursorHeaderWidthFlagsAndPositionRatherThanAnAbsentPoolSlot() {
+        Fixture f = new Fixture(false); Actor a = supported();
+        var pool = new CdObjectPool(); var cut = Optional.of(new CdPlayerMovement.ObjectContext(pool.capture(), 0, 1, 0xFF));
+        assertEquals(5, f.owner().step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment(), cut).state().animation());
+        // CONSTRUCTED zero acceleration keeps zero inertia while Left changes facing before the alias read.
+        f.physics = new CdPlayerMovement.Physics(0x600, 0, 0x80);
+        // Current player width2 puts its own d1=2 at the left edge.
+        cut = Optional.of(new CdPlayerMovement.ObjectContext(pool.capture(), 0, 1, 2));
+        assertEquals(6, f.owner().step(a.state(), new CdPlayerMovement.Input(4, 0), f.environment(), cut).state().animation());
+        var flipper = Optional.of(new CdPlayerMovement.ObjectContext(pool.capture(), 0, 0x1E, 12));
+        a.xv = 0x180;
+        assertEquals(a.x + (0x80 << 8), CdPlayerMovement.moveWithoutGravity(a.state(), flipper).centreX16_16());
+        a.xv = 0; a.flags = 9;
+        assertEquals(a.x + (0x100 << 8), CdPlayerMovement.moveWithoutGravity(a.state(), flipper).centreX16_16());
+        var jumped = f.owner().step(a.state(), new CdPlayerMovement.Input(0x10, 0x10), f.environment(), flipper);
+        assertEquals(-0xBE0, jumped.state().yVelocity()); // Current player flags0=1, force12.
+        assertFalse(jumped.effects().stream().anyMatch(CdPlayerMovement.ObjectPatch.class::isInstance));
+    }
+
+    @Test void slotPatchRequiresSameRealOwnerSlotAndExactlyTheAnimationByteIncludingSameValueStores() {
+        var pool = new CdObjectPool(); var before = pool.state(32);
+        assertEquals(before, new CdPlayerMovement.SlotPatch(before, before).after());
+        var after = before.moveByte(CdObjectState.ByteField.ANIMATION, 1);
+        assertEquals(after, new CdPlayerMovement.SlotPatch(before, after).after());
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.SlotPatch(before, pool.state(33)));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.SlotPatch(before, new CdObjectPool().state(32)));
+        for (var field : CdObjectState.ByteField.values()) {
+            if (field == CdObjectState.ByteField.ANIMATION) continue;
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdPlayerMovement.SlotPatch(before, after.moveByte(field, 1)), field.name());
+        }
+        assertThrows(NullPointerException.class, () -> new CdPlayerMovement.SlotPatch(null, after));
+        assertThrows(NullPointerException.class, () -> new CdPlayerMovement.SlotPatch(before, null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerMovement.ObjectPatch(null));
+    }
+
+    @Test void objectContextValidatesAllRequiredBytesAndNewPortsRejectNullOptionals() {
+        var pool = new CdObjectPool(); var slots = pool.capture(); var state = supported().state();
+        assertThrows(NullPointerException.class, () -> new CdPlayerMovement.ObjectContext(null, 0, 1, 12));
+        for (int bad : new int[]{-1, 256}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.ObjectContext(slots, bad, 1, 12));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.ObjectContext(slots, 0, bad, 12));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.ObjectContext(slots, 0, 1, bad));
+        }
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveWithGravity(null));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveWithoutGravity(null, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.moveWithoutGravity(state, null));
+        var f = new Fixture(false); var owner = f.owner();
+        assertThrows(NullPointerException.class, () -> owner.step(state, new CdPlayerMovement.Input(0, 0), f.environment(), null));
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        assertThrows(NullPointerException.class,
+                () -> owner.resumeAfterLevelBound(stopped, stopped.state(), stopped.environment(), null));
+    }
+
+    @ParameterizedTest @CsvSource({"0", "4", "2", "6"})
+    void supportedKillResumeBorrowsSameContextAndPreservesDispatchTailWithoutReplayingThePrefix(int mode) {
+        Fixture f = new Fixture(false); var pool = new CdObjectPool(); putSupport(pool, 32, 0x1E, 1, 12, 64, 96);
+        var cut = context(pool, 32); var owner = f.owner(); Actor a = new Actor();
+        a.flags = mode | 8; a.gv = 0x200; a.xv = 0x123; a.yv = 0x100; a.lock = 5; a.y = 200 << 16;
+        var input = new CdPlayerMovement.Input(8, 0);
+        var ordinary = owner.step(a.state(), input, f.environment(), cut);
+        f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0);
+        var stopped = owner.step(a.state(), input, f.environment(), cut);
+        assertEquals(CdPlayerMovement.Boundary.KILL_PLAYER, stopped.boundary());
+        var noWrite = killAt(stopped, 1);
+        var resumed = owner.resumeAfterLevelBound(stopped, noWrite.actor().motion(), stopped.environment(), cut);
+        assertEquals(ordinary.state(), resumed.state()); assertEquals(ordinary.environment().globals(), resumed.environment().globals());
+        assertTrue(resumed.effects().isEmpty());
+        assertEquals(resumed, f.owner().resumeAfterLevelBound(stopped, stopped.state(), stopped.environment(), cut));
+        if ((mode & 2) == 0) {
+            var ex = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                    () -> owner.resumeAfterLevelBound(stopped, stopped.state(), stopped.environment()));
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, ex.boundary());
+            assertTrue(ex.getMessage().contains("ObjMove"));
+        }
+    }
+
+    @Test void borrowedContextIsPureInputAndNeverRetainedInResultsOrMovementOwner() {
+        Fixture f = new Fixture(false); var owner = f.owner(); var pool = new CdObjectPool();
+        putSupport(pool, 32, 0x12, 0, 12, 64, 96); var firstCut = context(pool, 32);
+        Actor a = supported(); a.lock = 1; a.gv = 0x200;
+        var input = new CdPlayerMovement.Input(0, 0); var env = f.environment();
+        var first = owner.step(a.state(), input, env, firstCut);
+        putSupport(pool, 32, 0x1E, 1, 12, 64, 96); var nextCut = context(pool, 32);
+        var next = owner.step(a.state(), input, env, nextCut);
+        assertEquals(first.state().centreX16_16() + (0x100 << 8), next.state().centreX16_16());
+        assertEquals(first, owner.step(a.state(), input, env, firstCut));
+        assertEquals(first, f.owner().step(a.state(), input, env, firstCut));
+        for (var field : CdPlayerMovement.class.getDeclaredFields()) {
+            assertNotEquals(CdObjectPool.Snapshot.class, field.getType());
+            assertNotEquals(CdPlayerMovement.ObjectContext.class, field.getType());
+            assertNotEquals(Optional.class, field.getType());
+        }
+        for (var component : CdPlayerMovement.Result.class.getRecordComponents()) {
+            assertNotEquals(CdObjectPool.Snapshot.class, component.getType());
+            assertNotEquals(CdPlayerMovement.ObjectContext.class, component.getType());
+            assertNotEquals(Optional.class, component.getType());
+        }
+    }
+
+    private static Actor supported() { Actor a = new Actor(); a.flags = 8; return a; }
+    private static Optional<CdPlayerMovement.ObjectContext> context(CdObjectPool pool, int link) {
+        return Optional.of(new CdPlayerMovement.ObjectContext(pool.capture(), link, 1, 9));
+    }
+    private static void putSupport(CdObjectPool pool, int slot, int id, int flags, int width, int x, int y) {
+        pool.write(pool.state(slot).moveByte(CdObjectState.ByteField.ID, id).moveByte(CdObjectState.ByteField.FLAGS, flags)
+                .moveByte(CdObjectState.ByteField.WIDTH, width).moveWord(CdObjectState.WordField.X, x)
+                .moveWord(CdObjectState.WordField.Y, y));
+    }
+
     private static Actor airborne() { Actor a = rolled(); a.flags = 6; return a; }
     private static CdPlayerMovement.Globals globals(int look, int camera, int pri, int sec, int bored, int score) {
         return new CdPlayerMovement.Globals(look, camera, pri, sec, bored, score, 0, 0, 0, 0);
@@ -1151,7 +1508,7 @@ class TestCdPlayerMovement {
         }
     }
 
-    /** Exact admitted byte shapes, decoded by actual production asset/terrain owners. */
+    /** CONSTRUCTED byte shapes, decoded by production owners; no retail route or authenticated-media claim. */
     private static final class Fixture {
         final byte[] chunks = new byte[61952], fg = new byte[338], bg = new byte[50];
         final byte[] ids = new byte[900], angles = new byte[256], heights = new byte[4096], widths = new byte[4096];

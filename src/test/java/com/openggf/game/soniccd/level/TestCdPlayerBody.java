@@ -473,10 +473,11 @@ class TestCdPlayerBody {
         assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.TOUCH_SCAN);
     }
 
-    @Test void actualMovementUnsupportedRampMiniAndTimeWarpPropagateWithoutPublication() {
+    @Test void actualMovementRampContinuesWhileMiniAndTimeWarpPropagateWithoutPublication() {
         Fixture f = new Fixture(); Actor a = new Actor(); f.cell(0, 0, 6);
-        var ramp = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(a.state(), f.environment()));
-        assertEquals(CdPlayerMovement.UnsupportedBoundary.RAMP_ENTRY, ramp.boundary());
+        var ramp = f.owner().step(a.state(), f.environment());
+        assertEquals(2, ramp.state().motion().playerControl() & 2);
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, ramp.boundary());
         f.cell(0, 0, 2); f.mini = 1;
         assertEquals(CdPlayerMovement.UnsupportedBoundary.MINIATURE,
                 assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(a.state(), f.environment())).boundary());
@@ -948,7 +949,7 @@ class TestCdPlayerBody {
         for (var type : List.of(CdPlayerBody.State.class, CdPlayerBody.Environment.class, CdPlayerBody.Result.class)) {
             for (var component : type.getRecordComponents()) {
                 String name = component.getGenericType().getTypeName();
-                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "Snapshot",
+                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "ObjectContext", "Snapshot",
                         "CdPlayerTouchResponse")) {
                     assertFalse(name.contains(forbidden), type.getSimpleName() + "." + component.getName() + " " + name);
                 }
@@ -1948,6 +1949,268 @@ class TestCdPlayerBody {
     }
 
     /** Post-KillPlayer routine-6 actor (PP Player Object Collision.asm:282-292): air bit, oAnim $18, oTile bit 15, priority 0. */
+
+    // Support context is a per-invocation borrow. Native pin 1ecc5f3a:
+    // Sonic/Main.asm:285-351,675-776,1779-1861,2351-2366,2397-2404,3112-3157;
+    // Object Functions.asm:42-82,91-128. Constructed fixtures, not a retail route.
+    @ParameterizedTest @CsvSource({"0,0,95420416", "4,-12,95417344", "8,12,95423488"})
+    void supportedFloatMainUsesNormalInputsAndRunsTheUnchangedTail(int held, int speed, int x) {
+        Fixture f = new Fixture(); f.rawHeld = held; Actor a = supportActor(); var pool = supportPool(0x12, 0);
+        var before = pool.capture(); var objects = supportContext(before, a);
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), objects);
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, r.boundary());
+        assertEquals(x, r.state().motion().centreX16_16()); assertEquals(speed, r.state().motion().xVelocity());
+        assertEquals(speed, r.state().motion().groundVelocity());
+        assertEquals(0x01ED0000, r.state().motion().centreY16_16());
+        assertEquals(8, r.state().motion().flags() & 8); assertEquals(a.objectLinks, r.state().objectLinks());
+        assertEquals(0, r.state().motion().previousPrimaryAngle());
+        assertEquals(0, r.state().motion().previousSecondaryAngle());
+        assertEquals(4, r.state().history().index()); assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(96)), touchVisits(r));
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH).count());
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.ANIMATE).count());
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.MODE) < indexCall(r, CdPlayerBody.NativeCall.DISPLAY));
+        assertEquals(before.slots(), pool.capture().slots()); assertTrue(modePatches(r).isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({"16,-1608,32210944", "0,-968,32374784"})
+    void supportedFloatJumpKeepsLinksAndNextHeldOrReleasedActionNeedsNoSupportRead(int held, int velocity, int y) {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10; Actor a = supportActor();
+        var pool = supportPool(0x12, 0); var snapshot = pool.capture(); var owner = f.owner();
+        var jumped = owner.step(a.state(), f.environment(), Optional.empty(), Optional.empty(), supportContext(snapshot, a));
+        assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, jumped.modeBoundary().orElseThrow());
+        assertEquals(-0x680, jumped.state().motion().yVelocity());
+        assertEquals(0x01F20000, jumped.state().motion().centreY16_16());
+        assertEquals(14, jumped.state().motion().flags()); assertEquals(a.objectLinks, jumped.state().objectLinks());
+        assertEquals(List.of(new CdPlayerBody.ModeEffect(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP))),
+                jumped.effects().stream().filter(CdPlayerBody.ModeEffect.class::isInstance).toList());
+        var e = jumped.environment(); var controls = new CdPlayerBody.Controls(held, 0, 0, 0, 0);
+        var nextEnv = new CdPlayerBody.Environment(e.movement(), controls, e.globals(), e.dynamicSlots());
+        var next = owner.step(jumped.state(), nextEnv); // Bit3/link32 survive; air MODE has no stood-slot read.
+        assertEquals(velocity, next.state().motion().yVelocity()); assertEquals(y, next.state().motion().centreY16_16());
+        assertEquals(a.objectLinks, next.state().objectLinks()); assertEquals(8, next.state().motion().flags() & 8);
+        assertEquals(8, next.state().history().index()); assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void supportIsRequiredOnlyAtTheActualMainReadAndNeverForInitAbsentOrAir() {
+        Fixture f = new Fixture(); Actor a = supportActor(); var state = a.state(); var environment = f.environment();
+        var balance = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(state, environment));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, balance.boundary());
+        assertTrue(balance.getMessage().contains("CheckBalance"));
+        f.rawHeld = f.rawTap = 0x10;
+        var jump = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(state, f.environment()));
+        assertTrue(jump.getMessage().contains("ChkFlipper"));
+        f.rawHeld = 8; f.rawTap = 0; a.gv = 0x200;
+        var move = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(a.state(), f.environment()));
+        assertTrue(move.getMessage().contains("ObjMove"));
+        f.rawHeld = 0; a.routine = 0;
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.owner().step(a.state(), environment).boundary());
+        a.routine = 2; a.flags = 10; a.yv = -0x100;
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.owner().step(a.state(), environment).boundary());
+        a.header = new CdPlayerBody.Header(0, 0, 0, 0, 0);
+        assertEquals(CdPlayerBody.Boundary.SLOT_ABSENT, f.owner().step(a.state(), environment).boundary());
+        assertEquals(0, state.history().index()); assertEquals(0x01ED0000, state.motion().centreY16_16());
+    }
+
+    @ParameterizedTest @CsvSource({"18,0,false,95523380,-464", "30,0,false,95457844,-464",
+            "30,1,false,95588916,-464", "18,0,true,95523380,-496"})
+    void hurtUsesSharedObjMoveAndThenItsOwnDryOrWaterGravity(int id, int flags, boolean water, int x, int yVelocity) {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.flags = water ? 0x4A : 0x0A;
+        a.objectLinks = new CdPlayerBody.ObjectLinks(127, 32);
+        a.x = 0x05B01234; a.y = 0x01EDABCD; a.xv = 0x180; a.yv = -0x200;
+        var pool = supportPool(id, flags); var snapshot = pool.capture();
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), supportContext(snapshot, a));
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, r.boundary()); assertTrue(r.modeBoundary().isEmpty());
+        assertEquals(x, r.state().motion().centreX16_16()); assertEquals(0x01EBABCD, r.state().motion().centreY16_16());
+        assertEquals(0x180, r.state().motion().xVelocity(), "Flipper resistance changes only ObjMove's local word");
+        assertEquals(yVelocity, r.state().motion().yVelocity()); assertEquals(a.objectLinks, r.state().objectLinks());
+        var writes = actorWrites(r);
+        assertEquals(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, x), writes.get(0));
+        assertEquals(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG, 0x01EBABCD), writes.get(1));
+        assertEquals(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, -0x1D0), writes.get(2));
+        if (water) assertEquals(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, -0x1F0), writes.get(3));
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.OBJ_MOVE).count());
+        assertTrue(touchVisits(r).isEmpty()); assertTrue(modePatches(r).isEmpty()); assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @ParameterizedTest @CsvSource({"1,RESERVED_OBJECT_SLOT", "31,RESERVED_OBJECT_SLOT",
+            "128,OBJECT_ADDRESS", "255,OBJECT_ADDRESS"})
+    void hurtPropagatesReservedAndOutsideAddressesOnlyAtObjMove(int link, CdPlayerMovement.UnsupportedBoundary boundary) {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.flags |= 8; a.objectLinks = new CdPlayerBody.ObjectLinks(0, link);
+        var snapshot = new CdObjectPool().capture(); var state = a.state();
+        var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(state, f.environment(),
+                Optional.empty(), Optional.empty(), supportContext(snapshot, a)));
+        assertEquals(boundary, failure.boundary()); assertTrue(failure.getMessage().contains("ObjMove"));
+        assertEquals(0, state.history().index());
+    }
+
+    @ParameterizedTest @CsvSource({"-3072,2,-3072,66322432", "-2048,2,-1992,66584576",
+            "4095,0,4096,68157184", "4608,8,4096,68288512"})
+    void deadUsesSharedGravityWithoutReadingTheSuppliedReservedSupport(int oldY, int control, int nextY, int position) {
+        Fixture f = new Fixture(); Actor a = deadActor(); a.y = 0x04000000; a.yv = oldY; a.flags |= 8; a.ctrl = control;
+        a.objectLinks = new CdPlayerBody.ObjectLinks(255, 255); var level = new LevelCut();
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.of(level.context()),
+                supportContext(level.pool.capture(), a));
+        assertEquals(nextY, r.state().motion().yVelocity()); assertEquals(position, r.state().motion().centreY16_16());
+        assertEquals(a.objectLinks, r.state().objectLinks());
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.OBJ_MOVE_GRAVITY).count());
+        assertTrue(touchVisits(r).isEmpty()); assertTrue(modePatches(r).isEmpty());
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 4})
+    void killResumeForGroundAndRollReusesSupportWithoutReplayingThePrefix(int mode) {
+        Fixture f = new Fixture(); f.rawHeld = 8; f.debugMode = 1;
+        Actor a = supportActor(); a.x = 64 << 16; a.y = 200 << 16; a.flags = mode | 8;
+        a.anim = mode == 4 ? 2 : 0; a.gv = 0x200; a.xv = 0x123; a.lock = 5;
+        var pool = supportPool(0x1E, 1); var objects = supportContext(pool.capture(), a); var owner = f.owner();
+        var ordinary = owner.step(a.state(), f.environment(), Optional.empty(), Optional.empty(), objects);
+        f.bottom = 0xFF20;
+        var r = owner.step(a.state(), f.environment(), Optional.empty(), Optional.empty(), objects);
+        assertEquals(ordinary.state(), r.state());
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, kills(r).getFirst().exit());
+        assertEquals(1, kills(r).size()); assertEquals(1, r.effects().stream().filter(KILL_MARKER::equals).count());
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH).count());
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.EXTENDED_CAMERA).count());
+        assertEquals(1, calls(r).stream().filter(c -> c == CdPlayerBody.NativeCall.MODE).count());
+        assertEquals(new CdPlayerBody.KillPlayerCall(kills(r).getFirst()), r.effects().get(r.effects().indexOf(KILL_MARKER) + 1));
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.KILL_PLAYER) < indexCall(r, CdPlayerBody.NativeCall.MODE));
+        assertEquals(a.objectLinks, r.state().objectLinks());
+    }
+
+    @ParameterizedTest @CsvSource({"47,ENEMY", "111,ITEM"})
+    void flipperPatchPrecedesActualLaterTouchOfTheSameSlotAndEveryImageKeepsAnimationOne(
+            int collisionType, CdPlayerObjectTouch.Kind kind) {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10;
+        Actor a = supportActor(); var pool = supportPool(0x1E, 0);
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x80)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, collisionType));
+        var snapshot = pool.capture(); var before = pool.state(32); var contact = new Contact();
+        var touch = new CdPlayerBody.TouchContext(touchScanner(), snapshot, contact.context());
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(touch), Optional.empty(), supportContext(snapshot, a));
+        var patch = modePatches(r).getFirst().patch();
+        assertSame(before, patch.before()); assertEquals(before.moveByte(CdObjectState.ByteField.ANIMATION, 1), patch.after());
+        assertEquals(1, modePatches(r).size());
+        assertEquals(List.of(new CdPlayerBody.ModeEffect(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_SPRING)),
+                new CdPlayerBody.ModeEffect(new CdPlayerMovement.ObjectPatch(patch)),
+                new CdPlayerBody.ModeEffect(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_JUMP))),
+                r.effects().stream().filter(CdPlayerBody.ModeEffect.class::isInstance).toList());
+        int later;
+        if (kind == CdPlayerObjectTouch.Kind.ENEMY) {
+            var response = response(r); later = indexOf(r, CdPlayerBody.ObjectTouchResponse.class);
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY, response.exit());
+            assertEquals(1, response.changedSlots().size()); var changed = response.changedSlots().getFirst();
+            assertEquals(32, changed.identity().wholeIndex()); assertEquals(0x18, changed.id()); assertEquals(0, changed.routine());
+            assertEquals(1, changed.unsignedByte(CdObjectState.ByteField.ANIMATION));
+            assertEquals(1, changed.subtype());
+        } else {
+            var item = objectTouch(r); later = indexOf(r, CdPlayerBody.ObjectTouchResult.class);
+            assertEquals(CdPlayerObjectTouch.Kind.ITEM, item.kind());
+            assertEquals(patch.after(), item.selectedSlot().orElseThrow());
+            assertEquals(1, item.selectedSlot().orElseThrow().unsignedByte(CdObjectState.ByteField.ANIMATION));
+            assertEquals(1, item.changedSlot().orElseThrow().unsignedByte(CdObjectState.ByteField.ANIMATION));
+            assertEquals(4, item.changedSlot().orElseThrow().routine());
+        }
+        assertTrue(r.effects().indexOf(new CdPlayerBody.ModeEffect(new CdPlayerMovement.ObjectPatch(patch))) < later);
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.ANIMATE) < later);
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(1)), touchVisits(r));
+        assertEquals(0, before.unsignedByte(CdObjectState.ByteField.ANIMATION));
+        assertSame(before, pool.state(32)); assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void flipperOverlayRequiresTheIdenticalInitialSnapshotOnlyWhenAPatchReachesTouch() {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10; Actor a = supportActor(); var pool = supportPool(0x1E, 0);
+        var original = pool.capture(); var other = pool.capture();
+        assertNotSame(original, other); assertSame(original.slots().getFirst(), other.slots().getFirst());
+        var touch = new CdPlayerBody.TouchContext(touchScanner(), other);
+        assertThrows(IllegalArgumentException.class, () -> f.owner().step(a.state(), f.environment(), Optional.of(touch),
+                Optional.empty(), supportContext(original, a)));
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ID, 0x12));
+        var noPatchOriginal = pool.capture(); var noPatchOther = pool.capture();
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(new CdPlayerBody.TouchContext(touchScanner(), noPatchOther)),
+                Optional.empty(), supportContext(noPatchOriginal, a));
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, r.boundary()); assertTrue(modePatches(r).isEmpty());
+        assertEquals(0, pool.state(32).unsignedByte(CdObjectState.ByteField.ANIMATION));
+    }
+
+    @Test void flipperWithoutTouchPublishesOnlyItsPatchAndNeverInventsAScanner() {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10; f.slots = CdPlayerBody.DynamicSlots.UNIMPLEMENTED;
+        Actor a = supportActor(); var pool = supportPool(0x1E, 0); var snapshot = pool.capture();
+        var r = f.owner().step(a.state(), f.environment(), Optional.empty(), Optional.empty(), supportContext(snapshot, a));
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, r.boundary()); assertEquals(1, modePatches(r).size());
+        assertTrue(touchVisits(r).isEmpty());
+        assertFalse(r.effects().stream().anyMatch(e -> e instanceof CdPlayerBody.ObjectTouchResult || e instanceof CdPlayerBody.ObjectTouchResponse));
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void negativeControlSkipsEvenAMismatchedMalformedTouchAfterTheFlipperPatch() {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10; Actor a = supportActor(); a.ctrl = 0x80;
+        var pool = supportPool(0x1E, 0); var original = pool.capture();
+        var foreign = new CdObjectPool(); touchSlot(foreign, 32, 0x40, 0x5B0, 0x1ED);
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(touchContext(foreign)), Optional.empty(), supportContext(original, a));
+        assertEquals(1, modePatches(r).size()); assertTrue(touchVisits(r).isEmpty());
+        assertEquals(original.slots(), pool.capture().slots());
+    }
+
+    @Test void lateFailureAfterFlipperAndSameSlotResponsePublishesNothingAndLeavesAllInputsReusable() {
+        Fixture f = new Fixture(); f.rawHeld = f.rawTap = 0x10; f.special[2] = 2;
+        Actor a = supportActor(); var pool = supportPool(0x1E, 0);
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x80)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0x2F));
+        var original = pool.capture(); var before = a.state(); var env = f.environment();
+        var touch = new CdPlayerBody.TouchContext(touchScanner(), original, new Contact().context());
+        var owner = f.owner(); var objects = supportContext(original, a);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            assertEquals(CdPlayerBody.UnsupportedBoundary.ROLL_TUNNEL_OWNER,
+                    assertThrows(CdPlayerBody.UnsupportedBody.class, () -> owner.step(before, env, Optional.of(touch),
+                            Optional.empty(), objects)).boundary());
+            assertEquals(0, before.history().index()); assertEquals(0, before.motion().playerJump());
+            assertEquals(original.slots(), pool.capture().slots());
+        }
+    }
+
+    @Test void supportContextsAreNotRetainedByBodyRecordsOrOwnerAndOldCutsReplayPurely() {
+        Fixture f = new Fixture(); Actor a = supportActor(); var pool = supportPool(0x12, 0); var owner = f.owner();
+        var snapshot = pool.capture(); var input = a.state(); var env = f.environment(); var objects = supportContext(snapshot, a);
+        var first = owner.step(input, env, Optional.empty(), Optional.empty(), objects);
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ID, 0x1E).moveByte(CdObjectState.ByteField.FLAGS, 1));
+        var second = owner.step(input, env, Optional.empty(), Optional.empty(), supportContext(pool.capture(), a));
+        assertEquals(first.state().motion().centreX16_16() + 0x10000, second.state().motion().centreX16_16());
+        assertEquals(first, owner.step(input, env, Optional.empty(), Optional.empty(), objects));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT,
+                assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> owner.step(input, env)).boundary());
+        for (var field : CdPlayerBody.class.getDeclaredFields()) {
+            assertFalse(field.getGenericType().getTypeName().contains("ObjectContext"));
+            assertNotEquals(CdObjectPool.Snapshot.class, field.getType());
+        }
+        for (var type : List.of(CdPlayerBody.State.class, CdPlayerBody.Environment.class, CdPlayerBody.Result.class)) {
+            for (var component : type.getRecordComponents()) {
+                assertFalse(component.getGenericType().getTypeName().contains("ObjectContext"));
+                assertFalse(component.getGenericType().getTypeName().contains("Snapshot"));
+            }
+        }
+        assertThrows(NullPointerException.class, () -> owner.step(input, env, Optional.empty(), Optional.empty(), null));
+    }
+
+    private static Actor supportActor() {
+        Actor a = new Actor(); a.x = 0x05B00000; a.y = 0x01ED0000; a.flags = 8;
+        a.objectLinks = new CdPlayerBody.ObjectLinks(127, 32); return a;
+    }
+    private static CdObjectPool supportPool(int id, int flags) {
+        var pool = new CdObjectPool();
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ID, id).moveByte(CdObjectState.ByteField.FLAGS, flags)
+                .moveByte(CdObjectState.ByteField.WIDTH, 12).moveByte(CdObjectState.ByteField.ROUTINE, 2)
+                .moveWord(CdObjectState.WordField.X, 0x5B0).moveWord(CdObjectState.WordField.Y, 0x20C));
+        return pool;
+    }
+    private static Optional<CdPlayerMovement.ObjectContext> supportContext(CdObjectPool.Snapshot snapshot, Actor actor) {
+        return Optional.of(new CdPlayerMovement.ObjectContext(snapshot, actor.objectLinks.standObject(),
+                actor.header.slotId(), actor.header.width()));
+    }
+    private static List<CdPlayerMovement.ObjectPatch> modePatches(CdPlayerBody.Result result) {
+        return result.effects().stream().filter(CdPlayerBody.ModeEffect.class::isInstance)
+                .map(CdPlayerBody.ModeEffect.class::cast).map(CdPlayerBody.ModeEffect::effect)
+                .filter(CdPlayerMovement.ObjectPatch.class::isInstance).map(CdPlayerMovement.ObjectPatch.class::cast).toList();
+    }
+
     private static Actor deadActor() {
         Actor a = new Actor(); a.routine = 6; a.flags = 2; a.anim = 0x18; a.yv = -0x700; a.stick = 7; a.rotationDistance = 0xF1;
         a.header = new CdPlayerBody.Header(1, 0x21F200, 0x8780, 0, 24);
@@ -2072,7 +2335,7 @@ class TestCdPlayerBody {
         }
     }
     /** Actual 63 ObjColSizes pairs, Player Object Collision.asm:398-461; constructed format input only. */
-    private static CdPlayerObjectTouch touchScanner() {
+    static CdPlayerObjectTouch touchScanner() {
         byte[] dimensions = {
                 0x14, 0x14, 0x12, 0x0C, 0x0C, 0x10, 4, 0x10, 0x0C, 0x12, 0x10, 0x10, 6, 6,
                 0x18, 0x0C, 0x0C, 0x10, 0x10, 0x0C, 8, 8, 0x14, 0x10, 0x14, 8, 0x0E, 0x0E,

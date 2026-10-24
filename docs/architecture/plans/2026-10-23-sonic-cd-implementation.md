@@ -3746,3 +3746,59 @@ match byteforbyte; captures/provenance remain external under
 native/engine-float-block-world-r1 and-r2. Broad smoke remains pending. The next
 source dependencies are supportedplayer movement, actual rampBG and earlier
 Springdispatch; neither gatesuppression nor staticBG substitutes for those owners.
+
+### Supported player, ramp MODE and source-ordered flipper commits — 24 October 2026
+
+Movement now borrows an invocation-local object cut for the native stand-slot
+reads at jump/flipper, idle balance and ObjMove. Whole slot0 aliases the working
+player; dynamic32..127 reads use real immutable pool images; reserved/outside
+addresses stop at the actual read. Shared ObjMove and ObjMoveGrv preserve native
+local resistance, OLD Y-velocity integration, caps and arithmetic wrapping.
+Hurt and Dead reuse these moves at their existing source cuts. Ramp control
+bit1 runs the native MODE branches; charge keeps bit0/routine/size/mode guards
+and admits that real ramp byte without normalizing it. Other control/warp
+boundaries remain. Native owners: ObjSonic modes/CheckJump/ChkFlipper
+(Level/_Objects/Sonic/Main.asm:675-776,1779-1861,3112-3157) and ObjMove/ObjMoveGrv
+(Level/Object Functions.asm:42-128), at reference pin1ecc5f3a.
+
+Body, Frame and Runtime forward one borrowed context from the same post-spawn
+pool snapshot as touch and level context. A flipper animation store is an
+immutable before/after patch; a later touch scans and responds against the same
+locally overlaid snapshot. After the whole Body succeeds, Runtime folds final
+images in native effect order, validates every real owner and the full original
+cut, then CAS-writes final pool images and commits external globals once.
+A same-slot enemy response retains the earlier animation store. Actor/effect
+metadata is never replayed; exact sounds remain Frame-owned. Captures acquire
+no snapshot/context owner, and real SolidObject later detaches a jumped player.
+
+Tests-first Movement RED40558 stopped at RAMP_ENTRY as expected. First combined
+Movement287 check46048 exposed the unchanged Charge ramp guard and invalid
+noncardinal atan fixture; both independently reviewed P1/P2 findings were
+repaired against source. A direct Charge RED28152 reached its original gate.
+Root27341 then passed376/0/0/0 (Movement202, Charge86, Ground54, Terrain20, Math14),
+Java25, with strict assets unchanged. Its media-independent command selected
+TestCdPlayerMovement,TestCdPlayerCharge,TestCdPlayerGroundCollision,
+TestCdPlayerTerrain,TestCdPlayerMath through maven_queue.py -Dmse=off.
+
+Combined request13247 ran1050 cases across19 actual classes on ac4e5efa1 plus
+these12 Java files: one failure, no errors/skips. Selection included Body226,
+Frame132, Pool12, Runtime62, Movement/Charge/terrain/math/ground, Solid88, Float42,
+Actor/ObjectPass, actual WorldLoad/EGL, terrain load/boot, restart carry and
+ModApi signatures; USA media/EGL/S2ROM and surfaceless flags were supplied.
+The only failure was a constructed flipper/enemy missing spriteFlags bit7,
+which native Player_ObjCollide .Loop correctly skips (PP Player Object
+Collision.asm:28-32). R2 changes only that fixture's explicit $80 byte.
+Request25192 reran the entire Runtime62:62/0/0/0, exit0 at21:50:29BST,
+156squeue/29.688sMaven. All selected XML counts/skips were inspected; production
+is identical between those two runs. Do not describe the original1050 run as
+green or add overlapping totals as independent coverage.
+
+Independent Codex composition review confirmed that fixture P2 and its R2
+response, with no further P1/P2. Prior nonblocking Movement oracle gaps and
+the absence of a same-slot Runtime replay remain recorded externally. The
+Runtime standing/jump cases do replay actual actor/shared/pool/SAT state.
+No natural supported platform route, live ramp World traversal or native
+planes/PLC/timing/pixel/act/game parity is claimed. ACTIVE_3D_RAMP_BACKGROUND,
+Spring$0A, background tile streaming and section residency remain real owners.
+The fixed-ac4 broad smoke runs independently; it does not cover this later
+source revision and is not promoted to a pass before its result is inspected.

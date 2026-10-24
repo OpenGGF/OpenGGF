@@ -10,6 +10,7 @@ import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.player.CdPlayerMath;
+import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
@@ -19,6 +20,7 @@ import com.openggf.graphics.SpritePresentation;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -492,7 +494,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     /**
      * Detached touch commit ONLY after the complete Frame.runBody returns.
      * Exactly one fresh pool capture
-     * is passed in one ephemeral TouchContext; neither is stored here or in a
+     * is passed in the ephemeral touch, level and supported-object contexts; neither is stored here or in a
      * snapshot. The actor bridge subsequently calls enqueuePlayer exactly once
      * for an eligible Main Display; this method never calls DrawObject itself.
      * Deferring Display past the detached item commit is bounded to the reviewed
@@ -507,44 +509,67 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                             ringGlobals.updateHudLives(), scoreGlobals.score(), scoreGlobals.nextLifeScore(),
                             scoreGlobals.updateHudScore()));
             var level = new CdPlayerBody.LevelContext(callCut, ringGlobals, levelGlobals);
+            var player = frame.state();
+            var objectContext = new CdPlayerMovement.ObjectContext(callCut, player.objectLinks().standObject(),
+                    player.header().slotId(), player.header().width());
             var publication = frame.runBody(levelFrames,
-                    Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level));
+                    Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level),
+                    Optional.of(objectContext));
             checkActive(Phase.PLAYER_BODY);
             boolean displaySeen = false;
             boolean touchSeen = false;
-            boolean levelSeen = false;
+            CdPlayerBody.DeadCheckGone gone = null; CdPlayerBody.RestartCut restart = null;
+            var changed = new LinkedHashMap<Integer, CdObjectState>();
+            var nextRing = ringGlobals; var nextScore = scoreGlobals; var nextContact = contactGlobals;
+            // No Body owner writes live pool RAM. Even same-slot MODE and later touch images fold in source order
+            // into one final publication, validated/CASed against the ORIGINAL pre-player cut below.
             for (var effect : publication.result().effects()) {
-                if (effect instanceof CdPlayerBody.DeadCheckGone gone) {
-                    if (levelSeen) throw new IllegalStateException("Body published more than one level summary");
-                    levelSeen = true;
-                    commitDeadGone(callCut, gone, publication.result().effects());
-                } else if (effect instanceof CdPlayerBody.RestartCut restart) {
-                    if (levelSeen) throw new IllegalStateException("Body published more than one level summary");
-                    levelSeen = true;
-                    commitRestart(restart, publication.result().effects());
+                if (effect instanceof CdPlayerBody.ModeEffect mode
+                        && mode.effect() instanceof CdPlayerMovement.ObjectPatch write) {
+                    var patch = write.patch(); var pool = placement.pool();
+                    pool.validateWrite(patch.before()); pool.validateWrite(patch.after());
+                    int whole = patch.before().identity().wholeIndex();
+                    var before = changed.getOrDefault(whole, callCut.slots().get(patch.before().identity().dynamicIndex()));
+                    if (!before.equals(patch.before())) throw new IllegalStateException("Stale native MODE object patch");
+                    changed.put(whole, patch.after());
+                } else if (effect instanceof CdPlayerBody.DeadCheckGone summary) {
+                    if (gone != null || restart != null) throw new IllegalStateException("Body published more than one level summary");
+                    gone = summary;
+                } else if (effect instanceof CdPlayerBody.RestartCut summary) {
+                    if (gone != null || restart != null) throw new IllegalStateException("Body published more than one level summary");
+                    restart = summary;
                 } else if (effect instanceof CdPlayerBody.DisplayEligibility cut) {
-                    if (displaySeen) { throw new IllegalStateException("Body published more than one Display cut"); }
+                    if (displaySeen) throw new IllegalStateException("Body published more than one Display cut");
                     displaySeen = true;
-                    if (cut.eligible()) { expectedPlayerCut = cut; }
+                    if (cut.eligible()) expectedPlayerCut = cut;
                 } else if (effect instanceof CdPlayerBody.ObjectTouchResult touch) {
-                    if (touchSeen) { throw new IllegalStateException("Body published more than one touch result"); }
+                    if (touchSeen) throw new IllegalStateException("Body published more than one touch result");
                     touchSeen = true;
-                    touch.result().changedSlot().ifPresent(image -> commitTouchImages(callCut, List.of(image)));
+                    touch.result().changedSlot().ifPresent(image -> changed.put(image.identity().wholeIndex(), image));
                 } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) {
-                    if (touchSeen) { throw new IllegalStateException("Body published more than one touch result"); }
+                    if (touchSeen) throw new IllegalStateException("Body published more than one touch result");
                     touchSeen = true;
-                    var result = touch.result();
-                    var world = result.world();
-                    // Construct and validate EVERY new immutable value before the first pool write.
-                    var nextRing = new CdRingGlobals(world.rings(), world.lives(), ringGlobals.livesFlags(),
+                    var result = touch.result(); var world = result.world();
+                    nextRing = new CdRingGlobals(world.rings(), world.lives(), ringGlobals.livesFlags(),
                             ringGlobals.updateHudRings(), world.updateHudLives(), ringGlobals.timeStopTimer(),
                             ringGlobals.ringAnimationTimer(), ringGlobals.ringAnimationFrame());
-                    var nextScore = new ScoreGlobals(world.score(), world.nextLifeScore(), world.updateHudScore());
-                    var nextContact = touch.contact();
-                    commitTouchImages(callCut, result.changedSlots());
-                    ringGlobals = nextRing; scoreGlobals = nextScore; contactGlobals = nextContact;
-                    // The final actor/invincible/scoreChain values already belong to Frame. Never replay them here.
+                    nextScore = new ScoreGlobals(world.score(), world.nextLifeScore(), world.updateHudScore());
+                    nextContact = touch.contact();
+                    for (var image : result.changedSlots()) changed.put(image.identity().wholeIndex(), image);
+                    // Actor/invincible/scoreChain are already final Frame values; never re-apply them here.
                 }
+            }
+            var pool = placement.pool(); pool.validateRestore(callCut);
+            if (!pool.capture().slots().equals(callCut.slots())) {
+                throw new IllegalStateException("CD pool changed during its pure player call");
+            }
+            if (gone != null || restart != null) {
+                if (touchSeen || !changed.isEmpty()) throw new IllegalStateException("Level summary cannot also publish MODE/touch slots");
+                if (gone != null) commitDeadGone(callCut, gone, publication.result().effects());
+                else commitRestart(restart, publication.result().effects());
+            } else {
+                commitTouchImages(callCut, List.copyOf(changed.values()));
+                ringGlobals = nextRing; scoreGlobals = nextScore; contactGlobals = nextContact;
             }
             for (var sound : publication.sounds()) { appendSound(new PlayerSound(sound)); }
             return publication;

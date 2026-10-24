@@ -79,6 +79,33 @@ public final class CdObjectPool {
         return new Snapshot(owner, copy);
     }
 
+    /**
+     * Pure ephemeral derived view over a borrowed cut, for later native calls in the same invocation.
+     * Every image must keep the base's real pool owner and exact physical dynamic identity; one image
+     * per whole index. The base and live pool are untouched. The result has the SAME owner but is not
+     * an actual capture, provenance certificate or compare-and-set check; the external owner still
+     * validates/folds against its original live cut before committing once after the whole call succeeds.
+     */
+    public static Snapshot overlay(Snapshot base, List<CdObjectState> images) {
+        Objects.requireNonNull(base, "base snapshot"); Objects.requireNonNull(images, "overlay images");
+        boolean[] seen = new boolean[DYNAMIC_COUNT];
+        // Validate EVERY supplied image against base.owner, before constructing any derived Snapshot.
+        for (var image : images) {
+            Objects.requireNonNull(image, "overlay image");
+            if (!image.belongsTo(base.owner)) throw new IllegalArgumentException("Foreign CD overlay image owner");
+            int index = dynamicIndex(image.identity().wholeIndex());
+            if (!image.identity().equals(base.slots.get(index).identity())) {
+                throw new IllegalArgumentException("CD overlay must retain physical dynamic identity");
+            }
+            if (seen[index]) throw new IllegalArgumentException("Duplicate CD overlay physical index");
+            seen[index] = true;
+        }
+        if (images.isEmpty()) return base;
+        var derived = new ArrayList<>(base.slots);
+        for (var image : images) derived.set(dynamicIndex(image.identity().wholeIndex()), image);
+        return new Snapshot(base.owner, derived);
+    }
+
     /** Composite owners can preflight all partitions before any restore mutates state. */
     public void validateRestore(Snapshot snapshot) {
         Objects.requireNonNull(snapshot);

@@ -444,7 +444,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * levelFrames is the engine's ALREADY incremented argument projected low16.
      */
     public BodyPublication runBody(int levelFrames) {
-        return runBody(levelFrames, Optional.empty(), Optional.empty());
+        return runBody(levelFrames, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     /**
@@ -453,7 +453,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * commits the published response's slots, world and contact only after this call returns.
      */
     public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext) {
-        return runBody(levelFrames, touchContext, Optional.empty());
+        return runBody(levelFrames, touchContext, Optional.empty(), Optional.empty());
     }
 
     /**
@@ -463,11 +463,22 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext,
                                    Optional<CdPlayerBody.LevelContext> levelContext) {
+        return runBody(levelFrames, touchContext, levelContext, Optional.empty());
+    }
+
+    /**
+     * Forward only this invocation's borrowed support cut. Body owns its actual reads and local touch
+     * overlay; no context or Snapshot enters Frame fields, ActorState, SharedState or the publication.
+     * Runtime folds/commits immutable MODE/touch images after this entire call succeeds.
+     */
+    public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext,
+                                   Optional<CdPlayerBody.LevelContext> levelContext,
+                                   Optional<CdPlayerMovement.ObjectContext> objects) {
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext);
+            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext, objects);
             var publication = new BodyPublication(result, collectSounds(result.effects()));
             state = result.state(); environment = result.environment(); display = result.display();
             return publication;

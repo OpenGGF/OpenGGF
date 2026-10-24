@@ -762,10 +762,29 @@ class TestCdOpeningObjectRuntime {
             f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
             f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
             assertEquals(expected, f.frame.state()); assertEquals(objects.placement().pool().slots(), pool.capture().slots());
-            f.service(0); f.runtime.spawnBeforeReservedSlots();
-            var stop = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.body(3));
-            assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, stop.boundary());
-            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            CdPlayerBody.State expectedPlayer = null; CdPlayerBody.Environment expectedEnvironment = null;
+            List<CdObjectState> expectedSlots = null; byte[] expectedSat = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+                }
+                f.service(0); f.runtime.spawnBeforeReservedSlots();
+                assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(40, f.frame.state().objectLinks().standObject());
+                assertEquals(8, f.frame.state().motion().flags() & 10);
+                assertTrue(f.frame.state().motion().centreX16_16() > expected.motion().centreX16_16());
+                assertEquals(expected.motion().centreY16_16(), f.frame.state().motion().centreY16_16());
+                var completed = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                if (replay == 0) {
+                    expectedPlayer = f.frame.state(); expectedEnvironment = f.frame.environment();
+                    expectedSlots = pool.capture().slots(); expectedSat = completed.bytes();
+                } else {
+                    assertEquals(expectedPlayer, f.frame.state()); assertEquals(expectedEnvironment, f.frame.environment());
+                    assertEquals(expectedSlots, pool.capture().slots()); assertArrayEquals(expectedSat, completed.bytes());
+                }
+            }
         }
     }
 
@@ -842,6 +861,65 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // Begins at a native Solid-produced standing state, then ordinary Action input runs the real Main jump.
+    // The later Float calls, rather than MODE, detach the link. This is constructed device ingress, not a route.
+    @Test void supportedFloatJumpKeepsItsLinkUntilTheLaterSolidPassAndReplaysFromTheStandingCut() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0x100, 64 << 16, 0x721 << 16);
+            pool.write(floatBlock(pool.state(40), 2, 0x84, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(40, f.frame.state().objectLinks().standObject());
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            CdPlayerBody.State after = null; List<CdObjectState> slots = null; byte[] sat = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+                }
+                f.service(0x10); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(3);
+                assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, publication.result().boundary());
+                assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, publication.result().modeBoundary().orElseThrow());
+                assertEquals(-0x680, f.frame.state().motion().yVelocity());
+                assertEquals(40, f.frame.state().objectLinks().standObject(), "CheckJump leaves the link for the object owner");
+                assertEquals(8, f.frame.state().motion().flags() & 8);
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(0, f.frame.state().objectLinks().standObject());
+                assertEquals(0, f.frame.state().motion().flags() & 8);
+                assertEquals(0, f.slot(40).flags() & 8);
+                var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                if (replay == 0) { after = f.frame.state(); slots = pool.capture().slots(); sat = cpu.bytes(); }
+                else { assertEquals(after, f.frame.state()); assertEquals(slots, pool.capture().slots()); assertArrayEquals(sat, cpu.bytes()); }
+            }
+        }
+    }
+
+    // Dirty-ID construction exercises generic ChkFlipper and the later ENEMY handler on the SAME slot.
+    // Without Body's local overlay the touch image would restore animation0 over the earlier native store1.
+    @Test void flipperAnimationPatchAndLaterEnemyTouchFoldOnceAgainstTheOriginalPoolCut() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 8, 40, 0, 0, 0, 64 << 16, 0x721 << 16);
+            pool.write(pool.state(40).moveByte(ID, 0x1E).moveByte(SPRITE_FLAGS, 0x80)
+                    .moveByte(COLLISION_TYPE, 0x2F).moveByte(WIDTH, 12)
+                    .moveWord(X, 64).moveWord(Y, 0x740));
+            f.service(0x10); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+            assertEquals(0x18, f.slot(40).id(), "Main kills the constructed flipper/enemy before its dynamic visit");
+            assertEquals(1, f.slot(40).unsignedByte(ANIMATION), "the later response must preserve the earlier patch");
+            assertEquals(10, f.runtime.scoreGlobals().score());
+            assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_SPRING),
+                    new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP),
+                    new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_DESTROY)), publication.sounds());
+            assertEquals(publication.sounds().stream().map(CdOpeningObjectRuntime.PlayerSound::new).toList(),
+                    f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x18, f.slot(40).id(), "live later dispatch ran the newly selected Explosion");
+            assertTrue(pool.capture().slots().stream().anyMatch(slot -> slot.id() == 0x1C));
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
     private static CdObjectState floatBlock(CdObjectState s, int routine, int spriteFlags, int flags) {
         return s.moveByte(ID, 0x12).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
                 .moveLong(MAPPINGS, 0x20A3FA).moveWord(TILE, 0x4334).moveByte(PRIORITY, 1)
@@ -849,7 +927,7 @@ class TestCdOpeningObjectRuntime {
                 .moveWord(X, 64).moveWord(Y, 0x740).moveByte(FLAGS, flags);
     }
 
-    /** Constructed source cut after Body, before the live object pass; never route evidence. */
+    /** Explicit constructed state at an existing closed Frame cut; never route evidence. */
     private static void seedSolidPlayer(Fixture f, int flags, int stand, int charge, int xv, int yv, int x, int y) {
         var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
         var next = new CdPlayerMotionState(x, y, xv, yv, 0, 2, 0, flags, m.spriteFlags(), 9, 19,
