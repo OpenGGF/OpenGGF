@@ -2,7 +2,7 @@
 """Launch the Stageplay agent CLI with owned headless rendering and JSON results.
 
 Inputs: shot-local screenplay, .stageplay scene, user-supplied ROMs, optional engine jar.
-Screenplay v6 supports lossless canonical decompilation and editor round trips.
+Screenplay v7 supports lossless canonical decompilation and editor round trips.
 Object casts use per-shot objects/objectActions and worldCommands
 (CLEAR_BADNIKS, CLEAR_OBJECTS, REMOVE_OBJECT). Compile uses the engine's strict schema. Route plans emit existing native input
 intents or explicitly labelled visual object movement; supplied ROMs are required.

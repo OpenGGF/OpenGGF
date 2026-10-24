@@ -2,7 +2,7 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
-- [Stageplay speech sync](../guide/creating/stageplay-authoring.md#character-speech-noises): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
+- [Stageplay speech sync](../guide/creating/stageplay-authoring.md#validate-inspect-and-timeline): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
 
 - [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
@@ -35,7 +35,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
-- [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
+- [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see [render](../guide/creating/stageplay-authoring.md#render). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. The guide screenshots in `docs/guide/creating/images/stageplay/` are 256-colour palette PNGs reduced from these pictures (plus `TestStageplayRouteOverlayPictures`); refresh them from the same tests when the UI changes. Origin: 2026-10-21 Stageplay delivery.
 - [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles and losslessly decompiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
 - [Stageplay route helper](../../src/main/java/com/openggf/tools/StageplayRouteTool.java): bounded shot-entry native-input search with cold LIVE qualification, or visual object floor/headroom paths; same cancellable logic worker and content-bound result in both editors. Inputs are canonical scenes and supplied ROMs; see [route limits](../guide/creating/stageplay-authoring.md#route-helper). Origin: 2026-10-22 complete-cast task.
 
@@ -395,7 +395,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `TimeAttackLobbyVideoTool` (`racing-server capture-lobby OUTPUT ROOT s1|s2|s3k`): display-free first boot into a hosted LAN room's lobby level with three loopback peers (international names/looks, lobby presence replaying the player's own poses at an offset); records the menu over the level, ready, hidden-menu play, menu return and the round hand-over as stills, `lobby.mp4` and `state.csv` with received lobby ghost positions (2026-10-22 lobby-level lane).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
-support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#native-rom-worlds-screenplay-6-document-7)
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#simulate)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
 
 - [Stageplay object coverage](../../src/main/java/com/openggf/tools/StageplayObjectCoverageTool.java): generate every native byte ID per registered source context, with factory, art and visual-mode reasons; constructor-free inventory, originating in the 2026-10-22 complete-cast task.

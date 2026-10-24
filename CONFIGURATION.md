@@ -901,9 +901,12 @@ Trace playback retains its configured checkpoint interval.
 
 **F4** switches between level editing and the [Stageplay workspace](docs/guide/creating/stageplay.md)
 in both editor frontends. Stageplay owns its input while active: Space plays/pauses,
-left/right steps frames, Shift steps 60 frames, K sets an actor key, and F1 opens
-its commands. Record directed take uses WASD; Space stops recording. Stageplay
-settings live in the scene file, and these shortcuts are currently fixed.
+left/right steps frames, Shift steps 60 frames, K directs the selected actor, C
+toggles camera direction, R records a take and F1 opens its commands. In a Puppet
+take, A/D move, S brakes and W jumps; a Poser take moves with WASD; Space or Esc
+stops recording. Stageplay settings live in the scene file, and these shortcuts are
+currently fixed. The [Stageplay reference](docs/guide/creating/stageplay-reference.md#in-engine-editor-commands-and-keys)
+lists every key for both editors.
 
 Open **Advanced → Editor projects** at the master title to create, open, or import
 levels. Choose **New blank level**, then a game and ROM asset source. Entering from

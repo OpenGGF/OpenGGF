@@ -36,6 +36,17 @@ See the [Stageplay guide](../../docs/guide/creating/stageplay.md) for audio asse
 native player binding and trigger-based playback. The example cannot be combined
 with another controller that already owns native frame admission.
 
+## Start here
+
+- [`first-take.screenplay.json`](first-take.screenplay.json) is the ten-second
+  film from [Your first Stageplay film](../../docs/guide/creating/stageplay-first-film.md):
+  Sonic 1's Sonic and Sonic 2's Tails in Green Hill. Supply S1 and S2 ROMs.
+- [`day-off/`](day-off/) is *Day Off*, the 75-second film shown with the
+  Stageplay promo: a Sonic 1 Motobug takes a day off in three games. It has the
+  screenplay, the compiled scene and four original nine-slice dialogue frames.
+  Supply all three ROMs. [How Day Off was made](../../docs/guide/creating/stageplay-day-off.md)
+  walks through its techniques.
+
 ## Your first scene: Wait for me
 
 Start with the [screenplay](src/main/resources/scenes/wait-for-me.screenplay.json)
@@ -78,8 +89,8 @@ frame 285 instead of 293. Compare source frames 180–449 at normal speed. That
 measured result describes this route, not a general obstacle solver.
 
 The [authoring reference](../../docs/guide/creating/stageplay-authoring.md) provides
-compile, simulate and render commands. Keep screenplay JSON as the source for
-scripted revisions; editor edits save the portable scene, not a screenplay round-trip.
+compile, simulate and render commands. Editor edits save the scene; use **Export
+screenplay** or `decompile` to bring them back to a screenplay.
 For a film with a separate continuous music bed, make a new take with a supported
 `MUSIC_STOP` cue at frame zero. It retains native SFX; keep the combined music/SFX
 capture for standalone playback. Verify matching world, actors and camera before

@@ -1,0 +1,2310 @@
+{
+ "version": 7,
+ "name": "Day Off",
+ "width": 480,
+ "height": 270,
+ "cast": [
+  {
+   "id": "sonic",
+   "name": "Sonic",
+   "gameId": "s1",
+   "character": "sonic"
+  },
+  {
+   "id": "tails",
+   "name": "Tails",
+   "gameId": "s2",
+   "character": "tails"
+  },
+  {
+   "id": "knuckles",
+   "name": "Knuckles",
+   "gameId": "s3k",
+   "character": "knuckles"
+  }
+ ],
+ "objectCast": [
+  {
+   "id": "moto",
+   "name": "Motobug",
+   "gameId": "s1",
+   "zone": 0,
+   "act": 0,
+   "objectId": 64,
+   "subtype": 0,
+   "layoutIndex": -1,
+   "sourceKind": "LAYOUT_OBJECT"
+  }
+ ],
+ "dialogueTypers": [
+  {
+   "id": "moto",
+   "framesPerGrapheme": 3,
+   "punctuationPauseFrames": 14,
+   "spacePauseFrames": 2
+  },
+  {
+   "id": "sonic",
+   "framesPerGrapheme": 1,
+   "punctuationPauseFrames": 6,
+   "spacePauseFrames": 0
+  },
+  {
+   "id": "knuckles",
+   "framesPerGrapheme": 2,
+   "punctuationPauseFrames": 10,
+   "spacePauseFrames": 0
+  },
+  {
+   "id": "tails",
+   "framesPerGrapheme": 2,
+   "punctuationPauseFrames": 8,
+   "spacePauseFrames": 0
+  }
+ ],
+ "dialogueSkins": [
+  {
+   "id": "moto",
+   "nameArgb": -38310,
+   "textArgb": -724504,
+   "panelArgb": -267118037,
+   "borderArgb": -4669236,
+   "decorationAsset": "decor/moto.png",
+   "decorationBorder": 6,
+   "padding": 8,
+   "pointer": true
+  },
+  {
+   "id": "sonic",
+   "nameArgb": -8408321,
+   "textArgb": -724504,
+   "panelArgb": -267379654,
+   "borderArgb": -12751648,
+   "decorationAsset": "decor/sonic.png",
+   "decorationBorder": 6,
+   "padding": 8,
+   "pointer": true
+  },
+  {
+   "id": "knuckles",
+   "nameArgb": -34166,
+   "textArgb": -724504,
+   "panelArgb": -265678824,
+   "borderArgb": -2609072,
+   "decorationAsset": "decor/knuckles.png",
+   "decorationBorder": 6,
+   "padding": 8,
+   "pointer": true
+  },
+  {
+   "id": "tails",
+   "nameArgb": -15526,
+   "textArgb": -724504,
+   "panelArgb": -265675252,
+   "borderArgb": -1007584,
+   "decorationAsset": "decor/tails.png",
+   "decorationBorder": 6,
+   "padding": 8,
+   "pointer": true
+  }
+ ],
+ "shots": [
+  {
+   "id": "patrol",
+   "durationFrames": 840,
+   "set": {
+    "gameId": "s1",
+    "zone": 0,
+    "act": 0
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 400,
+     "y": 715,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 379,
+     "x": 400,
+     "y": 715,
+     "interpolation": "SMOOTH"
+    },
+    {
+     "frame": 439,
+     "x": 586.0,
+     "y": 769.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    }
+   ],
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 580,
+      "y": 845,
+      "mode": "FREE",
+      "facing": "LEFT"
+     },
+     {
+      "frame": 327,
+      "x": 736.0,
+      "y": 849.0,
+      "mode": "PUPPET",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     },
+     {
+      "frame": 790,
+      "x": 736.0,
+      "y": 849.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 798,
+      "x": 744.0,
+      "y": 849.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 800,
+      "x": 746.0,
+      "y": 849.656,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 802,
+      "x": 748.0,
+      "y": 851.188,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 804,
+      "x": 750.0,
+      "y": 853.594,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 806,
+      "x": 752.0,
+      "y": 856.875,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 808,
+      "x": 754.0,
+      "y": 861.031,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 810,
+      "x": 756.0,
+      "y": 866.062,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 812,
+      "x": 758.0,
+      "y": 871.969,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 814,
+      "x": 760.0,
+      "y": 878.75,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 816,
+      "x": 762.0,
+      "y": 886.406,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 818,
+      "x": 764.0,
+      "y": 894.938,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 820,
+      "x": 766.0,
+      "y": 904.344,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 822,
+      "x": 768.0,
+      "y": 914.625,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 824,
+      "x": 770.0,
+      "y": 925.781,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 826,
+      "x": 772.0,
+      "y": 937.812,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 828,
+      "x": 774.0,
+      "y": 945.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     }
+    ]
+   },
+   "captions": [
+    {
+     "startFrame": 20,
+     "endFrame": 200,
+     "text": "GREEN HILL ZONE   9:00 AM",
+     "x": 14,
+     "y": 248,
+     "argb": -1
+    }
+   ],
+   "dialogue": [
+    {
+     "startFrame": 15,
+     "endFrame": 359,
+     "speakerActor": "moto",
+     "text": "Patrol... turn. Patrol...",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 274,
+     "y": 10,
+     "width": 196,
+     "height": 52,
+     "revealFrames": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      91,
+      93,
+      95,
+      97,
+      99,
+      101,
+      121,
+      123,
+      125,
+      127,
+      129,
+      131,
+      133,
+      135,
+      137,
+      139
+     ]
+    },
+    {
+     "startFrame": 459,
+     "endFrame": 519,
+     "speakerActor": "moto",
+     "text": "...",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 40
+    },
+    {
+     "startFrame": 529,
+     "endFrame": 659,
+     "speakerActor": "moto",
+     "text": "Thirty-five years of this.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 52
+    },
+    {
+     "startFrame": 669,
+     "endFrame": 785,
+     "speakerActor": "moto",
+     "text": "I need a day off.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 52
+    }
+   ],
+   "audio": [
+    {
+     "frame": 0,
+     "kind": "ROM_MUSIC",
+     "gameId": "s1",
+     "soundId": 129
+    },
+    {
+     "frame": 359,
+     "kind": "MUSIC_STOP"
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    },
+    {
+     "frame": 0,
+     "kind": "REMOVE_OBJECT",
+     "target": {
+      "layoutIndex": 1,
+      "objectId": 38,
+      "subtype": 6
+     }
+    }
+   ]
+  },
+  {
+   "id": "loop",
+   "durationFrames": 800,
+   "set": {
+    "gameId": "s1",
+    "zone": 0,
+    "act": 0
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 5260,
+     "y": 470,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 200,
+     "x": 5260,
+     "y": 470,
+     "interpolation": "SMOOTH"
+    },
+    {
+     "frame": 275,
+     "x": 5583,
+     "y": 440,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 292,
+     "x": 5703.0,
+     "y": 538.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    }
+   ],
+   "actors": {
+    "sonic": [
+     {
+      "frame": 0,
+      "x": 5100,
+      "y": 686
+     }
+    ]
+   },
+   "actions": {
+    "sonic": [
+     {
+      "id": "route.move.0",
+      "frame": 4,
+      "kind": "MOVE_TO",
+      "x": 5860.0,
+      "y": 620.0,
+      "urgency": 1.0,
+      "holdFrames": 0,
+      "target": {
+       "layoutIndex": -1,
+       "objectId": 0,
+       "subtype": 0,
+       "offsetX": 0.0,
+       "offsetY": 0.0
+      },
+      "condition": "NONE",
+      "timeoutFrames": 0,
+      "motion": {
+       "startingAction": "WALK",
+       "travelSpeed": "RUN",
+       "endingAction": "HARD_STOP",
+       "endingFacing": "LEFT"
+      }
+     },
+     {
+      "id": "route.stop.0",
+      "frame": 271,
+      "kind": "STOP",
+      "x": 0.0,
+      "y": 0.0,
+      "urgency": 0.0,
+      "holdFrames": 0,
+      "target": {
+       "layoutIndex": -1,
+       "objectId": 0,
+       "subtype": 0,
+       "offsetX": 0.0,
+       "offsetY": 0.0
+      },
+      "condition": "NONE",
+      "timeoutFrames": 0,
+      "motion": {
+       "startingAction": "WALK",
+       "travelSpeed": "RUN",
+       "endingAction": "HARD_STOP",
+       "endingFacing": "LEFT"
+      }
+     },
+     {
+      "id": "route.face.0",
+      "frame": 279,
+      "kind": "FACE_LEFT",
+      "x": 0.0,
+      "y": 0.0,
+      "urgency": 0.0,
+      "holdFrames": 0,
+      "target": {
+       "layoutIndex": -1,
+       "objectId": 0,
+       "subtype": 0,
+       "offsetX": 0.0,
+       "offsetY": 0.0
+      },
+      "condition": "NONE",
+      "timeoutFrames": 0,
+      "motion": {
+       "startingAction": "WALK",
+       "travelSpeed": "RUN",
+       "endingAction": "HARD_STOP",
+       "endingFacing": "LEFT"
+      }
+     },
+     {
+      "frame": 545,
+      "kind": "LOOK_UP",
+      "holdFrames": 40
+     },
+     {
+      "frame": 680,
+      "kind": "MOVE_TO",
+      "x": 6400,
+      "y": 621,
+      "urgency": 1.0
+     }
+    ]
+   },
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 5490.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 8,
+      "x": 5498.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 16,
+      "x": 5506.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 24,
+      "x": 5514.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 32,
+      "x": 5522.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 40,
+      "x": 5530.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 48,
+      "x": 5538.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 56,
+      "x": 5546.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 64,
+      "x": 5554.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 72,
+      "x": 5562.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 80,
+      "x": 5570.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 88,
+      "x": 5578.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 96,
+      "x": 5586.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 104,
+      "x": 5594.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 112,
+      "x": 5602.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 120,
+      "x": 5610.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 128,
+      "x": 5618.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 136,
+      "x": 5626.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 144,
+      "x": 5634.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 152,
+      "x": 5642.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 160,
+      "x": 5650.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 168,
+      "x": 5658.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 176,
+      "x": 5666.0,
+      "y": 689.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 184,
+      "x": 5674.0,
+      "y": 687.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 192,
+      "x": 5682.0,
+      "y": 683.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 200,
+      "x": 5690.0,
+      "y": 679.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 208,
+      "x": 5698.0,
+      "y": 675.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 216,
+      "x": 5706.0,
+      "y": 671.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 224,
+      "x": 5714.0,
+      "y": 667.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 232,
+      "x": 5722.0,
+      "y": 663.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 240,
+      "x": 5730.0,
+      "y": 659.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 248,
+      "x": 5738.0,
+      "y": 655.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 256,
+      "x": 5746.0,
+      "y": 651.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 264,
+      "x": 5754.0,
+      "y": 647.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 272,
+      "x": 5762.0,
+      "y": 643.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 280,
+      "x": 5770.0,
+      "y": 639.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 288,
+      "x": 5778.0,
+      "y": 636.2,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 296,
+      "x": 5786.0,
+      "y": 633.4,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 300,
+      "x": 5790.0,
+      "y": 632.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     },
+     {
+      "frame": 720,
+      "x": 5790.0,
+      "y": 632.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 728,
+      "x": 5798.0,
+      "y": 630.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 736,
+      "x": 5806.0,
+      "y": 628.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 744,
+      "x": 5814.0,
+      "y": 626.6,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 752,
+      "x": 5822.0,
+      "y": 625.8,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 760,
+      "x": 5830.0,
+      "y": 625.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 768,
+      "x": 5838.0,
+      "y": 625.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 776,
+      "x": 5846.0,
+      "y": 625.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 784,
+      "x": 5854.0,
+      "y": 625.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 792,
+      "x": 5862.0,
+      "y": 625.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     }
+    ]
+   },
+   "dialogue": [
+    {
+     "startFrame": 305,
+     "endFrame": 440,
+     "speakerActor": "sonic",
+     "text": "Uh... aren't you supposed to be chasing me?",
+     "skinId": "sonic",
+     "typerId": "sonic",
+     "x": 194,
+     "y": 10,
+     "width": 276,
+     "height": 52
+    },
+    {
+     "startFrame": 450,
+     "endFrame": 535,
+     "speakerActor": "moto",
+     "text": "Day off.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 40
+    },
+    {
+     "startFrame": 590,
+     "endFrame": 690,
+     "speakerActor": "sonic",
+     "text": "...Huh. Fair enough.",
+     "skinId": "sonic",
+     "typerId": "sonic",
+     "x": 314,
+     "y": 10,
+     "width": 156,
+     "height": 52
+    }
+   ],
+   "audio": [
+    {
+     "frame": 0,
+     "kind": "ROM_MUSIC",
+     "gameId": "s1",
+     "soundId": 129
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    }
+   ]
+  },
+  {
+   "id": "ehz",
+   "durationFrames": 700,
+   "set": {
+    "gameId": "s2",
+    "zone": 0,
+    "act": 0
+   },
+   "transition": {
+    "kind": "WIPE_RIGHT",
+    "durationFrames": 24
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 40,
+     "y": 455,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 196,
+     "x": 120.0,
+     "y": 550.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    }
+   ],
+   "actors": {
+    "tails": [
+     {
+      "frame": 0,
+      "x": 290,
+      "y": 650,
+      "facing": "LEFT"
+     }
+    ]
+   },
+   "actions": {
+    "tails": [
+     {
+      "frame": 548,
+      "kind": "JUMP",
+      "holdFrames": 14
+     },
+     {
+      "frame": 549,
+      "kind": "WAIT",
+      "condition": "GROUNDED",
+      "timeoutFrames": 90
+     },
+     {
+      "frame": 550,
+      "kind": "FACE_RIGHT"
+     }
+    ]
+   },
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 0.0,
+      "y": 657,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 8,
+      "x": 8.0,
+      "y": 657,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 16,
+      "x": 16.0,
+      "y": 657,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 24,
+      "x": 24.0,
+      "y": 657.8,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 32,
+      "x": 32.0,
+      "y": 659.4,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 40,
+      "x": 40.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 48,
+      "x": 48.0,
+      "y": 661.4,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 56,
+      "x": 56.0,
+      "y": 661.8,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 64,
+      "x": 64.0,
+      "y": 661.8,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 72,
+      "x": 72.0,
+      "y": 661.4,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 80,
+      "x": 80.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 88,
+      "x": 88.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 96,
+      "x": 96.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 104,
+      "x": 104.0,
+      "y": 660.2,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 112,
+      "x": 112.0,
+      "y": 658.6,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 120,
+      "x": 120.0,
+      "y": 657.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 128,
+      "x": 128.0,
+      "y": 657.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 136,
+      "x": 136.0,
+      "y": 657.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 144,
+      "x": 144.0,
+      "y": 657.4,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 152,
+      "x": 152.0,
+      "y": 658.2,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 160,
+      "x": 160.0,
+      "y": 659.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 168,
+      "x": 168.0,
+      "y": 659.8,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 176,
+      "x": 176.0,
+      "y": 660.6,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 184,
+      "x": 184.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 190,
+      "x": 190.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     },
+     {
+      "frame": 470,
+      "x": 190.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 478,
+      "x": 198.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 486,
+      "x": 206.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 494,
+      "x": 214.0,
+      "y": 661.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 502,
+      "x": 222.0,
+      "y": 660.7,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 510,
+      "x": 230.0,
+      "y": 659.5,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 518,
+      "x": 238.0,
+      "y": 658.3,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 526,
+      "x": 246.0,
+      "y": 656.5,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 534,
+      "x": 254.0,
+      "y": 654.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 542,
+      "x": 262.0,
+      "y": 652.5,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 550,
+      "x": 270.0,
+      "y": 650.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 558,
+      "x": 278.0,
+      "y": 648.5,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 566,
+      "x": 286.0,
+      "y": 646.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 574,
+      "x": 294.0,
+      "y": 644.5,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 582,
+      "x": 302.0,
+      "y": 642.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 590,
+      "x": 310.0,
+      "y": 640.5,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 598,
+      "x": 318.0,
+      "y": 638.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 606,
+      "x": 326.0,
+      "y": 636.5,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 614,
+      "x": 334.0,
+      "y": 634.5,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 622,
+      "x": 342.0,
+      "y": 632.6,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 630,
+      "x": 350.0,
+      "y": 631.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 638,
+      "x": 358.0,
+      "y": 629.4,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 646,
+      "x": 366.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 654,
+      "x": 374.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 662,
+      "x": 382.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 670,
+      "x": 390.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 678,
+      "x": 398.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 686,
+      "x": 406.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 694,
+      "x": 414.0,
+      "y": 629.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     }
+    ]
+   },
+   "captions": [
+    {
+     "startFrame": 30,
+     "endFrame": 190,
+     "text": "EMERALD HILL ZONE   10:00 AM",
+     "x": 14,
+     "y": 248,
+     "argb": -1
+    }
+   ],
+   "dialogue": [
+    {
+     "startFrame": 215,
+     "endFrame": 345,
+     "speakerActor": "tails",
+     "text": "Wait... aren't you from Sonic 1?",
+     "skinId": "tails",
+     "typerId": "tails",
+     "x": 274,
+     "y": 10,
+     "width": 196,
+     "height": 52
+    },
+    {
+     "startFrame": 355,
+     "endFrame": 460,
+     "speakerActor": "moto",
+     "text": "Long drive.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 40
+    }
+   ],
+   "audio": [
+    {
+     "frame": 8,
+     "kind": "ROM_MUSIC",
+     "gameId": "s2",
+     "soundId": 129
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    }
+   ]
+  },
+  {
+   "id": "island",
+   "durationFrames": 918,
+   "set": {
+    "gameId": "s3k",
+    "zone": 0,
+    "act": 0
+   },
+   "transition": {
+    "kind": "WIPE_RIGHT",
+    "durationFrames": 24
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 4872,
+     "y": 860,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 426,
+     "x": 4931.0,
+     "y": 962.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    }
+   ],
+   "actors": {
+    "knuckles": [
+     {
+      "frame": 0,
+      "x": 5460,
+      "y": 1051,
+      "facing": "LEFT"
+     }
+    ]
+   },
+   "actions": {
+    "knuckles": [
+     {
+      "frame": 300,
+      "kind": "JUMP",
+      "holdFrames": 16
+     },
+     {
+      "frame": 318,
+      "kind": "GLIDE_TO",
+      "x": 4950,
+      "y": 1051,
+      "urgency": 1.0
+     },
+     {
+      "frame": 393,
+      "kind": "RELEASE"
+     },
+     {
+      "frame": 394,
+      "kind": "WAIT",
+      "condition": "GROUNDED",
+      "timeoutFrames": 200
+     },
+     {
+      "frame": 395,
+      "kind": "STOP"
+     }
+    ]
+   },
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 4840.0,
+      "y": 1056,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 8,
+      "x": 4848.0,
+      "y": 1056.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 16,
+      "x": 4856.0,
+      "y": 1056.067,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 24,
+      "x": 4864.0,
+      "y": 1056.6,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 32,
+      "x": 4872.0,
+      "y": 1056.867,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 40,
+      "x": 4880.0,
+      "y": 1056.333,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 48,
+      "x": 4888.0,
+      "y": 1055.8,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 56,
+      "x": 4896.0,
+      "y": 1055.267,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 64,
+      "x": 4904.0,
+      "y": 1054.733,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 72,
+      "x": 4912.0,
+      "y": 1054.2,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 80,
+      "x": 4920.0,
+      "y": 1054.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 88,
+      "x": 4928.0,
+      "y": 1054.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 96,
+      "x": 4936.0,
+      "y": 1054.0,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 104,
+      "x": 4944.0,
+      "y": 1054.0,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 112,
+      "x": 4952.0,
+      "y": 1054.467,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 120,
+      "x": 4960.0,
+      "y": 1055.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 128,
+      "x": 4968.0,
+      "y": 1055.533,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 136,
+      "x": 4976.0,
+      "y": 1056.067,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 144,
+      "x": 4984.0,
+      "y": 1056.6,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 152,
+      "x": 4992.0,
+      "y": 1056.867,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 160,
+      "x": 5000.0,
+      "y": 1056.333,
+      "mode": "POSE",
+      "pose": 0,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 168,
+      "x": 5008.0,
+      "y": 1055.8,
+      "mode": "POSE",
+      "pose": 1,
+      "facing": "RIGHT",
+      "interpolation": "LINEAR"
+     },
+     {
+      "frame": 170,
+      "x": 5010.0,
+      "y": 1055.667,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     },
+     {
+      "frame": 230,
+      "x": 5010.0,
+      "y": 1055.667,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "LEFT",
+      "interpolation": "HOLD"
+     },
+     {
+      "frame": 275,
+      "x": 5010.0,
+      "y": 1055.667,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "RIGHT",
+      "interpolation": "HOLD"
+     }
+    ]
+   },
+   "captions": [
+    {
+     "startFrame": 30,
+     "endFrame": 210,
+     "text": "ANGEL ISLAND ZONE   11:00 AM",
+     "x": 14,
+     "y": 248,
+     "argb": -1
+    }
+   ],
+   "dialogue": [
+    {
+     "startFrame": 448,
+     "endFrame": 573,
+     "speakerActor": "knuckles",
+     "text": "Hey! No badniks on my island!",
+     "skinId": "knuckles",
+     "typerId": "knuckles",
+     "x": 274,
+     "y": 10,
+     "width": 196,
+     "height": 52
+    },
+    {
+     "startFrame": 583,
+     "endFrame": 663,
+     "speakerActor": "moto",
+     "text": "Day off.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 40
+    },
+    {
+     "startFrame": 683,
+     "endFrame": 793,
+     "speakerActor": "knuckles",
+     "text": "...Badniks get days off?",
+     "skinId": "knuckles",
+     "typerId": "knuckles",
+     "x": 314,
+     "y": 10,
+     "width": 156,
+     "height": 52
+    },
+    {
+     "startFrame": 803,
+     "endFrame": 888,
+     "speakerActor": "moto",
+     "text": "They do now.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 40
+    }
+   ],
+   "audio": [
+    {
+     "frame": 0,
+     "kind": "ROM_MUSIC",
+     "gameId": "s3k",
+     "soundId": 1
+    },
+    {
+     "frame": 280,
+     "kind": "ROM_MUSIC",
+     "gameId": "s3k",
+     "soundId": 31
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    }
+   ]
+  },
+  {
+   "id": "ledge",
+   "durationFrames": 760,
+   "set": {
+    "gameId": "s3k",
+    "zone": 0,
+    "act": 0
+   },
+   "transition": {
+    "kind": "FADE_BLACK",
+    "durationFrames": 40
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 5988,
+     "y": 604.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    },
+    {
+     "frame": 560,
+     "x": 5988,
+     "y": 604.5,
+     "zoom": 2,
+     "interpolation": "SMOOTH"
+    },
+    {
+     "frame": 740,
+     "x": 5988,
+     "y": 494.5,
+     "zoom": 2,
+     "interpolation": "HOLD"
+    }
+   ],
+   "actors": {
+    "knuckles": [
+     {
+      "frame": 0,
+      "x": 6128,
+      "y": 703
+     }
+    ],
+    "sonic": [
+     {
+      "frame": 0,
+      "x": 6082,
+      "y": 703
+     }
+    ],
+    "tails": [
+     {
+      "frame": 0,
+      "x": 6040,
+      "y": 707
+     }
+    ]
+   },
+   "actions": {
+    "knuckles": [
+     {
+      "frame": 90,
+      "kind": "CROUCH",
+      "holdFrames": 420
+     }
+    ],
+    "sonic": [
+     {
+      "frame": 230,
+      "kind": "LOOK_UP",
+      "holdFrames": 180
+     }
+    ]
+   },
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 6176,
+      "y": 706.0,
+      "mode": "POSE",
+      "pose": 2,
+      "facing": "LEFT",
+      "interpolation": "HOLD"
+     }
+    ]
+   },
+   "captions": [
+    {
+     "startFrame": 40,
+     "endFrame": 200,
+     "text": "LATER",
+     "x": 14,
+     "y": 248,
+     "argb": -1
+    }
+   ],
+   "dialogue": [
+    {
+     "startFrame": 300,
+     "endFrame": 580,
+     "speakerActor": "moto",
+     "text": "Best. Day. Ever.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 10,
+     "y": 10,
+     "width": 156,
+     "height": 52,
+     "revealFrames": [
+      0,
+      3,
+      6,
+      9,
+      12,
+      50,
+      53,
+      56,
+      59,
+      62,
+      100,
+      103,
+      106,
+      109,
+      112,
+      115
+     ]
+    }
+   ],
+   "audio": [
+    {
+     "frame": 0,
+     "kind": "ROM_MUSIC",
+     "gameId": "s3k",
+     "soundId": 47
+    },
+    {
+     "frame": 400,
+     "kind": "ROM_MUSIC",
+     "gameId": "s3k",
+     "soundId": 41
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    },
+    {
+     "frame": 0,
+     "kind": "REMOVE_OBJECT",
+     "target": {
+      "layoutIndex": 4,
+      "objectId": 1,
+      "subtype": 4
+     }
+    },
+    {
+     "frame": 0,
+     "kind": "REMOVE_OBJECT",
+     "target": {
+      "layoutIndex": 5,
+      "objectId": 1,
+      "subtype": 3
+     }
+    }
+   ]
+  },
+  {
+   "id": "morning",
+   "durationFrames": 480,
+   "set": {
+    "gameId": "s1",
+    "zone": 0,
+    "act": 0
+   },
+   "transition": {
+    "kind": "FADE_BLACK",
+    "durationFrames": 40
+   },
+   "camera": [
+    {
+     "frame": 0,
+     "x": 400,
+     "y": 715,
+     "interpolation": "HOLD"
+    }
+   ],
+   "objects": {
+    "moto": [
+     {
+      "frame": 0,
+      "x": 580,
+      "y": 845,
+      "mode": "FREE",
+      "facing": "LEFT"
+     }
+    ]
+   },
+   "captions": [
+    {
+     "startFrame": 30,
+     "endFrame": 210,
+     "text": "NEXT MORNING",
+     "x": 14,
+     "y": 248,
+     "argb": -1
+    }
+   ],
+   "dialogue": [
+    {
+     "startFrame": 45,
+     "endFrame": 146,
+     "speakerActor": "moto",
+     "text": "Patrol... turn.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 314,
+     "y": 10,
+     "width": 156,
+     "height": 52,
+     "revealFrames": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      61,
+      63,
+      65,
+      67,
+      69,
+      71
+     ]
+    },
+    {
+     "startFrame": 186,
+     "endFrame": 476,
+     "speakerActor": "moto",
+     "text": "...Only 364 days to go.",
+     "skinId": "moto",
+     "typerId": "moto",
+     "x": 314,
+     "y": 10,
+     "width": 156,
+     "height": 52
+    }
+   ],
+   "audio": [
+    {
+     "frame": 0,
+     "kind": "ROM_MUSIC",
+     "gameId": "s1",
+     "soundId": 129
+    }
+   ],
+   "worldCommands": [
+    {
+     "frame": 0,
+     "kind": "CLEAR_BADNIKS"
+    },
+    {
+     "frame": 0,
+     "kind": "REMOVE_OBJECT",
+     "target": {
+      "layoutIndex": 1,
+      "objectId": 38,
+      "subtype": 6
+     }
+    }
+   ]
+  }
+ ]
+}
