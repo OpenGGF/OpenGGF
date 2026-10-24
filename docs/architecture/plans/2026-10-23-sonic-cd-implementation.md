@@ -1842,3 +1842,48 @@ registered, camera focus stays null, and the stock profile still holds. There
 is no claim of live player movement, source-native SAT/occlusion/culling,
 physical DMA timing, complete opening-route or whole-game parity. The ongoing
 mode/body/frame work must supply those consumers through the existing loop.
+
+## Native player MODE and body calls — 24 October 2026
+
+The immutable MODE owner now composes actual CD charge, trig, terrain probes
+and paired ground collision for the four normal ground/air/roll/jump dispatches.
+It preserves complete centre fractions, separate prior actor angle copies and
+source global buffers. Jump return and unfinished KillPlayer continuations are
+typed boundaries; the owner performs neither predispatch charge advancement nor
+Main-tail animation/history/angle copying. Unsupported native predicates reject
+rather than publishing an incomplete result. A caller-visible local register
+effect is explicit: ObjGetFloorDist clobbers d5 to 13 on the path that reaches
+it; later ground settling uses 13 without changing global acceleration 12.
+
+Astra's source review found one production error and two authored expectation
+errors before import. Downward landing read the low velocity byte instead of
+the first byte of the native big-endian word; the correction changes only that
+extraction. A side-air expectation had dropped C000 fractions, and a roll death
+boundary expectation omitted the preceding five-pixel unroll. Their production
+paths already behaved as the source requires. Frozen R1 and R2 external sources
+and reports remain separate, preserving the rejected interpretation.
+
+At parent `1fe96ac59` plus the imported MODE and body sources, parent62385 ran
+corrected distinguishing tests against R1 production: three tests, exactly two
+expected assertion failures, zero errors/skips, Java25. The 0138 landing row
+passed; 01F8 wrongly remained airborne, and the two-distance -10 case wrongly
+landed. After replacing only movement production with R2, parent6081 compiled
+and passed all78 MODE cases plus58 Init/Main body cases:136 tests, zero
+failures/errors/skips. Queue wait0s for both; Maven execution1m22s and1m26s.
+Both completed XML identities and Java25 properties were inspected. Commands
+from the private worktree, with display variables unset and Lua5.4 selected:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=com.openggf.game.soniccd.player.TestCdPlayerMovement#postGravity0138And01F8ShareHighMemoryByteLandingThreshold+bothFloorSensorsBelowNegativeNineRejectLanding' test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=com.openggf.game.soniccd.player.TestCdPlayerMovement,com.openggf.game.soniccd.level.TestCdPlayerBody' test -B
+```
+
+The body composes predispatch, routine0 Init-only or admitted routine2 Main,
+source camera extension, control-lock retention, display eligibility, complete
+history bytes, angle copies, animation and the explicitly empty development
+touch scan. Its58 passing cases are constructed-data tests, not a retail route;
+independent Body source review and normal actor/frame integration remain pending
+at this checkpoint. All effects are staged until complete return; sounds stay
+typed observations with no driver playback. No player is yet registered in the
+normal stock world. Broad smoke remains incomplete, and these finite results
+establish neither a playable opening route nor USA/full-regional parity.

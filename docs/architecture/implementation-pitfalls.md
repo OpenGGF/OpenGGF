@@ -23,6 +23,17 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**A byte memory operand at a native word reads its high byte.** The 68000 is
+big-endian: CD `Player_LvlColAir_Down` reads `move.b oYVel(a0),d2`, with no
+`+1`, then ADDQ.B/NEG.B and signed byte distance comparisons
+(`scddisasm/src/Level/_Objects/Sonic/Main.asm:2093-2099`). Extract velocity
+bits 15..8 before the byte arithmetic. A byte operation on a data register
+instead uses its low byte. Post-gravity velocities 0138 and 01F8 therefore
+share threshold -9. R1 incorrectly read the low byte and its authored test
+endorsed the same error; an independent source review and distinguishing
+landing/rejection tests exposed it. Preserve fractions through later word-only
+position corrections. See the [MODE correction evidence](plans/2026-10-23-sonic-cd-implementation.md#native-player-mode-and-body-calls--24-october-2026).
+
 **An MMD relocation may copy resident Word RAM beyond the file.** Sonic CD's
 `RunMMD` (`scddisasm/src/CD Initial Program/IPX.asm:1323-1340`) checks the full
 entry long, then copies an unsigned DBF count from Word RAM plus the 256-byte
