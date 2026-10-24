@@ -375,6 +375,192 @@ class TestNativeSpriteOwnershipPixels {
         }
     }
 
+    @Test
+    void depthRenderbufferTargetsPreservePixelsDepthAndStateAfterDrawAndQueuedFailure() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(true);
+            fixture.clear(0);
+            fixture.sat(1, false, false, 2, true); // retire initial palette residency before foreign-state setup
+            FboHelper.FboHandle scene = FboHelper.createWithDepth(352, 256, GL_CLAMP_TO_EDGE);
+            assertNotNull(scene);
+            FboHelper.FboHandle foreignRead = null;
+            try {
+                foreignRead = FboHelper.createColorOnly(16, 16, GL_CLAMP_TO_EDGE);
+                assertNotNull(foreignRead);
+                fixture.clear(scene.fboId());
+                glDepthMask(true);
+                glClearDepth(.25);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_SCISSOR_TEST);
+                glScissor(320, 224, 32, 32);
+                glClearDepth(.75);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                glDisable(GL_SCISSOR_TEST);
+                byte[] original = depth(scene, 352, 256);
+                assertFalse(java.util.Arrays.equals(java.util.Arrays.copyOfRange(original, 0, 32 * 2),
+                        java.util.Arrays.copyOfRange(original, (224 * 352 + 320) * 2, (224 * 352 + 352) * 2)),
+                        "Positive control: depth sentinels differ outside the viewport");
+                for (int replay = 0; replay < 3; replay++) {
+                    fixture.clear(scene.fboId());
+                    glBindFramebuffer(GL_READ_FRAMEBUFFER, foreignRead.fboId());
+                    glReadBuffer(GL_NONE);
+                    glBindRenderbuffer(GL_RENDERBUFFER, scene.depthId());
+                    glEnable(GL_DEPTH_TEST);
+                    glDepthMask(true);
+                    glEnable(GL_STENCIL_TEST);
+                    glStencilFuncSeparate(GL_FRONT, GL_NEVER, 3, 0x7F);
+                    glStencilFuncSeparate(GL_BACK, GL_LESS, 9, 0x37);
+                    glStencilMaskSeparate(GL_FRONT, 0x5A);
+                    glStencilMaskSeparate(GL_BACK, 0xA5);
+                    glEnable(GL_SCISSOR_TEST);
+                    glScissor(32, 170, 24, 24);
+                    List<Integer> before = state();
+                    int scratch;
+                    try (var ignored = NativeSpriteOwnership.open(fixture.graphics)) {
+                        scratch = packedScratchDepth(scene, 352, 256, 0);
+                    }
+                    assertFalse(glIsRenderbuffer(scratch), "The scratch image must be deleted on normal close");
+                    assertEquals(before, state());
+                    if (replay == 0) fixture.sat(1, false, false, 2, true);
+                    else fixture.layers(replay == 2, new ReplayLayer(1, true, .5f), new ReplayLayer(2, true, null));
+                    assertEquals(before, state());
+                    ByteBuffer shown = pixels(scene.fboId());
+                    if (replay == 0) pixel(shown, 41, 42, 3);
+                    else rgb(shown, 41, 42, 128, 128, 0);
+                    pixel(shown, 46, 42, 2);
+                    assertDepthTargetRestored(scene, 352, 256, original);
+                    int[] failedScratch = {0};
+                    Runnable failDraw = () -> fixture.graphics.registerCommand((x, y, width, height) -> {
+                        failedScratch[0] = packedScratchDepth(scene, 352, 256, 0);
+                        throw new IllegalStateException("injected depth target draw failure");
+                    });
+                    boolean layered = replay != 0;
+                    IllegalStateException failure = assertThrows(IllegalStateException.class, () ->
+                            fixture.graphics.executeCapturedCommands(() -> {
+                                if (layered) SpriteSatInternalAccess.replayNativeLayers(fixture.graphics,
+                                        List.of(false, true), Boolean::booleanValue,
+                                        span -> { if (span.getFirst()) failDraw.run(); });
+                                else fixture.graphics.withNativeSpriteOwnership(failDraw);
+                            }, 0, 0, 320, 224));
+                    assertEquals("injected depth target draw failure", failure.getMessage());
+                    assertTrue(failedScratch[0] != 0);
+                    assertFalse(glIsRenderbuffer(failedScratch[0]), "Queued failure must delete the scratch image");
+                    assertEquals(before, state());
+                    assertDepthTargetRestored(scene, 352, 256, original);
+                    assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
+                    assertEquals(GL_NO_ERROR, glGetError());
+                }
+            } finally {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glBindRenderbuffer(GL_RENDERBUFFER, 0);
+                FboHelper.destroy(foreignRead);
+                FboHelper.destroy(scene);
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
+        }
+    }
+
+    @Test
+    void depthRenderbufferAndStateSurviveBeginFailureAfterScratchInstallation() throws Exception {
+        assumeTrue(PresentationOffscreenTestContext.requested(), "requires owned surfaceless EGL");
+        try (Fixture fixture = new Fixture()) {
+            fixture.terrain(false);
+            FboHelper.FboHandle scene = FboHelper.createWithDepth(320, 224, GL_CLAMP_TO_EDGE);
+            assertNotNull(scene);
+            try {
+                fixture.clear(scene.fboId());
+                glDepthMask(true);
+                glClearDepth(.375);
+                glClear(GL_DEPTH_BUFFER_BIT);
+                byte[] original = depth(scene, 320, 224);
+                glBindRenderbuffer(GL_RENDERBUFFER, scene.depthId());
+                glEnable(GL_DEPTH_TEST);
+                glEnable(GL_STENCIL_TEST);
+                glStencilMaskSeparate(GL_FRONT, 0x5A);
+                glStencilMaskSeparate(GL_BACK, 0xA5);
+                glEnable(GL_SCISSOR_TEST);
+                glScissor(32, 170, 24, 24);
+                List<Integer> before = state();
+                assertEquals(GL_NO_ERROR, glGetError(), "The only GL error below must be the deliberate injection");
+                glEnable(-1); // Deliberate GL_INVALID_ENUM, consumed only by the post-install coverage-clear check.
+                IllegalStateException failure = assertThrows(IllegalStateException.class, () -> {
+                    try (var ignored = NativeSpriteOwnership.open(fixture.graphics)) {
+                        fail("The injected GL error must fail begin after installing scratch coverage");
+                    }
+                });
+                assertEquals("clearing native SAT coverage: GL error 0x500", failure.getMessage());
+                assertEquals(0, failure.getSuppressed().length);
+                assertEquals(before, state());
+                assertDepthTargetRestored(scene, 320, 224, original);
+                assertFalse(fixture.graphics.nativeSpriteOwnershipActive());
+                assertEquals(GL_NO_ERROR, glGetError(), "The deliberate GL_INVALID_ENUM must have been consumed");
+            } finally {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glBindRenderbuffer(GL_RENDERBUFFER, 0);
+                FboHelper.destroy(scene);
+            }
+        }
+    }
+
+    private static int packedScratchDepth(FboHelper.FboHandle scene, int width, int height, int samples) {
+        assertEquals(GL_RENDERBUFFER, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+        int scratch = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        assertNotEquals(scene.depthId(), scratch);
+        assertEquals(GL_RENDERBUFFER, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+        assertEquals(scratch, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME));
+        int binding = glGetInteger(GL_RENDERBUFFER_BINDING);
+        try {
+            glBindRenderbuffer(GL_RENDERBUFFER, scratch);
+            assertEquals(width, glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH));
+            assertEquals(height, glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT));
+            assertEquals(samples, glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES));
+            assertEquals(GL_DEPTH24_STENCIL8, glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_INTERNAL_FORMAT));
+        } finally { glBindRenderbuffer(GL_RENDERBUFFER, binding); }
+        assertFalse(glIsEnabled(GL_DEPTH_TEST));
+        assertFalse(glGetBoolean(GL_DEPTH_WRITEMASK));
+        assertEquals(GL_FRAMEBUFFER_COMPLETE, glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+        return scratch;
+    }
+
+    private static void assertDepthTargetRestored(FboHelper.FboHandle scene, int width, int height, byte[] original) {
+        assertEquals(scene.fboId(), glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING));
+        assertEquals(GL_RENDERBUFFER, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+        assertEquals(scene.depthId(), glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME));
+        assertEquals(GL_TEXTURE, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+        assertEquals(scene.textureId(), glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME));
+        assertEquals(GL_NONE, glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                GL_STENCIL_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE));
+        assertEquals(GL_FRAMEBUFFER_COMPLETE, glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
+        assertArrayEquals(original, depth(scene, width, height), "The foreign depth image, including off-viewport sentinels, is untouched");
+    }
+
+    private static byte[] depth(FboHelper.FboHandle scene, int width, int height) {
+        int read = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        try {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, scene.fboId());
+            ByteBuffer data = BufferUtils.createByteBuffer(width * height * 2);
+            glReadPixels(0, 0, width, height, GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, data);
+            byte[] bytes = new byte[data.remaining()]; data.get(bytes); return bytes;
+        } finally { glBindFramebuffer(GL_READ_FRAMEBUFFER, read); }
+    }
+
+    private static ByteBuffer pixels(int framebuffer) {
+        int read = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        try {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffer);
+            return pixels();
+        } finally { glBindFramebuffer(GL_READ_FRAMEBUFFER, read); }
+    }
+
     private static SpritePresentation.Tile tile(int pattern, boolean high, boolean flip, int start, int end) {
         return new SpritePresentation.Tile(SpritePresentation.Layer.OBJECT, pattern, 0, flip, false, high,
                 40, 40, 8, 8, true, 0xF, false, 1, start, end);
@@ -420,6 +606,7 @@ class TestNativeSpriteOwnershipPixels {
     private static List<Integer> state() {
         List<Integer> values = new ArrayList<>();
         for (int name : new int[]{GL_DRAW_FRAMEBUFFER_BINDING, GL_READ_FRAMEBUFFER_BINDING, GL_RENDERBUFFER_BINDING,
+                GL_READ_BUFFER, GL_DRAW_BUFFER0,
                 GL_CURRENT_PROGRAM, GL_VERTEX_ARRAY_BINDING, GL_ARRAY_BUFFER_BINDING, GL_ACTIVE_TEXTURE,
                 GL_STENCIL_FUNC, GL_STENCIL_REF, GL_STENCIL_VALUE_MASK, GL_STENCIL_WRITEMASK,
                 GL_STENCIL_FAIL, GL_STENCIL_PASS_DEPTH_FAIL, GL_STENCIL_PASS_DEPTH_PASS,
@@ -430,7 +617,9 @@ class TestNativeSpriteOwnershipPixels {
             values.add(glGetInteger(name));
         }
         for (int name : new int[]{GL_STENCIL_TEST, GL_SCISSOR_TEST, GL_DEPTH_TEST, GL_BLEND}) values.add(glIsEnabled(name) ? 1 : 0);
-        int[] box = new int[4]; glGetIntegerv(GL_SCISSOR_BOX, box);
+        int[] box = new int[4]; glGetIntegerv(GL_VIEWPORT, box);
+        for (int component : box) values.add(component);
+        glGetIntegerv(GL_SCISSOR_BOX, box);
         for (int component : box) values.add(component);
         values.add(glGetVertexAttribi(1, GL_VERTEX_ATTRIB_ARRAY_ENABLED));
         int active = glGetInteger(GL_ACTIVE_TEXTURE);

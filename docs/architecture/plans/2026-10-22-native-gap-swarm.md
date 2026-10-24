@@ -5446,3 +5446,144 @@ push, body/draft change, Main/develop mutation or manual CI dispatch. Root will
 receive the committed successor once by ancestry and prepare an updated smoke
 selection/count/cost/stopping-rule plan. Any new broad/manual-CI execution still
 requires explicit Farrell approval; the old f340 approval is not reusable.
+
+## 2026-10-24 — native ownership on renderbuffer-depth scene targets
+
+This bounded leaf starts from sole parent
+`3da9b979538ece909ad5d39a82f58d2c9b417534` in isolated worktree
+`<task-worktree>`, branch
+`bugfix/ai-pr223-native-depth-stencil-20261024`. The parent supplied two original
+3da errors in
+`TestStageplayLiveWorldRendering#nativeBodiesAppearAtTheResolvedDirectorCoordinatesWithoutTicking(String)`:
+`[4]` (`air`, `live-air-traffic`) failed on the frame-115 draw at original test
+line 49; `[5]` (`boundary`, `one-more-take`) failed on its initial frame-35 draw
+at original line 41, before its frame-1375 and frame-2255 draws. Both reported
+`NativeSpriteOwnership.requireComplete` status `0x8CDD` (`UNSUPPORTED`). This is
+supplied reproduction evidence, not a new baseline run or proof of newness or a
+particular driver's cause. The parent's broad source, targets and jobs were not
+read, changed or observed by this leaf.
+
+Source inspection identified the concrete portability gap: Stageplay's private
+tile target uses `FboHelper.createWithDepth`, an RGBA8 colour texture plus a D16
+depth renderbuffer without stencil or multisampling. Native ownership previously
+left that depth image attached while appending a separate S8 image. Simultaneous
+depth and stencil support is guaranteed for the same packed image, not that
+separate D16/S8 combination. Retaining separate S8 on this caller was therefore
+rejected; the observed unsupported status is consistent with that gap without
+establishing its exact driver cause.
+
+For the no-stencil, depth-renderbuffer case only, ownership now captures the
+foreign renderbuffer identity, width, height and sample count, allocates one
+owned D24S8 image, and attaches it to both depth and stencil. Depth testing and
+writes remain disabled during native drawing. The foreign image is detached,
+never cleared, copied, reallocated or drawn into; normal close, queued draw
+failure and begin failure restore its exact attachment and remove scratch
+stencil. The changed-attachment flag is set before either installation call.
+Colour-only S8 and existing-stencil backup/format/copy paths, native FIFO,
+first-opaque ownership, ghost order, palette masks, SHADOW_15 and SAT budgets
+retain their previous behavior. No shared FBO helper or public API changed.
+
+The two added cases in `TestNativeSpriteOwnershipPixels` were authored before
+the production edit:
+
+- `depthRenderbufferTargetsPreservePixelsDepthAndStateAfterDrawAndQueuedFailure`
+  uses real `createWithDepth(352,256)` with a 320×224 viewport, ordinary native
+  first-opaque drawing and both live/published ghost replay. It checks original
+  depth/colour attachment identity, full-image depth bytes with distinct
+  off-viewport sentinels, packed scratch dimensions and single-sample metadata,
+  bindings, read/draw buffers, viewport and graphics state after success and
+  queued draw failure, plus deletion of the captured scratch object names.
+- `depthRenderbufferAndStateSurviveBeginFailureAfterScratchInstallation`
+  deliberately injects `GL_INVALID_ENUM`; it requires the exact
+  `clearing native SAT coverage: GL error 0x500` failure after scratch installation
+  and verifies original attachment, depth bytes and state restoration. This is
+  an asserted negative control, not an unexpected validation error. Existing
+  injected draw failures and shadow validation/producer failures likewise remain
+  source-asserted negative controls.
+
+The Stageplay fixture now calls `GraphicsManager.cleanup()` in a local finally
+inside its boot try-with-resources, after private world/readback resources close
+and while its context is current. Removing only this wrapper reconstructs the
+entire old test file exactly: all five `first`, `hud`, `platform`, `air`,
+`boundary` parameters, frame bounds (0; 35; 35; 115; 35→1375→2255), coordinates
+and assertions are unchanged. Removing the added pixel cases/helpers and expanded
+state snapshot likewise reconstructs the old pixel test file exactly.
+
+### One affected request and actual readback
+
+The frozen three-source patch SHA-256 was
+`ddba47513a9b4c5caeaaf1aefc9bf1a7173074ed9e312af3a7c4da2e57b25813`.
+Post-run source SHA-256 values matched the reviewed pre-run values exactly:
+
+```text
+NativeSpriteOwnership.java        cd81980870d32b86908f058ef8684caa9b23faf9beaea91a8b210e71175fe0c2
+TestNativeSpriteOwnershipPixels   7a518f4012705d322c6a13baf9a093975de3185b5f8b97d81a44cfdb7d7b7ca9
+TestStageplayLiveWorldRendering   3b9329049e639811b9a5d511aec2355d0ebf344c7d88d49582a03813d667e2ca
+```
+
+Fresh reads of the three original stock ROM files named below matched the documented
+CRC32/SHA-1 identities: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 REV01 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3&K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROM links or copies were created.
+No owned Maven request was already queued/running. The current Main wrapper at
+`97eb86f186b432722024ca419a00b901b38f5ec2` had SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`;
+its static local-import closure also matched after execution. The sole command
+ran from the isolated worktree. This portable transcription uses `OPENGGF_MAIN`
+for the original Main checkout; the literal absolute argv was registered before
+execution in the task's external lifecycle registry:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.graphics.TestNativeSpriteOwnershipPixels,com.openggf.graphics.TestNativeShadow15Pixels,com.openggf.graphics.TestSpriteSatReplayPixels,com.openggf.stageplay.runtime.TestStageplayLiveWorldRendering' \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The launched environment used `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null`, `EGL_PLATFORM=surfaceless` and
+`PYTHONDONTWRITEBYTECODE=1`, with JDK bin first on PATH. Ambient JVM/Maven,
+desktop and graphics-driver overrides were removed. No standalone build,
+preflight or version probe preceded this one normal request; no retry, narrowed
+selector, custom timeout or resource override followed it. Command session
+`38860`, wrapper PID `1877905`, exact argv, source/import/ROM pins and handle were
+registered before result interpretation.
+
+The original request completed at `2026-10-24T12:33:16Z`, exit 0. Its own queue
+telemetry reported **131.4 seconds waiting** and **94.5 seconds holding execution**;
+Maven reported **93 seconds** for its lifecycle. Those intervals are distinct;
+the earlier 5–10 minute active estimate was not a measurement or cap. Actual XML
+contained exactly the 30 source-derived identities: ownership 13, SHADOW_15 11,
+SAT replay 1, Stageplay 5; **0 failures, 0 errors, 0 skips**. In particular both
+new depth cases and all original five scene invocations completed, including
+the air and boundary cases previously reported as errors.
+
+Readback covered all 30 identities, all four reports' 69 properties (Java 25,
+surfaceless EGL, selector, worktree and all three ROM paths), recursively nested
+streams, four text reports, the complete 146-line console log, new dump scan and
+post-run source/tree/head. Six nonempty XML streams contained only the known
+FAST-to-NONE load-profile warnings; the console contained ten such warnings.
+Compiler/JOML deprecation warnings also occurred. Maven's initial
+`java.io.tmpdir directory does not exist` warning preceded its normal
+`prepare-worktree-test-directories` creation of `target/maven-tmp`; the test JVM
+used the owned `target/test-tmp`. There were no caught-fault stack traces or new
+VM/Surefire dumps. Initial broad filename matches for `LevelLayoutDumpTool.class`
+and `SpriteSheetDump.class` were compiled classes, not diagnostic dumps, and were
+preserved. Raw owned XML/text/log diagnostics were consumed after readback;
+compiled classes, test resources, native extraction, source and worktree remain.
+
+This is one bounded affected pass, not aggregate smoke, guards, full-suite,
+route, hardware-timing or ROM-parity certification. No MSAA case was authored or
+executed; new depth cases are single-sample. Texture-depth and other non-renderbuffer
+attachment forms retain their previous behavior and are not newly covered.
+The begin-failure test verifies attachment/state/content cleanup after both scratch
+installation calls; its failed open does not expose the scratch name, so deletion
+there is supported by the finally-path source review rather than a name-based
+runtime assertion. No fault was injected between the two installation calls.
+Only this factual append and the folded existing Stageplay prerelease theme
+followed execution; the three tested source files stayed frozen. The local leaf
+does not authorize push, Main/PR/CI changes, another validation request, or
+observation of the parent's broad job; the parent owns final composition.

@@ -139,6 +139,7 @@ final class NativeSpriteOwnership implements AutoCloseable {
     private final Face back = Face.capture(true);
     private int ownedStencil;
     private int backupFramebuffer;
+    private int originalDepthRenderbuffer;
     private boolean attached;
     private boolean backedUp;
     private boolean contentsChanged;
@@ -193,17 +194,36 @@ final class NativeSpriteOwnership implements AutoCloseable {
         }
         int samples = glGetInteger(GL_SAMPLES);
         int format = bits == 0 ? GL_STENCIL_INDEX8 : stencilFormat(samples);
+        int width = viewport[2];
+        int height = viewport[3];
+        if (bits == 0 && glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE) == GL_RENDERBUFFER) {
+            originalDepthRenderbuffer = glGetFramebufferAttachmentParameteri(GL_DRAW_FRAMEBUFFER,
+                    GL_DEPTH_ATTACHMENT, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+            glBindRenderbuffer(GL_RENDERBUFFER, originalDepthRenderbuffer);
+            width = glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH);
+            height = glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT);
+            samples = glGetRenderbufferParameteri(GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES);
+            format = GL_DEPTH24_STENCIL8;
+        } else if (bits == 0) {
+            width = Math.addExact(viewport[0], viewport[2]);
+            height = Math.addExact(viewport[1], viewport[3]);
+        }
         ownedStencil = glGenRenderbuffers();
         glBindRenderbuffer(GL_RENDERBUFFER, ownedStencil);
-        int width = bits == 0 ? Math.addExact(viewport[0], viewport[2]) : viewport[2];
-        int height = bits == 0 ? Math.addExact(viewport[1], viewport[3]) : viewport[3];
         if (samples > 0) glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, format, width, height);
         else glRenderbufferStorage(GL_RENDERBUFFER, format, width, height);
         glDisable(GL_SCISSOR_TEST);
         if (bits == 0) {
-            // A color-only scene target receives an owned attachment for this draw only.
-            glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ownedStencil);
+            // Separate foreign depth and scratch stencil images are not guaranteed supported.
+            // Temporarily replace renderbuffer depth with the same packed scratch image;
+            // the detached foreign image is never cleared, copied, or drawn into.
+            // Mark before either attachment call so begin failures restore both attachments.
             attached = true;
+            if (originalDepthRenderbuffer != 0) {
+                glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, ownedStencil);
+            }
+            glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ownedStencil);
             requireComplete(GL_DRAW_FRAMEBUFFER);
         } else {
             // Keep foreign stencil attachments and their full viewport contents intact.
@@ -268,7 +288,13 @@ final class NativeSpriteOwnership implements AutoCloseable {
             }
         } finally {
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFramebuffer);
-            if (attached) glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
+            if (attached) {
+                glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);
+                if (originalDepthRenderbuffer != 0) {
+                    glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, originalDepthRenderbuffer);
+                }
+            }
             glBindFramebuffer(GL_READ_FRAMEBUFFER, readFramebuffer);
             glBindRenderbuffer(GL_RENDERBUFFER, renderbuffer);
             if (backupFramebuffer != 0) glDeleteFramebuffers(backupFramebuffer);
