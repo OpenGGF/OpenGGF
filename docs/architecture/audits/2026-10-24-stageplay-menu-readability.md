@@ -192,3 +192,64 @@ inventory and both filters (78 HUD / 90 desktop). All 334 original before/after
 PNGs have lossless WebP counterparts whose decoded pixels match exactly. Both
 worktrees pass whitespace checks and the Stageplay skill mirrors match. Required
 trailers and the final co-author block are parsed before each local commit.
+
+### Lead review round 3
+
+Follow-up to engine `9fe299275` and desktop `f6a6c88a0`. The ten-pixel HUD
+rows were rejected: they made the route's selected Motion chips touch even though
+the primary-button gap passed pixel inspection. Restore the original eighteen-pixel
+row height in the shared component and start the rows at y=52, leaving twelve pixels
+below the subtitle block. The existing visibility budget scrolls longer forms;
+neither rows nor the twenty-pixel primary-action gap are compressed. An additional
+Plan route capture scrolls to Apply so both the Motion spacing and button gap can
+be reviewed.
+
+Both frontends use the same picker painter. The faint cyan cross is replaced by a
+short yellow floor line with a dark outline and a thin vertical guide of separated
+yellow dashes from the cursor toward the queried terrain surface. Ground queries,
+placement coordinates and confirmation/cancellation are unchanged. The guide and
+skill mirrors, and the desktop README, describe the new marker.
+
+Focused regression checks first reproduced the missing subtitle gap and yellow
+floor marker (14 tests, exactly two failures). The row regression also checks
+normal Motion spacing, scrolling to the primary action and its retained gap; the
+marker regression checks the yellow floor line and separate thin vertical dashes.
+
+The new scrolled picture exposed a clipped F1 Help hint. When the complete footer
+would overflow, the shared renderer now reduces only the double spaces between
+hints; the labels and arrow glyphs stay intact. The focused regression checks this
+Apply-state footer as well.
+
+Final engine command (display variables unset, Java 25, all three absolute ROM
+properties and surfaceless EGL):
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.hudPictures=true -Dsonic1.rom.path=${ROM_ROOT}/s1.gen -Dsonic2.rom.path=${ROM_ROOT}/s2.gen -Ds3k.rom.path=${ROM_ROOT}/s3k.gen -Dtest=TestEditorProjectMenu,TestStageplayHud,TestStageplayPositionPicker,TestStageplayHudPictures,TestStageplayRouteOverlayPictures test`:
+**34 passed, zero skips**. All 79 HUD pictures were refreshed and inspected,
+including the new scrolled Plan route picture. The 42 visible primary buttons have
+a minimum twenty-pixel gap in pixel readback; the longer forms scroll. The final
+route picture shows all four normally spaced Motion rows and the gap before Who;
+the separate Apply view keeps its full footer. All refreshed engine lossless WebP
+copies decode to the original PNG pixels.
+
+The affected architecture selection,
+`maven_queue.py -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B`, passed
+**34 checks, zero skips**. This round changes only drawing/spacing and its focused
+regressions; it adds no dependencies or policies. The earlier complete guard run's
+other checks remain unchanged. The final engine was packaged and installed into
+the desktop editor's private Maven repository with `scripts/install-engine.sh`.
+
+Desktop command (display variables unset, Java 25, the same EGL/absolute ROM
+settings, `-Dopenggf.stageplay.desktopPictures=true` and the engine demo's absolute
+`openggf.stageplay.liveScene` path):
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.desktopPictures=true -Dtest=TestStageplayChrome,TestStageplayRouteOverlayPictures test`:
+**21 passed, zero skips**. Nine route/picker pictures were regenerated against the
+final installed engine and inspected; the other 81 desktop pictures remain
+applicable because native form/chrome presentation is unchanged this round. Both
+picker pictures visibly show the yellow floor line, dashed guide and coordinate
+tag over the prepared level. The editor's queued
+`maven_queue.py -Dmse=off -DskipTests package` succeeded.
+
+The review page now contains **169 comparisons** (79 HUD, 90 desktop), with verified
+lossless copies of the refreshed PNGs. Documentation whitespace checks and the
+Stageplay skill mirror check pass. No further screen conversion, policy edit,
+physics change, merge or push is part of this follow-up; broad smoke remains with
+the lead. Both local commits carry the required parsed co-author trailers.

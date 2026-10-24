@@ -14,6 +14,35 @@ import static org.lwjgl.glfw.GLFW.*;
 
 class TestEditorProjectMenu {
     @Test
+    void groupedRowsKeepNormalSpacingAndScrollInsteadOfShrinking() {
+        var menu=new EditorProjectMenu();
+        menu.showForm("Plan route",List.of(
+                new EditorProjectMenu.Field("who","Who","Sonic",MenuTextEditor.Mode.TEXT),
+                new EditorProjectMenu.Field("position","Position","160, 612",MenuTextEditor.Mode.TEXT),
+                new EditorProjectMenu.Field("start","Start","Walk",List.of("Walk","Jump")),
+                new EditorProjectMenu.Field("speed","Speed","Run",List.of("Run","Walk")),
+                new EditorProjectMenu.Field("stop","Stop","Gentle",List.of("Gentle","Hard")),
+                new EditorProjectMenu.Field("face","Face","Keep",List.of("Keep","Left","Right")),
+                new EditorProjectMenu.Field("frames","Frames","120",MenuTextEditor.Mode.TEXT)),"Find route",v->{});
+        menu.setHelp("Choose a destination.","");
+        menu.setGroup("Destination","position");menu.setGroup("Motion","start","speed","stop","face");
+        menu.setSection("Advanced","frames");
+        var font=new RecordingFont();menu.render(font,320);
+        assertTrue(font.y.get("Who")-font.y.get("Choose a destination.")>=20,
+                "Leave twelve pixels below the eight-pixel subtitle");
+        for(var pair:List.of(List.of("Start","Speed"),List.of("Speed","Stop"),List.of("Stop","Face")))
+            assertEquals(18,font.y.get(pair.get(1))-font.y.get(pair.get(0)),"Keep normal row height");
+        assertFalse(font.text.contains("Find route"),"The primary button scrolls below the full-height rows");
+        var input=new InputHandler();for(int i=0;i<7;i++)press(menu,input,GLFW_KEY_DOWN);
+        font.text.clear();font.y.clear();menu.render(font,320);
+        assertTrue(font.text.contains("Find route"));
+        assertTrue(font.text.stream().anyMatch(t->t.contains("Enter Apply")&&t.endsWith("F1 Help")),
+                "Keep the complete footer when scrolling to Apply");
+        assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=40,
+                "Scrolling retains the twenty-pixel gap before the primary button");
+    }
+
+    @Test
     void pairedPositionHasOneRowAndKeepsBothEditableValuesAndFractions() {
         var submitted=new AtomicReference<java.util.Map<String,String>>();var menu=new EditorProjectMenu();
         menu.showForm("Position",List.of(new EditorProjectMenu.Field("x","X","160.0",MenuTextEditor.Mode.TEXT),
@@ -82,7 +111,8 @@ class TestEditorProjectMenu {
 
     private static final class RecordingFont extends com.openggf.graphics.PixelFont {
         final java.util.List<String> text=new java.util.ArrayList<>();
-        @Override public void drawText(String value,int x,int y,float scale,float r,float g,float b,float a) {text.add(value);}
+        final java.util.Map<String,Integer> y=new java.util.HashMap<>();
+        @Override public void drawText(String value,int x,int y,float scale,float r,float g,float b,float a) {text.add(value);this.y.put(value,y);}
     }
 
     @Test

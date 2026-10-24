@@ -111,8 +111,9 @@ full descriptions, limits and native diagnostics. Level Position rows share a
 picker: HUD Enter opens it, arrows/d-pad move with held acceleration, Shift/right
 bumper moves one pixel, S/controller X toggles floor snap, Enter confirms fields,
 Esc cancels; F2 preserves numeric entry. Desktop Pick opens canvas pointing; click
-confirms and drag/scroll pans. Route snapping defaults on. Cyan floor markers use
-the existing prepared preview ground query, never per-move worker/JVM launches.
+confirms and drag/scroll pans. Route snapping defaults on. A yellow floor line and
+dashed vertical guide use the existing prepared preview ground query in both
+editors, never per-move worker/JVM launches.
 Confirming a pick writes only form values; Apply performs the normal undoable edit.
 Camera keys, actor/object keys and destinations use world picking; panel positions
 and relative offsets remain numeric. Verify proposed floor placements in playback.

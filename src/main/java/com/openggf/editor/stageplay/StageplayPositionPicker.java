@@ -87,7 +87,10 @@ public final class StageplayPositionPicker {
         int gold=0xFFC845,ink=0x101820;
         if(floor!=null){
             float fy=top+(float)((floor.surfaceY()-view.y())*view.zoom()*h/height);
-            p.line(sx-9,fy,sx+9,fy,0x61E5ED,2);p.line(sx,fy-5,sx,fy+3,0x61E5ED,2);
+            for(float dash=sy+12;dash<fy-3;dash+=8)
+                p.line(sx,dash,sx,Math.min(dash+4,fy-3),gold,1);
+            p.line(sx-12,fy,sx+12,fy,ink,5);
+            p.line(sx-12,fy,sx+12,fy,gold,3);
         }
         p.line(sx-10,sy,sx-3,sy,gold,2);p.line(sx+3,sy,sx+10,sy,gold,2);
         p.line(sx,sy-10,sx,sy-3,gold,2);p.line(sx,sy+3,sx,sy+10,gold,2);

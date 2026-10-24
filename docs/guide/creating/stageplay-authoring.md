@@ -686,7 +686,8 @@ Level positions have an in-level picker. In the HUD, press **Enter** on **Positi
 coordinate tag mark the point. Arrows or the controller d-pad move it, accelerating
 while held; **Shift** (controller right bumper) gives one-pixel movement. The camera
 follows across the level. **S** (controller X) toggles floor snapping; route destinations
-start with snapping on. A cyan marker shows the queried floor below the cursor.
+start with snapping on. A yellow floor line and dashed vertical guide mark the
+queried floor below the cursor in both editors.
 **Enter** confirms the field values and restores the form; **Esc** cancels. **F2**
 opens numeric entry instead. The picker changes no scene data until the form's
 primary action is applied.

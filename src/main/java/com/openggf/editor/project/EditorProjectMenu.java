@@ -97,7 +97,7 @@ public final class EditorProjectMenu {
     public boolean showingDetails() { return details != null; }
     public String helpText() { return help; }
 
-    private static final int ROW_TOP = 42, ROW_HEIGHT = 10, HEADING_HEIGHT = 21, ROW_BOTTOM = 205;
+    private static final int ROW_TOP = 52, ROW_HEIGHT = 18, HEADING_HEIGHT = 21, ROW_BOTTOM = 205;
 
     /** Immutable presentation shared with desktop chrome; canonical values stay separate from labels. */
     public record FormField(Field field, String value, String display, List<String> optionLabels, String unit,
@@ -580,6 +580,7 @@ public final class EditorProjectMenu {
         String footer=keys + accept + (apply ? " Apply  " : " Edit  ") + back + " Close  " + detailsLabel + " Help";
         if (submit!=null && selected<rows.size() && rows.get(selected).field()!=null && canPick(rows.get(selected).field().key()))
             footer="\u2191\u2193 Move  " + accept + " Pick  F2 Edit  " + back + " Close  " + detailsLabel + " Help";
+        if (!MenuStyle.fit(footer,this.width-18).equals(footer)) footer=footer.replace("  "," ");
         MenuStyle.text(font, footer,
                 9, 213, this.width - 18, .43f, .51f, .61f);
     }

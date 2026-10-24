@@ -10,6 +10,29 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 class TestStageplayPositionPicker {
+    @Test void floorMarkerUsesYellowLineAndSeparatedVerticalDashes() {
+        var view=new StageplayPositionPicker.View(0,0,1);
+        var picker=new StageplayPositionPicker(160,100,320,224,view,true,
+                (x,y)->List.of(new StageplayPositionPicker.Floor(x,151,170)));
+        record Stroke(float x1,float y1,float x2,float y2,int rgb,float width) { }
+        var lines=new java.util.ArrayList<Stroke>();
+        picker.paint(new StageplayPositionPicker.Painter(){
+            public void line(float x1,float y1,float x2,float y2,int rgb,float width){lines.add(new Stroke(x1,y1,x2,y2,rgb,width));}
+            public void rect(float x,float y,float width,float height,int rgb) { }
+            public void text(String text,float x,float y,int rgb) { }
+            public float textWidth(String text){return text.length()*6;}
+        },0,0,320,224,view);
+        assertTrue(lines.stream().anyMatch(s->s.y1()==170&&s.y2()==170&&s.x1()<160&&s.x2()>160
+                &&s.rgb()==0xFFC845&&s.width()>=2),"The queried floor has a visible yellow line");
+        var dashes=lines.stream().filter(s->s.x1()==160&&s.x2()==160&&s.y1()>110&&s.y2()<170).toList();
+        assertTrue(dashes.size()>3,"Connect the cursor to the floor with multiple short dashes");
+        for(int i=0;i<dashes.size();i++){
+            var dash=dashes.get(i);assertEquals(0xFFC845,dash.rgb());assertEquals(1,dash.width());
+            assertTrue(dash.y2()-dash.y1()<=4);
+            if(i>0)assertTrue(dash.y1()>dashes.get(i-1).y2(),"Dashes retain visible gaps");
+        }
+    }
+
     private static StageplayWorkspace workspace(){
         var doc=StageplayDocument.empty("s2",0,0,0,100,320,224).withActors(List.of(new Actor("hero","Sonic","s2","sonic",
                 List.of(new ActorKey(0,100,200,0,-1,Facing.RIGHT,true,1,Interpolation.HOLD)))))

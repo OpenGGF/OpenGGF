@@ -57,6 +57,10 @@ class TestStageplayHudPictures {
             try(var renderer=new EditorProjectMenuRenderer()) {
                 StageplayMenuSurvey.captureCheckpoint((name,workspace)->{
                     renderObjectMenu(renderer,workspace);capture(name,1280,720);
+                    if(name.equals("survey-route-player")) {
+                        var input=new InputHandler();for(int i=0;i<7;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+                        renderObjectMenu(renderer,workspace);capture("survey-route-player-apply",1280,720);
+                    }
                 });
             } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
         }
