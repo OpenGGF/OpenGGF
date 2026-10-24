@@ -190,8 +190,12 @@ these cases with bounded matched tests and preserve their coverage limits; a
 launch setting alone does not prove which backend a later test used.
 The 2026-10-24 architecture composition reproduced the same two errors with the
 ordered five-case baseline/current pair; both isolated two-case checks passed.
-See the [current attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
-and [open test-isolation bug](../status/known-bugs.md#shared-jvm-offscreen-property-is-cleared-before-boot-tests).
+The subsequent correction gives global class teardown ownership of restoring
+the incoming backend property, including absent and empty values. Its regression
+runs the actual clearing fixture through JUnit before inspecting the property;
+the fixture itself remains a negative control for removing that restoration.
+See the [historical attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
+and [correction evidence](../architecture/audits/2026-10-24-recurring-agent-mistakes.md).
 
 A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
 GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO
