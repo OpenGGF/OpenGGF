@@ -166,3 +166,48 @@ integers, and heuristic rewind-link exclusions. Existing behavior tests and
 ownership migrations cover parts of those classes. They require separate
 disassembly-backed admission/clock/identity work; no broad conversion or new
 blanket exception was made in this bounded correction.
+
+## Integrated verification and delivery
+
+Correction commits `41939547823d4183d842b7ac17c6a35c5927bea6`
+(backend-property ownership) and `fe44ffc74d0289a357cd45405ed4459759b254a7`
+(configured context, bytecode enforcement and reviewed cleanup fix) were
+fast-forwarded into the main checkout's existing `develop` branch. Fetch/pull
+found no intervening upstream changes, and integration had no conflicts. The
+original dirty reference submodules and unrelated untracked files were preserved.
+The main-worktree build/test lock protected the integration from concurrent
+Maven compilation; it was released before queued tests were requested.
+
+Actual launch-environment preflight passed Java 25, Lua 5.4 and PowerShell.
+The subsequent fresh-JVM command ran on the integrated commit `fe44ffc74`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u XDG_RUNTIME_DIR \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+It passed **791 distinct cases across 95 XML reports**, no failures/errors/skips.
+All report identities matched the completed command's class identities, every
+physical case identity was unique, and every report had Java `25.0.5.0.2` and
+explicit surfaceless EGL. The new raw-GLFW guard's five cases, including both
+historical compilations/rejections, and the five global-teardown wiring checks
+all executed. Queue admission was 20s; Maven execution was 6:22. No source changed
+from submission through completion. The 26 focused cases above exercised the
+same final Java/test inputs before the second correction commit was made.
+
+No new or worsened validation failure remained, so no disputed-failure baseline
+run was needed. This is complete structural-guard coverage and bounded focused
+behavior validation, not a complete ordinary smoke run, exhaustive trace sweep,
+native platform certification or release-only full-suite result. Documentation
+mirrors, local link targets, LF attributes, whitespace and range policy were also
+checked. Consumed diagnostics are deleted rather than archived.
+
+Property review had no actionable findings. Context review found the cleanup
+issue described above; its two failing fault controls then passed in the composed
+selection. No unchanged review or broad-validation loop was repeated. Worker
+changes were accounted for before cleanup: six carried files are byte-identical,
+and the context owner contains the documented parent cleanup correction. The
+historical sources are active compiler-negative inputs, not diagnostic archives.
