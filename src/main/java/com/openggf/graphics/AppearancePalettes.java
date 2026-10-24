@@ -177,14 +177,14 @@ public final class AppearancePalettes {
         private static int channelShift(byte value, byte live, byte water, int globalRatio) {
             int v = Byte.toUnsignedInt(value);
             int l = Byte.toUnsignedInt(live);
-            int ratio = l > 0 ? Byte.toUnsignedInt(water) * 256 / l : globalRatio;
-            return Math.min(255, v * ratio / 256);
+            int ratio = l > 0 ? UnderwaterPaletteTransform.ratioX256(l, Byte.toUnsignedInt(water)) : globalRatio;
+            return UnderwaterPaletteTransform.scale(v, ratio);
         }
 
         private static void shift(Line out, int i, PaletteView colour, int[] ratio) {
-            set(out, i, (byte) Math.min(255, Byte.toUnsignedInt(colour.red(i)) * ratio[0] / 256),
-                    (byte) Math.min(255, Byte.toUnsignedInt(colour.green(i)) * ratio[1] / 256),
-                    (byte) Math.min(255, Byte.toUnsignedInt(colour.blue(i)) * ratio[2] / 256));
+            set(out, i, (byte) UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(colour.red(i)), ratio[0]),
+                    (byte) UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(colour.green(i)), ratio[1]),
+                    (byte) UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(colour.blue(i)), ratio[2]));
         }
 
         private void bind(Object token, int base) {
@@ -297,15 +297,15 @@ public final class AppearancePalettes {
                 int r = Byte.toUnsignedInt(normal.red(i));
                 int g = Byte.toUnsignedInt(normal.green(i));
                 int b = Byte.toUnsignedInt(normal.blue(i));
-                if (r + g + b == 0) continue;
+                if (!UnderwaterPaletteTransform.eligible(r, g, b)) continue;
                 nr += r; ng += g; nb += b;
                 wr += Byte.toUnsignedInt(water.red(i));
                 wg += Byte.toUnsignedInt(water.green(i));
                 wb += Byte.toUnsignedInt(water.blue(i));
             }
-            if (nr > 0) out[0] = (int) (wr * 256 / nr);
-            if (ng > 0) out[1] = (int) (wg * 256 / ng);
-            if (nb > 0) out[2] = (int) (wb * 256 / nb);
+            out[0] = UnderwaterPaletteTransform.ratioX256(nr, wr);
+            out[1] = UnderwaterPaletteTransform.ratioX256(ng, wg);
+            out[2] = UnderwaterPaletteTransform.ratioX256(nb, wb);
         }
     }
 

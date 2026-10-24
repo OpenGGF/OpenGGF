@@ -171,6 +171,66 @@ class TestAppearancePalettes {
     }
 
     @Test
+    void underwaterOverridesKeepPerEntryRatiosGlobalFallbackAndDonorSelection() {
+        RenderContext.reset();
+        var graphics = new GraphicsManager();
+        graphics.initHeadless();
+        try {
+            Palette live = new Palette();
+            live.colors[1] = new Palette.Color((byte) 200, (byte) 100, (byte) 0);
+            live.colors[2] = new Palette.Color((byte) 0, (byte) 100, (byte) 200);
+            Palette water = new Palette();
+            water.colors[0] = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+            water.colors[1] = new Palette.Color((byte) 100, (byte) 200, (byte) 80);
+            water.colors[2] = new Palette.Color((byte) 30, (byte) 50, (byte) 100);
+            water.colors[3] = new Palette.Color((byte) 255, (byte) 240, (byte) 200);
+            Palette overrides = new Palette();
+            overrides.colors[1] = new Palette.Color((byte) 221, (byte) 151, (byte) 181);
+            graphics.cachePaletteTexture(live, 0);
+            Palette[] waterRows = {water, new Palette(), new Palette(), new Palette()};
+            var nativeBlock = AppearancePalettes.acquire(graphics, null, 0, live, true, overrides, 1 << 1);
+            var otherCharacter = AppearancePalettes.acquire(graphics, null, 0, live, false, overrides, 1 << 1);
+            RenderContext donor = RenderContext.getOrCreateDonor(com.openggf.game.GameId.S2);
+            donor.setPalette(0, live);
+            graphics.cachePaletteTexture(live, donor.getPaletteLineBase());
+            var donorBlock = AppearancePalettes.acquire(graphics, donor, 0, live, true, overrides, 1 << 1);
+
+            PaletteView nativeWater = graphics.appearancePaletteRows().underwaterRow(
+                    nativeBlock.context().getPaletteLineBase(), waterRows, live, water);
+            assertRgb(nativeWater, 1, 110, 255, 162);
+            assertRgb(nativeWater, 2, 30, 50, 100);
+            for (var block : new AppearancePalettes.Block[]{otherCharacter, donorBlock}) {
+                PaletteView shifted = graphics.appearancePaletteRows().underwaterRow(
+                        block.context().getPaletteLineBase(), waterRows, live, water);
+                assertRgb(shifted, 1, 143, 188, 162);
+                assertRgb(shifted, 2, 0, 125, 179);
+                assertSame(shifted, graphics.appearancePaletteRows().underwaterRow(
+                        block.context().getPaletteLineBase(), waterRows, live, water));
+            }
+            live.colors[1].r = 1;
+            graphics.cachePaletteTexture(live, 0);
+            PaletteView changed = graphics.appearancePaletteRows().underwaterRow(
+                    nativeBlock.context().getPaletteLineBase(), waterRows, live, water);
+            assertSame(nativeWater, changed);
+            assertRgb(changed, 1, 100, 200, 80);
+            assertRgb(graphics.appearancePaletteRows().underwaterRow(
+                    otherCharacter.context().getPaletteLineBase(), null, null, null), 1, 221, 151, 181);
+            nativeBlock.release();
+            otherCharacter.release();
+            donorBlock.release();
+        } finally {
+            graphics.cleanup();
+            RenderContext.reset();
+        }
+    }
+
+    private static void assertRgb(PaletteView row, int i, int red, int green, int blue) {
+        assertEquals(red, row.red(i) & 255, "red " + i);
+        assertEquals(green, row.green(i) & 255, "green " + i);
+        assertEquals(blue, row.blue(i) & 255, "blue " + i);
+    }
+
+    @Test
     void rowsStayInsideTheBankBudgetAndSurviveAPaletteReset() {
         RenderContext.reset();
         var graphics = new GraphicsManager();
