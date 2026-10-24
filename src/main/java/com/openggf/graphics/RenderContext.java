@@ -176,44 +176,48 @@ public class RenderContext {
         // Compute global per-channel ratio: avg(underwater) / avg(normal)
         long sumNR = 0, sumNG = 0, sumNB = 0;
         long sumUR = 0, sumUG = 0, sumUB = 0;
-        int count = 0;
         for (int i = 1; i < 16; i++) { // skip index 0 (transparent)
             Palette.Color nb = normalBase.getColor(i);
             Palette.Color ub = underwaterBase.getColor(i);
-            int nbR = Byte.toUnsignedInt(nb.r);
-            int nbG = Byte.toUnsignedInt(nb.g);
-            int nbB = Byte.toUnsignedInt(nb.b);
-            if (nbR + nbG + nbB > 0) {
+            int normalRgb = legacyRgb(nb);
+            int nbR = normalRgb >>> 16;
+            int nbG = (normalRgb >>> 8) & 255;
+            int nbB = normalRgb & 255;
+            if (UnderwaterPaletteTransform.eligible(nbR, nbG, nbB)) {
+                int waterRgb = legacyRgb(ub);
                 sumNR += nbR; sumNG += nbG; sumNB += nbB;
-                sumUR += Byte.toUnsignedInt(ub.r);
-                sumUG += Byte.toUnsignedInt(ub.g);
-                sumUB += Byte.toUnsignedInt(ub.b);
-                count++;
+                sumUR += waterRgb >>> 16;
+                sumUG += (waterRgb >>> 8) & 255;
+                sumUB += waterRgb & 255;
             }
         }
 
         // Ratios scaled by 256 for fixed-point math
-        int ratioR = 256, ratioG = 256, ratioB = 256;
-        if (count > 0) {
-            if (sumNR > 0) ratioR = (int) (sumUR * 256 / sumNR);
-            if (sumNG > 0) ratioG = (int) (sumUG * 256 / sumNG);
-            if (sumNB > 0) ratioB = (int) (sumUB * 256 / sumNB);
-        }
+        int ratioR = UnderwaterPaletteTransform.ratioX256(sumNR, sumUR);
+        int ratioG = UnderwaterPaletteTransform.ratioX256(sumNG, sumUG);
+        int ratioB = UnderwaterPaletteTransform.ratioX256(sumNB, sumUB);
 
         Palette result = new Palette();
         for (int i = 0; i < 16; i++) {
             Palette.Color dn = donorNormal.getColor(i);
-            int dnR = Byte.toUnsignedInt(dn.r);
-            int dnG = Byte.toUnsignedInt(dn.g);
-            int dnB = Byte.toUnsignedInt(dn.b);
+            int donorRgb = legacyRgb(dn);
+            int dnR = donorRgb >>> 16;
+            int dnG = (donorRgb >>> 8) & 255;
+            int dnB = donorRgb & 255;
 
-            int r = Math.min(255, dnR * ratioR / 256);
-            int g = Math.min(255, dnG * ratioG / 256);
-            int b = Math.min(255, dnB * ratioB / 256);
+            int r = UnderwaterPaletteTransform.scale(dnR, ratioR);
+            int g = UnderwaterPaletteTransform.scale(dnG, ratioG);
+            int b = UnderwaterPaletteTransform.scale(dnB, ratioB);
 
             result.setColor(i, new Palette.Color((byte) r, (byte) g, (byte) b));
         }
         return result;
+    }
+
+    private static int legacyRgb(Palette.Color color) {
+        return (Byte.toUnsignedInt(color.r) << 16)
+                | (Byte.toUnsignedInt(color.g) << 8)
+                | Byte.toUnsignedInt(color.b);
     }
 
     /**
