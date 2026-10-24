@@ -340,7 +340,7 @@ class TestRewindArchitectureGuard {
             // annotation carries an inline reason; same precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/BombPrizeObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/RingPrizeObjectInstance.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzKnuxPillarInstance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzLoweringGrappleObjectInstance.java#@RewindTransient", 4),

@@ -73,8 +73,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     }
 
     private Phase phase = Phase.WAIT_CAMERA_RANGE;
-    private LbzMinibossBoxRig leftRig;
-    private LbzMinibossBoxRig rightRig;
+    private final OptionalBoxRig leftRig = new OptionalBoxRig();
+    private final OptionalBoxRig rightRig = new OptionalBoxRig();
     private int armTimer;
     private int defeatBits;
     private int chunkSwapTimer = -1;
@@ -117,9 +117,9 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         int cameraX = cameraForRigs != null
                 ? cameraForRigs.getX() & 0xFFFF
                 : LbzMinibossBoxRig.NO_CAMERA;
-        if (leftRig != null) {
-            leftRig.update(cameraX);
-            rightRig.update(cameraX);
+        if (leftRig.value != null) {
+            leftRig.value.update(cameraX);
+            rightRig.value.update(cameraX);
         }
         tickWallExplosions();
         tickChunkSwap();
@@ -135,8 +135,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
             case AWAIT_SIGNPOST_CAMERA -> updateAwaitSignpostCamera();
             case DONE -> {
                 boolean explosionsDone = wallExplosions.allFinished();
-                boolean piecesGone = leftRig == null
-                        || (!leftRig.hasVisiblePieces() && !rightRig.hasVisiblePieces());
+                boolean piecesGone = leftRig.value == null
+                        || (!leftRig.value.hasVisiblePieces() && !rightRig.value.hasVisiblePieces());
                 if (explosionsDone && piecesGone) {
                     ObjectLifetimeOps.deleteNoRespawn(this);
                 }
@@ -163,8 +163,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         camera.setMaxY((short) CAMERA_MAX_Y);
         camera.setMinX((short) CAMERA_MIN_X);
         camera.setMaxX((short) CAMERA_MAX_X);
-        leftRig = new LbzMinibossBoxRig(getX() - BOX_CHILD_DX, getY());
-        rightRig = new LbzMinibossBoxRig(getX() + BOX_CHILD_DX, getY());
+        leftRig.value = new LbzMinibossBoxRig(getX() - BOX_CHILD_DX, getY());
+        rightRig.value = new LbzMinibossBoxRig(getX() + BOX_CHILD_DX, getY());
         phase = Phase.WAIT_FIGHT_START;
     }
 
@@ -187,8 +187,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         }
         // ROM loc_8D082: each box child releases its pieces, plays
         // sfx_BossActivate, and spawns Obj_LBZMiniboss with this box as parent.
-        leftRig.release();
-        rightRig.release();
+        leftRig.value.release();
+        rightRig.value.release();
         services().playSfx(Sonic3kSfx.BOSS_ACTIVATE.id);
         spawnKnucklesMiniboss(getX() - BOX_CHILD_DX, getY(), 0);
         spawnKnucklesMiniboss(getX() + BOX_CHILD_DX, getY(), 2);
@@ -295,6 +295,28 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         }
     }
 
+    /** Keeps absence before the camera gate distinct from an initialized box. */
+    private static final class OptionalBoxRig implements RewindStateful<LbzMinibossBoxRig.Snapshot> {
+        private LbzMinibossBoxRig value;
+
+        @Override
+        public LbzMinibossBoxRig.Snapshot captureRewindStateValue() {
+            return value == null ? null : value.captureRewindStateValue();
+        }
+
+        @Override
+        public void restoreRewindStateValue(LbzMinibossBoxRig.Snapshot state) {
+            if (state == null) {
+                value = null;
+                return;
+            }
+            // The fixed piece-table order reconstructs each final index and its rig
+            // owner. Every mutable position (including the anchor) is in the snapshot.
+            value = new LbzMinibossBoxRig(0, 0);
+            value.restoreRewindStateValue(state);
+        }
+    }
+
     /** Keeps the folded controllers on the default owner/base capture path. */
     private final class WallExplosionState implements Iterable<S3kBossExplosionController>,
             RewindStateful<WallExplosionState.Snapshot> {
@@ -360,7 +382,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
 
     @Override
     public int[] extraRenderBuckets() {
-        return LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, leftRig, rightRig);
+        return LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, leftRig.value, rightRig.value);
     }
 
     @Override
@@ -370,15 +392,15 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands, int bucket) {
-        if (isDestroyed() || leftRig == null) {
+        if (isDestroyed() || leftRig.value == null) {
             return;
         }
         PatternSpriteRenderer boxRenderer = getRenderer(Sonic3kObjectArtKeys.LBZ_MINIBOSS_BOX);
         if (boxRenderer == null) {
             return;
         }
-        leftRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
-        rightRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
+        leftRig.value.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
+        rightRig.value.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private boolean isPlayerKnuckles() {

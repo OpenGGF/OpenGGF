@@ -25,7 +25,7 @@ obligation is not a passing test claim.
 
 | # | Field | Reconstruction and disposition | Evidence or remaining obligation |
 | --- | --- | --- | --- |
-| 1 | [`sonic1.objects.Sonic1RingInstance#childRingSpawns`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingInstance.java) | Retained with narrower debt. Placed parents restore through `Sonic1ObjectRegistry.create(spawn)`, which rebuilds the canonical recipe from the current level mapping, including before INIT. Progressed dynamic children correctly recreate with an empty recipe. A field-wide exclusion still needs a contract for public caller-supplied parent recipes. | [`TestS1RingGroupGraphRewind`](../../../src/test/java/com/openggf/game/rewind/TestS1RingGroupGraphRewind.java) passes six destructive managed controls on unchanged runtime: real GHZ1 pre-INIT placement, exact allocation/collection/respawn replay, canonical RingManager identities, and progressed child sparkle retirement without duplication. See the bounded S1 follow-up below for construction inventory, recipe alternatives and residual limits. |
+| 1 | [`sonic1.objects.Sonic1RingInstance#childRingSpawns`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingInstance.java) | Closed by captured typed placement recipes through the existing default compact path. Capture detaches the exact ordered values and canonical collection indices; restore rebinds copied records to the current RingManager. The public constructor retains its caller-owned child view until restoration. | All six stock GHZ1 graph controls remain. Added dynamic pre-INIT, unmanaged no-table, caller-alias/order, duplicate-coordinate identity and collection controls exercise actual default capture. See the S1 recipe implementation follow-up below for red/green commands, identity evidence, rejected contracts and limits. |
 | 2 | [`sonic1.objects.bosses.FZPlasmaLauncher#activeBalls`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/FZPlasmaLauncher.java) | Closed with central `TRANSIENT`. Each recreated FZPlasmaBall adopts itself through `adoptPlasmaBallForRewind`; the launcher prunes destroyed entries and derives its active count. The native encounter has one launcher group. | [`TestS1FzBossGraphRewind.fzBossGraphRestoresChildrenLauncherBallsAndParentSideLinks`](../../../src/test/java/com/openggf/game/rewind/TestS1FzBossGraphRewind.java) removes children, creates a divergent launcher/ball, restores fresh identities, checks the exact list and count, then advances the launcher without duplicating balls. |
 | 3 | [`sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java) | Closed in the bounded follow-up below with central `TRANSIENT`. Recreation rebuilds the surviving managed inventory. Dispatch resolves the captured original `blockIndex` instead of a compacted list position, and advances the native break count on each timer borrow. | [`TestFalseFloorBlockRewindGenericRestore.partialCollapseReplaysThroughCleanupAfterDestructiveRestore`](../../../src/test/java/com/openggf/game/sonic1/objects/TestFalseFloorBlockRewindGenericRestore.java) fails on the original runtime in all four partial-collapse cases and passes with the fix. An event-style dynamic master and its surviving children restore as fresh objects with exact identities and order. Every forward timer, width and fragment state matches uninterrupted execution through master cleanup and fragment retirement. The complete eight-child test remains green. |
 | 4 | [`sonic1.objects.bosses.Sonic1SLZBossInstance#seesaws`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1SLZBossInstance.java) | Closed with central `TRANSIENT`. Recreation starts the list empty. `updateBossLogic` calls `scanForSeesaws` before consuming the cache on the next forward dispatch. | [`TestS1SlzBossSpikeballGraphRewind.restoreRebuildsTheBossSeesawScanCacheSoAlignmentCanStillMatch`](../../../src/test/java/com/openggf/game/rewind/TestS1SlzBossSpikeballGraphRewind.java) forces fresh reconstruction and verifies that the next update repopulates the cache. Other tests in the class check spikeball origin matching rather than first-live-seesaw matching. This is bounded encounter evidence, not a full SLZ route replay. |
@@ -37,14 +37,14 @@ obligation is not a passing test claim.
 | 10 | [`sonic2.objects.bosses.CPZBossPipe#segments`](../../../src/main/java/com/openggf/game/sonic2/objects/bosses/CPZBossPipe.java) | Closed with central `TRANSIENT`. CPZBossPipeSegment recreation calls `reregisterRestoredSegment` on the recreated pipe. | [`TestS2CpzBossGraphRewind.cpzBossGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2CpzBossGraphRewind.java) destructively replaces the graph and checks stable identities, fresh objects, parent links, and the pipe's exact live segment list. Its representative graph has one segment; sparse multi-segment retract ordering remains outside this check. |
 | 11 | [`sonic3k.objects.AizPlaneIntroInstance#activeWaves`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Removed the unused append-only history. ObjectManager owns each live wave; no gameplay consumer, public accessor, or unmanaged dispatch used the parent list. No transient policy or historical reconstruction is added. | [`TestS3kAizIntroInventoryRewind.liveChildrenRestoreFreshAndReplayThroughTheirRetirement`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestS3kAizIntroInventoryRewind.java), WAVES case, destroys the native managed graph and checks fresh identities, exact parent/slots, animation, motion, new spawns and retirement against uninterrupted dispatch. The final-wait/Knuckles-monitor regression now observes current managed children, not past spawns. See the AIZ follow-up below for results and boundaries. |
 | 12 | [`sonic3k.objects.AizPlaneIntroInstance#emeralds`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Removed the unused history. Seven managed emeralds outlive the retiring intro parent. A reproduced independent restore defect required capturing the parent's and emeralds' exact Knuckles links by ObjectRefId; the histories do not repair that ownership. | The same native test covers before-scatter, seven falling emeralds and partial pickup with destructive session-registry restore and forward replay through collection. A separate managed graph test distinguishes nearby opposite-direction collectors and an intentionally unbound emerald. See the AIZ follow-up below for baseline failures and limits. |
-| 13 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization finds or creates a managed pillar and records it. Generic spawn reconstruction with `initialized` restored does not run that creation path again. The public test accessor reads this inventory. | `TestLbz2RideCameoInstances` exercises production creation and cameo choreography, not destructive restoration of this list. Prove existing-pillar reuse, fresh pillar recreation, and list ownership after restore. |
-| 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization records four children. SwingChild recreation selects a nearest live cameo, without reattaching to its parent's inventory. | `TestLbz2RideCameoInstances` is named by the isolated sweep but does not perform registry capture/restore. Required evidence includes four exact child identities, parent inventory restoration, and shake/freefall replay. Do not equate that sweep label with executed graph proof. |
-| 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Retained. `spawnDebris` records managed IceDebris; FrozenPlayerBlock recreation starts an empty inventory. Current reads are the testing accessor, but the deletion and auxiliary-sidekick paths have distinct lifetimes. | [`TestS3kIczFreezerGraphRewind.iczFreezerGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) checks cloud/block/player graph links. It does not certify this nonempty debris inventory after the block breaks. Exercise the native and auxiliary-sidekick debris boundaries, including retirement and forward replay. |
+| 13 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Closed in the follow-up below by removing the history list. The public accessor resolves the exact captured support identity through the live managed query; retired supports and slot/coordinate replacements are absent. Scenery retains independent lifetime. Both observations are empty when services are unavailable. | [`TestLbzKnucklesInventoryRewind`](../../../src/test/java/com/openggf/game/rewind/schema/TestLbzKnucklesInventoryRewind.java) destructively restores fresh and reused managed pillars at initialization, moved swing, pre-fling and freefall boundaries, checks fresh instances/exact IDs/slots, then compares 220 forward frames. Retirement/reuse cases prevent resurrecting the pillar or adopting its replacement. See the focused results below. |
+| 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Closed in the follow-up below by removing the history list and observing live managed children by exact parent identity/native subtype. Pure child shells preserve child-before-owner capture order; compact capture restores native parent3 and the original swing anchor. The exact parent key uses the private optional-reference mode: absent capture tables preserve current links; present tables encode rejected/retired identities as authoritative null. | [`TestLbzKnucklesInventoryRewind`](../../../src/test/java/com/openggf/game/rewind/schema/TestLbzKnucklesInventoryRewind.java) proves four exact child identities/slots/links with a nearer competing cameo and full frame-by-frame fling/freefall replay. Partial-child retirement and both destroyed-unswept/removed-owner boundaries preserve absence, orphan expiry, and the unrelated graph. The actual compact-policy audit and disposition guard passed below. |
+| 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Closed by removing the obsolete history list and its testing-only count accessor. Both callers now observe actual debris submissions to ObjectManager; live debris remains independently managed, including auxiliary-sidekick ownership. No reconstruction policy or historical inventory is introduced. | [`TestS3kIczFreezerGraphRewind.retiringBlockReplaysDebrisAllocationAndPlayerRelease`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) restores the native/auxiliary blocks with replacement player references and replays release/allocation. `nonemptyDebrisRestoresAndReplaysAfterBlockRetirement` destructively restores both real debris populations at immediate, moving and partially retired checkpoints, then compares exact identities, order, ownership, motion and animation through retirement. See the bounded follow-up below. |
 | 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Closed through actual compact capture in the bounded ICZ follow-up below; no exclusion. Constructible helper-array elements and a final, preconstructed camera gate keep the existing inherited `CAPTURED` policy reachable. | [`TestIczMinibossGraphRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestIczMinibossGraphRewind.java) exercises the real manager/registry with fresh reconstruction at the camera gate, progressed orbs and pending defeat workers. [`TestIczMinibossFieldDisposition`](../../../src/test/java/com/openggf/game/rewind/schema/TestIczMinibossFieldDisposition.java) requires actual capture of the helpers, gate and inherited list. Native production leaves that list empty; orbs/shards are local helpers, and the explosion controller is a separately managed object. See the follow-up for validation and limits. |
 | 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Closed in the bounded ship follow-up below with central `CAPTURED`. The existing identity collection codec restores the registered child inventory in order. Admission excludes failed allocations; camera/flame unload hooks remove retired identities, and settled restore reconnects those children to the exact captured ship. | [`TestLbz2RobotnikShipRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLbz2RobotnikShipRewind.java) reproduces allocation before flame removal on the original runtime. Five managed graph cases cover destructive restore and release replay, exact slots/identities, camera retirement before capture, capture after flame retirement, overlapping owners, and tolerant missing-parent recreation. The existing 13 cameo checks remain green. |
 | 18 | [`sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossBoxKnuxInstance.java) | Captured ordered helper state through a final owner-local `RewindStateful` holder. Existing explosion snapshots retain ranges, timers and queued emissions; recreation binds every controller to the current shared session RNG. Default owner/base capture stays enabled. | [`TestLbzWallExplosionsRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLbzWallExplosionsRewind.java) discriminates populated/pending loss and early DONE deletion through destructive managed restore and forward replay. See the [bounded follow-up](#lbz-knuckles-wall-explosions-follow-up) for baseline failures, shape comparison, evidence and limits. |
 | 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Closed with a private owner-local `RewindStateful` holder and typed value snapshots. The default compact owner capture includes the holder; restoration constructs fresh nonstatic helpers in captured centre/ring/index order. No transient policy is used. | `TestS3kLbzMinibossGraphRewind.progressedPanelRingsRestoreFreshAndReplayRotationDetachAndRetirement` executes ten managed destructive fresh-restore cases at five progressed boundaries with Sonic/Tails attack sources, nonempty immediate draw/collision controls and 300-tick replay through detach and retirement. The focused owner disposition check confirms actual compact field capture. See the LBZ panel-ring follow-up for rejected payload evidence and renderer-input/route limits. |
-| 20 | [`sonic3k.objects.LightningSparkObjectInstance#sparkTiles`](../../../src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java) | Retained rendering obligation. `forRewindRecreate` fetches the shield art set from the current Sonic3kObjectArtProvider. A final Pattern array is mutable render data, not proof that the exact resident patterns were recovered. | Verify nonzero pattern content and matching animation mapping under a real art provider before removal, immediately after reconstruction, and during forward drawing. Null-art isolated passes do not establish that result. No runtime assets are loaded from disassembly files. |
+| 20 | [`sonic3k.objects.LightningSparkObjectInstance#sparkTiles`](../../../src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java) | Owner-local `sparkArtState` captures immutable pixel/script values, including independent and null constructor recipes. Its private named `SparkArtState` helper owns all live art/script/upload fields and their capture/restore behavior; the owner has no sideband fields or exclusions. Default compact owner/base capture remains enabled. | [`TestLightningSparkArtRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLightningSparkArtRewind.java) uses the real ROM provider, destructive managed restoration, exact art values and production EGL pixels through visible/blank frames and retirement. See the [bounded follow-up](#lightning-spark-art-follow-up) and its review correction for baseline failures, rejected shapes and donor/route limits. |
 | 21 | [`sonic3k.objects.badniks.CaterkillerJrHeadInstance#bodySegments`](../../../src/main/java/com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java) | Closed with central `TRANSIENT`. `afterRewindRestoreSettled` rebuilds the list only after each body's captured owner identity resolves, filters live bodies belonging to this exact head, and sorts by captured segment index. | [`TestS3kBadnikChildGraphRewind.caterkillerJrHeadRestoresBodySegmentListToRestoredChildren`](../../../src/test/java/com/openggf/game/rewind/TestS3kBadnikChildGraphRewind.java) restores two adjacent heads and twelve fresh bodies, checks exact parent inventories, rejects stale pre-restore references, restores changed indices/scalars, and drops a divergent extra head. This is exact graph evidence rather than an isolated scalar pass. |
 | 22 | [`sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java) | Retained diagnostic-history obligation. `launchSpikeBall` appends ROM subtypes, but gameplay selection uses the separately captured `launchCount` and table. The public test accessor reads the history. Reconstruction initializes a new empty history. | `TestLbzEndBossInstance` checks native spawn behavior but contains no destructive rewind test for this history. Establish the accessor's intended rewind contract and verify current-child subtype/launchCount replay before an explicit diagnostic-only exclusion. Do not fabricate past launches from surviving children. |
 | 23 | [`sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzFinalBoss1Instance.java) | Retained graph inventory obligation. The list stores SpawnRecord values with child kinds and references. It is used to initialize nested turret children when unmanaged and to expose kind-specific inventories. Generic recreation does not restore historical records. | `TestLbzFinalBoss1Instance` checks choreography but does not invoke registry capture/restore despite being named by the isolated sweep. Require a managed graph restore with exact kind/child relations and nested turret/retirement replay, and separately define the unmanaged-owner contract. |
@@ -333,7 +333,6 @@ This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
 HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
 S3K check, API check or release-only full suite ran in this follow-up.
 
-
 ## LBZ2 ride-ship child inventory follow-up
 
 This bounded follow-up starts at `624e95b4892533d23ae898d8127f277038777f70`
@@ -416,7 +415,6 @@ and the final boss's own inventory obligation remain open. These tests do not
 certify complete LBZ traversal, art/timing parity, viewport/donor/team breadth,
 or the unrelated cameo inventories. The parent retains those coverage limits
 and the delivery-wide gates.
-
 
 ## LBZ2 allocation-exhaustion correction
 
@@ -985,6 +983,227 @@ placement identities, allocation exhaustion, every orientation/group size,
 offscreen respawn routes, GPU pixels, or the complete S1 route matrix. No broad
 smoke, complete guard profile, API/S3K selection or release-only full suite ran.
 
+## S1 recipe implementation follow-up, 2026-10-24
+
+This slice uses the T3-created checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-efdd7c0b`, on
+`bugfix/ai-s1-ring-recipe-rewind-20261024`. Its clean initial HEAD
+`a236a1276` was verified as an ancestor of local
+`e849ed5a40c9313844f0bfb9451d1c92890001f9`, and the new branch alone was
+fast-forwarded to that commit. The requested base contains reviewed `fc17fb82e`.
+No nested worktree, remote update, parent-branch mutation, integration or push is
+part of this slice. The parent retains counts, release prose, API/S3K checks,
+full guards and composed delivery; loop 5 remains held for the separate AIZ work.
+
+The retained boundary above is now addressed, rather than excluded. The public
+parent constructor still takes the first supplied record once and retains the
+caller's child `subList`. Changing that list's elements before capture or before
+restore still changes the live recipe. Two typed
+[`Sonic1RingSpawnList`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingSpawnList.java)
+holders cover the current ring's singleton placement and the exact child
+sequence. They implement the existing `RewindStateful` contract, so the owner has
+no capture/restore override, policy allowance, annotation or generic-codec change.
+Capture stores immutable, defensively copied arrays of existing `RingSpawn`
+values and the collection owner's placement indices. It stores no services,
+manager, renderer, supplier or live object in the snapshot. Restore installs a
+detached immutable list; later caller mutations cannot alter an earlier capture.
+
+The existing engine-only `RingManagerInternalAccess` seam delegates to two
+package-private RingManager methods. Capture uses the same identity-first
+placement index as collection. Restore validates the indexed full record value
+and returns the current canonical object. This distinguishes both different
+placement IDs at the same coordinates and equal legacy records with ID `-1`.
+The existing full-value collection fallback defines compatibility for supplied
+noncanonical values or a changed index; an absent registration retains its
+captured value. No coordinate inference is used for the captured recipe. The
+existing coordinate-based recreation placeholder remains compatible with callers
+that invoke recreation without applying captured state; default state restoration
+replaces it before forward dispatch. RingManager's annotated public/protected
+surface and signature pins are unchanged.
+
+This identity guarantee is bounded to the same logical placement table. Without
+a RingManager, capture preserves ordered values, not original Java record
+references. Unrelated or reordered placement tables containing equal legacy
+records (placement ID `-1`) have no all-context identity guarantee; the saved
+index cannot establish historical identity across those different tables.
+
+An explicit placed-only creation contract was rejected: public constructor and
+ObjectRegistry/dynamic registration consumers already expose pre-INIT recipes,
+and restricting them would change supported behavior. Subtype/coordinate
+expansion was rejected because it changes supplied order/count and cannot
+identify duplicate placements. Value-only rebinding was rejected because the
+default deep-copy codec recreates immutable records, and equal legacy records
+can still denote different canonical collection indices. The chosen indices are
+existing RingManager placement identity, not a duplicate placement model or a
+snapshot of live manager state. No historical child objects are synthesized.
+
+Unchanged-runtime reproduction used the base SHA plus test changes only. The
+first request ran 12 graph cases: the six inherited controls passed, and six new
+cases failed, with zero errors/skips. All four
+`dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int)`
+cases (masks 0, 1, 2, 7) failed at restored recipe length: expected 2, actual 0.
+`unmanagedDefaultCaptureRestoresCaptureTimeRecipeWithoutAnIdentityTable` retained
+the later canonical child (placement 1), losing capture-time placement 900.
+The initial registry alias case restored placement 700 instead of the captured
+first child 702. The second unchanged-runtime request ran two parameterized
+registry cases (persisted IDs true/false) and the new
+`s1RingRecipeUsesDefaultCaptureWithoutAnExclusion` audit case. All three failed,
+with zero errors/skips: both recipe orders were lost, and the actual schema
+contained only `state` and `outOfRangeAnchorX`. These are reproduced failures of
+the unchanged runtime, not new failures attributed by totals alone.
+
+All invocations use the following environment, absolute queue wrapper, current
+worktree's own `target/`, and hash-verified existing S1 World REV01 ROM. Its CRC32
+is `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+Java compilation targets release 25, and Lua is `/usr/bin/lua5.4` (5.4.9).
+`MAIN_CHECKOUT` below resolves the shared Git directory's parent, the existing
+main checkout used for every absolute invocation. Expanding this variable yields
+the same executed argument vectors; it avoids storing a machine-local user-home
+path, which the resource-policy hook rejects. The first four requests, in order,
+are:
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+MAIN_CHECKOUT="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingGroupGraphRewind' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingGroupGraphRewind#registryRecipeCaptureFreezesSequenceOnlyAtCaptureAndRebindsDuplicateCoordinates,TestRewindFieldDispositionAudit#s1RingRecipeUsesDefaultCaptureWithoutAnExclusion' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingGroupGraphRewind,TestRewindFieldDispositionAudit,TestRewindFieldDispositionGuard,com.openggf.tests.TestSonic1RingInstance,com.openggf.game.sonic1.objects.TestSonic1RingInstance,TestSonic1RingPlacement' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingGroupGraphRewind#registryRecipeCaptureFreezesSequenceOnlyAtCaptureAndRebindsDuplicateCoordinates+dynamicUnregisteredRecipeKeepsValuesEvenAtRegisteredCoordinates' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+The first green request completed 36 cases with zero failures, errors or skips:
+13 graph cases, seven disposition-audit cases, the one actual field-disposition
+guard and 15 constructor/placement controls. Exact XML identities and skips were
+inspected. The emitted policy report contains no S1 ring key; only the exact
+`Sonic1RingInstance#childRingSpawns` baseline entry is removed. Both placement
+holders are captured by the actual default compact schema, as the focused audit
+now asserts. No other baseline key or allowance changes.
+
+The graph cases retain all six stock GHZ1 controls, force destructive managed
+restoration, and compare every forward frame through child/parent sparkle
+retirement. Supplied dynamic recipes reverse child order and deliberately differ
+from subtype count; collected children consume no allocation slot and keep their
+original native geometry index. The no-table case uses default owner capture,
+same-instance restoration and generic destructive recreation, preserving values
+and INIT progression without an identity table. Additional focused coverage
+replaces the canonical records before restore, independently collects one of two
+duplicate-coordinate placements, and restores progressed dynamic children. It
+also checks unregistered values at already-registered coordinates without binding
+them to the unrelated placement. The strengthened two duplicate cases and the
+unregistered case passed the fourth request: three tests, zero failures, errors or
+skips, with exact XML identities inspected. Together the two green requests cover
+37 distinct cases; there was no single 37-case invocation. The fourth request
+changed only focused tests, leaving the runtime source identical to the first
+green request. Its XML confirms Java 25 and the requested surfaceless EGL and
+absolute S1 ROM properties.
+
+The first red, second red, first green and focused follow-up requests waited
+10, 10, 4 and 47 seconds respectively. Maven reported about 88 seconds,
+26.296 seconds, about 85 seconds and 27.361 seconds including compilation.
+These are separate admission/execution intervals, not total delivery elapsed
+time. No request was cancelled, duplicated or restarted. All four completed. Existing compiler deprecations, load-time manifest
+fallbacks and art-mapping warnings were observed; these tests do not certify
+rendered art. Consumed Surefire reports and the generated policy report are
+inspected before removal; no category run, pass cache or log archive is created.
+
+Final source review caught an unintended constructor null check from wrapping
+the singleton in `List.of`. It was replaced with `Collections.singletonList`,
+preserving the original constructor's acceptance of the first supplied reference
+without adding early validation. No capture, rebinding or native algorithm
+changed. The affected constructor/placement controls and unmanaged no-table graph
+case were rechecked on this final source delta:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.tests.TestSonic1RingInstance,com.openggf.game.sonic1.objects.TestSonic1RingInstance,TestSonic1RingPlacement,TestS1RingGroupGraphRewind#unmanagedDefaultCaptureRestoresCaptureTimeRecipeWithoutAnIdentityTable' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+This fifth completed request passed all 16 cases, zero failures, errors or skips,
+with XML identities inspected. Admission wait was 0 seconds; Maven reported about
+85 seconds including compilation. It adds no distinct cases to the 37 already
+covered. No live jobs remain. The consumed Surefire and generated policy reports
+were removed after inspection; build outputs remain in this checkout's `target/`.
+The branch and worktree are retained for parent composition.
+
+This is bounded S1 recipe/identity evidence, not full-route, GPU, trace-sweep,
+allocation-exhaustion, every-orientation, viewport/donor/team, API or S3K
+certification. No broad smoke, full guard profile or release-only full suite is
+submitted. The allocator, native child-index geometry, collection, respawn and
+retirement algorithms themselves are unchanged. The parent owns combined
+validation and later composition.
+
+## S1 nullable recipe review correction, 2026-10-24
+
+Independent review of `60f4d832f971fbef612e3d173fe50a897a825b66` found a P2
+compatibility defect: the public parent constructor and default snapshot capture
+accept nullable placement entries, but `Sonic1RingSpawnList.restoreRewindStateValue`
+ended with `List.copyOf(restored)`, which rejects those entries. The earlier
+constructor-only null-check correction did not exercise nullable restoration.
+This follow-up stays in the same T3 checkout and
+`bugfix/ai-s1-ring-recipe-rewind-20261024`, directly atop that local commit.
+
+[`TestS1RingNullRecipeRewind`](../../../src/test/java/com/openggf/game/rewind/TestS1RingNullRecipeRewind.java)
+uses unmanaged public construction with `StubObjectServices`, without a
+RingManager or identity table. It covers `Collections.singletonList(null)` and a
+parent recipe with two null children around a non-null child. Each shape runs
+through both public capture/restore forms: no-argument methods and explicit
+`RewindCaptureContext.none()`. Each form is checked on the same object and on a
+fresh generic recreation, giving eight independent cases. The tests retain the
+caller's live child view before and after capture, then check detached restored
+values/order, INIT progression, an unmodifiable restored view, and reuse of the
+same snapshot after further caller edits and forward dispatch. No original Java
+reference identity is asserted for no-manager values.
+
+The correction wraps the already-fresh local `ArrayList` with
+`Collections.unmodifiableList(restored)`. Its backing list has no escaped mutable
+alias, so another defensive copy is unnecessary. Nulls remain in their exact
+positions. Snapshot array copies, canonical indices and rebinding, default owner
+capture and native update/allocation/collection semantics are unchanged. There
+are no new exclusions, annotations, manual owner overrides, baseline edits or API
+pins. The same-logical-table identity bound above remains in force.
+
+The requests use the environment and `MAIN_CHECKOUT` binding defined in the
+preceding follow-up: Java 25, Lua 5.4.9, surfaceless EGL, this checkout's own
+`target/`, and the same existing absolute S1 World REV01 ROM, reverified as CRC32
+`AFE05EEE` / SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`. Expanding the
+binding yields the absolute queue and ROM arguments actually used; the audit
+avoids machine-local home paths to satisfy its resource-policy hook.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingNullRecipeRewind' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingNullRecipeRewind,TestS1RingGroupGraphRewind,com.openggf.tests.TestSonic1RingInstance,com.openggf.game.sonic1.objects.TestSonic1RingInstance,TestSonic1RingPlacement' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+On unchanged runtime at `60f4d832f`, the first request completed eight tests,
+zero assertion failures, eight errors and zero skips. Every error was
+`NullPointerException`, with `java.util.List.copyOf` and
+`Sonic1RingSpawnList.restoreRewindStateValue` in its stack. Exact XML identities
+were `nullableRecipeSurvivesBothPublicNoTableForms(boolean, boolean, boolean)[1]`
+through `[8]`: nullable singleton parent with implicit capture/restore on the same
+instance and fresh instance (1–2), singleton parent with explicit `none()` on those
+two instances (3–4), nullable children with implicit methods (5–6), and nullable
+children with explicit `none()` (7–8). Capture and initial forward dispatch had
+already succeeded in every case; the first restoration rejected the nulls. These
+are observed same-instance and recreation errors in both public no-table forms.
+The request waited 92 seconds for admission; Maven reported 25.648 seconds of
+execution including compilation. No request was cancelled, restarted or duplicated.
+The second request completed 37 tests with zero failures, errors or skips:
+eight nullable controls, 14 graph cases and 15 existing constructor/placement
+controls. Exact XML testcase identities and skip elements were inspected. All
+six stock cases remain: `placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[1–4]`
+and `progressedDynamicChildrenRestoreFreshWithoutDuplicatingAndReplaySparkleRetirement(int)[1–2]`.
+Each of the eight new null identities `[1–8]` passed after the restore-wrapper
+change, through a forward INIT dispatch and a second restore of the same capture.
+The green request waited 0 seconds; Maven reported about 85 seconds including
+compilation. XML properties confirm Java `25.0.5.0.2`, surfaceless EGL and the
+absolute verified S1 ROM property. These are bounded completed-run results on
+`60f4d832f` plus this source/test delta, not a broad or parent validation claim.
+No running or queued requests remain. No source edits followed the green run.
+The parent retains combined validation and review. Loop 6 has not yet been tested
+and remains ready to compose this correction after review; this local slice does
+not claim parent guard/API, S3K, broad smoke, route or release validation. No push,
+integration, worktree cleanup or delegation is part of this correction.
+
 ## AIZ intro inventories follow-up
 
 This work is bounded to `AizPlaneIntroInstance#activeWaves` and `#emeralds`,
@@ -1297,3 +1516,728 @@ including compilation. Per-class XML identities and outcomes were inspected,
 then consumed XML/text reports were removed. The earlier 48-test behavioral
 selection and parent guard profiles were not repeated. Parent-owned broad gates,
 integration, push and worktree cleanup remain pending.
+
+## ICZ freezer debris follow-up
+
+This bounded follow-up starts at `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-679c48f4`, on
+`bugfix/ai-icz-freezer-debris-rewind-20261024`. It owns the frozen block's debris
+inventory, the two accessor callers, focused graph evidence, this row/append and
+one exact baseline key. The parent retains combined guards, API and required S3K
+checks, release/coverage prose, integration, push and worktree cleanup.
+
+The repository-wide producer/consumer census found one append site and only two
+reads, both `debrisSpawnedForTesting()` assertions in `TestS3kIczFreezerObject`.
+There is no runtime, tooling or Stageplay history consumer. Those tests now
+observe the twelve IceDebris registration attempts through their manager, while
+the graph tests observe the live managed population. This preserves the tests'
+spawn-count evidence without inventing a retired-block diagnostic contract.
+A narrow reconstruction disposition was rejected: the block has no gameplay
+consumer of this list, and rebuilding it from surviving debris would falsely
+represent history after retirement. Removing the list and migrating every caller
+is simpler and accurate. No `TRANSIENT` exclusion, manual capture override,
+mutable/shallow snapshot, strict-reference relaxation or API pin change is used.
+
+ROM loc_8A8BA (sonic3k.asm:188502-188509) releases the player, creates children
+and deletes the block. ChildObjDat_8AAEA (sonic3k.asm:188757-188782) defines twelve
+children; loc_8A8DC (sonic3k.asm:188512-188526) installs their independent routine.
+The existing twelve native `spawnChild` calls and auxiliary registration calls
+stay in the same loop/order. Native allocation attempts, Stageplay child
+notification, spawn-pass dispatch, respawn flags and retirement paths are
+unchanged. The tests independently check subtype order 0..22, native SSTs after
+the block versus auxiliary slot -1, engine ownership and absent player ownership.
+
+The graph fixture uses the real cloud producer for a native P2 or engine P3
+capture, then removes the cloud/freezer before the landed block boundary.
+In-place reuse is disabled. Two pre-break cases restore fresh blocks and current
+replacement player identities, then compare release flags, attacker bounce,
+invulnerability, exact debris identities/order/slots, spawn-pass motion and RNG.
+Six nonempty cases capture after 0, 7 or 20 moving ticks; the last pair require
+partial retirement. They discard the source and divergent same-class populations,
+restore fresh debris without the retired block, and compare every forward tick
+for 80 ticks through complete no-respawn retirement. Motion fractions/velocities,
+gravity and raw animation scalars are compared as immutable values. Captured
+entries must actually carry the default compact blob, with no generic fallback.
+The registered fixture RNG is restored after reconstruction through the existing
+registry contract, and the tests check its seed explicitly.
+
+The first test-only run on unchanged runtime source ran eight cases: six debris
+cases passed, and two pre-break cases errored because restoring replacement
+sprites lacked an active gameplay timer service. After supplying that service,
+the two-case request had one native animation mismatch and one pass. Only raw
+animation scalars differed: the fixture had omitted its constructor-consumed RNG
+from the registry. Registering that existing RNG made both pre-break cases pass
+on unchanged runtime source. These were fixture corrections, not attributed
+freezer runtime regressions; no unrelated restore change was made. The respective
+queue waits were 7, 0 and 0 seconds; Maven reported 82, 23.587 and 22.934 seconds
+of execution including compilation. These intervals are separate.
+
+All commands ran from this checkout, with source fixed while each job ran.
+The leased version probe reported Java 25.0.5; `/usr/bin/lua5.4 -v` reported
+5.4.9. The existing absolute ROM files below were read in place and matched all
+three AGENTS.md CRC32/SHA-1 pairs. No ROM was copied or linked. The following
+arrays spell out the common environment, wrapper and ROM arguments.
+`MAIN_CHECKOUT` substitutes the verified existing main-checkout absolute path;
+its ROM files are the exact verified files used by these commands. This follows
+the repository policy against committing machine-local user-home paths.
+
+```bash
+MAIN_CHECKOUT=/path/to/existing/OpenGGF-checkout
+mvnq=(env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py")
+roms=("-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen")
+"${mvnq[@]}" -v
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind#retiringBlockReplaysDebrisAllocationAndPlayerRelease+nonemptyDebrisRestoresAndReplaysAfterBlockRetirement' "${roms[@]}" test -B
+# Run twice: after timer fixture correction, then after RNG registration.
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind#retiringBlockReplaysDebrisAllocationAndPlayerRelease' "${roms[@]}" test -B
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind,TestS3kIczFreezerObject,TestRewindFieldDispositionGuard,TestS3kIczEndBossGraphRewind#iczEndBossRestoresQueuedExtendedSidekickFrostCapture' "${roms[@]}" test -B
+```
+
+The final focused selection passed all 44 tests with zero failures, errors or
+skips: 17 freezer graph cases (including all eight new parameter cases), 25 freezer
+behavior cases, the one selected boss frost check and the disposition guard.
+The generated field report exactly matches the 14 remaining baseline keys;
+only `IczFreezerObjectInstance$FrozenPlayerBlock#debris` was removed in this
+follow-up. Nine of the original 23 obligations are now closed at this boundary.
+The request waited 45 seconds; Maven reported 82 seconds of execution including
+compilation. The final four XML reports and the generated report were inspected.
+The parent receives the consumed files under this checkout's `target/` for its
+requested cleanup; this worker does not remove artifacts, worktrees or branches.
+No category run or validation receipt was created. Audit local links, all five
+disassembly citations and `git diff --check` passed.
+
+The measurement-hazard table was read before attributing results. These are
+bounded object/registry checks at a
+320-pixel viewport with TestablePlayableSprite participants and a landed-block
+setup; no complete ICZ route, character/donor/viewport matrix, terrain carry,
+GPU pixels or ROM parity expansion is certified. No broad smoke selection,
+complete guard profile, API check, required S3K combination or release-only full
+suite belongs to this worker. The checkout and local branch remain for the parent.
+
+## LBZ Knuckles optional box rigs follow-up
+
+This dependent slice starts at local loop-five candidate `e143088fa` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-6a06ac03`, branch
+`bugfix/ai-lbz-box-rig-rewind-20261024`. The clean T3-prepared branch was
+fast-forwarded from delivered `a236a1276`; ancestry includes both wall repairs
+`6cf7d4bbe` and `028cf0916`. No nested checkout or integration is part of this
+slice. The initial grounding was **source prediction**, not an observed failure:
+the owner constructor leaves both rigs absent until the native camera gate,
+while generic stateful restoration requires an existing target when a snapshot
+is present. The earlier wall tests seed FIGHT/DONE with absent rigs and cannot
+establish initialized encounter restoration.
+
+The bounded oracle uses actual ObjectManager camera-range/arm dispatch to
+initialize the two boxes and spawn the miniboss pair. It requires live progressed
+piece draw calls, miniboss arm collision publication and managed wall explosion
+children before capture. Rendering observations are CPU renderer arguments, not
+GPU pixels or a native-image comparison. Defeat notifications use the existing
+public parent callback; this is not a new player-damage or full-route oracle.
+The inherited [act matrix](../validation/levels/s3k-lbz-act1.md) still has open
+complete-route, supported viewport/donor/roster, load/death and presentation
+obligations. Parent delivery owns broad guards/API/S3K checks and integration.
+
+
+On unmodified runtime `e143088fa`, the completed initialized control reproduced
+`IllegalStateException: Cannot restore stateful rewind field
+com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#leftRig because one
+side is null`, through `GenericFieldCapturer.restoreStatefulValue` and the
+ObjectManager/registry recreation path. That run executed one test, zero assertion
+failures, one error, zero skips. Before reaching this discriminating run, test
+compilation needed private-enum formatting corrected; two fixture attempts then
+stopped before restore on absent audio/game-state services. Those are harness
+errors, not evidence of a runtime rewind regression. The final fixture owns an
+audio mock and a real registered GameStateManager; the sign handoff is delayed
+until its results work is outside the bounded replay.
+
+The selected shape is a final private typed holder for each optional rig, using
+the existing nullable `LbzMinibossBoxRig.Snapshot`. The rig itself remains absent
+until camera initialization. Empty restore clears divergent presence without
+services. Present restore constructs a fresh rig and fresh nonstatic pieces,
+then reapplies the captured values. The unchanged snapshot stores release state
+and, in fixed ten-piece table order, phase, integer/fractional position,
+velocity, frame, timer, animation cursor and deletion. Each fixed array position
+supplies the final piece index; construction binds the piece to its new enclosing
+rig. Priority is derived from phase by the existing restore contract. There is
+no persistent separate anchor or renderer to recreate, and no live helper,
+renderer or outer-owner reference is stored in the snapshot. No change to the
+shared rig class was needed.
+
+Explicit restore-time creation from these same snapshots was considered and
+rejected before implementation: an owner override would need to extract optional
+helper values before default restoration, compose the base/extra state and
+repeat or bypass the existing nine-field owner contract. That would obscure
+default-audit coverage for a local presence problem. The holders leave every
+existing field captured and enable the actual compact default route; the new
+route check verifies both eligibility and all nine captured field names, while
+the existing wall-holder audit still checks the owner for gaps. No allowances,
+baseline keys, default-audit opt-outs, eager rig construction, native camera/
+init/timer/piece/retirement changes, or per-controller RNG rebinding changes
+are introduced.
+
+The new behavior checks cover pre-gate empty capture, boundary initialization,
+closed-state fresh reconstruction, repeated empty clearing and reinitialization,
+all four left/right presence combinations through implicit and explicit
+context-free public forms, same-instance restoration after divergence,
+independently progressed rigs (182 versus 83 updates), and repeated forward
+piece movement/bucket/retirement replay. Partial presence combinations are codec
+boundary cases, not claimed native encounter phases. The initialized managed
+case captures after normal release and 80 progressing updates plus live wall
+effects, destructively recreates the graph, compares immediate draw/collision/
+effects and identities, then compares every forward draw, collision region,
+effect slot/coordinate/raw clock, SFX, shared RNG cursor, owner scalar, camera
+max-Y, object-manager clock and no-respawn retirement result.
+
+
+Commands ran from the task checkout, with verified canonical S3K ROM
+(`$HOME` expands to the original absolute paths in the recorded commands),
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -v
+# Java 25.0.5.0.2; separately, lua5.4 -v reported Lua 5.4.9.
+
+# Red: e143088fa + completed initialized test fixture, before runtime edits.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestLbzBoxRigsRewind' test
+
+# Green: e143088fa + final holder and focused tests recorded by this commit.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestLbzBoxRigsRewind,TestLbzWallExplosionsEmptyRewind,TestLbzWallExplosionsRewind,TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestRewindFieldDispositionAudit#wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath' test
+```
+
+The exact red identity was
+`TestLbzBoxRigsRewind.initializedEncounterRestoresProgressedRigsAndReplaysThroughRetirement`.
+The green selection completed **36 tests, zero failures, zero errors, zero
+skips**, including that same identity: rig cases 11, empty wall cases 3,
+populated wall cases 5, LBZ graph cases 13, piece buckets 3 and the exact
+wall-holder disposition method 1. The first expanded selection stopped at test
+compilation on a package-private schema query; the final route test uses public
+capture/blob and audit-field APIs. No runtime change followed the green run.
+The shared rig file, policy table, baselines and previously reviewed wall code
+are unchanged. Service-free empty wall restoration and current shared-RNG
+binding are observed passing on the newly compact owner path.
+
+This is focused validation, not a broad smoke, full suite, full act route,
+viewport/donor/team certification or GPU rendering result. All Maven invocations
+used the absolute main-workspace queue wrapper with this checkout's own target;
+queued jobs were retained without duplication or lock changes. Version-probe
+queue waiting was 312 seconds; the discriminating red and final green had zero
+queue wait, with Maven execution totals 26.574 and 28.073 seconds respectively.
+The earlier fixture rerun waited 67 seconds. These intervals overlap other work
+and are not an elapsed-delivery-time claim. No jobs remain live.
+
+## LBZ2 Knuckles inventory follow-up
+
+This bounded follow-up starts at main `develop` commit
+`2020d2e57a4b3a4cece9083730c89eb9c71d29a4` in the T3-provided checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-e372c0a8`, branch
+`bugfix/ai-lbz-knux-inventories-20261024`. No nested worktree, fetch, branch
+integration, push, API pin update, or unrelated object-family change belongs to
+this worker. The parent owns combined guards/API/S3K validation and delivery.
+
+The complete producer/consumer search found only initialization writes and the
+public `supportPillarsForTest` / `swingChildrenForTest` accessors, consumed by
+`TestLbz2RideCameoInstances`. The cameo never dispatches choreography through
+either collection. The manager dispatches each pillar and swing child; each
+swing child reads its own parent for launch/shake state, copies leader X to that
+parent, requests its fling, and expires after that parent retires. A reused pillar
+is independently managed scenery, not a lifetime-owned cameo child.
+
+ROM `loc_629CE` saves the initial child X in `$3A`
+(sonic3k.asm:129736-129746). `loc_62A6C` writes the fling bit through exact
+`parent3`, and `loc_62A82` copies leader X through the same link
+(sonic3k.asm:129789-129802). `loc_62AAE` advances freefall separately
+(sonic3k.asm:129814-129818). `loc_62AEE` advances pillar Y from the launch delta
+(sonic3k.asm:129836-129839). The original code instead treated the saved anchor as
+constructor-derived from the moved owner and chose the nearest cameo on recreate.
+
+The destructive regression exposed an additional lifecycle error. Native dynamic
+creation registers the cameo's initialized children before registering the cameo
+itself. Capture therefore records those children before their owner. Old child
+recreation drops them when no cameo has been restored yet; owner service injection
+then initializes a fresh pillar/chain with fresh identities. The corrected
+nine-case regression on unchanged production `2020d2e57` failed all nine cases,
+with zero errors/skips: six exact graph restores, stale retired-child observation,
+lost captured orphans, and the actual-path disposition audit. This is a root-cause
+regression, not evidence inferred from restored parent scalars. The first harness
+iteration also exposed an invalid slot-allocation expectation and an early
+freefall checkpoint; both were corrected before that nine-failure run. An earlier
+compile error was limited to placing the schema audit outside its package.
+
+Two models were compared. Marking the history lists transient leaves their
+meaningful public observations empty, stale, or dependent on initialization
+side effects. Capturing those lists would retain historical dead references and
+would not fix child-before-owner reconstruction, nearest-parent adoption, or the
+shifted anchor. The selected model deletes both lists. The swing accessor derives
+an immutable current inventory from live managed children with the exact owner,
+sorted by native subtype. Support observation stores only an immutable
+`ObjectRefId` value and uses the existing `ObjectQuery` identity/resolve surface
+to observe the exact live pillar; a retired pillar or a
+same-coordinate replacement is not reported as the captured support. Existing
+public accessor signatures remain; the direct cameo tests now supply a real
+manager. Unmanaged objects have no managed inventory to report.
+
+Restore construction seeds the existing `initialized` flag before later service
+binding, then phase two restores its captured value. Each swing recreates as a
+pure spawn shell even before its owner;
+compact identity fixup restores `parent`, and compact scalar capture restores the
+saved anchor. Owner removal clears its managed children's parent references so a
+snapshot between removal and the next child update captures genuine null-parent
+orphans. Their next update expires them; scenery keeps its independent lifetime.
+There are no new capture overrides, renderer snapshots, allowances, generic
+framework changes, or manual identity codecs. Upstream Stageplay
+`PlayerControlOwners` behavior is preserved; the new fixture supplies its player
+through the real services/camera identity registration.
+
+Focused validation completed in this checkout. The regression selection includes
+fresh/reused support, initialization, a moved swing, the last pre-fling crossing,
+freefall, a competing nearer cameo, exact identities/slots/parent links, retired
+members with slot reuse, destroyed-unswept and removed-owner boundaries, and 220 forward frames after each graph
+restore. It also audits each family's actual default compact schema rather than
+an independent whole-class schema. The field-disposition guard is selected with
+the two owned baseline keys removed; no other baseline key changes.
+
+
+The first runtime attempt kept suppression inside `initializeAfterServices` while
+`isRewindActiveRestore` was true. Its focused 25-case run passed the disposition
+guard, the compact-path audit, and 12 existing cameo checks, but failed all ten
+graph/retirement cases and errored on the Knuckles-route test helper. Inspection
+of `ObjectManager` proved it binds services *after* that construction scope ends.
+The guard therefore needed to seed the existing flag in the constructor, rather
+than inspect the expired scope during service binding. The rejected-route helper
+also now keeps the constructed actor for its assertion even when managed admission
+correctly returns null for an immediately deleted object. No production deletion
+rule was weakened.
+
+After that correction, the exact new graph/policy class (12 cases, including both
+owner-retirement boundaries) and the repaired rejected-route method passed 13
+tests with zero failures/errors/skips. That request acquired admission immediately;
+Maven reported 1 minute 24 seconds including compilation. The final implementation
+uses `ObjectQuery` directly for identity and membership observation; its complete
+focused selection passed below.
+
+
+The final focused invocation passed **26 tests, zero failures, zero errors, zero
+skips**: 12 graph/policy cases, all 13 existing ride/cameo checks, and the exact
+field-disposition guard. It acquired admission immediately; Maven reported
+1 minute 22 seconds including compilation. The generated disposition report
+matched the remaining **13 baseline keys exactly**, with both assigned keys
+absent. The per-class JUnit XML and skip elements were inspected, then those
+consumed reports and the generated disposition diagnostic were deleted.
+
+The final command, run from this checkout with DISPLAY/WAYLAND_DISPLAY unused,
+was (`MAIN_CHECKOUT` and `ROM_ROOT` denote the existing main checkout, matching
+the earlier command blocks; the variables below reproduce the executed absolute paths):
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLbzKnucklesInventoryRewind,TestLbz2RideCameoInstances,TestRewindFieldDispositionGuard' "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+The corrected nine-case baseline regression used the same command and ROM flags
+with `-Dtest=TestLbzKnucklesInventoryRewind` on unchanged production
+`2020d2e57` (nine failures, no errors/skips; queue wait 31 seconds, Maven execution
+27.274 seconds). The first runtime attempt used the final three-class selector
+above (25 tests, ten failures, one error, no skips; wait 64 seconds, execution
+1 minute 24 seconds). The narrow successful correction used
+`-Dtest=TestLbzKnucklesInventoryRewind,TestLbz2RideCameoInstances#knucklesModeDeletesCameoImmediately`
+(13 passed; immediate admission, execution 1 minute 24 seconds). These are distinct
+runs and source states, not a sum of elapsed delivery time. Tests were not duplicated
+while queued or running, and source stayed fixed from each submission to its exit.
+
+All supplied ROM paths already existed and were verified by CRC32/SHA-1 against
+the repository's REV01/locked-on identities. These focused tests are ROM-free;
+zero skips is not a claim that a ROM-backed route or GPU rendering ran. The graph
+harness uses the real ObjectManager and RewindRegistry with destructive recreation,
+and advances this family's production updates in SST order. Global music fade,
+full level/event/camera orchestration, rendering pixels, other viewport/donor/team
+routes and unrelated families are outside this evidence. Existing level-route
+coverage gaps remain inherited. No broad smoke selection, complete guard profile,
+API check, combined S3K suite, trace sweep or release-only full suite ran here.
+The parent retains those composition obligations.
+
+`git diff --check`, local audit-link existence checks and the scoped strict
+disassembly-citation check passed. The citation tool still reports inherited
+near/unverifiable references in these existing files; the new owning routines
+were also checked directly in the pinned disassembly. Only the two assigned
+baseline keys and audit rows were changed.
+
+## LBZ2 Knuckles independent review correction
+
+Review artifact `be55fe0715eb44bbbe6166fa709abc45e8f991f285cefe4074a22cf58827f69b`
+identified four missed contracts in `aabc684a16596ec4c46c5abe886d8e897562cf07`:
+the exact annotation count, constructor-before-owner admission exhaustion,
+public context-free child snapshots, and public unmanaged observations. These
+were reproduced before changing production code or merging upstream. The
+selected eight cases ran with **three failures, four capture errors, zero skips**;
+the unchanged override guard was the sole passing control. Admission waited two
+seconds; Maven reported 27.273 seconds of execution. The annotation failure named
+only this source's two actual annotations against the stale allowance of four.
+The getter failures were unavailable-services exceptions. The two public capture
+forms, a present-table/null control, and constrained-capacity capture failed at
+the strict `SwingChild.parent` identity codec as expected.
+
+Local `develop` at `a236a1276ec7020eaca28134e6fa6d4f345c8e07` was then merged
+normally as `ac3205445d0acb358d221409409be13fcfb36ad2`, with `aabc684a1` as its
+first parent. The only conflict was the shared audit append; both independent
+evidence sections and all separately updated field rows were retained. No
+branch was fetched, rebased, forced, switched in the main workspace, or pushed.
+Uncommitted review tests remained outside that merge commit. Other-family loop4
+changes, including Stageplay player ownership, were preserved.
+
+The correction reuses the already-private field-selected optional mode of
+`ObjectReferenceCodec`; the codec implementation is unchanged. One shared
+`LBZ_SWING_PARENT` key now selects that mode and the exact `CAPTURED` metadata.
+The closed-set reachability control admits exactly this key plus the original
+three S2 keys. The existing byte-level controls now also exercise the swing key,
+including class-only lookup remaining strict, replacement identity resolution,
+wrong-type rejection, uncaptured link preservation, authoritative captured null,
+and absent restore targets. No blanket optional-reference rule, new manual
+capture/restore override, opaque object pointer, allowance growth, or API pin
+change is used. The annotation allowance is pruned **4 -> 2**; the remaining two
+annotations classify only spawn-derived subtype/index. Both public observations
+use `tryServices()` and return empty when no services are available, including a
+previously initialized support identity whose services were removed.
+
+The new native admission fixture uses the real `Sonic3kObjectRegistry`,
+`ObjectManager` and `RewindRegistry`, with the S3K dynamic window constrained to
+four slots and its other slot-layout flags retained. Production allocation order
+is asserted literally: fade at slot 4, pillar at 5, subtype-0 swing at 6 and
+subtype-2 swing at 7. The remaining swings and then the owner fail admission. The
+raw owner is destroyed, has slot -1 and no registered identity; the two admitted
+children still point at it because rejected admission has no removal callback.
+Capture occurs **before** any child dispatch. Restore must recreate those exact
+child IDs/slots with authoritative null parents, and actual manager dispatch
+must delete them just as uninterrupted dispatch does. The fixture silences only
+the unrelated fade API with a test audio boundary; it asserts production graph
+and lifetime behavior rather than mock behavior. No production allocation call,
+order, slot flag or deferred-execution flag changes.
+
+Actual public child snapshot calls cover both no-argument and explicit
+`RewindCaptureContext.none()` capture. Context-free restore replays motion state
+while retaining the already-existing owner link; a no-table snapshot also
+preserves a different live owner's link even when restore supplies a table.
+Conversely, a snapshot made with a present table and an unregistered owner must
+clear a live link even when restore has no table, then reach the orphan deletion
+tail. This distinguishes missing authority from a captured null instead of
+returning early on both. Existing exact competing-owner/anchor/shell behavior
+and all original 26 cases are retained.
+
+The combined focused selection added the six boundary cases, exact
+optional-reference controls, both closed-set/reachability controls, and the
+architecture annotation/override methods to the original 26-case selection. It
+ran **68 cases: 67 passed, one failure, zero errors/skips**. All original 26
+cases and both architecture methods passed. Admission waited 74 seconds; Maven
+reported 1 minute 29 seconds of execution. The field-disposition baseline is
+unchanged by this review correction;
+its nine inherited keys match the final generated report exactly, with both
+LBZ inventory keys still absent. Full guard profiles, API/S3K composition and
+delivery remain with the parent. This fixture does not certify rendered output, complete LBZ routes or
+other viewport/donor/team breadth.
+
+
+The single failing case had advanced beyond the rejected-owner capture that
+failed on `aabc`: capture now succeeded, as did uninterrupted orphan deletion.
+A diagnostic rerun limited its restored-object assertions and still failed on
+owned swing ID 2, slot 6 (one failure, no errors/skips; four-second queue wait,
+26.108 seconds of Maven execution). This exposed a second owner-absence dependency:
+`ObjectRewindDynamicCodecs` constructs a probe before invoking the object's
+recreate hook. The available `(ObjectSpawn, parent)` probe constructor required
+finding a live cameo, so an orphan-only graph could never reach the otherwise
+parent-independent `recreateForRewind` shell. Ordinary two-owner fixtures had
+masked that dependency by allowing the generic fixed-point retry to find a live
+owner. The exact null-parent codec alone could not fix an unreachable recreation
+hook.
+
+The correction adds a private spawn-only `SwingChild` probe constructor and uses
+that same pure shell from `recreateForRewind`. Captured exact parents still bind
+in phase two; a graph containing no cameo can now recreate the null-parent child
+before native orphan dispatch retires it. Normal child creation still takes the
+same parent/subtype constructor and native allocation calls. Anchors, choreography
+and slot flags are unchanged. No framework workaround or manual capture override
+is added.
+
+An initial source reading had wrongly blamed the fade helper's recreation,
+overlooking its existing package-private `ObjectSpawn` constructor. That hypothesis
+and the reduced population assertion were rejected. The final regression retains
+all four admission and restoration identities/slots, including the fade helper;
+it also allocates two new pillars after uninterrupted/replayed orphan deletion,
+requiring slots 6 and 7 and identical next dynamic IDs in both paths. There is no
+asserted inherited fade gap.
+
+The final affected-family selection (the original 26 cases, all six new boundary
+cases, and both architecture methods) passed **34 tests, zero failures, zero
+errors, zero skips** after the constructor correction. Admission was immediate;
+Maven reported 1 minute 32 seconds of execution including compilation. The 32
+byte-level optional-codec cases and both
+closed-set/reachability methods already passed and their implementations/metadata
+have not changed since that run. No broad profile is being repeated.
+
+
+The final affected command was:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLbzKnucklesInventoryRewind,TestLbz2RideCameoInstances,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage+objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage' "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+`MAIN_CHECKOUT` / `ROM_ROOT` have the same neutral meaning as the earlier command
+blocks. All requests ran from this task checkout through that main-checkout
+wrapper with the existing verified absolute ROM paths, Java 25, Lua 5.4 and the
+required EGL flag. The other exact selectors below used identical wrapper,
+runtime and ROM arguments:
+
+- Baseline on `aabc`: `-Dtest=TestLbzKnucklesInventoryRewind#publicConstructionHasEmptyUnmanagedObservations+removingServicesMakesBothLiveObservationsEmpty+publicChildSnapshotsWithoutIdentityTablePreserveCurrentLinks+tableBackedUnregisteredOwnerIsAuthoritativeNullWithoutRestoreTable+constrainedNativeAdmissionCapturesRejectedOwnersChildrenBeforeDispatch,TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage+objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage`.
+- Combined after metadata/getter/count correction: `-Dtest=TestLbzKnucklesInventoryRewind,TestLbz2RideCameoInstances,TestRewindFieldDispositionGuard,TestOptionalObjectReferenceCodecs,TestCapturedPolicyCompactReachabilityGuard#optionalNativeLinksHaveClosedExactCapturedMetadata+capturedPoliciesNeedingCompactPathAreReachable,TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage+objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage`.
+- Narrow orphan-only diagnosis: `-Dtest=TestLbzKnucklesInventoryRewind#constrainedNativeAdmissionCapturesRejectedOwnersChildrenBeforeDispatch`.
+
+Coverage is **68 distinct passing cases across the completed selections**, with
+34 affected cases passing on the final constructor fix and the 34 unchanged
+codec/reachability cases passing in the earlier combined run. There was no single
+all-green 68-case invocation. XML case identities/counts and skip elements were
+inspected; consumed XML/text reports and the generated disposition report were
+removed. No live requests remain, none was duplicated or restarted, and source
+was fixed during each queued/running request. No release-only full suite, broad
+smoke selection, full guard profile, API check or combined S3K selection ran in
+this review follow-up. Existing route/rendering/viewport/donor/team limits remain
+as stated above; all reported checks are ROM-free despite receiving verified ROM
+paths. Local whitespace, audit-link and scoped strict citation checks passed.
+
+The follow-up adds no baseline field key and changes no unrelated family. Both
+inventory obligations remain closed with tested public compatibility and rejected
+owner behavior; the parent retains next-wave integration and delivery.
+
+## Lightning spark art follow-up
+
+Scope: `LightningSparkObjectInstance#sparkTiles`, its necessary animation and
+atlas-residency companion state, producer/recreation checks and this row only.
+The T3-created checkout `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9f830c00` was clean
+at `a236a1276`, renamed to `bugfix/ai-lightning-spark-art-rewind-20261024`, and
+fast-forwarded only to local reviewed base `e849ed5a4`. No nested worktree,
+subagent, integration or push belongs to this slice.
+
+### Producer census and rejected recipe
+
+All production `new LightningSparkObjectInstance` calls are in
+`LightningShieldObjectInstance.triggerSparks` and the public static
+`forRewindRecreate` factory; the package-private no-argument constructor delegates
+to the public null-art constructor for discovery. The public six- and
+seven-argument constructors independently accept a `Pattern[]` and animation set;
+there is no provider-only precondition on those entrypoints. The shield producer
+requests `Sonic3kObjectArtKeys.LIGHTNING_SPARK` from its injected module's actual
+`Sonic3kObjectArtProvider`. `loadShieldArt` / `buildSparkArtSet` load five
+uncompressed ROM tiles and construct the existing 20-frame `[0,1,2]` spark
+sequence with delay zero. Rendering uses those five patterns directly; no new
+PLC parsing, timing or art registration is introduced.
+
+The host shield factory and S3K cross-game donor factory both construct
+`LightningShieldObjectInstance`. `DefaultPowerUpSpawner.shieldFactory` selects
+the active donor factory before the host factory. The shield's art lookup still
+reads the **host** module: an S3K donor shield on a Sonic 2 host currently emits
+four null-art sparks. This is an observed construction/render boundary, not a
+claim that donor lightning art is implemented. The focused donor test exercises
+the actual spawner and exported factory with a stubbed active donor selection;
+it does not initialize a complete cross-game gameplay session.
+
+A genuinely reconstructible transient recipe was considered: retain only the
+provider key and resolve the current provider, as the old recreate hook does.
+The stock fixture proves that a replacement provider loads the same exact
+nonzero five-tile values from the same ROM. That recipe is insufficient for the
+public constructor's independent pixels/scripts or its null-art case. Capturing
+only a provider key (or excluding only stock `sparkTiles`) would silently change
+those supported recipes. The chosen owner-local `RewindStateful` holder's snapshot stores
+only defensive pixel arrays and immutable copies of animation scripts, including
+null/empty distinctions. Restore creates fresh patterns and an animation set;
+it neither keeps a renderer nor reads an atlas/ROM/disassembly as a fallback.
+The direct static factory keeps its existing provider lookup and null-service
+behavior; the managed default field restore then applies the captured recipe.
+The first implementation in `2abcdc86f` left the live fields on the owner and
+excluded them with three annotations while an anonymous holder read/wrote them.
+That sideband shape was rejected by independent review and the exact annotation
+guard, despite the passing pixel/recipe checks below. The corrected private named
+static helper owns the live fields, value capture/restore and upload cache
+directly, without an enclosing-owner reference, exclusions or replacement policy
+allowances. `tilesCached` remains helper-local upload scratch and resets at
+holder restore. See the review correction below for red/green evidence.
+
+### Discriminating baseline
+
+With unchanged production source at `e849ed5a4` and the new fixture, four tests
+executed: three assertion failures, zero errors/skips, and one passing
+context-free/null-retirement control. The failures were:
+
+- `independentConstructorArtAndAnimationAreCapturedAsValuesRatherThanReplacedByStock`:
+  five captured tiles restored as null after the live provider was removed.
+- `donorFactoryOnSonic2HostKeepsItsActualNullArtRecipeAndNativeAllocation`:
+  a null-art boundary changed from zero lit pixels to 12 when a stock provider
+  became available before restore. The later fixture revision routes the same
+  exported donor factory through `DefaultPowerUpSpawner` as well.
+- `stockProducerRestoresExactRomTilesAndVisibleBlankFramesThroughRetirement`:
+  all four recreated objects recovered exact stock pixels in CPU memory, but the
+  first production draw after atlas retirement changed from 48 lit pixels to
+  zero because the captured `tilesCached=true` suppressed re-upload.
+
+The baseline admission wait was 10 seconds; Maven reported 1:25 including
+compilation, with 0.847 seconds in the four-case XML. These are separate observed
+intervals, not total delivery time. The baseline command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" \
+  -Dtest=TestLightningSparkArtRewind test
+```
+
+`MAIN_CHECKOUT` and `ROM_ROOT` denote the existing main checkout and its root ROM
+directory, as in the earlier commands in this audit. The displayed variables
+stand for the actual absolute wrapper and ROM arguments used at launch; the
+worker did not invoke its local wrapper or create ROM links. The existing
+absolute ROM was verified before launch: 4,194,304 bytes,
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+The component fixture owns display-free EGL on Linux, installs no-device audio,
+uses production `GraphicsManager` draw/flush and reads a freshly cleared target
+each frame. Exact RGB image values, rather than just draw arguments or hashes, are
+compared. Graphics resources retire while EGL remains current. No ambient
+display, runtime fallback assets or manual capture override is used.
+
+### Candidate verification and limits
+
+The corrective focused selection is `TestLightningSparkArtRewind,` followed by
+`TestSonic3kLightningShieldObjectInstance,TestRewindFieldDispositionAudit`, with
+all other command arguments identical to the baseline. The owner audit method
+requires that `sparkArtState` is captured on the actual default compact route;
+only the exact `LightningSparkObjectInstance#sparkTiles` baseline key is removed.
+The existing shield tests own allocation timing, the four signed velocities and
+creation-time priority behavior. Parent-owned broad guards, API inventory, four
+required S3K stability checks and delivery remain outside this slice.
+
+The first corrective payload used an immutable map of copied scripts. The actual
+default holder codec calls `GenericFieldCapturer.deepCopySnapshotValue`, whose
+record copier rejects `Map` components. The 14-case corrective invocation
+therefore had two errors (`Cannot clone unsupported rewind value type
+java.util.Map`) in the real-art stock and independent cases, with no assertion
+failures/skips; the donor case, context-free control, seven disposition checks
+and three existing shield checks passed. Admission was immediate; Maven reported
+1:19 including compilation. This is rejected payload evidence, not a framework
+allowance: the replacement uses private typed script records and primitive
+arrays already accepted by the copier. Script IDs, delay, frames, end action,
+parameter and trailing bytes remain values, with no shared mutable collection.
+
+The stock fixture captures after three updates and a visible production draw,
+uses a fresh current provider, retires the five atlas entries, forces fresh
+managed objects with the exact captured identities/slots, and compares immediate
+rendering and 22 forward ticks through visible and blank animation frames and
+deletion. The independent recipe
+uses nonstock pixels and a distinct delayed script, mutates the original array,
+patterns and frame list after capture, then restores without a provider. Reusing
+the snapshot after mutating restored patterns/scripts distinguishes immutable
+value capture from live references. The final context-free control also restores
+populated art and empty nonnull arrays/sets through the inherited public capture
+and restore methods without injected services. The donor control preserves
+actual null art when a different provider appears before reconstruction. These are component
+GPU pixels and bounded object/allocator replay, not a full-route, occlusion,
+all-platform, independent-art coexistence or ROM scheduling parity claim.
+
+The typed-array implementation committed as `2abcdc86f` passed all **14 tests across three exact
+classes**, zero failures, errors or skips: four ROM/EGL spark cases (0.939 seconds
+in XML), three existing shield checks (0.127 seconds), and seven disposition
+audit checks (0.270 seconds). The selected command above exited zero; shared
+admission waited 41 seconds and Maven reported 1:19 including compilation.
+Those are observed queue/execution intervals, not total elapsed delivery time.
+The tested state was base `e849ed5a4` plus this slice's production class, new
+fixture, owner audit method and one-key baseline removal; only audit prose
+changed afterwards. Consumed XML identities, assertions and skips were inspected.
+That commit supplies the behavioral baseline for the review correction below;
+its annotation/override guard pair was not in that initial 14-case selection.
+No broad guard/API/S3K stability/full-route or release-only full-suite result is
+claimed; the parent owns those applicable gates and delivery. No live Maven job
+remains. Disposable logs/reports are removed rather than archived; no category
+run, pass cache or validation receipt was created.
+
+### Review correction: named art ownership without exclusions
+
+The independent review of `2abcdc86fd59cbc2443841fe34ce9f18c5c7751f` found that
+its three new `RewindTransient` annotations violated the authorized no-growth
+scope. The exact annotation guard has no LightningSpark allowance. The live
+`animSet`, `sparkTiles` and `tilesCached` fields were still owner sidebands,
+with an anonymous `sparkArtState` referring back to the owner. Pixel/recipe
+correctness did not justify those exclusions. The preceding 14 passing cases
+remain valid behavioral baseline evidence, not a passing no-growth gate.
+
+Before any production/test edit, the same clean checkout and branch at unchanged
+`2abcdc86f` ran this exact pair using the verified existing absolute wrapper/ROM
+paths represented by `MAIN_CHECKOUT` / `ROM_ROOT` above:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" \
+  '-Dtest=TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage+objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage' test
+```
+
+Both methods executed, with one failure, zero errors/skips. The annotation
+assertion reported exactly:
+
+```text
+Unexpected growth:
+src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java#@RewindTransient = 3
+```
+
+`objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage` passed. Queue wait
+was 35 seconds; Maven reported 25.196 seconds, with 0.518 seconds in the pair's
+XML. These are separate observed intervals. No new baseline or allowance was
+added to accept the rejected shape.
+
+The correction moves all three live fields and their existing value capture,
+restore and cache-upload behavior into a private named static `SparkArtState`
+implementing `RewindStateful`. The owner holds one final helper and reads its
+script/tile readiness and cache directly. There are no owner art sidebands,
+synthetic enclosing-owner references, Java-transient replacement fields or new
+exclusion annotations. Constructors pass through the original array and
+animation references unchanged; only snapshot values are defensively copied.
+Existing typed snapshots, null/empty distinctions, fresh restored patterns,
+script metadata and upload reset remain intact. The default compact capture
+route and inherited public no-table capture/restore still own the state;
+no manual owner override, codec context-mode change, API pin, policy or baseline
+edit belongs to this correction.
+
+The original four ROM/EGL cases retain their names, pixel comparisons,
+visible/blank/retirement replay and `EnabledOnOs(OS.LINUX)` isolation. Their
+reflection now reads the fields in the helper; the independent recipe case also
+asserts the original constructor aliases. The existing owner disposition method
+now requires the private/static/final named helper, its exact three owned fields,
+absence of owner sidebands/exclusions, actual default compact capture and zero
+owner disposition gaps.
+
+The corrective focused command preserves the baseline environment/wrapper/ROM
+arguments and replaces only the selector with:
+
+```text
+-Dtest=TestLightningSparkArtRewind,TestSonic3kLightningShieldObjectInstance,TestRewindFieldDispositionAudit,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage+objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage
+```
+
+This selects the original 14 affected cases plus the two exact annotation/override
+methods and actual field-disposition guard. No complete parent guard profile,
+API/S3K gate or release-only full suite is duplicated. Parent loop 6 is composed
+but not yet tested; this follow-up remains pending parent review/integration.
+The component rendering, donor-session and full-route limits above still apply.
+
+The named-helper corrective selection passed **all 17 cases across five exact
+class/method selections**, zero failures, errors or skips. XML confirmed the
+same four ROM/EGL methods (0.912 seconds), three existing shield checks (0.122
+seconds), seven owner/audit controls (0.024 seconds), the actual field-disposition
+guard (0.433 seconds), and exactly the two annotation/override methods (0.469
+seconds). The previously failing annotation method now passed with its baseline
+unchanged. Admission waited zero seconds; Maven reported 1:15 including
+compilation. Only audit prose changed after that completed run. The tested state
+is `2abcdc86f` plus this follow-up's production helper and two affected test files;
+the local follow-up commit identifies that source tree. No codec context modes,
+policy/baseline allowances or GL isolation annotations changed. Consumed XML
+identities and zero skip/failure results were inspected; no pass cache or category
+run was created. No live Maven request remains. The same branch/worktree is
+retained, and this result remains pending parent review/integration rather than
+a claim about the untested loop-6 composition or parent delivery gates.

@@ -21,10 +21,12 @@ final class DefaultObjectRewindPolicies {
     // Public context-free forms leave these links alone; managed captures remain strict.
     private static final Set<FieldKey> CONTEXT_COMPATIBLE_COLLECTORS = Set.of(
             AIZ_INTRO_COLLECTOR, AIZ_EMERALD_COLLECTOR);
-    // These native links may outlive a retired SST target. Reuse the exact-policy
+    private static final FieldKey LBZ_SWING_PARENT = new FieldKey(
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent");
+    // These native links may outlive a retired or rejected SST target. Reuse the exact-policy
     // keys so the existing field audit also rejects stale optional metadata.
     private static final Set<FieldKey> OPTIONAL_OBJECT_REFERENCES = Set.of(
-            REXON_PARENT, REXON_NEXT_HEAD, SOL_PARENT);
+            REXON_PARENT, REXON_NEXT_HEAD, SOL_PARENT, LBZ_SWING_PARENT);
 
     private static final Set<String> STRUCTURAL_OBJECT_FIELD_NAMES = Set.of(
             "anchor",
@@ -518,6 +520,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance", "queuedResultsArt"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artQueue"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artHandle"), RewindFieldPolicy.TRANSIENT),
+            // LBZ2 swing children can be captured before their owner. Bind native parent3
+            // by identity after graph reconstruction, never by the nearest cameo.
+            Map.entry(LBZ_SWING_PARENT, RewindFieldPolicy.CAPTURED),
             // The ship child rebinds to the nearest recreated live ship; its accumulator remains captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild", "parent"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
@@ -728,7 +733,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment", "mappingFrame"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment", "previous"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSegmentColumnObjectInstance$Segment", "root"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "attachedKnuckles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "carriedPlayer"), RewindFieldPolicy.CAPTURED),
             // Keep only registered children; their unload hooks remove retired identities.

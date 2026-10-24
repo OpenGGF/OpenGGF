@@ -8,8 +8,10 @@ import com.openggf.game.sonic1.Sonic1Level;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.objects.Sonic1RingInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -23,6 +25,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -35,7 +38,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Stock placed-parent controls for the childRingSpawns disposition review. */
+/** Stock and caller-supplied recipe controls for the childRingSpawns disposition review. */
 @RequiresRom(SonicGame.SONIC_1)
 class TestS1RingGroupGraphRewind {
     private static SharedLevel sharedLevel;
@@ -182,6 +185,199 @@ class TestS1RingGroupGraphRewind {
         }
     }
 
+    @ParameterizedTest(name = "supplied dynamic INIT collected mask {0}")
+    @ValueSource(ints = {0, 1, 2, 7})
+    void dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int collectedMask) {
+        Harness stock = harness;
+        // The exposed constructor accepts a recipe independent of subtype count and coordinates.
+        List<RingSpawn> recipe = List.of(stock.group().get(0), stock.group().get(2), stock.group().get(1));
+        Harness h = suppliedHarness(recipe, false);
+        Sonic1RingInstance original = h.parent();
+        int parentSlot = original.getSlotIndex();
+        h.collect(collectedMask);
+        CompositeSnapshot before = h.rewind().capture();
+        assertEquals(1, objectSnapshot(before).dynamicObjects().size());
+        assertNotNull(objectSnapshot(before).dynamicObjects().getFirst().state().compactGenericState());
+        assertRecipeIdentity(original, recipe);
+        h.tick(1);
+        assertSuppliedAllocation(h, collectedMask, parentSlot);
+        List<GraphView> forward = new ArrayList<>();
+        forward.add(h.view());
+        for (Sonic1RingInstance ring : h.live()) {
+            ring.onTouchResponse(h.player(), new TouchResponseResult(7, 6, 6, TouchCategory.SPECIAL),
+                    h.objects().getFrameCounter());
+        }
+        for (int frame = 2; frame <= 42; frame++) {
+            h.tick(frame);
+            forward.add(h.view());
+        }
+        assertTrue(h.live().isEmpty(), "positive control reaches forward retirement");
+        h.objects().reset(h.cameraX());
+        h.rewind().restore(before);
+        assertNotSame(original, h.parent());
+        assertRecipeIdentity(h.parent(), recipe);
+        assertEquals(0, h.parent().getCollisionFlags());
+        h.tick(1);
+        assertSuppliedAllocation(h, collectedMask, parentSlot);
+        assertEquals(forward.getFirst(), h.view());
+        for (Sonic1RingInstance ring : h.live()) {
+            ring.onTouchResponse(h.player(), new TouchResponseResult(7, 6, 6, TouchCategory.SPECIAL),
+                    h.objects().getFrameCounter());
+        }
+        for (int frame = 2; frame <= 42; frame++) {
+            h.tick(frame);
+            assertEquals(forward.get(frame - 1), h.view(), "supplied recipe forward frame " + frame);
+        }
+    }
+
+    @ParameterizedTest(name = "duplicate coordinates with persisted IDs {0}")
+    @ValueSource(booleans = {true, false})
+    void registryRecipeCaptureFreezesSequenceOnlyAtCaptureAndRebindsDuplicateCoordinates(boolean persistedIds) {
+        Harness stock = harness;
+        RingSpawn first = new RingSpawn(stock.spawn().x(), stock.spawn().y(), persistedIds ? 700 : -1);
+        RingSpawn duplicate = new RingSpawn(first.x(), first.y(), persistedIds ? 701 : -1);
+        RingSpawn last = new RingSpawn(first.x() + 32, first.y(), persistedIds ? 702 : -1);
+        // The selected parent is the SECOND placement at these coordinates.
+        List<RingSpawn> supplied = new ArrayList<>(List.of(duplicate, last, first));
+        stock.rings().resyncSpawnList(List.of(first, duplicate, last));
+        Harness h = suppliedHarness(supplied, true);
+        Sonic1RingInstance original = h.parent();
+        supplied.set(1, first);
+        supplied.set(2, last);
+        List<RingSpawn> capturedOrder = List.copyOf(supplied);
+        assertRecipeIdentity(original, capturedOrder); // preserve the constructor's caller-owned subList
+        CompositeSnapshot before = h.rewind().capture();
+        supplied.set(1, last);
+        supplied.set(2, first);
+        assertRecipeIdentity(original, supplied); // capture itself must not freeze live construction semantics
+        RingSpawn reboundFirst = new RingSpawn(first.x(), first.y(), first.placementId());
+        RingSpawn reboundDuplicate = new RingSpawn(duplicate.x(), duplicate.y(), duplicate.placementId());
+        RingSpawn reboundLast = new RingSpawn(last.x(), last.y(), last.placementId());
+        // A fresh table owns fresh Java records, even for equal legacy values.
+        h.rings().resyncSpawnList(List.of(reboundFirst, reboundDuplicate, reboundLast));
+        h.objects().reset(h.cameraX());
+        h.rewind().restore(before);
+        assertNotSame(original, h.parent());
+        assertEquals(capturedOrder, List.of(reboundDuplicate, reboundFirst, reboundLast));
+        assertRecipeIdentity(h.parent(), List.of(reboundDuplicate, reboundFirst, reboundLast));
+        assertSame(reboundDuplicate, ringSpawn(h.parent()), "coordinates alone would bind the wrong placement");
+        assertTrue(h.rings().collectPlacedRing(reboundFirst, h.player(), 0));
+        h.tick(1);
+        assertEquals(List.of(duplicate.placementId(), last.placementId()),
+                h.live().stream().map(r -> ringSpawn(r).placementId()).toList());
+        Sonic1RingInstance child = h.live().getLast();
+        assertSame(reboundLast, ringSpawn(child));
+        assertEquals(h.spawn().x() + 32, child.getX(), "filtered child keeps its original recipe index");
+        assertEquals(h.parent().getSlotIndex() + 1, child.getSlotIndex(), "no collected-child reservation");
+        CompositeSnapshot progressed = h.rewind().capture();
+        h.objects().reset(h.cameraX());
+        h.rewind().restore(progressed);
+        assertSame(reboundDuplicate, ringSpawn(h.parent()));
+        assertSame(reboundLast, ringSpawn(h.live().getLast()), "dynamic child must also retain placement identity");
+    }
+
+    @Test
+    void dynamicUnregisteredRecipeKeepsValuesEvenAtRegisteredCoordinates() {
+        List<RingSpawn> canonical = harness.group();
+        RingSpawn suppliedParent = new RingSpawn(canonical.getFirst().x(), canonical.getFirst().y(), 900);
+        RingSpawn suppliedChild = new RingSpawn(canonical.getLast().x(), canonical.getLast().y(), 901);
+        Harness h = suppliedHarness(List.of(suppliedParent, canonical.get(1), suppliedChild), false);
+        h.collect(2); // only the registered child is collected
+        CompositeSnapshot before = h.rewind().capture();
+        h.tick(1);
+        GraphView expected = h.view();
+        h.objects().reset(h.cameraX());
+        h.rewind().restore(before);
+        assertEquals(suppliedParent, ringSpawn(h.parent()));
+        assertNotSame(suppliedParent, ringSpawn(h.parent()), "default snapshot copy need not retain record identity");
+        List<?> children = (List<?>) field(h.parent(), "childRingSpawns");
+        assertSame(canonical.get(1), children.getFirst());
+        assertEquals(suppliedChild, children.getLast());
+        h.tick(1);
+        assertEquals(expected, h.view());
+        assertEquals(2, h.live().size());
+        assertEquals(h.spawn().x() + 32, h.live().getLast().getX());
+        assertEquals(h.parent().getSlotIndex() + 1, h.live().getLast().getSlotIndex());
+    }
+
+    @Test
+    void unmanagedDefaultCaptureRestoresCaptureTimeRecipeWithoutAnIdentityTable() {
+        ObjectSpawn spawn = harness.spawn();
+        List<RingSpawn> supplied = new ArrayList<>(harness.group());
+        Sonic1RingInstance parent = new Sonic1RingInstance(spawn, supplied);
+        parent.setServices(new StubObjectServices()); // intentional public unmanaged path, no RingManager/table
+        RingSpawn replacement = new RingSpawn(99, 123, 900);
+        supplied.set(1, replacement);
+        var snapshot = parent.captureRewindState();
+        assertNotNull(snapshot.compactGenericState());
+        supplied.set(1, harness.group().get(1));
+        assertRecipeIdentity(parent, supplied);
+        parent.update(1, null);
+        parent.restoreRewindState(snapshot);
+        assertEquals(0, parent.getCollisionFlags(), "restore the same instance to pre-INIT");
+        assertEquals(List.of(replacement, harness.group().get(2)), field(parent, "childRingSpawns"));
+        supplied.set(2, replacement);
+        assertEquals(List.of(replacement, harness.group().get(2)), field(parent, "childRingSpawns"),
+                "restored recipe is isolated from later caller mutations");
+        parent.update(1, null);
+        assertEquals(Sonic1RingInstance.RING_COLLISION_FLAGS, parent.getCollisionFlags());
+
+        Sonic1RingInstance recreated = (Sonic1RingInstance) parent.recreateForRewind(
+                new RewindRecreateContext(spawn, snapshot, new StubObjectServices()));
+        recreated.setServices(new StubObjectServices());
+        recreated.restoreRewindState(snapshot);
+        assertEquals(harness.group().getFirst(), ringSpawn(recreated));
+        assertEquals(List.of(replacement, harness.group().get(2)), field(recreated, "childRingSpawns"));
+        recreated.update(1, null);
+        assertEquals(Sonic1RingInstance.RING_COLLISION_FLAGS, recreated.getCollisionFlags());
+    }
+
+    private Harness suppliedHarness(List<RingSpawn> recipe, boolean registryPlaced) {
+        Harness stock = harness;
+        ObjectSpawn spawn = new ObjectSpawn(stock.spawn().x(), stock.spawn().y(), 0x25, 1, 0, false, 0);
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices old = stock.objects().getObjectServices();
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public RingManager ringManager() { return stock.rings(); }
+            @Override public Camera camera() { return old.camera(); }
+        };
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override public Sonic1RingInstance create(ObjectSpawn entry) { return new Sonic1RingInstance(entry, recipe); }
+            @Override public void reportCoverage(List<ObjectSpawn> entries) { }
+            @Override public String getPrimaryName(int id) { return "Supplied ring recipe"; }
+        };
+        ObjectManager objects = new ObjectManager(registryPlaced ? List.of(spawn) : List.of(), registry,
+                0, null, null, GameServices.graphics(), old.camera(), services);
+        holder[0] = objects;
+        objects.enableCounterBasedRespawn();
+        objects.setRewindInPlaceRestoreEnabledForTest(false);
+        objects.reset(stock.cameraX());
+        if (!registryPlaced) objects.addDynamicObject(registry.create(spawn));
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(stock.rings());
+        rewind.register(objects.rewindSnapshottable());
+        return new Harness(objects, stock.rings(), rewind, spawn, recipe, stock.cameraX(), stock.player());
+    }
+
+    private static void assertSuppliedAllocation(Harness h, int mask, int parentSlot) {
+        List<Integer> expectedIds = new ArrayList<>();
+        List<Integer> expectedSlots = new ArrayList<>();
+        int nextSlot = parentSlot + 1;
+        for (int i = 0; i < h.group().size(); i++) {
+            if ((mask & (1 << i)) != 0) continue;
+            RingSpawn placement = h.group().get(i);
+            expectedIds.add(placement.placementId());
+            expectedSlots.add(i == 0 ? parentSlot : nextSlot++);
+            Sonic1RingInstance ring = h.live().stream().filter(r -> ringSpawn(r) == placement).findFirst().orElseThrow();
+            assertEquals(h.spawn().x() + i * 16, ring.getX(), "native geometry follows recipe index");
+            assertEquals(h.spawn().y(), ring.getY());
+            assertEquals(h.spawn().x(), ring.getOutOfRangeReferenceX());
+        }
+        assertEquals(expectedIds, h.live().stream().map(r -> ringSpawn(r).placementId()).toList());
+        assertEquals(expectedSlots, h.live().stream().map(Sonic1RingInstance::getSlotIndex).toList());
+    }
+
     private void assertAllocation(int collectedMask, int parentSlot) {
         Harness h = harness;
         List<Integer> expectedPlacementIds = new ArrayList<>();
@@ -212,7 +408,7 @@ class TestS1RingGroupGraphRewind {
     }
 
     private static RingSpawn ringSpawn(Sonic1RingInstance ring) {
-        return (RingSpawn) field(ring, "ringSpawn");
+        return (RingSpawn) ((List<?>) field(ring, "ringSpawn")).getFirst();
     }
 
     private static Object field(Sonic1RingInstance ring, String name) {

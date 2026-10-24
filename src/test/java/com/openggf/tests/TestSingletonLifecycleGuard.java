@@ -81,7 +81,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/scroll/SwScrlMgzTest.java#setUpRuntime
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
-            src/test/java/com/openggf/graphics/TestFadeManager.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerFadeRebinding.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerSpriteSatReplay.java#setUp
             src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp

@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 records while the next ownership slice is designed | Next target: remove internal SAT-replay descriptor construction while retaining supported typed rendering ingress |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 records while remaining responsibilities are qualified | Retain the four SAT callback-adapter records; investigate mutable donor-palette ownership without changing shared bank allocation |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -92,7 +92,7 @@ new validation separately.
 Lifecycle calls are a separate migration inventory, not hundreds of automatically
 safe replacements. Preserve the intentional slot/reconstruction bridges and move
 callers only with focused lifecycle behavior evidence. Ambient test setup and
-remaining low-level audio/data allowances stay outside this campaign.
+remaining low-level audio/data allowances need their own caller-complete evidence.
 
 2026-10-23: the subsequent [title-preview migration](plans/2026-10-23-title-preview-providers.md)
 removed all nine shared-to-concrete mapping calls (S1: two, S2: one, S3K: six).
@@ -149,9 +149,10 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 98 methods across 97 files,
+The ambient singleton-setup inventory now contains 97 methods across 96 files,
 down from 102/100 after direct manager construction and named module fixtures
-replaced four methods in three test classes. These count setup obligations,
+replaced five methods in four test classes. The four FadeManager unit cases
+construct their own manager and need no gameplay fixture. These count setup obligations,
 not demonstrated leaks. Removing four unused GameLoop imports first tightened
 stale accounting. The later registry metadata and bonus-stage capability migration
 removes the remaining root coupling; both concrete-reference caps are now zero.
@@ -165,8 +166,12 @@ the ride ship's captured live inventory and codec-compatible ICZ helper state.
 Owner-bound LBZ panels and ordered wall-controller snapshots preserve progressed
 values and current shared RNG binding. Two unused AIZ histories are removed;
 exact captured actor links preserve finale triggering and emerald collection.
-Seven exact obligations remain, including the arbitrary S1 parent-ring recipe
-contract; stock placed recipes have bounded destructive-replay evidence. False-floor surviving children dispatch by
+Ordered S1 ring recipes now preserve caller values and canonical placement indices,
+including accepted null entries. Freezer and LBZ cameo histories are replaced by
+live managed observations; exact cameo links and saved anchors survive restoration.
+Initialized LBZ box rigs preserve absent/present helpers. Lightning sparks retain
+independent pixels and scripts while reacquiring atlas residency. Two exact boss
+inventory obligations remain. False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
@@ -565,9 +570,22 @@ The level-animation provider contracts now live beside their managers in
 `level.animation`. All three game loaders and LevelManager keep the same method
 bodies and runtime selection; exactly four parameter/return records are removed,
 151 → 147 in this composition. The API pins and historical frozen-rule key are
-unchanged. This meets the prior <=150 target. The next ownership target is the
-internal SAT-replay descriptor construction, separately from supported typed
-ingress and canonical value placement. Its four field/construction/write records
-are candidates for a reviewed migration, not an automatic allowance deletion or a
-new measured result. Preserve expanded replay palettes and cached descriptor
-semantics; do not duplicate values or erase types to meet a count.
+unchanged. This meets the prior <=150 target.
+
+The subsequent SAT boundary study retains all four descriptor-adapter records.
+The supplied preparation decoder observes the persistent descriptor synchronously,
+including its distinct raw and cached palette values, and may change attributes,
+mutate subsequently sampled state or throw. Primitive GPU replay alone cannot
+remove that callback obligation. Relocating the adapter would replace identities
+without improving ownership. Removing it requires a separately scoped decision
+about the callback used for expanded SAT tiles; this campaign preserves the
+existing behavior and claims zero removals from that study.
+
+RenderContext's shared registry also provides process-wide GPU bank uniqueness,
+standalone typed access and retained CPU sources across texture resets. Source
+inspection does not justify moving the entire registry into gameplay sessions.
+Completed donated-team palette selection, mutable donor-color rewind and smaller
+sidekick-bank texture lifetimes remain separate reproduction questions. The
+[continuation plan](plans/2026-10-24-architecture-continuation.md) records the
+qualified boundaries and the next bounded investigation; none is a measured
+defect or an automatic frozen-identity reduction.
