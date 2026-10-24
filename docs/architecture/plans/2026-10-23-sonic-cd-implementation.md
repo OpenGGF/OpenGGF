@@ -3834,3 +3834,47 @@ RAM/register ingress, source-order stepping, capture/restore and publication.
 BGCameraSectIDs/BGCameraSects runtime joins, native tile-plane streaming and
 section PLC residency remain separate work. No live ramp, new plane picture,
 render/native timing/parity, act completion or full-game claim follows.
+
+### Spring raw views/art and native background section source joins — 24 October 2026
+
+Spring now has lazy authenticated USA Ani_Spring14-byte and complete shared
+MapSpr_Spring1/2/3 200-byte views, with a separate36-tile normal bank at native
+$520..$543. Existing startup nine views/two decodes, four banks and selector0/5
+admission are unchanged. Source546-byte Nemesis data needs547 real reader bytes;
+the next $80 byte belongs to Art_MonitorTimePosts, not padding. Exact consumption,
+XOR output/hash, all tiles/gaps/cache/post-close access and regional rejection
+ran against supplied media. Native owners: Spring/Main.asm:186-244,492-496 and
+PLC_Std (PP Data:70-71), pin1ecc5f3a. Shared independent indices are still raw;
+a separate explicit decoder prerequisite owns their later visual family.
+
+BGCameraSectIDs130-byte and BGCameraSects16-byte views bind independently
+verified USA offsets3534/35B6 and JP/EU3530/35B2. The retained offscreen row0
+and finalrow129 are source data. Selectors0/2/4/6 address four longs, including
+the nonnull static/BG1 alias; MOVEA leaves the static branch's CCR unchanged.
+These are native camera RAM addresses, not MMD offsets. Initial live pointers
+and incremental copied-camera pointers are distinct source cuts. Only metadata
+is added; no plane write, rendering fallback, source-table literal or extra
+eager decode is installed. Native PP Scroll:892-995,1092-1198 supplies the
+lookup contracts; later bounded PlaneB ownership remains separate.
+
+Frozen Spring3 and BGsection2 do not overlap production owners. Root reconciled
+one constructed test's enum-wide TABLE count35->37; source blobs stay69. The
+new enum values shift later ordinals, but no CD ordinal consumer/published pin
+uses them. An initial wrong Spring mirror src/ prefix stopped the import guard
+before writes; unnecessary queued62838 was cancelled before admission130. The
+correct paths main/ and test/ were then checked against exact hashes and imported
+fresh-mtime. Original freezes remain untouched.
+
+Root33885 passed172/0/0/0 across seven actual classes: ObjectVisual13,
+ObjectAssets21, ObjectRetail3, RetailAssets9, Background54, Foreground61,
+ModApiSignatureSurface11. Java25, actual supplied media, lean4GiB/4core;
+exit0 at22:05:38BST,262squeue/95sMaven. Command used those exact named selectors
+through maven_queue.py --lean -Dmse=off with soniccd.media.root. All completed
+XML identities/skips were inspected. Independent Spring review found noP1/P2;
+Root also inspected the full two-entry BG delta/new tests. Known Spring P3
+limits: post-close access alone would not catch eager decoding, and malformed
+authenticated-owner accessor retry paths have no direct test seam.
+
+No Spring animation/object/collision/runtime admission, diagonal art, real PLC
+residency, BG tile streaming, new World route or native-plane/pixel/game parity
+is claimed. The full USA then regional task remains active.

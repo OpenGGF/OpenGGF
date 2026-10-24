@@ -51,7 +51,11 @@ public final class CdR11aObjectAssets {
         GAME_OVER_MAPPINGS("MapSpr_GameOver/MapSpr_TimeOver", 0xF03E, 56),
         // Floating Block/Main.asm:42,110,129,140,171-176; direct USA operands join both adjacent includes.
         FLOAT_BLOCK_ANIMATIONS("Ani_FloatBlock", 0xA3DC, 30),
-        FLOAT_BLOCK_MAPPINGS("MapSpr_FloatBlock", 0xA3FA, 76);
+        FLOAT_BLOCK_MAPPINGS("MapSpr_FloatBlock", 0xA3FA, 76),
+        // Spring/Main.asm:492-496; one real script and one shared include with three independent mapping bases.
+        // Keep the mappings raw: the vertical/horizontal tables do not fit the uniform visual decoder.
+        SPRING_ANIMATIONS("Ani_Spring", 0x9B92, 14),
+        SPRING_MAPPINGS("MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3", 0x9BA0, 200);
 
         private final String nativeLabel;
         private final int offset;
@@ -176,6 +180,30 @@ public final class CdR11aObjectAssets {
         }
     }
 
+
+    /**
+     * Separate optional normal Spring source for PLC_Std row 7. No PLC transfer, live residency or
+     * diagonal/MovingSpring art is implied; every existing bank remains separate.
+     */
+    public static final class SpringArtBank {
+        private final List<ArtBinding> bindings;
+        private SpringArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No Spring art binding for " + source));
+        }
+        /** Native 11-bit tile ID after mapping/base-word addition; adjacent Powerup art remains absent. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded Spring source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -206,6 +234,7 @@ public final class CdR11aObjectAssets {
     private ContactArtBank contactArtBank;
     private CdObjectVisualAssets floatBlock;
     private FloatBlockArtBank floatBlockArtBank;
+    private SpringArtBank springArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -401,6 +430,40 @@ public final class CdR11aObjectAssets {
             floatBlockArtBank = new FloatBlockArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
         }
         return floatBlockArtBank;
+    }
+
+
+    /**
+     * Explicit normal-art opt-in from the retained authenticated USA MMD, not an object or renderer admission.
+     * Spring's shared vertical/horizontal mapping headers remain raw views: the existing uniform visual decoder
+     * cannot represent them. No rebased mappings, invented scripts or new decoder path are supplied here.
+     */
+    public synchronized SpringArtBank springArtBank() throws IOException {
+        if (springArtBank == null) {
+            // Spring/Main.asm:188-189 writes the full raw $0520 word; PLC_Std row 7 owns destination $A400
+            // (Data (Act 1 Present).asm:70-71). ObjSpring2's $8520 and the high-byte palette BSET belong to execution.
+            var source = CdR11aAsset.ART_SPRINGS;
+            var entries = loadPlan.plcs().get(1).entries();
+            var entry = entries.get(7);
+            var blob = profile.range(source);
+            int baseWord = 0x0520;
+            if (entry.source() != source || entry.vramAddress() != 0xA400 || !entry.sourceRange().equals(blob)
+                    || entries.stream().filter(p -> p.source() == source).count() != 1
+                    || (baseWord & 0x7FF) * 32 != entry.vramAddress()
+                    || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+                throw new IllegalArgumentException("Unverified native Spring PLC row/base-word/source association");
+            }
+            // The prefix walk needs 546 source bytes. The finite 8-bit reader additionally consumes the real
+            // first Art_MonitorTimePosts byte ($80 at $34B3A); the source blob remains distinct from reader input.
+            var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), 547);
+            var decoded = CdNemesisAsset.decode(reader.read(image).copy(), 36 * 32, 36 * 32);
+            if (decoded.consumedInputBytes() != reader.length()) {
+                throw new IOException("Spring Nemesis reader consumption differs from its reviewed finite extent");
+            }
+            var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+            springArtBank = new SpringArtBank(List.of(new ArtBinding(source, 1, entry, baseWord, read)));
+        }
+        return springArtBank;
     }
 
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */

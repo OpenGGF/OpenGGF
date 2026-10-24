@@ -46,7 +46,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void reusedNemesisDecoderHasRealFiniteReadAheadAndFixedObjectOutputContracts() throws Exception {
-        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39, 15}) {
+        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39, 15, 36}) {
             // Constructed one-bit repeat-eight A code: one payload byte per tile, plus real reader lookahead.
             byte[] input = new byte[6 + tiles + 1];
             input[1] = (byte) tiles;
@@ -164,7 +164,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(27, CdR11aObjectAssets.Table.values().length);
+        assertEquals(29, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -172,7 +172,7 @@ class TestCdR11aObjectAssets {
         }
         assertEquals(0xB6D8, CdR11aObjectAssets.Table.MOSQUI_DAMAGED_ANIMATIONS.range().fileOffset());
         assertEquals(13, CdR11aObjectAssets.Table.MOSQUI_DAMAGED_ANIMATIONS.range().length());
-        assertEquals(35, Arrays.stream(CdR11aAsset.values()).filter(a -> a.kind() == CdR11aAsset.Kind.TABLE).count());
+        assertEquals(37, Arrays.stream(CdR11aAsset.values()).filter(a -> a.kind() == CdR11aAsset.Kind.TABLE).count());
     }
 
     @Test
@@ -223,7 +223,7 @@ class TestCdR11aObjectAssets {
         assertEquals(2, Arrays.stream(CdR11aObjectAssets.Table.values())
                 .filter(t -> t.nativeLabel().contains("FloatBlock")).count());
         assertEquals(List.of(CdR11aObjectAssets.Table.FLOAT_BLOCK_ANIMATIONS, CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS),
-                Arrays.stream(CdR11aObjectAssets.Table.values()).skip(25).toList());
+                Arrays.stream(CdR11aObjectAssets.Table.values()).skip(25).limit(2).toList());
         for (var left : List.of(animations, mappings)) {
             for (var right : CdR11aObjectAssets.Table.values()) {
                 if (left == right) { continue; }
@@ -371,6 +371,135 @@ class TestCdR11aObjectAssets {
         }
         assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(raw, 73), 5, 0));
         assertThrows(IllegalArgumentException.class, () -> CdR11aObjectAssets.decodeTileWord(Arrays.copyOf(raw, 75), 5, 0));
+    }
+
+
+    @Test
+    void springMetadataKeepsTheSharedNativeIncludeAndExistingNormalArtSource() {
+        var scripts = CdR11aObjectAssets.Table.SPRING_ANIMATIONS;
+        var maps = CdR11aObjectAssets.Table.SPRING_MAPPINGS;
+        assertEquals("Ani_Spring", scripts.nativeLabel());
+        assertEquals("MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3", maps.nativeLabel());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9B92, 14), scripts.range());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x9BA0, 200), maps.range());
+        assertEquals(0x209B92, scripts.range().nativeAddress());
+        assertEquals(0x209BA0, maps.range().nativeAddress());
+        assertEquals(scripts.range().endExclusive(), maps.range().fileOffset());
+        assertEquals(0x9C68, maps.range().endExclusive(), "Ani_MovingSpring starts after the real final even byte");
+        assertEquals(List.of(scripts, maps), Arrays.stream(CdR11aObjectAssets.Table.values()).skip(27).toList());
+        for (var left : List.of(scripts, maps)) {
+            for (var right : CdR11aObjectAssets.Table.values()) {
+                if (left == right) { continue; }
+                assertTrue(left.range().endExclusive() <= right.range().fileOffset()
+                        || right.range().endExclusive() <= left.range().fileOffset(), right.name());
+            }
+        }
+        var art = CdR11aAsset.ART_SPRINGS;
+        assertEquals("Art_Springs", art.nativeLabel());
+        assertEquals(CdR11aAsset.Kind.SOURCE_BLOB, art.kind());
+        assertEquals(CdR11aAsset.Encoding.NEMESIS, art.encodingForReviewedConsumer());
+        assertEquals(546, art.length());
+        for (CdReleaseVariant region : CdReleaseVariant.values()) { assertEquals(0x34918, art.fileOffset(region)); }
+        assertEquals(0x34B3A, art.fileOffset(CdReleaseVariant.USA) + art.length());
+        assertEquals(0x34B3A, CdR11aAsset.ART_MONITOR_TIME_POSTS.fileOffset(CdReleaseVariant.USA));
+    }
+
+    @Test
+    void constructedSpringRangesRemainDetachedWithoutForgingTheUsaOwner() throws Exception {
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        byte[] fake = new byte[CdR11aProfile.FILE_BYTES];
+        ByteBuffer.wrap(fake).putInt(8, 0x200100).putInt(12, 0x20010C).putInt(16, 0x200112);
+        byte[] maps = springMappings(), scripts = springAnimations();
+        System.arraycopy(scripts, 0, fake, 0x9B92, scripts.length);
+        System.arraycopy(maps, 0, fake, 0x9BA0, maps.length);
+        fake[0x9B91] = 0x4E;
+        fake[0x9C68] = 0x4E;
+        var image = CdMmdImage.parse(fake);
+        var scriptBytes = CdR11aObjectAssets.Table.SPRING_ANIMATIONS.range().read(image);
+        var mapBytes = CdR11aObjectAssets.Table.SPRING_MAPPINGS.range().read(image);
+        assertArrayEquals(scripts, scriptBytes.copy());
+        assertArrayEquals(maps, mapBytes.copy());
+        fake[0x9BA0] = 0x7F;
+        byte[] changed = mapBytes.copy();
+        changed[1] = 0x7F;
+        assertEquals(12, mapBytes.unsignedWord(0));
+        assertThrows(ReadOnlyBufferException.class, () -> mapBytes.buffer().put((byte) 1));
+        assertThrows(ReadOnlyBufferException.class, () -> scriptBytes.buffer().put((byte) 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> mapBytes.unsignedByte(200));
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, CdR11aProfile.FILE_BYTES - 199, 200));
+        assertThrows(IllegalArgumentException.class, () -> new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.RELOCATED_COPY, 0x9BA0, 200));
+        var asserted = new CdR11aAssets.Identity(CdReleaseVariant.USA, profile.stage(), profile.file(),
+                profile.domain(), profile.expectedMmdSha256(), "constructed Spring bytes are not a disc");
+        var error = assertThrows(IOException.class, () -> CdR11aObjectAssets.load(profile, asserted, image, null));
+        assertTrue(error.getMessage().contains("MMD content"));
+    }
+
+    @Test
+    void springSharedMappingHeadersStayRawAndTheExistingDecoderKeepsItsStrictContract() {
+        byte[] maps = springMappings(), scripts = springAnimations();
+        assertEquals("09fbb070ca8ab3354808535b21668a1c6faeac9fa88fb78628753fe9c8f8377c",
+                CdR11aProfile.sha256(maps));
+        assertEquals("7f641336673d1419b30d9555fa0e2ff3a12a95811b26f2d12d96e8b32befb6b5",
+                CdR11aProfile.sha256(scripts));
+        var bytes = CdAssetBytes.copyOf(maps);
+        assertEquals(List.of(12, 24, 30), List.of(bytes.unsignedWord(0), bytes.unsignedWord(2), bytes.unsignedWord(4)));
+        assertEquals(List.of(40, 52, 58), List.of(bytes.unsignedWord(6), bytes.unsignedWord(8), bytes.unsignedWord(10)));
+        assertEquals(List.of(6, 42, 78), List.of(bytes.unsignedWord(80), bytes.unsignedWord(82), bytes.unsignedWord(84)));
+        int[] bodies = {12, 24, 30, 46, 58, 64, 86, 122, 158};
+        int[] counts = {2, 1, 3, 2, 1, 3, 7, 7, 8};
+        for (int i = 0; i < bodies.length; i++) { assertEquals(counts[i], bytes.unsignedByte(bodies[i])); }
+        for (int pad : new int[]{23, 57, 199}) { assertEquals(0, bytes.unsignedByte(pad)); }
+        // The second header's relative words use +6, not +0. No rebasing or synthetic combined index is admitted.
+        assertEquals(46, 6 + bytes.unsignedWord(6));
+        assertEquals(80, 64 + 1 + bytes.unsignedByte(64) * 5);
+        for (int frames : new int[]{3, 6, 9}) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, frames, scripts, 1, 36));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(maps, 3, 36));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                Arrays.copyOfRange(maps, 6, 80), 3, scripts, 1, 36));
+        // The independently addressed diagonal table DOES fit the existing decoder, but requires its own 46-tile
+        // source. This format check neither binds that art nor supplies a vertical/horizontal Spring visual getter.
+        byte[] diagonal = Arrays.copyOfRange(maps, 80, 200);
+        var visual = CdObjectVisualAssets.decode(diagonal, 3, scripts, 1, 46);
+        assertEquals(List.of(6, 42, 78), visual.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(7, 7, 8), visual.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(List.of(36, 36, 41), visual.mappingFrames().stream().map(f -> f.bytes().length()).toList());
+        assertEquals(45, visual.mappingFrames().stream().flatMap(f -> f.pieces().stream())
+                .mapToInt(p -> p.tileOffset() + p.tileCount() - 1).max().orElseThrow());
+        assertEquals(2, visual.animations().getFirst().relativeOffset());
+        assertEquals(0, visual.animations().getFirst().delay());
+        assertEquals(List.of(0, 1, 1, 2, 2, 2, 2, 2, 2, 1), visual.animations().getFirst().frameBytes());
+        assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, visual.animations().getFirst().terminal());
+        assertEquals(12, visual.animations().getFirst().bytes().length());
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(diagonal, 3, scripts, 1, 45));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(diagonal, 3, scripts, 1, 36));
+        for (int frames : new int[]{2, 4}) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(diagonal, frames, scripts, 1, 46));
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(diagonal, 3, scripts, 2, 46));
+        // Removing only an optional zero is allowed by the decoder; removing the last actual piece byte is not.
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                Arrays.copyOf(diagonal, 118), 3, scripts, 1, 46));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                diagonal, 3, Arrays.copyOf(scripts, 13), 1, 46));
+        byte[] badPad = diagonal.clone();
+        badPad[119] = 1;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(badPad, 3, scripts, 1, 46));
+        byte[] badFrame = scripts.clone();
+        badFrame[3] = 3;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(diagonal, 3, badFrame, 1, 46));
+        Arrays.fill(diagonal, (byte) 0);
+        Arrays.fill(scripts, (byte) 0);
+        assertEquals(6, visual.mappings().unsignedWord(0));
+        assertEquals(2, visual.animationTable().unsignedWord(0));
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+        assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
     }
 
     @Test
@@ -521,6 +650,36 @@ class TestCdR11aObjectAssets {
                 0x02, 0x05, 0xFF, 0x00,
                 0x02, 0x01, 0x05, 0x02, 0x05, 0x03, 0x05, 0x04, 0x05, 0xFC,
                 0x02, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0xFC};
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
+    }
+
+    /** Pinned Spring/Data/Mappings.asm plus Main.asm:496 even; source-format fixture, never extracted media. */
+    private static byte[] springMappings() {
+        int[] values = {
+                0x00, 0x0C, 0x00, 0x18, 0x00, 0x1E, 0x00, 0x28, 0x00, 0x34, 0x00, 0x3A, 0x02, 0xF8, 0x0C, 0x00,
+                0x00, 0xF0, 0x00, 0x0C, 0x00, 0x04, 0xF0, 0x00, 0x01, 0x00, 0x0C, 0x00, 0x00, 0xF0, 0x03, 0xE0,
+                0x0C, 0x00, 0x00, 0xF0, 0xE8, 0x06, 0x00, 0x08, 0xF8, 0x00, 0x0C, 0x00, 0x0E, 0xF0, 0x02, 0xF0,
+                0x03, 0x00, 0x12, 0x00, 0xF0, 0x03, 0x00, 0x16, 0xF8, 0x00, 0x01, 0xF0, 0x03, 0x00, 0x12, 0xF8,
+                0x03, 0xF0, 0x03, 0x00, 0x12, 0x18, 0xF8, 0x09, 0x00, 0x1A, 0x00, 0xF0, 0x03, 0x00, 0x20, 0xF8,
+                0x00, 0x06, 0x00, 0x2A, 0x00, 0x4E, 0x07, 0x08, 0x00, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x01,
+                0xF0, 0x08, 0x00, 0x00, 0x02, 0xF8, 0xF0, 0x08, 0x00, 0x03, 0xF0, 0xF8, 0x00, 0x00, 0x06, 0xF0,
+                0xF8, 0x09, 0x00, 0x07, 0xF8, 0x08, 0x04, 0x00, 0x0D, 0x00, 0x07, 0x08, 0x00, 0x00, 0x00, 0xF0,
+                0x00, 0x00, 0x00, 0x0F, 0xF0, 0x08, 0x00, 0x00, 0x10, 0xF8, 0xF0, 0x05, 0x00, 0x11, 0xF0, 0xF8,
+                0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x15, 0xF8, 0x00, 0x05, 0x00, 0x16, 0x00, 0x08, 0x08,
+                0x00, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x1A, 0xF0, 0x08, 0x00, 0x00, 0x1B, 0xF8, 0xE0, 0x08,
+                0x00, 0x03, 0x00, 0xE8, 0x0E, 0x00, 0x1C, 0x00, 0xF8, 0x00, 0x00, 0x28, 0xF0, 0xF0, 0x02, 0x00,
+                0x29, 0xF8, 0x00, 0x01, 0x00, 0x2C, 0x00, 0x00};
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
+    }
+
+    /** Pinned Spring/Data/Animations.asm:1-7; native one-script FC table. Source-format fixture only. */
+    private static byte[] springAnimations() {
+        int[] values = {
+                0x00, 0x02, 0x00, 0x00, 0x01, 0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0xFC};
         byte[] out = new byte[values.length];
         for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
         return out;

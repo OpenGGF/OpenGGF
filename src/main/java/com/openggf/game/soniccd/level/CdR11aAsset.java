@@ -3,7 +3,7 @@ package com.openggf.game.soniccd.level;
 import com.openggf.game.soniccd.CdReleaseVariant;
 
 /**
- * Reviewed schema-v2 extents plus source/retail-checked player table views at scddisasm 1ecc5f3a.
+ * Reviewed schema-v2 extents plus source/retail-checked player/background camera table views at scddisasm 1ecc5f3a.
  * A source blob is not a consumer read extent. Encoding names cover only the
  * inventory's checked consumer; UNKNOWN is preserved even for .nem-named blobs.
  * No data bytes, JSON parser, source path or runtime disassembly dependency.
@@ -87,6 +87,11 @@ public enum CdR11aAsset {
     SINE_TABLE("SineTable", Kind.TABLE, 0x872, 0x872, 640, Encoding.UNKNOWN),
     // CalcAngle can index quotient 256. The following EVEN byte is not read.
     ARC_TAN_TABLE("ArcTanTable", Kind.TABLE, 0xB58, 0xB58, 257, Encoding.UNKNOWN),
+    // PP Scroll:1123-1164 / 1178-1183 at scddisasm 1ecc5f3a; retain the offscreen top row.
+    // One byte per 16 pixels; selectors 0/2/4/6 double to four big-endian camera-address longs.
+    // These 24-bit RAM addresses are not MMD file offsets. No drawing consumer is installed here.
+    BG_CAMERA_SECT_IDS("BGCameraSectIDs", Kind.TABLE, 0x3534, 0x3530, 130, Encoding.UNKNOWN),
+    BG_CAMERA_SECTS("BGCameraSects", Kind.TABLE, 0x35B6, 0x35B2, 16, Encoding.UNKNOWN),
     CAM_BOUNDS("CamBounds", Kind.TABLE, 0x2950, 0x294C, 12, Encoding.UNKNOWN),
     CLOUD_SECT_SIZES("CloudSectSizes", Kind.TABLE, 0x2C72, 0x2C6E, 10, Encoding.UNKNOWN),
     CLOUD_UPSIDE_DOWN_SECT_SIZES("CloudUpsideDownSectSizes", Kind.TABLE, 0x2C7C, 0x2C78, 9, Encoding.UNKNOWN),

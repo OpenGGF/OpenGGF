@@ -186,7 +186,7 @@ class TestCdR11aRetailAssets {
         assertThrows(UnsupportedOperationException.class, data.shield()::completeUploadBytes);
 
         assertEquals(69, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.SOURCE_BLOB).count());
-        assertEquals(35, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.TABLE).count());
+        assertEquals(37, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.TABLE).count());
         for (CdR11aAsset asset : CdR11aAsset.values()) {
             assertEquals(asset.length(), data.view(asset).bytes().length());
             assertEquals(data.profile().range(asset), data.view(asset).range());
@@ -195,6 +195,115 @@ class TestCdR11aRetailAssets {
         byte[] copy = data.view(ART_LEVEL_TILES).bytes().copy();
         Arrays.fill(copy, (byte) 0);
         assertEquals("538487cc7a6f05836fcce880fe23512d3538a4048a79a7c744a8d864d1250a0b", sha(data.view(ART_LEVEL_TILES).bytes()));
+    }
+
+    /** Independently checked against each supplied region; JP/EU equality is observed, not a shift rule. */
+    @ParameterizedTest(name = "{0} bounded background camera-section metadata")
+    @EnumSource(CdReleaseVariant.class)
+    void backgroundCameraSectionMetadataMatchesEveryIndependentlyCheckedRegion(CdReleaseVariant variant) {
+        int idsOffset = switch (variant) {
+            case USA -> 0x3534;
+            case JAPAN -> 0x3530;
+            case EUROPE -> 0x3530;
+        };
+        int sectionsOffset = switch (variant) {
+            case USA -> 0x35B6;
+            case JAPAN -> 0x35B2;
+            case EUROPE -> 0x35B2;
+        };
+        var profile = CdR11aProfile.forStage(variant, CdStageKey.parse("R11A"));
+        assertEquals("BGCameraSectIDs", BG_CAMERA_SECT_IDS.nativeLabel());
+        assertEquals("BGCameraSects", BG_CAMERA_SECTS.nativeLabel());
+        assertEquals(CdR11aAsset.Kind.TABLE, BG_CAMERA_SECT_IDS.kind());
+        assertEquals(CdR11aAsset.Kind.TABLE, BG_CAMERA_SECTS.kind());
+        assertEquals(CdR11aAsset.Encoding.UNKNOWN, BG_CAMERA_SECT_IDS.encodingForReviewedConsumer());
+        assertEquals(CdR11aAsset.Encoding.UNKNOWN, BG_CAMERA_SECTS.encodingForReviewedConsumer());
+        assertEquals(130, BG_CAMERA_SECT_IDS.length());
+        assertEquals(16, BG_CAMERA_SECTS.length());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM,
+                idsOffset, 130), profile.range(BG_CAMERA_SECT_IDS));
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM,
+                sectionsOffset, 16), profile.range(BG_CAMERA_SECTS));
+        assertEquals(0x200000 + idsOffset, profile.range(BG_CAMERA_SECT_IDS).nativeAddress());
+        assertEquals(0x200000 + sectionsOffset, profile.range(BG_CAMERA_SECTS).nativeAddress());
+        assertEquals(profile.range(BG_CAMERA_SECT_IDS).endExclusive(), sectionsOffset);
+    }
+
+    @ParameterizedTest(name = "{0} authenticated immutable background camera-section views")
+    @EnumSource(CdReleaseVariant.class)
+    void suppliedBackgroundCameraSectionsHaveAuthenticatedBoundedImmutableSourceViews(CdReleaseVariant variant)
+            throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for supplied-media checks");
+        String directory = switch (variant) {
+            case JAPAN -> "Japan";
+            case USA -> "USA";
+            case EUROPE -> "Europe";
+        };
+        Path cue;
+        try (var entries = Files.list(Path.of(configured).resolve(directory))) {
+            var cues = entries.filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size(), "Configured media directory must contain exactly one CUE");
+            cue = cues.getFirst();
+        }
+        CdR11aAssets data;
+        try (var source = CdProgramAssets.open(cue, Optional.of(variant), Optional.empty())) {
+            data = CdR11aAssetLoader.load(source, variant, CdStageKey.parse("R11A"));
+            // Both ends of both new views remain covered by the existing whole-MMD authentication.
+            for (CdR11aAsset asset : new CdR11aAsset[]{BG_CAMERA_SECT_IDS, BG_CAMERA_SECTS}) {
+                var range = data.profile().range(asset);
+                for (int index : new int[]{0, range.length() - 1}) {
+                    byte[] changed = source.mmd(CdNativeFile.R11A).readFile(0, 0x40000);
+                    changed[range.fileOffset() + index] ^= 1;
+                    assertThrows(IOException.class, () -> data.profile().verifyProgram(CdNativeFile.R11A,
+                            data.profile().domain(), CdMmdImage.parse(changed)), asset.nativeLabel() + " byte " + index);
+                }
+            }
+        }
+
+        // The original MMD, not source/disassembly data, supplies every read after disc close.
+        assertEquals(variant, data.identity().variant());
+        var idsView = data.view(BG_CAMERA_SECT_IDS);
+        var sectionsView = data.view(BG_CAMERA_SECTS);
+        assertSame(BG_CAMERA_SECT_IDS, idsView.asset());
+        assertSame(BG_CAMERA_SECTS, sectionsView.asset());
+        assertEquals(data.profile().range(BG_CAMERA_SECT_IDS), idsView.range());
+        assertEquals(data.profile().range(BG_CAMERA_SECTS), sectionsView.range());
+        CdAssetBytes ids = idsView.bytes();
+        CdAssetBytes sections = sectionsView.bytes();
+        assertEquals(130, ids.length());
+        assertEquals(16, sections.length());
+        assertEquals("be61eb18719488f8d6c91fd1ebd3d6b78e6739fb7a6f495851789a86396d7fa9", sha(ids));
+        assertEquals("2f5b9f478f4f44230ea76cb1574eca41017e2b09e378ea1be295aaef5f9cc6a1", sha(sections));
+        // PP Scroll:1123-1156 / BGSECT: one byte per 16 pixels, including the offscreen top row.
+        for (int index = 0; index < 130; index++) {
+            boolean dynamicBg2 = (index >= 71 && index <= 80) || (index >= 109 && index <= 118);
+            assertEquals(dynamicBg2 ? 4 : 0, ids.unsignedByte(index), "BGCameraSectIDs byte " + index);
+        }
+        assertEquals(0, ids.unsignedByte(0), "The offscreen top row is part of the source view");
+        assertEquals(0, ids.unsignedByte(129), "Retain the final source row beyond the initial masked lookup domain");
+        // PP Scroll:1179-1183: selectors 0/2/4/6 double to long offsets 0/4/8/12.
+        // Selector zero, not a null address, controls the native static-row branch (MOVEA leaves CCR unchanged).
+        long[] nativeCameras = {0x00FFF708L, 0x00FFF708L, 0x00FFF710L, 0x00FFF718L};
+        for (int selector : new int[]{0, 2, 4, 6}) {
+            assertEquals(nativeCameras[selector / 2], sections.unsignedLong(selector * 2));
+        }
+        assertThrows(IndexOutOfBoundsException.class, () -> ids.unsignedByte(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> ids.unsignedByte(130));
+        assertThrows(IndexOutOfBoundsException.class, () -> sections.unsignedLong(13));
+        assertThrows(IndexOutOfBoundsException.class, () -> sections.unsignedLong(16));
+        assertThrows(ReadOnlyBufferException.class, () -> ids.buffer().put(0, (byte) 4));
+        assertThrows(ReadOnlyBufferException.class, () -> sections.buffer().put(0, (byte) 1));
+        byte[] idsCopy = ids.copy();
+        byte[] sectionsCopy = sections.copy();
+        Arrays.fill(idsCopy, (byte) 0x7F);
+        Arrays.fill(sectionsCopy, (byte) 0);
+        assertEquals("be61eb18719488f8d6c91fd1ebd3d6b78e6739fb7a6f495851789a86396d7fa9",
+                sha(data.view(BG_CAMERA_SECT_IDS).bytes()));
+        assertEquals("2f5b9f478f4f44230ea76cb1574eca41017e2b09e378ea1be295aaef5f9cc6a1",
+                sha(data.view(BG_CAMERA_SECTS).bytes()));
+        assertThrows(UnsupportedOperationException.class, () -> data.decoded(BG_CAMERA_SECT_IDS));
+        assertThrows(UnsupportedOperationException.class, () -> data.decoded(BG_CAMERA_SECTS));
     }
 
     private static int maximumReferencedBlock(CdR11aTerrain terrain, CdR11aTerrain.Plane plane) {
