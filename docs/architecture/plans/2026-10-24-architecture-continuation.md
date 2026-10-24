@@ -6773,3 +6773,72 @@ canonical bug closure, editor fixture correction, and all earlier ownership cuts
 remain present. No worker result establishes this composed tree's runtime
 behavior. The affected KiS2 return, title/SS/bonus consumers, fresh guards and
 change-based smoke remain parent delivery gates.
+
+### Parent controller qualification after composing title ownership
+
+At `903722281d493def6df3ced6e7c3f12203a67ec6` (tree
+`911930b8177af4da32f77bf8aff5f3e0e3c1a638`), the parent observed **242 unique
+executed controls, zero failures/errors/skips**, across eleven physical XML
+reports. These comprise Root 103, bonus 21, ending 36, freeze-boundary 9, the
+previously unselected generic-provider reveal 1, SS 29, title 38, genuine S1
+request-to-release 1, S2 normal/wide-team request-to-release 2, the actual KiS2
+SS/results return 1, and the constructor-owned editor fixture 1. This includes
+both the corrected real-entry observer controls; neither was weakened by the
+one-line title-provider installation migration.
+
+With `MAIN_CHECKOUT` set to the existing main checkout, the exact selection was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  '-Dtest=TestGameLoop,TestGameLoopTitleCardOwnership,TestGameLoopSpecialStageLifecycle,TestGameLoopBonusStageSession,TestGameLoopEndingSession,TestGameLoopFreezeContractWiring,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider,TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching,TestGameLoopFreshLevelHandoff#genericProviderRetainsItsFadeFromBlack,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass' test
+```
+
+Queue waiting was 193s; Maven reported 1:30 execution. Every XML identity and
+parameter row was checked, including all 103 Root invocations and all three
+native request-to-release pilots. Java 25.0.5.0.2, surfaceless EGL and all four
+verified absolute ROM properties were present. The 22 XML/text reports were
+consumed. Root observed these outcomes; worker-reported tests above remain
+separate evidence. Both Bash and PowerShell commit-range policies passed for
+`97eb86f18..903722281`, each auditing 14,633 tree entries.
+
+This is focused composed qualification, not a smoke/full-suite claim. The
+change-based plan inspected against the pinned original destination `97eb86f18`
+selects all ten smoke categories, 3,762 candidate classes and fresh guards. The
+lead will recompute that plan against the actual next delivery base after the
+preceding ending/palette/SMPS wave is delivered. Shared-loop changes require
+that complete selection; existing focused results do not replace it.
+
+### Qualified next boundary: native fixed-tail storage
+
+The follow-up Git-object study of composed `fc520ae0b` and S2 disassembly pin
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7` does not establish a safe bounded
+Sideways repair. The failed after-current allocation aliases physical fixed-tail
+storage: its unwanted link writes can redirect a live tail's parent, and later
+platform retirement clears whichever occupant then inhabits that location.
+Dormant bytes, later installation, multiple aliases, animation/DPLC effects and
+separate late tail dispatch matter. An incarnation-only object reference cannot
+supply those storage/lifetime semantics.
+
+Current slot projections and the player-bound tail controller do not close that
+boundary. A per-manager storage owner with explicit controller binding is a
+credible future responsibility transfer, but its authoritative field and
+consumer coverage remains incomplete. The next discriminating evidence is a
+controlled native pressure probe of empty/live fixed targets, failed writes,
+fixed-tail dispatch, retirement, reinstallation and two-parent aliasing. It must
+observe SST bytes and the separate DPLC cache without hydrating engine gameplay
+from reference data. Manager rebuild alone is not authority for native RAM
+clearing; shared modules must not become storage owners for separate worlds.
+
+Therefore the accepted Sideways qualification and canonical open-bug entry stay
+intact. All ten count-one bridges and the 119-record store remain unchanged. This
+is a concrete evidence prerequisite, not architectural exhaustion or a claim
+that migration cost precludes the improvement. No native probe or runtime test
+was executed by that read-only study.
