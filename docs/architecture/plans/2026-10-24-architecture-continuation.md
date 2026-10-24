@@ -7550,3 +7550,177 @@ No category run directory, raw-log archive, pass cache or receipt was created.
 All three owned command handles are terminal. The clean local task worktree and
 branch are retained for parent review and scope handoff. Extraction has not begun;
 combined delivery gates and any later implementation remain parent-owned.
+
+
+### Held reverse-target owner: reviewed extraction
+
+The authorized second phase stays in the same retained T3 worktree/branch, with
+`23487d9733f10d0bd18da3811c87377f6f9f0271` unchanged as its parent. No fetch,
+newer upstream merge, parent/main worktree or job access, delegation, integration,
+push or worktree/branch removal is part of this phase. The parent retains composed
+smoke and complete guard ownership, and will launch the independent source review.
+
+`AudioManager.HeldReverseRestore` is one private concrete per-manager owner. It
+holds exactly the five reviewed fields and executes the complete held policy:
+begin; eager/deferred routing; detached reconstruction/cursor refresh;
+preparation/boundary replacement; release/injection/retry/retirement;
+`afterRewindRestore`'s entry-local provenance/release/drain/cleanup sequence;
+held and selected/live ring admission; acknowledgment invalidation/full reset.
+Its field initialization captures no producer, factory, session or presentation.
+Compatibility wrappers only delegate. Internal virtual end/prepare/capture calls
+explicitly traverse `AudioManager.this`; previous direct reads do not become
+public virtual calls. Current collaborator reads, local selected/provenance
+snapshots, source/lifecycle monitor regions and early-return ordering remain.
+
+Root retains composition, eager restore/rollback/optional forward-service state,
+shared publication counter, ring/timeline/donor storage, suppression/frame
+bookkeeping and producer teardown. Its held-publication effect unconditionally
+writes counter, ring, cursor and donor bindings in the original order; it makes
+no target/preparation/retry decision. Owner retirement follows only successful
+completion of that effect, preserving negative-order partial publication. A
+private root counter-reset effect preserves the shared counter write between
+clearing the gesture fields and clearing injection. Producer resources and all
+lower algorithms remain unchanged. CaptureLeases, natural restoration and upstream
+scene audio behavior remain separate. Comments now describe successful producer
+return rather than universal release atomicity; diagnostic messages are unchanged.
+
+Static comparison against the baseline found all 12 moved execution bodies token-
+equivalent after explicit outer-call qualification and private/local renames.
+All 132 public/protected declaration lines remain identical. Expanding the private
+root effects into owner publication/reset also reproduces their original tokens
+and exact write order. The five field names
+and policy reads occur only in the new owner. All four baseline test classes are
+byte-identical; only the typed diagnostic bridge's private layout traversal is
+retargeted. No assertion, failure seam, framework, API declaration, policy, guard,
+terminal, pin or store was added or weakened. Production edits are confined to
+AudioManager.java. The engine map records ownership and release prose is folded
+into the existing ownership entry.
+
+The stable tested input SHA-256, using the preceding section's path/NUL/content
+protocol, is `304dd39dd9c442dec0fc7d4126b3339e45fbc1b87319b3a2f88acb83f7602f6a`.
+AudioManager's Git blob is `4f47a72678dcfcdb961624949e882060cfe48f85`.
+Tested HEAD is baseline 23487d973 plus the AudioManager/bridge edits in this
+follow-up; prose edits do not change that input fingerprint. The own-tree
+build-only test-compile session `14199` passed, Maven 1:20, without test admission.
+The matched selection recompiled the final source after a private helper rename.
+No failed fixture or runtime attempt occurred in this phase.
+
+Source/tag/inheritance inspection divided the reviewed selection into disjoint
+cases. The exact 38 controls run first; their methods are removed from the later
+reviewed audio and host selectors, avoiding an unchanged repeat. This leaves 98
+audio/producer cases, 75 rewind/host cases (including only the two named creator
+host methods), 49 native/SMPS/API cases and 48 intended proportionate fresh guards (74 actually executed, explained below). Inherited
+S1/S2 one-up cases are included. TestHeldRewindAudioStepCost, GolfOnlinePeerProbe,
+creator route matrices, broad/category/release suites and a complete guard fleet
+are excluded. Each request uses normal admission, one live session/observer and
+30–60s waits. Stop on unexpected failure/skip or unexplained behavior/closure/
+budget growth; do not weaken assertions or expand permissions.
+
+| Selection | T/F/E/S | Queue wait | Maven execution | Owned session |
+| --- | --- | --- | --- | --- |
+| Exact baseline methods | 38/0/0/0 | 0s | 1:18 | 90605, exit 0 |
+| Remaining reviewed audio/producer | 98/0/0/0 | 18s | 29.173s | 65068, exit 0 |
+| Rewind/host | 75/0/0/0 | 255s | 30.167s | 2664, exit 0 |
+| Native/SMPS/recursive API | 49/0/0/0 | 333s | 35.724s | 43237, exit 0 |
+| Proportionate fresh guards, expanded ArchUnit field selection | 74/0/0/0 | 58s | 45.775s | 78089, exit 0 |
+
+All selections' exact XML identities, parameter invocations, selectors,
+Java `25.0.5.0.2` properties and F/E/S were inspected; all reports/logs were consumed.
+Matched class counts are diagnostics 3, manager modes 21, snapshot parity 9,
+producer rewind 3 and live cleanup 2. Remaining audio counts are manager modes 24,
+suppression 12, installation 7, snapshot parity 8, namespaced routing 7, history
+arming 6, unified presentation 10, producer rewind 22 and session thread ownership 2.
+Host counts are GameLoop 27, trace launcher 6, CourseControl 1, restore deferral 12,
+live cleanup 10, owner lifetime 17, monitor 1 and the exact Putt-Putt method 1.
+The launch estimate of 74 missed the final MOD_SCENE enum value; source and XML
+confirmed all 18 GameMode invocations and no unexpected method. Every host XML
+contained explicit EGL and all four exact absolute ROM properties; zero skips.
+Native/API counts are SMPS owner 13, inherited S1 one-up 6, inherited S2 one-up 6,
+S3K one-up 12, S3K device restoration 1 and recursive API 11. Every report had
+Java 25, explicit EGL and all four exact ROM properties, with zero skips. The
+compiled recursive surface and annotated inventory match unchanged pins/terminals;
+the candidate pin remains 22,541 unique sorted rows / 1,250 types. No repin was performed.
+
+In the commands below, MAIN_CHECKOUT denotes the existing absolute main-checkout
+ROM root supplied for this task; only its ROM files were read. The XML checks
+compared the fully expanded original absolute paths, not placeholders.
+
+All commands unset DISPLAY, WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS and
+JDK_JAVA_OPTIONS and set JAVA_HOME=/usr/lib/jvm/java-25-openjdk. The matched command
+is the preceding section's exact `-Dtest` argument with the same queued wrapper,
+`--normal -Dmse=off ... test -B`. Remaining exact selectors are recorded below;
+these are command arguments, not pass caches or validation receipts.
+
+```bash
+audio_selector='TestAudioPresentationSnapshotParity#logicalSnapshotCapturesAndRestoresPresentationFlagsAtSameBoundary+heldReverseDefersPresentationRestoreUntilRelease+rewindReleaseRestoresAudibleFmAndPsgMasksAndNextToggleState+deferredTargetReplayAdvancesPresentationLogicalState+heldReplayUsesPresentationStateWhileTheSourceBackendStaysIdle+snapshotRestoresTheSolePresentationCoordFlagCounter+controlledReferenceRendererMatchesExactClockCursorsForOneHundredTwentyFrames+managerProductionProducerKeepsFractionalBoundaryForOneHundredTwentyFrames,TestAudioManagerPresentationModes#updatePumpsSinkButNeverPresentsAnotherPacket+everyExplicitModePresentsExactlyOneProducerPacket+forwardAppliesCommandsBeforeRendering+silentAppliesStructuralCommandsWithoutMovingVoiceCursors+reverseConsumesHistoryWithoutRenderingVoices+rewindPresentationControlsNeverReachTheBackend+ordinaryExceptionStillClosesTapRegistryHistoryThenSink+resyncCleanupPopsARealOverrideAndPreservesBaseMusic+resyncCleanupWithoutOverridePreservesDurableMusic+authoritativeResyncPopsThePersistentSessionOverride+stopAllPresentationClearsPersistentSessionAndRegistry+nullSelectionLogicalStagingUsesThePersistentSessionTransaction+synchronousQueuePressureDrainUsesTheSessionCompositeBoundary+suppressedAndStopAllPoliciesMutateRealProducerStateExactly+mutatingPoliciesWaitForSuccessfulTransactionalReleaseAndRetry+afterRewindRestoreReportsReleaseSuccessToProductionHosts+managerLifecycleDiscardsPreparedProducerRestoreWriteFreeExactlyOnce+queuedReverseCommandsAreAppliedInOrderBeforePolicyCleanupAndCannotResurrect,TestAudioManagerRewindSuppression#suppressesPlaybackCommandsInsideReplayScope+suppressionScopeNestsUntilOuterScopeCloses+replayScopeCloseIsIdempotent+suppressedRingSoundDoesNotAdvanceRingAlternation+suppressionDoesNotBlockSetupState+afterRestorePoliciesUseConservativePresentationCleanup+stopTransientSfxPolicyDoesNotForcePopAnAlreadyCorrectlyRestoredOverride+silentFrameStepDoesNotPollThePresentationBackend+afterRestoreEndsReversePresentationBeforeCleanupPolicy+updateDuringReversePresentationDoesNotRenderNormalFrame+logicalRestoreIsDeferredUntilReverseReleaseAndReachesOnlyTheProducer+reversePresentationLifecycleIsOwnedOnlyByProducer,TestAudioManagerRuntimeInstallation#backendReplacementChangesOnlyTheSinkAndPreservesTheManagerLedger+speakerDeviceFailureReplacesOnlyTheSinkAndPreservesLiveVoices+baseGenerationChangesReplaceOneSessionWhileDonorChangesPreserveIt+reinstallingTheInstalledProfileAndRomKeepsTheSession+resetStateReinstallsBackendSinkWithoutReplacingTheBackend+failedDeviceInitializationInstallsNoDeviceSink+stoppingCaptureDuringRewindLeavesProducerReverseOwnershipUntouched,TestNamespacedMusicRouting#musicReferenceKeepsStockAndNamespacedIdentitiesDisjoint+audioManagerRoutesNamespacedMusicWithoutAllocatingAStockId+stockMusicReferencePreservesExistingNumericRoute+missingNamespacedTrackFailsBeforeTimelineOrPresentationMutation+namespacedSfxIsExactAndPresentationOnly+namespacedSfxIsSuppressedDuringRewindAndUnknownKeysDoNotMutatePresentation+logicalReplayReconstructsNamespacedSnapshotWithoutLivePlayback,TestRewindHistoryArming#audioManagerRoutesArmingOnlyToTheProducer+armingRecordsPresentedPcmAndDisarmingStopsRecording+clearingHistoryIsAHardBoundaryThatDropsStoredPcm+repeatedArmingDuringHeldRewindPreservesTheReverseCursor+timeLimitedHistoryCoversConfiguredSecondsAtTheOutputRate+sizeLimitedHistoryKeepsConfiguredByteCapacity,TestUnifiedAudioPresentationIntegration#titleAndGameplayPacketsRemainNonZeroBeforeDuringAndAfterCapture+specialStageRingAndSfxRemainInSpeakerAndCapturePcmDuringRecording+smpsWavPitchedSfxAndSegaPcmAllReachFinalPacket+togglePreservesEveryLogicalVoiceIdentityCursorAndSpeakerQueue+startDuringHeldRewindImmediatelyMatchesSpeakerReversePcm+pauseFrameStepAndModalSubmitFreshSilence+releaseAppliesTransientPolicyAndOneCrossfade+repeatedRecordingDoesNotLeakTapOrVoiceState+deviceFailurePreservesMixerHistoryRewindAndCapture+ordinaryEngineExceptionFinalizesRecorderAndCleansAudioInOrder,TestAudioPresentationProducerRewind#recordedReplayReversesTheFinalStereoPacketAndChangesOnlyItsOwnRate+silentRowsFreezeRecordedReplayCursorAndRecordNoPauseSamples+recordedReplayOwnsABoundedFloorAndCannotReadBeforeCaptureStarted+recordedReplaySurvivesDeveloperHistoryDisarmAndClearAndPreservesItsReleaseState+clearingDeveloperHistoryDuringScopedReverseKeepsItsCursorAndCrossfadeSource+scopedReverseReleasePreservesTransientVoiceIdentitiesAndCursors+failedScopedSinkBoundaryLeavesRecordingAndReverseCursorRetryable+offOwnerReplayCloseCannotReleaseOrDetachTheLiveHandle+conflictingReverseOwnersCannotReplaceOrSealARecordedReplay+recordingBoundsAndProducerCloseInvalidateEveryHandle+transactionIdentityFingerprintsContainOnlyScalarTokens+reverseEntryFlushesSinkBeforeFirstReversePacket+reverseRateChangesOnlyProducerOwnedCursor+captureAttachedDuringHeldRewindGetsTheNextSameReversePacket+lateCaptureAttachAlignsWithFractionalHeldReversePackets+reverseDoesNotRenderOrAppendForwardHistory+hardBoundaryEpochMakesStaleReverseCursorReturnSilence+repeatedForwardReverseAndCaptureAttachDetachPreserveOneTimeline+exhaustedReversePacketCrossfadesFromBroadcastSilence+partialReverseTailCrossfadesFromItsPaddedFinalFrame+staleEpochReverseSilenceIsTheReleaseCrossfadeSource+hardBoundaryClearsDeferredLogicalRestore,TestSmpsSessionThreadOwnership#offOwnerThreadEntryPointsFailBeforeMutation+sessionAndPortOffOwnerEntriesFailBeforeMutation'
+host_selector='TestHeldRewindAudioRestoreDeferral#heldRewindDefersIntermediateRestoresAndCommitsExactlyOnceOnRelease+stepBackwardWithoutReversePresentationKeepsPerFrameRestores+releasedHeldRewindStateMatchesPerFrameRestoresAndFreshReplay+levelLoadDuringHeldRewindKeepsFreshAudioAndDropsStaleDeferredRestore+resetBufferAtCurrentFrameAlsoDropsStaleDeferredRestore+recordExternalStepCommitsDeferredRestoreBeforeResumingForwardPlay+seekToSupersedesDeferredTargetWithoutPublishingBeforeRelease+liveRewindManagerReleasePathCommitsDeferredRestoreBeforePresentationCleanup+liveRewindManagerLevelLoadBoundaryDropsDeferredRestoreBeforePresentationCleanup+liveRewindManagerLevelLoadBoundaryClearsPcmRewindHistory+liveRewindManagerArmsPcmHistoryWhileUsableAndDisarmsWhenNot+liveRewindManagerSeamlessBoundaryDropsDeferredRestoreBeforePresentationCleanup,TestLiveRewindManagerAudioCleanup#defaultLiveRewindStepsOneFramePerHeldVisualFrame+heldLiveRewindFreezesFadePresentationUntilReleaseCleanup+failedReleaseRetainsLiveHostStateAndRetriesBeforeGameplayResumes+unsupportedModeReleaseFailureKeepsGameplayFrozenAndRetainsClearOwner+failedLevelLoadReleaseDoesNotResetHistoryBeforeRetry+failedSeamlessReleaseDoesNotRerootHistoryBeforeRetry+tapeCoastDelaysTransientAudioCleanupUntilCoastEnds+releasingHeldRewindWhileAnOverrideIsStillActiveDoesNotEndItEarly+leavingLevelWhileRewindingStopsAllPresentationAudio+pendingNonRewindableTransitionStopsPresentationAudioLikeModeExit,TestLiveRewindOwnerLifetime#installedOwnerReplaysItsRegisteredProviderWhileAnotherSessionIsAmbient+parkingReleasesPresentationAndResumesTheSameHistoryWithoutAdvancingIt+destroyedOutgoingOwnerStillOwnsRepeatedReleaseRetries+aSecondReplacementSupersedesTheWaitingOwnerWithoutLosingOutgoingCleanup+staleBoundaryFromAnEarlierInstallationCannotRerootTheSameOwnersNewHistory+replacingTheRegisteredSpecialProviderStartsANewSegmentAndRetiresOldPlayback+restoreBoundaryWaitsForTheAdmittedSeekThenRerootsAtTheNextManagerEntry+aDeferredBoundaryCannotAcquireAuthorityOverAReplacementInstallation+recordingAnExecutedOutgoingTickCannotAppendToTheNewOwnersHistory+aBonusTickCannotRecordTheProviderInstalledByItsCompletionCallback+auditorRestoreBoundaryIsAppliedAfterTheCompletedExternalRecord+deferredRecordAndFloorCannotAlterAReplacementInstallation+failedIterationCannotRecordAndDoesNotCarryItsInputIntoTheNextFrame+unsupportedOrDisabledBindingDoesNotReadObjectWorldInstallationState+inactiveLevelBindingDoesNotCaptureBeforeAdmissionAndActiveFadeTicksStillRecord+registeredSpecialStageStillInstallsWhileItsOutgoingLevelIsInactive+scriptedRewindIsResolvedFromTheInstalledOwnersModuleWhileTheLiveKeyIsDisabled,TestLiveRewindMonitorState#heldLiveRewindRestoresIntactMonitorBeforeRelease,TestGameLoopAudioPresentationModes#normalOuterFrameIsForward+modalAndFrameStepOuterFramesAreSilent+ordinaryPauseOuterFrameIsSilent+everyProductionModeEntersTheSharedOuterFrameBoundary+modalPickerAndFrameStepDriveRealBoundaryAsSilence+outerAudioBoundaryCreditsAggregateAudioMetric+realNineStepFastForwardHasOneOuterPresentationPacket+heldRewindDrivesReverseThroughRealBoundary+heldTraceRewindEarlyReturnStillPresentsReverseExactlyOnce+heldLiveRewindEarlyReturnStillPresentsReverseExactlyOnce,TestTraceSessionLauncherRewindPresentation#traceRealtimeRewindFreezesFadePresentationUntilReleaseCleanup+failedReleaseRetainsTraceHostAndPlaybackUntilLaterOwnerBoundary+failedTeardownReleaseRetainsActiveSessionUntilLaterRetry+pendingNonRewindableTransitionRejectsRealtimeRewindAndTearsDownPresentation+traceBoundaryExternalFrameRerootsRewindBuffer+inFrameTraceBoundaryRecordsCompletedFrameBeforeRerooting,TestCourseControl#replayAudioHasIndependentOwnershipAndForgottenLeasesCloseWithTheSession,TestPuttPuttParadise#liveRewindReplaysNonKeyframeAimChargeFlightAndNativePenalty'
+native_selector='TestSmpsRestoreOwnerContract,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestS3kLevelEntryAudioDeviceRestore,TestModApiSignatureSurface'
+guards_selector='TestAudioPresentationBoundary,TestAudioPresentationArchitectureGuard,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction,TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage,TestArchitecturalReviewGuard#archUnitFrozenRulesDoNotAutoUpdateDuringNormalRuns+archUnitPublishedBaselineCountsMatchFrozenStore+archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers+core_runtime_cycle_cluster_does_not_gain_top_level_edges'
+
+# Data-free audio selection:
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off "-Dtest=${audio_selector}" test -B
+
+# Host and native selections each use this exact environment/properties,
+# substituting host_selector or native_selector respectively:
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  "-Dtest=${host_selector}" test -B
+
+# Separate fresh guard JVM, exact selected methods only:
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off -Pguards "-Dtest=${guards_selector}" test -B
+```
+
+Only existing root ROM files were read, not linked/copied/renamed. S1 REV01, S2
+REV01 and S3&K CRC32/SHA-1 matched the repository guidance. The fourth existing
+kis2.gen is CRC32 `2AC1E7C6`, SHA-1
+`6cd0537a3aee0e012bb86d5837ddff9342595004`. This task does not certify emulator
+parity or arbitrary routes. Queue wait and Maven execution remain separate;
+other unmeasured work is unknown.
+
+The fresh guard command executed **74**, not the estimated 48, cases. The requested
+core-runtime method ran, but Surefire's method selector did not filter ArchUnit's
+27 field-based rules: the requested low-level rule plus 26 additional field rules
+all executed. XML identities establish this expansion; it was not a second guard
+request or a launched complete guard fleet. All 28 observed ArchUnit identities
+passed, along with audio architecture 38, producer boundary 1, source guards 3,
+ambient setup 1 and accounting/policy guards 3. Both intended ArchUnit identities
+were present. No missing-test/skip was accepted and no unchanged rerun was made.
+This selector limitation is relevant to future bounded ArchUnit planning.
+
+The affected frozen rule passed with store updating disabled. The compiled/source
+accounting checks retain **119 frozen records**, **6 ambient methods / 5 files**
+and **151 package-pair permissions**, with all pins, terminals, descriptor/version,
+guards, policy and frozen stores byte-identical to baseline. Source budgets and
+the nested producer-entry boundary passed without exemptions. The recursive API
+qualification is compiled evidence; it is not inferred only from a textual diff.
+
+Across the disjoint selections, **334 unique case identities passed, zero
+failures/errors/skips**. Coverage is bounded to the recorded controls; parent
+composition, independent source review, complete composed guards and delivery-wide
+smoke remain separate. This is a preserving ownership extraction, not a runtime
+repair, universal atomicity claim or emulator-parity result. All inspected XML/
+text reports and temporary raw logs were consumed; owned diagnostics are empty.
+The five temporary selector files and prepared message are discarded after the
+local commit, not retained as pass caches/receipts. No category directory exists.
+Owned handles `14199`, `90605`, `65068`, `2664`, `43237`, `78089` are terminal exit 0.
+Hooks remain installed. The task branch/worktree will remain clean and retained
+for the parent's fresh review; no integration/push/cleanup is performed here.
+
+The first local commit attempt was rejected by the installed resource-policy hook
+because this evidence initially spelled out the machine-local user-home ROM root.
+Only prose was corrected to the repository's existing MAIN_CHECKOUT notation;
+recorded commands expand to the same checked absolute arguments. No executable
+input changed, so completed runtime checks were not repeated for this correction.

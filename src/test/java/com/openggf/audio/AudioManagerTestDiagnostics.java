@@ -52,17 +52,17 @@ public final class AudioManagerTestDiagnostics {
         return audio.deferredReverseLogicalSnapshotForTesting();
     }
 
-    // No production accessor is added for the baseline's private lifetime ledger.
+    // Layout-only reads remain test-side; no production accessor is added.
     public static boolean reversePreparationAcknowledged(AudioManager audio) {
-        return field(audio, "deferredReverseLogicalPrepared", Boolean.class);
+        return heldReverseField(audio, "deferredReverseLogicalPrepared", Boolean.class);
     }
 
     public static boolean postBoundaryReverseTarget(AudioManager audio) {
-        return field(audio, "postBoundaryReverseTarget", Boolean.class);
+        return heldReverseField(audio, "postBoundaryReverseTarget", Boolean.class);
     }
 
     public static boolean reverseReleaseFailureArmed(AudioManager audio) {
-        return field(audio, "failNextReverseRelease", Object.class) != null;
+        return heldReverseField(audio, "failNextReverseRelease", Object.class) != null;
     }
 
     /**
@@ -194,6 +194,17 @@ public final class AudioManagerTestDiagnostics {
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException(
                     "cannot open a scoped session SMPS epoch", failure);
+        }
+    }
+
+    private static <T> T heldReverseField(AudioManager audio, String name, Class<T> type) {
+        Object owner = field(audio, "heldReverseRestore", Object.class);
+        try {
+            Field field = owner.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return type.cast(field.get(owner));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read held reverse restore." + name, failure);
         }
     }
 

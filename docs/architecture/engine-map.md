@@ -505,6 +505,17 @@ manager restoration records `RESTORE` intent and an accepted timeline command;
 presentation-owned natural restoration retains its separate deferred publication
 path. Legacy singleton configuration binding remains a distinct contract.
 
+Each `AudioManager` also retains a private `HeldReverseRestore` owner for the
+held logical target across selection, detached replay, preparation, producer
+replacement, boundary supersession and release retries. It owns held admission
+reads and after-restore cleanup ordering through the existing virtual manager
+entry points, without adding a lock or capturing producer dependencies. Prepared
+acknowledgment can outlive or differ from producer selection; release preserves
+partial effects from producer and ledger failures. Source composition, live
+snapshot capture, eager rollback/forward-service restore, the shared publication
+counter and ring/timeline/donor storage remain with the manager. Producer tokens,
+restoration algorithms, cursors, history, clocks and output remain below.
+
 Each `AudioManager` retains one private `CaptureLeases` owner across producer
 generations. It owns offline/live admission, accepted release, rebuild carry,
 retirement and the stable live-recording handle. Compatibility methods retain
