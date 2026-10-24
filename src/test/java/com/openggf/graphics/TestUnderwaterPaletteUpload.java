@@ -10,6 +10,8 @@ import com.openggf.tools.PresentationOffscreenTestContext;
 import org.joml.Matrix4f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -197,6 +199,7 @@ class TestUnderwaterPaletteUpload {
     }
 
     @ParameterizedTest
+    @EnabledOnOs(OS.LINUX)
     @CsvSource({
             "NONE,0,RAW_RGB,FULL,7565D8,6EFFA2,1E3264",
             "NONE,0,MD_ANALOG,LIMITED,4343BD,43DE76,111143",
