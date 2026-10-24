@@ -105,6 +105,7 @@ final class DefaultObjectRewindPolicies {
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
             // These lists rebuild from recreated managed children. Exact graph checks own the evidence.
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher", "activeBalls"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.CPZBossPipe", "segments"), RewindFieldPolicy.TRANSIENT),
             // The captured spawn selects the mapping frame/piece from the current art owner.

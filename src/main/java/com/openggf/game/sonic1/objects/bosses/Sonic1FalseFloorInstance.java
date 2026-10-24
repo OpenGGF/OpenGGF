@@ -204,14 +204,15 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         disintegrateTimer = newTimer & 0xFF;
 
         if (borrow) {
-            // Signal next child block to break
-            if (currentFrame < childBlocks.size()) {
-                // ROM: move.w objoff_30(a0,d0.w),d0 -> get child pointer
-                //      move.w #"GO",obSubtype(a1)
-                FalseFloorBlock block = childBlocks.get(currentFrame);
-                block.signalBreak();
-                currentFrame++;
+            // FFloor_Break indexes the original pointer table, never the surviving-list position
+            // (_incObj/82, 83 SBZ Eggman Cutscene and Crumbling Floor.asm:284-296).
+            for (FalseFloorBlock block : childBlocks) {
+                if (block.blockIndex == currentFrame) {
+                    block.signalBreak();
+                    break;
+                }
             }
+            currentFrame++;
 
             // Check if all children have been signaled (ROM: cmpi.b #8,obFrame)
             if (currentFrame >= CHILD_COUNT) {
@@ -337,24 +338,15 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     }
 
     /**
-     * Rewind-restore hook: re-registers a recreated {@link FalseFloorBlock} into
-     * {@code childBlocks} so the disintegration sequence
-     * ({@code childBlocks.get(currentFrame).signalBreak()}) still resolves after a
-     * held rewind. Inserts ordered by {@link FalseFloorBlock#blockIndex} so the
-     * left-to-right collapse order matches the ROM regardless of restore order.
+     * Recreated children attach before their captured {@code blockIndex} scalars
+     * restore. Dispatch uses those indices after restore, so missing retired
+     * blocks and recreation order cannot shift the next collapse target.
      */
     public void reattachChildBlock(FalseFloorBlock block) {
         if (block == null) {
             return;
         }
-        int insertAt = childBlocks.size();
-        for (int i = 0; i < childBlocks.size(); i++) {
-            if (childBlocks.get(i).blockIndex > block.blockIndex) {
-                insertAt = i;
-                break;
-            }
-        }
-        childBlocks.add(insertAt, block);
+        childBlocks.add(block);
     }
 
     // =========================================================================
