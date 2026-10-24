@@ -1,5 +1,21 @@
 package com.openggf;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
+import java.util.HashMap;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import com.openggf.level.SolidTile;
+import com.openggf.level.Pattern;
+import com.openggf.level.Palette;
+import com.openggf.level.ChunkDesc;
+import com.openggf.level.Chunk;
+import com.openggf.level.Block;
+import com.openggf.level.AbstractLevel;
+import com.openggf.game.sonic2.ButtonVineTriggerManager;
+import com.openggf.game.sonic1.Sonic1SwitchManager;
+import com.openggf.game.GameDataSource;
 import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,10 +153,176 @@ public class TestGameLoop {
         SonicConfigurationService.getInstance().clearSessionOverrides();
         SonicConfigurationService.getInstance().resolveDisplayAspect();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetPerTest();
         mockInputHandler = mock(InputHandler.class);
         when(mockInputHandler.logical()).thenReturn(com.openggf.control.LogicalInputSnapshot.neutral());
         gameLoop = new GameLoop(mockInputHandler);
+    }
+
+    @Test
+    void setupPreservesBasePreferencesForFreshGameplay() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        var savedPreferences = new HashMap<>((Map<?, ?>) getPrivateField(config, "config"));
+        try {
+            SessionManager.clear();
+            config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+            config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
+            config.setConfigValue(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, false);
+            config.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 1234);
+            config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT, 777);
+            config.setConfigValue(SonicConfiguration.FPS, 75);
+            var seededPreferences = new HashMap<>((Map<?, ?>) getPrivateField(config, "config"));
+            config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, true);
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "SUPER_32_9");
+            config.setSessionOverride(SonicConfiguration.FPS, 144);
+            config.resolveDisplayAspect();
+            assertEquals(320, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            assertNull(SessionManager.getCurrentGameplayMode());
+
+            setUp();
+
+            assertEquals(seededPreferences, getPrivateField(config, "config"),
+                    "setup must preserve the base preference map, excluding transient overlays");
+            for (SonicConfiguration key : List.of(SonicConfiguration.TEST_MODE_ENABLED,
+                    SonicConfiguration.DISPLAY_ASPECT, SonicConfiguration.FPS)) {
+                assertFalse(config.hasSessionOverride(key), "setup must clear the conflicting override: " + key);
+            }
+            assertFalse(config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED));
+            assertEquals("WIDE_16_9", config.getString(SonicConfiguration.DISPLAY_ASPECT));
+            assertEquals(75, config.getInt(SonicConfiguration.FPS));
+            assertEquals(1234, config.getInt(SonicConfiguration.SCREEN_WIDTH));
+            assertEquals(777, config.getInt(SonicConfiguration.SCREEN_HEIGHT));
+            assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            assertEquals(224, config.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS));
+            var camera = SessionManager.getCurrentGameplayMode().getCamera();
+            assertEquals(400, camera.getWidth(), "fresh camera must use the preserved base display preference");
+            assertEquals(224, camera.getHeight());
+            assertSame(camera, getPrivateField(gameLoop, "camera"));
+        } finally {
+            SessionManager.clear();
+            setPrivateField(config, "config", savedPreferences);
+            config.clearSessionOverrides();
+            config.resolveDisplayAspect();
+        }
+    }
+
+    @Test
+    void setupPreservesIncomingWorldAndLoadedDataWhileResettingItsProfile() throws Exception {
+        var savedVineTriggers = ButtonVineTriggerManager.snapshot();
+        try {
+            SessionManager.clear();
+            var module = new Sonic1GameModule();
+            AtomicInteger waterSourceReads = new AtomicInteger();
+            GameDataSource source = new GameDataSource() {
+                @Override public Optional<com.openggf.data.Rom> rom() {
+                    waterSourceReads.incrementAndGet();
+                    return Optional.empty();
+                }
+                @Override public InputStream openAsset(String path) throws IOException {
+                    if (!"fixture/terrain.bin".equals(path)) throw new IOException("unknown fixture asset: " + path);
+                    return new ByteArrayInputStream(new byte[] {0x12, 0x34, 0x56});
+                }
+                @Override public String identity() { return "fixture:gameloop-s1-terrain"; }
+            };
+            var gameplay = SessionManager.openGameplaySession(module, module, source, null);
+            TestEnvironment.activeGameplayMode();
+            var world = gameplay.getWorldSession();
+            var levels = gameplay.getLevelManager();
+            var terrain = new SetupPreservationTerrain();
+            levels.initializeCollisionOnly(terrain, 2, 1);
+            var camera = gameplay.getCamera();
+            var sprites = gameplay.getSpriteManager();
+            var collision = gameplay.getCollisionSystem();
+            var parallax = gameplay.getParallaxManager();
+            var water = gameplay.getWaterSystem();
+            var fade = gameplay.getFadeManager();
+            var state = gameplay.getGameStateManager();
+            var timers = gameplay.getTimerManager();
+            var switches = module.getGameService(Sonic1SwitchManager.class);
+            assertNotNull(switches);
+            switches.setBit(3, 7);
+            ButtonVineTriggerManager.setTrigger(5, true);
+            camera.setX((short) 0x180);
+            camera.setY((short) 0x40);
+            var player = new com.openggf.sprites.playable.Sonic("fixture-player", (short) 0x130, (short) 0x90);
+            sprites.addSprite(player);
+            state.addScore(2700);
+            assertTrue(switches.isPressed(3));
+            assertTrue(ButtonVineTriggerManager.getTrigger(5));
+            assertEquals(0x180, camera.getX());
+            assertSame(player, sprites.getSprite("fixture-player"));
+            assertEquals(1, levels.getBlockIdAt(0x130, 0x40));
+            assertEquals(0x3001, levels.getChunkDescAt((byte) 0, 0x130, 0x40).get());
+            int readsBeforeSetup = waterSourceReads.get();
+
+            setUp();
+
+            assertSame(gameplay, SessionManager.getCurrentGameplayMode());
+            assertSame(world, SessionManager.getCurrentWorldSession());
+            assertSame(module, world.getGameModule());
+            assertSame(module, GameModuleRegistry.getCurrent());
+            assertInstanceOf(Sonic2GameModule.class, GameModuleRegistry.getBootstrapDefault());
+            assertSame(levels, gameplay.getLevelManager());
+            assertSame(camera, gameplay.getCamera());
+            assertSame(sprites, gameplay.getSpriteManager());
+            assertSame(collision, gameplay.getCollisionSystem());
+            assertSame(parallax, gameplay.getParallaxManager());
+            assertSame(water, gameplay.getWaterSystem());
+            assertSame(fade, gameplay.getFadeManager());
+            assertSame(state, gameplay.getGameStateManager());
+            assertSame(timers, gameplay.getTimerManager());
+            assertSame(levels, getPrivateField(gameLoop, "levelManager"));
+            assertSame(camera, getPrivateField(gameLoop, "camera"));
+            assertSame(terrain, world.getCurrentLevel());
+            assertSame(terrain, levels.getCurrentLevel());
+            assertSame(source, world.getDataSource());
+            assertEquals(2, world.getCurrentZone());
+            assertEquals(1, world.getCurrentAct());
+            assertEquals(2, levels.getCurrentZone());
+            assertEquals(1, levels.getCurrentAct());
+            assertEquals(1, levels.getBlockIdAt(0x130, 0x40));
+            assertEquals(0x3001, levels.getChunkDescAt((byte) 0, 0x130, 0x40).get());
+            try (InputStream asset = source.openAsset("fixture/terrain.bin")) {
+                assertArrayEquals(new byte[] {0x12, 0x34, 0x56}, asset.readAllBytes());
+            }
+            assertTrue(ButtonVineTriggerManager.getTrigger(5),
+                    "S2 is only bootstrap: its separate vine profile must not run");
+            assertFalse(switches.isPressed(3), "the incoming S1 profile must clear its switch state");
+            assertEquals(0, camera.getX(), "camera coordinates are transient");
+            assertEquals(0, camera.getY());
+            assertNull(sprites.getSprite("fixture-player"), "the inherited sprite roster is transient");
+            assertEquals(0, state.getScore());
+            assertTrue(waterSourceReads.get() > readsBeforeSetup,
+                    "loaded-water refresh must consult the retained data source without a ROM");
+        } finally {
+            ButtonVineTriggerManager.restore(savedVineTriggers);
+            SessionManager.clear();
+        }
+    }
+
+    /** Minimal reconstructible S1 block/chunk terrain, following the existing AbstractLevel test stubs. */
+    private static final class SetupPreservationTerrain extends AbstractLevel {
+        SetupPreservationTerrain() {
+            super(2);
+            palettes = new Palette[] {new Palette(), new Palette(), new Palette(), new Palette()};
+            patterns = new Pattern[] {new Pattern()};
+            chunks = new Chunk[] {new Chunk(), new Chunk()};
+            blocks = new Block[] {new Block(16), new Block(16)};
+            blocks[1].setChunkDesc(3, 4, new ChunkDesc(0x3001));
+            solidTiles = new SolidTile[] {new SolidTile(0, new byte[16], new byte[16], (byte) 0)};
+            map = new com.openggf.level.Map(2, 3, 2);
+            map.setValue(0, 1, 0, (byte) 1);
+            objects = List.of();
+            rings = List.of();
+            patternCount = patterns.length;
+            chunkCount = chunks.length;
+            blockCount = blocks.length;
+            solidTileCount = solidTiles.length;
+            maxX = 0x200;
+            maxY = 0x100;
+        }
+        @Override public int getBlockPixelSize() { return 256; }
+        @Override public int getChunksPerBlockSide() { return 16; }
     }
 
     @AfterEach

@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestSingletonLifecycleGuard {
     private static final Path TEST_ROOT = Path.of("src/test/java");
     private static final Set<String> AMBIENT_GAMEPLAY_MODE_SETUP_BASELINE = baseline("""
-            src/test/java/com/openggf/TestGameLoop.java#setUp
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
