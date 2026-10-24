@@ -29,8 +29,8 @@ obligation is not a passing test claim.
 | 2 | [`sonic1.objects.bosses.FZPlasmaLauncher#activeBalls`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/FZPlasmaLauncher.java) | Closed with central `TRANSIENT`. Each recreated FZPlasmaBall adopts itself through `adoptPlasmaBallForRewind`; the launcher prunes destroyed entries and derives its active count. The native encounter has one launcher group. | [`TestS1FzBossGraphRewind.fzBossGraphRestoresChildrenLauncherBallsAndParentSideLinks`](../../../src/test/java/com/openggf/game/rewind/TestS1FzBossGraphRewind.java) removes children, creates a divergent launcher/ball, restores fresh identities, checks the exact list and count, then advances the launcher without duplicating balls. |
 | 3 | [`sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java) | Closed in the bounded follow-up below with central `TRANSIENT`. Recreation rebuilds the surviving managed inventory. Dispatch resolves the captured original `blockIndex` instead of a compacted list position, and advances the native break count on each timer borrow. | [`TestFalseFloorBlockRewindGenericRestore.partialCollapseReplaysThroughCleanupAfterDestructiveRestore`](../../../src/test/java/com/openggf/game/sonic1/objects/TestFalseFloorBlockRewindGenericRestore.java) fails on the original runtime in all four partial-collapse cases and passes with the fix. An event-style dynamic master and its surviving children restore as fresh objects with exact identities and order. Every forward timer, width and fragment state matches uninterrupted execution through master cleanup and fragment retirement. The complete eight-child test remains green. |
 | 4 | [`sonic1.objects.bosses.Sonic1SLZBossInstance#seesaws`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1SLZBossInstance.java) | Closed with central `TRANSIENT`. Recreation starts the list empty. `updateBossLogic` calls `scanForSeesaws` before consuming the cache on the next forward dispatch. | [`TestS1SlzBossSpikeballGraphRewind.restoreRebuildsTheBossSeesawScanCacheSoAlignmentCanStillMatch`](../../../src/test/java/com/openggf/game/rewind/TestS1SlzBossSpikeballGraphRewind.java) forces fresh reconstruction and verifies that the next update repopulates the cache. Other tests in the class check spikeball origin matching rather than first-live-seesaw matching. This is bounded encounter evidence, not a full SLZ route replay. |
-| 5 | [`sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java) | Retained render debt. The public piece constructor retains a mapping piece and renderer, while recreation always takes the frame-index constructor. It cannot reconstruct the legacy piece recipe from its spawn. | [`TestS2BreakableBlockFragmentGraphRewind.breakableBlockFragmentRestoresFreshWithCapturedPhysicsAndFrame`](../../../src/test/java/com/openggf/game/rewind/TestS2BreakableBlockFragmentGraphRewind.java) uses the frame-index constructor with null art. It proves physics and identity only. Required evidence is a nonempty piece-backed draw before removal, after recreation, and on forward replay. Do not classify the list from this scalar-only pass. |
-| 6 | [`sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/OOZLauncherObjectInstance.java) | Retained render debt. Recreation explicitly supplies null piece and renderer, creating an empty list. Production rendering requires a ready renderer and a nonempty list. | [`TestS2LauncherGraphRewind.oozLauncherFragmentRestoresFreshWithCapturedPhysicsAndIdentity`](../../../src/test/java/com/openggf/game/rewind/TestS2LauncherGraphRewind.java) supplies null art. It cannot prove visibility. Preserve a ROM-backed frame/piece recipe and verify emitted render data through destructive restore before closing this key. No speculative capture of live render handles is added. |
+| 5 | [`sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java) | Closed by removing the redundant list and capturing an immutable `FragmentArt(artKey, piece)` value through the existing default compact schema. A null piece selects the existing frame fallback; a null recipe preserves artless construction. The piece constructor now requires explicit art provenance instead of a live renderer. | [`TestS2BreakableBlockFragmentGraphRewind.pieceFragmentRestoresItsDrawBeforeAndAfterMovement`](../../../src/test/java/com/openggf/game/rewind/TestS2BreakableBlockFragmentGraphRewind.java) checks exact nonempty submissions after destructive registry restore, immediately and after motion, through a replacement renderer. `frameFallbackPreservesArtPresenceAndRetirement` checks frame 3, artless construction and retirement replay. See the S2 fragment follow-up below for baseline failures and limits. |
+| 6 | [`sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/OOZLauncherObjectInstance.java) | Closed by removing the redundant list and capturing an immutable art-key/piece recipe. The production owner supplies the orientation-specific art key, and drawing resolves the current renderer. No renderer or inferred coordinate match enters the snapshot. | [`TestS2LauncherGraphRewind.producedFragmentsRestoreTheirDrawForBothOrientations`](../../../src/test/java/com/openggf/game/rewind/TestS2LauncherGraphRewind.java) breaks real managed parents for both orientations, captures before and after child motion, replaces the renderer, and checks exact submissions, piece zero, identities and allocation slots after destructive registry restore. `fragmentRestoresTheLatchedOffscreenRetirement` checks a custom art key and next-step deletion from a restored offscreen latch. See the S2 fragment follow-up below. |
 | 7 | [`sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/SmashableGroundObjectInstance.java) | Closed with central `TRANSIENT`. The captured spawn packs frame and piece indices. Recreation fetches the matching sheet and renderer from `ObjectServices.renderManager()` and builds the one-piece list. | [`TestS2DebrisFragmentGraphRewind.smashableGroundFragmentRecreatesItsNonemptyMappingPieceAndReplaysTheDraw`](../../../src/test/java/com/openggf/game/rewind/TestS2DebrisFragmentGraphRewind.java) uses frame 1/piece 1 with a decoy, distinct offsets, dimensions, tile, flips, palette, and priority. It removes the source, verifies the exact nonempty draw after reconstruction, and compares the next moving draw with uninterrupted execution. This checks renderer input, not GPU pixels or every art variant. |
 | 8 | [`sonic2.objects.badniks.RexonBadnikInstance#heads`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/RexonBadnikInstance.java) | Retained pending broader owner evidence. Recreated heads attach through `nearestRexon`; the custom list rebuilds linked-head order during addition. | [`TestS2BadnikChildGraphRewind.s2BadnikChildGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2BadnikChildGraphRewind.java) checks five heads, restored parent references, and chain links in one Rexon family. Before excluding the list, exercise two nearby families, partial head retirement, restored indices, and forward chain behavior. The current nearest-owner recipe does not establish exact multi-family identity. |
 | 9 | [`sonic2.objects.badniks.SolBadnikInstance#fireballs`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/SolBadnikInstance.java) | Retained pending broader owner evidence. Recreated fireballs attach through `nearestSol`; detached flying fireballs may have no parent. | The same S2 badnik graph test checks four parent-owned restored fireballs. `detachedFlyingSolFireballRestoresWithoutLiveParent` checks the detached case. Add two nearby owners and mixed attached/flying retirement evidence before declaring this cache wholly reconstructible. |
@@ -249,3 +249,86 @@ The consumed XML, text reports and generated field report were inspected and
 removed. No category run or validation receipt was created. These focused checks
 do not certify rendered output, player riding-contact cleanup or the complete
 SBZ2 route. No broad or full suite was run.
+
+## S2 fragment art follow-up
+
+This bounded follow-up starts at `624e95b4892533d23ae898d8127f277038777f70`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-44afbf86`, on
+`bugfix/ai-s2-fragment-rewind-art-20261024`. It owns only the two S2 fragment
+implementations, their graph tests, these audit rows, and the two removed baseline
+keys. The parent retains release prose, guide updates, combined guards, S3K and
+API checks, integration, and cleanup.
+
+The first reproduction changed tests only. Both Breakable Block cases reached
+destructive registry restore and failed the exact nonempty `drawPieces` check.
+Recreation instead submitted `drawFrameIndex(-1, ...)`. The combined request
+executed 13 tests with two failures, four launcher harness errors, and zero skips.
+The launcher harness initially omitted its explicit player query, then omitted
+the rolling animation needed to break a parent. Those setup failures were fixed
+before attributing launcher render loss. With both prerequisites supplied, all
+four launcher cases failed after destructive restore with no renderer submission.
+They cover subtype 0 and subtype 1, each before and after movement. All source
+and uninterrupted moving submissions passed before those restore failures.
+
+Two state shapes were compared. A ROM recipe containing art key, orientation,
+frame, piece index and drawing mode describes the production mapping tables.
+It does not describe the public legacy constructor's independently supplied
+piece and renderer. Inferring a frame or orientation by equal piece coordinates
+would invent provenance. Capturing immutable piece values with the art key
+covers both the production pieces and explicitly keyed independent pieces.
+The existing compact record codec supports that value without new snapshot
+infrastructure or a central exclusion policy.
+
+Each owner now stores `FragmentArt(artKey, piece)` and creates the one-piece draw
+list at submission. Breakable Block's existing `frameIndex` remains captured.
+Its null-piece recipe selects frame fallback; a null recipe preserves intentionally
+artless construction even when restore services have art available. Renderer
+lookup uses the current ObjectRenderManager. The tests replace its renderer
+between capture and restore, so retaining a captured live renderer cannot satisfy
+the expected submissions.
+
+The renderer-taking public native overloads were replaced with art-key overloads,
+and every repository producer was migrated. Nonempty pieces require a nonnull
+key, which the constructor tests enforce. The two native implementation classes
+are absent from `src/test/resources/mods/mod-api-signatures-0.7.txt`; no creator
+signature pin changes. The frame-index and artless constructors remain.
+OOZ movement-before-gravity, render-flag deletion, the parent's piece-zero slot,
+and invisible-launcher-before-fragment allocation are unchanged. Breakable Block
+retains its inherited movement and camera-bottom retirement behavior. This work
+makes no new ROM-parity claim for that behavior.
+
+The focused selection ran 25 tests with one failure, zero errors and zero skips.
+The failure was confined to the new launcher retirement harness, which directly
+stepped fragments without installing the production camera bounds. The other 24
+cases passed, including every missing-submission case, both art-key constructor
+contracts, Breakable Block fallback and retirement, all six existing OOZ object
+checks, and the ROM-backed CPZ block despawn check. After installing the cached
+bounds, the exact retirement method and field-disposition guard passed two tests
+with zero failures, errors or skips. Runtime source did not change between these
+two runs. Completed coverage is 26 distinct test cases across those selections;
+there was no single all-green 26-case invocation. No unchanged passing checks
+were repeated.
+
+The exact focused selections were:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS2BreakableBlockFragmentGraphRewind,TestS2LauncherGraphRewind,TestOOZLauncherObjectInstance,TestBreakableBlockDespawn' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS2LauncherGraphRewind#fragmentRestoresTheLatchedOffscreenRetirement,TestRewindFieldDispositionGuard' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Both ran from this worktree with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, and DISPLAY and WAYLAND_DISPLAY unset.
+`MAIN_CHECKOUT` and `ROM_ROOT` identify the existing main checkout, as in the
+earlier commands.
+The 25-case request waited 67 seconds and Maven reported 75 seconds of execution,
+including compilation. The final two-case request waited 30 seconds and Maven
+reported 25.961 seconds of execution. These are separate intervals.
+
+The generated disposition report exactly matched all 15 remaining baseline
+keys, with both assigned keys absent. The lists were removed, so no speculative
+`TRANSIENT` policy was needed. Eight of the original 23 keys are now closed.
+The two graph classes remain on the default compact capture path. The nonempty
+piece checks distinguish offsets, dimensions, tile, palette, flips and priority.
+This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
+HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
+S3K check, API check or release-only full suite ran in this follow-up.

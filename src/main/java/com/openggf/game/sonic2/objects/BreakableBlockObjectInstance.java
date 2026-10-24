@@ -16,6 +16,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -271,7 +272,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
                         velX,
                         velY,
                         piece,
-                        renderer));
+                        Sonic2ObjectArtKeys.BREAKABLE_BLOCK));
             }
             return;
         }
@@ -349,14 +350,13 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         private int subY;  // 8.8 fixed point
         private int velX;  // 8.8 fixed point
         private int velY;  // 8.8 fixed point
-        private final SpriteMappingPiece piece;
-        private final PatternSpriteRenderer renderer;
-        private final List<SpriteMappingPiece> pieceList;
+        private FragmentArt fragmentArt;
         private int frameIndex;
         private final ObjectRenderManager renderManager;
 
+        /** The art key identifies the current ROM-backed renderer for this immutable piece. */
         public BreakableBlockFragmentInstance(int x, int y, int velX, int velY, SpriteMappingPiece piece,
-                                              PatternSpriteRenderer renderer) {
+                                              String artKey) {
             super(new ObjectSpawn(x, y, 0x32, 0, 0, false, 0), "BlockFragment");
             this.currentX = x;
             this.currentY = y;
@@ -364,9 +364,8 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             this.subY = y << 8;
             this.velX = velX;
             this.velY = velY;
-            this.piece = piece;
-            this.renderer = renderer;
-            this.pieceList = piece != null ? List.of(piece) : List.of();
+            this.fragmentArt = piece != null
+                    ? new FragmentArt(Objects.requireNonNull(artKey, "artKey"), piece) : null;
             this.frameIndex = -1;
             this.renderManager = null;
         }
@@ -380,9 +379,8 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             this.subY = y << 8;
             this.velX = velX;
             this.velY = velY;
-            this.piece = null;
-            this.renderer = null;
-            this.pieceList = List.of();
+            this.fragmentArt = renderManager != null
+                    ? new FragmentArt(Sonic2ObjectArtKeys.BREAKABLE_BLOCK, null) : null;
             this.frameIndex = frameIndex;
             this.renderManager = renderManager;
         }
@@ -429,22 +427,22 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
                 return;
             }
 
-            if (renderer != null) {
-                if (!renderer.isReady() || pieceList.isEmpty()) {
-                    return;
-                }
-                renderer.drawPieces(pieceList, currentX, currentY, false, false);
+            if (fragmentArt == null) {
                 return;
             }
-
-            if (renderManager != null) {
-                PatternSpriteRenderer fallbackRenderer = renderManager.getRenderer(Sonic2ObjectArtKeys.BREAKABLE_BLOCK);
-                if (fallbackRenderer == null || !fallbackRenderer.isReady()) {
-                    return;
-                }
-                fallbackRenderer.drawFrameIndex(frameIndex, currentX, currentY, false, false);
+            ObjectRenderManager manager = renderManager != null ? renderManager : services().renderManager();
+            PatternSpriteRenderer renderer = manager != null ? manager.getRenderer(fragmentArt.artKey()) : null;
+            if (renderer == null || !renderer.isReady()) {
+                return;
+            }
+            if (fragmentArt.piece() != null) {
+                renderer.drawPieces(List.of(fragmentArt.piece()), currentX, currentY, false, false);
+            } else {
+                renderer.drawFrameIndex(frameIndex, currentX, currentY, false, false);
             }
         }
+
+        private record FragmentArt(String artKey, SpriteMappingPiece piece) {}
 
         @Override
         public int getPriorityBucket() {
