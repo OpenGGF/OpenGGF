@@ -2647,3 +2647,72 @@ still unadmitted. No player values or collision outcomes were adjusted.
 ```bash
 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectPool,TestCdPlayerObjectTouch' test -B
 ```
+
+
+### Paired completed-loop scroll publication, 24 October 2026
+
+The opening development World now publishes terrain scroll and its immutable SAT
+picture from the same completed native loop. The previous checkpoint's current
+terrain/prior-sprite displacement is fixed for this admitted path. A real EGL
+regression first reproduced it at pixel37,0 outside every displayed sprite tile.
+No gameplay position, input, source clock or native movement was adjusted.
+
+LevelSpritePresentation now exposes opaque immutable ScrollFrame capture, pure
+owner/lifetime validation and a terrain draw scope. It retains the actual full
+scroll buffers/registers and resolved render mode, with manager/World/source,
+level/load generation, renderer, camera/parallax, graphics/atlas and viewport
+ownership. Capture does not drain/draw/advance; scope never moves gameplay camera.
+The scope owns normal pattern commands, not arbitrary SAT/effect/art mutations.
+Same-instance graphics cleanup/reinit without a World/renderer/load reset remains
+outside the available lifetime detection. No generic CD sprite publication was enabled.
+
+The CD Presenter owns prepared/published render cuts separately from its native
+foreground accumulator. Cold pairs remain null until first input after completed
+production load. Its per-visit PLC composition delegates exactly one Runtime
+service, then publishes the prior prepared cut on ordinary/pause; PP lag retains
+both. After a completed ordinary tail it captures the next cut. Rendering and
+restore never manufacture or advance it. Shared restore preflights all three
+Frame/Runtime/scroll partitions before writing, and stale service handles reject
+before they can close or change the current visit. Advanced capture/service/draw
+failures close the sibling source owners without pretending to roll back GPU work.
+
+Independent source review found two shared P2s, both repaired and re-reviewed:
+queued terrain wrappers now own render-mode copies rather than controller reuse
+buffers; cinematic admission covers contributor setup through unwind. The direct
+graphics capture dependency now restores its prior target even when unwind,
+discard or frame cleanup fails, retains the primary error and visits each release
+once. Nested captures retain their documented immediate-inner order. Failed lists
+are cleared and not pooled. No ordinary flush owner was refactored.
+
+Observed checks, each attributed to its source selection rather than summed:
+
+- 48345: original rendered pixel failure plus17 new-fixture cascade errors; the
+ constructor-safe partial service fixture corrected the latter separately.
+- 3453: tests-only R2 on old production,31tests/9 intended failures/0errors/skips.
+- 38364: repaired shared scope/cleanup plus maintained capture regressions,
+ 57tests/0failures/errors/skips.
+- 90130: actual CD pickup/full/course/pause/cold replay, regional entries and API,
+ 71tests/0failures/errors/skips.
+- 79813: required S3K consumers, publication lifecycle and two real cinematic
+ terrain/priority-mask probes,68tests/0failures/errors/skips.
+- 78762: complete guards profile,722tests/0failures/errors/skips across89fresh XML.
+
+All selected XML Java25.0.5.0.2 and required media/ROM/EGL properties were checked.
+The actual capture contains93 observations; all22 earlier gameplay columns match
+exactly. The91 consecutively sampled camera pairs publish prior prepared values;
+the initial0-to2 sample gap deliberately omits call1. At call93 current cameraX72,
+published cameraX69; the SAT and terrain use the latter. Actual call16/65/93 PNGs
+were visually inspected. Repeated draw and full/course replay preserve the image.
+The new local comparison uses only actual OpenGGF captures, not emulator references.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestLevelScrollCapture,TestLevelScrollDrawScope,TestCapturedCommandCleanup,TestLevelSpritePresentation,TestPooledRenderCommandDiscard,TestRenderContext' test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestSonicCdModuleContracts,TestSonicCdStaticStageLoad,TestSonicCdPlayerPresentation,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off -Pguards test -B
+```
+
+These checks are not a full ordinary smoke or release full-suite pass. Native
+plane VRAM/palette publication, background deformation, mixed sprite/plane
+priority, live PLC, driver audio, contact consequences and complete-game parity
+remain open. Generic mode-copy allocation impact is unmeasured. Existing earlier
+smoke attribution remains historical; no unrelated donor/platform code was fixed.

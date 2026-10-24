@@ -104,6 +104,18 @@ final class LevelScrollPresentation {
         return builder.build();
     }
 
+    /** Retain a controller result without sampling live scroll or its double-buffered storage. */
+    static AdvancedRenderFrameState copyRenderMode(AdvancedRenderFrameState mode) {
+        var builder = AdvancedRenderFrameState.builder();
+        if (mode.enableForegroundHeatHaze()) builder.enableForegroundHeatHaze();
+        if (mode.enablePerLineForegroundScroll()) builder.enablePerLineForegroundScroll();
+        if (mode.reversePlaneAssignment()) builder.reversePlaneAssignment();
+        if (mode.hasForegroundVScrollOverride()) builder.setForegroundVScrollOverride(mode.foregroundVScrollOverride());
+        if (mode.hasBackgroundVScrollOverride()) builder.setBackgroundVScrollOverride(mode.backgroundVScrollOverride());
+        builder.setForegroundPerColumnVScrollOverride(mode.foregroundPerColumnVScrollOverride());
+        return builder.build();
+    }
+
     private static short[] copy(short[] source) { return source == null ? null : source.clone(); }
 
     @Override public boolean equals(Object other) {

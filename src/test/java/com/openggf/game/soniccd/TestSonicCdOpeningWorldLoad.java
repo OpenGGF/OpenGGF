@@ -112,7 +112,7 @@ class TestSonicCdOpeningWorldLoad {
         var frame = h.module().requirePlayerFrame();
         assertEquals(source(CdReleaseVariant.USA).identity(), h.mode().getWorldSession().getDataSource().identity());
         assertSame(((CdGameDataSource) h.mode().getWorldSession().getDataSource()).assets(), frame.assets());
-        assertSame(objects, h.module().getGameService(PlcLifecycleService.class));
+        assertNotNull(h.module().getGameService(PlcLifecycleService.class));
         assertSame(objects, NativeDynamicObjectPass.forModule(h.module()));
         assertNull(h.mode().getLevelManager().getObjectManager());
         assertNull(h.mode().getLevelManager().getRingManager());
@@ -139,6 +139,39 @@ class TestSonicCdOpeningWorldLoad {
         h.module().requirePlayerActor().requireCompletedNativeFrame();
         assertTrue(objects.displayedFrame().patternVersions().keySet().stream().allMatch(PatternAtlasRange.OBJECTS::contains));
         assertObjectRangeExactlyOnce();
+    }
+
+    @Test void scrollPublicationPairsThePreviousCompletedLoopWithTheSharedCpuSat() throws Exception {
+        var h = opening();
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        assertNull(presentation.captureScrollPublication().prepared());
+        assertNull(presentation.captureScrollPublication().published());
+        step(h, LogicalInputSnapshot.neutral());
+        step(h, LogicalInputSnapshot.neutral());
+        boolean movedHorizontally = false;
+        for (int i = 0; i < 91; i++) {
+            var prior = presentation.captureScrollPublication().prepared();
+            step(h, input(8, i >= 60 && i < 84 ? 2 : 0, false));
+            var next = presentation.captureScrollPublication();
+            assertSame(prior, next.published(), "V-int latches the exact prior completed scroll with CPU SAT");
+            assertEquals(h.mode().getCamera().getX(), next.prepared().cameraX());
+            assertEquals(h.mode().getCamera().getY(), next.prepared().cameraY());
+            movedHorizontally |= next.published().cameraX() != next.prepared().cameraX();
+        }
+        assertTrue(movedHorizontally, "The ordinary route must distinguish current and published camera");
+    }
+
+    @Test void coldFullRestoreRetainsUnseededScrollAndReplaysTheFirstCompletedLoop() throws Exception {
+        var h = opening();
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var cold = h.mode().getRewindRegistry().capture();
+        step(h, LogicalInputSnapshot.neutral());
+        var after = state(h);
+        h.mode().getRewindRegistry().restore(cold);
+        assertNull(presentation.captureScrollPublication().prepared());
+        assertNull(presentation.captureScrollPublication().published());
+        step(h, LogicalInputSnapshot.neutral());
+        assertState(after, h);
     }
 
     @Test void unrunOpeningRejectsRosterAndConfigurationChangesBeforeService() throws Exception {
@@ -187,20 +220,26 @@ class TestSonicCdOpeningWorldLoad {
         var objects = objects(h);
         var prior = objects.captureClosedCut();
         var beforeActor = h.module().requirePlayerFrame().captureActor();
+        var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
+        var priorScroll = presentation.captureScrollPublication();
         int levelFrame = h.mode().getLevelManager().getFrameCounter();
         step(h, input(0, 0, true));
         assertTrue(h.module().requirePlayerFrame().paused());
+        assertSame(priorScroll.prepared(), presentation.captureScrollPublication().prepared());
+        assertSame(priorScroll.prepared(), presentation.captureScrollPublication().published());
         assertEquals(levelFrame, h.mode().getLevelManager().getFrameCounter());
         assertEquals(beforeActor, h.module().requirePlayerFrame().captureActor());
         assertEquals(prior.placement().pool().slots(), objects.placement().capture().pool().slots());
         assertEquals(prior.ringGlobals(), objects.ringGlobals());
         assertEquals(prior.lastSoundRequests(), objects.lastSoundRequests(), "Pause retains the last-loop ledger");
         var picture = objects.displayedFrame();
+        var pausedScroll = presentation.captureScrollPublication();
         var nativeFrame = h.module().requirePlayerFrame();
         nativeFrame.prepareInput(0); // Explicit semantic held cut, not a GameLoop lag-row generator.
         h.mode().plcFrameLifecycle().runLogicalIteration(frame -> { }, h.mode().getFadeManager()::update,
                 frame -> { LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(h.mode()), frame, PlcLifecyclePhase.LAG); return null; });
         assertSame(picture, objects.displayedFrame());
+        assertEquals(pausedScroll, presentation.captureScrollPublication(), "PP lag retains both scroll partitions");
         assertEquals(prior.lastSoundRequests(), objects.lastSoundRequests(), "Lag does not clear or replay sounds");
         assertEquals(prior.ringGlobals(), objects.ringGlobals());
         assertEquals(prior.placement().pool().slots(), objects.placement().capture().pool().slots());
@@ -260,12 +299,19 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalArgumentException.class, () -> b.mode().getRewindRegistry().restoreCourse(course));
         assertState(before, b);
         var previous = objects(b);
+        var retiredPlc = b.module().getGameService(PlcLifecycleService.class);
         var oldOwned = previous.captureClosedCut();
         b.mode().getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext());
         assertTrue(previous.closed());
         assertThrows(IllegalArgumentException.class, () -> objects(b).validateRestore(oldOwned));
         assertEquals(0, objects(b).cpuSat().spriteCount());
         assertTrue(objects(b).displayedFrame().tiles().isEmpty());
+        var fresh = state(b);
+        assertThrows(IllegalStateException.class, () -> retiredPlc.serviceVBlank(PlcLifecyclePhase.LAG));
+        assertThrows(IllegalStateException.class, () -> retiredPlc.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL));
+        assertState(fresh, b); // A stale service cannot advance or close the new visit.
+        assertFalse(objects(b).closed());
+        step(b, LogicalInputSnapshot.neutral());
     }
 
     // Catches duplicate atlas registration on retained headless reset, clearing a
@@ -353,12 +399,13 @@ class TestSonicCdOpeningWorldLoad {
     private record State(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
                          CdOpeningObjectRuntime.Snapshot objects, CdObjectDrawQueue.CpuSat cpu,
                          SpritePresentation.Frame picture, Object camera, Object scroll, int levelFrame,
-                         PlayerResidentBanks.Snapshot resident) { }
+                         PlayerResidentBanks.Snapshot resident, SonicCdPlayerPresentation.ScrollPublication publication) { }
     private static State state(Harness h) {
         var frame = h.module().requirePlayerFrame(); var objects = objects(h);
         return new State(frame.captureActor(), frame.captureShared(), objects.captureClosedCut(), objects.cpuSat(), objects.displayedFrame(),
                 h.mode().getCamera().capture(), h.module().getScrollHandlerProvider().getHandler(0).captureRewindState(),
-                h.mode().getLevelManager().getFrameCounter(), PlayerResidentBanks.capture(h.module().requirePlayerActor().getSpriteRenderer()));
+                h.mode().getLevelManager().getFrameCounter(), PlayerResidentBanks.capture(h.module().requirePlayerActor().getSpriteRenderer()),
+                ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).captureScrollPublication());
     }
     private static void assertState(State expected, Harness h) {
         var actual = state(h);
@@ -381,6 +428,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.picture(), actual.picture());
         assertEquals(expected.camera(), actual.camera()); assertEquals(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrame(), actual.levelFrame());
+        assertEquals(expected.publication(), actual.publication());
         var a = expected.resident().tiles(); var b = actual.resident().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));

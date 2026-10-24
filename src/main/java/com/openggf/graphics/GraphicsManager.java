@@ -282,6 +282,10 @@ public class GraphicsManager {
 		commands.add(command);
 	}
 
+	/**
+	 * Owns one immediate capture, restoring any enclosing target even when cleanup fails.
+	 * Nested captures drain immediately; the enclosing capture's commands drain afterward.
+	 */
 	public void executeCapturedCommands(Runnable producer, int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
 		List<GLCommandable> previousCaptureTarget = commandCaptureTarget;
 		// Reuse capture lists via a small pool (a stack, so nested captures each
@@ -293,34 +297,56 @@ public class GraphicsManager {
 		commandCaptureTarget = capturedCommands;
 		int nextUnexecuted = 0;
 		boolean frameStateActive = false;
+		Throwable failure = null;
 		try {
 			producer.run();
-			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
-				return;
+			if (!headlessMode && !capturedCommands.isEmpty() && glInitialized) {
+				// A native batch can execute before the first scoped pattern command.
+				// Rebuild expanded rows from published CRAM inputs before either path samples them.
+				refreshScopedUnderwaterResidency();
+				PatternRenderCommand.resetFrameState();
+				frameStateActive = true;
+				for (int i = 0, n = capturedCommands.size(); i < n; i++) {
+					capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
+					nextUnexecuted = i + 1;
+				}
 			}
-			// A native batch can execute before the first scoped pattern command.
-			// Rebuild expanded rows from published CRAM inputs before either path samples them.
-			refreshScopedUnderwaterResidency();
-			PatternRenderCommand.resetFrameState();
-			frameStateActive = true;
-			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
-				capturedCommands.get(i).execute(cameraX, cameraY, cameraWidth, cameraHeight);
-				nextUnexecuted = i + 1;
+		} catch (RuntimeException | Error primary) {
+			failure = primary;
+			for (int n = capturedCommands.size(); nextUnexecuted < n; nextUnexecuted++) {
+				try {
+					capturedCommands.get(nextUnexecuted).unwindAfterFailure(cameraX, cameraY, cameraWidth, cameraHeight);
+				} catch (RuntimeException | Error cleanup) {
+					if (cleanup != failure) failure.addSuppressed(cleanup);
+				}
 			}
-		} catch (RuntimeException | Error failure) {
-			unwindCommands(capturedCommands, nextUnexecuted,
-					cameraX, cameraY, cameraWidth, cameraHeight, failure);
-			nextUnexecuted = capturedCommands.size();
-			throw failure;
 		} finally {
-			if (frameStateActive) {
-				cleanupPatternFrameState();
+			try {
+				if (frameStateActive) {
+					try { cleanupPatternFrameState(); }
+					catch (RuntimeException | Error cleanup) {
+						if (failure == null) failure = cleanup;
+						else if (cleanup != failure) failure.addSuppressed(cleanup);
+					}
+				}
+				// Each unexecuted command gets one release attempt; a failed discard must
+				// neither strand later commands nor be retried in a subsequent capture.
+				for (int n = capturedCommands.size(); nextUnexecuted < n; nextUnexecuted++) {
+					try { capturedCommands.get(nextUnexecuted).discard(); }
+					catch (RuntimeException | Error cleanup) {
+						if (failure == null) failure = cleanup;
+						else if (cleanup != failure) failure.addSuppressed(cleanup);
+					}
+				}
+			} finally {
+				commandCaptureTarget = previousCaptureTarget;
+				capturedCommands.clear();
+				// Failed captures drop their list after clearing it; only clean lists reenter the pool.
+				if (failure == null) captureListPool.addLast(capturedCommands);
 			}
-			discardCommands(capturedCommands, nextUnexecuted);
-			commandCaptureTarget = previousCaptureTarget;
-			capturedCommands.clear();
-			captureListPool.addLast(capturedCommands);
 		}
+		if (failure instanceof RuntimeException runtime) throw runtime;
+		if (failure instanceof Error error) throw error;
 	}
 
 	void cleanupPatternFrameState() {

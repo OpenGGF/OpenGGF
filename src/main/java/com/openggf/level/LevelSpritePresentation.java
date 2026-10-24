@@ -12,6 +12,111 @@ import com.openggf.sprites.managers.SpriteManager;
 public final class LevelSpritePresentation {
     private LevelSpritePresentation() { }
 
+    /**
+     * Internal immutable scroll value belonging to one retained level/renderer lifetime.
+     * Only captureScroll creates these values; repeated equal captures in that lifetime compare equal.
+     * No buffer or mutable render-mode storage is exposed.
+     */
+    public static final class ScrollFrame {
+        private final LevelManager owner;
+        private final LevelRenderer renderer;
+        private final com.openggf.game.session.WorldSession world;
+        private final com.openggf.game.GameDataSource source;
+        private final Level level;
+        private final com.openggf.camera.Camera camera;
+        private final ParallaxManager parallax;
+        private final com.openggf.graphics.GraphicsManager graphics;
+        private final com.openggf.graphics.PatternAtlas atlas;
+        private final Object lifetime;
+        private final long loadGeneration;
+        private final boolean glInitialized, headless;
+        private final int width, height;
+        private final LevelScrollPresentation scroll;
+
+        private ScrollFrame(LevelManager owner) {
+            this.owner = java.util.Objects.requireNonNull(owner, "level");
+            renderer = owner.spritePresentationRenderer();
+            world = owner.getWorldSession();
+            source = world == null ? null : world.getDataSource();
+            level = owner.level;
+            camera = owner.camera;
+            parallax = owner.parallaxManager;
+            graphics = owner.graphicsManager;
+            if (renderer == null || world == null || source == null || level == null
+                    || world.getCurrentLevel() != level || camera == null || parallax == null || graphics == null) {
+                throw new IllegalStateException("Scroll capture requires a retained, attached level");
+            }
+            atlas = graphics.getPatternAtlas();
+            glInitialized = graphics.isGlInitialized();
+            headless = graphics.isHeadlessMode();
+            if (atlas == null || (!glInitialized && !headless)) {
+                throw new IllegalStateException("Scroll capture requires initialized graphics");
+            }
+            width = camera.getWidth(); height = camera.getHeight();
+            lifetime = renderer.spriteTables.scrollLifetime;
+            loadGeneration = owner.getCompletedProductionLoadGeneration();
+            scroll = renderer.captureScroll();
+            requireCurrent(owner);
+        }
+
+        public int cameraX() { return scroll.registers().cameraX(); }
+        public int cameraY() { return scroll.registers().cameraY(); }
+
+        private void requireCurrent(LevelManager candidate) {
+            if (candidate != owner) throw new IllegalArgumentException("Scroll frame belongs to another level manager");
+            if (owner.spritePresentationRenderer() != renderer || owner.getWorldSession() != world
+                    || world.getDataSource() != source || owner.level != level || world.getCurrentLevel() != level
+                    || owner.camera != camera || owner.parallaxManager != parallax || owner.graphicsManager != graphics
+                    || graphics.getPatternAtlas() != atlas || graphics.isGlInitialized() != glInitialized
+                    || graphics.isHeadlessMode() != headless || camera.getWidth() != width || camera.getHeight() != height
+                    || renderer.spriteTables.scrollLifetime != lifetime
+                    || owner.getCompletedProductionLoadGeneration() != loadGeneration) {
+                throw new IllegalStateException("Scroll frame no longer belongs to the retained renderer lifetime");
+            }
+        }
+
+        @Override public boolean equals(Object other) {
+            return other instanceof ScrollFrame frame && owner == frame.owner && renderer == frame.renderer
+                    && world == frame.world && source == frame.source && level == frame.level && camera == frame.camera
+                    && parallax == frame.parallax && graphics == frame.graphics && atlas == frame.atlas
+                    && lifetime == frame.lifetime && loadGeneration == frame.loadGeneration
+                    && glInitialized == frame.glInitialized && headless == frame.headless
+                    && width == frame.width && height == frame.height && scroll.equals(frame.scroll);
+        }
+
+        @Override public int hashCode() {
+            // Owner/lifetime identity narrows the domain; scroll supplies its immutable value hash.
+            return java.util.Objects.hash(System.identityHashCode(owner), System.identityHashCode(lifetime),
+                    loadGeneration, scroll);
+        }
+    }
+
+    /**
+     * Capture actual current render registers/buffers after completed level load and the native scroll update.
+     * Resolves render-mode contributors once; never draws, advances deformation or prepares/publishes sprites.
+     * Callers own phase/latch/rewind policy. Capture and drawing must run on the owning engine thread.
+     */
+    public static ScrollFrame captureScroll(LevelManager level) { return new ScrollFrame(level); }
+
+    /** Pure owner/lifetime/scope preflight for composite restore before any partition is written. */
+    public static void validateScroll(LevelManager level, ScrollFrame frame) {
+        java.util.Objects.requireNonNull(frame, "frame");
+        frame.requireCurrent(level);
+        frame.renderer.requireScrollIdle();
+    }
+
+    /**
+     * Select one captured scroll for terrain drawing and drain its commands before restoring the prior view.
+     * The callback must only draw: no owner/lifecycle changes, native preparation or nested scroll/cinematic scope.
+     * Commands use the retained graphics camera, not a substituted snapshot camera. Same-object graphics
+     * cleanup/reinitialization without a world/renderer/load reset is an unsupported lifecycle.
+     */
+    public static void withScroll(LevelManager level, ScrollFrame frame, Runnable draw) {
+        java.util.Objects.requireNonNull(draw, "draw");
+        validateScroll(level, frame);
+        frame.renderer.withScroll(frame.scroll, () -> frame.requireCurrent(level), draw);
+    }
+
     /** Immutable displayed SAT, read by captured presentation consumers independently of GPU drawing. */
     public static SpritePresentation.Frame published(LevelManager level) {
         var renderer = level == null ? null : level.spritePresentationRenderer();
@@ -48,6 +153,8 @@ public final class LevelSpritePresentation {
         private SpritePresentation.Frame published = SpritePresentation.Frame.empty();
         private SpritePresentation.Frame counters = SpritePresentation.Frame.empty();
         private LevelScrollPresentation preparedScroll, publishedScroll;
+        // A lifetime marker, deliberately excluded from rewind State. Reset/reload invalidates old views.
+        private Object scrollLifetime = new Object();
         void prepare(SpritePresentation.Frame frame) { prepare(frame, null); }
         void prepare(SpritePresentation.Frame frame, LevelScrollPresentation scroll) {
             prepared = frame;
@@ -64,6 +171,7 @@ public final class LevelSpritePresentation {
         SpritePresentation.Frame counters() { return counters; }
         SpritePresentation.Frame published() { return published; }
         void invalidateScrollForActReload() {
+            scrollLifetime = new Object();
             // SAT coordinates are already screen-relative. Scroll presentation
             // addresses the engine's full level layout, which Load_Level replaces;
             // rebuild those addresses from the rebased destination camera.
@@ -71,6 +179,7 @@ public final class LevelSpritePresentation {
             publishedScroll = null;
         }
         void reset() {
+            scrollLifetime = new Object();
             prepared = SpritePresentation.Frame.empty();
             published = prepared;
             counters = prepared;
@@ -110,6 +219,8 @@ public final class LevelSpritePresentation {
     }
 
     public static void prepare(LevelManager level, SpriteManager sprites) {
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        if (renderer != null) renderer.rejectScrollOperation();
         if (level != null && level.camera != null) {
             level.spritePresentationRenderer().boundsMask.advance(LevelScrollPresentation.captureArenaMask(level),
                     level.camera.getXWithShake(), level.camera.getWidth());
@@ -122,6 +233,8 @@ public final class LevelSpritePresentation {
     }
 
     public static void publish(LevelManager level, PlcLifecyclePhase phase) {
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        if (renderer != null) renderer.rejectScrollOperation();
         if (enabled(level) && ((SpriteTablePublication) level.gameModule.getLevelInitProfile())
                 .publishesSpriteTable(phase)) {
             var profile = (SpriteTablePublication) level.gameModule.getLevelInitProfile();
@@ -147,6 +260,8 @@ public final class LevelSpritePresentation {
      * parked level table is stale.
      */
     public static void publishPreparedScene(LevelManager level) {
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        if (renderer != null) renderer.rejectScrollOperation();
         if (enabled(level)) level.spritePresentationRenderer().spriteTables.publish();
         if (level != null) {
             PaletteUploadPresentation.release(level.graphicsManager);

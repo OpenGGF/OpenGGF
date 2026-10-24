@@ -7,6 +7,8 @@ import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.GameplayModeContext;
@@ -59,6 +61,7 @@ public final class SonicCdGameModule implements GameModule {
     private CdPlayerFrameRuntime playerFrame;
     private CdPlayableSonic playerActor;
     private CdOpeningObjectRuntime openingObjects;
+    private PlcLifecycleService openingPlc;
     private CdR11aAssets authenticatedOpeningAssets;
     private boolean constructingPlayer;
 
@@ -80,16 +83,19 @@ public final class SonicCdGameModule implements GameModule {
     };
 
     // One shared opening payload. Body/history/display remain in actor Extra;
-    // camera/scroll remain in their existing adapters. No duplicate player capture.
+    // Foreground accumulator/camera remain in their existing adapters. The two
+    // immutable render-scroll cuts belong here, once, beside the CPU/display SAT.
     private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
-                                      CdOpeningObjectRuntime.Snapshot objects) { }
+                                      CdOpeningObjectRuntime.Snapshot objects,
+                                      SonicCdPlayerPresentation.ScrollPublication scroll) { }
     private final RewindSnapshottable<OpeningSharedState> sharedOpeningAdapter = new RewindSnapshottable<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
         @Override public OpeningSharedState capture() {
             requireTerrainPlayerReady();
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
-            return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut());
+            return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
+                    playerPresentation.captureScrollPublication());
         }
         @Override public void restore(OpeningSharedState snapshot) {
             requireTerrainPlayerReady();
@@ -97,12 +103,14 @@ public final class SonicCdGameModule implements GameModule {
             playerActor.requireCompletedNativeFrame();
             playerFrame.captureShared(); // Pure pending-input/entitlement guard before runtime preflight.
             Objects.requireNonNull(snapshot, "opening shared capture");
-            // Both preflights are pure and run BEFORE either partition changes.
+            // All preflights are pure and run BEFORE any partition changes.
             playerFrame.validateSharedRestore(snapshot.frame());
             openingObjects.validateRestore(snapshot.objects());
+            playerPresentation.validateScrollPublication(snapshot.scroll());
             try {
                 playerFrame.restoreShared(snapshot.frame());
                 openingObjects.restore(snapshot.objects());
+                playerPresentation.restoreScrollPublication(snapshot.scroll());
             } catch (RuntimeException | Error failure) {
                 closePlayerCycleAfterFailure(failure);
                 throw failure;
@@ -250,6 +258,7 @@ public final class SonicCdGameModule implements GameModule {
                             new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
                             new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF),
                             playerFrame::applyObjectPrimaryAngle);
+                    openingPlc = composeOpeningPlc(openingObjects, playerFrame);
                 } catch (IOException failure) {
                     throw new UncheckedIOException("Cannot stage authenticated CD opening objects", failure);
                 }
@@ -280,6 +289,45 @@ public final class SonicCdGameModule implements GameModule {
             catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
             throw failure;
         }
+    }
+
+    private PlcLifecycleService composeOpeningPlc(CdOpeningObjectRuntime owner, CdPlayerFrameRuntime frameOwner) {
+        return new PlcLifecycleService() {
+            private void requireCurrentOwner() {
+                // A retained service from a prior visit must not close or advance
+                // the new world. Rejection precedes the current-owner failure path.
+                if (openingObjects != owner || playerFrame != frameOwner) {
+                    throw new IllegalStateException("Opening PLC service belongs to a retired visit");
+                }
+            }
+            @Override public void serviceVBlank(PlcLifecyclePhase phase) {
+                requireCurrentOwner();
+                try {
+                    requireTerrainPlayerReady();
+                    owner.serviceVBlank(phase); // Exactly one source service, including held frames.
+                    playerPresentation.publishOpeningScroll(phase);
+                } catch (RuntimeException | Error failure) {
+                    closePlayerCycleAfterFailure(failure);
+                    throw failure;
+                }
+            }
+            @Override public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                requireCurrentOwner();
+                return owner.hasPreparationBoundary(phase);
+            }
+            @Override public boolean ownsTimedLoopTailArm() {
+                requireCurrentOwner();
+                return owner.ownsTimedLoopTailArm();
+            }
+            @Override public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                requireCurrentOwner();
+                owner.prepareAfterLoop(phase);
+            }
+            @Override public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+                requireCurrentOwner();
+                return owner.captureQueueDiagnostics();
+            }
+        };
     }
 
     void requireTerrainPlayerReady() {
@@ -342,6 +390,7 @@ public final class SonicCdGameModule implements GameModule {
                     }
                 } finally {
                     openingObjects = null;
+                    openingPlc = null;
                     playerFrame = null;
                     playerActor = null;
                     playerMode = null;
@@ -422,8 +471,8 @@ public final class SonicCdGameModule implements GameModule {
         if (openingObjectsAdmission) {
             // Even a failed owner remains selected until teardown: returning null here
             // would silently fall back to normal gameplay after a terminal failure.
-            return openingObjects != null && (type == NativeDynamicObjectPass.class || type == PlcLifecycleService.class)
-                    ? type.cast(openingObjects) : null;
+            if (type == NativeDynamicObjectPass.class) return openingObjects == null ? null : type.cast(openingObjects);
+            return type == PlcLifecycleService.class && openingPlc != null ? type.cast(openingPlc) : null;
         }
         return playerAdmission && type == PlcLifecycleService.class && playerFrame != null ? type.cast(playerFrame) : null;
     }

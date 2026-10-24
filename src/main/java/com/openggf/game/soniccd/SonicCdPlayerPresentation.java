@@ -25,6 +25,7 @@ import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelSpritePresentation;
 import com.openggf.level.render.SpritePresentationRenderer;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -56,6 +57,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70;
     private CdR11aForegroundScroll.State scrollState;
     private Object scrollCaptureOwner = new Object();
+    // CPU scroll prepared by the completed loop; V-int selects the previous one
+    // alongside the Runtime's previous CPU SAT. These are immutable render inputs,
+    // distinct from the native foreground accumulator owned by Scroll below.
+    private LevelSpritePresentation.ScrollFrame preparedScroll;
+    private LevelSpritePresentation.ScrollFrame publishedScroll;
+    record ScrollPublication(Object owner, LevelSpritePresentation.ScrollFrame prepared,
+                             LevelSpritePresentation.ScrollFrame published) { }
     private PlcLifecyclePhase heldPhase;
     private int horizontalOffset;
 
@@ -66,6 +74,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         this.assets = Objects.requireNonNull(assets);
         scrollState = CdR11aForegroundScroll.coldFromLoadPlan(assets.loadPlan(), 320, 224);
         scrollCaptureOwner = new Object();
+        preparedScroll = null;
+        publishedScroll = null;
         heldPhase = null;
     }
 
@@ -114,6 +124,8 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             }
         } finally {
             frame = null; actor = null; openingObjects = null; assets = null; scrollState = null; heldPhase = null;
+            preparedScroll = null;
+            publishedScroll = null;
             horizontalOffset = 0;
         }
     }
@@ -136,6 +148,66 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         } catch (RuntimeException | Error failure) {
             module.closePlayerCycleAfterFailure(failure);
             throw failure;
+        }
+    }
+
+    ScrollPublication captureScrollPublication() {
+        requireBound();
+        frame.captureShared(); // Closed controller/body boundary, no state change.
+        if (openingObjects == null || openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+            throw new IllegalStateException("Opening scroll capture requires its completed native loop");
+        }
+        return new ScrollPublication(scrollCaptureOwner, preparedScroll, publishedScroll);
+    }
+
+    void validateScrollPublication(ScrollPublication snapshot) {
+        requireBound();
+        Objects.requireNonNull(snapshot, "opening scroll publication");
+        if (snapshot.owner() != scrollCaptureOwner || (snapshot.prepared() == null) != (snapshot.published() == null)) {
+            throw new IllegalArgumentException("Opening scroll capture belongs to another visit or an incomplete pair");
+        }
+        if (snapshot.prepared() != null) {
+            var level = GameServices.level();
+            LevelSpritePresentation.validateScroll(level, snapshot.prepared());
+            LevelSpritePresentation.validateScroll(level, snapshot.published());
+        }
+    }
+
+    void restoreScrollPublication(ScrollPublication snapshot) {
+        validateScrollPublication(snapshot);
+        preparedScroll = snapshot.prepared();
+        publishedScroll = snapshot.published();
+    }
+
+    // Called AFTER the one Runtime V-int service, never by rendering or diagnostics.
+    // Do not capture here: this boundary publishes the previous completed loop.
+    void publishOpeningScroll(PlcLifecyclePhase phase) {
+        requireBound();
+        if (openingObjects == null) throw new IllegalStateException("No opening scroll publication owner");
+        if (phase == PlcLifecyclePhase.LAG) return; // Native PP lag retains scroll and SAT.
+        if (phase != PlcLifecyclePhase.ORDINARY_LEVEL && phase != PlcLifecyclePhase.NORMAL_PAUSE) {
+            throw new UnsupportedOperationException("Unsupported opening scroll service phase: " + phase);
+        }
+        if (preparedScroll == null || publishedScroll == null) {
+            throw new IllegalStateException("Ordinary/pause publication requires its admitted cold or completed scroll");
+        }
+        LevelSpritePresentation.validateScroll(GameServices.level(), preparedScroll);
+        publishedScroll = preparedScroll;
+    }
+
+    private void initializeOpeningScrollAfterLoad() {
+        if ((preparedScroll == null) != (publishedScroll == null)) {
+            throw new IllegalStateException("Incomplete opening scroll pair");
+        }
+        if (preparedScroll == null) {
+            // Profile installation precedes completedProductionLoadGeneration.
+            // Capture only at first input, after load has returned. Restoring the
+            // explicit cold null cut repeats this admission without advancing it.
+            preparedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+            publishedScroll = preparedScroll;
+        } else {
+            LevelSpritePresentation.validateScroll(GameServices.level(), preparedScroll);
+            LevelSpritePresentation.validateScroll(GameServices.level(), publishedScroll);
         }
     }
 
@@ -189,6 +261,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 module.closePlayerCycleAfterFailure(failure);
                 throw failure;
             }
+            try { initializeOpeningScrollAfterLoad(); }
+            catch (RuntimeException | Error failure) {
+                module.closePlayerCycleAfterFailure(failure);
+                throw failure;
+            }
             var camera = GameServices.camera();
             openingObjects.setPreScrollForeground(new CdObjectDrawQueue.CameraWords(
                     camera.getX() & 0xFFFF, camera.getY() & 0xFFFF));
@@ -215,8 +292,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 throw new IllegalStateException("CD represented frame did not complete its selected native body/hold");
             }
             if (openingObjects != null) {
-                if (advanced) openingObjects.finishOrdinaryTail(); // Exactly once, after camera/SAT build.
-                else if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                if (advanced) {
+                    openingObjects.finishOrdinaryTail(); // Exactly once, after camera/SAT build.
+                    preparedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                } else if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
                     throw new IllegalStateException("Held opening service did not retain its completed cut");
                 }
                 // Last-loop sound ledger is retained across holds; never replay it here.
@@ -232,17 +311,32 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public boolean drawScene() { return true; }
     @Override public boolean presentationPaused() { return frame != null && frame.paused(); }
     @Override public void drawOverlay() {
+        try { drawCompletedOverlay(); }
+        catch (RuntimeException | Error failure) {
+            if (module.openingObjectsAdmission()) module.closePlayerCycleAfterFailure(failure);
+            throw failure;
+        }
+    }
+
+    private void drawCompletedOverlay() {
         requireBound();
         actor.requireCompletedNativeFrame();
         if (openingObjects != null && openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
             throw new IllegalStateException("Opening draw requires its completed loop, never a partial SAT");
         }
         var level = GameServices.level();
-        GameServices.parallax().update(0, 0, GameServices.camera(), level.getFrameCounter());
-        level.drawWithRenderOptions(GameServices.sprites(),
-                openingObjects == null
-                        ? new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false)
-                        : LevelManager.LevelRenderOptions.tilesOnly());
+        if (openingObjects == null) {
+            GameServices.parallax().update(0, 0, GameServices.camera(), level.getFrameCounter());
+            level.drawWithRenderOptions(GameServices.sprites(),
+                    new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false));
+        } else {
+            Runnable terrain = () -> level.drawWithRenderOptions(GameServices.sprites(),
+                    LevelManager.LevelRenderOptions.tilesOnly());
+            // Before first V-int the explicit empty CPU SAT has no published
+            // render cut. Cold draw remains live but never creates one by drawing.
+            if (publishedScroll == null) terrain.run();
+            else LevelSpritePresentation.withScroll(level, publishedScroll, terrain);
+        }
         if (openingObjects != null) {
             var camera = GameServices.camera();
             // Screen-relative immutable SAT picture; renderer adds camera back for

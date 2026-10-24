@@ -19,6 +19,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelSpritePresentation;
 import com.openggf.sprites.render.PlayerResidentBanks;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tools.HeadlessGameBoot;
@@ -101,11 +102,14 @@ class TestSonicCdOpeningWorldEgl {
                 assertTrue(Arrays.stream(cold.pixels()).distinct().count() > 8, "Actual decoded terrain must be visible");
                 assertArrayEquals(cold.pixels(), render(module, false).pixels(), "Empty DEV display has no private actor fallback");
                 step(loop, movie.getFrame(0));
+                var firstCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, movie.getFrame(1));
                 var before = capture(module);
                 var beforeImage = render(module, true);
+                var beforeTerrain = renderTerrain(module, firstCompletedScroll);
+                assertTerrainOutsideSprites(beforeImage, beforeTerrain, runtime.displayedFrame());
                 observe(output, 2, movie.getFrame(1), module, beforeImage);
-                assertFalse(Arrays.equals(beforeImage.pixels(), render(module, false).pixels()), "Actual Ring picture must draw");
+                assertFalse(Arrays.equals(beforeImage.pixels(), beforeTerrain.pixels()), "Actual Ring picture must draw");
                 assertArrayEquals(beforeImage.pixels(), render(module, true).pixels());
                 assertCapture(before, module);
                 var registry = mode.getRewindRegistry();
@@ -117,10 +121,12 @@ class TestSonicCdOpeningWorldEgl {
                 int pickupIndex = -1;
                 for (int index = 2; index < movie.getFrameCount(); index++) {
                     var input = movie.getFrame(index);
+                    var previousCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                     step(loop, input);
                     prefix.add(input);
                     expectedRows.add(capture(module));
                     var picture = render(module, true); // Production overlay and GL at every admitted row.
+                    assertTerrainOutsideSprites(picture, renderTerrain(module, previousCompletedScroll), runtime.displayedFrame());
                     observe(output, index + 1, input, module, picture);
                     if (runtime.ringGlobals().rings() > 0) { pickupIndex = index; break; }
                 }
@@ -136,6 +142,7 @@ class TestSonicCdOpeningWorldEgl {
                 assertTrue(pickupCpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 0),
                         "The shared SAT must include the real reserved player, not only Rings");
                 var neutral = new Bk2FrameInput(pickupIndex + 1, 0, 0, false, "post-pickup neutral");
+                var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
                         com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aOpeningDevPreloadedArt(
@@ -149,9 +156,11 @@ class TestSonicCdOpeningWorldEgl {
                         .anyMatch(id -> id >= playerBase && id < playerBase + 24));
                 var after = capture(module);
                 var afterImage = render(module, true);
+                var afterTerrain = renderTerrain(module, pickupCompletedScroll);
+                assertTerrainOutsideSprites(afterImage, afterTerrain, runtime.displayedFrame());
                 observe(output, pickupIndex + 2, neutral, module, afterImage);
                 if (output != null) ScreenshotCapture.savePNG(afterImage, output.resolve("pickup-next-vint.png"));
-                assertFalse(Arrays.equals(afterImage.pixels(), render(module, false).pixels()));
+                assertFalse(Arrays.equals(afterImage.pixels(), afterTerrain.pixels()));
                 assertFalse(Arrays.equals(beforeImage.pixels(), afterImage.pixels()), "Route must produce a changed framebuffer");
                 assertArrayEquals(afterImage.pixels(), render(module, true).pixels());
                 assertCapture(after, module);
@@ -206,7 +215,7 @@ class TestSonicCdOpeningWorldEgl {
         Files.createDirectory(output); // Never replace an earlier capture.
         Files.writeString(output.resolve("input-log.txt"), sourceInputLog, StandardOpenOption.CREATE_NEW);
         Files.writeString(output.resolve("state.csv"),
-                "call,input_mask,action_mask,level_frames,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,rings,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,camera_x,camera_y,cpu_sprites,displayed_tiles,sounds\n",
+                "call,input_mask,action_mask,level_frames,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,rings,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,camera_x,camera_y,prepared_camera_x,prepared_camera_y,published_camera_x,published_camera_y,cpu_sprites,displayed_tiles,sounds\n",
                 StandardOpenOption.CREATE_NEW);
         return output;
     }
@@ -218,13 +227,18 @@ class TestSonicCdOpeningWorldEgl {
         var motion = module.requirePlayerFrame().state().motion();
         var mosqui = runtime.placement().pool().state(34);
         String sounds = runtime.lastSoundRequests().toString().replace("\"", "\"\"");
+        var scroll = ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication();
         String row = String.format(Locale.ROOT,
-                "%d,%d,%d,%d,%08X,%08X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,\"%s\"%n",
+                "%d,%d,%d,%d,%08X,%08X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,\"%s\"%n",
                 call, input == null ? 0 : input.p1InputMask(), input == null ? 0 : input.p1ActionMask(),
                 GameServices.level().getFrameCounter(), motion.centreX16_16(), motion.centreY16_16(),
                 motion.xVelocity(), motion.yVelocity(), motion.groundVelocity(), motion.routine(), motion.flags(),
                 motion.animation(), runtime.ringGlobals().rings(), mosqui.id(), mosqui.routine(), mosqui.centreX(), mosqui.centreY(),
-                GameServices.camera().getX(), GameServices.camera().getY(), runtime.cpuSat().spriteCount(),
+                GameServices.camera().getX(), GameServices.camera().getY(),
+                scroll.prepared() == null ? -1 : scroll.prepared().cameraX(),
+                scroll.prepared() == null ? -1 : scroll.prepared().cameraY(),
+                scroll.published() == null ? -1 : scroll.published().cameraX(),
+                scroll.published() == null ? -1 : scroll.published().cameraY(), runtime.cpuSat().spriteCount(),
                 runtime.displayedFrame().tiles().size(), sounds);
         Files.writeString(output.resolve("state.csv"), row, StandardOpenOption.APPEND);
         ScreenshotCapture.savePNG(image, output.resolve(String.format(Locale.ROOT, "frame-%03d.png", call)));
@@ -253,16 +267,49 @@ class TestSonicCdOpeningWorldEgl {
         return ScreenshotCapture.captureFramebuffer(320, 224);
     }
 
+    private static RgbaImage renderTerrain(SonicCdGameModule module, LevelSpritePresentation.ScrollFrame scroll) {
+        var graphics = GameServices.graphics(); var level = GameServices.level();
+        graphics.runPendingRenderThreadTasks(); level.setClearColor();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); graphics.resetForFixedFunction();
+        LevelSpritePresentation.withScroll(level, scroll, () ->
+                level.drawWithRenderOptions(GameServices.sprites(), LevelManager.LevelRenderOptions.tilesOnly()));
+        graphics.flush(); graphics.flushScreenSpace(); glFinish();
+        return ScreenshotCapture.captureFramebuffer(320, 224);
+    }
+
+    private static void assertTerrainOutsideSprites(RgbaImage actual, RgbaImage terrain,
+                                                     com.openggf.graphics.SpritePresentation.Frame displayed) {
+        boolean[] covered = new boolean[320 * 224];
+        for (var tile : displayed.tiles()) {
+            int left = Math.max(0, (int) Math.floor(tile.x()));
+            int right = Math.min(320, (int) Math.ceil(tile.x() + tile.width()));
+            int top = Math.max(0, (int) Math.floor(tile.y()));
+            int bottom = Math.min(224, (int) Math.ceil(tile.y() + tile.height()));
+            for (int y = top; y < bottom; y++) for (int x = left; x < right; x++) covered[y * 320 + x] = true;
+        }
+        int compared = 0;
+        for (int at = 0; at < covered.length; at++) {
+            if (covered[at]) continue;
+            compared++;
+            if (actual.pixels()[at] != terrain.pixels()[at]) {
+                fail("Terrain and displayed SAT use different completed loops at pixel " + (at % 320) + "," + (at / 320));
+            }
+        }
+        assertTrue(compared > covered.length / 2, "The control must compare substantial terrain outside real sprite bounds");
+    }
+
     private record Capture(CdPlayerFrameRuntime.ActorState actor, CdPlayerFrameRuntime.SharedState shared,
                            CdOpeningObjectRuntime.Snapshot objects, CdObjectDrawQueue.CpuSat cpu,
                            List<CdPlayerFrameRuntime.Sound> actorSounds, Object camera, Object scroll,
-                           int levelFrames, PlayerResidentBanks.Snapshot bank) { }
+                           int levelFrames, PlayerResidentBanks.Snapshot bank,
+                           SonicCdPlayerPresentation.ScrollPublication publication) { }
     private static Capture capture(SonicCdGameModule module) {
         var runtime = (CdOpeningObjectRuntime) module.getGameService(NativeDynamicObjectPass.class);
         var frame = module.requirePlayerFrame(); var actor = module.requirePlayerActor();
         return new Capture(frame.captureActor(), frame.captureShared(), runtime.captureClosedCut(), runtime.cpuSat(),
                 actor.lastSoundRequests(), GameServices.camera().capture(), module.getScrollHandlerProvider().getHandler(0).captureRewindState(),
-                GameServices.level().getFrameCounter(), PlayerResidentBanks.capture(actor.getSpriteRenderer()));
+                GameServices.level().getFrameCounter(), PlayerResidentBanks.capture(actor.getSpriteRenderer()),
+                ((SonicCdPlayerPresentation) module.getScrollHandlerProvider()).captureScrollPublication());
     }
     private static void assertCapture(Capture expected, SonicCdGameModule module) {
         var actual = capture(module);
@@ -285,6 +332,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().displayedFrame(), actual.objects().displayedFrame());
         assertEquals(expected.camera(), actual.camera()); assertEquals(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrames(), actual.levelFrames());
+        assertEquals(expected.publication(), actual.publication());
         var a = expected.bank().tiles(); var b = actual.bank().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)

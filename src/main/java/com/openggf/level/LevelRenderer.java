@@ -667,7 +667,9 @@ public final class LevelRenderer {
             refs[6] = r.pendingFboAtlasId;
             refs[7] = r.pendingFboPaletteId;
             refs[8] = r.pendingBgColumns;
-            advancedState = r.currentAdvancedRenderFrameState;
+            // Controller results reuse two mutable buffers. This queued wrapper owns its mode
+            // even when later CPU captures resolve both buffers before the command is drained.
+            advancedState = LevelScrollPresentation.copyRenderMode(r.currentAdvancedRenderFrameState);
             scroll0Length = 0;
             short0Length = 0;
             short1Length = 0;
@@ -920,6 +922,78 @@ public final class LevelRenderer {
     final LevelBoundsMaskTransition boundsMask = new LevelBoundsMaskTransition();
     private boolean preparingSpritePresentation;
     private LevelScrollPresentation currentScrollPresentation;
+    private boolean scrollOperation;
+    private LevelScrollPresentation scopedScroll;
+
+    /** Existing native/cinematic paths may not change presentation inside an owned scroll operation. */
+    void rejectScrollOperation() {
+        if (scrollOperation) throw new IllegalStateException("Scroll capture/draw already active");
+    }
+
+    void requireScrollIdle() {
+        rejectScrollOperation();
+        if (cinematicCameraActive || cinematicScroll != null || cinematicDraw || preparingSpritePresentation
+                || SpritePresentation.isPreparing(lm.graphicsManager)) {
+            throw new IllegalStateException("Scroll operation inside another presentation scope");
+        }
+    }
+
+    LevelScrollPresentation captureScroll() {
+        requireScrollIdle();
+        var savedMode = LevelScrollPresentation.copyRenderMode(currentAdvancedRenderFrameState);
+        scrollOperation = true;
+        try {
+            resolveAdvancedRenderFrameState(lm.frameCounter);
+            return LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+        } finally {
+            currentAdvancedRenderFrameState = savedMode;
+            scrollOperation = false;
+        }
+    }
+
+    void withScroll(LevelScrollPresentation scroll, Runnable validate, Runnable draw) {
+        requireScrollIdle();
+        var graphics = lm.graphicsManager;
+        var savedScroll = currentScrollPresentation;
+        var savedMode = LevelScrollPresentation.copyRenderMode(currentAdvancedRenderFrameState);
+        boolean commandsOwned = false;
+        scrollOperation = true;
+        try {
+            // Drain prior work while its old presentation remains selected. Reentrant entry is already closed.
+            graphics.flushPatternBatch();
+            graphics.flush();
+            validate.run();
+            scopedScroll = scroll;
+            currentScrollPresentation = scroll;
+            currentAdvancedRenderFrameState = scroll.renderMode();
+            commandsOwned = true;
+            // The capture owns cleanup even when this scope is itself inside a graphics command capture.
+            graphics.executeCapturedCommands(() -> {
+                try {
+                    draw.run();
+                    validate.run();
+                } catch (RuntimeException | Error failure) {
+                    try { graphics.flushPatternBatch(); }
+                    catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+                    throw failure;
+                }
+                graphics.flushPatternBatch();
+                validate.run();
+            }, lm.camera.getXWithShake(), lm.camera.getYWithShake(), lm.camera.getWidth(), lm.camera.getHeight());
+        } catch (RuntimeException | Error failure) {
+            if (!commandsOwned) {
+                try { graphics.discardQueuedCommands(); }
+                catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
+            }
+            throw failure;
+        } finally {
+            scopedScroll = null;
+            currentScrollPresentation = savedScroll;
+            currentAdvancedRenderFrameState = savedMode;
+            scrollOperation = false;
+        }
+    }
+
     /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
     Runnable hudUnderlay;
 
@@ -927,6 +1001,7 @@ public final class LevelRenderer {
      * This deliberately excludes HUD and never resolves deformation/camera-follow/world events.
      */
     SpritePresentation.Frame captureSceneSpriteTable(SpriteManager sprites) {
+        rejectScrollOperation();
         if (lm.graphicsManager == null || lm.camera == null) throw new IllegalStateException("Renderer not attached");
         boolean previous = preparingSpritePresentation;
         preparingSpritePresentation = true;
@@ -941,18 +1016,26 @@ public final class LevelRenderer {
     /** Select the VDP scroll generation paired with the displayed sprite table. */
     private boolean cinematicDraw;
     private LevelScrollPresentation cinematicScroll;
+    private boolean cinematicCameraActive;
+    private boolean cinematicCallbackActive;
 
     /** A directed view consumes a private scroll snapshot; gameplay camera, deformation,
      * published SAT/scroll and the previous draw's presentation remain native-owned.
      */
     void withCinematicCamera(int x, int y, Runnable draw) {
-        if (cinematicScroll != null) throw new IllegalStateException("Nested cinematic camera");
+        rejectScrollOperation();
+        if (cinematicCameraActive || cinematicDraw) throw new IllegalStateException("Nested cinematic camera");
+        // Cover setup and contributor resolution before cinematicScroll exists, and retain the
+        // guard through failure cleanup. Only the intended callback may draw this directed view.
+        cinematicCameraActive = true;
         var camera = lm.camera;
-        var savedCamera = camera.capture();
         var savedScroll = currentScrollPresentation;
-        // Controller results are double-buffered; retain an owned copy across resolution.
-        var savedMode = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState).renderMode();
+        com.openggf.game.rewind.snapshot.CameraSnapshot savedCamera = null;
+        AdvancedRenderFrameState savedMode = null;
+        Throwable primaryFailure = null;
         try {
+            savedCamera = camera.capture();
+            savedMode = LevelScrollPresentation.copyRenderMode(currentAdvancedRenderFrameState);
             // Contributors read the native camera. Do not resolve again under the director camera.
             resolveAdvancedRenderFrameState(lm.frameCounter);
             var nativeScroll = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
@@ -960,20 +1043,38 @@ public final class LevelRenderer {
             camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
             cinematicScroll = nativeScroll.forCinematicCamera(camera.getX(), camera.getY(),
                     LevelScrollPresentation.captureArenaMask(lm));
-            draw.run();
+            cinematicCallbackActive = true;
+            try { draw.run(); }
+            finally { cinematicCallbackActive = false; }
         } catch (RuntimeException | Error failure) {
-            lm.graphicsManager.discardQueuedCommands();
+            primaryFailure = failure;
+            try { lm.graphicsManager.discardQueuedCommands(); }
+            catch (RuntimeException | Error cleanup) {
+                if (cleanup != failure) failure.addSuppressed(cleanup);
+            }
             throw failure;
         } finally {
-            cinematicScroll = null;
-            camera.restore(savedCamera, camera.getFocusedSprite());
-            currentScrollPresentation = savedScroll;
-            currentAdvancedRenderFrameState = savedMode;
+            try {
+                if (savedCamera != null) camera.restore(savedCamera, camera.getFocusedSprite());
+            } catch (RuntimeException | Error cleanup) {
+                if (primaryFailure == null) throw cleanup;
+                if (cleanup != primaryFailure) primaryFailure.addSuppressed(cleanup);
+            } finally {
+                cinematicScroll = null;
+                currentScrollPresentation = savedScroll;
+                if (savedMode != null) currentAdvancedRenderFrameState = savedMode;
+                cinematicCallbackActive = false;
+                cinematicCameraActive = false;
+            }
         }
     }
 
     /** Presentation-only view of the current world from a director camera; native SAT/scroll publication is retained. */
     void drawCinematicWorld(SpriteManager sprites) {
+        rejectScrollOperation();
+        if (cinematicCameraActive && !cinematicCallbackActive) {
+            throw new IllegalStateException("Drawing during cinematic setup or cleanup");
+        }
         if (cinematicDraw) throw new IllegalStateException("Nested cinematic world draw");
         cinematicDraw = true;
         try { drawWithRenderOptions(sprites, new LevelManager.LevelRenderOptions(true, true, true, false, false, false, true)); }
@@ -981,6 +1082,7 @@ public final class LevelRenderer {
     }
 
     private LevelScrollPresentation scrollForDraw() {
+        if (scopedScroll != null) return scopedScroll;
         if (cinematicDraw) return cinematicScroll;
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
     }
@@ -1034,6 +1136,7 @@ public final class LevelRenderer {
     }
 
     void prepareSpritePresentation(SpriteManager sprites) {
+        rejectScrollOperation();
         if (lm.graphicsManager == null || lm.camera == null) return;
         preparingSpritePresentation = true;
         try {
@@ -1198,6 +1301,9 @@ public final class LevelRenderer {
     }
 
     public void drawWithRenderOptions(SpriteManager spriteManager, LevelManager.LevelRenderOptions renderOptions) {
+        if ((scrollOperation && scopedScroll == null) || (cinematicCameraActive && !cinematicCallbackActive)) {
+            throw new IllegalStateException("Drawing during presentation setup or cleanup");
+        }
         if (lm.level == null) {
             LevelManager.LOGGER.warning("No level loaded to draw.");
             return;
@@ -1932,6 +2038,7 @@ public final class LevelRenderer {
      * optional backdrop color override.
      */
     public void renderEndingBackground(int bgVscroll, float[] backdropOverride) {
+        rejectScrollOperation();
         if (lm.level == null || lm.level.getMap() == null) {
             return;
         }
