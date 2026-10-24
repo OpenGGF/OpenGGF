@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -28,6 +29,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -96,7 +98,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private static final int[] CENTER_ANIM_ROW_NEXT = {1, 2, 2};
 
     private final SubpixelMotion.State motion;
-    private final List<PanelState> panels = new ArrayList<>();
+    private final PanelRingState panels = new PanelRingState();
     private int routine = ROUTINE_INIT;
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
@@ -809,6 +811,48 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * Owns the folded native child slots. Rewind retains their ordered values,
+     * then constructs each nonstatic helper against the restored miniboss.
+     * Keeping this final holder on the default capture path also preserves the
+     * parent's scalar/motion/reference capture and AbstractObjectInstance state.
+     */
+    private final class PanelRingState implements Iterable<PanelState>, RewindStateful<PanelRingState.Snapshot> {
+        private final List<PanelState> entries = new ArrayList<>();
+
+        private record Snapshot(PanelState.Snapshot[] entries) {
+            private Snapshot {
+                entries = entries.clone();
+            }
+
+            @Override
+            public PanelState.Snapshot[] entries() { return entries.clone(); }
+        }
+
+        private boolean isEmpty() { return entries.isEmpty(); }
+        private int size() { return entries.size(); }
+        private PanelState get(int index) { return entries.get(index); }
+        private void add(PanelState panel) { entries.add(panel); }
+
+        @Override
+        public Iterator<PanelState> iterator() { return entries.iterator(); }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(entries.stream().map(PanelState::captureSnapshot).toArray(PanelState.Snapshot[]::new));
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot snapshots) {
+            entries.clear();
+            for (PanelState.Snapshot snapshot : snapshots.entries()) {
+                PanelState panel = new PanelState(snapshot.center(), snapshot.index(), snapshot.secondRing());
+                panel.restoreSnapshot(snapshot);
+                entries.add(panel);
+            }
+        }
+    }
+
     private final class PanelState {
         private static final int ROUTINE_INIT_WAIT = 2;
         private static final int ROUTINE_ROTATE_IF_ARMED = 4;
@@ -856,6 +900,39 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
                 childWaitTimer = -1;
                 waitCallback = PanelWaitCallback.NONE;
             }
+        }
+
+        private record Snapshot(boolean center, int index, boolean secondRing,
+                                int x, int y, int xSub, int ySub, int xVel, int yVel,
+                                int frame, int angle, int angleDelta, int childRoutine, int childWaitTimer,
+                                PanelWaitCallback waitCallback, boolean initialized, boolean bit1,
+                                boolean detached, boolean markedForDetach, boolean deleted, int detachedLifeTimer) {}
+
+        private Snapshot captureSnapshot() {
+            return new Snapshot(center, index, secondRing, x, y, xSub, ySub, xVel, yVel,
+                    frame, angle, angleDelta, childRoutine, childWaitTimer, waitCallback,
+                    initialized, bit1, detached, markedForDetach, deleted, detachedLifeTimer);
+        }
+
+        private void restoreSnapshot(Snapshot snapshot) {
+            x = snapshot.x();
+            y = snapshot.y();
+            xSub = snapshot.xSub();
+            ySub = snapshot.ySub();
+            xVel = snapshot.xVel();
+            yVel = snapshot.yVel();
+            frame = snapshot.frame();
+            angle = snapshot.angle();
+            angleDelta = snapshot.angleDelta();
+            childRoutine = snapshot.childRoutine();
+            childWaitTimer = snapshot.childWaitTimer();
+            waitCallback = snapshot.waitCallback();
+            initialized = snapshot.initialized();
+            bit1 = snapshot.bit1();
+            detached = snapshot.detached();
+            markedForDetach = snapshot.markedForDetach();
+            deleted = snapshot.deleted();
+            detachedLifeTimer = snapshot.detachedLifeTimer();
         }
 
         /** The ROM child slot's priority word as a bucket; see {@link #PANEL_PRIORITY_WORDS}. */
