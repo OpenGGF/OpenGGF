@@ -1044,3 +1044,125 @@ python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
 class follows the existing guards-profile name convention; its actual complete
 profile inclusion remains part of the eventual composed sixth-loop guard run.
 No full suite or duplicate broad run was launched for this metadata/Javadoc edit.
+
+### Sixth-loop composition and boundary qualification
+
+The sixth candidate advanced through delivered fifth-loop main
+`3ca14002fa2fafeabe1d3e6e370a3f559b6cba4e`. Production and tests were fixed at
+`399ea56113dceaf73ef304ad945582924b9ff093` for the following parent runs in
+`.worktrees/ai-architecture-loop6-20261024`. The later documentation edits do
+not change those executable inputs.
+
+The composition includes the reviewed freezer history removal (`ece291b08`),
+initialized LBZ box rigs (`656a8bb58`), corrected LBZ cameo ownership
+(`4cce9ad67`), lightning art values (`83dd96cd8`) and ordered S1 ring recipes
+(`2c05bf692`). The existing field audit retains each family's red/green commands,
+rejected approaches and bounded evidence. Review corrections matter here:
+rejected owner admission must not create uncapturable links; absent identity
+context differs from authoritative captured null; accepted null ring placements
+must also restore; and helper ownership removes the spark's proposed three
+transient exclusions. The final cameo annotation allowance decreases from four
+to two. No owner override, exclusion, API pin or frozen allowance grows.
+
+Conflict resolution preserves both the four-field optional-native reference set
+and AIZ's separate two-field context-compatible, managed-strict set.
+`RewindCodecs.java` is byte-identical to delivered main. Both actual-path audit
+methods survive the ring/spark test conflict. Baseline reconciliation removes
+only the five newly resolved keys from main's seven, leaving the LBZ end-boss
+launch history and final-boss spawned inventory. Audit merges retain earlier
+sections and merge assigned table rows by identity, rather than concatenating
+interleaved command fragments.
+
+The change-based planner selected 3,739 smoke classes because the exact policy
+file, field baseline and base-class Javadoc are classified as shared. The actual
+policy change selects one additional exact optional field and removes one stale
+disposition; the base-class runtime bodies and generic codec are unchanged.
+Family-local reconstruction changes have destructive graph, no-context, rendering
+and forward-replay checks. A focused consumer selection plus complete fresh-JVM
+guards is proportionate here. The updated runner's Java 25/Lua/PowerShell preflight
+passed. No release-only full suite or duplicated broad baseline/development run
+was submitted.
+
+The parent focused invocation passed **390 distinct cases in 33 reports**, zero
+failures, errors or skips. It includes both physical S1 ring and S3K loading
+classes, all eight nullable-ring controls, all four spark-art methods (including
+actual EGL pixels), both reference modes, API pins, manager closure and all four
+mandatory S3K selectors. Admission took 43 seconds; Maven reported 92 seconds.
+The complete separate guards invocation then passed **769 distinct cases in 92
+reports**, zero failures/errors/skips. Admission took nine seconds; Maven reported
+321 seconds. Actual inclusion was checked for all 14 new exact-policy controls,
+33 ArchUnit cases, eight compact-policy cases, four rewind architecture cases and
+eight singleton-lifecycle cases. The two generated censuses match exactly:
+two field keys and 513 lifecycle caller identities. The 66 focused and 184 guard
+XML/text reports and both inspected censuses were consumed and removed.
+
+Commands used the existing main checkout, each worktree's own target, display and
+JVM-option variables unset, and verified existing World REV01/locked-on ROMs:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+ROM_ROOT=$MAIN_CHECKOUT
+FOCUSED_SIX='TestLbzKnucklesInventoryRewind,TestLbz2RideCameoInstances,TestOptionalObjectReferenceCodecs,TestRewindObjectReferenceCodecs,TestAizCollectorObjectReferenceCodecs,TestAizCollectorPublicRewind,TestS3kAizIntroGraphRewind,TestLbzBoxRigsRewind,TestLbzWallExplosionsRewind,TestLbzWallExplosionsEmptyRewind,TestS3kLbzMinibossGraphRewind,TestRewindFieldDispositionAudit,TestS3kIczFreezerGraphRewind,TestS3kIczFreezerObject,TestS1RingGroupGraphRewind,TestS1RingNullRecipeRewind,TestSonic1RingInstance,TestSonic1RingPlacement,TestLightningSparkArtRewind,TestRewindPolicyRegistry,TestRewindSchemaRegistry,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS2BadnikChildGraphRewind,TestObjectManagerRewindSnapshot,TestObjectManagerRewindReferenceClosure'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED_SIX" \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The result proves bounded restoration and current guard compliance, not every
+native encounter route, simultaneous family, player-contact outcome or GPU path.
+Spark pixels and the six stock S1 graph cases executed; CPU-only box/freezer/cameo
+observations do not imply full-route rendering certification. The first report
+inspection incorrectly expected 14 methods in the spark class: its four art
+methods plus other classes made up the worker's 14-case selection. XML established
+the actual four identities; no test rerun was needed for that inspection error.
+
+Two read-only studies refine the next course without claiming debt removal.
+SAT replay at `aa843d5d8` retains its persistent descriptor adapter's four
+field/construction/write records. The supplied decoder runs synchronously before
+tile append and later state sampling; it can observe raw/cached disagreement,
+descriptor identity, returned overrides and exceptions. Expanded palette seven
+has raw palette bits three but cached palette seven. Primitive GPU replay does
+not eliminate that callback obligation. A primitive callback migration would need
+an explicit compatibility decision; moving the adapter or erasing its type merely
+changes recorded identities. Whole-row command substitution also has different
+integer/float behavior at extreme coordinates. This study ran no tests and
+authorizes zero allowance removals.
+
+RenderContext lifetime inspection at `3ca14002f` supports shared GPU bank
+allocation, reset boundaries and standalone typed access. Mutable donor colors
+are a separate responsibility. The completed donated-team initialization path
+may overwrite the main donor row while loading distinct sidekick art; donor-color
+rewind and shrinking ordinary sidekick-bank texture height need separate
+reproductions. None is established as a runtime defect by source inspection.
+The next bounded worker first tests completed-team selection while preserving
+standalone refresh semantics. No session-context framework or registry relocation
+is justified. Background renderer and PreparedPiece compatibility remain closed
+decisions absent new evidence. Low-level frozen records stay at 147.
+
+A separate test-only slice, `9b1242fa5`, constructs FadeManager directly in its
+four existing unit cases. Assertions and test identities remain unchanged; the
+ambient setup and teardown disappear. The exact setup allowance decreases from
+98 methods/97 files to 97/96. `TestFadeManager,TestSingletonLifecycleGuard` passed
+12 cases, zero failures/errors/skips, through the same absolute wrapper and Java
+25/Lua environment with `-Dmse=off` and no GL requirement. Admission took 166
+seconds; Maven reported 78 seconds. Exact XML identities were inspected and all
+four reports removed. No production code changed after the 390/769-case parent
+runs, and the changed fixture/guard were checked in this separate checkout.
+Repeating the other unchanged guards would add no coverage. This final test-only
+merge retains that scoped evidence rather than claiming a second complete run.
+
+Main fetch/fast-forward pull found no intervening upstream changes at this
+checkpoint. All parent jobs have completed. Documentation/policy checks, final
+integration, push and accounted-for cleanup remain delivery obligations. Later
+boss-inventory and donated-team work is outside these completed runs.

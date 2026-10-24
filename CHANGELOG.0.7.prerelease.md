@@ -626,7 +626,11 @@ Unreleased. The earlier development themes remain in
   Rexon necks and Sol fireballs restore their exact owners and sparse links while
   preserving context-free object round trips. LBZ panels and wall explosions retain
   their progressed state and shared RNG binding; AIZ finale actors retain their
-  exact links after rewind. Registry metadata and bonus-stage capabilities own
+  exact links after rewind. Initialized LBZ box rigs, cameo child ownership and
+  saved swing anchors restore with their encounter. Freezer debris keeps its
+  managed lifetime, S1 ring groups retain ordered placement recipes, and lightning
+  sparks restore their supplied art and refresh atlas residency.
+  Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts
   live with their managers.
