@@ -628,7 +628,8 @@ Unreleased. The earlier development themes remain in
   their progressed state and shared RNG binding; AIZ finale actors retain their
   exact links after rewind. Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
-  lives beside its game-owned loader.
+  lives beside its game-owned loader, and level-animation composition contracts
+  live with their managers.
   Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the

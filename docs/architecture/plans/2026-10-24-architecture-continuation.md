@@ -893,3 +893,31 @@ confirmed the low-level layer, package-cycle and top-level edge checks executed.
 Compiled providers exist only at their new locations. No runtime edit followed
 these checks; only this evidence append remained. The inspected nine XML and nine
 text reports are disposable diagnostics; no pass cache or receipt is retained.
+
+
+### Fifth-loop validation selection
+
+Delivered destination `a236a1276ec7020eaca28134e6fa6d4f345c8e07` is merged by
+`e143088fa`; only append-only evidence needed reconciliation. Animation-provider
+commit `1f55021bb` is merged by `497b52109`. The coordinator compared both entire
+interface bodies and all five consumer bodies with the base after removing only
+package/import lines: they are unchanged. The exact four frozen records disappear
+without additions, leaving 147 in this composition, meeting the former <=150
+target. Supported pins and store keys remain unchanged. The next ownership target
+is internal SAT-replay descriptor construction; it requires a separately qualified
+migration, and the interim count must hold at 147.
+
+Actual-environment preflight passed with Java 25 and Lua 5.4. The change-based plan
+against pinned delivered `a236a1276` selects 3,734 smoke candidates across every
+category, driven by root files, relocated contracts and shared frozen resources.
+The known caller-complete moves preserve implementation bodies; focused controls
+cover root dispatch/capabilities, the actual animation consumers in all games,
+SMPS/WAV behavior, destructive owner-bound graph replay and API/S3K stability.
+The parent therefore selects 41 exact class/method selectors (including explicit
+nested WAV and all four required S3K selectors), then complete fresh guards.
+This is proportionate focused verification, not execution of the all-category
+smoke plan or the release-only full suite. Estimated execution is a few minutes,
+with queue wait separate and unbounded. Finish the selected invocation, inspect
+all exact identities/failures/skips, repair regressions narrowly, and expand only
+for new evidence or unresolved coupling. Do not repeat unchanged broad coverage.
+Later Knuckles, freezer and initialized-box-rig work stays outside this candidate.

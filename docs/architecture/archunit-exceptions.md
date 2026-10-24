@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 151 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 records while the next ownership slice is designed | Next target: remove internal SAT-replay descriptor construction while retaining supported typed rendering ingress |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -254,7 +254,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 151
+- `low_level_layers_do_not_depend_on_runtime_layers`: 147
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -559,3 +559,15 @@ When a frozen violation is removed:
 4. Update record counts, member-dependency counts, and affected exception prose
    in this document. Keep committed allowances separate from measured live
    violations and package-pair permissions.
+
+
+The level-animation provider contracts now live beside their managers in
+`level.animation`. All three game loaders and LevelManager keep the same method
+bodies and runtime selection; exactly four parameter/return records are removed,
+151 → 147 in this composition. The API pins and historical frozen-rule key are
+unchanged. This meets the prior <=150 target. The next ownership target is the
+internal SAT-replay descriptor construction, separately from supported typed
+ingress and canonical value placement. Its four field/construction/write records
+are candidates for a reviewed migration, not an automatic allowance deletion or a
+new measured result. Preserve expanded replay palettes and cached descriptor
+semantics; do not duplicate values or erase types to meet a count.
