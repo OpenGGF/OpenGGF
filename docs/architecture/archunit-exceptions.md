@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 123 records | Hold at 123 pending joint contract checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 pending joint contract checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 123
+- `low_level_layers_do_not_depend_on_runtime_layers`: 121
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -664,7 +664,7 @@ fixtures preserve session camera/game-state consumers and authoritative module
 sampling. The local inventory is21 methods across20 files; these component
 checks passed110 cases plus8 guards, with joint validation still pending.
 
-The current joint composition contains123 low-level records: complete `Game`
+The preceding Game composition contains123 low-level records: complete `Game`
 relocation removes three more from126, with no frozen replacements. It owns
 source-backed level/music/scroll/editing/runtime-art assembly beside `GameModule`,
 `ModGame` and `StandaloneGameSpec`. This intentional unpublished-candidate break
@@ -678,3 +678,13 @@ permissions and matching cycle ignores are removed, leaving151 directed pairs.
 `audio -> data`, `data -> game` and `data -> configuration` remain required.
 The parent will verify the actual compiled graph and exact published counts;
 component results are not a claim of completed joint delivery.
+
+The current source composition has121 low-level records. Native SMPS readers
+retain their own identical caller-supplied ROM reference; the generic cache/hex
+dispatch base is ROM-free. Its two obsolete records disappear without replacement
+or permission removal. All three public native `(Rom)` constructors and supported
+pins are unchanged. Unsupported external base subclasses must adapt to the
+protected no-argument constructor, retain their own ROM and rebuild. The two
+legacy sequencer restore-owner constructors remain qualified and byte-unchanged.
+The component's90 behavior and58 strict/API checks passed; final joint evaluation
+remains pending.
