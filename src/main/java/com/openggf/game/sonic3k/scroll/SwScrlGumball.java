@@ -1,12 +1,13 @@
 package com.openggf.game.sonic3k.scroll;
 
-import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
+import static com.openggf.level.scroll.M68KMath.*;
+
 import com.openggf.game.GameServices;
+
+import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
-
-import static com.openggf.level.scroll.M68KMath.*;
 
 /**
  * Gumball Machine bonus stage scroll handler.
@@ -39,7 +40,8 @@ import static com.openggf.level.scroll.M68KMath.*;
  * mirrors the visual effect of the ROM's strip scatter without having to
  * replicate the VDP VSRAM scatter layout.
  */
-public class SwScrlGumball extends AbstractZoneScrollHandler {
+public class SwScrlGumball extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
 
     /** ROM H40 display: 40 cells wide, column pairs of 16px each (20 entries). */
     private static final int COLUMN_COUNT = 20;
@@ -51,24 +53,21 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
     private static final int Y_BASE_OFFSET = 0xC8;
 
     /**
-     * ROM Gumball_VScroll writes machineTrackedY only to HScroll_table offset $4
-     * (= VSRAM entry for Plane A column-pair 1 = screen pixels 32-63).
-     * DrawTilesVDeform with scatter array {$C0, $80, $7FFF} then distributes
-     * VSRAM across 6+4 column-pairs, but only column-pair 1 has the machine
+     * ROM Gumball_VScroll writes machineTrackedY only to HScroll_table offset $4 (= VSRAM entry for
+     * Plane A column-pair 1 = screen pixels 32-63). DrawTilesVDeform with scatter array {$C0, $80,
+     * $7FFF} then distributes VSRAM across 6+4 column-pairs, but only column-pair 1 has the machine
      * value — all others get cameraY.
      *
-     * In the engine's 20-column system (16px each), column-pair 1 = columns 2-3.
-     * Rather than hardcoding column indices, we use the world X range that
-     * maps to those columns. With camera at ~0x60, column 2 starts at
-     * 0x60 + 32 = 0x80, column 3 ends at 0x60 + 63 = 0x9F.
-     * But the machine body chunks span 2 chunks (256px) centered at 0x100.
-     * The actual visible machine tiles = chunks at X=[0x80, 0x180).
+     * <p>In the engine's 20-column system (16px each), column-pair 1 = columns 2-3. Rather than
+     * hardcoding column indices, we use the world X range that maps to those columns. With camera
+     * at ~0x60, column 2 starts at 0x60 + 32 = 0x80, column 3 ends at 0x60 + 63 = 0x9F. But the
+     * machine body chunks span 2 chunks (256px) centered at 0x100. The actual visible machine tiles
+     * = chunks at X=[0x80, 0x180).
      *
-     * The ROM uses a SINGLE 32px column-pair for the per-strip VSCROLL.
-     * This works because DrawTilesVDeform redraws tiles at shifted positions
-     * within each strip. Our shader-based approach applies VSCROLL to the
-     * entire visible column, so we need to apply it to ALL columns that
-     * overlap the machine body — otherwise only 32px of the body moves.
+     * <p>The ROM uses a SINGLE 32px column-pair for the per-strip VSCROLL. This works because
+     * DrawTilesVDeform redraws tiles at shifted positions within each strip. Our shader-based
+     * approach applies VSCROLL to the entire visible column, so we need to apply it to ALL columns
+     * that overlap the machine body — otherwise only 32px of the body moves.
      */
     // Machine body tiles: 4-chunk-wide layout, chunks 0+3 are walls, chunks 1+2
     // are the machine body. Each chunk is 128px, so machine body spans world X
@@ -158,5 +157,44 @@ public class SwScrlGumball extends AbstractZoneScrollHandler {
     @Override
     public short getVscrollFactorFG() {
         return vscrollFactorFG;
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        LevelManager level = GameServices.levelOrNull();
+        GumballMachineObjectInstance machine =
+                level == null
+                        ? null
+                        : GumballMachineObjectInstance.current(level.getObjectManager());
+        Integer machineY = machine == null ? null : machine.getCurrentY();
+        return view -> {
+            int[] words = new int[view.height()];
+            java.util.Arrays.fill(
+                    words, packScrollWords(negWord(view.cameraX()), negWord(BG_CAMERA_X)));
+            short[] columns = null;
+            if (machineY != null) {
+                columns = new short[(view.width() + 15) / 16];
+                for (int col = 0; col < columns.length; col++) {
+                    int centre = view.cameraX() + col * 16 + 8;
+                    columns[col] =
+                            centre >= MACHINE_BODY_MIN_X && centre < MACHINE_BODY_MAX_X
+                                    ? (short) (Y_BASE_OFFSET - machineY)
+                                    : 0;
+                }
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    words,
+                    null,
+                    null,
+                    columns,
+                    (short) view.cameraY(),
+                    asrWord(view.cameraY(), 1),
+                    context.nativeOutput().backgroundX(),
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    context.nativeOutput().shakeY(),
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

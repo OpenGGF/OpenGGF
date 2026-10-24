@@ -9,8 +9,13 @@ public final class S3kSpriteMaskSupport {
     private S3kSpriteMaskSupport() { }
 
     /** Obj_SpriteMask uses subtype's high nibble as its ROM mapping frame. */
-    public static void submitFrame(GraphicsManager graphics, com.openggf.data.Rom rom,
-                                   int frame, int originX, int originY) throws java.io.IOException {
+    public static void submitFrame(
+            GraphicsManager graphics, com.openggf.data.Rom rom, int frame, int originX, int originY)
+            throws java.io.IOException {
+        com.openggf.graphics.SpriteCaptureControl.control(
+                "SAT sprite-mask controls require native display-list replay "
+                        + "Obj_SpriteMask (docs/skdisasm/sonic3k.asm:181335); "
+                        + "Map_SpriteMask (docs/skdisasm/sonic3k.asm:201991)");
         if (graphics == null || !graphics.isSpriteSatCollectionActive()) return;
         graphics.requestSpriteMask();
         // Map_SpriteMask ($18595E), six-byte S3K mapping pieces, art_tile = 0.
@@ -28,6 +33,10 @@ public final class S3kSpriteMaskSupport {
 
     /** Submits exact mapping frame $04: marker tile $7C0 followed by its companion. */
     public static void submitFrame4(GraphicsManager graphics, int originX, int originY) {
+        com.openggf.graphics.SpriteCaptureControl.control(
+                "SAT sprite-mask controls require native display-list replay "
+                        + "Obj_SpriteMask (docs/skdisasm/sonic3k.asm:181335); "
+                        + "Map_SpriteMask (docs/skdisasm/sonic3k.asm:201991)");
         if (graphics == null || !graphics.isSpriteSatCollectionActive()) return;
         graphics.requestSpriteMask();
         for (ControlEntry entry : frame4Entries(originX, originY)) {

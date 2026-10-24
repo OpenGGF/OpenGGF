@@ -197,9 +197,55 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
     }
 
     @Override
+    protected java.util.Optional<com.openggf.level.objects.ObjectRegistryCatalog.AuxiliaryFactory> releasedAnimalFactory(
+            com.openggf.level.objects.ObjectRegistryCatalog.Context context) {
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectRegistryCatalog.AuxiliaryFactory(
+                "released-animal", "Native released animal", List.of("Obj28_InitRandom (docs/s2disasm/s2.asm:24596-24612)"),
+                com.openggf.game.sonic2.Sonic2AnimalCatalog.variants(),
+                com.openggf.level.objects.DestructionEffects.deferredAnimalWithoutPopup(-1, false).animalFactory()));
+    }
+
+    /** Native position admission metadata; this does not alter a boss routine or its world effects. */
+    @Override
+    protected com.openggf.level.objects.ObjectRegistryCatalog.Semantics catalogSemantics(int objectId,
+            com.openggf.level.objects.ObjectRegistryCatalog.Context context) {
+        String routine = switch (objectId) {
+            case Sonic2ObjectIds.EHZ_BOSS -> "Obj56_Init (docs/s2disasm/s2.asm:63372-63425)";
+            case Sonic2ObjectIds.CPZ_BOSS -> "Obj5D_Init (docs/s2disasm/s2.asm:61610-61623)";
+            case Sonic2ObjectIds.HTZ_BOSS -> "Obj52_Init (docs/s2disasm/s2.asm:64266-64290)";
+            case Sonic2ObjectIds.MCZ_BOSS -> "Obj57_Init (docs/s2disasm/s2.asm:65931-65955)";
+            case Sonic2ObjectIds.CNZ_BOSS -> "Obj51_Init (docs/s2disasm/s2.asm:66594-66618)";
+            case Sonic2ObjectIds.MTZ_BOSS -> "Obj54_Init (docs/s2disasm/s2.asm:67340-67365)";
+            case Sonic2ObjectIds.OOZ_BOSS -> "Obj55_Main_Init (docs/s2disasm/s2.asm:68408-68418)";
+            case Sonic2ObjectIds.ARZ_BOSS -> "Obj89_Init_RaisePillars (docs/s2disasm/s2.asm:64921-64954)";
+            default -> "";
+        };
+        if (objectId == Sonic2ObjectIds.EHZ_BOSS)
+            return new com.openggf.level.objects.ObjectRegistryCatalog.Semantics(
+                    com.openggf.level.objects.ObjectRegistryCatalog.Role.BOSS,
+                    com.openggf.level.objects.ObjectRegistryCatalog.PositionRule.NATIVE_ARENA,
+                    List.of(routine,
+                            "loc_2F262 (docs/s2disasm/s2.asm:63536-63548)",
+                            "Ani_obj56_a (docs/s2disasm/s2.asm:64164-64177)",
+                            "Ani_obj56_b (docs/s2disasm/s2.asm:64186-64199)",
+                            "Ani_obj56_c (docs/s2disasm/s2.asm:64212-64227)"),
+                    List.of("Puppet/Pose hold the initialized native multipart appearance. Aircraft/car/drill state transitions and native part animation selection require loc_2F262 and child routines; these routines are suspended in directed modes.",
+                            "Pure per-part ROM animation is unavailable: three existing native hardcoded scripts differ from Ani_obj56_a/c. Do not label these tables ROM-backed or apply one animation table to every part of the aggregate sheet; author held mapping frames instead."));
+        if (!routine.isEmpty()) return new com.openggf.level.objects.ObjectRegistryCatalog.Semantics(
+                com.openggf.level.objects.ObjectRegistryCatalog.Role.BOSS,
+                com.openggf.level.objects.ObjectRegistryCatalog.PositionRule.NATIVE_ARENA, List.of(routine));
+        if (objectId == Sonic2ObjectIds.WFZ_BOSS || objectId == Sonic2ObjectIds.MECHA_SONIC
+                || objectId == Sonic2ObjectIds.DEATH_EGG_ROBOT || objectId == Sonic2ObjectIds.DEZ_EGGMAN)
+            return new com.openggf.level.objects.ObjectRegistryCatalog.Semantics(
+                    com.openggf.level.objects.ObjectRegistryCatalog.Role.BOSS,
+                    com.openggf.level.objects.ObjectRegistryCatalog.PositionRule.UNVERIFIED, List.of());
+        return super.catalogSemantics(objectId, context);
+    }
+
+    @Override
     protected void registerDefaultFactories() {
         namesById.putAll(Sonic2ObjectRegistryData.NAMES_BY_ID);
-        // LayerSwitcher (0x03) behavior is handled by ObjectManager.PlaneSwitchers,
+        // LayerSwitcher (0x03) behavior is handled by ObjectPlaneSwitcherController,
         // but the ROM still allocates Obj03 into an SST slot before MarkObjGone3.
         registerFactory(Sonic2ObjectIds.LAYER_SWITCHER,
                 (spawn, registry) -> new Sonic2LayerSwitcherObjectInstance(
@@ -305,35 +351,35 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new SpiralObjectInstance(spawn, registry.getPrimaryName(spawn.objectId())));
 
         // OOZ Badniks
-        registerFactory(Sonic2ObjectIds.OCTUS,
+        registerBadnikFactory(Sonic2ObjectIds.OCTUS,
                 (spawn, registry) -> new OctusBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.AQUIS,
+        registerBadnikFactory(Sonic2ObjectIds.AQUIS,
                 (spawn, registry) -> new AquisBadnikInstance(spawn));
 
         // EHZ Badniks
-        registerFactory(Sonic2ObjectIds.MASHER,
+        registerBadnikFactory(Sonic2ObjectIds.MASHER,
                 (spawn, registry) -> new MasherBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.BUZZER,
+        registerBadnikFactory(Sonic2ObjectIds.BUZZER,
                 (spawn, registry) -> new BuzzerBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.COCONUTS,
+        registerBadnikFactory(Sonic2ObjectIds.COCONUTS,
                 (spawn, registry) -> new CoconutsBadnikInstance(spawn));
 
         // CPZ Badniks
-        registerFactory(Sonic2ObjectIds.SPINY,
+        registerBadnikFactory(Sonic2ObjectIds.SPINY,
                 (spawn, registry) -> new SpinyBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.SPINY_ON_WALL,
+        registerBadnikFactory(Sonic2ObjectIds.SPINY_ON_WALL,
                 (spawn, registry) -> new SpinyOnWallBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.GRABBER,
+        registerBadnikFactory(Sonic2ObjectIds.GRABBER,
                 (spawn, registry) -> new GrabberBadnikInstance(spawn));
 
         // ARZ Badniks
-        registerFactory(Sonic2ObjectIds.CHOP_CHOP,
+        registerBadnikFactory(Sonic2ObjectIds.CHOP_CHOP,
                 (spawn, registry) -> new ChopChopBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.WHISP,
+        registerBadnikFactory(Sonic2ObjectIds.WHISP,
                 (spawn, registry) -> new WhispBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.GROUNDER_IN_WALL,
+        registerBadnikFactory(Sonic2ObjectIds.GROUNDER_IN_WALL,
                 (spawn, registry) -> new GrounderBadnikInstance(spawn, false));
-        registerFactory(Sonic2ObjectIds.GROUNDER_IN_WALL2,
+        registerBadnikFactory(Sonic2ObjectIds.GROUNDER_IN_WALL2,
                 (spawn, registry) -> new GrounderBadnikInstance(spawn, true));
         // Note: GROUNDER_WALL (0x8F) and GROUNDER_ROCKS (0x90) are spawned dynamically
 
@@ -342,54 +388,54 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new HtzFireShooterObjectInstance(spawn));
 
         // HTZ Badniks
-        registerFactory(Sonic2ObjectIds.SPIKER,
+        registerBadnikFactory(Sonic2ObjectIds.SPIKER,
                 (spawn, registry) -> new SpikerBadnikInstance(spawn));
         registerFactory(Sonic2ObjectIds.SPIKER_DRILL,
                 (spawn, registry) -> new SpikerDrillObjectInstance(
                         spawn, spawn.x(), spawn.y(),
                         (spawn.renderFlags() & 0x01) != 0,
                         (spawn.renderFlags() & 0x02) != 0));
-        registerFactory(Sonic2ObjectIds.SOL,
+        registerBadnikFactory(Sonic2ObjectIds.SOL,
                 (spawn, registry) -> new SolBadnikInstance(spawn));
         // Rexon (lava snake) - both 0x94 and 0x96 point to same implementation
-        registerFactory(Sonic2ObjectIds.REXON,
+        registerBadnikFactory(Sonic2ObjectIds.REXON,
                 (spawn, registry) -> new RexonBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.REXON2,
+        registerBadnikFactory(Sonic2ObjectIds.REXON2,
                 (spawn, registry) -> new RexonBadnikInstance(spawn));
         // Note: REXON_HEAD (0x97) is spawned dynamically by RexonBadnikInstance
 
         // CNZ Badniks
-        registerFactory(Sonic2ObjectIds.CRAWL,
+        registerBadnikFactory(Sonic2ObjectIds.CRAWL,
                 (spawn, registry) -> new CrawlBadnikInstance(spawn));
 
         // MTZ Badniks
-        registerFactory(Sonic2ObjectIds.ASTERON,
+        registerBadnikFactory(Sonic2ObjectIds.ASTERON,
                 (spawn, registry) -> new AsteronBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.SHELLCRACKER,
+        registerBadnikFactory(Sonic2ObjectIds.SHELLCRACKER,
                 (spawn, registry) -> new ShellcrackerBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.SLICER,
+        registerBadnikFactory(Sonic2ObjectIds.SLICER,
                 (spawn, registry) -> new SlicerBadnikInstance(spawn));
 
         // MCZ Badniks
-        registerFactory(Sonic2ObjectIds.CRAWLTON,
+        registerBadnikFactory(Sonic2ObjectIds.CRAWLTON,
                 (spawn, registry) -> new CrawltonBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.FLASHER,
+        registerBadnikFactory(Sonic2ObjectIds.FLASHER,
                 (spawn, registry) -> new FlasherBadnikInstance(spawn));
 
         // SCZ Badniks
-        registerFactory(Sonic2ObjectIds.NEBULA,
+        registerBadnikFactory(Sonic2ObjectIds.NEBULA,
                 (spawn, registry) -> new NebulaBadnikInstance(spawn));
-        registerFactory(Sonic2ObjectIds.TURTLOID,
+        registerBadnikFactory(Sonic2ObjectIds.TURTLOID,
                 (spawn, registry) -> new TurtloidBadnikInstance(spawn));
         // Note: TURTLOID_RIDER (0x9B) and Turtloid jet are spawned dynamically by TurtloidBadnikInstance
-        registerFactory(Sonic2ObjectIds.BALKIRY,
+        registerBadnikFactory(Sonic2ObjectIds.BALKIRY,
                 (spawn, registry) -> new BalkiryBadnikInstance(spawn));
         // Note: BALKIRY_JET (0x9C) is spawned dynamically by BalkiryBadnikInstance
 
         // WFZ Badniks
         registerFactory(Sonic2ObjectIds.CLUCKER_BASE,
                 (spawn, registry) -> new CluckerBaseObjectInstance(spawn));
-        registerFactory(Sonic2ObjectIds.CLUCKER,
+        registerBadnikFactory(Sonic2ObjectIds.CLUCKER,
                 (spawn, registry) -> new CluckerBadnikInstance(spawn));
 
         // Level completion objects
@@ -641,11 +687,11 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry implements com.
                         registry.getPrimaryName(spawn.objectId())));
 
         // WFZ Stick (ObjBF) - unused rotating stick badnik in WFZ debug list
-        registerFactory(Sonic2ObjectIds.WFZ_STICK,
+        registerBadnikFactory(Sonic2ObjectIds.WFZ_STICK,
                 (spawn, registry) -> new WFZStickBadnikInstance(spawn));
 
         // WFZ Unknown (ObjBB) - removed unused object retained in the ROM pointer table
-        registerFactory(Sonic2ObjectIds.WFZ_UNKNOWN,
+        registerBadnikFactory(Sonic2ObjectIds.WFZ_UNKNOWN,
                 (spawn, registry) -> new WFZUnknownBadnikInstance(spawn));
 
         // WFZ WallTurret (ObjB8) - wall-mounted turret that shoots projectiles

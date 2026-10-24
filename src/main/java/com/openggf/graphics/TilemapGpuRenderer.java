@@ -1,6 +1,8 @@
 package com.openggf.graphics;
 
 import com.openggf.util.ShortIndexedView;
+import com.openggf.graphics.TilemapResidencyState.ForegroundResidencyState;
+import com.openggf.graphics.TilemapResidencyState.BackgroundResidencyState;
 import com.openggf.util.IntIndexedView;
 
 import java.io.IOException;
@@ -34,13 +36,79 @@ public class TilemapGpuRenderer {
         return shader;
     }
 
-    private final TilemapTexture backgroundTexture = new TilemapTexture();
-    private final TilemapTexture foregroundTexture = new TilemapTexture();
+    private TilemapTexture backgroundTexture = new TilemapTexture();
+    private boolean cinematicBackgroundActive;
+
+    /** An owned descriptor texture keeps cinematic window uploads outside native GPU residency. */
+    void withCinematicBackground(CinematicBackgroundResidency residency, Runnable draw) {
+        if (cinematicBackgroundActive) throw new IllegalStateException("Nested cinematic background residency");
+        BackgroundResidencyState saved = captureBackgroundResidency();
+        var savedForeground = new ForegroundResidencyState(foregroundTexture, foregroundWindowTexture,
+                foregroundData, foregroundWidthTiles, foregroundHeightTiles, foregroundDirty,
+                foregroundWindow, foregroundVerticalScrollSplit, uploadedWindowDescriptors);
+        foregroundTexture = residency.foregroundTexture;
+        foregroundWindowTexture = residency.foregroundWindowTexture;
+        foregroundData = null; foregroundWidthTiles = 0; foregroundHeightTiles = 0; foregroundDirty = false;
+        foregroundWindow = null; foregroundVerticalScrollSplit = null; uploadedWindowDescriptors = null;
+        PatternLookupBuffer savedLookupTexture = patternLookup;
+        patternLookup = cinematicPatternLookup;
+        byte[] savedLookup = lookupData;
+        int savedLookupSize = lookupSize;
+        boolean savedLookupDirty = lookupDirty;
+        boolean savedClipHorizontal = clipHorizontal;
+        lookupData = null; lookupSize = 0; lookupDirty = false;
+        cinematicBackgroundActive = true;
+        restoreBackgroundResidency(new BackgroundResidencyState(residency.texture, null, null, null, 0, 0, false, false, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, -1, 0));
+        try { draw.run(); }
+        finally {
+            restoreBackgroundResidency(saved);
+            foregroundTexture = savedForeground.texture();
+            foregroundWindowTexture = savedForeground.windowTexture();
+            foregroundData = savedForeground.data();
+            foregroundWidthTiles = savedForeground.width(); foregroundHeightTiles = savedForeground.height();
+            foregroundDirty = savedForeground.dirty(); foregroundWindow = savedForeground.window();
+            foregroundVerticalScrollSplit = savedForeground.split(); uploadedWindowDescriptors = savedForeground.uploadedWindow();
+            clipHorizontal = savedClipHorizontal;
+            patternLookup = savedLookupTexture;
+            lookupData = savedLookup; lookupSize = savedLookupSize; lookupDirty = savedLookupDirty;
+            cinematicBackgroundActive = false;
+        }
+    }
+
+    private BackgroundResidencyState captureBackgroundResidency() {
+        return new BackgroundResidencyState(backgroundTexture, backgroundData, backgroundColumnUploadData, backgroundRowUploadData, backgroundWidthTiles, backgroundHeightTiles, backgroundDirty, backgroundIncrementalDirty, backgroundRingBaseXTiles, backgroundRingBaseYTiles, backgroundPendingSourceColumn, backgroundPendingDestinationColumn, backgroundPendingColumnCount, backgroundPendingSourceRow, backgroundPendingDestinationRow, backgroundPendingRowCount, backgroundRenderRingBaseXOverride, backgroundRenderRingBaseYOverride, backgroundContentGeneration, backgroundRenderGenerationOverride, bgVdpWrapHeight);
+    }
+
+    private void restoreBackgroundResidency(BackgroundResidencyState state) {
+        backgroundTexture = state.backgroundTexture();
+        backgroundData = state.backgroundData();
+        backgroundColumnUploadData = state.backgroundColumnUploadData();
+        backgroundRowUploadData = state.backgroundRowUploadData();
+        backgroundWidthTiles = state.backgroundWidthTiles();
+        backgroundHeightTiles = state.backgroundHeightTiles();
+        backgroundDirty = state.backgroundDirty();
+        backgroundIncrementalDirty = state.backgroundIncrementalDirty();
+        backgroundRingBaseXTiles = state.backgroundRingBaseXTiles();
+        backgroundRingBaseYTiles = state.backgroundRingBaseYTiles();
+        backgroundPendingSourceColumn = state.backgroundPendingSourceColumn();
+        backgroundPendingDestinationColumn = state.backgroundPendingDestinationColumn();
+        backgroundPendingColumnCount = state.backgroundPendingColumnCount();
+        backgroundPendingSourceRow = state.backgroundPendingSourceRow();
+        backgroundPendingDestinationRow = state.backgroundPendingDestinationRow();
+        backgroundPendingRowCount = state.backgroundPendingRowCount();
+        backgroundRenderRingBaseXOverride = state.backgroundRenderRingBaseXOverride();
+        backgroundRenderRingBaseYOverride = state.backgroundRenderRingBaseYOverride();
+        backgroundContentGeneration = state.backgroundContentGeneration();
+        backgroundRenderGenerationOverride = state.backgroundRenderGenerationOverride();
+        bgVdpWrapHeight = state.bgVdpWrapHeight();
+    }
+
+    private TilemapTexture foregroundTexture = new TilemapTexture();
     int foregroundTextureForDiagnostics() { return foregroundTexture.getTextureId(); }
     int backgroundTextureForDiagnostics() { return backgroundTexture.getTextureId(); }
     int lookupTextureForDiagnostics() { return patternLookup.getTextureId(); }
 
-    private final TilemapTexture foregroundWindowTexture = new TilemapTexture();
+    private TilemapTexture foregroundWindowTexture = new TilemapTexture();
     private ForegroundWindow foregroundWindow;
     private com.openggf.graphics.ForegroundScrollSplit foregroundVerticalScrollSplit;
 
@@ -54,7 +122,8 @@ public class TilemapGpuRenderer {
     public void setForegroundWindow(ForegroundWindow window) {
         foregroundWindow = window;
     }
-    private final PatternLookupBuffer patternLookup = new PatternLookupBuffer();
+    private PatternLookupBuffer patternLookup = new PatternLookupBuffer();
+    private final PatternLookupBuffer cinematicPatternLookup = new PatternLookupBuffer();
     private final HScrollBuffer foregroundLineScrollBuffer = new HScrollBuffer(true);
     private VScrollBuffer columnVScrollBuffer;
     private final QuadRenderer quadRenderer = new QuadRenderer();
@@ -148,6 +217,20 @@ public class TilemapGpuRenderer {
     private float upperBandWrapHeightPx = 0.0f;
     private float upperBandWrapWidthTiles = 0.0f;
     private boolean perColumnVScroll = false;
+    private int cinematicColumnPhaseX;
+    private TilemapShaderProgram columnPhaseShader;
+    private int columnPhaseLocation = -1;
+    private int cinematicNativeColumnCount;
+
+    void setCinematicColumnPhase(int phase) {
+        phase = Math.floorMod(phase, 16);
+        if (cinematicColumnPhaseX == phase) return;
+        if (phase != 0 && cinematicColumnPhaseX == 0)
+            cinematicNativeColumnCount = columnVScrollBuffer.getEntryCount();
+        cinematicColumnPhaseX = phase;
+        applyResolvedDisplayWidth((cinematicNativeColumnCount + (phase == 0 ? 0 : 1)) * 16);
+    }
+
 
     private float bgVdpWrapHeight = 0.0f;
 
@@ -539,6 +622,11 @@ public class TilemapGpuRenderer {
         glBindTexture(GL_TEXTURE_1D, boundColumnVScrollTexture);
 
         shader.use();
+        if (columnPhaseShader != shader) {
+            columnPhaseShader = shader;
+            columnPhaseLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(shader.getProgramId(), "ColumnPhaseX");
+        }
+        org.lwjgl.opengl.GL20.glUniform1f(columnPhaseLocation, cinematicColumnPhaseX);
         shader.cacheUniformLocations();
         shader.setTotalPaletteLines((float) RenderContext.getTotalPaletteLines());
 
@@ -1035,6 +1123,7 @@ public class TilemapGpuRenderer {
         foregroundWindow = null;
         foregroundVerticalScrollSplit = null;
         patternLookup.cleanup();
+        cinematicPatternLookup.cleanup();
         quadRenderer.cleanup();
         backgroundData = null;
         backgroundColumnUploadData = null;

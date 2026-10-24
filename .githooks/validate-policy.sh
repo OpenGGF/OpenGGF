@@ -165,6 +165,8 @@ contains_mod_api_annotation() {
 # retained declaration references their name (or they carry @ModApi themselves).
 # References are followed to a fixed point; literals and implementation bodies
 # cannot make an owner public. Ambiguous names over-retain conservatively.
+# Nested types are directly exposed only with member visibility; hidden owners
+# remain reachable through retained declarations, matching the compiled surface.
 # This is not Java name resolution: the compiled signature guard remains exact.
 mod_api_surface_text() {
     printf '%s\n' "$1" | awk '

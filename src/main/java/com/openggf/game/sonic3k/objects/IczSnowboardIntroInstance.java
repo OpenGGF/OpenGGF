@@ -15,7 +15,6 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -136,6 +135,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private int overlayAnimationCursor;
     private int lastOverlayAnimationId = -1;
     private boolean initialized;
+    private AbstractPlayableSprite ownedPlayer;
     private boolean sonicSnowboardOverlayActive;
     private boolean sonicSnowboardTouchedGround;
 
@@ -258,6 +258,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     public void primePostStartupWaitForBoardHandoff(AbstractPlayableSprite player) {
+        ownedPlayer = player;
         initialized = true;
         state = State.WAIT_FOR_BOARD_JUMP;
         startupTimer = 0;
@@ -288,6 +289,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     }
 
     private void initializePlayer(AbstractPlayableSprite player) {
+        ownedPlayer = player;
         initialized = true;
         applyInitialPlayerLock(player);
     }
@@ -630,11 +632,13 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         return services().camera().getFocusedSprite();
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        releasePlayerLocks();
+    }
+
     private void releasePlayerLocks() {
-        AbstractPlayableSprite player = focusedPlayer();
-        if (player != null) {
-            releasePlayerLocks(player);
-        }
+        if (ownedPlayer != null) releasePlayerLocks(ownedPlayer);
     }
 
     private void releasePlayerLocks(AbstractPlayableSprite player) {
@@ -644,6 +648,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         player.setHidden(false);
         player.clearForcedInputMask();
         player.clearQueuedControlState();
+        if (ownedPlayer == player) ownedPlayer = null;
     }
 
     private int clampFrame(int frame, int frameCount) {

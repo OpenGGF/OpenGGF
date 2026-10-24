@@ -13,7 +13,6 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import com.openggf.debug.DebugColor;
 import java.util.List;
 
@@ -182,6 +181,11 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         // a2 was advanced past the first word, so first pair is at index 0,1
         this.targetX = signExtend16(waypointData[0]);
         this.targetY = signExtend16(waypointData[1]);
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        releaseControlledPlayer();
     }
 
     @Override
@@ -476,12 +480,17 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance imple
         player.setYSpeed((short) RELEASE_Y_VELOCITY);
     }
 
-    private void cancelTransport() {
+    private void releaseControlledPlayer() {
         if (controlledPlayer != null) {
             ObjectControlState.none().applyTo(controlledPlayer);
             controlledPlayer.setControlLocked(false);
             controlledPlayer.setForcedAnimationId(-1);
         }
+        controlledPlayer = null;
+    }
+
+    private void cancelTransport() {
+        releaseControlledPlayer();
         routine = Routine.WAIT;
         waypointIndex = 0;
         targetX = signExtend16(waypointData[0]);

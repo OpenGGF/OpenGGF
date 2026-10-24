@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -35,8 +36,6 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -341,6 +340,18 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     }
 
     public static final class CaptureCloud extends AbstractObjectInstance implements RewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                ObjectControlState.none().applyTo(player);
+            }
+            visualControlOwners.clear();
+        }
+
         // loc_8A748 starts at $1F, then scans after the underflow.
         private static final int CAPTURE_DELAY_FRAMES = 0x1F;
         private static final int OFF_PHASE_DELETE_DELAY = 0x1F;
@@ -475,7 +486,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         private void applyCaptureState(AbstractPlayableSprite player, int capturedX, int capturedY) {
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
@@ -537,7 +548,6 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         private static final int FLOOR_Y_RADIUS = 0x10;
 
         private AbstractPlayableSprite capturedPlayer;
-        private final List<IceDebris> debris = new ArrayList<>(DEBRIS_COUNT);
         private final SubpixelMotion.State motion;
 
         private int breakTimer = BREAK_TIMER;
@@ -738,6 +748,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public void releasePlayersForVisualDirection() {
+            releaseOwnedControl(0);
+            capturedPlayer = null;
+        }
+
+        @Override
         public void onUnload() {
             releaseOwnedControl(0);
             capturedPlayer = null;
@@ -764,19 +780,19 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         private void spawnDebris() {
+            // loc_8A8BA deletes this block after CreateChild1_Normal. The
+            // independently managed debris owns its lifetime and rewind state.
             for (int i = 0; i < DEBRIS_COUNT; i++) {
                 int[] velocity = VELOCITY_INDEX[i];
                 int debrisSubtype = i * 2;
-                IceDebris child;
                 if (engineSidekickExtension) {
-                    child = new IceDebris(
+                    IceDebris child = new IceDebris(
                             getX(), getY(), debrisSubtype, velocity[0], velocity[1]);
                     services().objectManager().addRewindableAuxiliaryDynamicObject(child);
                 } else {
-                    child = spawnChild(() -> new IceDebris(
+                    spawnChild(() -> new IceDebris(
                             getX(), getY(), debrisSubtype, velocity[0], velocity[1]));
                 }
-                debris.add(child);
             }
         }
 
@@ -805,10 +821,6 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         public AbstractPlayableSprite capturedPlayerForTesting() {
             return capturedPlayer;
-        }
-
-        public int debrisSpawnedForTesting() {
-            return debris.size();
         }
     }
 

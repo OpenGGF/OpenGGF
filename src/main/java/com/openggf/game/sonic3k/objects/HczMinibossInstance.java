@@ -1234,6 +1234,11 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        releaseVortexPlayers();
+    }
+
+    @Override
     public void onUnload() {
         deleteVortexBubbles();
         releaseVortexPlayers();

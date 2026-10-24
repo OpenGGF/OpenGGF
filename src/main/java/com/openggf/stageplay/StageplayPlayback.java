@@ -60,9 +60,9 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
     private static void validateNativeDocument(StageplayDocument document, String boundActor) {
         Objects.requireNonNull(boundActor, "boundActor");
         if (boundActor.isEmpty()) return;
-        if (document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
-                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE))
-            throw new IllegalArgumentException("LIVE scenes own native players in their isolated world; active-player binding requires terrain-only shots");
+        // The isolated world supplies value poses only. The held interactive player is
+        // still borrowed exclusively through CourseControl's visit-bound lease, so
+        // object clearing never changes the native handover contract.
         var actor = document.actors().stream().filter(value -> value.id().equals(boundActor)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Bound actor is missing"));
         if (!document.set().levelProject().isEmpty()
@@ -151,6 +151,9 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
                 throw new IOException("Stageplay assets exceed registration byte budget");
             assets.put(path, encoded);
         }
+        // The isolated native worker decodes the same transaction-loaded authored
+        // terrain bytes. It must never reopen mod paths against a process cwd.
+        assets.putAll(projectBytes);
         var prepared = Map.copyOf(assets);
         // Validate decoration dimensions, slicing and layout before publishing any service.
         // This pass needs neither the native world nor a loaded ROM.
@@ -317,7 +320,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
         public void prepare() { resources.validate(document); try { audio.prepare(document); } catch (IOException failure) { throw new UncheckedIOException(failure); } }
         public void seek(int frame) {
             audio.seek(frame);
-            if (frame < 0) { resources.resetPuppets(); resolved = null; }
+            if (frame < 0) { resources.resetWorld(); resolved = null; }
             else resolveFrame(StageplayTimeline.sample(document, frame));
         }
         public StageplayTimeline.Frame resolveFrame(StageplayTimeline.Frame authored) {
@@ -327,7 +330,7 @@ public final class StageplayPlayback implements GameplayFrameController, RewindS
             audio.playFrame(document, frame);
             audio.playNativeFrame(frame, resources.previewSound(frame));
         }
-        public void stop() { audio.stop(); resources.resetPuppets(); resolved = null; }
+        public void stop() { audio.stop(); resources.resetWorld(); resolved = null; }
         public com.openggf.audio.rewind.AudioLogicalSnapshot captureEntryAudio() { return audio.captureEntry(); }
         public void restoreEntryAudio(com.openggf.audio.rewind.AudioLogicalSnapshot entry) { audio.restoreEntry(entry); }
         public int mappingFrame(StageplayTimeline.ActorPose actor) { return renderer.mappingFrame(actor); }

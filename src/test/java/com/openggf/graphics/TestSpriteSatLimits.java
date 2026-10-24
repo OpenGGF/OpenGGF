@@ -219,6 +219,203 @@ class TestSpriteSatLimits {
         assertThrows(UnsupportedOperationException.class, () -> empty.replayFragments().add(nativePiece));
     }
 
+    @Test void logicalViewportPreservesAlignedContractsWithoutRounding350() {
+        assertThrows(IllegalArgumentException.class, () -> new SpriteSatMaskPostProcessor.Raster(0, 0, 350, 224));
+        assertThrows(IllegalArgumentException.class, () -> new SpriteSatMaskPostProcessor.Raster(0, 0, 350, 224, 320));
+        assertThrows(IllegalArgumentException.class, () -> SpriteSatMaskPostProcessor.Raster.extended(0, 0, 350, 224));
+        assertThrows(IllegalArgumentException.class, () -> SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 319, 224));
+        assertThrows(IllegalArgumentException.class, () -> SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 0));
+        var logical = SpriteSatMaskPostProcessor.LogicalViewport.h40(17, 19, 350, 37);
+        assertEquals(17, logical.x()); assertEquals(19, logical.y());
+        assertEquals(350, logical.width()); assertEquals(37, logical.height());
+        assertEquals(320, logical.hardwareWidth()); assertEquals(20, logical.lineSprites());
+        assertEquals(80, logical.tableSprites());
+        for (var raster : List.of(SpriteSatMaskPostProcessor.Raster.h32(17, 19, 37),
+                SpriteSatMaskPostProcessor.Raster.h40(17, 19, 37),
+                SpriteSatMaskPostProcessor.Raster.extended(17, 19, 640, 37),
+                new SpriteSatMaskPostProcessor.Raster(17, 19, 640, 37, 256))) {
+            var adapted = SpriteSatMaskPostProcessor.LogicalViewport.fromAligned(raster);
+            assertEquals(raster.x(), adapted.x()); assertEquals(raster.y(), adapted.y());
+            assertEquals(raster.width(), adapted.width()); assertEquals(raster.height(), adapted.height());
+            assertEquals(raster.hardwareWidth(), adapted.hardwareWidth());
+            assertEquals(raster.lineSprites(), adapted.lineSprites()); assertEquals(raster.tableSprites(), adapted.tableSprites());
+            var entries = List.of(piece(20, 20, 1, 1, 10), piece(344, 20, 1, 1, 20), piece(384, 20, 1, 1, 30));
+            var expected = SpriteSatMaskPostProcessor.process(entries, false, raster);
+            var actual = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, adapted));
+            assertEquals(expected, actual);
+        }
+        assertTrue(SpriteSatMaskPostProcessor.process(null, false, null).isEmpty());
+        assertTrue(SpriteSatMaskPostProcessor.process(List.of(), false, null).isEmpty());
+    }
+
+    @Test void logical350RetainsWholeIntersectingTileAndExcludesPieceStartingAt350() {
+        for (int origin : new int[]{0, 1000}) {
+            var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(origin, 2000, 350, 224);
+            var edge = piece(origin + 344, 2020, 1, 1, 100);
+            var outside = piece(origin + 350, 2020, 1, 1, 200);
+            var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(List.of(edge, outside), false, viewport));
+            assertEquals(List.of(edge), replay);
+            assertSame(edge, replay.getFirst(), "destination clipping must retain the whole [344,352) source tile");
+            var destinations = new ArrayList<Integer>();
+            replay.getFirst().piece().forEachTile((p, h, v, pal, x, y) -> destinations.add(x));
+            assertEquals(List.of(origin + 344), destinations);
+        }
+    }
+
+    @Test void logical350ChargesWholeDeclaredWidthsForOffscreenEmptyAndSourceClippedArt() {
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224);
+        for (var charged : List.of(piece(350, 20, 4, 1, 0),
+                piece(20, 20, 4, 1, 0).withReplayFragments(List.of()),
+                piece(20, 20, 4, 1, 0).clipRect(2, 1, 0, 1),
+                piece(20, 20, 4, 1, 0).clipRect(4, 0, 0, 1))) {
+            var entries = new ArrayList<SpriteSatEntry>();
+            for (int i = 0; i < 9; i++) entries.add(charged); // 288 declared pixels, independent of resident art.
+            entries.add(piece(350, 20, 3, 1, 10)); // Offscreen still brings the total to 312.
+            entries.add(piece(344, 20, 4, 1, 100));
+            entries.add(piece(40, 20, 1, 1, 200));
+            var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+            var edge = replay.stream().filter(e -> e.piece().firstPatternIndex() == 100).findFirst().orElseThrow();
+            assertEquals(0, edge.piece().startColTile()); assertEquals(1, edge.piece().colCountTiles());
+            assertFalse(replay.stream().anyMatch(e -> e.piece().firstPatternIndex() == 200));
+        }
+    }
+
+    @Test void logical350OverflowKeepsScreenLeftSourceColumnsUnderBothFlips() {
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224);
+        for (boolean h : new boolean[]{false, true}) for (boolean v : new boolean[]{false, true}) {
+            var entries = overflowPrelude(20, 4);
+            entries.removeLast(); entries.add(piece(350, 20, 3, 1, 0)); // 312 pixels.
+            var edge = SpriteSatEntry.of(344, 20, 4, 2, 100, 0, h, v, false, false);
+            entries.add(edge);
+            var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+            var slices = replay.stream().filter(e -> e.piece().firstPatternIndex() == 100).toList();
+            assertEquals(2, slices.size());
+            assertEquals(h ? 3 : 0, slices.getFirst().piece().startColTile());
+            assertEquals(1, slices.getFirst().piece().colCountTiles());
+            assertEquals(28, slices.getFirst().visibleBottomY());
+            assertEquals(4, slices.getLast().piece().colCountTiles());
+            assertEquals(28, slices.getLast().visibleTopY());
+            var firstRowDestinations = new ArrayList<Integer>();
+            slices.getFirst().piece().forEachTile((p, hf, vf, pal, x, y) -> firstRowDestinations.add(x));
+            assertEquals(List.of(344, 344), firstRowDestinations);
+            entries.set(entries.size() - 1, edge.clipRect(h ? 0 : 1, 3, 0, 2));
+            var clipped = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+            var remaining = clipped.stream().filter(e -> e.piece().firstPatternIndex() == 100).toList();
+            assertEquals(1, remaining.size(), "a source clip cannot reassign the sole admitted screen-left column");
+            assertEquals(28, remaining.getFirst().visibleTopY());
+        }
+    }
+
+    @Test void logical350UsesWideRawXWhileNativeRasterKeepsNineBitWrapping() {
+        var entries = List.of(piece(20, 20, 1, 1, 10), piece(384, 20, 1, 1, 20), piece(40, 20, 1, 1, 30));
+        var nativeReplay = SpriteSatMaskPostProcessor.process(entries, false);
+        var wideReplay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false,
+                SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224)));
+        assertEquals(List.of(entries.getFirst()), nativeReplay, "native raw X=512 wraps to an armed X=0 mask");
+        assertEquals(List.of(entries.getFirst(), entries.getLast()), wideReplay, "wide raw X=512 stays nonzero even offscreen");
+        assertEquals(nativeReplay, SpriteSatMaskPostProcessor.process(entries, false));
+    }
+
+    @Test void logical350RetainsPixelCarryCountOnlyAndEmptyLineReset() {
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224);
+        for (boolean fullPixels : new boolean[]{false, true}) {
+            var entries = new ArrayList<SpriteSatEntry>();
+            for (int i = 0; i < (fullPixels ? 10 : 21); i++) entries.add(piece(350, 10, fullPixels ? 4 : 1, 1, 0));
+            entries.add(piece(-128, 18, 1, 1, 100)); entries.add(piece(344, 18, 1, 1, 200));
+            entries.add(piece(-128, 27, 1, 1, 300)); entries.add(piece(344, 27, 1, 1, 400));
+            var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+            var first = replay.getFirst();
+            assertEquals(fullPixels ? 19 : 18, Math.max(first.piece().y(), first.visibleTopY()));
+            assertEquals(18, first.piece().y());
+            if (fullPixels) {
+                assertEquals(19, first.visibleTopY());
+            } else {
+                assertSame(entries.get(entries.size() - 3), first);
+                assertEquals(SpriteSatEntry.UNCLIPPED_TOP, first.visibleTopY());
+                assertEquals(SpriteSatEntry.UNCLIPPED_BOTTOM, first.visibleBottomY());
+            }
+            assertEquals(200, replay.getFirst().piece().firstPatternIndex());
+            assertSame(entries.getLast(), replay.getLast(), "an empty scanline clears carry");
+            assertEquals(replay, List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport)));
+        }
+    }
+
+    @Test void logical350PreservesMarkerGhostDuplicateAndFifoSemantics() {
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224);
+        var ghost = piece(344, 20, 1, 1, 100).withGhost(new SpriteSatEntry.Ghost(.375f, true));
+        var markerEntries = List.of(piece(20, 20, 1, 1, 0x7C0), ghost, piece(20, 20, 1, 1, 0), piece(40, 20, 1, 1, 200));
+        var masked = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(markerEntries, true, viewport));
+        assertEquals(List.of(ghost), masked, "the native companion skips ghosts without masking preceding ghosts");
+        var unmasked = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(markerEntries, false, viewport));
+        assertEquals(markerEntries, unmasked);
+        assertEquals(masked, List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(markerEntries, true, viewport)));
+        var entries = new ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 20; i++) entries.add(piece(20 + i, 40, 1, 1, i));
+        var laterGhost = piece(344, 40, 1, 1, 300).withGhost(ghost.ghost());
+        entries.add(laterGhost); entries.add(piece(100, 40, 1, 1, 400)); entries.add(laterGhost);
+        var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+        assertEquals(22, replay.size());
+        assertEquals(entries.subList(0, 20), replay.subList(0, 20));
+        assertSame(laterGhost, replay.get(20)); assertSame(laterGhost, replay.get(21));
+        var table = new ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 80; i++) table.add(piece(350, 100, 1, 1, 0));
+        table.add(ghost); table.add(piece(344, 20, 1, 1, 500));
+        assertEquals(List.of(ghost), List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(table, false, viewport)));
+    }
+
+    @Test void alignedH32AdapterKeepsItsInnerRasterInside350Presentation() {
+        int presentationWidth = 350;
+        var inner = SpriteSatMaskPostProcessor.Raster.h32((presentationWidth - 256) / 2, 7, 100);
+        var viewport = SpriteSatMaskPostProcessor.LogicalViewport.fromAligned(inner);
+        assertEquals(47, viewport.x()); assertEquals(256, viewport.width()); assertEquals(7, viewport.y());
+        assertEquals(100, viewport.height()); assertEquals(256, viewport.hardwareWidth());
+        var entries = new ArrayList<SpriteSatEntry>();
+        for (int i = 0; i < 17; i++) entries.add(piece(55, 20, 1, 1, i));
+        assertEquals(16, List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport)).size());
+        entries.clear();
+        for (int i = 0; i < 10; i++) entries.add(piece(55, 20, 3, 1, i));
+        entries.add(piece(100, 20, 3, 1, 100));
+        var pixels = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport));
+        assertEquals(2, pixels.getLast().piece().colCountTiles());
+        assertEquals(SpriteSatMaskPostProcessor.process(entries, false, inner), pixels);
+        entries.clear();
+        for (int i = 0; i < 64; i++) entries.add(piece(55, 80, 1, 1, i));
+        entries.add(piece(55, 20, 1, 1, 100));
+        assertFalse(List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(entries, false, viewport)).stream()
+                .anyMatch(e -> e.piece().firstPatternIndex() == 100));
+    }
+
+    @Test void logical350CompositeEdgeRetainsFragmentMetadataAndSourceClips() {
+        var subject = new SpritePresentation.Subject("logical-edge", SpritePresentation.Part.BODY, false, 100);
+        var ghost = new SpriteSatEntry.Ghost(.375f, true);
+        var source = SpriteSatEntry.of(336, 20, 2, 3, 100, 3, true, true, false, false);
+        var fragment = new SpriteSatEntry(4, source.piece().withDebugSource("edge-fragment"))
+                .withGhost(ghost).withPresentationSubject(subject).withTileOcclusionPaletteMask(5)
+                .withPixelOperation(SpriteSatEntry.PixelOperation.SHADOW_15)
+                .withMaskReplayRole(SpriteMaskReplayRole.PRE_MASK_FRONT)
+                .clipRect(0, 1, 1, 1).withVisibleScanlines(29, 35);
+        var outside = piece(352, 20, 1, 3, 200);
+        var group = piece(344, 20, 1, 3, 900).withReplayFragments(List.of(fragment, outside));
+        var replay = List.copyOf(SpriteSatMaskPostProcessor.processLogicalReusable(List.of(group), false,
+                SpriteSatMaskPostProcessor.LogicalViewport.h40(0, 0, 350, 224)));
+        assertEquals(List.of(fragment), replay, "[344,352) must reach fragment expansion whole before destination clipping");
+        var edge = replay.getFirst();
+        assertSame(subject, edge.presentationSubject()); assertSame(ghost, edge.ghost());
+        assertEquals(4, edge.priorityBucket()); assertEquals(5, edge.tileOcclusionPaletteMask());
+        assertEquals(SpriteSatEntry.PixelOperation.SHADOW_15, edge.pixelOperation());
+        assertEquals(SpriteMaskReplayRole.PRE_MASK_FRONT, edge.piece().maskReplayRole());
+        assertEquals("edge-fragment", edge.piece().debugSource()); assertEquals(3, edge.piece().paletteIndex());
+        assertTrue(edge.piece().hFlip()); assertTrue(edge.piece().vFlip());
+        assertEquals(0, edge.piece().startColTile()); assertEquals(1, edge.piece().colCountTiles());
+        assertEquals(1, edge.piece().startRowTile()); assertEquals(1, edge.piece().rowCountTiles());
+        assertEquals(29, edge.visibleTopY()); assertEquals(35, edge.visibleBottomY());
+        var destinations = new ArrayList<Integer>();
+        edge.piece().forEachTile((p, h, v, pal, x, y) -> {
+            assertEquals(101, p); assertEquals(28, y); destinations.add(x);
+        });
+        assertEquals(List.of(344), destinations);
+    }
+
     private static ArrayList<SpriteSatEntry> overflowPrelude(int y, int width) {
         var entries = new ArrayList<SpriteSatEntry>();
         for (int i = 0; i < 10; i++) entries.add(piece(0, y, width, 1, i * width));

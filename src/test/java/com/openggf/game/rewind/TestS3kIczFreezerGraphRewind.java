@@ -2,10 +2,14 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -15,11 +19,16 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -43,11 +52,13 @@ class TestS3kIczFreezerGraphRewind {
 
     @BeforeEach
     void initHeadlessGraphics() {
+        SessionManager.clear();
         GraphicsManager.getInstance().initHeadless();
     }
 
     @AfterEach
     void resetGraphics() {
+        SessionManager.clear();
         GraphicsManager.getInstance().resetState();
     }
 
@@ -224,6 +235,208 @@ class TestS3kIczFreezerGraphRewind {
                 .filter(ObjectManagerSnapshot.DynamicObjectEntry::rewindableAuxiliary)
                 .count());
         assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void retiringBlockReplaysDebrisAllocationAndPlayerRelease(boolean extension) {
+        var mode = SessionManager.openGameplaySession(new Sonic3kGameModule());
+        GameplaySessionFactory.attachManagers(mode, EngineContext.fromLegacySingletonsForBootstrap());
+        DebrisScenario scenario = debrisScenario(extension);
+        Harness harness = scenario.harness();
+        ObjectManager manager = harness.objectManager();
+        var registry = new RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        registry.register(harness.services().rng());
+        ObjectRefId blockId = requireId(manager.captureIdentityContext().requireIdentityTable(), scenario.block());
+        var mainState = harness.camera().getFocusedSprite().captureRewindState();
+        var captiveState = scenario.captive().captureRewindState();
+        CompositeSnapshot snapshot = registry.capture();
+        assertCompactCapture(manager.rewindSnapshottable().capture());
+
+        shatter(scenario, 10);
+        List<DebrisState> uninterrupted = debrisState(manager);
+        long uninterruptedSeed = harness.services().rng().getSeed();
+        assertEquals(12, uninterrupted.size());
+        for (ObjectInstance object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+        var replacementMain = player("replacement-sonic", 0, 0);
+        replacementMain.restoreRewindState(mainState);
+        var replacementCaptive = player("replacement-captive", 0, 0);
+        replacementCaptive.restoreRewindState(captiveState);
+        harness.setPlayer(replacementMain);
+        harness.setSidekicks(extension
+                ? new AbstractPlayableSprite[]{player("native-p2", 0x2600, 0x0340), replacementCaptive}
+                : new AbstractPlayableSprite[]{replacementCaptive});
+
+        registry.restore(snapshot);
+
+        var restoredBlock = objectById(manager, IczFreezerObjectInstance.FrozenPlayerBlock.class, blockId);
+        assertNotSame(scenario.block(), restoredBlock);
+        assertSame(replacementCaptive, restoredBlock.capturedPlayerForTesting());
+        assertTrue(replacementCaptive.isObjectControlled());
+        assertEquals(extension, readBooleanField(restoredBlock, "engineSidekickExtension"));
+        assertEquals(extension, restoredBlock.getSlotIndex() == -1);
+        assertEquals(0, debrisState(manager).size(), "pre-break restore must not invent past debris");
+        shatter(new DebrisScenario(harness, replacementCaptive, restoredBlock), 10);
+        assertEquals(uninterrupted, debrisState(manager),
+                "allocation order, identities, slots and spawn-pass movement must replay exactly");
+        assertEquals(uninterruptedSeed, harness.services().rng().getSeed(), "native allocation RNG must replay too");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,0", "false,7", "false,20", "true,0", "true,7", "true,20"})
+    void nonemptyDebrisRestoresAndReplaysAfterBlockRetirement(boolean extension, int movingTicks) {
+        DebrisScenario scenario = debrisScenario(extension);
+        Harness harness = scenario.harness();
+        ObjectManager manager = harness.objectManager();
+        int blockSlot = scenario.block().getSlotIndex();
+        int originX = scenario.block().getX();
+        int originY = scenario.block().getY();
+        shatter(scenario, 10);
+        List<AbstractObjectInstance> sourceDebris = liveDebris(manager);
+        List<DebrisState> initial = debrisState(manager);
+        assertEquals(12, initial.size());
+        int[][] velocities = {{0x200, -0x200}, {-0x300, -0x200}, {0x300, -0x200},
+                {-0x200, -0x200}, {0, -0x200}, {-0x400, -0x300}, {0x400, -0x300},
+                {0x300, -0x300}, {-0x400, -0x300}, {0x400, -0x300}, {-0x200, -0x200}, {0x200, -0x200}};
+        for (int i = 0; i < initial.size(); i++) {
+            DebrisState debris = initial.get(i);
+            assertEquals(i * 2, debris.subtype(), "native child-table order");
+            assertEquals(extension ? -1 : blockSlot + i + 1, debris.slot());
+            assertEquals(extension, debris.auxiliary());
+            assertNull(debris.ownerModId(), "these are engine-owned objects");
+            assertEquals(velocities[i][0], debris.xVel());
+            assertEquals(velocities[i][1] + (extension ? 0 : 0x38), debris.yVel());
+            assertEquals(originX + (extension ? 0 : velocities[i][0] >> 8), debris.x());
+            assertEquals(originY + (extension ? 0 : velocities[i][1] >> 8), debris.y());
+        }
+        for (int tick = 1; tick <= movingTicks; tick++) stepManager(harness, 10 + tick);
+        List<DebrisState> checkpoint = debrisState(manager);
+        long checkpointSeed = harness.services().rng().getSeed();
+        assertFalse(checkpoint.isEmpty(), "checkpoint must contain actual independently managed debris");
+        if (movingTicks == 20) assertTrue(checkpoint.size() < 12, "exercise partially retired inventory");
+        assertEquals(0, countLive(manager, IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        var registry = new RewindRegistry();
+        registry.register(manager.rewindSnapshottable());
+        registry.register(harness.services().rng());
+        CompositeSnapshot snapshot = registry.capture();
+        ObjectManagerSnapshot captured = manager.rewindSnapshottable().capture();
+        assertEquals(checkpoint.size(), captured.dynamicObjects().size(), "retired block must not be captured");
+        assertCompactCapture(captured);
+
+        List<List<DebrisState>> forward = new ArrayList<>();
+        for (int tick = 1; tick <= 80; tick++) {
+            stepManager(harness, 10 + movingTicks + tick);
+            forward.add(debrisState(manager));
+        }
+        assertTrue(liveDebris(manager).isEmpty(), "uninterrupted debris must complete retirement");
+        assertTrue(sourceDebris.stream().allMatch(ObjectInstance::isDestroyed));
+        assertTrue(sourceDebris.stream().noneMatch(AbstractObjectInstance::isDestroyedRespawnable));
+        assertTrue(manager.getActiveObjects().isEmpty(), "retirement must remove the managed population");
+        // A different break creates same-class objects that the old checkpoint must discard.
+        var divergent = manager.createDynamicObject(() -> new IczFreezerObjectInstance.FrozenPlayerBlock(
+                null, originX, originY, originX, false));
+        writeBooleanField(divergent, "landedOnTerrain", true);
+        writeIntField(divergent, "breakTimer", 0);
+        stepManager(harness, 100);
+        List<AbstractObjectInstance> divergentDebris = liveDebris(manager);
+        assertEquals(12, divergentDebris.size());
+
+        registry.restore(snapshot);
+
+        assertEquals(checkpoint, debrisState(manager), "fresh debris must preserve exact identities, order and state");
+        assertEquals(checkpointSeed, harness.services().rng().getSeed(), "reconstruction must not advance the restored RNG");
+        assertFalse(manager.getActiveObjects().contains(scenario.block()), "retired parent stays retired");
+        assertEquals(0, countLive(manager, IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        for (AbstractObjectInstance restored : liveDebris(manager)) {
+            assertTrue(sourceDebris.stream().noneMatch(old -> old == restored));
+            assertTrue(divergentDebris.stream().noneMatch(old -> old == restored));
+        }
+        for (int tick = 1; tick <= forward.size(); tick++) {
+            stepManager(harness, 10 + movingTicks + tick);
+            assertEquals(forward.get(tick - 1), debrisState(manager), "forward tick " + tick);
+            assertFalse(scenario.captive().isObjectControlled(), "debris must never reacquire the released player");
+        }
+        assertTrue(manager.getActiveObjects().isEmpty());
+        assertEquals(checkpointSeed, harness.services().rng().getSeed(), "independent debris motion consumes no RNG");
+        assertDoesNotThrow(manager::validateRewindReferenceClosure);
+    }
+
+    private record DebrisScenario(Harness harness, TestablePlayableSprite captive,
+                                  IczFreezerObjectInstance.FrozenPlayerBlock block) { }
+
+    private static DebrisScenario debrisScenario(boolean extension) {
+        var main = player("sonic", 0x2600, 0x0340);
+        var captive = player("captive", 0x2410, 0x0340);
+        captive.setCpuControlled(true);
+        Harness harness = Harness.create(main, extension
+                ? List.of(player("native-p2", 0x2600, 0x0340), captive) : List.of(captive));
+        ObjectManager manager = harness.objectManager();
+        var freezer = manager.createDynamicObject(() -> new IczFreezerObjectInstance(FREEZER_SPAWN));
+        var cloud = manager.createDynamicObject(() -> freezer.createCaptureCloudForTesting(0x2400, 0x0330, false));
+        cloud.update(0, main);
+        cloud.update(1, main);
+        var block = cloud.frozenBlockForTesting();
+        assertNotNull(block, "use the real cloud's native/auxiliary capture producer");
+        assertSame(captive, block.capturedPlayerForTesting());
+        assertTrue(captive.isObjectControlled());
+        assertEquals(extension, block.getSlotIndex() == -1);
+        manager.removeDynamicObject(cloud);
+        manager.removeDynamicObject(freezer);
+        // Isolate the landed shatter boundary from level terrain and the long carry route.
+        writeBooleanField(block, "landedOnTerrain", true);
+        NativePositionOps.writeXPosPreserveSubpixel(main, block.getX());
+        NativePositionOps.writeYPosPreserveSubpixel(main, block.getY());
+        main.setAnimationId(2);
+        main.setYSpeed((short) 0x300);
+        return new DebrisScenario(harness, captive, block);
+    }
+
+    private static void shatter(DebrisScenario scenario, int vIntRunCount) {
+        stepManager(scenario.harness(), vIntRunCount);
+        assertTrue(scenario.block().isDestroyed());
+        assertFalse(scenario.block().isDestroyedRespawnable());
+        assertNull(scenario.block().capturedPlayerForTesting());
+        assertFalse(scenario.captive().isObjectControlled());
+        assertFalse(scenario.captive().isObjectControlSuppressesMovement());
+        assertFalse(scenario.captive().isObjectControlAllowsCpu());
+        assertFalse(scenario.captive().isHurt(), "partner shatter must skip timer-expiry damage");
+        assertTrue(scenario.captive().getAir());
+        assertEquals(120, scenario.captive().getInvulnerableFrames());
+        assertEquals(-0x300, scenario.harness().camera().getFocusedSprite().getYSpeed());
+        assertDoesNotThrow(scenario.harness().objectManager()::validateRewindReferenceClosure);
+    }
+
+    private static List<AbstractObjectInstance> liveDebris(ObjectManager manager) {
+        return manager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getName().equals(IczFreezerObjectInstance.class.getName() + "$IceDebris"))
+                .filter(object -> !object.isDestroyed()).map(AbstractObjectInstance.class::cast).toList();
+    }
+
+    private record DebrisState(ObjectRefId id, int slot, int subtype, boolean auxiliary, String ownerModId,
+                               int x, int y, int xSub, int ySub, int xVel, int yVel, int gravity,
+                               int mappingFrame, int animFrame, int animTimer) { }
+
+    private static List<DebrisState> debrisState(ObjectManager manager) {
+        var table = manager.captureIdentityContext().requireIdentityTable();
+        var entries = manager.rewindSnapshottable().capture().dynamicObjects();
+        return liveDebris(manager).stream().map(debris -> {
+            ObjectRefId id = requireId(table, debris);
+            var entry = entries.stream().filter(candidate -> id.equals(candidate.objectId())).findFirst().orElseThrow();
+            assertNull(entry.playerOwner(), "debris has no continuing player ownership");
+            var motion = (SubpixelMotion.State) readObjectField(debris, "motionState");
+            return new DebrisState(id, debris.getSlotIndex(), debris.getSpawn().subtype(), entry.rewindableAuxiliary(),
+                    entry.ownerModId(), debris.getX(), debris.getY(), motion.xSub, motion.ySub, motion.xVel, motion.yVel,
+                    readIntField(debris, "gravity"), readIntField(debris, "mappingFrame"),
+                    readIntField(debris, "animFrame"), readIntField(debris, "animFrameTimer"));
+        }).toList();
+    }
+
+    private static void assertCompactCapture(ObjectManagerSnapshot snapshot) {
+        for (var entry : snapshot.dynamicObjects()) {
+            assertNotNull(entry.state().compactGenericState(), "exercise the actual default compact capture path");
+            assertNull(entry.state().genericState(), "no fallback or custom capture should hide the obligation");
+        }
     }
 
     @Test

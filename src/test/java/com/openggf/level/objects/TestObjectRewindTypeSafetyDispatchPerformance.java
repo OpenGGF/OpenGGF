@@ -108,6 +108,44 @@ class TestObjectRewindTypeSafetyDispatchPerformance {
     }
 
     @Test
+    void explicitContextOverrideKeepsIdentityTableBesideNoArgumentConvenienceWrappers() {
+        var object = new WrappedContextObject();
+        var context = context();
+        for (int i = 0; i < 2; i++) {
+            var snapshot = ObjectRewindTypeSafety.capture(object, context);
+            ObjectRewindTypeSafety.restore(object, snapshot, context);
+        }
+        assertEquals(0, object.noArgumentCalls);
+        assertSame(context, object.capturedContext);
+        assertSame(context, object.restoredContext);
+    }
+
+    @Test
+    void callbackRouterKeepsDefaultAndLegacyStateAndForwardsExplicitContext() {
+        var router = new ObjectCallbackRouter(null);
+        var ordinary = new DefaultRouteObject();
+        var legacy = new LegacyRouteObject();
+        var contextual = new WrappedContextObject();
+        var context = context();
+        for (int i = 0; i < 2; i++) {
+            ordinary.setSlotIndex(17 + i);
+            var ordinarySnapshot = router.captureRewind(ordinary, context);
+            ordinary.setSlotIndex(99);
+            router.restoreRewind(ordinary, ordinarySnapshot, context);
+            assertEquals(17 + i, ordinary.getSlotIndex());
+            var legacySnapshot = router.captureRewind(legacy, context);
+            router.restoreRewind(legacy, legacySnapshot, context);
+            var contextualSnapshot = router.captureRewind(contextual, context);
+            router.restoreRewind(contextual, contextualSnapshot, context);
+        }
+        assertEquals(2, legacy.legacyCaptureCalls);
+        assertEquals(2, legacy.legacyRestoreCalls);
+        assertEquals(0, contextual.noArgumentCalls);
+        assertSame(context, contextual.capturedContext);
+        assertSame(context, contextual.restoredContext);
+    }
+
+    @Test
     void warmDispatchReusesResolvedRouteDescriptor() {
         ObjectRewindTypeSafety.DispatchRoute coldRoute =
                 ObjectRewindTypeSafety.dispatchRoute(CacheIdentityRouteObject.class);
@@ -258,6 +296,27 @@ class TestObjectRewindTypeSafetyDispatchPerformance {
             contextRestoreCalls++;
             lastRestoreContext = context;
             super.restoreRewindState(snapshot, context);
+        }
+    }
+
+    private static final class WrappedContextObject extends RouteObject {
+        int noArgumentCalls;
+        RewindCaptureContext capturedContext, restoredContext;
+        WrappedContextObject() { super("WrappedContextObject"); }
+        @Override public PerObjectRewindSnapshot captureRewindState() {
+            noArgumentCalls++;
+            return captureRewindState(RewindCaptureContext.none());
+        }
+        @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+            noArgumentCalls++;
+            restoreRewindState(snapshot, RewindCaptureContext.none());
+        }
+        @Override public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+            capturedContext = context;
+            return BENCHMARK_SNAPSHOT;
+        }
+        @Override public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+            restoredContext = context;
         }
     }
 

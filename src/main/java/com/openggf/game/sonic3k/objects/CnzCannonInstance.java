@@ -22,7 +22,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -54,6 +53,21 @@ import java.util.List;
 public final class CnzCannonInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, RomObjectCodePointerProvider {
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (capturedPlayer != null) {
+            releaseControl(capturedPlayer, services().objectManager().getFrameCounter());
+            capturedPlayer.setOnObject(false);
+            capturedPlayer.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+            capturedPlayer.setHighPriority(false);
+            capturedPlayer = null;
+        }
+        if (releasedPlayer != null) {
+            releasedPlayer.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+            releasedPlayer = null;
+        }
+    }
+
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
      * ROM {@code Obj_CNZCannon} is installed from the S3K object pointer table at
@@ -64,6 +78,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
      * on the next off-screen on-object frame is {@code $0003}
      * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
+
     @Override
     public int romObjectCodePointerHighWord() {
         return 0x0003;
@@ -295,6 +310,10 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
     }
 
+    private static void releaseControl(AbstractPlayableSprite player, int frameCounter) {
+        player.releaseFromObjectControl(frameCounter);
+    }
+
     private void launchPlayer(AbstractPlayableSprite player, int frameCounter) {
         int launchAngle = ((chamberFrame & 0x0F) << 4) + 0x80;
         short xSpeed = (short) (TrigLookupTable.cosHex(launchAngle) << 4);
@@ -311,7 +330,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         player.setYSpeed(ySpeed);
         player.setGSpeed(xSpeed);
         player.setAir(true);
-        player.releaseFromObjectControl(frameCounter);
+        releaseControl(player, frameCounter);
         player.setOnObject(false);
         player.setJumping(false);
         player.setPriorityBucket(PLAYER_CAPTURE_PRIORITY);

@@ -95,6 +95,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private int contributedZone = -1;
     private ZoneScrollHandler contributedHandler;
 
+    private com.openggf.level.scroll.ScrollProjectionPhase projectionPhase;
+    private BackgroundBuildParameters backgroundBuild;
+    private com.openggf.game.internal.BackgroundColumnProjection backgroundColumns;
+
     private int currentZone = -1;
     private int currentAct = -1;
 
@@ -135,6 +139,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         currentShakeOffsetX = 0;
         currentShakeOffsetY = 0;
         cachedBgCameraX = Integer.MIN_VALUE;
+        projectionPhase = null;
+        backgroundBuild = null;
+        backgroundColumns = null;
         cachedBgPeriodWidth = 512;
         cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
         minScroll = 0;
@@ -378,6 +385,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         int cameraY = cam.getY();
         vscrollFactorFG = (short) cameraY;
 
+        ZoneScrollHandler sampledHandler = null;
         // Native providers and contributed handlers use the same update path.
         if (scrollProvider != null || zoneId == contributedZone) {
             // Reconciliation is not the pending native initialization dispatch.
@@ -386,6 +394,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
             if (!rebuild) initZone(zoneId, actId, cameraX, cameraY);
 
             ZoneScrollHandler handler = getHandler(zoneId);
+            sampledHandler = handler;
             if (handler != null) {
                 if (rebuild && (currentZone != zoneId || currentAct != actId)
                         && !(handler instanceof ScrollOutputRebuilder)
@@ -441,6 +450,89 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
             cachedBgTilemapUpdateMode = BgTilemapUpdateMode.STATIC_WINDOW;
             fillMinimal(cam);
         }
+        freezeProjection(sampledHandler, cam, frameCounter, actId);
+    }
+
+    private void freezeProjection(ZoneScrollHandler handler, Camera camera, int frame, int act) {
+        var level = GameServices.levelOrNull();
+        if (level == null
+                || level.gameModule == null
+                || level.gameModule.getGameService(
+                                com.openggf.level.scroll.DirectedScrollPresentation.class)
+                        == null) {
+            // Ordinary gameplay uses the native
+            // registers directly. Never allocate or query directed descriptor owners.
+            projectionPhase = null;
+            backgroundBuild = null;
+            backgroundColumns = null;
+            return;
+        }
+        backgroundBuild = BackgroundBuildParameters.capture(level);
+        backgroundColumns = level.zoneFeatureProvider
+                instanceof com.openggf.game.internal.BackgroundColumnProjectionSource source
+                ? source.captureBackgroundColumns() : null;
+        var output =
+                new com.openggf.level.scroll.ScrollProjection(
+                        hScroll,
+                        getVScrollPerLineBGForShader(),
+                        getVScrollPerColumnBGForShader(),
+                        getVScrollPerColumnFGForShader(),
+                        vscrollFactorFG,
+                        vscrollFactorBG,
+                        cachedBgCameraX,
+                        cachedBgPeriodWidth,
+                        currentShakeOffsetX,
+                        currentShakeOffsetY,
+                        cachedBgTilemapUpdateMode);
+        var context =
+                new com.openggf.level.scroll.ScrollProjectionContext(
+                        camera.getX(),
+                        camera.getY(),
+                        frame,
+                        act,
+                        camera.getWidth(),
+                        camera.getHeight(),
+                        output);
+        if (handler instanceof com.openggf.level.scroll.ScrollProjectionSource source) {
+            projectionPhase = source.captureProjection(context);
+        } else if (handler == null) {
+            // This is the existing fillMinimal arithmetic, without a native handler to advance.
+            projectionPhase =
+                    view -> {
+                        int[] horizontal = new int[view.height()];
+                        short foreground = (short) -view.cameraX();
+                        short background = (short) (foreground + (view.cameraX() >> 1));
+                        java.util.Arrays.fill(horizontal, packScrollWords(foreground, background));
+                        return new com.openggf.level.scroll.ScrollProjection(
+                                horizontal,
+                                null,
+                                null,
+                                null,
+                                (short) view.cameraY(),
+                                output.backgroundY(),
+                                output.backgroundX(),
+                                output.backgroundPeriod(),
+                                0,
+                                0,
+                                output.tilemapMode());
+                    };
+        } else {
+            // Contributed native handlers remain valid gameplay handlers. Only a directed
+            // sampling request needs the additional, explicit presentation capability.
+            projectionPhase = null;
+        }
+    }
+
+    com.openggf.level.scroll.ScrollProjectionPhase projectionPhase() {
+        return projectionPhase;
+    }
+
+    com.openggf.game.internal.BackgroundColumnProjection backgroundColumnProjection() {
+        return backgroundColumns;
+    }
+
+    BackgroundBuildParameters backgroundBuildParameters() {
+        return backgroundBuild;
     }
 
     /**
@@ -509,6 +601,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      * @param bgVscroll  ending BG vertical scroll (ROM: Camera_BG_Y_pos)
      */
     public void updateForEnding(int zoneId, int actId, int frameCounter, int bgVscroll) {
+        // This separate owner publishes special-ending output, not the ordinary
+        // handler's camera projection. Never pair it with an older directed phase.
+        projectionPhase = null;
+        backgroundBuild = null;
+        backgroundColumns = null;
         java.util.Arrays.fill(hScroll, 0);
         minScroll = Integer.MAX_VALUE;
         maxScroll = Integer.MIN_VALUE;
@@ -663,7 +760,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         return handler != null ? handler.captureRewindState() : null;
     }
 
-    /** Engine load lifecycle: a null contributed handler explicitly retains flat hosted scrolling. */
+    /**
+     * Engine load lifecycle: a null contributed handler explicitly retains flat hosted scrolling.
+     */
     void installContributedHandler(int logicalZone, ZoneScrollHandler handler) {
         if (contributedZone >= 0 || logicalZone >= 0) {
             currentZone = -1;

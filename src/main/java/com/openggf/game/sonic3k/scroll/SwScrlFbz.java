@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 import static com.openggf.level.scroll.M68KMath.negWord;
 
 /** ROM-accurate FBZ indoor/outdoor and Act 2 cloud deformation. */
-public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzCloudPositionSource {
+public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzCloudPositionSource, com.openggf.level.scroll.ScrollProjectionSource {
     private static final int[] INDOOR_HEIGHTS = {
             0x80, 0x40, 0x20, 8, 8, 8, 8, 0x28, 0x30, 8, 4, 4,
             0xB8, 0x30, 0x10, 0x10, 0x30, 0x28, 0x18, 0x10, 0x30,
@@ -60,6 +60,9 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
     private int cloudPositionCount;
     private int lastAct = -1;
     private short vscrollFactorFG;
+    // Resolved native presentation inputs; samplers never invoke the runtime's accumulators.
+    private int presentationMode, presentationDrift, presentationBob;
+    private int presentationOffsetX, presentationOffsetY, presentationShake, presentationForegroundY;
 
     public SwScrlFbz() {
         this(() -> GameServices.hasRuntime()
@@ -102,6 +105,13 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
     }
 
     private void updateIndoor(int cameraX, int cameraY) {
+        presentationMode = 0;
+        composeIndoor(composer, hScrollTable, cameraX, cameraY);
+        cloudPositionCount = 0;
+    }
+
+    private static void composeIndoor(ScrollEffectComposer composer, ScrollValueTable hScrollTable,
+                                      int cameraX, int cameraY) {
         int bgY = (short) cameraY;
         bgY >>= 1;
         bgY -= bgY >> 5;
@@ -116,15 +126,22 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
         composer.setVscrollFactorBG((short) bgY);
         DeformationPlan.applyTableBands(composer, bgY, negWord(cameraX), hScrollTable,
                 INDOOR_HEIGHTS, 0, value -> negWord(value));
-        cloudPositionCount = 0;
     }
 
     private void updateOutdoor(int cameraX, int frameCounter, FbzZoneRuntimeState state) {
-        int bgY = (short) (0x16 + state.outdoorBobOffset());
+        presentationMode = 1;
+        presentationBob = state.outdoorBobOffset();
+        presentationDrift = state.sampleOutdoorHScrollAccumulator(frameCounter);
+        composeOutdoor(composer, hScrollTable, cameraX, presentationBob, presentationDrift);
+        cloudPositionCount = 0;
+    }
+
+    private static void composeOutdoor(ScrollEffectComposer composer, ScrollValueTable hScrollTable,
+                                       int cameraX, int bob, int drift) {
+        int bgY = (short) (0x16 + bob);
         int fixed = ((short) cameraX) << 16;
         fixed >>= 4;
         int step = fixed >> 1;
-        int drift = state.sampleOutdoorHScrollAccumulator(frameCounter);
         for (int index : OUTDOOR_SCATTER) {
             fixed += drift;
             hScrollTable.set(index, (short) (fixed >> 16));
@@ -133,25 +150,22 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
         composer.setVscrollFactorBG((short) bgY);
         DeformationPlan.applyTableBands(composer, bgY, negWord(cameraX), hScrollTable,
                 OUTDOOR_HEIGHTS, 0, value -> negWord(value));
-        cloudPositionCount = 0;
     }
 
     private void updateCloudBoss(int cameraX, int cameraY, int frameCounter, FbzZoneRuntimeState state) {
-        int shake = state.screenShakeLastOffset();
-        int bgY = (short) (cameraY - 0x300 + state.bossBackgroundOffsetY() + shake);
-        int bgX = (short) (cameraX - 0x2600 - state.bossBackgroundOffsetX());
-        int fixed = ((short) bgX) << 16;
-        fixed >>= 4;
-        int step = fixed >> 2;
-        int drift = state.sampleBossHScrollAccumulator(frameCounter);
-        for (int index : CLOUD_SCATTER) {
-            fixed += drift;
-            hScrollTable.set(index, (short) (fixed >> 16));
-            fixed += step;
-        }
+        presentationMode = 2;
+        presentationShake = state.screenShakeLastOffset();
+        presentationOffsetY = state.bossBackgroundOffsetY();
+        presentationOffsetX = state.bossBackgroundOffsetX();
+        presentationDrift = state.sampleBossHScrollAccumulator(frameCounter);
+        presentationBob = state.outdoorBobOffset();
+        presentationForegroundY = state.bossForegroundVScroll();
+        int shake = presentationShake;
+        int bgY = composeCloudBoss(composer, hScrollTable, cameraX, cameraY, presentationOffsetX,
+                presentationOffsetY, shake, presentationForegroundY, presentationDrift);
         int cloudY = (short) (bgY - shake);
         cloudY >>= 1;
-        cloudY = (short) (-(cloudY + shake) + state.outdoorBobOffset());
+        cloudY = (short) (-(cloudY + shake) + presentationBob);
         for (int addressSlot = 0; addressSlot < CLOUD_POSITION_FRAME_DATA.length; addressSlot++) {
             // SetUp_FBZ2BossEvent allocates selectors 9..0 into address slots
             // 0..9. CloudDeform then consumes HScroll words in address order.
@@ -162,9 +176,25 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
             cloudPositionSlots[addressSlot].setPosition(x, y);
         }
         cloudPositionCount = CLOUD_POSITION_FRAME_DATA.length;
+    }
+
+    private static int composeCloudBoss(ScrollEffectComposer composer, ScrollValueTable hScrollTable,
+                                        int cameraX, int cameraY, int offsetX, int offsetY, int shake,
+                                        int foregroundY, int drift) {
+        int bgY = (short) (cameraY - 0x300 + offsetY + shake);
+        int bgX = (short) (cameraX - 0x2600 - offsetX);
+        int fixed = ((short) bgX) << 16;
+        fixed >>= 4;
+        int step = fixed >> 2;
+        for (int index : CLOUD_SCATTER) {
+            fixed += drift;
+            hScrollTable.set(index, (short) (fixed >> 16));
+            fixed += step;
+        }
         composer.setVscrollFactorBG((short) bgY);
-        composer.setVscrollFactorFG((short) state.bossForegroundVScroll());
+        composer.setVscrollFactorFG((short) foregroundY);
         composer.fillPackedScrollWords(0, composer.visibleLineCount(), negWord(bgX), negWord(cameraX));
+        return bgY;
     }
 
     @Override public short getVscrollFactorFG() { return vscrollFactorFG; }
@@ -266,4 +296,45 @@ public final class SwScrlFbz extends AbstractZoneScrollHandler implements FbzClo
             return "CloudPosition[x=" + x + ", y=" + y + ", mappingFrame=" + mappingFrame + ']';
         }
     }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int mode = presentationMode, drift = presentationDrift, bob = presentationBob;
+        int offsetX = presentationOffsetX, offsetY = presentationOffsetY;
+        int shake = presentationShake, foregroundY = presentationForegroundY;
+        int[] nativeCloudX = new int[cloudPositionSlots.length], nativeCloudY = new int[cloudPositionSlots.length];
+        for (int slot = 0; slot < cloudPositionSlots.length; slot++) {
+            nativeCloudX[slot] = cloudPositionSlots[slot].x();
+            nativeCloudY[slot] = cloudPositionSlots[slot].y();
+        }
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            var table = ScrollValueTable.ofLength(256);
+            if (mode == 2) composeCloudBoss(output, table, view.cameraX(), view.cameraY(), offsetX,
+                    offsetY, shake, foregroundY, drift);
+            else if (mode == 1) composeOutdoor(output, table, view.cameraX(), bob, drift);
+            else composeIndoor(output, table, view.cameraX(), view.cameraY());
+            output.setVscrollFactorFG((short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()));
+            var positions = new java.util.LinkedHashMap<com.openggf.level.scroll.ScrollSpriteKey,
+                    com.openggf.level.scroll.ScrollSpritePosition>();
+            for (int slot = 0; slot < nativeCloudX.length; slot++) {
+                int screenX = nativeCloudX[slot], screenY = nativeCloudY[slot];
+                if (mode == 2) {
+                    var cloud = computeBossCloudPosition(9 - slot, slot, table.get(slot),
+                            output.getVscrollFactorBG(), shake, bob);
+                    screenX = cloud.x(); screenY = cloud.y();
+                }
+                positions.put(new com.openggf.level.scroll.ScrollSpriteKey("s3k/fbz-cloud", slot),
+                        new com.openggf.level.scroll.ScrollSpritePosition(
+                                (view.cameraX() + screenX - 0x80) & 0xFFFF,
+                                (view.cameraY() + screenY - 0x80) & 0xFFFF));
+            }
+            return new com.openggf.level.scroll.ScrollProjection(output.packedScrollWords(), null, null, null,
+                    output.getVscrollFactorFG(), output.getVscrollFactorBG(), context.nativeOutput().backgroundX(),
+                    context.nativeOutput().backgroundPeriod(), context.nativeOutput().shakeX(), context.nativeOutput().shakeY(),
+                    context.nativeOutput().tilemapMode()).withSpritePositions(positions);
+        };
+    }
+
 }

@@ -17,10 +17,9 @@ belongs to the game. Choose the source workflow from what the film must show:
   Use [trace-capture](../trace-capture/SKILL.md) for an existing trace replay.
 - A hybrid can combine these, with provenance identifying each source. Stageplay
   `timeline` samples describe authored intent; physical actors remain `UNRESOLVED`.
-  `simulate` with `TERRAIN_ONLY` measures native actor physics on detached static
-  terrain, without placed-object AI, rings or zone events. With `LIVE`, it measures
-  a shared native world: actors, placed objects, rings and observed native events.
-  LIVE evidence supports the interactions actually observed from authored shot
+  `simulate` measures one shared native world: actors, placed objects, rings and
+  observed native events. Shots that clear objects keep terrain, rings and events.
+  Its evidence supports the interactions actually observed from authored shot
   setups; it does not establish a continuous cold route or ROM parity.
 
 Follow [gameplay-highlights](../gameplay-highlights/SKILL.md) for honest labelling,
@@ -259,12 +258,12 @@ Read the Stageplay first-creator lesson before choosing the teaching sequence.
   `GameplayCaptureTool --audio` records music and SFX as one mix, and there is
   no SFX-only stem. Under an editorial bed, capture silently and add ROM
   stingers rendered with `FmSfxRenderTool --sfx <id> --paced`.
-  Stageplay exports combine authored cues with native SFX in LIVE shots; avoid mixing that soundtrack
+  Stageplay exports combine authored cues with native world SFX; avoid mixing that soundtrack
   with a second unplanned bed in the compositor.
 - Gameplay start positions must be real for the act; disclose debug jumps and
-  positioned starts. Stageplay shots have authored spawns and cuts under either
-  `TERRAIN_ONLY` or `LIVE`; retain the screenplay, canonical scene, per-shot world
-  policy and labelled timeline/simulation JSONL. Normal gameplay CSV records a
+  positioned starts. Stageplay shots have authored spawns and cuts in one native
+  world; retain the screenplay, canonical scene, per-shot object clear/removal
+  commands and labelled timeline/simulation JSONL. Normal gameplay CSV records a
   gameplay run with its actual input and entry method. Do not imply uninterrupted
   gameplay from staged native interactions or positioned excerpts.
 - Make a contact sheet of each clip, for example Slay's `sheet.py` or
@@ -290,8 +289,10 @@ movement: destinations/urgency and jump button holds drive native acceleration,
 terrain collision, animation and landing. Do not draw a fake jump arc with position
 keys. Inspect `simulate` JSONL for actual arrival/blocked state, then review feet,
 facing and accessories in motion. Poser mode is for deliberate nonphysical staging;
-there is no universal pathfinder. `TERRAIN_ONLY` omits placed-object AI, rings and
-zone events; `LIVE` runs the shared native world through production owners. Author
+the route helper is a basic planner, not a universal pathfinder: it reports failures
+rather than finding every detour, and both editors draw its observed path for review
+before Apply. Clearing objects removes placed-object AI; rings and zone events keep
+running in the shared native world. Author
 routes and bounded waits, then check native world telemetry for support, pickups,
 hurt and abilities. A listening character should visibly react where
 the line calls for it; an entire idle cast weakens a story about their interaction.
@@ -331,8 +332,8 @@ Do the steps in this order:
 
 1. For a compositor edit, `promo_kit.py sheet edit.py 30` makes a five-column
    sheet, one frame every half second. For Stageplay, inspect authored timeline
-   samples, policy-specific simulation JSONL and source frames at the action,
-   speaking and transition boundaries. LIVE claims need `sample.world` evidence.
+   samples, simulation JSONL and source frames at the action,
+   speaking and transition boundaries. Native interaction claims need `sample.world` evidence.
 2. Render transition midpoints and full layouts, then watch their complete motion
    at the intended output size and cadence. Include camera travel, character and
    accessory animation, entrances/exits, dialogue reveal and listener reactions.
@@ -345,7 +346,7 @@ Do the steps in this order:
    playback.
 6. Archive in OpenGGF-Media as gameplay-highlights requires: applicable edit file,
    brief, beat/shot sheet, capture scripts and chapters, plus Stageplay screenplay,
-   canonical scene and labelled authored/policy-specific simulation JSONL when used. A direct Stageplay render does
+   canonical scene and labelled authored/simulation JSONL when used. A direct Stageplay render does
    not waive the promo archive requirement.
 
 ## Screen grammar
@@ -451,11 +452,10 @@ to preserve eyelines, speaker identity and the timing of a reaction.
 - A push transition travels the way the action moves. If Sonic runs right,
   the next shot pushes in from the right, using `tdir="left"`.
 - Divider lean, stripe angle and wipe slant agree with each other.
-- In Stageplay `TERRAIN_ONLY`, camera x/y can pan while zoom holds until its next
-  key. Author stable integer framing and use cuts to change it. Imported static
-  fractional values remain compatible. `LIVE` uses fixed zoom 1 with authored pans
-  or actor/group follow; use export scale for larger output. Do not animate
-  fractional nearest-neighbour source zoom.
+- Stageplay animates camera position and zoom with HOLD / LINEAR / SMOOTH keys and
+  filters the composed world picture before drawing text. Hold integer framing where
+  a pause must be pixel-stable, and review every animated zoom in motion at output
+  size. Directed cameras stay within the level's native bounds.
 - The compositor's `cam_move`, `cam_slam` and punch zooms are editorial effects
   on captured frames. `game_view` uses an integer nearest-neighbour enlargement
   followed by a BOX area filter, so its fractional framing is filtered, not
@@ -578,7 +578,7 @@ When the user gives feedback, change the cause, not the symptom. If they say
 is not. Record their words and the response in the production README, as the
 archive does for every revision.
 
-For Stageplay LIVE promos, require native world telemetry beside the source:
+For Stageplay promos, require native world telemetry beside the source:
 boarding/riding/leaving support, collision pickups, hazard hurt/ring loss/recovery,
 and flight/glide/landing. Do not advertise an animation, placement or counter as an
-interaction without that evidence. Keep zoom one and watch complete moving footage.
+interaction without that evidence. Watch complete moving footage, including every animated zoom.

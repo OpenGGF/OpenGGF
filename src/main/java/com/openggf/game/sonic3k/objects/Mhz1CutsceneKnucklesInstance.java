@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -25,7 +26,6 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 
 /**
@@ -37,6 +37,10 @@ import java.util.List;
  */
 public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_WAIT_PLAYER = 0x02;
     private static final int ROUTINE_WAIT_LANDING = 0x04;
@@ -137,6 +141,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         if (playerEntity instanceof AbstractPlayableSprite playable) {
             playable.setDirection(Direction.RIGHT);
             playable.setRenderFlips(false, playable.getRenderVFlip());
+            directedControlPlayers.add(playable);
             playable.setControlLocked(true);
             playable.clearLogicalInputState();
             playable.clearForcedInputMask();
@@ -190,10 +195,21 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            player.setControlLocked(false);
+            player.clearLogicalInputState();
+            player.clearForcedInputMask();
+        }
+        directedControlPlayers.clear();
+    }
+
     private void routineCleanup(PlayableEntity playerEntity) {
         workspaceRoutine = ROUTINE_INIT;
         if (playerEntity instanceof AbstractPlayableSprite playable) {
             playable.setControlLocked(false);
+            directedControlPlayers.remove(playable);
             playable.clearLogicalInputState();
             playable.clearForcedInputMask();
         }
@@ -312,6 +328,11 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
 
     private static final class Mhz1CutscenePlayerTwoStopper extends AbstractObjectInstance
             implements RewindRecreatable {
+
+        private final PlayerControlOwners directedControlPlayers =
+                new PlayerControlOwners();
+
+
         private Mhz1CutsceneKnucklesInstance owner;
         private boolean locked;
 
@@ -378,7 +399,15 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
         public void appendRenderCommands(List<GLCommand> commands) {
         }
 
-        private static void lockSidekick(AbstractPlayableSprite sidekick) {
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (AbstractPlayableSprite player : directedControlPlayers.players())
+                releaseSidekick(player);
+            directedControlPlayers.clear();
+        }
+
+        private void lockSidekick(AbstractPlayableSprite sidekick) {
+            directedControlPlayers.add(sidekick);
             sidekick.setControlLocked(true);
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {
@@ -390,7 +419,8 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
             stopSidekick(sidekick);
         }
 
-        private static void releaseSidekick(AbstractPlayableSprite sidekick) {
+        private void releaseSidekick(AbstractPlayableSprite sidekick) {
+            directedControlPlayers.remove(sidekick);
             sidekick.setControlLocked(false);
             sidekick.clearLogicalInputState();
             if (sidekick.getCpuController() != null) {

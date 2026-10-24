@@ -45,7 +45,9 @@ public final class SwScrlLrz3 extends SwScrlS3kDefault {
                 GameServices.hasRuntime() && GameServices.gameState().isEndOfLevelFlag());
     }
 
-    /** Pure rendering boundary also used by source-table tests. Event stages have a separate owner. */
+    /**
+     * Pure rendering boundary also used by source-table tests. Event stages have a separate owner.
+     */
     void render(int[] buffer, int cameraX, int cameraY, int frame, LrzZoneRuntimeState state,
                 int width, boolean endOfLevel) {
         loadShimmer(); resetScrollTracking();
@@ -89,7 +91,85 @@ public final class SwScrlLrz3 extends SwScrlS3kDefault {
         }
     }
 
-    @Override public short[] getPerColumnVScrollBG() { return columnMode ? lavaColumns : null; }
+    @Override public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        // The native dispatch already loaded the ROM shimmer. Freeze it and the resolved
+        // event gates; director samples must neither publish deformation words nor run events.
+        short[] frozenShimmer = shimmer.clone();
+        var nativeState = state();
+        int stage = nativeState == null ? 0 : nativeState.backgroundRoutine();
+        int savedX = nativeState == null ? 0 : nativeState.savedBackgroundCameraX();
+        int savedY = nativeState == null ? 0 : nativeState.savedBackgroundCameraY();
+        boolean heat =
+                nativeState != null
+                        && nativeState.bossAct().foregroundRoutine() >= 8
+                        && !nativeState.bossAct().capsuleOpened()
+                        && !(GameServices.hasRuntime()
+                                && GameServices.gameState().isEndOfLevelFlag());
+        boolean centered = nativeState != null && nativeState.centerNativeArenaCamera();
+        // Freeze the native boss's 192-byte lava-height RAM, including its edge clamp.
+        int[] heights = new int[192];
+        if (nativeState != null) {
+            for (int i = 0; i < heights.length; i++)
+                heights[i] = nativeState.bossAct().lavaHeight(i);
+        }
+        int copyDX = foregroundY - (short) context.cameraY();
+        int copyX =
+                GameServices.hasRuntime() && nativeState != null
+                        ? GameServices.camera().getXCopy() - context.cameraX()
+                        : 0;
+        return view -> {
+            int x = view.cameraX() + copyX;
+            int y = (short) (view.cameraY() + copyDX);
+            boolean distant = stage == 0 || stage == 8;
+            int bgX = distant ? (short) x >> 4 : (short) (x - 0x700);
+            int bgY = distant ? ((short) y >> 4) + 0x10 : (short) (y - 0x500);
+            if (distant && savedX != 0) {
+                bgX = (short) savedX;
+                bgY = (short) savedY;
+            }
+            int[] horizontal = new int[view.height()];
+            int fgPhase = ((y + 2 * context.frameCounter()) & 0x3E) >> 1;
+            int bgPhase = ((bgY + context.frameCounter()) & 0x3E) >> 1;
+            for (int line = 0; line < horizontal.length; line++) {
+                short fg = (short) (-x + (heat ? frozenShimmer[(fgPhase + line) & 31] : 0));
+                short bg = (short) (-bgX + (heat ? frozenShimmer[(bgPhase + line) & 31] : 0));
+                horizontal[line] = (fg & 65535) << 16 | bg & 65535;
+            }
+            short[] columns = null;
+            if (stage == 12) {
+                columns = new short[(view.width() + 15) / 16];
+                int inset =
+                        centered ? com.openggf.camera.NativeViewportFraming.inset(view.width()) : 0;
+                for (int i = 0; i < columns.length; i++) {
+                    columns[i] =
+                            (short)
+                                    (heights[
+                                                    Math.clamp(
+                                                            19 + 8 * i - inset / 2,
+                                                            0,
+                                                            heights.length - 1)]
+                                            - 0x30);
+                }
+            }
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    null,
+                    columns,
+                    null,
+                    (short) y,
+                    (short) bgY,
+                    bgX - 1,
+                    Math.max(512, (view.width() + 31) & ~15),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
+    }
+
+    @Override
+    public short[] getPerColumnVScrollBG() { return columnMode ? lavaColumns : null; }
     @Override public short getVscrollFactorFG() { return foregroundY; }
     @Override public int getBgCameraX() { return backgroundX - 1; }
     @Override public int getBgPeriodWidth() {

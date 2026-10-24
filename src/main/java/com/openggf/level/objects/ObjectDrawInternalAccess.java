@@ -65,7 +65,7 @@ public final class ObjectDrawInternalAccess {
         void populateBuckets(Collection<ObjectInstance> active, List<ObjectInstance> dynamic,
                 NativeSpriteSubmissionQueue queue) {
             ObjectRenderParts.populateBuckets(active, dynamic, queue, currentOwner, externalResolver,
-                    unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
+                    manager.stageplayDirection, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
 
         void drawLowPriority() {
@@ -157,9 +157,8 @@ public final class ObjectDrawInternalAccess {
             // Native queue entries already resolve reserved ring slots through the live resolver.
             // Legacy anchoring cannot emit those slots twice or sort an explicit FIFO by SST.
             var nativeSlots = new java.util.HashSet<Integer>();
-            for (var cachedBucket : unifiedBuckets) {
-                for (var entry : cachedBucket) if (entry.nativeSubmission()) nativeSlots.add(entry.slot());
-            }
+            var queue = manager.nativeSpriteSubmissions();
+            for (int ordinal = 0; ordinal < queue.size(); ordinal++) nativeSlots.add(queue.slotAt(ordinal));
             if (!nativeSlots.isEmpty()) {
                 external = external.stream().filter(emission -> !nativeSlots.contains(emission.slot())).toList();
             }

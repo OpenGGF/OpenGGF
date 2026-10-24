@@ -425,6 +425,9 @@ public interface ObjectInstance {
         return false;
     }
 
+    /** Releases only owned player control before a director suspends or retires this routine. */
+    default void releasePlayersForVisualDirection() { }
+
     /**
      * Called when this object is being unloaded from the active object list.
      * Override to perform cleanup when the object goes off-screen or is removed.

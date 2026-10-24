@@ -5,6 +5,9 @@ import com.openggf.game.GameServices;
 import com.openggf.game.internal.CheckpointBackgroundScroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 import java.util.logging.Logger;
@@ -28,7 +31,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * REV01 GHZ uses bg3screenposx (96/256 speed) and bg2screenposx (128/256 speed),
  * plus three auto-scroll cloud counters.
  */
-public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
+public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler, ScrollProjectionSource {
 
     private static final Logger LOG = Logger.getLogger(SwScrlGhz.class.getName());
 
@@ -137,78 +140,8 @@ public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1Checkp
         cloudLayer2Counter = cloudFrames * 0x0000C000;
         cloudLayer3Counter = cloudFrames * 0x00008000;
 
-        // Extract integer pixel positions (high word of 16.16)
-        int bg3X = (int) (bg3XPos >> 16);
-        int bg2X = (int) (bg2XPos >> 16);
-
-        // d4 = max(0, 0x20 - ((screenposy & 0x7FF) >> 5))
-        int d4 = 0x20 - ((cameraY & 0x7FF) >> 5);
-        if (d4 < 0) {
-            d4 = 0;
-        }
-        composer.setVscrollFactorBG((short) d4);
-
-        // FG scroll = -screenposx (constant for all lines)
-        short fgScroll = negWord(cameraX);
-
-        int lineIndex = 0;
-
-        // ==================== Cloud + mountain bands ====================
-        short cloud1Offset = (short) (cloudLayer1Counter >> 16);
-        short cloud2Offset = (short) (cloudLayer2Counter >> 16);
-        short cloud3Offset = (short) (cloudLayer3Counter >> 16);
-
-        // Upper clouds: 32-d4 lines
-        lineIndex = fillBand(lineIndex, Math.max(0, 0x20 - d4), fgScroll,
-                negWord(bg3X + cloud1Offset));
-        // Middle clouds: 16 lines
-        lineIndex = fillBand(lineIndex, 16, fgScroll, negWord(bg3X + cloud2Offset));
-        // Lower clouds: 16 lines
-        lineIndex = fillBand(lineIndex, 16, fgScroll, negWord(bg3X + cloud3Offset));
-        // Mountains: 48 lines
-        lineIndex = fillBand(lineIndex, 48, fgScroll, negWord(bg3X));
-
-        // ==================== Section 2: BG2 (distant hills) ====================
-        // 40 lines (0x28) with BG = -bg2X
-        lineIndex = fillBand(lineIndex, 40, fgScroll, negWord(bg2X));
-
-        // ==================== Section 3: Perspective interpolation ====================
-        // (0x48 + d4) lines, interpolating from bg2X to cameraX
-        // over 0x68 (104) conceptual divisions.
-        //
-        // From disassembly (REV01):
-        //   d2 = screenposx - bg2screenposx (distance to interpolate)
-        //   increment = (d2 << 8) / 0x68 << 8 (16.16 fixed point per line)
-        //   start = bg2screenposx (16.16)
-        int section3Count = 0x48 + d4;
-        if (section3Count > 0 && lineIndex < VISIBLE_LINES) {
-            // Start value: bg2screenposx (negated for scroll direction)
-            int startVal = bg2X;
-            // End value: screenposx (REV01)
-            int endVal = cameraX;
-
-            // Calculate per-line increment in 16.16 fixed point
-            int diff = endVal - startVal;
-            long increment16 = 0;
-            if (diff != 0) {
-                // Matching disasm: (diff << 8) / 0x68, then << 8
-                // Combined: (diff << 16) / 0x68
-                increment16 = ((long) diff << 16) / 0x68;
-            }
-
-            // Start in 16.16 fixed point
-            long currentVal = (long) startVal << 16;
-
-            int limit = Math.min(VISIBLE_LINES, lineIndex + section3Count);
-            for (; lineIndex < limit; lineIndex++) {
-                int bgPixel = (int) (currentVal >> 16);
-                short bgScroll = negWord(bgPixel);
-
-                composer.writePackedScrollWord(lineIndex, fgScroll, bgScroll);
-
-                currentVal += increment16;
-            }
-        }
+        compose(composer, cameraX, cameraY, bg2XPos, bg3XPos,
+                cloudLayer1Counter, cloudLayer2Counter, cloudLayer3Counter);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -218,6 +151,7 @@ public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1Checkp
         // One-time diagnostic dump to verify scroll state against ROM
         if (!firstFrameLogged) {
             firstFrameLogged = true;
+            int d4 = composer.getVscrollFactorBG();
             int bg3XInt = (int) (bg3XPos >> 16);
             int bg2XInt = (int) (bg2XPos >> 16);
             LOG.info("SwScrlGhz first frame: cameraX=" + cameraX + " cameraY=" + cameraY +
@@ -234,11 +168,11 @@ public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1Checkp
         }
     }
 
-    private int fillBand(int lineIndex, int lineCount, short fgScroll, short bgScroll) {
-        if (lineCount <= 0 || lineIndex >= VISIBLE_LINES) {
+    private static int fillBand(ScrollEffectComposer composer, int lineIndex, int lineCount, short fgScroll, short bgScroll) {
+        if (lineCount <= 0 || lineIndex >= composer.visibleLineCount()) {
             return lineIndex;
         }
-        int writeCount = Math.min(lineCount, VISIBLE_LINES - lineIndex);
+        int writeCount = Math.min(lineCount, composer.visibleLineCount() - lineIndex);
         composer.fillPackedScrollWords(lineIndex, writeCount, fgScroll, bgScroll);
         return lineIndex + writeCount;
     }
@@ -365,4 +299,98 @@ public class SwScrlGhz extends AbstractZoneScrollHandler implements Sonic1Checkp
         bg2XPos = (long) state.bg2X() << 16;
         bg3XPos = (long) state.bg3X() << 16;
     }
+
+    private static void compose(ScrollEffectComposer composer, int cameraX, int cameraY,
+                                long bg2XPos, long bg3XPos, int cloudLayer1Counter,
+                                int cloudLayer2Counter, int cloudLayer3Counter) {
+        // Extract integer pixel positions (high word of 16.16)
+        int bg3X = (int) (bg3XPos >> 16);
+        int bg2X = (int) (bg2XPos >> 16);
+
+        // d4 = max(0, 0x20 - ((screenposy & 0x7FF) >> 5))
+        int d4 = 0x20 - ((cameraY & 0x7FF) >> 5);
+        if (d4 < 0) {
+            d4 = 0;
+        }
+        composer.setVscrollFactorBG((short) d4);
+
+        // FG scroll = -screenposx (constant for all lines)
+        short fgScroll = negWord(cameraX);
+
+        int lineIndex = 0;
+
+        // ==================== Cloud + mountain bands ====================
+        short cloud1Offset = (short) (cloudLayer1Counter >> 16);
+        short cloud2Offset = (short) (cloudLayer2Counter >> 16);
+        short cloud3Offset = (short) (cloudLayer3Counter >> 16);
+
+        // Upper clouds: 32-d4 lines
+        lineIndex = fillBand(composer, lineIndex, Math.max(0, 0x20 - d4), fgScroll,
+                negWord(bg3X + cloud1Offset));
+        // Middle clouds: 16 lines
+        lineIndex = fillBand(composer, lineIndex, 16, fgScroll, negWord(bg3X + cloud2Offset));
+        // Lower clouds: 16 lines
+        lineIndex = fillBand(composer, lineIndex, 16, fgScroll, negWord(bg3X + cloud3Offset));
+        // Mountains: 48 lines
+        lineIndex = fillBand(composer, lineIndex, 48, fgScroll, negWord(bg3X));
+
+        // ==================== Section 2: BG2 (distant hills) ====================
+        // 40 lines (0x28) with BG = -bg2X
+        lineIndex = fillBand(composer, lineIndex, 40, fgScroll, negWord(bg2X));
+
+        // ==================== Section 3: Perspective interpolation ====================
+        // (0x48 + d4) lines, interpolating from bg2X to cameraX
+        // over 0x68 (104) conceptual divisions.
+        //
+        // From disassembly (REV01):
+        //   d2 = screenposx - bg2screenposx (distance to interpolate)
+        //   increment = (d2 << 8) / 0x68 << 8 (16.16 fixed point per line)
+        //   start = bg2screenposx (16.16)
+        int section3Count = Math.max(0, composer.visibleLineCount() - lineIndex);
+        if (section3Count > 0 && lineIndex < composer.visibleLineCount()) {
+            // Start value: bg2screenposx (negated for scroll direction)
+            int startVal = bg2X;
+            // End value: screenposx (REV01)
+            int endVal = cameraX;
+
+            // Calculate per-line increment in 16.16 fixed point
+            int diff = endVal - startVal;
+            long increment16 = 0;
+            if (diff != 0) {
+                // Matching disasm: (diff << 8) / 0x68, then << 8
+                // Combined: (diff << 16) / 0x68
+                increment16 = ((long) diff << 16) / 0x68;
+            }
+
+            // Start in 16.16 fixed point
+            long currentVal = (long) startVal << 16;
+
+            int limit = Math.min(composer.visibleLineCount(), lineIndex + section3Count);
+            for (; lineIndex < limit; lineIndex++) {
+                int bgPixel = (int) (currentVal >> 16);
+                short bgScroll = negWord(bgPixel);
+
+                composer.writePackedScrollWord(lineIndex, fgScroll, bgScroll);
+
+                currentVal += increment16;
+            }
+        }
+
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long captured2 = bg2XPos, captured3 = bg3XPos;
+        int cloud1 = cloudLayer1Counter, cloud2 = cloudLayer2Counter, cloud3 = cloudLayer3Counter;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX();
+            long x2 = captured2 + (long) dx * 32768, x3 = captured3 + (long) dx * 24576;
+            var output = new ScrollEffectComposer(view.height());
+            compose(output, view.cameraX(), view.cameraY(), x2, x3, cloud1, cloud2, cloud3);
+            int bg3 = (int) (x3 >> 16);
+            return Sonic1ProjectionOutput.finish(context, view, output, bg3,
+                    requiredBgPeriodWidth(view.cameraX(), bg3, cloud1, cloud2, cloud3, view.width()));
+        };
+    }
+
 }

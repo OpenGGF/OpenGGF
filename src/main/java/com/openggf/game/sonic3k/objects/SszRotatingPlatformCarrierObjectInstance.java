@@ -96,6 +96,13 @@ public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObje
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        releaseDirectedPlayer(query.mainPlayerOrNull(), 0);
+        releaseDirectedPlayer(query.nativeP2OrNull(), 1);
+    }
+
+    @Override
     public SszRotatingPlatformCarrierObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new SszRotatingPlatformCarrierObjectInstance(ctx.spawn());
     }
@@ -131,6 +138,16 @@ public final class SszRotatingPlatformCarrierObjectInstance extends AbstractObje
         servicePlayer(0, player);
         // lea (Player_2).w,a1: the routine's second pass is the native Player 2 slot.
         servicePlayer(1, services().playerQuery().nativeP2OrNull());
+    }
+
+    private void releaseDirectedPlayer(PlayableEntity entity, int slot) {
+        if (!(entity instanceof AbstractPlayableSprite player)) return;
+        if (state(slot) != 0) SszRotatingPlatformObjectInstance.releaseControl(player, services(), this);
+        setState(slot, 0);
+        if (latched(slot)) {
+            setLatched(slot, false);
+            player.setPriorityBucket(RenderPriority.fromS3kWord(PRIORITY_NEAR));
+        }
     }
 
     /** One {@code loc_45F74} call. */

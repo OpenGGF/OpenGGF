@@ -1,0 +1,1484 @@
+package com.openggf.level.objects;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutators.ObjectHeadRole;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.StageplayObjectDirection.*;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+class TestStageplayObjectDirection {
+    @Test
+    void directedNativeGraphSkipsRoutineContactBookkeepingAndUnloadThenResumesAtOriginalAnchor() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        TestObject child = root.child();
+        direction.direct(root, heldTemplate(), new Direction(900, 400, true, true, 0, -1));
+        assertTrue(direction.suspended(root));
+        assertTrue(direction.suspended(child));
+        new ObjectExecutionController(fixture.objects).execute(root, null, List.of(), false, false);
+        new ObjectExecutionController(fixture.objects)
+                .execute(child, null, List.of(), false, false);
+        fixture.objects.snapshotTouchResponseState();
+        fixture.objects.refreshPostCameraRenderState();
+        fixture.objects.runPostPlayerHooks(null, 100);
+        assertTrue(fixture.objects.getSolidProviderObjects().isEmpty());
+        assertTrue(fixture.objects.getTouchResponseObjects().isEmpty());
+        assertTrue(
+                fixture.objects
+                        .solidContacts()
+                        .processParticipantCheckpoint(root, mock(PlayableEntity.class), false)
+                        .perPlayer()
+                        .isEmpty());
+        fixture.objects.update(60000, null, List.of(), 0, false);
+        assertEquals(0, root.updates + child.updates);
+        assertEquals(0, root.snapshots + child.snapshots);
+        assertEquals(0, root.refreshes + child.refreshes);
+        assertEquals(0, root.unloads + child.unloads);
+        assertEquals(100, root.getX());
+        assertTrue(fixture.objects.getActiveObjects().contains(root));
+        direction.releaseToFree(root);
+        new ObjectExecutionController(fixture.objects).execute(root, null, List.of(), false, false);
+        assertEquals(1, root.updates);
+        assertFalse(direction.suspended(child));
+        assertEquals(100, root.getX());
+    }
+
+    @Test
+    void deadAndRejectedChildrenDoNotAccumulateInGraphOrRewind() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject root = fixture.objects.createDynamicObject(
+                () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        direction.claimAuthored("root", root);
+        for (int i = 0; i < 200; i++) {
+            TestObject child = root.child();
+            assertEquals(2, direction.graph(root).size());
+            fixture.objects.removeDynamicObject(child);
+            assertEquals(1, direction.graph(root).size());
+            assertTrue(direction.children.isEmpty());
+            assertEquals(1, direction.authored.size());
+        }
+        assertTrue(direction.rewindSnapshottable().capture().edges().isEmpty());
+        direction.clearObjects();
+        TestObject rejected = root.child();
+        assertFalse(fixture.objects.getActiveObjects().contains(rejected));
+        assertTrue(direction.children.isEmpty());
+        assertTrue(direction.nextChildOrdinals.isEmpty());
+        assertTrue(direction.authored.isEmpty());
+    }
+
+    @Test
+    void placementLookupNeverSelectsADynamicChildWithTheSameSpawnTupleAndRejectsOtherSets() {
+        ObjectSpawn spawn = new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 4);
+        Fixture fixture = new Fixture(List.of(spawn));
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        ObjectInstance child = fixture.objects.createDynamicObject(() -> new TestObject(spawn));
+        ObjectInstance placed = direction.materializePlaced(spawn);
+        assertNotSame(child, placed);
+        assertSame(placed, direction.findPlaced(direction.placementIdentity(spawn)).orElseThrow());
+        assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
+                new PlacementIdentity("s2", 0, 1, 4, 1, 2)));
+        assertThrows(IllegalArgumentException.class, () -> direction.materializePlaced(
+                new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 99)));
+        direction.remove(direction.placementIdentity(spawn));
+        assertTrue(fixture.objects.getActiveObjects().contains(child));
+        assertFalse(fixture.objects.getActiveObjects().contains(placed));
+    }
+
+    @Test
+    void directionAndRemovalReleaseNativeVineTubeAndGrabberOwnersWithoutUnloadingWorldState() throws Exception {
+        for (boolean remove : List.of(false, true)) for (String kind : List.of("vine", "tube", "grabber", "zipline", "pole", "grab", "spring", "hand", "pulley", "cup")) {
+            Fixture fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class,
+                    withSettings().name("kind=" + kind + ",remove=" + remove));
+            var query = mock(ObjectPlayerQuery.class);
+            when(fixture.services.playerQuery()).thenReturn(query);
+            when(query.mainPlayerOrNull()).thenReturn(player);
+            when(query.playersFor(any())).thenReturn(List.of(player));
+            ObjectSpawn spawn = new ObjectSpawn(100, 80, 1, 0, 0, false, 80);
+            ObjectInstance object = fixture.objects.createDynamicObject(() -> switch (kind) {
+                case "vine" -> new com.openggf.game.sonic2.objects.VineSwitchObjectInstance(spawn, "vine");
+                case "tube" -> new com.openggf.game.sonic2.objects.MTZSpinTubeObjectInstance(spawn);
+                case "zipline" -> new com.openggf.game.sonic3k.objects.LbzRideGrappleInstance(spawn);
+                case "pole" -> new com.openggf.game.sonic1.objects.Sonic1PoleThatBreaksObjectInstance(spawn);
+                case "grab" -> new com.openggf.game.sonic2.objects.GrabObjectInstance(spawn, "grab");
+                case "spring" -> new com.openggf.game.sonic2.objects.LauncherSpringObjectInstance(spawn, "spring");
+                case "hand" -> new com.openggf.game.sonic3k.objects.HCZHandLauncherObjectInstance(spawn);
+                case "pulley" -> new com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance(spawn);
+                case "cup" -> new com.openggf.game.sonic3k.objects.LbzCupElevatorInstance(spawn);
+                default -> new com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance(spawn);
+            });
+            switch (kind) {
+                case "vine" -> {
+                    setField(object, "player1Grabbed", true);
+                    setField(object, "player1Owner", player);
+                }
+                case "tube" -> {
+                    setField(object, "mainStateOwner", player);
+                    var field = object.getClass().getDeclaredField("mainCharState"); field.setAccessible(true);
+                    setField(field.get(object), "state", 2);
+                }
+                case "zipline" -> {
+                    setField(object, "p1Owner", player);
+                    var field = object.getClass().getDeclaredField("p1"); field.setAccessible(true);
+                    setField(field.get(object), "grabbed", true);
+                }
+                case "pole" -> { setField(object, "poleGrabbed", true); setField(object, "controlledPlayer", player); }
+                case "grab" -> setField(object, "player1Grabbed", true);
+                case "spring" -> {
+                    var type = Class.forName(object.getClass().getName() + "$PlayerState");
+                    var ctor = type.getDeclaredConstructor(); ctor.setAccessible(true);
+                    var state = ctor.newInstance(); setField(state, "state", 1);
+                    @SuppressWarnings("unchecked") var states = (java.util.Map<Object, Object>) fieldValue(object, "playerStates");
+                    states.put(player, state);
+                }
+                case "hand" -> {
+                    setField(object, "p1Owner", player);
+                    setField(((Object[]) fieldValue(object, "nativeStates"))[0], "grabbed", true);
+                }
+                case "pulley" -> {
+                    when(player.isObjectControlled()).thenReturn(true);
+                    when(player.isObjectControlSuppressesMovement()).thenReturn(true);
+                    when(player.getAnimationId()).thenReturn(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.GET_UP.id());
+                    ((boolean[]) fieldValue(object, "grabbed"))[0] = true;
+                    ((com.openggf.sprites.playable.AbstractPlayableSprite[]) fieldValue(object, "grabbedPlayers"))[0] = player;
+                }
+                case "cup" -> { setField(object, "p1Owner", player); setField(fieldValue(object, "p1"), "inside", true); }
+                default -> setField(object, "grabbedPlayer", player);
+            }
+            if (remove) direction.removeDynamic(object);
+            else direction.direct(object, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            if (kind.equals("pulley")) verify(player).releaseFromObjectControl(0);
+            else verify(player, atLeastOnce()).applyObjectControlState(com.openggf.sprites.playable.ObjectControlState.NONE);
+            if (!remove) assertTrue(direction.suspended(object));
+        }
+    }
+
+    @Test
+    void directingAndRemovingTheNativeZiplineReleasesItsStandingRider() {
+        for (boolean remove : List.of(false, true)) {
+            Fixture fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            ObjectInstance lift = fixture.objects.createDynamicObject(() -> new com.openggf.game.sonic2.objects.HTZLiftObjectInstance(
+                    new ObjectSpawn(100, 80, 0x16, 0, 0, false, 80), "zipline"));
+            fixture.objects.solidContacts().forceRidingObjectForBootstrap(player, lift);
+            clearInvocations(player);
+            if (remove) direction.removeDynamic(lift);
+            else direction.direct(lift, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            assertFalse(fixture.objects.solidContacts().isPlayerRiding(player, lift));
+            verify(player).setOnObject(false);
+            verify(player).setAir(true);
+        }
+    }
+
+    private static Object fieldValue(Object target, String name) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        var field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    @Test
+    void nativePictureCyclesAnimateCapturedPosesWithoutRunningTheNativeRoutine() {
+        Fixture fixture = new Fixture(List.of());
+        Pattern pixels = new Pattern(); pixels.setPixel(0, 0, (byte) 1);
+        var sheet = new ObjectSpriteSheet(new Pattern[] {pixels}, List.of(
+                new SpriteMappingFrame(List.of(new SpriteMappingPiece(0, 0, 1, 1, 0, false, false, 0))),
+                new SpriteMappingFrame(List.of(new SpriteMappingPiece(8, 0, 1, 1, 0, false, false, 0)))), 0, 1);
+        var renderer = new PatternSpriteRenderer(sheet, fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        class Cyclic extends TestObject implements ObjectVisualAnimationSource {
+            Cyclic() { super(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)); }
+            public java.util.Optional<Cycle> visualAnimationCycle(int frame) {
+                return java.util.Optional.of(new Cycle(1, List.of(0, 1)));
+            }
+            public void appendRenderCommands(List<GLCommand> commands) { renderer.drawFrameIndex(0, getX(), getY()); }
+        }
+        Cyclic root = fixture.objects.createDynamicObject(Cyclic::new);
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var picture = direction.captureDynamic(root);
+        var part = picture.parts().getFirst();
+        assertEquals(List.of(0, 1), part.animations().getFirst().frames());
+        direction.direct(root, picture, new Direction(100, 80, false, true, 0, -1));
+        assertNotEquals(StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 0)),
+                StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 2)));
+        fixture.objects.update(20, null, List.of(), 0, false);
+        assertEquals(0, root.updates);
+    }
+
+    @Test
+    void animalFlightCycleUsesNativeTwoTickFlapButWalkingFrameRemainsPhysicsOwned() {
+        Fixture fixture = new Fixture(List.of());
+        var art = mock(ObjectRenderManager.class);
+        when(fixture.services.renderManager()).thenReturn(art);
+        when(art.getAnimalTypeA()).thenReturn(AnimalType.FLICKY.ordinal());
+        var bird = new AnimalObjectInstance(new ObjectSpawn(100, 80, 0, 0, 0, false, 0), fixture.services);
+        assertEquals(1, bird.visualAnimationCycle(2).orElseThrow().delay());
+        assertEquals(List.of(0, 1), bird.visualAnimationCycle(2).orElseThrow().mappingFrames());
+        when(art.getAnimalTypeA()).thenReturn(AnimalType.RABBIT.ordinal());
+        var walker = new AnimalObjectInstance(new ObjectSpawn(100, 80, 0, 0, 0, false, 0), fixture.services);
+        assertTrue(walker.visualAnimationCycle(26).isEmpty());
+    }
+
+    @Test
+    void ordinaryNativeChildSpawnDoesNotCreateAStageplayController() {
+        Fixture fixture = new Fixture(List.of());
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        root.child();
+        assertNull(fixture.objects.stageplayDirection);
+    }
+
+    @Test
+    void portablePlacementIdentityDistinguishesDuplicateAnchorsAndSurvivesRemovalReadmission() {
+        ObjectSpawn first = new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 4);
+        ObjectSpawn second = new ObjectSpawn(100, 80, 1, 2, 0, false, 80, 5);
+        Fixture fixture = new Fixture(List.of(first, second));
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        ObjectInstance a = direction.materializePlaced(direction.placementIdentity(first));
+        ObjectInstance b = direction.materializePlaced(direction.placementIdentity(second));
+        assertNotSame(a, b);
+        assertSame(a, direction.materializePlaced(first));
+        direction.remove(direction.placementIdentity(first));
+        assertFalse(direction.allowsPlacement(first));
+        assertTrue(direction.allowsPlacement(second));
+        assertTrue(direction.findPlaced(direction.placementIdentity(first)).isEmpty());
+        assertSame(b, direction.findPlaced(direction.placementIdentity(second)).orElseThrow());
+        ObjectInstance readmitted = direction.materializePlaced(first);
+        assertNotSame(a, readmitted);
+        assertFalse(
+                direction.allowsPlacement(first),
+                "Explicit actor does not reopen ordinary placement scans");
+    }
+
+    @Test
+    void
+            clearRejectsUnrelatedFutureNativeObjectsButExplicitCastAndItsLaterChildrenRemainAdmitted() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        direction.clearObjects();
+        TestObject unrelated = new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80));
+        fixture.objects.addDynamicObject(unrelated);
+        assertFalse(fixture.objects.getActiveObjects().contains(unrelated));
+        assertEquals(0, unrelated.updates + unrelated.unloads);
+        TestObject authored =
+                (TestObject)
+                        ObjectDirectionAccess.createNative(
+                                fixture.objects, new ObjectSpawn(100, 80, 1, 0, 0, false, 80));
+        assertTrue(direction.allowsObject(authored));
+        TestObject child = direction.withAuthoredAdmission("stageplay-cast", authored::child);
+        assertTrue(fixture.objects.getActiveObjects().contains(child));
+        assertTrue(direction.allowsObject(child));
+        direction.clearObjects();
+        assertFalse(fixture.objects.getActiveObjects().contains(authored));
+        assertFalse(fixture.objects.getActiveObjects().contains(child));
+        assertEquals(0, authored.unloads + child.unloads);
+    }
+
+    @Test
+    void badnikClearKeepsMachineryAndRejectsFutureSemanticBadniksWithoutNameHeuristics() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        direction.clearBadniks();
+        TestObject machine = new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80));
+        TestObject badnik =
+                new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                    @Override
+                    public ObjectHeadRole headPresentationRole() {
+                        return ObjectHeadRole.BADNIK;
+                    }
+                };
+        fixture.objects.addDynamicObject(machine);
+        fixture.objects.addDynamicObject(badnik);
+        assertTrue(fixture.objects.getActiveObjects().contains(machine));
+        assertFalse(fixture.objects.getActiveObjects().contains(badnik));
+        assertEquals(0, badnik.updates + badnik.unloads);
+    }
+
+    @Test
+    void badnikClearUsesContextualRegistryTraitsForNonbaseNativeRootsAndFutureAdmission() {
+        ObjectRegistry registry =
+                new AbstractObjectRegistry() {
+                    @Override
+                    protected void registerDefaultFactories() {
+                        registerBadnikFactory(7, (spawn, owner) -> new TestObject(spawn));
+                        registerFactory(8, (spawn, owner) -> new TestObject(spawn));
+                    }
+
+                    @Override
+                    public String getPrimaryName(int id) {
+                        return id == 7 ? "Ordinary machinery" : "Badnik-looking name";
+                    }
+
+                    @Override
+                    protected ObjectRegistryCatalog.Semantics catalogSemantics(
+                            int id, ObjectRegistryCatalog.Context context) {
+                        return context.zone() == 9 && context.act() == 2
+                                ? super.catalogSemantics(id, context)
+                                : ObjectRegistryCatalog.Semantics.NONE;
+                    }
+                };
+        Fixture fixture = new Fixture(List.of(), registry);
+        var level = mock(com.openggf.level.LevelManager.class);
+        when(level.getCurrentZone()).thenReturn(9);
+        when(level.getCurrentAct()).thenReturn(2);
+        when(fixture.services.levelManager()).thenReturn(level);
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject enemy =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                (TestObject)
+                                        registry.create(
+                                                new ObjectSpawn(100, 80, 7, 0, 0, false, 80)));
+        TestObject child = enemy.child();
+        TestObject machine =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                (TestObject)
+                                        registry.create(
+                                                new ObjectSpawn(140, 80, 8, 0, 0, false, 80)));
+        assertNotEquals(ObjectHeadRole.BADNIK, enemy.headPresentationRole());
+        direction.clearBadniks();
+        assertFalse(direction.allowsPlacement(enemy.getSpawn()), "The same semantic policy suppresses inactive placements");
+        assertTrue(direction.allowsPlacement(machine.getSpawn()));
+        assertFalse(fixture.objects.getActiveObjects().contains(enemy));
+        assertFalse(fixture.objects.getActiveObjects().contains(child));
+        assertTrue(fixture.objects.getActiveObjects().contains(machine));
+        TestObject future =
+                (TestObject) registry.create(new ObjectSpawn(180, 80, 7, 0, 0, false, 80));
+        fixture.objects.addDynamicObject(future);
+        assertFalse(fixture.objects.getActiveObjects().contains(future));
+        assertEquals(
+                0, enemy.updates + enemy.unloads + child.unloads + future.updates + future.unloads);
+        when(level.getCurrentAct()).thenReturn(3);
+        TestObject otherContext =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                (TestObject)
+                                        registry.create(
+                                                new ObjectSpawn(200, 80, 7, 0, 0, false, 80)));
+        assertTrue(
+                fixture.objects.getActiveObjects().contains(otherContext),
+                "Use the injected logical source context, not a cached role from another act");
+        assertTrue(direction.allowsPlacement(otherContext.getSpawn()),
+                "Placement admission also uses the current registry context");
+    }
+
+    @Test
+    void visualSnapshotRestoresHandleAndDirectionWithoutNativeSlotsAndRewindsRemovalPolicy() throws Exception {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        ObjectInstance visual =
+                direction.installVisual(
+                        "cast-robot", heldTemplate(), new Direction(5, 7, false, true, 0, -1));
+        var adapter = direction.rewindSnapshottable();
+        var saved = adapter.capture();
+        var policy = (StageplayObjectLoadPolicy) fieldValue(direction, "loadPolicy");
+        var policySaved = policy.rewindAdapter().capture();
+        direction.setDirection(visual, new Direction(100, 200, true, false, 0, -1));
+        direction.clearObjects();
+        policy.rewindAdapter().restore(policySaved);
+        adapter.restore(saved);
+        assertTrue(
+                fixture.objects.getActiveObjects().isEmpty(),
+                "Baked visuals do not consume native SST slots");
+        assertNotSame(
+                visual,
+                direction.findVisual("cast-robot").orElseThrow(),
+                "A removed visual is re-resolved through its stable actor identity after rewind");
+        assertEquals(saved, adapter.capture());
+        assertTrue(direction.allowsPlacement(new ObjectSpawn(100, 80, 1, 0, 0, false, 80, 5)));
+    }
+
+    @Test
+    void nativeCaptureEnumeratesMappingPosesAndFreezesPixelsPalettesAndMultipartOffsets() {
+        Fixture fixture = new Fixture(List.of());
+        Pattern source = new Pattern();
+        source.setPixel(0, 0, (byte) 3);
+        ObjectSpriteSheet sheet =
+                new ObjectSpriteSheet(
+                        new Pattern[] {source},
+                        List.of(
+                                new SpriteMappingFrame(
+                                        List.of(
+                                                new SpriteMappingPiece(
+                                                        -4, -8, 1, 1, 0, false, false, 0))),
+                                new SpriteMappingFrame(
+                                        List.of(
+                                                new SpriteMappingPiece(
+                                                        4, 8, 1, 1, 0, true, false, 0)))),
+                        0,
+                        1);
+        PatternSpriteRenderer renderer = new PatternSpriteRenderer(sheet, fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        com.openggf.level.Palette palette = new com.openggf.level.Palette();
+        for (int i = 0; i < 16; i++) {
+            palette.setColor(
+                    i, new com.openggf.level.Palette.Color((byte) (i * 8), (byte) 20, (byte) 40));
+        }
+        fixture.graphics.cachePaletteTexture(palette, 0);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                    @Override
+                                    public void appendRenderCommands(List<GLCommand> commands) {
+                                        renderer.drawFrameIndex(1, 100, 80);
+                                    }
+                                });
+        VisualTemplate template =
+                ObjectDirectionAccess.forManager(fixture.objects).captureDynamic(root);
+        assertEquals(1, template.parts().size());
+        assertTrue(template.parts().getFirst().partId().startsWith("root/bucket"));
+        assertTrue(template.parts().getFirst().partId().endsWith("/draw0"));
+        assertEquals(2, template.parts().getFirst().poses().size());
+        assertEquals(1, template.parts().getFirst().defaultPose());
+        assertEquals(3, template.patterns().getFirst().a() & 15);
+        assertEquals(0xff081428, template.palettes().getFirst().argb().get(1));
+        assertEquals(4, template.parts().getFirst().poses().get(1).tiles().getFirst().x());
+        source.setPixel(0, 0, (byte) 9);
+        assertEquals(3, template.patterns().getFirst().a() & 15);
+        assertThrows(UnsupportedOperationException.class, () -> template.patterns().clear());
+        assertFalse(template.limitations().isEmpty());
+    }
+
+    @Test
+    void explicitPoseWinsAndPureAnimationSamplingUsesExistingRunnerIncludingSwitchMarker() {
+        var source = new com.openggf.sprites.animation.SpriteAnimationSet();
+        source.addScript(
+                0,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,
+                        0,
+                        List.of(0xff)));
+        source.addScript(
+                1,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(2),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH,
+                        0,
+                        List.of(0xfd, 0)));
+        VisualPart part =
+                new VisualPart(
+                        "root/0",
+                        4,
+                        false,
+                        0,
+                        0,
+                        List.of(
+                                new VisualPose(0, List.of(), List.of()),
+                                new VisualPose(1, List.of(), List.of()),
+                                new VisualPose(2, List.of(), List.of())),
+                        StageplayObjectDirection.pureAnimations(source, 3));
+        assertEquals(
+                1,
+                StageplayObjectDirection.selectedPose(
+                                part, new Direction(0, 0, false, true, 999, 1))
+                        .pose());
+        assertEquals(
+                2,
+                StageplayObjectDirection.selectedPose(
+                                part, new Direction(0, 0, false, true, 1, -1, Map.of(), 1))
+                        .pose());
+        assertEquals(
+                0,
+                StageplayObjectDirection.selectedPose(
+                                part, new Direction(0, 0, false, true, 1, -1, Map.of(), 2))
+                        .pose());
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        StageplayObjectDirection.selectedPose(
+                                part, new Direction(0, 0, false, true, 999, -1)));
+        assertEquals(
+                0,
+                StageplayObjectDirection.selectedPose(
+                                heldTemplate().parts().getFirst(),
+                                new Direction(0, 0, false, true, 0, -1))
+                        .pose());
+    }
+
+    @Test
+    void synthesizedAndRoutineChangingScriptsAreHeldAndUnsafeSwitchChainsAreExcluded() {
+        var source = new com.openggf.sprites.animation.SpriteAnimationSet();
+        source.addScript(
+                0,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,
+                        0));
+        source.addScript(
+                1,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,
+                        0,
+                        List.of(0xff)));
+        source.addScript(
+                2,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP,
+                        0,
+                        List.of(0xfc)));
+        source.addScript(
+                3,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH,
+                        2,
+                        List.of(0xfd, 2)));
+        source.addScript(
+                4,
+                new com.openggf.sprites.animation.SpriteAnimationScript(
+                        0,
+                        List.of(0),
+                        com.openggf.sprites.animation.SpriteAnimationEndAction.SWITCH,
+                        3,
+                        List.of(0xfd, 3)));
+        assertEquals(
+                List.of(1),
+                StageplayObjectDirection.pureAnimations(source, 1).stream()
+                        .map(VisualAnimation::id)
+                        .toList());
+    }
+
+    @Test
+    void sharedLoadPolicySurvivesManagerReplacementBeforeAnyRoutineRunsAndRestoresFlags() {
+        StageplayObjectLoadPolicy policy = new StageplayObjectLoadPolicy();
+        Fixture old = new Fixture(List.of());
+        StageplayObjectDirection first = new StageplayObjectDirection(old.objects, policy);
+        old.objects.stageplayDirection = first;
+        first.clearObjects();
+        var saved = policy.rewindAdapter().capture();
+        first.close();
+        Fixture next = new Fixture(List.of());
+        next.objects.stageplayDirection = new StageplayObjectDirection(next.objects, policy);
+        TestObject event = new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80));
+        next.objects.addDynamicObject(event);
+        assertTrue(next.objects.getActiveObjects().isEmpty());
+        assertEquals(0, event.updates + event.unloads);
+        policy.rewindAdapter().resetForMissingSnapshot();
+        assertTrue(next.objects.stageplayDirection.allowsObject(event));
+        policy.rewindAdapter().restore(saved);
+        assertFalse(next.objects.stageplayDirection.allowsObject(event));
+    }
+
+    @Test
+    void directedReplayRetainsNativeSubtileRowsInPainterAndSatPreparation() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var tile = new VisualTile(0, 0, false, true, false, 1, 2, 8, 8, false, 7, 2, 6);
+        var template =
+                new VisualTemplate(
+                        0,
+                        0,
+                        List.of(
+                                new VisualPart(
+                                        "root/0",
+                                        4,
+                                        false,
+                                        0,
+                                        0,
+                                        List.of(new VisualPose(0, List.of(tile), List.of())))),
+                        List.of(new PatternPixels(3, 0, 0, 0)),
+                        List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))),
+                        List.of());
+        ObjectInstance visual =
+                direction.installVisual(
+                        "clipped", template, new Direction(100, 80, false, true, 0, -1));
+        try {
+            var painter =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () ->
+                                    fixture.objects.drawUnifiedBucketWithPriority(
+                                            4, fixture.graphics));
+            var sat =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () -> {
+                                fixture.graphics.beginSpriteSatCollection();
+                                fixture.graphics.setCurrentSpriteSatBucket(4);
+                                fixture.objects.drawUnifiedBucketWithPriority(4, fixture.graphics);
+                                fixture.graphics.endSpriteSatCollectionAndReplay();
+                            });
+            for (var frame : List.of(painter, sat)) {
+                assertEquals(1, frame.tiles().size());
+                var drawn = frame.tiles().getFirst();
+                assertEquals(101, drawn.x());
+                assertEquals(82, drawn.y());
+                assertEquals(2, drawn.rowStart());
+                assertEquals(6, drawn.rowEnd());
+                assertTrue(drawn.vFlip());
+                assertEquals(
+                        7,
+                        drawn.occlusionMask(),
+                        "Clipped rows preserve the captured palette mask");
+                assertEquals(3, frame.patternVersions().get(drawn.patternId()).a() & 15);
+            }
+        } finally {
+            direction.removeDynamic(visual);
+        }
+    }
+
+    @Test
+    void distinctSmallDirectedGraphsSharePaletteAndExceedOldTenGraphTrailLimit() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        java.util.List<ObjectInstance> actors = new java.util.ArrayList<>();
+        var palette = new PaletteColors(java.util.Collections.nCopies(16, 0));
+        try {
+            for (int i = 0; i < 24; i++) {
+                var tile = new VisualTile(0, 0, false, false, false, 0, 0, 8, 8, false, 15, 0, 8);
+                var template =
+                        new VisualTemplate(
+                                0,
+                                0,
+                                List.of(
+                                        new VisualPart(
+                                                "root/0",
+                                                4,
+                                                false,
+                                                0,
+                                                0,
+                                                List.of(
+                                                        new VisualPose(
+                                                                0, List.of(tile), List.of())))),
+                                List.of(new PatternPixels(i, 0, 0, 0)),
+                                List.of(palette),
+                                List.of());
+                actors.add(
+                        direction.installVisual(
+                                "ensemble-" + i,
+                                template,
+                                new Direction(i * 8, 80, false, true, 0, -1)));
+            }
+            var frame =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () ->
+                                    fixture.objects.drawUnifiedBucketWithPriority(
+                                            4, fixture.graphics));
+            assertEquals(24, frame.tiles().size());
+            assertEquals(
+                    24,
+                    frame.tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::patternId)
+                            .distinct()
+                            .count());
+            assertEquals(
+                    1,
+                    frame.tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::palette)
+                            .distinct()
+                            .count());
+            direction.removeDynamic(actors.get(11));
+            var retained =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () ->
+                                    fixture.objects.drawUnifiedBucketWithPriority(
+                                            4, fixture.graphics));
+            assertEquals(23, retained.tiles().size());
+            assertEquals(
+                    1,
+                    retained.tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::palette)
+                            .distinct()
+                            .count());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void multipartDirectionRetainsChildSlotOcclusionAroundOtherNativeObjects() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        fixture.objects.createDynamicObject(
+                () ->
+                        new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                            @Override
+                            public int getPriorityBucket() {
+                                return 4;
+                            }
+
+                            @Override
+                            public void appendRenderCommands(List<GLCommand> commands) {
+                                fixture.graphics.renderPatternWithId(
+                                        777, new com.openggf.level.PatternDesc(), 77, 80);
+                            }
+                        });
+        TestObject child = root.child();
+        var palette = new PaletteColors(java.util.Collections.nCopies(16, 0));
+        var first = new VisualTile(0, 0, false, false, false, 1, 0, 8, 8, false, 15, 0, 8);
+        var second = new VisualTile(0, 0, false, false, false, 3, 0, 8, 8, false, 15, 0, 8);
+        var template =
+                new VisualTemplate(
+                        0,
+                        0,
+                        List.of(
+                                new VisualPart(
+                                        "root/0",
+                                        4,
+                                        false,
+                                        root.getSlotIndex(),
+                                        0,
+                                        List.of(new VisualPose(0, List.of(first), List.of()))),
+                                new VisualPart(
+                                        "root/1",
+                                        4,
+                                        false,
+                                        child.getSlotIndex(),
+                                        0,
+                                        List.of(new VisualPose(0, List.of(second), List.of())))),
+                        List.of(new PatternPixels(1, 0, 0, 0)),
+                        List.of(palette),
+                        List.of());
+        direction.direct(root, template, new Direction(0, 80, false, true, 0, -1));
+        try {
+            var frame =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () ->
+                                    fixture.objects.drawUnifiedBucketWithPriority(
+                                            4, fixture.graphics));
+            assertEquals(
+                    List.of(3f, 77f, 1f),
+                    frame.tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::x)
+                            .toList());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void directedNativeFifoKeepsInvertedRootChildSlotsAndEveryRepeatedAdmittedPart() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(70, 40), new Direction(0, 80, false, true, 0, -1));
+        try {
+            for (var object : List.of(root, child, root, child))
+                assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, object, 4));
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertEquals(List.of(70, 40, 70, 40), ledger.admissions().stream()
+                    .map(NativeSpriteSubmissionAccess.Admission::slot).toList());
+            for (int repeat = 0; repeat < 2; repeat++) {
+                assertEquals(List.of(3f, 1f, 3f, 1f), prepareDirectedPicture(fixture, true).tiles().stream()
+                        .map(com.openggf.graphics.SpritePresentation.Tile::x).toList(),
+                        "SAT replay reverses the actual root/child FIFO, not the SST order");
+                assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+                assertEquals(0, root.updates + child.updates);
+            }
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void refusedSixtyFourthNativeCallDoesNotFundPictureAdmissionOrBypassSatLimits() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(70, 40), new Direction(0, 80, false, true, 0, -1));
+        try {
+            for (int call = 0; call < 63; call++)
+                assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            assertFalse(NativeSpriteSubmissionAccess.submit(fixture.objects, child, 4));
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            var painter = prepareDirectedPicture(fixture, false);
+            assertEquals(63, painter.tiles().stream().filter(tile -> tile.x() == 1f).count());
+            assertEquals(1, painter.tiles().stream().filter(tile -> tile.x() == 3f).count(),
+                    "The unsubmitted child has separate explicit picture authority");
+            var sat = prepareDirectedPicture(fixture, true);
+            assertEquals(20, sat.tiles().size(), "Native repeats exhaust the H40 same-line SAT count");
+            assertTrue(sat.tiles().stream().allMatch(tile -> tile.x() == 1f),
+                    "The picture suffix still competes after the native FIFO prefix");
+            assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+            assertEquals(63, ledger.admissions().size());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void rawAcceptedZeroIdAndOrphanAddressesSuppressPicturesAndReuseDrawsOnlyTheCurrentOwner() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(70, 40), new Direction(0, 80, false, true, 0, -1));
+        try {
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, child, 4));
+            root.liveId = 0;
+            fixture.objects.removeDynamicObject(child);
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty(),
+                    "Neither raw accepted address may reappear as a separate picture");
+            var replacement = nativePictureProbe(fixture, 40, 99);
+            assertFalse(direction.suspended(replacement));
+            assertEquals(List.of(99f), prepareDirectedPicture(fixture, true).tiles().stream()
+                    .map(com.openggf.graphics.SpritePresentation.Tile::x).toList(),
+                    "A reused address resolves an undirected replacement, not the old child's template");
+            fixture.objects.removeDynamicObject(replacement);
+            assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty());
+            assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+        } finally {
+            direction.close();
+        }
+    }
+
+    @Test
+    void emptyCompletedNativeLedgerRetainsExplicitPicturesAcrossPrepareRewindAndRelease() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        var root = nativePictureProbe(fixture, 70, 90);
+        var child = nativePictureProbe(fixture, 40, 99);
+        direction.childSpawned(root, child);
+        direction.direct(root, nativePictureTemplate(70, 40), new Direction(0, 80, false, true, 0, -1));
+        try {
+            assertTrue(NativeSpriteSubmissionAccess.submit(fixture.objects, root, 4));
+            fixture.objects.update(0, null, List.of(), 1, false);
+            var ledger = fixture.objects.nativeSpriteSubmissions().capture();
+            assertTrue(ledger.nativePassPresent());
+            assertTrue(ledger.admissions().isEmpty());
+            fixture.objects.setRewindInPlaceRestoreEnabledForTest(false);
+            var nativeState = fixture.objects.rewindSnapshottable().capture();
+            var pictures = direction.rewindSnapshottable().capture();
+            var rootId = fixture.objects.objectQuery().identityOf(root).orElseThrow();
+            var childId = fixture.objects.objectQuery().identityOf(child).orElseThrow();
+            for (int replay = 0; replay < 2; replay++) {
+                for (int prepare = 0; prepare < 2; prepare++) {
+                    assertEquals(List.of(1f, 3f), prepareDirectedPicture(fixture, true).tiles().stream()
+                            .map(com.openggf.graphics.SpritePresentation.Tile::x).toList());
+                    assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+                }
+                var liveRoot = (NativePictureProbe) fixture.objects.objectQuery().resolve(rootId).orElseThrow();
+                var liveChild = (NativePictureProbe) fixture.objects.objectQuery().resolve(childId).orElseThrow();
+                assertEquals(0, liveRoot.updates + liveChild.updates);
+                direction.releaseToFree(liveRoot);
+                assertTrue(prepareDirectedPicture(fixture, true).tiles().isEmpty(),
+                        "Releasing picture authority never supplies fallback for unsubmitted natives");
+                fixture.objects.rewindSnapshottable().restore(nativeState);
+                fixture.objects.nativeSpriteSubmissions().restore(ledger);
+                direction.rewindSnapshottable().restore(pictures);
+                assertNotSame(liveRoot, fixture.objects.objectQuery().resolve(rootId).orElseThrow());
+                assertEquals(ledger, fixture.objects.nativeSpriteSubmissions().capture());
+            }
+        } finally {
+            direction.close();
+        }
+    }
+
+    private static NativePictureProbe nativePictureProbe(Fixture fixture, int slot, int nativeX) {
+        var object = new NativePictureProbe(new ObjectSpawn(100, 80, 1, nativeX, 0, false, 80));
+        fixture.objects.addDynamicObjectAtSlot(object, slot);
+        return object;
+    }
+
+    private static VisualTemplate nativePictureTemplate(int... slots) {
+        var parts = new java.util.ArrayList<VisualPart>();
+        for (int index = 0; index < slots.length; index++) {
+            var tile = new VisualTile(0, 0, false, false, false, 1 + 2 * index, 0, 8, 8, false, 15, 0, 8);
+            parts.add(new VisualPart("root/" + index, 4, false, slots[index], 0,
+                    List.of(new VisualPose(0, List.of(tile), List.of()))));
+        }
+        return new VisualTemplate(0, 0, parts, List.of(new PatternPixels(1, 0, 0, 0)),
+                List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))), List.of());
+    }
+
+    private static com.openggf.graphics.SpritePresentation.Frame prepareDirectedPicture(Fixture fixture, boolean sat) {
+        return com.openggf.level.render.SpritePresentationRenderer.prepare(fixture.graphics, 0, 0, () -> {
+            if (sat) {
+                com.openggf.graphics.SpriteSatInternalAccess.beginCollection(fixture.graphics,
+                        com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.h40(0, 0, 224));
+                fixture.graphics.setCurrentSpriteSatBucket(4);
+            }
+            fixture.objects.drawUnifiedBucketWithPriority(4, fixture.graphics);
+            if (sat) fixture.graphics.endSpriteSatCollectionAndReplay();
+        });
+    }
+
+    public static final class NativePictureProbe extends AbstractObjectInstance
+            implements NativeSpriteSubmissionSource, SpawnRewindRecreatable {
+        int updates;
+        int liveId = 1;
+        public NativePictureProbe(ObjectSpawn spawn) { super(spawn, "native-picture-probe"); }
+        @Override public int getPriorityBucket() { return 4; }
+        @Override public int getLiveObjectId() { return liveId; }
+        @Override public boolean isPersistent() { return true; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { updates++; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) {
+            var graphics = services().graphicsManager();
+            if (graphics.isSpriteSatCollectionActive()) {
+                graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                        getSpawn().subtype(), 80, 1, 1, 777, 777 & 0x7ff, 0,
+                        false, false, false, false, 0, 1));
+            } else {
+                graphics.renderPatternWithId(777, new com.openggf.level.PatternDesc(), getSpawn().subtype(), 80);
+            }
+        }
+    }
+
+    @Test
+    void structuralPartIdentityDoesNotDependOnOtherActorsNativeSlotPressure() {
+        java.util.List<java.util.Set<String>> captured = new java.util.ArrayList<>();
+        for (boolean pressure : List.of(false, true)) {
+            Fixture fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            PatternSpriteRenderer renderer =
+                    new PatternSpriteRenderer(
+                            new ObjectSpriteSheet(
+                                    new Pattern[] {new Pattern()},
+                                    List.of(
+                                            new SpriteMappingFrame(
+                                                    List.of(
+                                                            new SpriteMappingPiece(
+                                                                    0, 0, 1, 1, 0, false, false,
+                                                                    0)))),
+                                    0,
+                                    1),
+                            fixture.graphics);
+            renderer.ensurePatternsCached(fixture.graphics, 512);
+            if (pressure) {
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(40, 80, 1, 0, 0, false, 80)));
+            }
+            TestObject root =
+                    fixture.objects.createDynamicObject(
+                            () ->
+                                    new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                        @Override
+                                        public void appendRenderCommands(List<GLCommand> commands) {
+                                            renderer.drawFrameIndex(0, getX(), getY());
+                                        }
+                                    });
+            root.visualChild(renderer);
+            VisualTemplate template = direction.captureDynamic(root);
+            captured.add(
+                    template.parts().stream()
+                            .map(VisualPart::partId)
+                            .collect(java.util.stream.Collectors.toSet()));
+        }
+        assertEquals(captured.get(0), captured.get(1));
+        assertEquals(2, captured.get(0).size());
+        assertTrue(captured.get(0).stream().anyMatch(path -> path.startsWith("root/0/")));
+    }
+
+    @Test
+    void residualPrimitivesFailExplicitlyInsteadOfChangingNativeRenderOrder() {
+        var primitive =
+                new VisualPrimitive(
+                        0,
+                        com.openggf.graphics.SpritePresentation.PrimitiveKind.RECTANGLE,
+                        0,
+                        List.of(
+                                new com.openggf.graphics.SpritePresentation.Vertex(
+                                        0, 0, 8, 8, 0xffffffff)));
+        var part =
+                new VisualPart(
+                        "root/0",
+                        4,
+                        false,
+                        0,
+                        0,
+                        List.of(new VisualPose(0, List.of(), List.of(primitive))));
+        var failure =
+                assertThrows(
+                        UnsupportedRenderOrderException.class,
+                        () ->
+                                new VisualTemplate( 0, 0, List.of(part), List.of(), List.of(), List.of()));
+        assertTrue(failure.getMessage().contains("use Free mode"));
+        assertTrue(failure.getMessage().contains("Puppet/Pose cannot preserve this render order"));
+    }
+
+    @Test
+    void captureKeepsOnlyUsedScopedPaletteAndNativeEntryOcclusionMask() {
+        Fixture fixture = new Fixture(List.of());
+        // Four distinct unrelated world rows must not consume a directed template's four-row
+        // budget.
+        for (int row = 0; row < 4; row++) {
+            var palette = new com.openggf.level.Palette();
+            palette.setColor(
+                    1, new com.openggf.level.Palette.Color((byte) (row * 20), (byte) 1, (byte) 2));
+            fixture.graphics.cachePaletteTexture(palette, row);
+        }
+        var used = new com.openggf.level.Palette();
+        used.setColor(1, new com.openggf.level.Palette.Color((byte) 91, (byte) 92, (byte) 93));
+        Object owner = new Object();
+        var lease =
+                com.openggf.graphics.ScopedPaletteGraphicsAccess.acquire(
+                        fixture.graphics,
+                        owner,
+                        new com.openggf.graphics.PaletteView[] {used, used, used, used});
+        var resolutions = new java.util.concurrent.atomic.AtomicInteger();
+        VisualTemplate template;
+        TestObject root;
+        try {
+            int paletteIndex =
+                    com.openggf.graphics.ScopedPaletteGraphicsAccess.base(
+                            lease, fixture.graphics, owner);
+            PatternSpriteRenderer renderer = visualRenderer(fixture, 0);
+            // Native scoped encounter producers retain the logical art_tile row and attach a
+            // trusted palette projection to the sprite subject. A bank index in art_tile is not
+            // the native scoped path (the native painter has only two palette bits).
+            var subject =
+                    new com.openggf.graphics.SpritePresentation.Subject(
+                            "scoped",
+                            com.openggf.graphics.SpritePresentation.Part.OBJECT_BODY,
+                            false,
+                            100,
+                            null,
+                            null,
+                            (graphics, logicalLine) -> {
+                                assertSame(fixture.graphics, graphics);
+                                resolutions.incrementAndGet();
+                                return paletteIndex + logicalLine;
+                            });
+            root =
+                    fixture.objects.createDynamicObject(
+                            () ->
+                                    new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                        @Override
+                                        public int getTileOcclusionPaletteMask() {
+                                            return 7;
+                                        }
+
+                                        @Override
+                                        public void appendRenderCommands(List<GLCommand> commands) {
+                                            com.openggf.graphics.SpritePresentation.withSubject(
+                                                    fixture.graphics,
+                                                    subject,
+                                                    () -> renderer.drawFrameIndex(0, 100, 80));
+                                        }
+                                    });
+            fixture.graphics.setCurrentSpriteTileOcclusionPaletteMask(15);
+            template = ObjectDirectionAccess.forManager(fixture.objects).captureDynamic(root);
+            assertEquals(1, template.palettes().size());
+            assertEquals(0xff5b5c5d, template.palettes().getFirst().argb().get(1));
+            assertEquals(
+                    7,
+                    template.parts()
+                            .getFirst()
+                            .poses()
+                            .getFirst()
+                            .tiles()
+                            .getFirst()
+                            .occlusionMask());
+            assertEquals(15, fixture.graphics.getCurrentSpriteTileOcclusionPaletteMask());
+        } finally {
+            com.openggf.graphics.ScopedPaletteGraphicsAccess.release(lease, owner);
+        }
+        fixture.objects.removeDynamicObject(root);
+        assertTrue(resolutions.get() > 0);
+        int capturedResolutions = resolutions.get();
+        assertEquals(1, template.parts().size());
+        int capturedBucket = template.parts().getFirst().bucket();
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        ObjectInstance visual =
+                direction.installVisual(
+                        "frozen-scoped-palette",
+                        template,
+                        new Direction(100, 80, false, true, 0, -1));
+        try {
+            var frame =
+                    com.openggf.level.render.SpritePresentationRenderer.prepare(
+                            fixture.graphics,
+                            0,
+                            0,
+                            () ->
+                                    fixture.objects.drawUnifiedBucketWithPriority(
+                                            capturedBucket, fixture.graphics));
+            assertEquals(1, frame.tiles().size());
+            var colors =
+                    com.openggf.graphics.ObjectVisualGraphicsAccess.palette(
+                            fixture.graphics, frame.tiles().getFirst().palette());
+            assertEquals(0xff5b5c5d, colors.get(1));
+            assertEquals(
+                    capturedResolutions,
+                    resolutions.get(),
+                    "Directed replay must not retain the retired source palette resolver");
+        } finally {
+            direction.removeDynamic(visual);
+        }
+    }
+
+    @Test
+    void childCreationPathsKeepNonlexicalOrderAcrossRewindAndFreeRecapture() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        PatternSpriteRenderer renderer = visualRenderer(fixture, 0);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        for (int i = 0; i < 12; i++) {
+            root.visualChild(renderer);
+        }
+        var before = direction.captureDynamic(root);
+        direction.direct(root, before, new Direction(200, 80, false, true, 0, -1));
+        var adapter = direction.rewindSnapshottable();
+        adapter.restore(adapter.capture());
+        direction.releaseToFree(root);
+        var after = direction.captureDynamic(root);
+        assertEquals(
+                before.parts(),
+                after.parts(),
+                "Native child identity strings must not reorder creation paths");
+    }
+
+    @Test
+    void childCreationPathsPreserveMissingOrdinalAndNextCounterAcrossRewind() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        PatternSpriteRenderer renderer = visualRenderer(fixture, 0);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
+        TestObject missing = root.visualChild(renderer);
+        root.visualChild(renderer);
+        fixture.objects.removeDynamicObject(missing);
+        var adapter = direction.rewindSnapshottable();
+        var snapshot = adapter.capture();
+        assertEquals(List.of(1), snapshot.edges().stream().map(EdgeSnapshot::ordinal).toList());
+        adapter.restore(snapshot);
+        var restored = direction.captureDynamic(root);
+        assertEquals(1, restored.parts().size());
+        assertTrue(restored.parts().getFirst().partId().startsWith("root/1/"));
+        root.visualChild(renderer);
+        var expanded = direction.captureDynamic(root);
+        assertEquals(2, expanded.parts().size());
+        assertTrue(expanded.parts().stream().anyMatch(part -> part.partId().startsWith("root/2/")));
+        assertTrue(
+                expanded.parts().stream().noneMatch(part -> part.partId().startsWith("root/0/")));
+    }
+
+    @Test
+    void nativeSatControlGraphFailsTypedBeforeCpuCaptureCanOmitItsMask() {
+        Fixture fixture = new Fixture(List.of());
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                    @Override
+                                    public void appendRenderCommands(List<GLCommand> commands) {
+                                        com.openggf.game.sonic3k.S3kSpriteMaskSupport.submitFrame4(
+                                                fixture.graphics, 100, 80);
+                                    }
+                                });
+        var failure =
+                assertThrows(
+                        UnsupportedRenderOrderException.class,
+                        () -> direction.captureDynamic(root));
+        assertTrue(failure.getMessage().contains(root.getName()));
+        assertTrue(failure.getMessage().contains("Obj_SpriteMask"));
+        assertTrue(failure.getMessage().contains("use Free mode"));
+        assertFalse(fixture.graphics.isSpriteSatCollectionActive());
+        assertFalse(com.openggf.level.render.ObjectSpriteCapture.isObserving());
+    }
+
+    @Test
+    void nativeCaptureCopiesMappedPixelsWithoutReadingUnusedSparseArtCapacity() {
+        Fixture fixture = new Fixture(List.of());
+        Pattern pixels = new Pattern();
+        pixels.setPixel(0, 0, (byte) 9);
+        PatternSpriteRenderer renderer =
+                new PatternSpriteRenderer(
+                        new ObjectSpriteSheet(
+                                new Pattern[] {pixels, null, null},
+                                List.of(
+                                        new SpriteMappingFrame(
+                                                List.of(
+                                                        new SpriteMappingPiece(
+                                                                0, 0, 1, 1, 0, false, false, 0)))),
+                                0,
+                                1),
+                        fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                    @Override
+                                    public void appendRenderCommands(List<GLCommand> commands) {
+                                        renderer.drawFrameIndex(0, 100, 80);
+                                    }
+                                });
+        var template = ObjectDirectionAccess.forManager(fixture.objects).captureDynamic(root);
+        assertEquals(1, template.patterns().size());
+        assertEquals(9, template.patterns().getFirst().a() & 15);
+        assertEquals(1, template.parts().getFirst().poses().getFirst().tiles().size());
+    }
+
+    @Test
+    void nativeCaptureRejectsMappedMissingPixelsInsteadOfUsingStaleAtlasResidency() {
+        Fixture fixture = new Fixture(List.of());
+        Pattern stale = new Pattern();
+        stale.setPixel(0, 0, (byte) 7);
+        fixture.graphics.cachePatternTexture(stale, 513);
+        PatternSpriteRenderer renderer =
+                new PatternSpriteRenderer(
+                        new ObjectSpriteSheet(
+                                new Pattern[] {new Pattern(), null},
+                                List.of(
+                                        new SpriteMappingFrame(
+                                                List.of(
+                                                        new SpriteMappingPiece(
+                                                                0, 0, 1, 1, 1, false, false, 0)))),
+                                0,
+                                1),
+                        fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        TestObject root =
+                fixture.objects.createDynamicObject(
+                        () ->
+                                new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)) {
+                                    @Override
+                                    public void appendRenderCommands(List<GLCommand> commands) {
+                                        renderer.drawFrameIndex(0, 100, 80);
+                                    }
+                                });
+        var failure =
+                assertThrows(
+                        IllegalStateException.class,
+                        () ->
+                                ObjectDirectionAccess.forManager(fixture.objects)
+                                        .captureDynamic(root));
+        assertTrue(failure.getMessage().contains("mapping pose 0"));
+        assertTrue(failure.getMessage().contains("unloaded ROM pattern 1"));
+    }
+
+    private static PatternSpriteRenderer visualRenderer(Fixture fixture, int palette) {
+        var renderer =
+                new PatternSpriteRenderer(
+                        new ObjectSpriteSheet(
+                                new Pattern[] {new Pattern()},
+                                List.of(
+                                        new SpriteMappingFrame(
+                                                List.of(
+                                                        new SpriteMappingPiece(
+                                                                0, 0, 1, 1, 0, false, false, 0)))),
+                                palette,
+                                1),
+                        fixture.graphics);
+        renderer.ensurePatternsCached(fixture.graphics, 512);
+        return renderer;
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void prisonEndingInputReleasesOnDirectionRemovalAndClearWithoutResettingItsRoutine() throws Exception {
+        for (String action : List.of("puppet", "pose", "remove", "clear")) {
+            var fixture = new Fixture(List.of());
+            var direction = ObjectDirectionAccess.forManager(fixture.objects);
+            var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            var prison = fixture.objects.createDynamicObject(() ->
+                    new com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance(
+                            new ObjectSpawn(100, 100, 0x3e, 0, 0, false, 100)));
+            var routine = prison.getClass().getDeclaredField("state"); routine.setAccessible(true);
+            Object exploding = Enum.valueOf((Class) routine.getType(), "EXPLODING");
+            routine.set(prison, exploding);
+            setField(prison, "buttonTriggered", true);
+            setField(prison, "buttonTriggerVIntRunCount", 1);
+            prison.update(1, player);
+            verify(player).setForceInputRight(true);
+            verify(player).setControlLocked(true);
+            clearInvocations(player);
+            switch (action) {
+                case "remove" -> direction.removeDynamic(prison);
+                case "clear" -> direction.clearObjects();
+                default -> direction.direct(prison, heldTemplate(), new Direction(100, 80, false, true, 0, -1));
+            }
+            verify(player).setControlLocked(false);
+            verify(player).clearForcedInputMask();
+            assertSame(exploding, routine.get(prison));
+            if (action.equals("puppet") || action.equals("pose")) {
+                direction.releaseToFree(prison);
+                assertSame(exploding, routine.get(prison));
+            }
+        }
+    }
+
+    private static VisualTemplate heldTemplate() {
+        return new VisualTemplate(
+                100,
+                80,
+                List.of(
+                        new VisualPart(
+                                "root/0",
+                                4,
+                                false,
+                                0,
+                                0,
+                                List.of(new VisualPose(0, List.of(), List.of())))),
+                List.of(),
+                List.of(),
+                List.of());
+    }
+
+    private static final class Fixture {
+        final GraphicsManager graphics = new GraphicsManager();
+        final ObjectServices services = mock(ObjectServices.class);
+        final ObjectManager objects;
+
+        Fixture(List<ObjectSpawn> spawns) {
+            this(spawns, null);
+        }
+
+        Fixture(List<ObjectSpawn> spawns, ObjectRegistry suppliedRegistry) {
+            graphics.setHeadlessMode(true);
+            for (int i = 0; i < 4; i++) {
+                graphics.cachePaletteTexture(new com.openggf.level.Palette(), i);
+            }
+            var module = mock(com.openggf.game.GameModule.class);
+            when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
+            var world = new com.openggf.game.session.WorldSession(module);
+            when(services.worldSession()).thenReturn(world);
+            when(services.graphicsManager()).thenReturn(graphics);
+            when(services.solidExecutionRegistry()).thenReturn(SolidExecutionRegistry.inert());
+            ObjectRegistry registry =
+                    suppliedRegistry != null
+                            ? suppliedRegistry
+                            : new ObjectRegistry() {
+                                public ObjectInstance create(ObjectSpawn spawn) {
+                                    return new TestObject(spawn);
+                                }
+
+                                public void reportCoverage(List<ObjectSpawn> source) {}
+
+                                public String getPrimaryName(int id) {
+                                    return "TEST";
+                                }
+                            };
+            objects =
+                    new ObjectManager(
+                            spawns,
+                            registry,
+                            0,
+                            null,
+                            null,
+                            graphics,
+                            mock(Camera.class),
+                            services);
+            when(services.objectManager()).thenReturn(objects);
+        }
+    }
+
+    private static class TestObject extends AbstractObjectInstance
+            implements SolidObjectProvider, TouchResponseProvider {
+        int updates, snapshots, refreshes, unloads;
+
+        TestObject(ObjectSpawn spawn) {
+            super(spawn, "test native object");
+        }
+
+        TestObject child() {
+            return spawnChild(() -> new TestObject(new ObjectSpawn(120, 80, 1, 0, 0, false, 80)));
+        }
+
+        TestObject visualChild(PatternSpriteRenderer renderer) {
+            return spawnChild(
+                    () ->
+                            new TestObject(new ObjectSpawn(120, 80, 1, 0, 0, false, 80)) {
+                                @Override
+                                public void appendRenderCommands(List<GLCommand> commands) {
+                                    renderer.drawFrameIndex(0, getX(), getY());
+                                }
+                            });
+        }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) {
+            updates++;
+        }
+
+        @Override
+        public void snapshotPreUpdatePosition() {
+            snapshots++;
+        }
+
+        @Override
+        public void snapshotTouchResponseState() {
+            snapshots++;
+        }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            refreshes++;
+        }
+
+        @Override
+        public void onUnload() {
+            unloads++;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {}
+
+        public SolidObjectParams getSolidParams() {
+            throw new AssertionError("Directed solid provider executed");
+        }
+
+        public int getCollisionFlags() {
+            return 1;
+        }
+
+        public int getCollisionProperty() {
+            throw new AssertionError("Directed touch provider executed");
+        }
+    }
+}

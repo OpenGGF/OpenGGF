@@ -23,6 +23,7 @@ import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpawn;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -70,8 +71,8 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     private enum State { INIT, ANIMATE, SPARKLE }
 
-    private final RingSpawn ringSpawn;
-    private final List<RingSpawn> childRingSpawns;
+    private final Sonic1RingSpawnList ringSpawn;
+    private final Sonic1RingSpawnList childRingSpawns;
     // Un-finaled for rewind: outOfRangeAnchorX is the PARENT placement X, NOT recoverable
     // from a child ring's spawn (child spawn x = childX), so the generic field capturer
     // reapplies the captured value after the recreate hook uses a placeholder.
@@ -88,10 +89,10 @@ public class Sonic1RingInstance extends AbstractObjectInstance
      */
     public Sonic1RingInstance(ObjectSpawn spawn, List<RingSpawn> allRingSpawns) {
         super(spawn, "Ring");
-        this.ringSpawn = allRingSpawns.get(0);
-        this.childRingSpawns = allRingSpawns.size() > 1
+        this.ringSpawn = rewindSpawns(Collections.singletonList(allRingSpawns.get(0)));
+        this.childRingSpawns = rewindSpawns(allRingSpawns.size() > 1
                 ? allRingSpawns.subList(1, allRingSpawns.size())
-                : List.of();
+                : List.of());
         this.outOfRangeAnchorX = spawn.x();
         this.state = State.INIT;
     }
@@ -104,14 +105,21 @@ public class Sonic1RingInstance extends AbstractObjectInstance
      */
     Sonic1RingInstance(ObjectSpawn spawn, RingSpawn ringSpawn, int outOfRangeAnchorX) {
         super(spawn, "Ring");
-        this.ringSpawn = ringSpawn;
-        this.childRingSpawns = List.of();
+        this.ringSpawn = rewindSpawns(Collections.singletonList(ringSpawn));
+        this.childRingSpawns = rewindSpawns(List.of());
         this.outOfRangeAnchorX = outOfRangeAnchorX;
         this.state = State.ANIMATE;
     }
 
     private Sonic1RingInstance() {
         this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), new RingSpawn(0, 0), 0);
+    }
+
+    private Sonic1RingSpawnList rewindSpawns(List<RingSpawn> spawns) {
+        return new Sonic1RingSpawnList(spawns, () -> {
+            ObjectServices services = tryServices();
+            return services != null ? services.ringManager() : null;
+        });
     }
 
     @Override
@@ -171,7 +179,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                         objectManager.clearSpawnCounterActiveBit(getSpawn());
                     }
                 }
-                if (ringManager != null && ringManager.isCollected(ringSpawn)) {
+                if (ringManager != null && ringManager.isCollected(ringSpawn.getFirst())) {
                     setDestroyed(true);
                     return;
                 }
@@ -179,7 +187,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
             }
             case ANIMATE -> {
                 RingManager ringManager = services().ringManager();
-                if (ringManager != null && ringManager.isCollected(ringSpawn)) {
+                if (ringManager != null && ringManager.isCollected(ringSpawn.getFirst())) {
                     state = State.SPARKLE;
                 }
             }
@@ -197,7 +205,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
                     gameplayFrameCounter = objectManager.getFrameCounter();
                 }
                 if (ringManager == null || ringManager.isCollectedAndSparkleDone(
-                        ringSpawn, gameplayFrameCounter)) {
+                        ringSpawn.getFirst(), gameplayFrameCounter)) {
                     setDestroyed(true);
                 }
             }
@@ -216,7 +224,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         if (ringManager == null) {
             return true;
         }
-        if (!ringManager.isCollected(ringSpawn)) {
+        if (!ringManager.isCollected(ringSpawn.getFirst())) {
             return true;
         }
         for (RingSpawn child : childRingSpawns) {
@@ -351,7 +359,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
             return;
         }
         RingManager ringManager = services().ringManager();
-        if (ringManager == null || !ringManager.collectPlacedRing(ringSpawn, player, frameCounter)) {
+        if (ringManager == null || !ringManager.collectPlacedRing(ringSpawn.getFirst(), player, frameCounter)) {
             return;
         }
         // ROM: ReactToItem advances routine immediately on touch, so the ring
@@ -366,7 +374,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
         if (manager == null || state == State.INIT) return;
         var level = services().levelManager();
         int frame = level != null ? level.getFrameCounter() : 0;
-        com.openggf.level.rings.RingDrawInternalAccess.drawPlacedObject(manager, ringSpawn, frame);
+        com.openggf.level.rings.RingDrawInternalAccess.drawPlacedObject(manager, ringSpawn.getFirst(), frame);
     }
 
     @Override
@@ -384,8 +392,8 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     public String traceDebugDetails() {
         return String.format("state=%s ring=@%04X,%04X children=%d anchor=%04X",
                 state,
-                ringSpawn.x() & 0xFFFF,
-                ringSpawn.y() & 0xFFFF,
+                ringSpawn.getFirst().x() & 0xFFFF,
+                ringSpawn.getFirst().y() & 0xFFFF,
                 childRingSpawns.size(),
                 outOfRangeAnchorX & 0xFFFF);
     }

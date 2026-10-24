@@ -29,7 +29,7 @@ import java.util.List;
  *   <li>Subtype 0x0A-0x14: ending animals ("Anml_Ending" subtype path)</li>
  * </ul>
  */
-public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable {
     private static final int OBJECT_FALL_GRAVITY = 0x38;
     private static final int FLIGHT_GRAVITY = 0x18;
     private static final int FLOOR_CHECK_HEIGHT = 12;
@@ -533,6 +533,19 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
                 && screenX - 8 < S1_SCREEN_WIDTH
                 && screenY >= -32
                 && screenY < S1_SCREEN_HEIGHT + 32;
+    }
+
+    @Override
+    public java.util.Optional<com.openggf.level.objects.ObjectVisualAnimationSource.Cycle> visualAnimationCycle(int mappingFrame) {
+        // Anml_SlowGravity (_incObj/28, 29 Animals and Points.asm:266-290) and
+        // Anml_End_DoubleFly (_incObj/28, 29 Animals and Points.asm:449-475)
+        // toggle 0/1 with an independent two-tick timer. Walking frames instead
+        // follow y_vel and remain held in a directed picture.
+        boolean flying = endingMode ? endingSpeciesIndex == 0 || endingSpeciesIndex == 5 : mappingSetIndex == 0;
+        if (!flying) return java.util.Optional.empty();
+        int base = mappingFrame / FRAMES_PER_ANIMAL * FRAMES_PER_ANIMAL;
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectVisualAnimationSource.Cycle(
+                WING_FLAP_TIMER, List.of(base, base + 1)));
     }
 
     private void animateWings() {

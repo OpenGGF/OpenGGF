@@ -91,6 +91,18 @@ public class BackgroundRenderer {
     private short[] priorityColumnVScroll = new short[0];
     private int priorityHScrollLength, priorityLineVScrollLength, priorityColumnVScrollLength;
     private int priorityMidpoint, priorityExtraBuffer, priorityVScroll;
+    private int cinematicColumnPhaseX, cinematicNativeColumnCount, priorityColumnPhaseX;
+    private int cinematicColumnPhaseLocation = -1;
+
+    void setCinematicColumnPhase(int phase) {
+        phase = Math.floorMod(phase, 16);
+        if (cinematicColumnPhaseX == phase) return;
+        if (initialized && phase != 0 && cinematicColumnPhaseX == 0)
+            cinematicNativeColumnCount = vScrollColumnBuffer.getEntryCount();
+        cinematicColumnPhaseX = phase;
+        if (initialized) applyResolvedDisplayWidth((cinematicNativeColumnCount + (phase == 0 ? 0 : 1)) * 16);
+    }
+
     private int priorityShimmerFrame, priorityShimmerStyle;
     private float priorityShimmerWaterline;
     private boolean priorityNoHScroll;
@@ -140,6 +152,7 @@ public class BackgroundRenderer {
         parallaxShader = new ParallaxShaderProgram(shaderPath);
         parallaxShader.cacheUniformLocations();
         remapEnabledLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "UseColumnRemap");
+        cinematicColumnPhaseLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnPhaseX");
         remapXLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapX");
         remapYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapY");
         remapEndYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapEndY");
@@ -365,6 +378,7 @@ public class BackgroundRenderer {
         priorityVScroll = vScroll;
         priorityNoHScroll = noHScroll;
         priorityColumns = preparedColumns;
+        priorityColumnPhaseX = cinematicColumnPhaseX;
         priorityShimmerFrame = shimmerFrameCounter;
         priorityShimmerStyle = shimmerStyle;
         priorityShimmerWaterline = shimmerWaterlineScreenY;
@@ -381,6 +395,8 @@ public class BackgroundRenderer {
     void renderPriorityMask() {
         if (!initialized || !priorityReplayReady) return;
         var savedColumns = preparedColumns;
+        int savedColumnPhase = cinematicColumnPhaseX;
+        cinematicColumnPhaseX = priorityColumnPhaseX;
         int savedShimmerFrame = shimmerFrameCounter;
         int savedShimmerStyle = shimmerStyle;
         float savedShimmerWaterline = shimmerWaterlineScreenY;
@@ -399,6 +415,7 @@ public class BackgroundRenderer {
             priorityMetadata = false;
             priorityMask = false;
             preparedColumns = savedColumns;
+            cinematicColumnPhaseX = savedColumnPhase;
             shimmerFrameCounter = savedShimmerFrame;
             shimmerStyle = savedShimmerStyle;
             shimmerWaterlineScreenY = savedShimmerWaterline;
@@ -440,6 +457,7 @@ public class BackgroundRenderer {
 
         // Bind shader and set uniforms
         parallaxShader.use();
+        org.lwjgl.opengl.GL20.glUniform1f(cinematicColumnPhaseLocation, cinematicColumnPhaseX);
         org.lwjgl.opengl.GL20.glUniform1i(priorityMetadataLocation, priorityMetadata ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(priorityMaskLocation, priorityMask ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapEnabledLocation, columns != null ? 1 : 0);

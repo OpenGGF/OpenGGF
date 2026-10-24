@@ -355,7 +355,11 @@ The existing memory profiler ran a fresh diagnostic JVM for each selector group,
 three repeated passes within each process, before then after (not interleaved).
 Environment: Linux, Java `25.0.5.0.2`, 3 GiB diagnostic heap, 100 ms sampling,
 `--gc none` (no test/class-boundary forced GC; the tool still requests post-plan
-GC for its run floors), exclusive test admission and build-activity isolation.
+GC for its run floors), and exclusive test admission. Maven preparation held
+shared build-activity leases; these profiler invocations did not hold an exclusive
+build-activity lease. Overlap with unrelated build-only work was not ruled out,
+which further limits timing attribution. This isolation wording was corrected
+during the subsequent [lean qualification](../../research/2026-10-24-lean-test-qualification.md).
 Class-container measurements include class setup such as compilation. They
 exclude Maven preparation and queue waits.
 

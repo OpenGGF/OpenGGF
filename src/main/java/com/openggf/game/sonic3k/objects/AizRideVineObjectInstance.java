@@ -105,6 +105,11 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
         handle.prevY = handle.y;
     }
     @Override
+    public void releasePlayersForVisualDirection() {
+        clearGrabbedPlayers();
+    }
+
+    @Override
     public int getX() {
         return currentX;
     }

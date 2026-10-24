@@ -13,6 +13,19 @@ import java.util.List;
 /** Obj_LevelIntro_PlayerFallIntoGround, loc_41FEE–loc_42248. */
 public final class SozFallingIntroInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, FreshLevelTitleOwnerReplacement {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private boolean armed;
     private boolean initialized;
     private int routine;
@@ -23,13 +36,13 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
     public void arm() {
         armed = true;
         for (var player : players()) {
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
             player.clearForcedInputMask();
             // Native clr.w Ctrl_1/2_logical bypasses the input publisher's
             // lock-latching rule; physical pad edges remain available.
             player.clearLogicalInputState();
             if (player.getCpuController() != null) player.getCpuController().clearController2LogicalLatch();
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(player));
         }
     }
 
@@ -42,7 +55,7 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
         }
         var players = players();
         for (var player : players) {
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
             player.clearForcedInputMask();
             // Native clr.w Ctrl_1/2_logical bypasses the input publisher's
             // lock-latching rule; physical pad edges remain available.
@@ -65,14 +78,14 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
                         player.setJumping(false);
                         player.setAnimationId(0x10);
                         player.setObjectMappingFrameControl(false);
-                        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+                        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(player));
                     }
                 }
             }
             case 2 -> {
                 if ((main.getCentreY() & 0xFFFF) < 0x6A8) {
                     for (var player : players) {
-                        ObjectControlState.none().applyTo(player);
+                        ObjectControlState.none().applyTo(visualControlOwners.relinquish(player));
                         player.setControlLocked(false);
                     }
                     splash(players);

@@ -100,6 +100,14 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        releaseOwnedPlayer(mainOwner, nativeRideStates[PLAYER_SLOT_MAIN]);
+        releaseOwnedPlayer(nativeP2Owner, nativeRideStates[PLAYER_SLOT_SIDEKICK]);
+        for (var entry : extensionRideStates.entrySet()) releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        extensionRideStates.clear();
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         bindMainPlayer(player);

@@ -1999,6 +1999,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public void onUnload() {
         releaseAllPlayers();
     }

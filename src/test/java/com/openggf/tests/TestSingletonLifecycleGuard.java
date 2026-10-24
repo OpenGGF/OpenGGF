@@ -23,9 +23,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/editor/TestEditorRenderingSmoke.java#setUp
             src/test/java/com/openggf/editor/TestLevelEditorController.java#setUp
             src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
-            src/test/java/com/openggf/game/TestGameStateManager.java#setUp
             src/test/java/com/openggf/game/TestGameModuleProviderLifetimes.java#configureEngineServices
-            src/test/java/com/openggf/game/TestGameStateManager.java#configureEngineServices
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
             src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
@@ -78,13 +76,11 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestMGZSwingingPlatformObjectInstance.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kMonitorObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kSpringObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/badniks/TestMegaChopperBadnikInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/scroll/SwScrlMgzTest.java#setUpRuntime
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
-            src/test/java/com/openggf/graphics/TestFadeManager.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerFadeRebinding.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerSpriteSatReplay.java#setUp
             src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
@@ -112,7 +108,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/tests/TestRingManager.java#setUp
             src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kLightningShieldObjectInstance.java#setUp
-            src/test/java/com/openggf/tests/TestSonic3kMonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
             src/test/java/com/openggf/tests/TestS3kIczFreezerObject.java#setUp
             src/test/java/com/openggf/tests/TestS3kMgzPulleyAndMantis.java#setUp

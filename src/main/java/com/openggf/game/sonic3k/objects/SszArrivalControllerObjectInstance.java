@@ -57,6 +57,18 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
     static final int PLAYER_Y_ABOVE_CAMERA = 0x65;
     /** {@code loc_57CD2}/{@code loc_57D50}: 8 px per frame for both the player and the camera. */
     private static final int RISE_STEP = 8;
+    private void releasePlayerControl(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setObjectMappingFrameControl(false);
+        if (ownedPlayer == sprite) ownedPlayer = null;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (ownedPlayer != null) releasePlayerControl(ownedPlayer);
+        // The arrival event byte, camera, light cycle and beam remain native-owned.
+    }
+
     /** {@code Obj_57D64}: {@code move.l #$20000,d0} / {@code move.l #$800,d1}. */
     private static final int SWING_SPEED = 0x20000;
     private static final int SWING_ACCELERATION = 0x800;
@@ -83,10 +95,12 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
     private int releaseBaseY;
     private final S3kGradualSwing swing = new S3kGradualSwing();
     private TeleporterBeamObjectInstance beam;
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
+    private AbstractPlayableSprite ownedPlayer;
 
     private record RewindExtra(int riseRemaining, int phase, int beamFlag, int lightTimer, int lightIndex, int releaseBaseY,
                                S3kGradualSwing.Value swing,
-                               ObjectRefId beamId)
+                               ObjectRefId beamId, com.openggf.game.rewind.identity.PlayerRefId playerId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public SszArrivalControllerObjectInstance(ObjectSpawn spawn) {
@@ -107,7 +121,8 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
                 .map(table -> table.encodeObject(beam)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 riseRemaining, phase, beamFlag, lightTimer, lightIndex, releaseBaseY,
-                swing.captureRewindStateValue(), beamId));
+                swing.captureRewindStateValue(), beamId,
+                context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null)));
     }
 
     @Override
@@ -121,6 +136,8 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
             lightIndex = extra.lightIndex();
             releaseBaseY = extra.releaseBaseY();
             swing.restoreRewindStateValue(extra.swing());
+            ownedPlayer = extra.playerId() == null ? null : (AbstractPlayableSprite)
+                    context.requireIdentityTable().resolvePlayer(extra.playerId(), true);
             beam = extra.beamId() == null ? null
                     : (TeleporterBeamObjectInstance) context.requireIdentityTable()
                             .resolveObject(extra.beamId(), true);
@@ -166,6 +183,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
             // object_control = 3: bits 0-6 without bit 7, and bit 1 suppresses Animate_Sonic,
             // so the cleared anim and mapping_frame survive the ride up.
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+            ownedPlayer = sprite;
             sprite.setObjectMappingFrameControl(true);
             sprite.setAnimationId(0);
             sprite.setMappingFrame(0);
@@ -236,7 +254,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
             try {
                 var helper = ObjectConstructionContext.with(services(), targetSlot,
                         () -> new SszTailsArrivalHelperObjectInstance(
-                                new ObjectSpawn(x, releaseBaseY, 0, 0x0C, 0, false, 0)));
+                                new ObjectSpawn(x, releaseBaseY, 0, 0x0C, 0, false, 0), sidekick()));
                 ObjectLifetimeOps.addDynamicAtReservedSlot(manager, helper, targetSlot);
             } catch (RuntimeException | Error failure) {
                 if (managed) manager.releaseDynamicSlot(targetSlot);
@@ -272,8 +290,7 @@ public final class SszArrivalControllerObjectInstance extends AbstractObjectInst
         if (swing.rising()) {
             return;
         }
-        ObjectControlState.none().applyTo(sprite);
-        sprite.setObjectMappingFrameControl(false);
+        releasePlayerControl(sprite);
         sprite.setAnimationId(0);
         SszZoneRuntimeState state = state();
         if (state != null) {

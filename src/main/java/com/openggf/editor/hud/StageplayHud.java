@@ -18,7 +18,12 @@ import static com.openggf.editor.hud.EditorHudTheme.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 /** Controller and pointer authoring front end; all document edits use the shared workspace. */
-final class StageplayHud {
+final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteOverlay.Painter {
+    private EditorHudCanvas routeCanvas;
+
+    @Override public void line(float x1, float y1, float x2, float y2, int rgb, float width) {
+        routeCanvas.line(x1, y1, x2, y2, rgb, width);
+    }
     enum Page { CAST, TIMELINE, COMMANDS }
     record Row(String label, String detail, int frame, Runnable action) { }
     private record Hit(Rect rect, Runnable action) { }
@@ -141,11 +146,12 @@ final class StageplayHud {
     }
 
     private void cycleActor(int direction) {
-        var actors = workspace.controller().document().actors();
-        if (actors.isEmpty()) return;
-        int index = -1;
-        for (int i = 0; i < actors.size(); i++) if (actors.get(i).id().equals(workspace.controller().selectedActorId())) index = i;
-        workspace.selectActor(actors.get(Math.floorMod(index + direction, actors.size())).id());
+        var ids = new ArrayList<String>();
+        workspace.controller().document().actors().forEach(actor -> ids.add(actor.id()));
+        workspace.controller().document().objectActors().forEach(actor -> ids.add(actor.id()));
+        if (ids.isEmpty()) return;
+        int index = ids.indexOf(workspace.controller().selectedActorId());
+        workspace.selectActor(ids.get(Math.floorMod(index + direction, ids.size())));
     }
 
     private void changePage(Page value) { page = value; selected = 0; workspace.setCameraInputEnabled(value != Page.COMMANDS); }
@@ -166,6 +172,10 @@ final class StageplayHud {
                     boolean physical = document.puppets().stream().anyMatch(p -> p.actorId().equals(actor.id()));
                     rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / " + actor.character()
                             + (physical ? " / Puppet" : " / Poser"), -1, () -> workspace.selectActor(actor.id())));
+                }
+                for (var actor : document.objectActors()) {
+                    rows.add(new Row(actor.name(), actor.gameId().toUpperCase(java.util.Locale.ROOT) + " / Object", -1,
+                            () -> workspace.selectActor(actor.id())));
                 }
             }
             case TIMELINE -> {
@@ -208,6 +218,12 @@ final class StageplayHud {
         var controller = workspace.controller();
         var document = controller.document();
         Rect game = layout.game();
+        if (workspace.routeOverlay() != null) {
+            routeCanvas = c;
+            c.clip(game);
+            try { workspace.paintRouteOverlay(this, game.x(), game.y(), game.w(), game.h()); }
+            finally { c.unclip(); routeCanvas = null; }
+        }
         // Leave the engine's completed preview intact, filling only its surrounding chrome.
         c.rect(0, 0, layout.width(), game.y(), BACKDROP, 1);
         c.rect(0, game.bottom(), layout.width(), layout.height() - game.bottom(), BACKDROP, 1);
@@ -237,6 +253,8 @@ final class StageplayHud {
         hits = List.copyOf(nextHits);
     }
 
+    private List<StageplayDocument.Actor> documentActors() { return workspace.controller().document().actors(); }
+
     private void drawPanel(EditorHudCanvas c, Rect panel, List<Hit> nextHits) {
         c.panel(panel.x(), panel.y(), panel.w(), panel.h(), PANEL, 1);
         float gap = 4, width = (panel.w() - 20) / 3;
@@ -248,7 +266,10 @@ final class StageplayHud {
                     names[i], () -> changePage(target), page == target);
         }
         List<Row> rows = rows();
-        visibleRows = Math.max(1, (int) ((panel.h() - 110) / 27));
+        var route = workspace.routeOverlay();
+        var routeLines = route == null ? List.<String>of() : wrapRouteText(route.motionSummary()+". "+route.reason(), panel.w() - 28);
+        float routeHeight = route == null ? 0 : 68 + routeLines.size() * 11;
+        visibleRows = Math.max(1, (int) ((panel.h() - 110 - routeHeight) / 27));
         selected = rows.isEmpty() ? 0 : Math.clamp(selected, 0, rows.size() - 1);
         int first = Math.max(0, Math.min(selected - visibleRows / 2, rows.size() - visibleRows));
         if (rows.isEmpty()) {
@@ -262,13 +283,25 @@ final class StageplayHud {
             c.rect(area.x(), area.y(), area.w(), area.h(), chosen ? PANEL_HIGHLIGHT : PANEL_RAISED, 1);
             if (chosen) c.rect(area.x(), area.y(), 2, area.h(), GOLD, 1);
             String label = (row.frame() >= 0 ? row.frame() + "  " : "") + row.label();
-            boolean selectedActor = page == Page.CAST && workspace.controller().document().actors().get(i).id().equals(workspace.controller().selectedActorId());
+            boolean selectedActor = page == Page.CAST && (i < documentActors().size() ? documentActors().get(i).id()
+                    : workspace.controller().document().objectActors().get(i - documentActors().size()).id()).equals(workspace.controller().selectedActorId());
             if (selectedActor) label = "* " + label;
             c.fittedText(label, area.x() + 6, area.y() + 4, area.w() - 12, Size.SMALL, TEXT, 1);
             c.fittedText(selectedActor ? workspace.selectedActorStatus() : row.detail(), area.x() + 6, area.y() + 15, area.w() - 12, Size.SMALL, TEXT_DIM, 1);
             nextHits.add(new Hit(area, () -> { selected = index; row.action().run(); }));
         }
         float bottom = panel.bottom() - 67;
+        if (route != null) {
+            float x = panel.x() + 10, y = bottom - routeHeight - 10;
+            c.rect(x - 2, y - 5, panel.w() - 16, 1, LINE, 1);
+            c.text(route.title(), x, y, Size.SMALL, route.successful() ? GOOD : WARN, 1);
+            c.text("Cyan: walk", x, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND, 1);
+            c.text("Gold: air / takeoff", x + 85, y + 14, Size.SMALL, com.openggf.stageplay.editor.StageplayRouteOverlay.AIR, 1);
+            c.text("Square: start   Diamond: goal", x, y + 26, Size.SMALL, TEXT_DIM, 1);
+            c.text(route.applied() ? "White cross: actual position" : "Red cross: stopped attempt", x, y + 37, Size.SMALL, TEXT_DIM, 1);
+            for (int i = 0; i < routeLines.size(); i++)
+                c.text(routeLines.get(i), x, y + 52 + i * 11, Size.SMALL, TEXT, 1);
+        }
         c.fittedText(rows.isEmpty() ? "" : (selected + 1) + " / " + rows.size() + "   Up / Down to browse",
                 panel.x() + 8, bottom - 10, panel.w() - 16, Size.SMALL, TEXT_FAINT, 1);
         float half = (panel.w() - 18) / 2;
@@ -282,7 +315,23 @@ final class StageplayHud {
             button(c, nextHits, new Rect(panel.x() + 6 + (i % 2) * (half + 6), bottom + (i / 2) * 21, half, 18),
                     labels[i], () -> workspace.invoke(action), false);
         }
-        c.fittedText(workspace.status(), panel.x() + 8, panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
+        c.fittedText(route == null ? workspace.status() : route.statusText(), panel.x() + 8,
+                panel.bottom() - 16, panel.w() - 16, Size.SMALL, TEXT_DIM, 1);
+    }
+
+    /** Route explanations wrap at spaces instead of passing through the HUD's ellipsis fitter. */
+    static List<String> wrapRouteText(String text, float width) {
+        var lines = new ArrayList<String>();
+        String line = "";
+        for (String word : text.split("\\s+")) {
+            String next = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && EditorHudCanvas.textWidth(next, Size.SMALL) > width) {
+                lines.add(line);
+                line = word;
+            } else line = next;
+        }
+        if (!line.isEmpty()) lines.add(line);
+        return List.copyOf(lines);
     }
 
     private void drawTimeline(EditorHudCanvas c, Rect dock, StageplayDocument document, List<Hit> nextHits) {

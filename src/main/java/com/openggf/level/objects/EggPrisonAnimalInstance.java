@@ -30,7 +30,7 @@ import java.util.List;
  * </ul>
  */
 public class EggPrisonAnimalInstance extends AbstractObjectInstance
-        implements SpawnTrailingZeroIntsRewindRecreatable {
+        implements ObjectVisualAnimationSource, SpawnTrailingZeroIntsRewindRecreatable {
     // Physics constants from s2.asm
     private static final int GRAVITY = 0x38;        // Standard gravity
     private static final int FLY_GRAVITY = 0x18;    // Reduced gravity for flying animals
@@ -94,6 +94,17 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance
 
     EggPrisonAnimalInstance(ObjectSpawn spawn) {
         this(spawn, 0, 0);
+    }
+
+    @Override
+    public java.util.Optional<Cycle> visualAnimationCycle(int mappingFrame) {
+        // Obj28_Fly (s2.asm:24690-24720) and loc_2CABA (sonic3k.asm:61209-61218)
+        // toggle 0/1 with an independent two-tick timer. Obj28_Walk
+        // (s2.asm:24671-24683) and loc_2CA3C (sonic3k.asm:61172-61182) instead
+        // test y_vel, so directed walking keeps that physics-owned hop frame held.
+        if (!definition.flying()) return java.util.Optional.empty();
+        int base = mappingFrame / FRAMES_PER_MAPPING * FRAMES_PER_MAPPING;
+        return java.util.Optional.of(new Cycle(1, List.of(base, base + 1)));
     }
 
     @Override

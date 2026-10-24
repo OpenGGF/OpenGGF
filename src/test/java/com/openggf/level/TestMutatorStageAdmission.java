@@ -125,14 +125,17 @@ class TestMutatorStageAdmission {
         services.policy(LevelMutatorPolicy.STOCK);
         assertTrue(HpzMutatorSelectionTestAccess.beginSelection(pedestal, player));
         for (int i=0;i<5;i++) pedestal.updateSelection();
-        var objectSnapshot = pedestal.captureRewindState();
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerPlayer(player, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        var rewindContext = RewindCaptureContext.withIdentityTable(identities);
+        var objectSnapshot = pedestal.captureRewindState(rewindContext);
         var permits = services.runtime().capture();
         services.policy(NO_ENTRY);
         for (int i=0;i<11;i++) pedestal.updateSelection();
         assertEquals(new SpecialStageEntryRequest(2, EmeraldRewardKind.SUPER_EMERALD),
                 services.transitions.consumeSpecialStageEntryRequest());
         services.runtime().restore(permits);
-        pedestal.restoreRewindState(objectSnapshot, RewindCaptureContext.none());
+        pedestal.restoreRewindState(objectSnapshot, rewindContext);
         for (int i=0;i<10;i++) pedestal.updateSelection();
         assertFalse(services.transitions.isSpecialStageRequested());
         pedestal.updateSelection();

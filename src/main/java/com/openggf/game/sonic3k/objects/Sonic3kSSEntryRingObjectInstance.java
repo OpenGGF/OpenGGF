@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -24,7 +25,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -64,6 +64,12 @@ import java.util.logging.Logger;
  * Reference: docs/skdisasm/sonic3k.asm Obj_SSEntryRing (lines 128211-128530)
  */
 public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
+    private AbstractPlayableSprite directedHiddenPlayer;
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryRingObjectInstance.class.getName());
 
     // Collision extents from center (ROM: SSEntry_Range: dc.w -$18, $30, -$28, $50)
@@ -549,6 +555,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             // loc_6173A does not select the byte through the touched character.
             art.vintDmaLedger().forcePlayerOneReload();
         }
+        directedHiddenPlayer = player;
         player.setHidden(true);
         lockCapturedPlayerAnimation(player);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -617,7 +624,25 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 .toList();
     }
 
+    void transferCapturedPlayersTo(Sonic3kSSEntryFlashObjectInstance flash) {
+        flash.acceptCapturedPlayers(directedControlPlayers.players(), directedHiddenPlayer);
+        directedControlPlayers.clear();
+        directedHiddenPlayer = null;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        if (directedHiddenPlayer != null) directedHiddenPlayer.setHidden(false);
+        directedHiddenPlayer = null;
+        directedControlPlayers.clear();
+    }
+
     private void lockCapturedPlayerAnimation(AbstractPlayableSprite captured) {
+        directedControlPlayers.add(captured);
         captured.setForcedAnimationId(-1);
         // ROM writes mapping_frame(a1) = 0 itself rather than waiting for the
         // animation script, because Animate_Sonic has already run for this

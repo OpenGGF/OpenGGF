@@ -20,7 +20,7 @@ full-suite or ROM-parity result.
 | Need | Existing owner |
 | --- | --- |
 | Gameplay screenshots or movies | [gameplay-capture](../gameplay-capture/SKILL.md): `GameplayCaptureTool` |
-| Stageplay animatics, directed dialogue or staged promos | [stageplay-authoring](../stageplay-authoring/SKILL.md): `tools/stageplay/stageplay.py` and `StageplayCaptureTool`, using detached terrain or an explicitly owned live native world, with offline audio |
+| Stageplay animatics, directed dialogue or staged promos | [stageplay-authoring](../stageplay-authoring/SKILL.md): `tools/stageplay/stageplay.py` and `StageplayCaptureTool`, using one explicitly owned native world, with offline audio |
 | Render an existing trace replay | [trace-capture](../trace-capture/SKILL.md): `TraceCaptureTool`; video completion does not prove parity |
 | Rendered gameplay tests or custom route probes | `GameplayCaptureSession`: production boot, stepping, mode-aware drawing, and optional image readback |
 | Component, shader, framebuffer, or presentation pixel tests | `PresentationOffscreenTestContext.open(width, height)` in test scope; it owns a core-profile EGL context, not a loaded game or initialized graphics manager |
@@ -141,6 +141,14 @@ its teardown; retaining shader/atlas handles after context destruction can make
 the next session render black. Keep test reset/property restoration scoped to
 the test, including failure paths.
 
+`HeadlessGameBoot` alone is a foundation: it closes its session/ROM/context but
+leaves process-owned graphics caches to its caller. A custom host or test that
+initializes `GraphicsManager` must retire those owned resources while EGL is still
+current, after its world/private textures close and before `boot.close()`.
+`initHeadless()` is a logic-mode reset, not GL resource cleanup. Otherwise a second
+context can reuse stale ArenaMaskRenderer program/VAO handles even when two pictures
+compare equal. Higher-level capture sessions own their documented teardown.
+
 ## Verify the evidence
 
 Check executed tests and skips, not just exit status: `@RequiresRom` and some GL
@@ -151,9 +159,10 @@ above requires EGL and fails if context creation is unavailable on Linux;
 For gameplay captures, inspect `state.csv` before selecting frames; for trace
 captures, inspect the selected clip and replay reports using `trace-capture`.
 For Stageplay, inspect the screenplay, labelled authored/simulated JSONL and moving
-footage using `stageplay-authoring`. TERRAIN_ONLY `simulate` resolves native puppet
-physics against detached terrain without GL. LIVE simulation advances one shared
-production object/ring/player world; its `sample.world` contains native states/events.
+footage using `stageplay-authoring`. Stageplay `simulate` advances one shared
+production object/ring/player world. A terrain-only shot uses the same world with
+an entry `CLEAR_OBJECTS` command; rings have a separate clear command. Its
+`sample.world` contains native states/events.
 Pure `timeline` remains authored and leaves puppets `UNRESOLVED`. A selected scene
 simulation is bounded evidence, not certification of a full level or ROM parity. Confirm dimensions, scene/mode, nonblank pixels, and the playable
 sprite when expected. Compare relevant pixels or a deliberately cleared target to reject stale framebuffer

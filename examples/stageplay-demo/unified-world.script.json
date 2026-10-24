@@ -1,0 +1,293 @@
+{
+  "version": 6,
+  "name": "One world, complete framing",
+  "width": 384,
+  "height": 216,
+  "cast": [
+    {
+      "id": "classic",
+      "name": "Classic Sonic",
+      "gameId": "s1",
+      "character": "sonic",
+      "puppet": true
+    },
+    {
+      "id": "tails",
+      "name": "Tails",
+      "gameId": "s2",
+      "character": "tails",
+      "puppet": true
+    },
+    {
+      "id": "knuckles",
+      "name": "Knuckles",
+      "gameId": "s3k",
+      "character": "knuckles",
+      "puppet": true
+    },
+    {
+      "id": "pose",
+      "name": "Pose study",
+      "gameId": "s2",
+      "character": "sonic",
+      "puppet": false
+    }
+  ],
+  "shots": [
+    {
+      "id": "populated",
+      "durationFrames": 180,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 0,
+          "y": 500,
+          "zoom": 1.2
+        }
+      ],
+      "actors": {
+        "classic": [
+          {
+            "frame": 0,
+            "x": 80,
+            "y": 655
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 120,
+            "y": 655
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 160,
+            "y": 655
+          }
+        ],
+        "pose": [
+          {
+            "frame": 0,
+            "x": 270,
+            "y": 630,
+            "animation": 5,
+            "scale": 1.2,
+            "interpolation": "HOLD"
+          }
+        ]
+      },
+      "actions": {
+        "classic": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 150,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 60,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 190,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 70,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 230,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 80,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "captions": [
+        {
+          "startFrame": 0,
+          "endFrame": 180,
+          "text": "Populated world / mixed ROM cast",
+          "x": 8,
+          "y": 8
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "soundId": 129
+        }
+      ]
+    },
+    {
+      "id": "cleared",
+      "durationFrames": 180,
+      "set": {
+        "gameId": "s2",
+        "zone": 0,
+        "act": 0
+      },
+      "camera": [
+        {
+          "frame": 0,
+          "x": 0,
+          "y": 500,
+          "zoom": 1.2
+        }
+      ],
+      "actors": {
+        "classic": [
+          {
+            "frame": 0,
+            "x": 80,
+            "y": 655
+          }
+        ],
+        "tails": [
+          {
+            "frame": 0,
+            "x": 120,
+            "y": 655
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 0,
+            "x": 160,
+            "y": 655
+          }
+        ],
+        "pose": [
+          {
+            "frame": 0,
+            "x": 270,
+            "y": 630,
+            "animation": 5,
+            "scale": 1.2,
+            "interpolation": "HOLD"
+          }
+        ]
+      },
+      "actions": {
+        "classic": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 150,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 60,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ],
+        "tails": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 190,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 70,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ],
+        "knuckles": [
+          {
+            "frame": 30,
+            "kind": "MOVE_TO",
+            "x": 230,
+            "y": 655,
+            "urgency": 0.35
+          },
+          {
+            "frame": 80,
+            "kind": "JUMP",
+            "holdFrames": 10
+          },
+          {
+            "frame": 140,
+            "kind": "STOP"
+          }
+        ]
+      },
+      "captions": [
+        {
+          "startFrame": 0,
+          "endFrame": 180,
+          "text": "Cleared world / same native cast",
+          "x": 8,
+          "y": 8
+        }
+      ],
+      "audio": [
+        {
+          "frame": 0,
+          "kind": "ROM_MUSIC",
+          "soundId": 129
+        }
+      ],
+      "transition": {
+        "kind": "FADE_BLACK",
+        "durationFrames": 30
+      },
+      "worldCommands": [
+        {
+          "id": "clear-objects-180",
+          "frame": 0,
+          "kind": "CLEAR_OBJECTS"
+        }
+      ]
+    }
+  ]
+}

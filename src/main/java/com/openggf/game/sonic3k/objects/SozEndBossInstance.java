@@ -19,6 +19,21 @@ import java.util.List;
 /** SKL $98, Obj_SOZEndBoss ($7764A). Shell, pilot and arena remain separate native owners. */
 public final class SozEndBossInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private int routine, savedRoutine, xFixed, yFixed, baseY, xVelocity, yVelocity;
     private int timer, initialWalkTimer, strideTimer, footPauseTimer, phaseStep, armStep, armAngle, angle;
     private int chargeTimer = 0xC0, hits = 8, flashTimer;
@@ -179,13 +194,13 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         }
     }
     private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(music);for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
-        if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(p);p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
-        if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);p.setControlLocked(true);}}
+        if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(visualControlOwners.relinquish(p));p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
+        if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);visualControlOwners.acquire(p).setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;
         if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16|(xFixed&0xFFFF);yFixed=p.getCentreY()<<16|(yFixed&0xFFFF);xVelocity=p.getXSpeed();yVelocity=0;
-            escapePhase=7;if(!knuckles()){ObjectControlState.nativeBit7FullControl().applyTo(p);p.setAnimationId(0x1A);}return;}
+            escapePhase=7;if(!knuckles()){ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p));p.setAnimationId(0x1A);}return;}
         boolean jump=p.getPushing()||forcedJumpTimer!=0;if(p.getPushing())forcedJumpTimer=0x1F;else if(forcedJumpTimer!=0)forcedJumpTimer--;
-        p.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
+        visualControlOwners.acquire(p).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
         p.setLogicalInputState(false,false,false,true,jump,p.getPushing());}
     private void exitMove(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;move();
         if(!knuckles()&&getX()>=0x54C0){xVelocity=0;yVelocity=0;timer=0x7F;escapePhase=8;runtime().events().endBossFallStarted(true);services().camera().requestFastVerticalScroll();}

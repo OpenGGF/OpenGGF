@@ -99,6 +99,11 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public MGZTwistingLoopObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new MGZTwistingLoopObjectInstance(ctx.spawn());
     }

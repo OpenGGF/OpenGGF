@@ -20,7 +20,6 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugObjectArtViewer;
 import com.openggf.debug.PerformanceProfiler;
-import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.mode.BootScreenModeController;
 import com.openggf.game.launch.MasterTitleLaunchCoordinator;
 import com.openggf.game.launch.MasterTitleExitCoordinator;
@@ -2154,7 +2153,7 @@ public class GameLoop {
     }
 
     /**
-     * BONUS_STAGE per-frame update: overlay tick, glowing-sphere bootstrap, the
+     * BONUS_STAGE per-frame update: overlay tick, provider-declared bootstrap, the
      * shared level frame step (with the bonus-stage high-priority enforcement
      * and completion check), and the gumball debug shortcuts. Falls through to
      * the shared post-update tail.
@@ -2165,16 +2164,15 @@ public class GameLoop {
         com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(
                 getTitleCardProviderLazy(), gameplayMode.getWorldSession());
 
-        if (levelManager.getRomZoneId() == Sonic3kZoneIds.ZONE_GLOWING_SPHERE) {
-            ensureBonusStageBootstrapObjectPresent(BonusStageType.GLOWING_SPHERE);
-        }
+        com.openggf.game.internal.BonusStageFrameLifecycle.ensureBootstrapPresent(
+                activeBonusStageProvider, levelManager.getObjectManager());
 
         // Bonus stage runs the same level frame steps as LEVEL mode
+        BonusStageProvider executedProvider = activeBonusStageProvider;
         boolean freezeForBonusExit = bonusStageTransitionPending;
         if (!freezeForBonusExit) {
             GameplayModeContext executedOwner = gameplayMode;
             GameMode executedMode = currentGameMode;
-            BonusStageProvider executedProvider = activeBonusStageProvider;
             beginGameplayAudioFrameForTick();
             spriteManager.publishHeldInputForLevelEvents(inputHandler);
             // LiveTraceComparator (or any PlaybackFrameObserver) may ask us to
@@ -2259,11 +2257,11 @@ public class GameLoop {
 
         // Debug: F11 cycles through bucket/priority isolation for the gumball machine
         if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_F11)) {
-            com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugFilter();
+            com.openggf.game.internal.BonusStageFrameLifecycle.cycleObjectRenderFilter(executedProvider);
         }
         // Debug: Insert cycles through gumball child-source isolation without colliding with overlay F-keys.
         if (isUnmodifiedDebugKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT)) {
-            com.openggf.game.sonic3k.objects.GumballMachineObjectInstance.cycleDebugSourceFilter();
+            com.openggf.game.internal.BonusStageFrameLifecycle.cycleObjectSourceFilter(executedProvider);
         }
     }
 
@@ -3214,7 +3212,7 @@ public class GameLoop {
 
         // Create results screen with current emerald count via provider
         int totalEmeralds = gameState.getEmeraldCount();
-        resultsScreen = com.openggf.game.sonic3k.specialstage.S3kSpecialStageWorldAccess.createResults(
+        resultsScreen = GameLoopSpecialStageLifecycle.createResults(
                 ssProvider, gameplayMode, ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
 
         if (resultsScreen == null) {

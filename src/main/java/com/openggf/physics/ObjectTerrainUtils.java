@@ -531,6 +531,18 @@ public final class ObjectTerrainUtils {
         return checkNativeUpwardCeilingDistAtPoint(levelManager, x, y - yRadius, false);
     }
 
+    // Internal authoring probes use explicit owners/path selection. Native callers
+    // retain the existing entry points and their shipped arithmetic unchanged.
+    static TerrainCheckResult routeCeilingDist(LevelManager lm, int x, int y, boolean secondary) {
+        TerrainCheckResult current = scanCeilingTile(lm, (byte) 0, x, y, y, false, true, SOLIDITY_ALL, secondary);
+        if (current != null) return current;
+        TerrainCheckResult extension = scanCeilingTile(lm, (byte) 0, x, y, y - FULL_TILE, true, true, SOLIDITY_ALL, secondary);
+        return extension != null ? extension : TerrainCheckResult.noCollision();
+    }
+    static TerrainCheckResult routeWallDist(LevelManager lm, int x, int y, boolean secondary) {
+        return checkWallDistAtPoint(lm, (byte) 0, x, y, false, true, secondary);
+    }
+
     private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
             LevelManager lm, int x, int y, boolean flipAwareAngle) {
         return checkNativeUpwardCeilingDistAtPoint(lm, (byte) 0, x, y, flipAwareAngle,

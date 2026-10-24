@@ -115,7 +115,7 @@ public final class SszCraneShip extends AbstractObjectInstance implements SpawnR
                 var boss = occupant(state.carriedObjectSlot());
                 if (code == 0x7CBA4 && inRange(boss, 0x78)) {
                     code = 0x7CBCE;
-                    spawnFreeChild(() -> new SszCranePlayerRelease(child(0, 0, 0)));
+                    spawnFreeChild(() -> new SszCranePlayerRelease(child(0, 0, 0), player));
                     state.setCutsceneFlag(5);
                 }
                 // loc_7CBA4 falls through into loc_7CBCE even before the first range succeeds.

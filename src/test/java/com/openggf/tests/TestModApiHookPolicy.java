@@ -53,6 +53,43 @@ class TestModApiHookPolicy {
         assertStagedPasses(repo);
     }
 
+    @Test void internalNestedClassAdditionAndRemovalNeedNoPinChange() throws Exception {
+        Path repo = fixtureWithAnnotatedClass();
+        String baseline = Files.readString(repo.resolve(CLASS_API));
+        String internalTypes = """
+                    private static final class PrivateHelper {
+                        public int value() { return 1; }
+                        public static class InvisibleExport { }
+                    }
+                    private static class InlineHelper { public void internal() { } }
+                    private static final class MultiLineHelper
+                            implements Runnable {
+                        public void run() { String braces = "{ }"; }
+                        private static class Deeper { }
+                    }
+                    static final class PackageHelper
+                            implements Runnable {
+                        public void run() { String braces = "{ }"; }
+                        public static class PackageExport { }
+                    }
+                    interface PackageContract { void run(); }
+                """;
+        write(repo, CLASS_API, baseline.replace("    public int value", internalTypes + "    public int value"));
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+        commit(repo);
+        write(repo, CLASS_API, baseline);
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void implicitlyPublicTypesInsideVisibleInterfacesStillRequireThePin() throws Exception {
+        Path repo = fixtureWithClassMembers("public interface Contract { void run(); }\n");
+        write(repo, CLASS_API, annotatedClass("public interface Contract { void run(); class Added { } }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+    }
+
     @Test void removingAnnotatedPrivateFieldsNeedsNoSignaturePinChange() throws Exception {
         Path repo = fixtureWithClassMembers("""
                     @SuppressWarnings("unused")
@@ -62,6 +99,26 @@ class TestModApiHookPolicy {
         write(repo, CLASS_API, annotatedClass(""));
         git(repo, "add", CLASS_API);
         assertStagedPasses(repo);
+    }
+
+    @Test void exportedNestedTypesAndNewPublicMethodsRequireThePin() throws Exception {
+        Path repo = fixtureWithAnnotatedClass();
+        String baseline = Files.readString(repo.resolve(CLASS_API));
+        for (String declaration : List.of(
+                "public class Exported { }",
+                "public static class Exported { }",
+                "protected static class Exported { }",
+                "public interface Exported { void run(); }",
+                "protected interface Exported { void run(); }",
+                "public record Exported(int value) { }",
+                "public enum Exported { VALUE }",
+                "public @interface Exported { }",
+                "public void added() { }")) {
+            write(repo, CLASS_API, baseline.substring(0, baseline.lastIndexOf('}'))
+                    + "    " + declaration + "\n}\n");
+            git(repo, "add", CLASS_API);
+            assertStagedFails(repo);
+        }
     }
 
     @Test void privateRecordHeadersAndTheirPublicMembersNeedNoSignaturePinChange() throws Exception {

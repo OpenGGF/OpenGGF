@@ -37,12 +37,35 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
         animationLifecycle.ensureArtLoaded(this::loadShieldArt);
     }
 
+    @Override
+    public com.openggf.level.objects.AbstractObjectInstance recreateForRewind(
+            com.openggf.level.objects.RewindRecreateContext context) {
+        if (context.dynamicEntry() != null && context.dynamicEntry().rewindableAuxiliary()
+                && getPlayer() instanceof AbstractPlayableSprite player
+                && player.getPowerUpSpawner() instanceof com.openggf.sprites.render.PlayerAttachedEffectArt supplied
+                && supplied.instaShieldArt() != null) {
+            // Extra directed performers own rewindable overlays outside ROM SST slots.
+            // The ordinary deferred player-refresh path requires a captured native slot;
+            // return this auxiliary graph directly so the manager restores its ID/state.
+            var restored = com.openggf.level.objects.ObjectConstructionContext.construct(context.objectServices(),
+                    () -> new InstaShieldObjectInstance(player));
+            player.setInstaShieldObject(restored);
+            return restored;
+        }
+        return super.recreateForRewind(context);
+    }
+
     /**
      * Acquires DPLC renderer and animation set from the art provider.
      * Called at construction and lazily on first triggerAttack() if art wasn't
      * available at construction time (sprite created before level load).
      */
     private ShieldAnimationArtLifecycle.Art loadShieldArt() {
+        if (getPlayer() instanceof AbstractPlayableSprite player
+                && player.getPowerUpSpawner() instanceof com.openggf.sprites.render.PlayerAttachedEffectArt supplied
+                && supplied.instaShieldArt() != null) {
+            return new ShieldAnimationArtLifecycle.Art(supplied.instaShieldRenderer(), supplied.instaShieldArt().animationSet());
+        }
         Sonic3kObjectArtProvider artProvider = getS3kArtProvider();
         if (artProvider != null) {
             PlayerSpriteRenderer renderer = artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.INSTA_SHIELD,
@@ -67,7 +90,9 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // Obj_InstaShield_Main (sonic3k.asm:34626-34651) reads parent(a0) into a2,
+        // then writes that parent's completion flag, including for additional players.
+        AbstractPlayableSprite player = (AbstractPlayableSprite) getPlayer();
         if (isShieldDestroyed()) return;
         animationLifecycle.stepAnimation();
         if (animationLifecycle.mappingFrame() == FINAL_FRAME && player.getDoubleJumpFlag() == 1) {

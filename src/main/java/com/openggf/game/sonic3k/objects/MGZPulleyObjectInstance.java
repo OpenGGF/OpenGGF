@@ -117,6 +117,11 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        releaseAllGrabbedPlayers();
+    }
+
+    @Override
     public MGZPulleyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new MGZPulleyObjectInstance(ctx.spawn(), false);
     }

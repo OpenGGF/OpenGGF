@@ -140,6 +140,11 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public OOZPoppingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new OOZPoppingPlatformObjectInstance(ctx.spawn(), "OOZPoppingPform");
     }

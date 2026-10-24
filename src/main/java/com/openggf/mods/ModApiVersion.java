@@ -113,8 +113,12 @@ public final class ModApiVersion {
      * expose native S3K CRAM passes; prior GameRules constructors retain their overlay default.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
-     * Stageplay v5 adds opt-in live ROM worlds, stable placement targets, bounded native intents,
-     * fixed-scale actor/group following and native world observations; legacy scenes stay terrain-only.
+     * Stageplay v6 unifies native and initially cleared worlds, donor performers and
+     * directed framing; v1-v5 documents retain explicit compatibility execution policies.
+     * Stageplay route motion settings and actor-declared movement abilities remain in candidate 0.7.
+     * Stageplay v7 adds object source/mode keys, visual child-part frames and timed world commands;
+     * registry/graph/ROM presentation owners remain internal. Stable placement targets, bounded
+     * native intents and native observations remain portable.
      * Stageplay adds immutable directing documents, pure timeline evaluation,
      * owner-bound cutscene playback, bounded sample voices and explicit native
      * player/camera borrowing with captured handover and fault revocation.

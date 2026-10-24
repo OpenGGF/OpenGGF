@@ -153,6 +153,11 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (grabbedPlayer != null) releasePlayer(true);
+    }
+
+    @Override
     public int getReservedChildSlotCount() {
         return reservedChildSlotCount();
     }

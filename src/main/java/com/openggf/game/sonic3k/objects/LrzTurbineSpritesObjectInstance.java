@@ -136,6 +136,13 @@ public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstanc
      * block lies in one bank, so the high word {@code sub_13EFC} latches is {@code $0004}.
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (captured[0] && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releasePlain(0, player);
+        if (captured[1] && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releasePlain(1, player);
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         return 0x0004;
     }

@@ -15,7 +15,7 @@ import uuid
 AGING_SECONDS = 300
 # Advisory only. Bump when admission, ordering, validation or lease semantics change;
 # never use this stamp to authorize, prioritize or reject a request.
-TOOLING_REVISION = 2
+TOOLING_REVISION = 4
 FULL_SECONDS = 900
 REQUEST_NAME = re.compile(r'[0-9a-f]{32}\.request')
 WORKTREE_BUSY = object()

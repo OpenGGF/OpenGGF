@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 6,
   "name": "Ring run",
   "width": 320,
   "height": 224,
@@ -9,14 +9,16 @@
       "name": "Sonic",
       "gameId": "s3k",
       "character": "sonic",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     },
     {
       "id": "tails",
       "name": "Tails",
       "gameId": "s3k",
       "character": "tails",
-      "snapToFloor": false
+      "snapToFloor": false,
+      "puppet": true
     }
   ],
   "shots": [
@@ -26,8 +28,7 @@
       "set": {
         "gameId": "s3k",
         "zone": 11,
-        "act": 0,
-        "worldPolicy": "LIVE"
+        "act": 0
       },
       "camera": [
         {
@@ -89,7 +90,13 @@
             "kind": "MOVE_TO",
             "x": 1960,
             "y": 1960,
-            "urgency": 0.25
+            "urgency": 0.25,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 1,
@@ -112,7 +119,13 @@
             "kind": "MOVE_TO",
             "x": 2200,
             "y": 2360,
-            "urgency": 0.4
+            "urgency": 0.4,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 126,
@@ -136,7 +149,13 @@
             "kind": "MOVE_TO",
             "x": 1960,
             "y": 1960,
-            "urgency": 0.25
+            "urgency": 0.25,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 1,
@@ -159,7 +178,13 @@
             "kind": "MOVE_TO",
             "x": 2200,
             "y": 2360,
-            "urgency": 0.4
+            "urgency": 0.4,
+            "motion": {
+              "startingAction": "WALK",
+              "travelSpeed": "RUN",
+              "endingAction": "HARD_STOP",
+              "endingFacing": "INHERIT"
+            }
           },
           {
             "frame": 126,

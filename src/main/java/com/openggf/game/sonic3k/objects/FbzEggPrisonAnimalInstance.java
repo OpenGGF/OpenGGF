@@ -10,7 +10,7 @@ import java.util.List;
 
 /** Exact {@code loc_89CE2/loc_89D02/loc_89D18} FBZ prison animal child. */
 public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable {
     private static final int[] Y_VELOCITIES = {-0x380,-0x300,-0x280,-0x200};
     private static final int[] X_OFFSETS = {0,0x10,-0x10,0x1C,-0x1C};
     private int x, y, xSub, ySub, xVelocity, yVelocity, savedYVelocity, waitTimer;
@@ -37,6 +37,15 @@ public final class FbzEggPrisonAnimalInstance extends AbstractObjectInstance
         if(renderManager!=null)animalIndex=artVariant==0?renderManager.getAnimalTypeA():renderManager.getAnimalTypeB();
         AnimalType definition=AnimalType.fromIndex(animalIndex);
         mappingBase=((definition.mappingSet().ordinal()*2)+artVariant)*3;
+    }
+
+    @Override
+    public java.util.Optional<com.openggf.level.objects.ObjectVisualAnimationSource.Cycle> visualAnimationCycle(int mappingFrame) {
+        // The native draw already selects these frames from a fixed clock bit;
+        // playback of the picture cycle has no terrain, player or routine effects.
+        int base = mappingFrame / 3 * 3;
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectVisualAnimationSource.Cycle(
+                7, java.util.List.of(base + 0, base + 1)));
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity player) {

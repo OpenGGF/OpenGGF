@@ -33,6 +33,15 @@ class TestRewindArchitectureGuard {
             "\\bpublic\\s+void\\s+restoreRewindState\\s*\\(");
 
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
+            // Stageplay complete-cast control release: the AIZ boss embeds its post-defeat
+            // controller outside the SST graph, so its acquired-player sets travel with the
+            // owning boss. Sanctuary already has a bespoke runtime snapshot; its added context
+            // overload carries acquired player identities alongside that state. Generic holders
+            // use the central PlayerControlOwners codec instead of per-object overrides.
+            // TestStageplayCapsuleControlRelease and TestObjectRewindTypeSafetyDispatchPerformance
+            // cover embedded ownership restoration and context forwarding respectively.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AizEndBossInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AizEndBossInstance.java#restoreRewindState", 1),
             // Exact parent id plus a null tombstone for the one-update retired-owner tail;
             // generic strict object refs cannot capture the already-unregistered parent.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/ChainspikeBadnikInstance.java#captureRewindState", 1),
@@ -158,8 +167,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldGlowObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldObjectInstance.java#restoreRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#captureRewindState", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#restoreRewindState", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuaryFallingCrystalObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuaryFallingCrystalObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuarySmallEmeraldCeremonyObjectInstance.java#captureRewindState", 1),
@@ -331,7 +340,7 @@ class TestRewindArchitectureGuard {
             // annotation carries an inline reason; same precedent as the entries above.
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/BombPrizeObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/RingPrizeObjectInstance.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java#@RewindTransient", 4),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzKnuxPillarInstance.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/LbzLoweringGrappleObjectInstance.java#@RewindTransient", 4),

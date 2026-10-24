@@ -6,16 +6,19 @@ import com.openggf.level.LevelManager;
 import com.openggf.util.ShortIndexedView;
 
 /**
- * Widescreen presentation extension of DEZ2's cropped, fixed ROM planet.
- * The native 320px image is unchanged. Outside it, reflected 64px surface
- * strips follow a circle inferred from the ROM silhouette, without new art.
- * This is an engine presentation choice, not a cartridge deformation routine.
+ * Widescreen presentation extension of DEZ2's cropped, fixed ROM planet. The native 320px image is
+ * unchanged. Outside it, reflected 64px surface strips follow a circle inferred from the ROM
+ * silhouette, without new art. This is an engine presentation choice, not a cartridge deformation
+ * routine.
  */
 public final class DezPlanetBackground {
     private Level sourceLevel;
     private int sourceWidth;
     private int sourceEndY;
     private Columns columns;
+    private Level projectionLevel;
+    private int projectionEndY;
+    private com.openggf.game.internal.BackgroundColumnProjection projection;
 
     public Columns columns(LevelManager manager, int width) {
         return columns(manager, width, Integer.MAX_VALUE);
@@ -25,16 +28,48 @@ public final class DezPlanetBackground {
         Level level = manager.getCurrentLevel();
         if (level == null || width <= 320) return null;
         if (sourceLevel == level && sourceWidth == width && sourceEndY == endY) return columns;
+        var captured = captureProjection(manager, endY);
+        columns = captured == null ? null : captured.sample(
+                new com.openggf.level.scroll.ScrollView(0, 0, width, 224));
+        sourceLevel = level;
+        sourceWidth = width;
+        sourceEndY = endY;
+        return columns;
+    }
+
+    /** Freeze the indexed ROM silhouette once; new director widths never query the live level. */
+    public com.openggf.game.internal.BackgroundColumnProjection captureProjection(
+            LevelManager manager, int endY) {
+        Level level = manager.getCurrentLevel();
+        if (level == null) return null;
+        if (projectionLevel == level && projectionEndY == endY && projection != null)
+            return projection;
         int[] horizon = new int[320];
         int minimum = 224, first = 0, last = 0;
         for (int x = 0; x < 320; x++) {
             // Read the indexed art, not live RGB: a palette fade must not
             // change the inferred silhouette or get cached as another shape.
             int space = paletteIndex(manager, level, x, 0);
-            while (horizon[x] < 224 && paletteIndex(manager, level, x, horizon[x]) == space) horizon[x]++;
-            if (horizon[x] < minimum) { minimum = horizon[x]; first = x; }
+            while (horizon[x] < 224 && paletteIndex(manager, level, x, horizon[x]) == space)
+                horizon[x]++;
+            if (horizon[x] < minimum) {
+                minimum = horizon[x];
+                first = x;
+            }
             if (horizon[x] == minimum) last = x;
         }
+
+        int lowest = minimum, apexFirst = first, apexLast = last;
+        projection =
+                view -> projectedColumns(horizon, lowest, apexFirst, apexLast, view.width(), endY);
+        projectionLevel = level;
+        projectionEndY = endY;
+        return projection;
+    }
+
+    private static Columns projectedColumns(
+            int[] horizon, int minimum, int first, int last, int width, int endY) {
+        if (width <= 320) return null;
         // Three authored silhouette points determine the circle. The centre of
         // the flat, pixel-rounded apex avoids selecting its first lit column.
         double apexX = (first + last) / 2.0;
@@ -65,11 +100,7 @@ public final class DezPlanetBackground {
             }
             xs[x] = (short) sourceX;
         }
-        columns = new Columns(view(xs), view(ys), endY);
-        sourceLevel = level;
-        sourceWidth = width;
-        sourceEndY = endY;
-        return columns;
+        return new Columns(view(xs), view(ys), endY);
     }
 
     private static double height(int x, double cx, double cy, double radius) {
@@ -78,16 +109,23 @@ public final class DezPlanetBackground {
 
     private static int paletteIndex(LevelManager manager, Level level, int x, int y) {
         int descriptor = manager.getBackgroundTileDescriptorAtWorld(x, y);
-        int index = level.getPattern(descriptor & 0x7FF).getPixel(
-                (descriptor & 0x800) != 0 ? 7 - (x & 7) : x & 7,
-                (descriptor & 0x1000) != 0 ? 7 - (y & 7) : y & 7);
+        int index =
+                level.getPattern(descriptor & 0x7FF)
+                        .getPixel(
+                                (descriptor & 0x800) != 0 ? 7 - (x & 7) : x & 7,
+                                (descriptor & 0x1000) != 0 ? 7 - (y & 7) : y & 7);
         return ((descriptor >>> 13) & 3) * 16 + index;
     }
 
     private static ShortIndexedView view(short[] values) {
         return new ShortIndexedView() {
-            public int size() { return values.length; }
-            public short get(int index) { return values[index]; }
+            public int size() {
+                return values.length;
+            }
+
+            public short get(int index) {
+                return values[index];
+            }
         };
     }
 }

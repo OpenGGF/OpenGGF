@@ -312,7 +312,7 @@ public class TestSonic1RingInstance {
         try {
             Field field = Sonic1RingInstance.class.getDeclaredField("ringSpawn");
             field.setAccessible(true);
-            return (RingSpawn) field.get(ring);
+            return (RingSpawn) ((List<?>) field.get(ring)).getFirst();
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }

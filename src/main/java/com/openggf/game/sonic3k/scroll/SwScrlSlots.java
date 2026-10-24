@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
@@ -12,8 +14,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * ROM-shaped Slot Machine bonus-stage screen/background handler.
  *
@@ -21,7 +21,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * Slots_BackgroundInit/Event into the engine scroll handler rather than
  * synthesizing a new wobble model in the runtime.
  */
-public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.openggf.level.scroll.ScrollOutputRebuilder {
+public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.openggf.level.scroll.ScrollOutputRebuilder,
+                com.openggf.level.scroll.ScrollProjectionSource {
     private static final int VISIBLE_LINES = 224;
     private static final int SCREEN_ORIGIN = 0x400;
     private static final int SCREEN_STEP_LIMIT = 0x20;
@@ -369,6 +370,39 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler implements com.
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int[] heights = deformHeights.clone();
+        int[] scrolls = expandedBandScrollValues.clone();
+        int originX = foregroundOriginX, originY = foregroundOriginY;
+        int bgY = backgroundCameraY();
+        return view -> {
+            int[] horizontal = new int[view.height()];
+            short fg = negWord(originX + view.cameraX() - context.cameraX());
+            int band = 0, skip = bgY;
+            while (band < heights.length - 1 && skip >= heights[band]) skip -= heights[band++];
+            int remaining = heights[band] - skip;
+            for (int line = 0; line < horizontal.length; line++) {
+                horizontal[line] = ((fg & 65535) << 16) | negWord(scrolls[band]) & 65535;
+                if (--remaining == 0 && band < heights.length - 1) remaining = heights[++band];
+            }
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    new short[view.height()],
+                    null,
+                    null,
+                    (short) (originY + view.cameraY() - context.cameraY()),
+                    (short) bgY,
+                    output.backgroundX(),
+                    output.backgroundPeriod(),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
     }
 
     private void expandBandScrollTable() {

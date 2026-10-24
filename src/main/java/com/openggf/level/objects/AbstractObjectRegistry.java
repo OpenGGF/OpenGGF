@@ -31,6 +31,7 @@ public abstract class AbstractObjectRegistry implements ObjectRegistry, HostObje
     private static final Logger LOG = Logger.getLogger(AbstractObjectRegistry.class.getName());
 
     protected final Map<Integer, ObjectFactory> factories = new HashMap<>();
+    private final Map<Integer, ObjectRegistryCatalog.Role> factoryRoles = new HashMap<>();
     private boolean loaded;
 
     protected final ObjectFactory defaultFactory = (spawn, registry) ->
@@ -69,6 +70,38 @@ public abstract class AbstractObjectRegistry implements ObjectRegistry, HostObje
      */
     protected void registerFactory(int objectId, ObjectFactory factory) {
         factories.put(objectId, factory);
+        factoryRoles.remove(objectId);
+    }
+
+    /** Native registration trait; includes badnik spawners that do not inherit a shared enemy base. */
+    protected void registerBadnikFactory(int objectId, ObjectFactory factory) {
+        registerFactory(objectId, factory);
+        factoryRoles.put(objectId, ObjectRegistryCatalog.Role.BADNIK);
+    }
+
+    /** Reads a declaration without constructing or inspecting the factory's implementation. */
+    protected final ObjectRegistryCatalog.Role registeredFactoryRole(int objectId) {
+        return factoryRoles.getOrDefault(objectId, ObjectRegistryCatalog.Role.UNRESOLVED);
+    }
+
+    /** Internal metadata hook; factory construction is deliberately outside catalog enumeration. */
+    protected ObjectRegistryCatalog.Entry catalogEntry(int objectId, ObjectRegistryCatalog.Context context) {
+        ensureLoaded();
+        boolean registered = factories.containsKey(objectId);
+        return new ObjectRegistryCatalog.Entry(objectId, getPrimaryName(objectId), "stock",
+                registered ? ObjectRegistryCatalog.FactoryStatus.REGISTERED : ObjectRegistryCatalog.FactoryStatus.ABSENT,
+                registered ? "registered" : "none", editorPreviewArtKey(objectId).orElse(""), true,
+                catalogSemantics(objectId, context));
+    }
+
+    protected ObjectRegistryCatalog.Semantics catalogSemantics(int objectId, ObjectRegistryCatalog.Context context) {
+        var role = registeredFactoryRole(objectId);
+        return role == ObjectRegistryCatalog.Role.UNRESOLVED ? ObjectRegistryCatalog.Semantics.NONE
+                : new ObjectRegistryCatalog.Semantics(role, ObjectRegistryCatalog.PositionRule.UNVERIFIED, List.of());
+    }
+
+    protected java.util.Optional<ObjectRegistryCatalog.AuxiliaryFactory> releasedAnimalFactory(ObjectRegistryCatalog.Context context) {
+        return java.util.Optional.empty();
     }
 
     /**

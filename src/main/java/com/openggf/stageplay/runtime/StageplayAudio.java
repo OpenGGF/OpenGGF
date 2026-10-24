@@ -20,7 +20,7 @@ public final class StageplayAudio implements AutoCloseable {
     private final Assets assets;
     private final Map<String, SmpsLoader> loaders = new HashMap<>();
     private final Map<String, GameAudioProfile> profiles = new HashMap<>();
-    private final Map<String, ScopedDonorAudio> scopes = new LinkedHashMap<>();
+    private final Map<String, com.openggf.mods.scene.host.SceneRomAudioSources.Lease> scopes = new LinkedHashMap<>();
     private StageplayDocument document;
     private StageplayCueDispatcher cues;
     private AudioManager.SceneAudioSamples samples;
@@ -28,6 +28,7 @@ public final class StageplayAudio implements AutoCloseable {
     private com.openggf.audio.rewind.AudioLogicalSnapshot entryAudio;
     private final ArrayDeque<AudioManager.SceneAudioSamples> nativeVoices = new ArrayDeque<>();
     private int nativeSoundFrame = -1;
+    private LevelMusicAccess.Control musicControl;
     private boolean closed;
 
     public StageplayAudio(AudioManager audio, SceneRomLibrary roms, Path projectRoot) {
@@ -65,7 +66,6 @@ public final class StageplayAudio implements AutoCloseable {
                     }
                 }
                 case ROM_MUSIC, ROM_SFX -> {
-                    if (cue.gain() != 1) throw new IOException("ROM cue gain must be 1; gain is available for voice clips");
                     SmpsLoader loader = loader(cue.gameId());
                     var data = cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC
                             ? loader.loadMusic(cue.soundId()) : loader.loadSfx(cue.soundId());
@@ -78,6 +78,12 @@ public final class StageplayAudio implements AutoCloseable {
         stop();
         if (samples != null) samples.close();
         samples = replacement; preparedSamples = Map.copyOf(prepared); document = next; cues = new StageplayCueDispatcher(next);
+    }
+
+    private void ownMusic() {
+        if (musicControl == null && document != null && document.audio().stream().anyMatch(cue ->
+                cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC || cue.kind() == StageplayDocument.AudioKind.MUSIC_STOP))
+            musicControl = LevelMusicAccess.suppressAutomatic(audio);
     }
 
     private SmpsLoader loader(String game) throws IOException {
@@ -93,6 +99,7 @@ public final class StageplayAudio implements AutoCloseable {
     public void playFrame(StageplayDocument source, int frame) {
         requireOpen();
         if (!source.equals(document)) throw new IllegalStateException("Prepare this scene's audio before playback");
+        ownMusic();
         if (entryAudio == null) entryAudio = audio.captureLogicalSnapshot();
         cues.advance(frame, this::dispatch);
     }
@@ -116,11 +123,11 @@ public final class StageplayAudio implements AutoCloseable {
             case VOICE -> samples.play(cue.asset(), (float) cue.gain());
             case MUSIC_STOP -> audio.stopMusic();
             case ROM_MUSIC, ROM_SFX -> {
-                boolean base = cue.gameId().equals(roms.activeGame());
-                if (!base && !scopes.containsKey(cue.gameId())) {
-                    var loader = loaders.get(cue.gameId()); var profile = profiles.get(cue.gameId());
-                    scopes.put(cue.gameId(), ScopedDonorAudio.register(audio, cue.gameId(), loader, loader.loadDacData(),
-                            profile.getSequencerConfig(), profile));
+                var currentProfile = audio.getAudioProfile();
+                String currentGame = currentProfile == null ? roms.activeGame() : currentProfile.presentationGameId();
+                boolean base = cue.gameId().equals(currentGame);
+                if (!base && (!scopes.containsKey(cue.gameId()) || !scopes.get(cue.gameId()).active())) {
+                    scopes.put(cue.gameId(),roms.acquireAudioSource(audio,cue.gameId()));
                 }
                 if (cue.kind() == StageplayDocument.AudioKind.ROM_MUSIC) {
                     if (base) audio.playMusic(cue.soundId()); else audio.playDonorMusic(cue.gameId(), cue.soundId());
@@ -135,6 +142,7 @@ public final class StageplayAudio implements AutoCloseable {
         entryAudio = null;
         stopNativeSound();
         // These donor routes belonged to the retired producer, as in abandon().
+        for (var scope : scopes.values()) scope.abandon();
         scopes.clear();
         if (samples != null) samples.close();
         samples = audio.prepareSceneSamples(preparedSamples);
@@ -143,7 +151,11 @@ public final class StageplayAudio implements AutoCloseable {
 
     /** The borrowed entry soundtrack is part of a cutscene's rewind state. */
     public com.openggf.audio.rewind.AudioLogicalSnapshot captureEntry() { return entryAudio; }
-    public void restoreEntry(com.openggf.audio.rewind.AudioLogicalSnapshot entry) { requireOpen(); entryAudio = entry; }
+    public void restoreEntry(com.openggf.audio.rewind.AudioLogicalSnapshot entry) {
+        requireOpen(); entryAudio = entry;
+        if (entry != null) ownMusic();
+        else if (musicControl != null) { musicControl.close(); musicControl = null; }
+    }
 
     /** No ROM commands or old cues are emitted by a seek. Voice tails are silenced. */
     public void seek(int frame) {
@@ -153,12 +165,16 @@ public final class StageplayAudio implements AutoCloseable {
     /** Restores the borrowed soundtrack and drops owned voice tails. */
     public void stop() {
         requireOpen();
-        stopNativeSound();
-        if (samples != null) samples.stop();
-        var borrowed = new ArrayList<>(scopes.values()); scopes.clear();
-        for (int i = borrowed.size() - 1; i >= 0; i--) borrowed.get(i).close();
-        if (entryAudio != null) { var saved = entryAudio; entryAudio = null; audio.restoreLogicalSnapshot(saved); }
-        if (cues != null) cues.seek(-1);
+        try {
+            stopNativeSound();
+            if (samples != null) samples.stop();
+            var borrowed = new ArrayList<>(scopes.values()); scopes.clear();
+            for (int i = borrowed.size() - 1; i >= 0; i--) borrowed.get(i).close();
+            if (entryAudio != null) { var saved = entryAudio; entryAudio = null; audio.restoreLogicalSnapshot(saved); }
+            if (cues != null) cues.seek(-1);
+        } finally {
+            if (musicControl != null) { musicControl.close(); musicControl = null; }
+        }
     }
     private void requireOpen() { if (closed) throw new IllegalStateException("Stageplay audio is closed"); }
     /** A replaced gameplay/audio session must not receive this scene's old soundtrack snapshot. */
@@ -166,6 +182,7 @@ public final class StageplayAudio implements AutoCloseable {
         entryAudio = null;
         // Routes belong to the expired session. Reapplying their saved bindings could overwrite
         // the new visit's donor policy. Normal same-visit close restores them through stop().
+        for (var scope : scopes.values()) scope.abandon();
         scopes.clear();
         close();
     }

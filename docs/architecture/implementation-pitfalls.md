@@ -1025,6 +1025,14 @@ without first removing that alias.
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
 
+**Direct object steps do not publish camera bounds.** `ObjectManager` updates
+`AbstractObjectInstance`'s cached bounds before the object pass; constructing a
+Camera stub and calling an object's `update()` directly bypasses that publication.
+Use the manager path for lifecycle comparisons. A deliberately direct unit test
+must seed those bounds and reset them between fixtures before asserting offscreen
+retirement. The [S2 fragment follow-up](audits/2026-10-24-rewind-disposition-review.md#s2-fragment-art-follow-up)
+records a false retirement failure caused by an origin viewport left in that cache.
+
 **Underwater route liveness.** `getDead() == false` does not exclude the drowning
 pre-death phase. `applyDrownDeath()` locks controls and zeroes velocity before the
 delayed dead flag; no-death route assertions must also reject `isDrowningDeath()`.
@@ -2484,3 +2492,84 @@ public-dispatch control observes both hooks and callback-written66, as well as
 ordinary/ledge negatives. Original5aef's47 returned-state checks alone did not
 cover callback timing. See the aggregate's bounded5aef/372/372671811 composition
 in [the swarm plan](plans/2026-10-22-native-gap-swarm.md).
+
+### Native visual observation must be read-only (Stageplay, 2026-10-22)
+
+An object's render callback is not automatically pure. MGZ's boss/flicker parts
+advance draw-owned animation counters; observing them again to build a directed
+template would change resumed Free state. Keep an explicit capture scope and
+preserve those counters. Likewise, a CPU mapping observation must detect native
+SAT controls before an inactive-SAT guard returns: silently omitting a mask child
+can leave a plausible but incorrect parent picture. Reject unsupported controls.
+
+An animation set is not automatically a ROM script either. Synthesized tables
+can look equivalent while differing by a frame, and a parser can normalize a
+routine-control terminator into a loop. Admit parsed ROM bytes and verified pure
+terminators, including safe switch targets. EHZ's three extra hardcoded frames
+are recorded in the [bug ledger](../status/known-bugs.md#s2-ehz-boss-animation-tables-contain-three-extra-frames).
+Capture only palettes actually used by the graph; reserving four unused world
+palettes falsely rejects a graph using one scoped palette. Preserve native row
+clipping, custom occlusion masks and child creation ordinals across rewind.
+
+Logic-only level loading can leave the palette upload cache empty even though the
+current decoded ROM palettes exist. Publish those authoritative owners at the
+visual capture boundary, including native boss/event palette changes. Never fill
+missing rows with guessed colors. Sprite-sheet capacity can also contain unused
+null slots: bind only the tiles referenced by the selected mapping, and reject a
+referenced missing tile explicitly instead of reading stale atlas contents.
+
+Initial decoder transforms must consume their own object/ring dirty notifications
+before native managers assemble. Leaving an editor mutation notification pending
+can trigger a first-frame placement resync and erase an explicitly admitted cast.
+Do not weaken ordinary dirty-region processing or native unload windows to mask it.
+
+
+### Native player ownership needs the central rewind policy (Stageplay, 2026-10-23)
+
+A codec alone does not make a final mutable helper part of default object capture.
+Register its type with the default helper policy as well; otherwise recreation
+silently drops acquired-player state and the final-reference audit correctly
+rejects the new structural type. Restore the helper in place and encode actual
+players by stable team IDs. Empty sets and null references need no identity table;
+nonempty references must retain the manager's capture context. A no-context
+convenience wrapper beside an explicit context overload must not win manager
+dispatch and discard that table. Keep legacy-only overrides on their existing
+route. Exercise the real holder, not only a standalone codec fixture, across
+release/restore and participant recreation. See the
+[repair evidence](plans/2026-10-21-stageplay-live-world-plan.md#interrupted-smoke-repair-resumed-2026-10-23).
+
+
+The production callback router must use that same dispatch resolver. Testing the
+cache directly can pass while ObjectManager's callback boundary still has a
+second legacy-only detector that drops the table. Keep capture/restore delegation
+inside the existing callback fault boundary and exercise the real router with
+ordinary state, legacy-only overrides and explicit context wrappers. The full HPZ
+ceremony, LRZ2 gateway, sanctuary origin-return and pedestal matrices reproduced
+2,293 errors through that missed route, then passed all 2,295 cases after sharing
+the resolver. The two additional cases already passed in the broad snapshot.
+
+**Distinguish missing context from captured absence.** For an object that supports
+context-free same-instance round trips, an absent identity table must leave its
+links uncaptured. Encoding that absence as null owner IDs makes restore erase
+live constructor links; an orbiting Sol fireball then destroys itself. Table-backed
+null IDs remain authoritative, including through the context-free restore overload.
+Rexon/Sol native links use exact CAPTURED field metadata and a private
+optional mode of the existing reference codec: an uncaptured marker preserves the
+current field, while a captured null clears it. Other reference codecs stay strict.
+For existing handwritten extras, omit the link extra when its capture table is
+absent; do not suppress authoritative restore values. Exercise both public capture
+forms, explicit nulls, missing targets and wrong types. The [schema evidence](plans/2026-10-24-architecture-continuation.md#loop-4-optional-native-reference-schema-blocker)
+records why four new handwritten overrides were rejected and removed without
+growing the architecture baseline. In-place eligibility is a separate proof;
+compact reference capture alone does not satisfy the scalar-only safety audit.
+
+AIZ collector links instead use a context-compatible, managed-strict mode: no
+table leaves the field uncaptured, while table-present capture and restoration
+still require registered, correctly typed identities. Context-free compatibility
+does not justify optional missing managed targets. After a void SST allocation
+attempt rejects a candidate, its owner must stop retaining that unregistered
+handle before capture. Clear the rejected reference after the existing attempt;
+preserve native allocation order, routine advancement and lifecycle flags. The
+[AIZ correction evidence](plans/2026-10-24-architecture-continuation.md#fifth-loop-focused-results-correction-and-acceptance)
+distinguishes this admission boundary from arbitrary early collector retirement,
+which remains a separate unproven lifecycle contract.

@@ -18,7 +18,7 @@ import java.util.List;
 
 /** The five freed-animal roles from {@code ChildObjDat_89ED0}. */
 final class FbzMinibossAnimalChild extends AbstractObjectInstance
-        implements RewindRecreatable, RomWorldPositionedObject {
+        implements com.openggf.level.objects.ObjectVisualAnimationSource, RewindRecreatable, RomWorldPositionedObject {
     private static final int[] X_OFFSETS = {0, 0x10, -0x10, 0x1C, -0x1C};
     private static final int[] BOUNCE_Y_VELOCITIES = {-0x380, -0x300, -0x280, -0x200, -0x380};
     private static final int FRAMES_PER_MAPPING = 3;
@@ -61,6 +61,15 @@ final class FbzMinibossAnimalChild extends AbstractObjectInstance
         this.y = spawn.y();
         this.xFixed = x << 16;
         this.yFixed = y << 16;
+    }
+
+    @Override
+    public java.util.Optional<com.openggf.level.objects.ObjectVisualAnimationSource.Cycle> visualAnimationCycle(int mappingFrame) {
+        // The native draw already selects these frames from a fixed clock bit;
+        // playback of the picture cycle has no terrain, player or routine effects.
+        int base = mappingFrame / 3 * 3;
+        return java.util.Optional.of(new com.openggf.level.objects.ObjectVisualAnimationSource.Cycle(
+                7, java.util.List.of(base + 0, base + 1)));
     }
 
     @Override

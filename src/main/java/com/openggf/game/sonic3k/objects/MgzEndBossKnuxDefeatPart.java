@@ -35,11 +35,21 @@ final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance implements S
             ObjectLifetimeOps.expireDynamic(this);
         }
     }
-    @Override public void appendRenderCommands(List<GLCommand> commands) {
-        if ((flicker++ & 1) == 0) return;
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        // Capture observes loc_6CFBE (docs/skdisasm/sonic3k.asm:143833) without a draw tick.
+        // ChildObjDat_6D822 (docs/skdisasm/sonic3k.asm:144695) owns these native parts.
+        int phase = flicker;
+        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
+            flicker++;
+        }
+        if ((phase & 1) == 0) return;
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
-        if (renderer != null && renderer.isReady()) renderer.drawFrameIndex(frame, getX(), getY(), false, false);
+        if (renderer != null && renderer.isReady())
+            renderer.drawFrameIndex(frame, getX(), getY(), false, false);
     }
+
     @Override public int getX() { return xFixed >> 8; }
     @Override public int getY() { return yFixed >> 8; }
     @Override public int getPriorityBucket() { return getSpawn().subtype() == 0 ? 6 : 4; }

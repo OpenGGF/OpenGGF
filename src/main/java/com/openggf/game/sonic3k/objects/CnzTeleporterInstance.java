@@ -12,11 +12,11 @@ import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -78,6 +78,20 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
         super(spawn, "CNZTeleporter");
         this.centreX = spawn.x();
         this.centreY = spawn.y();
+    }
+
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+    private final PlayerControlOwners objectControlOwners = new PlayerControlOwners();
+
+    /** Releases acquired player controls without changing the native teleporter code phase. */
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : objectControlOwners.players()) ObjectControlState.none().applyTo(player);
+        for (var player : visualControlOwners.players()) player.setControlLocked(false);
+        objectControlOwners.clear();
+        visualControlOwners.clear();
+        // Disappearance is a native Y-word write, not a renderer-hidden flag.
+        // Camera locks, beam progress, playerHidden and queued art stay native-owned.
     }
 
     @Override
@@ -168,7 +182,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
 
         player.setXSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setControlLocked(true);
+        visualControlOwners.acquire(player).setControlLocked(true);
 
         /**
          * The engine does not expose the raw logical-input buffer, so Task 8
@@ -251,7 +265,8 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
         if (beamCounter == 8) {
             // loc_523B6 executes on EVERY parent entry at eight. This bset
             // changes status only: no radius, pose, subpixel or velocity write.
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(
+                    objectControlOwners.acquire(player));
             boolean skidding = player.getSkidding();
             int skidDustTimer = player.getSkidDustTimer();
             boolean fixedSkidDustActive = player.isFixedSkidDustActive();
@@ -281,7 +296,8 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance
             // loc_5238E writes object_control=3: bit0 holds movement, bit1
             // skips native animation. P1 disappears by Y-word zero, not by a
             // renderer visibility flag; its fractional position survives.
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(
+                    objectControlOwners.acquire(player));
             player.setObjectMappingFrameControl(true);
             NativePositionOps.writeYPosPreserveSubpixel(player, 0);
             player.setAnimationId(0);

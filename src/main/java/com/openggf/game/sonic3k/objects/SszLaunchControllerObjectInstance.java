@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -28,6 +29,9 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     private int p1Jump;
     private int p2Jump;
     private boolean transitionRequested;
+
+    private final PlayerControlOwners ownedPlayers =
+            new PlayerControlOwners();
 
     public SszLaunchControllerObjectInstance(ObjectSpawn spawn) { super(spawn, "SSZLaunch"); }
 
@@ -98,12 +102,14 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
             else p1Counter = (p1Counter & 255) | (count << 8);
             if ((byte) count < 0) {
                 // sub_58002 owns Ctrl_*_logical while the hardware pad copy is locked.
+                ownedPlayers.add(sprite);
                 sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
                 sprite.setForcedJumpPress(true);
                 sprite.writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_JUMP, true);
             }
             return;
         }
+        ownedPlayers.add(sprite);
         if (sprite.getYSpeed() >= 0) {
             sprite.setForcedInputMask(0);
             NativePositionOps.writeYPosPreserveSubpixel(sprite, 0x7FFF);
@@ -125,6 +131,7 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
     }
 
     private void spiral(AbstractPlayableSprite sprite, boolean partner) {
+        ownedPlayers.add(sprite);
         int jump = partner ? p2Jump : p1Jump;
         int counter = partner ? p2Counter : p1Counter;
         if (jump != 0) {
@@ -189,6 +196,20 @@ public final class SszLaunchControllerObjectInstance extends AbstractObjectInsta
         NativePositionOps.writeYPosPreserveSubpixel(sprite, y);
         sprite.setObjectMappingFrameControl(true);
         sprite.setMappingFrame(byteAt(0x587A8 + ((((angle + 10) & 255) * 3) >> 6)));
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : ownedPlayers.players()) {
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+            player.clearQueuedControlState();
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        ownedPlayers.clear();
+        // This native controller ends through a level transition. Interruption
+        // releases its players without running the spiral, SFX or DEZ handoff.
     }
 
     private PlayerCharacter character() {

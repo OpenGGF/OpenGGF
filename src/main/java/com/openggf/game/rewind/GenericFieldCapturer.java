@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
@@ -443,6 +444,7 @@ public final class GenericFieldCapturer {
         return type == SubpixelMotion.State.class
                 || type == ObjectAnimationState.class
                 || type == PlatformBobHelper.class
+                || type == PlayerControlOwners.class
                 || type == AnimationTimer.class
                 || RewindCodecs.supportsInPlaceStateHolder(type);
     }

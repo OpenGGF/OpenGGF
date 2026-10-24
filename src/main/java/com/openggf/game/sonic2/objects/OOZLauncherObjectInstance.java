@@ -27,10 +27,10 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.NativePositionOps;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -318,7 +318,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             spawnChild(() -> new LauncherFragmentInstance(
                     spawn.x(), spawn.y(),
                     FRAGMENT_VELOCITIES[index][0], FRAGMENT_VELOCITIES[index][1],
-                    piece, renderer));
+                    piece, artKey));
         }
     }
 
@@ -453,6 +453,24 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * State 2: Tracking (ROM: loc_25036 / Obj3D_MoveCharacter).
      * Moves the player along their velocity until off-screen or captured by LauncherBall.
      */
+    private void releaseTrackedPlayer(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.setAir(true);
+        player.setOnObject(false);
+        activeLaunchers.remove(player, this);
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : playerStates.entrySet()) {
+            if (entry.getValue().launcherState != 0 && activeLaunchers.get(entry.getKey()) == this) {
+                releaseTrackedPlayer(entry.getKey());
+                recentLauncherMoves.remove(entry.getKey());
+            }
+        }
+    }
+
     private int processTracking(AbstractPlayableSprite player, int frameCounter) {
         // If player is no longer on-object (captured by LauncherBall or released), stop tracking
         if (!player.isOnObject() || !player.isObjectControlled()) {
@@ -461,12 +479,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         // Check if player is off-screen (ROM: btst #render_flags.on_screen)
         if (!isPlayerOnScreen(player)) {
-            // Release player
-            ObjectControlState.none().applyTo(player);
-            player.setControlLocked(false);
-            player.setAir(true);
-            player.setOnObject(false);
-            activeLaunchers.remove(player, this);
+            releaseTrackedPlayer(player);
             return 0;
         }
 
@@ -698,12 +711,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         private int subY;   // 8.8 fixed point
         private int velX;   // 8.8 fixed point
         private int velY;   // 8.8 fixed point
-        private final SpriteMappingPiece piece;
-        private final PatternSpriteRenderer renderer;
-        private final List<SpriteMappingPiece> pieceList;
+        private FragmentArt fragmentArt;
 
+        /** The art key preserves orientation without retaining a live renderer across rewind. */
         public LauncherFragmentInstance(int x, int y, int velX, int velY,
-                                        SpriteMappingPiece piece, PatternSpriteRenderer renderer) {
+                                        SpriteMappingPiece piece, String artKey) {
             super(new ObjectSpawn(x, y, 0x3D, 0, 0, false, 0), "LauncherFragment");
             this.currentX = x;
             this.currentY = y;
@@ -711,9 +723,8 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             this.subY = y << 8;
             this.velX = velX;
             this.velY = velY;
-            this.piece = piece;
-            this.renderer = renderer;
-            this.pieceList = piece != null ? List.of(piece) : List.of();
+            this.fragmentArt = piece != null
+                    ? new FragmentArt(Objects.requireNonNull(artKey, "artKey"), piece) : null;
         }
 
         public LauncherFragmentInstance(int x, int y, int velX, int velY) {
@@ -772,11 +783,18 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (isDestroyed() || renderer == null || !renderer.isReady() || pieceList.isEmpty()) {
+            if (isDestroyed() || fragmentArt == null) {
                 return;
             }
-            renderer.drawPieces(pieceList, currentX, currentY, false, false);
+            ObjectRenderManager manager = services().renderManager();
+            PatternSpriteRenderer renderer = manager != null ? manager.getRenderer(fragmentArt.artKey()) : null;
+            if (renderer == null || !renderer.isReady()) {
+                return;
+            }
+            renderer.drawPieces(List.of(fragmentArt.piece()), currentX, currentY, false, false);
         }
+
+        private record FragmentArt(String artKey, SpriteMappingPiece piece) {}
 
         @Override
         public int getPriorityBucket() {

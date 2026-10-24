@@ -48,6 +48,12 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance impl
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        int clock = services().objectManager().getVblaCounter();
+        for (var player : List.copyOf(playerStates.keySet())) forceReleasePlayer(player, clock);
+    }
+
+    @Override
     public PachinkoMagnetOrbObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new PachinkoMagnetOrbObjectInstance(ctx.spawn());
     }

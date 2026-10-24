@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -66,6 +68,8 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private int mappingFrame;
     private boolean opened;
     private boolean buttonTriggered;
+
+    private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
     private boolean resultsStarted;
     private boolean releaseTriggered;
     private int postOpenTimer;
@@ -88,6 +92,16 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                             : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
                 }
             };
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var sprite : resultControlOwners.players()) {
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setControlLocked(false);
+            sprite.setForcedAnimationId(-1);
+        }
+        resultControlOwners.clear();
+    }
 
     protected AbstractS3kFloatingEndEggCapsuleInstance(int initialX, int initialY, String debugName) {
         this(initialX, initialY, debugName, false);
@@ -561,6 +575,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     protected void lockForResults(AbstractPlayableSprite sprite) {
+        resultControlOwners.add(sprite);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);

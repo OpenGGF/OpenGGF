@@ -26,7 +26,11 @@ public final class StageplayCaptureTool {
     private StageplayCaptureTool() { }
 
     public record Arguments(Path scene, Path output, Path rom, String game, int scale, String ffmpeg,
-                            Map<String, Path> suppliedRoms, Path stagingDirectory) {
+                            Map<String, Path> suppliedRoms, Path stagingDirectory, Path romDescriptor) {
+        public Arguments(Path scene, Path output, Path rom, String game, int scale, String ffmpeg,
+                         Map<String, Path> suppliedRoms, Path stagingDirectory) {
+            this(scene,output,rom,game,scale,ffmpeg,suppliedRoms,stagingDirectory,null);
+        }
         public Arguments {
             Objects.requireNonNull(scene); Objects.requireNonNull(output); Objects.requireNonNull(ffmpeg);
             suppliedRoms = Map.copyOf(suppliedRoms);
@@ -36,9 +40,11 @@ public final class StageplayCaptureTool {
                 throw new IllegalArgumentException("Lossless Stageplay exports use .mkv");
             if (scene.toAbsolutePath().normalize().equals(output.toAbsolutePath().normalize()))
                 throw new IllegalArgumentException("Export must not replace its source scene");
+            if (romDescriptor != null && (rom != null || !suppliedRoms.isEmpty()))
+                throw new IllegalArgumentException("A ROM descriptor cannot be combined with ROM path overrides");
         }
         public static Arguments parse(String[] args) {
-            Path scene = null, output = null, rom = null, staging = null; String game = null, ffmpeg = "ffmpeg"; int scale = 1;
+            Path scene = null, output = null, rom = null, staging = null, descriptor = null; String game = null, ffmpeg = "ffmpeg"; int scale = 1;
             var supplied = new LinkedHashMap<String, Path>();
             var seen = new HashSet<String>();
             for (int i = 0; i < args.length; i += 2) {
@@ -50,6 +56,7 @@ public final class StageplayCaptureTool {
                     case "--out" -> output = Path.of(value);
                     case "--rom" -> rom = Path.of(value);
                     case "--staging-dir" -> staging = Path.of(value);
+                    case "--rom-descriptor" -> descriptor = Path.of(value);
                     case "--game" -> game = value;
                     case "--scale" -> scale = Integer.parseInt(value);
                     case "--ffmpeg" -> ffmpeg = value;
@@ -58,7 +65,7 @@ public final class StageplayCaptureTool {
                 }
             }
             if (scene == null || output == null) throw new IllegalArgumentException("--scene and --out are required");
-            return new Arguments(scene, output, rom, game, scale, ffmpeg, supplied, staging);
+            return new Arguments(scene, output, rom, game, scale, ffmpeg, supplied, staging, descriptor);
         }
     }
 
@@ -82,22 +89,31 @@ public final class StageplayCaptureTool {
             config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
             String game = arguments.game() == null ? document.set().gameId() : arguments.game();
+            Map<String,com.openggf.data.RomByteReader> transported = null;
+            if (arguments.romDescriptor() != null) {
+                transported = StageplayRomTransport.openFile(arguments.romDescriptor());
+            }
             // Gameplay boot only supplies independent ROM/audio services; this tool never steps its level.
             try (var boot = new HeadlessGameBoot(document.width(), document.height(), document.width(), document.height(), 320, 224)) {
                 boot.setBootToTitle(true);
-                if (arguments.rom() == null) boot.boot(identity(game), 0, 0); else boot.boot(arguments.rom(), 0, 0);
+                if (transported != null) boot.boot(Objects.requireNonNull(transported.get(game),"Supply the boot ROM"),
+                        "Stageplay export " + game, 0, 0);
+                else if (arguments.rom() == null) boot.boot(identity(game), 0, 0);
+                else boot.boot(arguments.rom(), 0, 0);
                 var audio = GameServices.audio();
                 if (audio.presentationFrameRate() != StageplayDocument.FRAMES_PER_SECOND)
                     throw new IOException("Stageplay exports require 60 Hz audio; this ROM is using " + audio.presentationFrameRate());
                 audio.stopMusic(); audio.stopAllSfx();
-                try (var library = new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom());
+                try (var library = transported == null
+                        ? new SceneRomLibrary(GameServices.module(), GameServices.rom().getRom(), GameServices.rom())
+                        : SceneRomLibrary.openReaders(transported,game);
                      var resources = new StageplayResources(library, false);
                      var cues = new StageplayAudio(audio, library, arguments.scene().toAbsolutePath().getParent());
                      var surface = new SceneSurface();
                      var grabber = new GlReadPixelsGrabber(document.width(), document.height())) {
                     resources.setProjectRoot(arguments.scene().toAbsolutePath().getParent());
                     resources.validate(document);
-                    if (StageplayTool.usesLiveWorld(document)) resources.setLiveWorld(StageplayLiveWorld.adoptOffline(
+                    resources.setLiveWorld(StageplayLiveWorld.adoptOffline(
                             library, com.openggf.game.session.SessionManager.getCurrentGameplayMode()));
                     resources.resolveFrame(document, StageplayTimeline.sample(document, 0));
                     cues.prepare(document);
@@ -111,19 +127,18 @@ public final class StageplayCaptureTool {
                         int[] viewport = {0, 0, document.width(), document.height()};
                         renderFrames(document, staged, rate, encoder, frame -> {
                             boolean boundary = frame > 0 && document.sceneChanges().stream().anyMatch(c -> c.frame() == frame);
-                            if (boundary && StageplayTool.usesLiveWorld(document)) audio.endCaptureMode();
+                            if (boundary) audio.endCaptureMode();
                             var actual = resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
-                            if (boundary && StageplayTool.usesLiveWorld(document)) {
+                            if (boundary) {
                                 cues.refreshAfterNativeBoundary(frame);
                                 audio.beginCaptureMode(rate, StageplayDocument.FRAMES_PER_SECOND);
                             }
                             cues.playFrame(document, frame);
                             HeadlessGameBoot.presentHeadlessOuterAudioFrame();
                             int frames = audio.drainCaptureFrame(pcm);
-                            if (actual.world() != null) resources.drawLiveWorld(actual);
+                            resources.drawLiveWorld(actual);
                             surface.record(document.width(), document.height(), canvas -> {
-                                if (actual.world() != null) renderer.drawLiveOverlay(document, actual, canvas);
-                                else renderer.draw(document, actual, canvas);
+                                renderer.drawLiveOverlay(document, actual, canvas);
                             });
                             org.lwjgl.opengl.GL11.glViewport(0, 0, document.width(), document.height());
                             surface.render(projection, viewport);

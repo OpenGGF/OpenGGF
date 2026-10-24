@@ -194,6 +194,11 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (playerGrabbed) releasePlayer(nativeMainPlayer(lastNativeMainPlayer));
+    }
+
+    @Override
     public BreakablePlatingObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new BreakablePlatingObjectInstance(ctx.spawn(), getName());
     }

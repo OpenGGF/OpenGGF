@@ -96,6 +96,11 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (poleGrabbed) releasePlayer(controlledPlayer);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite updatePlayer = (AbstractPlayableSprite) playerEntity;
         if (routine != Routine.ACTION) {

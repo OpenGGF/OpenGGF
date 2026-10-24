@@ -18,6 +18,22 @@ import java.util.List;
 
 /** loc_7E25C: independent SST surviving results and the DEZ1 -> DEZ2 load. */
 final class DezMinibossTransport extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private int state;
     private int timer;
     private boolean fromRight;
@@ -44,7 +60,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
             }
             case 1 -> {
                 if(services().gameState().isEndOfLevelActive()) return;
-                state=2; player.setControlLocked(true);
+                state=2; visualControlOwners.acquire(player).setControlLocked(true);
                 spawnFreeChild(()->new P2Hold(new ObjectSpawn(0,0,0,0,0,false,0)));
                 fromRight=(player.getCentreX()&0xFFFF)>=0x140;
                 walk(player);
@@ -61,7 +77,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
             }
             case 4 -> {
                 if((player.getCentreY()&0xFFFF)<0x360 || player.getAir()) return;
-                state=5; ObjectControlState.nativeBit7FullControl().applyTo(player);
+                state=5; ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
                 player.setAnimationId(0); stop(player); player.setPushing(false); player.setAir(true);
                 player.setDirection(Direction.RIGHT); player.setRenderFlips(false,false);
             }
@@ -98,7 +114,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
                             services().graphicsManager(),S3kPaletteOwners.DEZ_MINIBOSS,S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
                             1,services().rom().readBytes(0x7F01C,32));
                 } catch(IOException failure) { throw new UncheckedIOException(failure); }
-                ObjectControlState.none().applyTo(player); player.setObjectMappingFrameControl(false); player.setControlLocked(false);
+                ObjectControlState.none().applyTo(visualControlOwners.relinquish(player)); player.setObjectMappingFrameControl(false); player.setControlLocked(false);
                 if(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite p2) p2.setControlLocked(false);
                 ObjectLifetimeOps.deleteNoRespawn(this);
             }
@@ -111,7 +127,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
             boolean jump=player.getPushing();
             // Ctrl_1_locked suppresses hardware copies; loc_7E2C0/7E2DE owns
             // Ctrl_1_logical. The forced mask admits that scripted input to movement.
-            player.setForcedInputMask((fromRight ? AbstractPlayableSprite.INPUT_LEFT : AbstractPlayableSprite.INPUT_RIGHT)
+            visualControlOwners.acquire(player).setForcedInputMask((fromRight ? AbstractPlayableSprite.INPUT_LEFT : AbstractPlayableSprite.INPUT_RIGHT)
                     | (jump ? AbstractPlayableSprite.INPUT_JUMP : 0));
             player.setLogicalInputState(false,false,fromRight,!fromRight,jump,jump);
             return;
@@ -146,6 +162,19 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
 
     /** loc_863C0: a positive lock suppresses manual P2 input, not native CPU following. */
     static final class P2Hold extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                player.setControlLocked(false);
+                if (player.getCpuController() != null) player.getCpuController().setController2Input(0, 0);
+            }
+            visualControlOwners.clear();
+        }
+
         private boolean initialized;
         P2Hold(ObjectSpawn spawn) { super(spawn,"DEZTransportP2Hold"); }
         @Override public boolean isPersistent() { return true; }
@@ -156,7 +185,7 @@ final class DezMinibossTransport extends AbstractObjectInstance implements Spawn
                 ObjectLifetimeOps.deleteNoRespawn(this); return;
             }
             var cpu=p2.getCpuController();
-            if(!initialized) { initialized=true; p2.setControlLocked(true); if(cpu!=null) cpu.clearManualControlTimer(); }
+            if(!initialized) { initialized=true; visualControlOwners.acquire(p2).setControlLocked(true); if(cpu!=null) cpu.clearManualControlTimer(); }
             if(!p2.isControlLocked()) {
                 if(cpu!=null) cpu.setController2Input(0,0);
                 ObjectLifetimeOps.deleteNoRespawn(this); return;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -32,7 +33,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -44,6 +44,21 @@ import java.util.List;
  * capsule handoff, and Robotnik ship escape onto the shared boss path.
  */
 public final class MhzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int HIT_COUNT = 9;
     private static final int COLLISION_SIZE = 0x0F;
     private static final int INITIAL_X_OFFSET = 0xC0;
@@ -700,7 +715,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (player instanceof AbstractPlayableSprite sprite) {
             // loc_76270 calls Restore_PlayerControl/2 before its separate
             // controller lock: results' object_control=$81 must not survive.
-            ObjectControlState.none().applyTo(sprite);
+            ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
             // Restore_PlayerControl clears object_control ($2E), not interact
             // ($42). Keep the last capsule contact, including its rewind binding.
             // Clearing the slot here was an engine-only write that broke restore.
@@ -710,8 +725,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             sprite.setAnimationFrameIndex(0);
             sprite.setAnimationTick(0);
             sprite.setHighPriority(true);
-            sprite.setControlLocked(true);
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+            visualControlOwners.acquire(sprite).setControlLocked(true);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
     }
 
@@ -766,7 +781,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private void forceWalkoffRight(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         }
     }
 
@@ -785,7 +800,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
     }
 
@@ -813,7 +828,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
         player.setXSpeed((short) 0x200);
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
         }
     }
 
@@ -821,7 +836,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
-        sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
+        visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
         if (player.getYSpeed() < 0) {
             return;
         }
@@ -833,7 +848,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(Sonic3kAnimationIds.HANG);
         player.setDirection(Direction.LEFT);
         setCustomFlag(TIMER_OFFSET, 0x5F);
@@ -1036,6 +1051,18 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private static final class MhzEndBossSidekickLockChild extends AbstractObjectInstance
             implements ZeroArgRewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                player.setControlLocked(false);
+            }
+            visualControlOwners.clear();
+        }
+
         private boolean lockIssued;
 
         private MhzEndBossSidekickLockChild() {
@@ -1066,7 +1093,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 return;
             }
             if (!lockIssued) {
-                sidekick.setControlLocked(true);
+                visualControlOwners.acquire(sidekick).setControlLocked(true);
                 lockIssued = true;
             }
             if (sidekick.isControlLocked()) {
@@ -1097,6 +1124,20 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private static final class MhzEndBossWalkoffPrepChild extends AbstractObjectInstance
             implements RewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                player.setControlLocked(false);
+                player.clearForcedInputMask();
+                player.clearLogicalInputState();
+            }
+            visualControlOwners.clear();
+        }
+
         private static final int WALKOFF_PREP_X = 0x4600;
 
         private MhzEndBossInstance parent;
@@ -1145,13 +1186,13 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
                 // loc_768D2 clears facing/roll while airborne, but only banks
                 // Events_fg_5 and locks control after landing.
                 if (sprite.getAir()) return;
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 parent.signalEndBossWalkoffPrepEvent();
                 forcingWalkoff = true;
                 return; // loc_768D2 installs loc_768FE; forced RIGHT begins next dispatch.
             }
             if (Integer.compareUnsigned(Short.toUnsignedInt(sprite.getCentreX()), WALKOFF_PREP_X) < 0) {
-                sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+                visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
                 return;
             }
             NativePositionOps.writeXPosPreserveSubpixel(sprite, WALKOFF_PREP_X);
@@ -1170,6 +1211,18 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private static final class MhzEndBossPlayerTwoCarryChild extends AbstractObjectInstance
             implements ZeroArgRewindRecreatable {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                ObjectControlState.none().applyTo(player);
+            }
+            visualControlOwners.clear();
+        }
+
         private boolean initialized;
 
         private MhzEndBossPlayerTwoCarryChild() {
@@ -1199,7 +1252,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             }
             if (!initialized) {
                 initialized = true;
-                ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+                ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sidekick));
                 sidekick.setAnimationId(Sonic3kAnimationIds.FLY);
                 sidekick.setDirection(Direction.RIGHT);
                 return;

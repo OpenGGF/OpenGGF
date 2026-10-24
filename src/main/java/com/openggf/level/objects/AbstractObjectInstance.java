@@ -100,6 +100,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     private boolean destroyedRespawnable;
     private ObjectSpawn dynamicSpawn;
     private ObjectServices services;
+    private transient StageplayActivationPolicy stageplayActivation;
 
     /**
      * Pre-update position snapshot, saved by ObjectManager before the object update loop.
@@ -491,6 +492,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setServices(ObjectServices services) {
         this.services = services;
+        // Native parent/rewind adoption may re-inject services after admission.
+        // The admitting manager owns policy replacement through bindStageplayActivation.
+    }
+
+    void bindStageplayActivation(StageplayActivationPolicy policy) {
+        stageplayActivation = policy;
     }
 
     /**
@@ -712,7 +719,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the camera viewport
      */
     protected boolean isOnScreen() {
-        return cameraBounds.contains(getX(), getY());
+        return cameraBounds.contains(getX(), getY()) || stageplayVisible(getX(), getY(), 0, 0);
+    }
+
+    // Custom native bounds/retained-flag owners use the same supplemental windows as the common helpers.
+    final boolean stageplayVisible(int x, int y, int xMargin, int yMargin) {
+        return stageplayActivation != null && stageplayActivation.contains(x, y, xMargin, yMargin);
     }
 
     protected static boolean isWithinBuildSpritesBounds(
@@ -758,7 +770,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // that set render_flags bit 7. The extra previous-frame snapshot lags
         // the ROM gate by two frames in inline object order.
         return cameraBounds.containsRenderSpriteBounds(
-                getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
+                getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight())
+                || stageplayVisible(getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /**
@@ -895,16 +908,19 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 // obHeight=$80) keeps render_flags bit 7 set and stays
                 // touchable. Mirror the ROM custom-height bounds test.
                 return cameraBounds.containsRenderSpriteBounds(preUpdateX, preUpdateY,
-                        getOnScreenHalfWidth(), getOnScreenHalfHeight());
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight())
+                        || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
             }
             // S1: include the BuildSprites .assumeHeight Y band.
             return cameraBounds.contains(preUpdateX, preUpdateY,
-                    getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN);
+                    getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN)
+                    || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
         }
         // S2/S3K: pre-Task-3 X-only behaviour. Matches ROM S2 Touch_Loop
         // (no render-flag gate) and S3K Collision_response_list (gate
         // happens upstream during list build, not at touch time).
-        return cameraBounds.containsX(preUpdateX);
+        return cameraBounds.containsX(preUpdateX)
+                || stageplayVisible(preUpdateX, preUpdateY, getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 
     /**
@@ -933,11 +949,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Use this for detection checks where Y proximity is handled separately.
      */
     protected boolean isOnScreenX() {
-        return cameraBounds.containsX(getX());
+        return cameraBounds.containsX(getX()) || stageplayVisible(getX(), getY(), 0, 0);
     }
 
     protected boolean isOnScreenX(int margin) {
-        return cameraBounds.containsX(getX(), margin);
+        return cameraBounds.containsX(getX(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 
     /**
@@ -948,7 +964,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if the object is within the extended camera viewport
      */
     protected boolean isOnScreen(int margin) {
-        return cameraBounds.contains(getX(), getY(), margin);
+        return cameraBounds.contains(getX(), getY(), margin) || stageplayVisible(getX(), getY(), margin, margin);
     }
 
     /** ROM-style unsigned, 128-pixel-aligned X distance used by delete-touch routines. */
@@ -977,7 +993,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /** Applies a coarse-X delete-touch check when an object has a camera service. */
     protected final void coarseXCull(int anchorX, int maximumDistance) {
         if (services().camera() != null
-                && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)) {
+                && isCoarseXOutOfRange(anchorX, services().camera().getX(), maximumDistance)
+                && !stageplayVisible(anchorX, getY(), 128, 128)) {
             setDestroyedByOffscreen();
         }
     }
@@ -988,7 +1005,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * render_flags on-screen bit rather than MarkObjGone's inclusive point test.
      */
     protected boolean isWithinRenderSpriteBounds(int xMargin, int yMargin) {
-        return cameraBounds.containsRenderSpriteBounds(getX(), getY(), xMargin, yMargin);
+        return cameraBounds.containsRenderSpriteBounds(getX(), getY(), xMargin, yMargin)
+                || stageplayVisible(getX(), getY(), xMargin, yMargin);
     }
 
     /**
@@ -1026,8 +1044,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     protected boolean isPreUpdateWithinRenderSpriteBounds(int xMargin, int yMargin) {
-        return preUpdateValid && cameraBounds.containsRenderSpriteBounds(
-                preUpdateX, preUpdateY, xMargin, yMargin);
+        return preUpdateValid && (cameraBounds.containsRenderSpriteBounds(
+                preUpdateX, preUpdateY, xMargin, yMargin)
+                || stageplayVisible(preUpdateX, preUpdateY, xMargin, yMargin));
     }
 
     /**
@@ -1063,7 +1082,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
         int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + viewportWidth() + 192);
+        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**
@@ -1113,9 +1132,9 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     protected boolean isChkObjectVisible() {
         int dx = getX() - cameraBounds.left();
-        if (dx < 0 || dx >= viewportWidth()) return false;
         int dy = getY() - cameraBounds.top();
-        return dy >= 0 && dy < viewportHeight();
+        return (dx >= 0 && dx < viewportWidth() && dy >= 0 && dy < viewportHeight())
+                || stageplayVisible(getX(), getY(), 0, 0);
     }
 
     /**
@@ -1170,7 +1189,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         int objAligned = objectX & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         short dist = (short) (objAligned - screenAligned);
-        return dist <= (128 + viewportWidth() + 192);
+        return dist <= (128 + viewportWidth() + 192) || stageplayVisible(objectX, getY(), 128, 128);
     }
 
     /**
@@ -1247,6 +1266,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /** Report structural children only after their native allocation and outside rewind probes. */
     private void notifyOwnedChild(ObjectInstance child) {
         if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
+            ObjectDirectionAccess.childSpawned(services(), this, child);
             var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
             if(policies!=null && child!=null) policies.childSpawned(this,child);
         }
@@ -1395,26 +1415,27 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * pre-update position cache, touch/solid-contact gating flags, slot index,
      * and respawn state index.
      *
-     * <p><strong>Subclass contract:</strong> Subclasses that hold private
-     * gameplay-relevant state (boss phase counters, badnik AI timers, sub-state
-     * machine indices, etc.) <em>must</em> override this method (and the matching
-     * {@link #restoreRewindState}) to include their own fields — otherwise that
-     * state will silently fail to round-trip across a rewind.
+     * <p><strong>Subclass contract:</strong> Keep gameplay state on the actual
+     * centrally gated default path whenever possible. Supported fields use the
+     * compact schema; classes that cannot use it retain the generic scalar
+     * fallback. Constructor recipes, mutable helpers and identity links need
+     * appropriate codecs or explicit field dispositions, plus fresh-instance
+     * restore and forward-replay evidence. Merely having scalar fields does not
+     * establish that the rest of a class is captured.
      *
-     * <p>Known subclasses likely to require overrides (non-exhaustive):
-     * <ul>
-     *   <li>Any boss instance — phase counters, arena/boundary flags, hit counters</li>
-     *   <li>{@code AbstractBadnikInstance} subclasses with multi-phase AI — per-frame
-     *       timers beyond {@code animTimer}, direction change state</li>
-     *   <li>CNZ bumper — reload timer</li>
-     *   <li>HTZ earthquake object — oscillation accumulator</li>
-     *   <li>Any object that uses {@code objoff_*} scratch fields for state machines</li>
-     * </ul>
-     *
-     * <p>The current default path is centrally gated by
+     * <p>The default path is selected by
      * {@link GenericRewindEligibility#usesDefaultObjectSubclassCapture(Class)}:
-     * subclasses without a concrete rewind override automatically capture fields
-     * accepted by {@link GenericFieldCapturer#captureObjectSubclassScalars(AbstractObjectInstance)}.
+     * subclasses without a concrete rewind override use compact capture when
+     * eligible, otherwise fields accepted by
+     * {@link GenericFieldCapturer#captureObjectSubclassScalars(AbstractObjectInstance)}.
+     * Existing approved manual paths remain responsible for their own extras.
+     * Adding an override can remove a class from default field auditing and must
+     * pass the exact architecture inventory; it is not the default way to add state.
+     *
+     * <p>This overload supplies {@link RewindCaptureContext#none()}. Managed
+     * identity fields require a table unless their exact codec explicitly supports
+     * context-free capture. Preserve that codec's distinction between uncaptured
+     * links and authoritative captured nulls when changing a field's disposition.
      *
      * @return immutable snapshot of this object's standard mutable field surface
      */

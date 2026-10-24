@@ -37,7 +37,7 @@ final class ObjectRenderParts {
     /** Rebuilds presentation lists without changing submission or simulation state. */
     static void populateBuckets(Collection<ObjectInstance> active, List<ObjectInstance> dynamic,
             NativeSpriteSubmissionQueue queue, IntFunction<AbstractObjectInstance> currentOwner,
-            Supplier<IntFunction<SpriteSlotEmission>> externalResolver,
+            Supplier<IntFunction<SpriteSlotEmission>> externalResolver, StageplayObjectDirection direction,
             List<RenderEntry>[] unified, List<RenderEntry>[] low, List<RenderEntry>[] high) {
         // Clear all buckets
         for (int i = 0; i < unified.length; i++) {
@@ -46,18 +46,26 @@ final class ObjectRenderParts {
             unified[i].clear();
         }
 
-        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
-        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
+        // Every accepted address owns its presentation, including ID-zero and
+        // orphan words that emit nothing. Picture direction never refunds a call.
+        var nativeSlots = new java.util.HashSet<Integer>();
+        for (int ordinal = 0; ordinal < queue.size(); ordinal++) nativeSlots.add(queue.slotAt(ordinal));
+
+        // Explicit picture authority belongs to the legacy suffix. Undirected
+        // native producers still require their actual DisplaySprite calls.
         for (ObjectInstance instance : active) {
+            if (direction != null && direction.addRenderEntries(instance, nativeSlots, unified, low, high)) continue;
             if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
                 ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
             }
         }
         for (ObjectInstance instance : dynamic) {
+            if (direction != null && direction.addRenderEntries(instance, nativeSlots, unified, low, high)) continue;
             if (!NativeSpriteSubmissionAccess.authoritative(instance)) {
                 ObjectRenderParts.addToRenderBuckets(instance, unified, low, high);
             }
         }
+        if (direction != null) direction.addVisualRenderEntries(nativeSlots, unified, low, high);
 
         // ROM parity: lower sprite-table indices render in front. Objects execute and
         // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
@@ -193,8 +201,12 @@ final class ObjectRenderParts {
     static void appendRenderCommands(RenderEntry entry, List<GLCommand> commands, int bucket, ObjectServices services) {
         if (entry.instance() instanceof ExternalSprite) {
             appendRenderCommands(entry, commands, bucket);
-        } else {
-            ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
+            return;
         }
+        var direction = services == null || services.objectManager() == null
+                ? null : services.objectManager().stageplayDirection;
+        if (direction != null
+                && direction.drawReplacement(entry.instance(), bucket, entry.high(), entry.slot())) return;
+        ObjectHeadPresentation.draw(entry.instance(), services, () -> appendRenderCommands(entry, commands, bucket));
     }
 }

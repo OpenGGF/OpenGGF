@@ -49,6 +49,9 @@ import java.util.stream.Stream;
  *       {@code *StaticAdapter} pattern (see {@code OscillationStaticAdapter},
  *       {@code Sonic3kLevelTriggerStaticAdapter}, {@code
  *       ButtonVineTriggerStaticAdapter}).</li>
+ *   <li>the explicit {@link #PROVIDER_OWNERS} map names its special-stage
+ *       provider. Initialized GameLoop registration, restore and retirement are
+ *       checked by {@code TestSpecialStageProviderRewindOwnership}.</li>
  * </ul>
  *
  * <p><b>A second candidate source: per-{@code GameModule} registered
@@ -79,6 +82,18 @@ import java.util.stream.Stream;
  * gap keys.
  */
 public final class StaticStateRewindCoverageAnalyzer {
+
+    // Provider-owned managers use instance delegation, not the legacy "ManagerName." heuristic.
+    // TestSpecialStageProviderRewindOwnership exercises initialized registration and retirement.
+    private static final Map<String, String> PROVIDER_OWNERS = Map.of(
+            "com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager",
+            "com.openggf.game.sonic2.Sonic2SpecialStageProvider",
+            "com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager",
+            "com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider");
+
+    static Map<String, String> providerOwners() {
+        return PROVIDER_OWNERS;
+    }
 
     /** Root package (relative to {@code src/main/java}) scanned for candidates. */
     private static final String SCAN_ROOT = "com/openggf/game";
@@ -143,6 +158,7 @@ public final class StaticStateRewindCoverageAnalyzer {
         // Coverage index: simple names referenced (as "Name.") from any file
         // that implements RewindSnapshottable, plus classes covering themselves.
         Set<String> coveredSimpleNames = new LinkedHashSet<>();
+        coveredSimpleNames.addAll(PROVIDER_OWNERS.keySet());
         for (SourceFile file : files) {
             if (!IMPLEMENTS_SNAPSHOTTABLE.matcher(file.content()).find()) {
                 continue;

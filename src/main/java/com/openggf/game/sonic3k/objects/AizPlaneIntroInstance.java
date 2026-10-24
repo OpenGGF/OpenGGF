@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
-
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
@@ -22,8 +21,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -196,18 +193,13 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
 
     /** Whether this object currently owns player control lock. */
     private boolean ownsPlayerControl;
+    private AbstractPlayableSprite ownedPlayer;
 
     /** Reference to the plane child sprite (biplane visual). */
     private AizIntroPlaneChild planeChild;
 
-    /** Reference to the Knuckles cutscene object. */
+    /** Live finale trigger/emerald collector; captured by identity, not a reconstructed history. */
     private CutsceneKnucklesAiz1Instance knuckles;
-
-    /** List of active wave children for cleanup. */
-    private final ArrayList<AizIntroWaveChild> activeWaves = new ArrayList<>();
-
-    /** List of scattered emeralds. */
-    private final ArrayList<AizEmeraldScatterInstance> emeralds = new ArrayList<>();
 
     private int mappingFrame;
     private int lastFrameCounter;
@@ -390,26 +382,22 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (!ownsPlayerControl || ownedPlayer == null) return;
+        ownedPlayer.setControlLocked(false);
+        ObjectControlState.none().applyTo(ownedPlayer);
+        ownedPlayer.setObjectMappingFrameControl(false);
+        ownedPlayer.setHidden(false);
+        ownsPlayerControl = false;
+        ownedPlayer = null;
+    }
+
+    @Override
     public void onUnload() {
         if (activeIntroInstance == this) {
             activeIntroInstance = null;
         }
-        // Safety net: release player control if we still own it.
-        if (ownsPlayerControl) {
-            try {
-                var focusedSprite = services().camera().getFocusedSprite();
-                if (focusedSprite instanceof AbstractPlayableSprite ps) {
-                    ps.setControlLocked(false);
-                    ObjectControlState.none().applyTo(ps);
-                    ps.setHidden(false);
-                }
-            } catch (Exception e) {
-                LOG.fine(() -> "AizPlaneIntroInstance.onUnload: " + e.getMessage());
-            }
-            ownsPlayerControl = false;
-        }
-        activeWaves.clear();
-        emeralds.clear();
+        releasePlayersForVisualDirection();
         // Art reset moved to CutsceneKnucklesAiz1Instance.onUnload() —
         // Knuckles (and emeralds, rock child) still need the shared art data
         // after the plane parent destroys itself mid-cutscene.
@@ -557,7 +545,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                         currentX, currentY + 0x18, 0, 0, 0, false, 0);
                 AizIntroWaveChild wave = new AizIntroWaveChild(waveSpawn, this);
                 spawnDynamicObject(wave);
-                activeWaves.add(wave);
             }
         }
     }
@@ -614,6 +601,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             ObjectControlState.engineScriptedPreserveCpuMovementSuppressed().applyTo(player);
             player.setHidden(true);
             ownsPlayerControl = true;
+            ownedPlayer = player;
         }
 
         // Load all intro art.
@@ -1005,6 +993,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                     0, 0, 0, false, 0);
             knuckles = new CutsceneKnucklesAiz1Instance(knuxSpawn);
             spawnDynamicObject(knuckles);
+            // A failed SST admission destroys the candidate before identity registration.
+            // Keep the native attempt and routine advance, but never retain a rejected collector.
+            if (knuckles.isDestroyed()) {
+                knuckles = null;
+            }
             // Rock child is spawned by Knuckles' own routine0Init
 
             LOG.fine("Routine 22: spawned Knuckles");
@@ -1064,6 +1057,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 player.setHidden(false);
                 ObjectControlState.none().applyTo(player);
                 ownsPlayerControl = false;
+                ownedPlayer = null;
                 // The object runs after the player slot. Retail publishes the
                 // Hurt byte immediately but leaves the already displayed intro
                 // frame intact until the next Animate_Sonic pass
@@ -1109,7 +1103,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 AizEmeraldScatterInstance emerald = new AizEmeraldScatterInstance(emeraldSpawn);
                 emerald.setKnuckles(knuckles);
                 spawnDynamicObject(emerald);
-                emeralds.add(emerald);
 
                 // Compensate for pendingDynamicAdditions delay: ROM processes each
                 // emerald's first movement in the same frame via CreateChild6_Simple.

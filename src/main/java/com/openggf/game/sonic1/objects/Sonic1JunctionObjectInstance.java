@@ -26,7 +26,6 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import com.openggf.debug.DebugColor;
 import java.util.List;
 
@@ -191,6 +190,11 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     // ========================================================================
     // Object Lifecycle
     // ========================================================================
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        releaseControlledPlayer();
+    }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
@@ -538,12 +542,17 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         player.setCentreYPreserveSubpixel((short) ((targetY + savedY) >> 1));
     }
 
-    private void cancelGrab() {
+    private void releaseControlledPlayer() {
         if (controlledPlayer != null) {
             ObjectControlState.none().applyTo(controlledPlayer);
             controlledPlayer.setControlLocked(false);
             controlledPlayer.setForcedAnimationId(-1);
         }
+        controlledPlayer = null;
+    }
+
+    private void cancelGrab() {
+        releaseControlledPlayer();
         routine = Routine.ACTION;
         controlledPlayer = null;
     }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -52,6 +54,10 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private boolean resultsStarted;
     private boolean sidekickEndPoseWaiting;
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
+
+    private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
+
+    private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
     private int postOpenTimer;
     protected S3kBossExplosionController explosionController;
     // Recreated capsules must resume Obj_CreateBossExplosion's timers; its children draw the
@@ -78,6 +84,32 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
     protected AbstractS3kUprightEggCapsuleInstance(int x, int y, String name) {
         this(new ObjectSpawn(x, y, Sonic3kObjectIds.EGG_CAPSULE, 0, 0, false, 0), name);
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        // Release only players acquired by this capsule; idle removal must not
+        // reset an unrelated native holder or the world's team.
+        for (var owned : List.copyOf(resultsSolidContactPlayers)) {
+            if (owned instanceof AbstractPlayableSprite sprite) {
+                sprite.setObjectControlledSolidContactObject(null);
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setControlLocked(false);
+            }
+        }
+        resultsSolidContactPlayers.clear();
+        for (var sprite : sidekickPoseOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().cancelQueuedNativeEndingPose();
+            if (sprite.isObjectControlled() && sprite.getAnimationId() == Sonic3kAnimationIds.VICTORY.id()) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
+            }
+        }
+        for (var sprite : sidekickControlOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
+        }
+        sidekickControlOwners.clear();
+        sidekickPoseOwners.clear();
     }
 
     @Override
@@ -252,6 +284,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
             // The capsule slot runs after Player_2, so this suppresses CPU input
             // generation beginning with the following player pass while the
             // already-latched Ctrl_2_logical word continues to drive physics.
+            sidekickControlOwners.add(sidekick);
             sidekick.getCpuController().setController2SignedLocked(true);
         }
         services().playSfx(Sonic3kSfx.EXPLODE.id);
@@ -332,6 +365,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                     && sprite != leader && sprite.getCpuController() != null) {
                 // sub_868F8 ends Player_1 immediately; the following
                 // Check_TailsEndPose dispatch ends Player_2 one SST pass later.
+                sidekickPoseOwners.add(sprite);
                 sprite.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
             }
         }
@@ -345,6 +379,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
             if (candidate instanceof AbstractPlayableSprite sprite
                     && sprite != leader && sprite.getCpuController() != null
                     && !sprite.getDead() && !sprite.getAir()) {
+                sidekickPoseOwners.add(sprite);
                 S3kSignpostInstance.applySidekickEndingPose(sprite);
             }
         }

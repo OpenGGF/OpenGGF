@@ -1,21 +1,21 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.asrWord;
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 import com.openggf.level.scroll.compose.WaterlineBlendComposer;
 
-import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.asrWord;
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Hydrocity Zone (HCZ) scroll handler for Sonic 3K.
  *
  * <p>Ports HCZ1_Deform and HCZ2_Deform from the S3K disassembly.
  */
-public class SwScrlHcz extends AbstractZoneScrollHandler {
+public class SwScrlHcz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
 
     static final int[] HCZ1_DEFORM_HEIGHTS = {
             0x40, 8, 8, 5, 5, 6, 0xF0, 6, 5, 5, 8, 8, 0x30, 0x80C0, 0x7FFF
@@ -60,7 +60,7 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
         NORMAL
     }
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
     private final ScrollValueTable hcz1HScroll = ScrollValueTable.ofLength(HCZ1_HSCROLL_SIZE);
     private final ScrollValueTable hcz2HScroll = ScrollValueTable.ofLength(HCZ2_HSCROLL_SIZE);
     private final byte[] waterlineData;
@@ -72,7 +72,12 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
     private short vscrollFactorFG;
 
     public SwScrlHcz(byte[] waterlineData) {
+        this(waterlineData, 224);
+    }
+
+    private SwScrlHcz(byte[] waterlineData, int height) {
         this.waterlineData = waterlineData;
+        composer = new ScrollEffectComposer(height);
     }
 
     public SwScrlHcz() {
@@ -150,7 +155,11 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
     public void update(int[] horizScrollBuf,
                        int cameraX,
                        int cameraY,
-                       int frameCounter,
+                       int frameCounter, int actId) {
+        composeCamera(horizScrollBuf, cameraX, cameraY, actId);
+    }
+
+    private void composeCamera(int[] horizScrollBuf, int cameraX, int cameraY,
                        int actId) {
         resetScrollTracking();
         composer.reset();
@@ -250,7 +259,7 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
             lastBgCameraX = bgCameraX;
             composer.setVscrollFactorBG((short) (cameraY - WALL_CHASE_BG_Y_OFFSET));
             short bgScroll = negWord(bgCameraX);
-            composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
+            composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
             return;
         }
 
@@ -291,5 +300,35 @@ public class SwScrlHcz extends AbstractZoneScrollHandler {
             }
             value -= step;
         }
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        byte[] blend = waterlineData == null ? null : waterlineData.clone();
+        Hcz2BgPhase phase = hcz2Phase;
+        int shake = screenShakeOffset, wallX = wallChaseOffsetX;
+        return view -> {
+            SwScrlHcz scratch = new SwScrlHcz(blend, view.height());
+            scratch.hcz2Phase = phase;
+            scratch.screenShakeOffset = shake;
+            scratch.wallChaseOffsetX = wallX;
+            int[] words = new int[view.height()];
+            scratch.composeCamera(words, view.cameraX(), view.cameraY(), context.act());
+            short foregroundY =
+                    scratch.vscrollFactorFG == 0 ? (short) view.cameraY() : scratch.vscrollFactorFG;
+            return new com.openggf.level.scroll.ScrollProjection(
+                    words,
+                    null,
+                    null,
+                    null,
+                    foregroundY,
+                    scratch.vscrollFactorBG,
+                    scratch.lastBgCameraX,
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    shake,
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

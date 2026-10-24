@@ -56,6 +56,35 @@ public final class SpriteSatMaskPostProcessor {
         int tableSprites() { return hardwareWidth / 4; }
     }
 
+    /** Exact presentation span over an aligned native SAT capacity. */
+    public static final class LogicalViewport {
+        private final Raster alignedRaster;
+        private final int logicalWidth;
+
+        private LogicalViewport(Raster alignedRaster, int logicalWidth) {
+            this.alignedRaster = alignedRaster;
+            this.logicalWidth = logicalWidth;
+        }
+
+        /** Wider presentation retains H40 admission without rounding its right edge. */
+        public static LogicalViewport h40(int x, int y, int width, int height) {
+            if (width < 320) throw new IllegalArgumentException("Logical H40 viewport needs width >= 320");
+            return new LogicalViewport(Raster.h40(x, y, height), width);
+        }
+
+        static LogicalViewport fromAligned(Raster raster) {
+            return new LogicalViewport(raster, raster.width());
+        }
+
+        int x() { return alignedRaster.x(); }
+        int y() { return alignedRaster.y(); }
+        int width() { return logicalWidth; }
+        int height() { return alignedRaster.height(); }
+        int hardwareWidth() { return alignedRaster.hardwareWidth(); }
+        int lineSprites() { return alignedRaster.lineSprites(); }
+        int tableSprites() { return alignedRaster.tableSprites(); }
+    }
+
     /** Fresh, retainable native H40 result. The flag controls only the ROM marker rewrite. */
     public static List<SpriteSatEntry> process(List<SpriteSatEntry> entries, boolean spriteMaskEnabled) {
         return process(entries, spriteMaskEnabled, Raster.h40(0, 0, 224));
@@ -71,6 +100,13 @@ public final class SpriteSatMaskPostProcessor {
     }
 
     static List<SpriteSatEntry> processReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled, Raster raster) {
+        return processLogicalReusable(entries, spriteMaskEnabled,
+                entries == null || entries.isEmpty() ? null : LogicalViewport.fromAligned(raster));
+    }
+
+    /** Thread-owned result; whole admitted source columns precede destination viewport clipping. */
+    static List<SpriteSatEntry> processLogicalReusable(List<SpriteSatEntry> entries, boolean spriteMaskEnabled,
+                                                       LogicalViewport raster) {
         Scratch scratch = SCRATCH.get();
         scratch.processed.clear();
         if (entries == null || entries.isEmpty()) return scratch.processed;
@@ -173,7 +209,7 @@ public final class SpriteSatMaskPostProcessor {
         return -1;
     }
 
-    private static void appendVisible(SpriteSatEntry entry, int index, Raster raster, Scratch scratch) {
+    private static void appendVisible(SpriteSatEntry entry, int index, LogicalViewport raster, Scratch scratch) {
         int top = Math.max(Math.max(entry.piece().y(), entry.visibleTopY()), raster.y());
         int bottom = Math.min(Math.min(entry.piece().endYExclusive(), entry.visibleBottomY()), raster.y() + raster.height());
         int start = top;

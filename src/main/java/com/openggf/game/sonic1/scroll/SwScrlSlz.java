@@ -3,6 +3,9 @@ package com.openggf.game.sonic1.scroll;
 import com.openggf.game.internal.CheckpointBackgroundScroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
 
@@ -31,7 +34,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * <p>The main Deform_SLZ routine tiles this 68-entry buffer across the screen
  * at 16-line intervals, indexed by the BG Y scroll position.
  */
-public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler {
+public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1CheckpointScrollHandler, ScrollProjectionSource {
 
     private static final int SCROLL_BUFFER_SIZE = 68;
     private static final int LINES_PER_GROUP = 16;
@@ -89,6 +92,15 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1Checkp
         int bgY = (int) (bgYPos >> 16);
         composer.setVscrollFactorBG((short) bgY);
 
+        compose(composer, scrollBuffer, cameraX, bgY);
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private static void compose(ScrollEffectComposer composer, short[] scrollBuffer, int cameraX, int bgY) {
         // FG scroll (high word of packed h-scroll entries)
         short fgScroll = negWord(cameraX);
 
@@ -176,26 +188,35 @@ public class SwScrlSlz extends AbstractZoneScrollHandler implements Sonic1Checkp
         if (firstGroupLines > 0 && firstGroupLines < LINES_PER_GROUP) {
             int bufIdx = yOffset % SCROLL_BUFFER_SIZE;
             short bgScroll = scrollBuffer[bufIdx];
-            int writeCount = Math.min(firstGroupLines, VISIBLE_LINES - lineIndex);
+            int writeCount = Math.min(firstGroupLines, composer.visibleLineCount() - lineIndex);
             composer.fillPackedScrollWords(lineIndex, writeCount, fgScroll, bgScroll);
             lineIndex += writeCount;
             yOffset++;
         }
 
         // Full 16-line groups
-        while (lineIndex < VISIBLE_LINES) {
+        while (lineIndex < composer.visibleLineCount()) {
             int bufIdx = yOffset % SCROLL_BUFFER_SIZE;
             short bgScroll = scrollBuffer[bufIdx];
-            int writeCount = Math.min(LINES_PER_GROUP, VISIBLE_LINES - lineIndex);
+            int writeCount = Math.min(LINES_PER_GROUP, composer.visibleLineCount() - lineIndex);
             composer.fillPackedScrollWords(lineIndex, writeCount, fgScroll, bgScroll);
             lineIndex += writeCount;
             yOffset++;
         }
 
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long capturedY = bgYPos;
+        return view -> {
+            int bgY = (int) ((capturedY + (long) (view.cameraY() - context.cameraY()) * 128 * 256) >> 16);
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            compose(output, new short[SCROLL_BUFFER_SIZE], view.cameraX(), bgY);
+            return Sonic1ProjectionOutput.finish(context, view, output, context.nativeOutput().backgroundX(),
+                    context.nativeOutput().backgroundPeriod());
+    };
     }
 
 

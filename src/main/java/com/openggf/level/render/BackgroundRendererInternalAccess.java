@@ -8,6 +8,10 @@ import com.openggf.util.ShortIndexedView;
 public final class BackgroundRendererInternalAccess {
     private BackgroundRendererInternalAccess() { }
 
+    public static void setCinematicColumnPhase(BackgroundRenderer renderer, int phase) {
+        renderer.setCinematicColumnPhase(phase);
+    }
+
     public static void setColumns(BackgroundRenderer renderer, Columns columns) {
         renderer.setColumns(columns);
     }

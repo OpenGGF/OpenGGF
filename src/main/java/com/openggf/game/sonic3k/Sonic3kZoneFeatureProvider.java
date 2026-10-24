@@ -57,7 +57,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundBuildProjectionSource, com.openggf.game.internal.BackgroundColumnProjectionSource, com.openggf.game.internal.LevelStartCameraPosition, com.openggf.game.internal.ForegroundVerticalScrollSplit, com.openggf.game.internal.ForegroundDescriptorOverride, com.openggf.game.internal.NativeArenaCameraFraming, com.openggf.game.internal.BackgroundColumnRemap, com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy, com.openggf.level.render.PriorityBucketSpriteSource {
     @Override
     public void initializeLevelStartCamera(Camera camera, AbstractPlayableSprite player,
                                            int zone, int act, boolean checkpoint) {
@@ -367,6 +367,20 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 ? dezPlanetBackground.columns(manager, GameServices.camera().getWidth()) : null;
     }
 
+    @Override
+    public com.openggf.game.internal.BackgroundColumnProjection captureBackgroundColumns() {
+        if (!GameServices.hasRuntime()) return null;
+        var manager = GameServices.level();
+        if (GameServices.zoneRuntimeState() instanceof
+                com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {
+            int tileHeight = com.openggf.level.LevelConstants.CHUNK_HEIGHT;
+            int originY = Math.floorDiv(state.screenY(), tileHeight) * tileHeight;
+            return dezPlanetBackground.captureProjection(manager, 0xE0 - originY);
+        }
+        return manager.getFeatureZoneId() == Sonic3kZoneIds.ZONE_DEZ && manager.getFeatureActId() == 1
+                ? dezPlanetBackground.captureProjection(manager, Integer.MAX_VALUE) : null;
+    }
+
     @Override public long foregroundDescriptorRevision() {
         if(!GameServices.hasRuntime())return 0;
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
@@ -448,6 +462,81 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
             return GameServices.level().getForegroundTileDescriptorAtWorld(sourceX, y);
         }
         return state.plane().descriptor(sourceX, sourceY);
+    }
+
+    @Override public com.openggf.game.internal.BackgroundBuildProjection captureBackgroundBuild() {
+        var level = GameServices.levelOrNull();
+        if (level == null) return new com.openggf.game.internal.BackgroundBuildProjection(0, null, ignored -> 0);
+        int zone = level.getFeatureZoneId(), act = level.getFeatureActId();
+        int introOffset = AizPlaneIntroInstance.getIntroScrollOffset();
+        java.util.function.IntToDoubleFunction nametable = zone == 0 && act == 0
+                ? cameraX -> introNametableBase(cameraX, introOffset) : ignored -> 0;
+        long revision = backgroundDescriptorRevision();
+        java.util.function.IntBinaryOperator descriptors = null;
+        if (revision != 0) {
+            var runtime = GameServices.zoneRuntimeState();
+            if (revision == Long.MIN_VALUE || runtime instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState) {
+                var grid = captureDescriptorGrid(512, 256, this::backgroundDescriptorAt);
+                descriptors = grid::at;
+            } else if (extendedDezInterior()) {
+                var grid = captureBackgroundGrid(level);
+                int width = GameServices.camera().getWidth();
+                descriptors = (x, y) -> {
+                    var tile = com.openggf.game.sonic3k.render.DezInteriorBackground.tile(x, width);
+                    return grid.at(tile.x(), y) ^ (tile.flip() ? 0x800 : 0);
+                };
+            } else if (runtime instanceof com.openggf.game.sonic3k.runtime.SozZoneRuntimeState soz
+                    && extendedSozPyramid(soz)) {
+                var grid = captureBackgroundGrid(level);
+                descriptors = (x, y) -> grid.at(x >= 0x780 ? 0x740 + Math.floorMod(x - 0x780, 0x40) : x, y);
+            } else if (runtime instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                    && ssz.actIndex() == 1 && ssz.endingBackgroundPlane().revision() != 0) {
+                int width = Math.max(512, level.getCurrentLevel().getLayerWidthBlocks(1)
+                        * level.getCurrentLevel().getBlockPixelSize());
+                var grid = captureDescriptorGrid(width, 256, this::backgroundDescriptorAt);
+                boolean[] foregroundRows = new boolean[32];
+                for (int row = 0; row < 32; row++) foregroundRows[row] = ssz.endingBackgroundPlane().foregroundRow(row * 8);
+                int edge = (ssz.backgroundCameraX() + 319) & ~7;
+                boolean wide = GameServices.camera().getWidth() > 320;
+                descriptors = (x, y) -> grid.at(foregroundRows[Math.floorMod(Math.floorDiv(y, 8), 32)]
+                        ? x & 0x1ff : wide ? Math.min(x, edge) : x, y);
+            } else if (runtime instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                    && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
+                    && GameServices.camera().getWidth() > 320) {
+                var grid = captureBackgroundGrid(level);
+                int edge = (ssz.backgroundCameraX() + 319) & ~7;
+                descriptors = (x, y) -> grid.at(Math.min(x, edge), y);
+            } else {
+                // These native retained Plane-B owners expose one complete 64x32 physical image.
+                var grid = captureDescriptorGrid(512, 256, this::backgroundDescriptorAt);
+                descriptors = grid::at;
+            }
+        }
+        return new com.openggf.game.internal.BackgroundBuildProjection(revision, descriptors, nametable);
+    }
+
+    private record FrozenBackgroundGrid(int widthTiles, int heightTiles, int[] cells) {
+        int at(int x, int y) {
+            return cells[Math.floorMod(Math.floorDiv(y, 8), heightTiles) * widthTiles
+                    + Math.floorMod(Math.floorDiv(x, 8), widthTiles)];
+        }
+    }
+
+    private static FrozenBackgroundGrid captureBackgroundGrid(com.openggf.level.LevelManager level) {
+        var source = level.getCurrentLevel();
+        return captureDescriptorGrid(source.getLayerWidthBlocks(1) * source.getBlockPixelSize(),
+                source.getLayerHeightBlocks(1) * source.getBlockPixelSize(), level::getBackgroundTileDescriptorAtWorld);
+    }
+
+    private static FrozenBackgroundGrid captureDescriptorGrid(int width, int height,
+            java.util.function.IntBinaryOperator source) {
+        int columns = Math.max(1, (width + 7) / 8), rows = Math.max(1, (height + 7) / 8);
+        if ((long) columns * rows > 2 * 1024 * 1024)
+            throw new IllegalArgumentException("Directed native descriptor snapshot exceeds eight MiB");
+        int[] cells = new int[columns * rows];
+        for (int row = 0; row < rows; row++) for (int column = 0; column < columns; column++)
+            cells[row * columns + column] = source.applyAsInt(column * 8, row * 8);
+        return new FrozenBackgroundGrid(columns, rows, cells);
     }
 
     @Override public long backgroundDescriptorRevision() {
@@ -1174,7 +1263,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         if (zoneIndex != 0 || actIndex != 0) {
             return 0.0f;
         }
-        int introOffset = AizPlaneIntroInstance.getIntroScrollOffset();
+        return introNametableBase(cameraX, AizPlaneIntroInstance.getIntroScrollOffset());
+    }
+
+    private static float introNametableBase(int cameraX, int introOffset) {
         if (introOffset < 0) {
             return 0.0f;  // Pure ocean phase: no positions overwritten
         }

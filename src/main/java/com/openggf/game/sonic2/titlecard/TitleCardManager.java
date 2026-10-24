@@ -20,7 +20,7 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
-import com.openggf.graphics.TitleCardSpriteRenderer;
+import com.openggf.game.titlecard.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.util.PatternDecompressor;
 

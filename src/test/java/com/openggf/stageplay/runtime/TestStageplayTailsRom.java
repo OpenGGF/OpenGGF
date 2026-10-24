@@ -56,24 +56,27 @@ class TestStageplayTailsRom {
         try (var resources = new StageplayResources(id -> sceneRom, List.of(game)); var surface = new SceneSurface()) {
             var renderer = new StageplayRenderer(resources);
             for (boolean flip : new boolean[]{false, true}) {
-                var document = StageplayDocument.empty(game, 0, 0, 100, 50, 320, 224)
+                var document = scene(game, 0, 0, 100, 50, 320, 224)
                         .withCamera(List.of(new CameraKey(0, 100, 50, 2, Interpolation.HOLD)))
                         .withActors(List.of(new Actor("tails", "Tails", game, "tails", List.of(
                                 new ActorKey(0, 160, 100, 5, idleBody, flip, true, 1.5, Interpolation.HOLD)))));
                 resources.validate(document);
-                surface.record(320, 224, canvas -> renderer.draw(document, StageplayTimeline.sample(document, 0), canvas));
+                surface.record(320, 224, canvas -> renderer.drawLivePosers(document, StageplayTimeline.sample(document, 0), canvas,
+                        new StageplayTimeline.CameraPose(100, 50, 1)));
                 var ops = surface.recordedFrame();
                 var tailDraw = ops.stream().filter(op -> op.image() == idle.sprite().image()).findFirst().orElseThrow();
                 var bodyDraw = ops.stream().filter(op -> op.image() == body.frame(idleBody).image()).findFirst().orElseThrow();
                 assertTrue(ops.indexOf(tailDraw) < ops.indexOf(bodyDraw), "native tail lies behind body");
-                float expectedLeft = 120 - (flip ? idle.sprite().width() - idle.sprite().originX() : idle.sprite().originX()) * 3f;
+                float expectedLeft = 60 - (flip ? idle.sprite().width() - idle.sprite().originX() : idle.sprite().originX()) * 1.5f;
                 assertEquals(expectedLeft, tailDraw.x0());
-                assertEquals(100 - idle.sprite().originY() * 3f, tailDraw.y0());
-                assertEquals(idle.sprite().width() * 3f, tailDraw.x1() - tailDraw.x0());
+                assertEquals(50 - idle.sprite().originY() * 1.5f, tailDraw.y0());
+                assertEquals(idle.sprite().width() * 1.5f, tailDraw.x1() - tailDraw.x0());
                 assertEquals(flip, tailDraw.u0() > tailDraw.u1());
                 // Random access does not retain the later sample's script or facing.
-                surface.record(320, 224, canvas -> renderer.draw(document, StageplayTimeline.sample(document, 37), canvas));
-                surface.record(320, 224, canvas -> renderer.draw(document, StageplayTimeline.sample(document, 0), canvas));
+                surface.record(320, 224, canvas -> renderer.drawLivePosers(document, StageplayTimeline.sample(document, 37), canvas,
+                        new StageplayTimeline.CameraPose(100, 50, 1)));
+                surface.record(320, 224, canvas -> renderer.drawLivePosers(document, StageplayTimeline.sample(document, 0), canvas,
+                        new StageplayTimeline.CameraPose(100, 50, 1)));
                 assertTrue(surface.recordedFrame().stream().anyMatch(op -> op.image() == idle.sprite().image()
                         && op.x0() == expectedLeft));
             }
@@ -103,4 +106,10 @@ class TestStageplayTailsRom {
                 List.of(new SceneBackdrop.Band(0, 224, 0, 0))));
         return kit;
     }
+    /** These fixtures exercise detached art/choreography, independent of a native session. */
+    private static StageplayDocument scene(String gameId, int zone, int act, double x, double y, int width, int height) {
+        return StageplayDocument.empty(gameId, zone, act, x, y, width, height)
+                .withSet(new StageplayDocument.SetSource(gameId, zone, act, "", ""));
+    }
+
 }

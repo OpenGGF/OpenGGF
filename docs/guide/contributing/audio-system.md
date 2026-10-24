@@ -31,6 +31,20 @@ SmpsSequencer       Processes sequence commands each frame.
 AudioOutput         Mixes all sources and sends to system audio.
 ```
 
+## Standalone sound test
+
+Run `scripts/soundTest.sh --game s1 --rom /absolute/path/to/rom.gen --console`
+to select tracks without opening gameplay. Omit `--console` for the desktop
+window. Add `--null-audio` to advance synthesis without a speaker device.
+`scripts/soundTest.sh --help` lists the command-line arguments.
+
+`com.openggf.tools.audio.SoundTestApp` owns argument parsing, ROM loading,
+profile/catalog selection, UI and WAV export. It passes its selected profile to
+`StandaloneAudioPresentationHost`, which owns the isolated audio manager,
+producer executor, sink and cleanup. Hub music supplies its existing detached
+profile to the same host. The reusable host does not select concrete games or
+depend on the desktop application.
+
 ## SMPS Format
 
 SMPS (Sample Music Playback System) is the sound driver format used by all three games.

@@ -43,7 +43,10 @@ final class PlayableSpriteRuntimeServices {
          * back to the bootstrap module.
          */
         static LevelEventProvider levelEventsOrNull(AbstractPlayableSprite sprite) {
-                if (sprite.runtimeServices != null) return null;
+                if (sprite.runtimeServices != null) {
+                        var world = sprite.runtimeServices.world;
+                        return world == null ? null : world.getWorldSession().getGameModule().getLevelEventProvider();
+                }
                 WorldSession world = SessionManager.getCurrentWorldSession();
                 GameModule module = world != null ? world.getGameModule() : null;
                 return module != null ? module.getLevelEventProvider() : null;

@@ -156,7 +156,7 @@ public class GraphicsManager {
 	private float ghostRenderAlpha = 1.0f;
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
-	private SpriteSatMaskPostProcessor.Raster spriteSatRaster;
+	private SpriteSatMaskPostProcessor.LogicalViewport spriteSatViewport;
 	private List<SpriteSatEntry> spriteSatFragments;
     private boolean submittingNativeSpriteOwnership;
     SpriteSatEntry.PixelOperation currentSpritePixelOperation = SpriteSatEntry.PixelOperation.NORMAL;
@@ -404,6 +404,21 @@ public class GraphicsManager {
                 || !previous.appendPresentation(command)) registerCommand(command);
 	}
 
+	private final ObjectVisualPatternBanks objectVisualPatterns = new ObjectVisualPatternBanks();
+
+	ObjectVisualPatternBanks.Bank objectVisualPatternBank(Object owner, int count) {
+		return objectVisualPatterns.acquire(
+				owner, count, presentationTrailBanks.values(), PRESENTATION_TRAIL_BANK_SIZE);
+	}
+
+	boolean objectVisualPatternBankValid(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		return objectVisualPatterns.valid(owner, bank);
+	}
+
+	void releaseObjectVisualPatternBank(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		objectVisualPatterns.release(owner, bank);
+	}
+
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
 	private final java.util.IdentityHashMap<Object,Long> presentationTrailGenerations=new java.util.IdentityHashMap<>();
 	private long nextPresentationTrailGeneration;
@@ -417,6 +432,7 @@ public class GraphicsManager {
 			// Owners use identity, but reserved numeric addresses must use value equality.
 			boolean occupied=false;
 			for(int assigned:presentationTrailBanks.values())if(assigned==base){occupied=true;break;}
+			if (objectVisualPatterns.overlaps(base, PRESENTATION_TRAIL_BANK_SIZE)) occupied = true;
 			if(!occupied) {
 				presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
 			}
@@ -487,6 +503,7 @@ public class GraphicsManager {
 	 * Use this for testing game logic without rendering.
 	 */
 	public void initHeadless() {
+		objectVisualPatterns.clear();
 		this.headlessMode = true;
 		this.glInitialized = false;
 		if (this.patternAtlas == null) {
@@ -1704,6 +1721,24 @@ public class GraphicsManager {
 		this.cachedConfigScreenHeightPx = -1;
 	}
 
+	/** Internal bounded offscreen viewport; restores the host's projection source/override exactly. */
+	void withPresentationViewport(int width, int height, Runnable draw) {
+		int oldX = viewportX, oldY = viewportY, oldWidth = viewportWidth, oldHeight = viewportHeight;
+		int oldProjectionWidth = projectionWidth, oldLogicalHeight = cachedConfigScreenHeightPx;
+		float[] oldProjection = projectionMatrixBuffer;
+		try {
+			setViewport(0, 0, width, height);
+			projectionWidth = width;
+			cachedConfigScreenHeightPx = height;
+			projectionMatrixBuffer = new org.joml.Matrix4f().ortho2D(0, width, 0, height).get(new float[16]);
+			draw.run();
+		} finally {
+			viewportX = oldX; viewportY = oldY; viewportWidth = oldWidth; viewportHeight = oldHeight;
+			projectionWidth = oldProjectionWidth; cachedConfigScreenHeightPx = oldLogicalHeight;
+			projectionMatrixBuffer = oldProjection;
+		}
+	}
+
 	/**
 	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
 	 * to avoid a config-service lookup per rendered pattern. The cache is
@@ -1995,27 +2030,23 @@ public class GraphicsManager {
 			long sumUR = 0;
 			long sumUG = 0;
 			long sumUB = 0;
-			int count = 0;
 			for (int colorIndex = 1; colorIndex < 16; colorIndex++) {
 				int colorOffset = colorIndex * 3;
 				int nr = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset]);
 				int ng = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 1]);
 				int nb = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 2]);
-				if (nr + ng + nb > 0) {
+				if (UnderwaterPaletteTransform.eligible(nr, ng, nb)) {
 					sumNR += nr;
 					sumNG += ng;
 					sumNB += nb;
 					sumUR += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset]);
 					sumUG += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 1]);
 					sumUB += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 2]);
-					count++;
 				}
 			}
-			if (count > 0) {
-				if (sumNR > 0) ratioR = (int) (sumUR * 256 / sumNR);
-				if (sumNG > 0) ratioG = (int) (sumUG * 256 / sumNG);
-				if (sumNB > 0) ratioB = (int) (sumUB * 256 / sumNB);
-			}
+			ratioR = UnderwaterPaletteTransform.ratioX256(sumNR, sumUR);
+			ratioG = UnderwaterPaletteTransform.ratioX256(sumNG, sumUG);
+			ratioB = UnderwaterPaletteTransform.ratioX256(sumNB, sumUB);
 		}
 
 		int bufferSize = 16 * totalLines * 4;
@@ -2148,9 +2179,9 @@ public class GraphicsManager {
 		int[] rgba = underwaterDerivedRowRgba[row];
 		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 			int colorOffset = donorOffset + colorIndex * 3;
-			int r = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]) * ratioR / 256);
-			int g = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]) * ratioG / 256);
-			int b = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]) * ratioB / 256);
+			int r = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]), ratioR);
+			int g = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]), ratioG);
+			int b = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]), ratioB);
             if (whiteMode != PaletteFadePresentation.Mode.NONE) {
                 int faded = PaletteFadePresentation.fadeRgb(r, g, b, whiteMode, whiteSteps);
                 r = (faded >>> 16) & 255;
@@ -2218,6 +2249,7 @@ public class GraphicsManager {
 	 * data and palette state so subsequent rendering starts from a clean GPU.
 	 */
 	public void resetPatternAndPaletteState() {
+		objectVisualPatterns.clear();
 		if (headlessMode || !glInitialized) {
 			return;
 		}
@@ -2237,6 +2269,7 @@ public class GraphicsManager {
 	 */
 	public void cleanup() {
         presentationTrailBanks.clear();
+		objectVisualPatterns.clear();
         presentationTrailGenerations.clear();
         if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
@@ -2401,6 +2434,14 @@ public class GraphicsManager {
 	ShaderProgram presentationShader(boolean priority) {
 		return (priority || nativeSpriteOwnership != null) && spritePriorityShaderProgram != null
                 ? spritePriorityShaderProgram : currentShaderProgram;
+	}
+
+	PaletteView objectVisualPalette(int line) {
+		PaletteView palette =
+				line >= 0 && line < lastCachedPaletteLines.length
+						? lastCachedPaletteLines[line]
+						: null;
+		return palette != null ? palette : getRenderContextPaletteForEffectiveLine(line);
 	}
 
 	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
@@ -2681,14 +2722,27 @@ public class GraphicsManager {
 		int rasterHeight = getConfiguredScreenHeightPx();
 		int rasterX = spritePresentationBuilder != null ? spritePresentationBuilder.cameraX : getCamera().getXWithShake();
 		int rasterY = spritePresentationBuilder != null ? spritePresentationBuilder.cameraY : getCamera().getYWithShake();
-		beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
+		if ((rasterWidth & 7) == 0) {
+			beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster.extended(rasterX, rasterY, rasterWidth, rasterHeight));
+		} else {
+			beginLogicalSpriteSatCollection(SpriteSatMaskPostProcessor.LogicalViewport.h40(
+					rasterX, rasterY, rasterWidth, rasterHeight));
+		}
 	}
 
 	/** Explicit native inner raster, e.g. fixed H32 inside a wider special-stage presentation. */
 	void beginSpriteSatCollection(SpriteSatMaskPostProcessor.Raster raster) {
         if (currentSpritePixelOperation != SpriteSatEntry.PixelOperation.NORMAL)
             throw new IllegalStateException("Shadow submissions may only submit prepared pieces, not begin a SAT table");
-		spriteSatRaster = java.util.Objects.requireNonNull(raster, "SAT raster");
+		beginLogicalSpriteSatCollection(SpriteSatMaskPostProcessor.LogicalViewport.fromAligned(
+				java.util.Objects.requireNonNull(raster, "SAT raster")));
+	}
+
+	/** Exact logical presentation span with unchanged native SAT admission. */
+	void beginLogicalSpriteSatCollection(SpriteSatMaskPostProcessor.LogicalViewport viewport) {
+        if (currentSpritePixelOperation != SpriteSatEntry.PixelOperation.NORMAL)
+            throw new IllegalStateException("Shadow submissions may only submit prepared pieces, not begin a SAT table");
+		spriteSatViewport = java.util.Objects.requireNonNull(viewport, "SAT viewport");
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
@@ -2702,6 +2756,8 @@ public class GraphicsManager {
 	}
 
 	public void requestSpriteMask() {
+		SpriteCaptureControl.control(
+				"SAT sprite-mask controls require native display-list replay");
 		if (spriteSatCollectionActive) {
 			spriteMaskRequested = true;
 		}
@@ -2710,6 +2766,8 @@ public class GraphicsManager {
 	/** Submits one non-drawable SAT control entry while collection is active. */
 	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
 			int rawTileWordLow11) {
+		SpriteCaptureControl.control(
+				"SAT control entries require native display-list replay");
 		if (!spriteSatCollectionActive) return;
 		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
@@ -2775,6 +2833,36 @@ public class GraphicsManager {
         }
     }
 
+    /** Attach only to the last tile in the currently collecting native art stream. */
+    void attachObjectVisualSatMask(int mask) {
+        List<SpriteSatEntry> active = activeVisualSatTiles();
+        int index = active.size() - 1;
+        active.set(index, active.get(index).withTileOcclusionPaletteMask(mask & 15));
+    }
+
+    void clipObjectVisualSatTile(int rowStart, int rowEnd) {
+        List<SpriteSatEntry> active = activeVisualSatTiles();
+        if (rowStart < 0 || rowEnd > 8 || rowStart > rowEnd) {
+            throw new IllegalArgumentException("Visual row clip must stay within one native tile");
+        }
+        int index = active.size() - 1;
+        SpriteSatEntry tile = active.get(index);
+        int top = Math.max(tile.visibleTopY(), tile.piece().y() + rowStart);
+        int bottom = Math.max(top, Math.min(tile.visibleBottomY(), tile.piece().y() + rowEnd));
+        active.set(index, tile.withVisibleScanlines(top, bottom));
+    }
+
+    private List<SpriteSatEntry> activeVisualSatTiles() {
+        List<SpriteSatEntry> active = spriteSatFragments != null ? spriteSatFragments : spriteSatEntries;
+        if (!spriteSatCollectionActive || active.isEmpty()) {
+            throw new IllegalStateException("Visual attachment has no submitted native SAT tile");
+        }
+        if (active.getLast().replayFragments() != null) {
+            throw new IllegalStateException("Visual attachment cannot modify a completed SAT composite");
+        }
+        return active;
+    }
+
 	public void endSpriteSatCollectionAndReplay() {
 		if (!spriteSatCollectionActive) {
 			return;
@@ -2787,8 +2875,8 @@ public class GraphicsManager {
 		// Evaluation always runs, including zones without S3K's marker rewrite.
 		// Use logical display dimensions: a wide trace can retain a native-width camera.
 		// Results are thread-owned scratch, consumed synchronously before collection clears.
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(
-                spriteSatEntries, applyMask, spriteSatRaster);
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processLogicalReusable(
+                spriteSatEntries, applyMask, spriteSatViewport);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;

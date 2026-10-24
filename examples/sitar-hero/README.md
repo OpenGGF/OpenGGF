@@ -295,7 +295,7 @@ supply. Reorder a list to change who plays drums, synth or harp.
 **Change a menu sound.** `HouseAudio.sfx` and `HouseAudio.music` map each cue to a driver
 ID per running game. The engine's per-game tables list the IDs (for example
 `src/main/java/com/openggf/game/sonic3k/audio/Sonic3kSfx.java` and `Sonic3kMusic.java`), and
-the desktop `com.openggf.audio.debug.SoundTestApp` plays them. Keep `-1` where a game has
+the desktop `com.openggf.tools.audio.SoundTestApp` plays them. Keep `-1` where a game has
 no suitable sound.
 
 **Move a song in the career.** In `CareerTours.all`, a world's third argument lists its

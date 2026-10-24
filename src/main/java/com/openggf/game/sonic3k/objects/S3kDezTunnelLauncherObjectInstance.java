@@ -24,6 +24,14 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         super(spawn, "DEZTunnelLauncher");
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (captured[0] != 0 && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseControl(player);
+        if (captured[1] != 0 && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseControl(player);
+        captured[0] = captured[1] = 0;
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {
         if (countdown) {
             timer = (timer - 1) & 0xFF;
@@ -84,6 +92,10 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         if (mappingFrame == 0) mappingFrame = 7;
     }
 
+    private static void releaseControl(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+    }
+
     /** Player_TouchFloor: capture admits grounded rolling players too. */
     private void touchFloor(AbstractPlayableSprite player) {
         int oldY = player.getCentreY(), oldRadius = player.getYRadius();
@@ -142,6 +154,13 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
         private final int[] waypoint = new int[3];
         public Controller(ObjectSpawn spawn) { super(spawn, "DEZTunnelControl"); }
 
+        @Override public void releasePlayersForVisualDirection() {
+            var query = services().playerQuery();
+            if (routine[0] != 0 && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseControl(player);
+            if (routine[1] != 0 && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseControl(player);
+            routine[0] = routine[1] = 0;
+        }
+
         @Override public void update(int vIntRunCount, PlayableEntity ignored) {
             if (!initialized) {
                 initialized = true;
@@ -182,7 +201,7 @@ public final class S3kDezTunnelLauncherObjectInstance extends AbstractObjectInst
                 player.setGSpeed((short) 0x800); player.setAir(true);
                 player.setMappingFrame(0x96);
             }
-            if (routine[slot] == 0) ObjectControlState.none().applyTo(player);
+            if (routine[slot] == 0) releaseControl(player);
         }
 
         private void run(BodyState body, int slot) {

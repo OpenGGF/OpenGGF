@@ -94,25 +94,60 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
-  camera movement, held integer zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
+  camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
+  Authored music control holds off automatic level playlists through deferred entry
+  and shot changes in playback/export; ROM cue gain is checked during authoring.
+  Free objects, including released animals outside the main view, retain native
+  appearances when switched to Puppet/Pose within their cast activation windows.
   Puppet mode follows destinations and urgency through native acceleration, terrain
   collision and jump physics; floor snapping defaults on. Poser mode retains manual
-  positioning, animation and frame selection, including older scenes. Opt-in live ROM
-  worlds share moving objects, collision pickups, native hurt and per-actor controllers;
-  bounded routes/placement targets, native flight/glide and fixed-scale actor/group
+  positioning, animation and frame selection. Every scene uses one native world
+  with supplied-game performers, authored terrain and common framing, binding and
+  activation-window rules. Timed object clears preserve separately owned rings;
+  unpublished documents and screenplays accept only their current format. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
+  bounded routes/placement targets, native flight/glide and actor/group
   camera follow use the production gameplay and rewind owners. Directed foreground,
-  characters and occlusion stay aligned through camera movement. Inspect actual state
+  characters and occlusion stay aligned through camera movement. Current native
+  scenes project background parallax/deformation at the directed camera without
+  advancing native effect phases; separated performers share native object slots
+  through independent activation windows. Inspect actual state
   and events through windowless simulation and placement/capability discovery. Live
-  editor previews run in an isolated offscreen worker, preserving the active world.
+  editor previews run in an isolated offscreen worker, preserving the active world;
+  preview and export preserve logical-ROM windows and composite images.
   Record directed takes, undo edits, save/reopen and export synchronized
   lossless films. Shot-local screenplay tools and a mirrored agent skill support
-  resource discovery, validation and offline filmmaking; Tails uses native accessory
+  resource discovery, validation, lossless canonical-to-screenplay round trips and
+  offline filmmaking; both editors import/export the same screenplay. A bounded
+  route helper preserves per-route starting action, a slow stroll or live native Run speed,
+  gentle/hard/overshoot endings and final facing (Spindash requires Run),
+  and emits native movement/jump intents over actual collision terrain
+  with observed native charge/release and cold LIVE verification, penalised back-up
+  run-ups only after direct steering fails, and location-specific speed advice
+  supported by a matched Run probe, plus visual walking-object routes over slopes and
+  steps up to eight pixels. Both editors show the simulated route before Apply,
+  with grounded/airborne segments and endpoints over the picture, plus route state,
+  legends and readable failure explanations in editor chrome; applied
+  plans remain visible during authoring playback without entering saved scenes or films.
+  Centred camera pushes preserve their framing centre,
+  fractional origins survive composition, and the world framebuffer is reused.
+  Evaluated framing stays within native level bounds in films and both editors;
+  authored keys keep their original values.
+  Tall views extend native background pattern bands without stacking another sky.
+  Tails uses native accessory
   relationships, and both editors keep a usable constrained authoring window.
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
   clear speakers and deterministic text reveal in playback, both editors and exports.
   Mods play the same scenes with held native gameplay and optional explicit
-  main-player handover. See the [guide](docs/guide/creating/stageplay.md) and
+  main-player handover. ROM object roles add Free native behavior and visual Puppet/Pose
+  direction with child-part frames, portable placed identities and timed clear/removal
+  commands. Interrupting a native holder, including nested ending/P2 helpers, releases its
+  acquired players while preserving native routine progress; seeking restores
+  that ownership. The hand launcher releases acquired players for visual direction
+  while native unload retains its separate behavior. Logical viewport dimensions
+  remain exact while native SAT admission limits stay fixed. A generated ID/context
+  catalog reports native arena and appearance
+  restrictions. See the [guide](docs/guide/creating/stageplay.md) and
   [directing examples](examples/stageplay-demo/README.md), including a 26-second
   beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
   and a single-setting jump comparison.
@@ -303,7 +338,8 @@ Unreleased. The earlier development themes remain in
   independently of the existing colour profile. Full keeps current output;
   Limited caps palette RGB at 238 after fades and profile conversion, including
   creator colours, with live normal and underwater palette refresh. The palette
-  backdrop and headless gameplay captures use the same saved setting.
+  backdrop and headless gameplay captures use the same saved setting. Underwater
+  donor, appearance and texture colours share one tint policy.
 
 - **Main menu:** Compact and bold lettering now share one pixel-font family,
   with clear navy lettering on gold launch buttons. Holding Escape freezes a
@@ -872,7 +908,30 @@ Unreleased. The earlier development themes remain in
   keep their palette masks, coloured ghost style and constrained shadow effect
   when a scene is copied. Stock title
   previews use detached game-owned providers, preserving animated pixels and
-  catalogue ROM views without consulting a suspended game's live services. Remaining
+  catalogue ROM views without consulting a suspended game's live services.
+  Title-card mapping and drawing now share one domain owner. Event and object-service
+  bridge allowances pin callers and call counts, and special-stage rewind coverage
+  follows the registered provider through replacement and retirement. Standalone
+  audio callers supply their selected profile to the reusable presentation host;
+  desktop sound-test composition lives with the developer tools. Rewinding a
+  partially collapsed Sonic 1 false floor preserves the remaining break sequence
+  and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
+  current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
+  LBZ's ride ship restores its exact child inventory while preserving flame
+  retirement before boss allocation, including full-slot conditions.
+  Rexon necks and Sol fireballs restore their exact owners and sparse links while
+  preserving context-free object round trips. LBZ panels and wall explosions retain
+  their progressed state and shared RNG binding; AIZ finale actors retain their
+  exact links after rewind. Initialized LBZ box rigs, cameo child ownership and
+  saved swing anchors restore with their encounter. Freezer debris keeps its
+  managed lifetime, S1 ring groups retain ordered placement recipes, and lightning
+  sparks restore their supplied art and refresh atlas residency.
+  Registry metadata and bonus-stage capabilities own
+  root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
+  lives beside its game-owned loader, and level-animation composition contracts
+  live with their managers.
+  Object-service guards also recognize forbidden
+  method references. Remaining
   migrations and exact allowance accounting live in the
   [exception guide](docs/architecture/archunit-exceptions.md).
 

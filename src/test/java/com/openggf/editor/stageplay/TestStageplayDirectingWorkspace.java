@@ -27,6 +27,30 @@ class TestStageplayDirectingWorkspace {
         workspace.activate(); return workspace;
     }
 
+    @Test void sharedDirectorUsesTheHostsBoundedDraftForPreviewFurtherPansAndExplicitCapture() {
+        var scene = StageplayDocument.empty("s1", 0, 0, 100, 768, 320, 224);
+        var workspace = new StageplayWorkspace(new StageplayWorkspace.Host() {
+            public StageplayDocument initialDocument() { return scene; }
+            public Path initialAssetRoot() { return directory; }
+            public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame draft) {
+                var view = new StageplayTimeline.CameraPose(draft.baseCamera().x(),
+                        Math.clamp(draft.baseCamera().y(), 0, 768), draft.baseCamera().zoom());
+                return new StageplayTimeline.Frame(draft.frame(), draft.actors(), view, draft.captions(), draft.set(),
+                        draft.transition(), view, draft.dialogue(), draft.puppets(), draft.world());
+            }
+        });
+        workspace.activate(); workspace.invoke(CAMERA_MODE);
+        workspace.moveCamera(0, 64, 1);
+        assertEquals(768, workspace.directorCamera().y());
+        assertEquals(768, workspace.previewFrame().camera().y());
+        assertEquals(scene, workspace.controller().document(), "Clamping transient framing cannot rewrite authored keys");
+        workspace.moveCamera(0, -16, 1);
+        assertEquals(752, workspace.directorCamera().y(), "The next pan starts at the displayed boundary");
+        workspace.invoke(SET_CAMERA_KEY);
+        assertEquals(752, workspace.controller().document().camera().getFirst().y());
+        workspace.invoke(UNDO); assertEquals(scene, workspace.controller().document());
+    }
+
     @Test void cameraFramingIsTransientUntilCapturedAndNeverBakesShake() {
         var workspace = workspace();
         var before = workspace.controller().document().withCameraEffects(List.of(
@@ -48,33 +72,13 @@ class TestStageplayDirectingWorkspace {
         assertEquals(StageplayTimeline.sample(before,20).baseCamera(),workspace.directorCamera());
     }
 
-    @Test void liveCameraKeepsFixedZoomWhilePanningRecordingAndRejectingInvalidFormEdits() {
-        var workspace = workspace();
-        var before = workspace.controller().document().withSet(new StageplayDocument.SetSource(
-                "s2",0,0,"","",StageplayDocument.WorldPolicy.LIVE));
-        workspace.controller().replace(before); workspace.invoke(CAMERA_MODE);
-        workspace.moveCamera(10,-4,2);
-        assertEquals(new StageplayTimeline.CameraPose(110,196,1),workspace.directorCamera());
-        workspace.invoke(SET_CAMERA_KEY);
-        assertEquals(1,workspace.controller().document().camera().getFirst().zoom());
-        workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0);
-        workspace.menu().setValue("zoom","2"); workspace.menu().submit();
-        assertNotNull(workspace.menu().error());
-        assertEquals(1,workspace.controller().document().camera().getFirst().zoom());
-        workspace.menu().setValue("zoom","1"); workspace.menu().submit();
-        assertFalse(workspace.menu().isOpen());
-        workspace.invoke(RECORD_CAMERA); workspace.recordCameraStep(1,0,2); workspace.stop();
-        assertTrue(workspace.controller().document().camera().stream().allMatch(k -> k.zoom()==1));
-        assertEquals(112,workspace.controller().document().camera().getFirst().x());
-    }
-
     @Test void liveFollowViewSeedsPanCaptureRecordingAndFormWithoutRewritingItsAuthoredSeed() {
         var key=new StageplayDocument.ActorKey(0,100,200,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD);
         var follow=new StageplayDocument.CameraFollow(List.of("lead"),12,8,4,.2,5,-6);
         var scene=StageplayDocument.empty("s2",0,0,100,200,320,224)
                 .withActors(List.of(new StageplayDocument.Actor("lead","Sonic","s2","sonic",List.of(key))))
                 .withPuppets(List.of(new StageplayDocument.PuppetTrack("lead",true,0,List.of())))
-                .withSet(new StageplayDocument.SetSource("s2",0,0,"","",StageplayDocument.WorldPolicy.LIVE))
+                .withSet(new StageplayDocument.SetSource("s2",0,0,"",""))
                 .withCamera(List.of(new StageplayDocument.CameraKey(0,100,200,1,StageplayDocument.Interpolation.HOLD,follow)));
         var view=new StageplayTimeline.CameraPose(700,900,1);
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host() {
@@ -91,7 +95,7 @@ class TestStageplayDirectingWorkspace {
         workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0);
         assertEquals(700,Double.parseDouble(workspace.menu().values().get("x")));
         workspace.menu().submit(); assertEquals(scene,workspace.controller().document(),"Reading a resolved follow view cannot rewrite its smoothing seed");
-        workspace.moveCamera(10,-4,2); assertEquals(new StageplayTimeline.CameraPose(710,896,1),workspace.directorCamera());
+        workspace.moveCamera(10,-4,1); assertEquals(new StageplayTimeline.CameraPose(710,896,1),workspace.directorCamera());
         workspace.invoke(CAMERA_KEY); choose(workspace.menu(),0); workspace.menu().submit();
         var offsetKey=workspace.controller().document().camera().getFirst();
         assertEquals(100,offsetKey.x()); assertEquals(200,offsetKey.y());
@@ -104,6 +108,21 @@ class TestStageplayDirectingWorkspace {
         workspace.recordCameraStep(1,0,1); workspace.stop();
         assertEquals(702,workspace.controller().document().camera().getFirst().x());
         assertTrue(workspace.controller().document().camera().getFirst().follow().actors().isEmpty());
+    }
+
+    @Test void nativeWorldOffersZoomAndFilmDimensions() {
+        var workspace = workspace();
+        workspace.controller().replace(workspace.controller().document().withSet(new StageplayDocument.SetSource(
+                "s2", 0, 0, "", "")).withSize(384, 216));
+        workspace.invoke(CAMERA_MODE);
+        workspace.moveCamera(0, 0, 2);
+        assertEquals(2, workspace.directorCamera().zoom());
+        workspace.invoke(SET_CAMERA_KEY);
+        workspace.invoke(CAMERA_KEY); choose(workspace.menu(), 0);
+        workspace.menu().setValue("zoom", "1.5"); workspace.menu().submit();
+        assertNull(workspace.menu().error());
+        assertEquals(1.5, workspace.controller().document().camera().getFirst().zoom());
+        assertEquals(216, workspace.controller().document().height());
     }
 
     @Test void cameraRecordingNeedsNoActorAndCommitsOneUndoStep() {

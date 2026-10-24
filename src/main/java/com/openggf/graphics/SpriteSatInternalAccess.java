@@ -18,6 +18,11 @@ public final class SpriteSatInternalAccess {
         graphics.beginSpriteSatCollection(raster);
     }
 
+    public static void beginLogicalCollection(GraphicsManager graphics, SpriteSatMaskPostProcessor.LogicalViewport viewport) {
+        engineCaller();
+        graphics.beginLogicalSpriteSatCollection(viewport);
+    }
+
     public static void submitGroups(GraphicsManager graphics, List<SpriteSatEntry> geometry, Runnable producer) {
         engineCaller();
         graphics.submitSpriteSatGroups(geometry, producer);

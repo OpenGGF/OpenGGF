@@ -186,6 +186,11 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public MTZSpinTubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new MTZSpinTubeObjectInstance(ctx.spawn());
     }

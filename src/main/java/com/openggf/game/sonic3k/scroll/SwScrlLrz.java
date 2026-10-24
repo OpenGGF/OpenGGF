@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.events.LrzBackgroundStageMachine;
 import com.openggf.game.sonic3k.events.LrzDomeRegions;
@@ -9,34 +11,32 @@ import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
-import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Lava Reef Zone background scroll for the two playable acts, {@code $900} and {@code $901}.
  *
- * <p>Act 1 runs {@code LRZ1_Deform} (sonic3k.asm:115435-115481) from
- * {@code LRZ1_BackgroundInit}/{@code LRZ1_BackgroundEvent}; act 2 runs {@code sub_57082}
- * (115739-115820) from {@code LRZ2_BackgroundInit}/{@code LRZ2_BackgroundEvent}. Both hold
- * {@code Camera_X_pos_copy} as a 16.16 long and derive two fractions,
- * {@code b = X/8} ({@code asr.l #3}) and {@code s = b/4} ({@code asr.l #2}). They then scatter
- * {@code b + n*s} across {@code HScroll_table} twice: a descending run of eight words
- * ({@code move.w d1,-(a1)}, step {@code s}) and an ascending run of five
- * ({@code move.w d2,(a1)+}, starting at {@code b+s} with the step doubled).
+ * <p>Act 1 runs {@code LRZ1_Deform} (sonic3k.asm:115435-115481) from {@code
+ * LRZ1_BackgroundInit}/{@code LRZ1_BackgroundEvent}; act 2 runs {@code sub_57082} (115739-115820)
+ * from {@code LRZ2_BackgroundInit}/{@code LRZ2_BackgroundEvent}. Both hold {@code
+ * Camera_X_pos_copy} as a 16.16 long and derive two fractions, {@code b = X/8} ({@code asr.l #3})
+ * and {@code s = b/4} ({@code asr.l #2}). They then scatter {@code b + n*s} across {@code
+ * HScroll_table} twice: a descending run of eight words ({@code move.w d1,-(a1)}, step {@code s})
+ * and an ascending run of five ({@code move.w d2,(a1)+}, starting at {@code b+s} with the step
+ * doubled).
  *
  * <p>The acts differ in three places only.
+ *
  * <ul>
- *   <li>Where the runs start. Act 1 uses {@code HScroll_table+$01C} for both, and separately
- *       writes {@code Camera_X_pos_BG_copy} and {@code HScroll_table+$004} with {@code b}. Act 2
- *       uses {@code HScroll_table+$010} for both and writes only {@code Camera_X_pos_BG_copy},
- *       so its {@code +$004} is whatever the descending run left there ({@code b+5s}).</li>
+ *   <li>Where the runs start. Act 1 uses {@code HScroll_table+$01C} for both, and separately writes
+ *       {@code Camera_X_pos_BG_copy} and {@code HScroll_table+$004} with {@code b}. Act 2 uses
+ *       {@code HScroll_table+$010} for both and writes only {@code Camera_X_pos_BG_copy}, so its
+ *       {@code +$004} is whatever the descending run left there ({@code b+5s}).
  *   <li>{@code Camera_Y_pos_BG_copy}. Act 1 is {@code ((Camera_Y_pos_copy - shake) asr 3) + shake};
  *       act 2 is {@code (Y/8 - Y/32) + shake} with {@code Y = Camera_Y_pos_copy - shake}, i.e.
  *       three thirty-seconds. Both remove the shake before scaling and add it back, so the
- *       background shakes 1:1 with the foreground.</li>
- *   <li>The band table and where {@code ApplyDeformation} starts reading:
- *       {@code LRZ1_BGDeformArray} from {@code HScroll_table+$00C} (word 6), and
- *       {@code LRZ2_BGDeformArray} from {@code HScroll_table} (word 0).</li>
+ *       background shakes 1:1 with the foreground.
+ *   <li>The band table and where {@code ApplyDeformation} starts reading: {@code
+ *       LRZ1_BGDeformArray} from {@code HScroll_table+$00C} (word 6), and {@code
+ *       LRZ2_BGDeformArray} from {@code HScroll_table} (word 0).
  * </ul>
  *
  * <p>{@code Events_bg+$10} and {@code +$12} - {@code b-s} and {@code b-2s} - are not scroll words
@@ -44,10 +44,10 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * {@code Camera_X_pos_BG_copy} from. They are published into {@link LrzZoneRuntimeState} for the
  * animated-tile channels, which own them from slice 2 on.
  *
- * <p>Both Lava Reef background layouts repeat every four 128 px chunks, so the engine's default
- * 512 px plane period is the ROM's nametable. Act 2 confirms it from the other side: its plane is
- * refilled with {@code moveq #0,d1} ({@code LRZ2_BackgroundInit}, {@code loc_57044},
- * {@code loc_5705C}), i.e. always from layout column 0, and only the scroll words move it.
+ * <p>Both Lava Reef background layouts repeat every four 128 px chunks, so the engine's default 512
+ * px plane period is the ROM's nametable. Act 2 confirms it from the other side: its plane is
+ * refilled with {@code moveq #0,d1} ({@code LRZ2_BackgroundInit}, {@code loc_57044}, {@code
+ * loc_5705C}), i.e. always from layout column 0, and only the scroll words move it.
  *
  * <p>Not modelled here, by slice: the locked dome background ({@code sub_56DAC}, reached when
  * {@code Events_bg+$02} is non-zero and {@code PlainDeformation} replaces this routine), the act-2
@@ -56,7 +56,9 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  */
 public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scroll.ScrollOutputRebuilder {
 
-    /** {@code LRZ1_BGDeformArray} (sonic3k.asm:115689); the trailing {@code $7FFF} is the remainder. */
+    /**
+     * {@code LRZ1_BGDeformArray} (sonic3k.asm:115689); the trailing {@code $7FFF} is the remainder.
+     */
     private static final int[] ACT1_BG_DEFORM =
             {0x40, 0x20, 0x10, 0x10, 0x10, 0x10, 0x10, 0x100, 0x10, 0x10, 0x10, 0x20, 0x7FFF};
     /** {@code LRZ2_BGDeformArray} (sonic3k.asm:115891). */
@@ -87,7 +89,16 @@ public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scr
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlLrz() {
+        this(224);
+    }
+
+    private SwScrlLrz(int height) {
+        composer = new ScrollEffectComposer(height);
+    }
+
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(TABLE_WORDS);
 
     /**
@@ -196,7 +207,8 @@ public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scr
      * {@code -Camera_X_pos_BG_copy} for the background.
      */
     private void plainDeformation(int cameraXCopy, int backgroundCameraX) {
-        composer.fillPackedScrollWords(0, VISIBLE_LINES,
+        composer.fillPackedScrollWords(0,
+                composer.visibleLineCount(),
                 (short) negWord(cameraXCopy), (short) negWord(backgroundCameraX));
     }
 
@@ -204,7 +216,6 @@ public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scr
     public short getVscrollFactorFG() {
         return foregroundVscroll;
     }
-
 
     /**
      * {@code Camera_Y_pos_BG_copy}. Act 1 ({@code LRZ1_Deform}, 115390-115395) works in words:
@@ -262,7 +273,8 @@ public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scr
         }
 
         if (actId == 0) {
-            // LRZ1_Deform only: move.w d1,(Camera_X_pos_BG_copy).w / move.w d1,(HScroll_table+$004).w
+            // LRZ1_Deform only: move.w d1,(Camera_X_pos_BG_copy).w / move.w
+            // d1,(HScroll_table+$004).w
             hScrollTable.set(BG_CAMERA_WORD, (short) (base >> 16));
         }
     }
@@ -281,6 +293,65 @@ public class SwScrlLrz extends SwScrlS3kDefault implements com.openggf.level.scr
             return null;
         }
         return S3kRuntimeStates.currentLrz(GameServices.zoneRuntimeRegistry()).orElse(null);
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        var nativeState = lrzState();
+        int shake = screenShakeOffset(nativeState);
+        boolean locked =
+                context.act() == 0
+                        && nativeState != null
+                        && nativeState.backgroundRoutine()
+                                == LrzBackgroundStageMachine.BG_STAGE_LOCKED;
+        boolean pinned =
+                context.act() == 0 && nativeState != null && nativeState.backgroundCameraPinned();
+        int domePhase = nativeState == null ? 0 : nativeState.domePlatformPhase();
+        int savedX = nativeState == null ? 0 : nativeState.savedBackgroundCameraX();
+        int savedY = nativeState == null ? 0 : nativeState.savedBackgroundCameraY();
+        return view -> {
+            var scratch = new SwScrlLrz(view.height());
+            int cameraYCopy = (short) (view.cameraY() + shake);
+            short bgY;
+            if (locked) {
+                bgY = (short) LrzDomeRegions.lockedBackgroundY(cameraYCopy, domePhase);
+                scratch.composer.setVscrollFactorBG(bgY);
+                scratch.plainDeformation(
+                        view.cameraX(), LrzDomeRegions.lockedBackgroundX(view.cameraX()));
+            } else {
+                bgY = backgroundY(context.act(), cameraYCopy, shake);
+                scratch.composer.setVscrollFactorBG(bgY);
+                int base = (view.cameraX() << 16) >> 3;
+                scratch.buildHScrollTable(context.act(), base, base >> 2);
+                if (pinned) {
+                    scratch.composer.setVscrollFactorBG((short) savedY);
+                    scratch.plainDeformation(view.cameraX(), savedX);
+                } else {
+                    DeformationPlan.applyTableBands(
+                            scratch.composer,
+                            bgY,
+                            negWord(view.cameraX()),
+                            scratch.hScrollTable,
+                            context.act() == 0 ? ACT1_BG_DEFORM : ACT2_BG_DEFORM,
+                            context.act() == 0 ? ACT1_DEFORM_START_WORD : ACT2_DEFORM_START_WORD,
+                            NEGATE_WORD);
+                }
+            }
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    scratch.composer.packedScrollWords(),
+                    null,
+                    null,
+                    null,
+                    (short) cameraYCopy,
+                    scratch.composer.getVscrollFactorBG(),
+                    output.backgroundX(),
+                    output.backgroundPeriod(),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
     }
 
     /** Test access to the {@code HScroll_table} words this handler writes for an act. */

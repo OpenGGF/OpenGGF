@@ -71,6 +71,13 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseControl(player, playerOneState);
+        if (query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseControl(player, playerTwoState);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectServices objectServices = tryServices();
         AbstractPlayableSprite playerOne = asSprite(objectServices == null
@@ -114,6 +121,12 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         return ((shiftedAnchor - coarseBack) & 0xFFFF) > 0x400 + coarseXCullRange();
     }
 
+    private void releaseControl(AbstractPlayableSprite player, RoomState state) {
+        if (!state.captured) return;
+        ObjectControlState.none().applyTo(player);
+        state.captured = false;
+    }
+
     /** {@code sub_4964A} :95889-95998. */
     private void runFor(AbstractPlayableSprite player, RoomState state) {
         if (!state.captured) {
@@ -122,8 +135,7 @@ public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstanc
         }
         // loc_496A8 :95915-95922.
         if (player.isDebugMode() || !insideCorridor(player)) {
-            ObjectControlState.none().applyTo(player);
-            state.captured = false;
+            releaseControl(player, state);
             return;
         }
         blow(player);

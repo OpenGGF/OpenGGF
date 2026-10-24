@@ -510,11 +510,21 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
 			public void validate(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.validate(document, root); }
 			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
+			public com.openggf.stageplay.StageplayTimeline.Frame resolvePreview(com.openggf.stageplay.StageplayDocument document, Path root, com.openggf.stageplay.StageplayTimeline.Frame frame) throws IOException { return stageplaySession.resolvePreview(document, root, frame); }
+			public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() { return stageplaySession.objectInspection(); }
 			public void refreshResources() { stageplaySession.release(); }
 			public void play(com.openggf.stageplay.StageplayDocument document, Path root, int frame) throws IOException { stageplaySession.play(document, root, frame); }
 			public void present(com.openggf.stageplay.StageplayDocument document, int frame) { stageplaySession.present(document, frame); }
 			public void stop() { stageplaySession.stop(); }
 			public void export(com.openggf.stageplay.StageplayDocument document, Path source, Path output) throws IOException { stageplaySession.export(document, source, output); }
+			public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(
+					com.openggf.stageplay.StageplayDocument.Actor actor, Path root) throws IOException {
+				return stageplaySession.movementAbilities(actor,root);
+			}
+			public void startRoute(com.openggf.stageplay.StageplayDocument document, Path root, com.openggf.stageplay.route.StageplayRouteRequest request) throws IOException { stageplaySession.startRoute(document,root,request); }
+			public com.openggf.stageplay.editor.StageplayRouteJob.Update pollRoute() { return stageplaySession.pollRoute(); }
+			public void requestRouteApply(com.openggf.stageplay.StageplayDocument document, Path root) throws IOException { stageplaySession.requestRouteApply(document,root); }
+			public void cancelRoute() { stageplaySession.cancelRoute(); }
 		});
 		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
 				ModSubsystem.current().processCatalog().scanned().stream()
@@ -2138,11 +2148,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void configureEditorProjectSpawnEditing(EditorProjectDocument document) {
 		var registry = editorProjectBaseModule.createObjectRegistry();
+		var table = document.metadata().objectZoneSet();
 		java.util.function.IntFunction<String> names = registry::getPrimaryName;
-		if (document.metadata().objectZoneSet() != null
-				&& editorProjectRootModule.createObjectRegistry() instanceof com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry nativeRegistry) {
-			var family = com.openggf.game.sonic3k.constants.S3kZoneSet.valueOf(document.metadata().objectZoneSet().name());
-			names = id -> nativeRegistry.getPrimaryName(id, family);
+		if (table != null
+				&& editorProjectRootModule.createObjectRegistry() instanceof com.openggf.level.metadata.ObjectTableNameProvider tables) {
+			names = id -> tables.objectTableName(id, table);
 		}
 		levelEditorController.configureSpawnEditing(registry, editorProjectBaseModule.getObjectPlacementEncoding(),
 				names);

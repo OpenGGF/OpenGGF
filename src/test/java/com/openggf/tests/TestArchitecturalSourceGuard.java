@@ -161,13 +161,13 @@ class TestArchitecturalSourceGuard {
             // special-stage return boundary. State machines remain collaborator-owned.
             // 2026-10-09: 3381 -> 3313 after Time Attack and multiplayer moved into the
             // bundled mod; the loop keeps only generic hosted-run hooks (HostedRunController).
-            GAME_LOOP_PATH, 3311
+            GAME_LOOP_PATH, 3305
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final Map<String, Integer> ROOT_CONCRETE_SONIC_REFERENCE_BUDGETS = Map.of(
-            ENGINE_PATH, 2,
-            GAME_LOOP_PATH, 8
+            ENGINE_PATH, 0,
+            GAME_LOOP_PATH, 0
     );
     private static final int OBJECT_MANAGER_CONCRETE_SONIC_REFERENCE_BUDGET = 0;
     private static final int LOW_LEVEL_GAMEPLAY_SERVICE_LOOKUP_BUDGET = 0;

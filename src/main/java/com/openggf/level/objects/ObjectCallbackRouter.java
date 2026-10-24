@@ -3,7 +3,6 @@ package com.openggf.level.objects;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -64,6 +63,10 @@ final class ObjectCallbackRouter {
 
     <T> T call(ObjectInstance instance, Supplier<T> callback) {
         String owner = owners.get(instance);
+        return callWithOwner(owner, callback);
+    }
+
+    private <T> T callWithOwner(String owner, Supplier<T> callback) {
         if (owner == null || boundary == null) return callback.get();
         String previous = currentOwner;
         currentOwner = owner;
@@ -117,6 +120,34 @@ final class ObjectCallbackRouter {
         String owner = currentOwner != null ? currentOwner
                 : rememberedOwner != null ? rememberedOwner : scopedOwner.get();
         if (owner != null) owners.put(instance, owner);
+    }
+
+    /** Capture before the first unregister; this token never restores registration. */
+    RemovalCallback captureRemovalCallback(ObjectInstance receiver) {
+        return new RemovalCallback(receiver, owners.get(receiver));
+    }
+
+    final class RemovalCallback {
+        private final ObjectInstance receiver;
+        private final String owner;
+
+        private RemovalCallback(ObjectInstance receiver, String owner) {
+            this.receiver = receiver;
+            this.owner = owner;
+        }
+
+        boolean isFor(ObjectInstance instance) { return receiver == instance; }
+
+        void invoke() {
+            if (!(receiver instanceof AbstractObjectInstance instance)) return;
+            // Only this exact removal receiver may reuse this router's active owner.
+            // A second catching boundary would let native full-delete continue to onUnload.
+            if (owner != null && owner.equals(currentOwner)) {
+                instance.onRemovedFromObjectManager();
+            } else {
+                callWithOwner(owner, () -> { instance.onRemovedFromObjectManager(); return null; });
+            }
+        }
     }
 
     void runAndUnregister(ObjectInstance instance, Runnable callback) {
@@ -257,28 +288,12 @@ final class ObjectCallbackRouter {
     }
 
     PerObjectRewindSnapshot captureRewind(AbstractObjectInstance object, RewindCaptureContext context) {
-        return hasLegacyRewindOverride(object.getClass(), "captureRewindState")
-                ? call(object, object::captureRewindState)
-                : call(object, () -> object.captureRewindState(context));
+        return call(object, () -> ObjectRewindTypeSafety.capture(object, context));
     }
 
     void restoreRewind(AbstractObjectInstance object, PerObjectRewindSnapshot snapshot,
             RewindCaptureContext context) {
-        if (hasLegacyRewindOverride(object.getClass(), "restoreRewindState",
-                PerObjectRewindSnapshot.class)) run(object, () -> object.restoreRewindState(snapshot));
-        else run(object, () -> object.restoreRewindState(snapshot, context));
-    }
-
-    private static boolean hasLegacyRewindOverride(Class<?> type, String name, Class<?>... parameters) {
-        for (Class<?> current = type; current != null && current != AbstractObjectInstance.class;
-                current = current.getSuperclass()) {
-            if (current == AbstractBadnikInstance.class) continue;
-            try {
-                var method = current.getDeclaredMethod(name, parameters);
-                if (!Modifier.isAbstract(method.getModifiers()) && !method.isSynthetic() && !method.isBridge()) return true;
-            } catch (NoSuchMethodException ignored) { }
-        }
-        return false;
+        run(object, () -> ObjectRewindTypeSafety.restore(object, snapshot, context));
     }
 
 }

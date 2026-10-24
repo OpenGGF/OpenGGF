@@ -2,6 +2,11 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.rewind.RewindScanSupport;
+import com.openggf.game.rewind.RewindTransient;
+import com.openggf.level.objects.PlayerControlOwners;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton;
@@ -42,6 +47,145 @@ class TestCapturedPolicyCompactReachabilityGuard {
         assertTrue(RewindCodecs.codecFor(field).isPresent());
         assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field),
                 "a subclass falling back from compact capture must still retain ordinal history");
+    }
+
+    @Test
+    void optionalNativeLinksHaveClosedExactCapturedMetadata() throws Exception {
+        var expected = java.util.Set.of(
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent"),
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead"),
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"),
+                new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent"));
+        var actual = new java.util.HashSet<FieldKey>();
+        for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
+            for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
+                for (var field : type.getDeclaredFields()) {
+                    if (!DefaultObjectRewindPolicies.isOptionalObjectReference(field)) continue;
+                    var key = FieldKey.of(field);
+                    actual.add(key);
+                    assertEquals(RewindFieldPolicy.CAPTURED,
+                            DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(key));
+                    assertTrue(RewindCodecs.requiresIdentityTable(field), "closure diagnostics still inspect optional links");
+                    assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(type));
+                    assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type));
+                    assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type).capturedFields().stream()
+                            .anyMatch(plan -> plan.field().equals(field)), field.toString());
+                }
+            }
+        }
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void contextCompatibleCollectorsHaveClosedExactCapturedMetadata() throws Exception {
+        var expected = java.util.Set.of(
+                new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "knuckles"),
+                new FieldKey("com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance", "knuckles"));
+        var actual = new java.util.HashSet<FieldKey>();
+        for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
+            for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
+                for (var field : type.getDeclaredFields()) {
+                    if (!DefaultObjectRewindPolicies.isContextCompatibleCollectorReference(field)) continue;
+                    var key = FieldKey.of(field);
+                    actual.add(key);
+                    assertFalse(DefaultObjectRewindPolicies.isOptionalObjectReference(field),
+                            "AIZ managed references must not inherit optional-target semantics");
+                    assertEquals(RewindFieldPolicy.CAPTURED,
+                            DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(key));
+                    assertTrue(RewindCodecs.requiresIdentityTable(field));
+                    assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(type));
+                    assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type));
+                    assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type).capturedFields().stream()
+                            .anyMatch(plan -> plan.field().equals(field)), field.toString());
+                }
+            }
+        }
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void acquiredPlayerFieldsAlwaysReachTheCentralIdentityCodec() throws Exception {
+        var failures = new ArrayList<String>();
+        int audited = 0;
+        var roots = new ArrayList<>(RewindScanSupport.discoverRuntimeOwnerClasses());
+        // Ending controllers live outside the ordinary object source roots.
+        var endingRoot = java.nio.file.Path.of("src/main/java/com/openggf/game/sonic3k/ending");
+        try (var sources = java.nio.file.Files.walk(endingRoot)) {
+            for (var path : sources.filter(p -> p.toString().endsWith(".java")).toList()) {
+                String name = path.getFileName().toString().replaceFirst("\\.java$", "");
+                roots.add(Class.forName("com.openggf.game.sonic3k.ending." + name, false,
+                        getClass().getClassLoader()));
+            }
+        }
+        for (var root : roots) {
+            for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
+                for (var field : type.getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers()) || !containsPlayerReference(field.getGenericType())) continue;
+                    boolean ownershipSet = field.getType() == PlayerControlOwners.class;
+                    // Bespoke snapshots and affirmative exclusions have their own behavioral checks.
+                    // Acquired-player sets are never structural or excluded.
+                    if (!ownershipSet && (!GenericRewindEligibility.usesCompactDefaultSubclassCapture(type)
+                            && !GenericRewindEligibility.usesDefaultObjectSubclassCapture(type)
+                            && !GenericRewindEligibility.usesDefaultBadnikSubclassCapture(type))) continue;
+                    var policy = DefaultObjectRewindPolicies.policyFor(field);
+                    if (!ownershipSet && (Modifier.isTransient(field.getModifiers())
+                            || field.isAnnotationPresent(RewindTransient.class)
+                            || field.isAnnotationPresent(com.openggf.game.rewind.RewindDeferred.class)
+                            || policy == RewindFieldPolicy.TRANSIENT || policy == RewindFieldPolicy.DEFERRED)) continue;
+                    audited++;
+                    failures.addAll(ownershipFieldProblems(type, field));
+                }
+            }
+        }
+        assertTrue(audited >= 50, "Audit the complete holder population, including nested owners");
+        System.out.println("Central acquired-player codec audit: " + audited + " fields");
+        assertEquals(List.of(), failures,
+                "Acquired-player references must reach a central identity-aware codec, never scalar fallback");
+    }
+
+    @Test
+    void ownershipAuditRejectsExcludedAndRawPlayerFields() throws Exception {
+        assertFalse(ownershipFieldProblems(ExcludedOwner.class,
+                ExcludedOwner.class.getDeclaredField("owners")).isEmpty());
+        assertFalse(ownershipFieldProblems(RawOwners.class,
+                RawOwners.class.getDeclaredField("owners")).isEmpty());
+    }
+
+    private static boolean containsPlayerReference(java.lang.reflect.Type type) {
+        if (type instanceof Class<?> cls)
+            return cls == PlayerControlOwners.class || com.openggf.game.PlayableEntity.class.isAssignableFrom(cls)
+                    || (cls.isArray() && containsPlayerReference(cls.getComponentType()));
+        if (type instanceof java.lang.reflect.ParameterizedType parameterized)
+            return java.util.Arrays.stream(parameterized.getActualTypeArguments())
+                    .anyMatch(TestCapturedPolicyCompactReachabilityGuard::containsPlayerReference);
+        return false;
+    }
+
+    private static List<String> ownershipFieldProblems(Class<?> type, Field field) {
+        boolean defaultCapture = AbstractBadnikInstance.class.isAssignableFrom(type)
+                ? GenericRewindEligibility.usesDefaultBadnikSubclassCapture(type)
+                : GenericRewindEligibility.usesDefaultObjectSubclassCapture(type);
+        var schema = defaultCapture ? RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type)
+                : RewindSchemaRegistry.schemaFor(type);
+        var plan = schema.capturedFields().stream().filter(p -> p.field().equals(field)).findFirst();
+        if (plan.isEmpty() || !plan.get().codec().requiresIdentityTable()
+                || (defaultCapture && !GenericRewindEligibility.usesCompactDefaultSubclassCapture(type)))
+            return List.of(type.getName() + "#" + field.getName());
+        return List.of();
+    }
+
+    private static final class ExcludedOwner extends AbstractObjectInstance {
+        @RewindTransient(reason = "Deliberately invalid ownership exclusion for the guard regression") private final PlayerControlOwners owners = new PlayerControlOwners();
+        ExcludedOwner() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "excluded-owner"); }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
+    }
+
+    private static final class RawOwners extends AbstractObjectInstance {
+        private final List<AbstractPlayableSprite> owners = new ArrayList<>();
+        RawOwners() { super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "raw-owners"); }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
 
     @Test

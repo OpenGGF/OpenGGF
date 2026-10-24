@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.game.PlayableEntity;
@@ -989,6 +992,29 @@ public class AizEndBossInstance extends AbstractBossInstance
             spawnFreeChild(() -> new AizEndBossDebrisChild(x, y, debrisIndex));
         }
     }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        // The native continuation reuses the boss SST and is deliberately not a
+        // graph child. Retiring its picture must release its acquired controls too.
+        postDefeatSequence.controller.releasePlayersForVisualDirection();
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new EmbeddedControlExtra(
+                postDefeatSequence.controller.captureControlOwners(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        postDefeatSequence.controller.restoreControlOwners(snapshot.objectSubclassExtra() instanceof EmbeddedControlExtra extra
+                ? extra.owners() : new Aiz2BossEndSequenceController.ControlOwners(java.util.List.of(), java.util.List.of(), java.util.List.of()), context);
+    }
+
+    private record EmbeddedControlExtra(Aiz2BossEndSequenceController.ControlOwners owners)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
 
     private static final class PostDefeatSequence implements
             com.openggf.game.rewind.RewindStateful<Aiz2BossEndSequenceController.SequenceSnapshot> {

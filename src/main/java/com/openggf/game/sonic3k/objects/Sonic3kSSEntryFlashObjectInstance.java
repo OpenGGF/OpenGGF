@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -16,7 +18,6 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -47,6 +48,13 @@ import java.util.logging.Logger;
  * Reference: docs/skdisasm/sonic3k.asm lines 128384-128477
  */
 public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
+    private AbstractPlayableSprite directedHiddenPlayer;
+
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSSEntryFlashObjectInstance.class.getName());
 
     // AniRaw_SSEntryFlash: dc.b 0, 0, 0, 1, 2, 3|$40, 3, 2, 1, 0, $F4
@@ -118,6 +126,22 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         this.transitionIntent = transitionIntent;
     }
 
+    void acceptCapturedPlayers(java.util.List<AbstractPlayableSprite> players, AbstractPlayableSprite hiddenPlayer) {
+        for (AbstractPlayableSprite player : players) directedControlPlayers.add(player);
+        directedHiddenPlayer = hiddenPlayer;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        if (directedHiddenPlayer != null) directedHiddenPlayer.setHidden(false);
+        directedHiddenPlayer = null;
+        directedControlPlayers.clear();
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         if (ctx.spawn() == null) {
@@ -170,6 +194,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
                 && animIndex == RING_DELETE_ANIM_INDEX && !ringDeleteTriggered) {
             ringDeleteTriggered = true;
             if (parentRing != null) {
+                parentRing.transferCapturedPlayersTo(this);
                 parentRing.markForDeletion();
             }
         }

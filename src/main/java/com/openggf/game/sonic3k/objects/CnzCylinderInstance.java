@@ -46,6 +46,11 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
      * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         return 0x0003;
     }

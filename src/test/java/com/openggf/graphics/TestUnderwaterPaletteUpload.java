@@ -1,14 +1,25 @@
 package com.openggf.graphics;
 
 import com.openggf.game.GameId;
+import com.openggf.graphics.color.DisplayColorExpansion;
+import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
+import com.openggf.level.PatternDesc;
+import com.openggf.tools.PresentationOffscreenTestContext;
+import org.joml.Matrix4f;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.opengl.GL11.*;
 
 class TestUnderwaterPaletteUpload {
     private GraphicsManager graphics;
@@ -185,6 +196,103 @@ class TestUnderwaterPaletteUpload {
         cacheUnderwaterPaletteTexture(underwater, new Palette());
         assertArrayEquals(new int[]{204, 238, 238, 255}, rgbaAt(uploadBuffer(graphics), 1));
         assertArrayEquals(new int[]{0, 0, 0, 0}, rgbaAt(uploadBuffer(graphics), 0));
+    }
+
+    @ParameterizedTest
+    @EnabledOnOs(OS.LINUX)
+    @CsvSource({
+            "NONE,0,RAW_RGB,FULL,7565D8,6EFFA2,1E3264",
+            "NONE,0,MD_ANALOG,LIMITED,4343BD,43DE76,111143",
+            "TO_WHITE,2,RAW_RGB,FULL,B66DDB,B6FF92,6D246D",
+            "TO_WHITE,2,MD_ANALOG,LIMITED,9743BD,97DE76,431143",
+            "FROM_WHITE,3,MD_ANALOG,LIMITED,7676BD,76DE76,767676",
+            "TO_BLACK,1,RAW_RGB,FULL,5E5BE5,49FF92,00246D"
+    })
+    void underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(
+            PaletteFadePresentation.Mode mode, int steps, DisplayColorProfile profile,
+            DisplayColorExpansion expansion, String donorRgb, String appearanceRgb, String stockRgb) throws Exception {
+        RenderContext.reset();
+        try (var context = PresentationOffscreenTestContext.open(320, 224)) {
+            graphics = new GraphicsManager();
+            try {
+                graphics.init("shaders/shader_the_hedgehog.glsl");
+                graphics.setBatchingEnabled(false);
+                graphics.setViewport(0, 0, 320, 224);
+                graphics.setProjectionWidth(320);
+                graphics.setProjectionMatrixBuffer(new Matrix4f().ortho(0, 320, 0, 224, -1, 1).get(new float[16]));
+                graphics.setUseSpritePriorityShader(true);
+                graphics.setWaterEnabled(true);
+                graphics.setWaterlineScreenY(40);
+                graphics.setWindowHeight(224);
+                graphics.setScreenHeight(224);
+                graphics.setDisplayColorProfile(profile);
+                graphics.setDisplayColorExpansion(expansion);
+                glDisable(GL_DITHER);
+
+                Palette normal = paletteWithColor(1, 200, 100, 0);
+                normal.colors[2] = new Palette.Color((byte) 0, (byte) 100, (byte) 200);
+                Palette[] water = fourRows();
+                water[0].colors[0] = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+                water[0].colors[1] = new Palette.Color((byte) 100, (byte) 200, (byte) 80);
+                water[0].colors[2] = new Palette.Color((byte) 30, (byte) 50, (byte) 100);
+                water[0].colors[3] = new Palette.Color((byte) 255, (byte) 240, (byte) 200);
+                Palette donorLine = paletteWithColor(1, 181, 81, 241);
+                donorLine.colors[0] = new Palette.Color((byte) 181, (byte) 81, (byte) 241);
+                RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
+                donor.setPalette(0, donorLine);
+                graphics.cachePaletteTexture(normal, 0);
+                graphics.cachePaletteTexture(donorLine, donor.getPaletteLineBase());
+                Palette overrides = paletteWithColor(1, 221, 151, 181);
+                var appearance = AppearancePalettes.acquire(graphics, null, 0, normal, true, overrides, 1 << 1);
+                assertNotNull(appearance);
+                int appearanceBase = appearance.context().getPaletteLineBase();
+
+                graphics.setPaletteFadePresentation(mode, steps, PaletteFadePresentation.ALL_LINES);
+                Integer texture = graphics.cacheUnderwaterPaletteTexture(water, normal);
+                assertNotNull(texture);
+                glBindTexture(GL_TEXTURE_2D, texture);
+                int height = glGetTexLevelParameteri(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT);
+                ByteBuffer pixels = ByteBuffer.allocateDirect(16 * height * 4);
+                glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+                assertArrayEquals(rgbWithAlpha(donorRgb, 255), rgbaAt(pixels, donor.getPaletteLineBase() * 16 + 1));
+                assertArrayEquals(rgbWithAlpha(appearanceRgb, 255), rgbaAt(pixels, appearanceBase * 16 + 1));
+                assertArrayEquals(rgbWithAlpha(stockRgb, 255), rgbaAt(pixels, appearanceBase * 16 + 2));
+                assertEquals(0, rgbaAt(pixels, donor.getPaletteLineBase() * 16)[3]);
+                assertEquals(0, rgbaAt(pixels, appearanceBase * 16)[3]);
+
+                Pattern pattern = new Pattern();
+                for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                    pattern.setPixel(x, y, (byte) (x < 4 ? 1 : x < 6 ? 0 : 2));
+                }
+                int patternId = PatternAtlasRange.OBJECTS.base();
+                graphics.cachePatternTexture(pattern, patternId);
+                glViewport(0, 0, 320, 224);
+                glClearColor(3 / 255f, 5 / 255f, 7 / 255f, 1);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                graphics.executeCapturedCommands(() -> graphics.renderPatternRowsWithId(patternId, new PatternDesc(),
+                        appearanceBase, false, false, true, 20, 60, 0, 8), 0, 0, 320, 224);
+                glFinish();
+                assertFramebufferRgb(22, 63, appearanceRgb);
+                assertFramebufferRgb(26, 63, stockRgb);
+                assertFramebufferRgb(24, 63, "030507");
+                assertEquals(GL_NO_ERROR, glGetError());
+                appearance.release();
+            } finally {
+                graphics.cleanup();
+                graphics = null;
+            }
+        }
+    }
+
+    private static int[] rgbWithAlpha(String hex, int alpha) {
+        int rgb = Integer.parseUnsignedInt(hex, 16);
+        return new int[]{rgb >>> 16, (rgb >>> 8) & 255, rgb & 255, alpha};
+    }
+
+    private static void assertFramebufferRgb(int x, int y, String hex) {
+        ByteBuffer pixel = ByteBuffer.allocateDirect(4);
+        glReadPixels(x, 223 - y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+        assertArrayEquals(rgbWithAlpha(hex, 255), rgbaAt(pixel, 0), "framebuffer at " + x + "," + y);
     }
 
     @Test

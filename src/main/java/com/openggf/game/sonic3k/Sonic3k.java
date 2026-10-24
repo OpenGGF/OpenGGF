@@ -2,8 +2,6 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.data.AnimatedPaletteProvider;
-import com.openggf.data.AnimatedPatternProvider;
 import com.openggf.data.Game;
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
@@ -22,7 +20,9 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
+import com.openggf.level.animation.AnimatedPaletteProvider;
 import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.animation.AnimatedPatternProvider;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
 import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.resources.DeferredLevelResourceManifest;

@@ -31,7 +31,17 @@ public record CharacterDefinition(
         SecondaryAbility secondaryAbility,
         boolean supportsSuperForm,
         ArtSupplier artSupplier,
-        PaletteSupplier paletteSupplier) {
+        PaletteSupplier paletteSupplier, java.util.Set<MovementAbility> movementAbilities) {
+
+    @ModApi public enum MovementAbility { SPINDASH }
+
+    public CharacterDefinition(CharacterKey key, String displayName, PlayableFactory spriteFactory,
+            RespawnStrategyFactory respawnStrategyFactory, PlayerCharacter behavesLike,
+            SecondaryAbility secondaryAbility, boolean supportsSuperForm, ArtSupplier artSupplier,
+            PaletteSupplier paletteSupplier) {
+        this(key, displayName, spriteFactory, respawnStrategyFactory, behavesLike, secondaryAbility,
+                supportsSuperForm, artSupplier, paletteSupplier, java.util.Set.of());
+    }
 
     /** Creates a definition that relies on the host-game palette fallback. */
     public CharacterDefinition(CharacterKey key, String displayName,
@@ -46,6 +56,7 @@ public record CharacterDefinition(
     }
 
     public CharacterDefinition {
+        movementAbilities = java.util.Set.copyOf(movementAbilities);
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(displayName, "displayName");
         if (displayName.isBlank()) throw new IllegalArgumentException("displayName must not be blank");

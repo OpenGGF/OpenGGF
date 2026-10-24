@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -12,7 +13,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -22,6 +22,10 @@ import java.util.List;
  * {@code word_62822 = -$40,+$80,-$30,+$60}.
  */
 public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstance implements RewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
     private static final int LEFT = -0x40;
     private static final int RIGHT = 0x80;
     private static final int TOP = -0x30;
@@ -72,6 +76,8 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (parent == null || parent.isDestroyed()) {
+            // The parent's native exit already released its captured participants.
+            directedControlPlayers.clear();
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
@@ -104,7 +110,16 @@ public final class CutsceneKnucklesLbz1RangeHelper extends AbstractObjectInstanc
                 && playerY < y + BOTTOM;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (parent == null || !parent.isDestroyed())
+            for (AbstractPlayableSprite player : directedControlPlayers.players())
+                CutsceneKnucklesLbz1Instance.releasePlayer(player);
+        directedControlPlayers.clear();
+    }
+
     private void applyCapture(AbstractPlayableSprite player) {
+        directedControlPlayers.add(player);
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
         if (state != null) {
             state.setLbz1KnucklesCutsceneControlLocked(true);

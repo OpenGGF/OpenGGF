@@ -18,6 +18,19 @@ import java.util.List;
 
 /** loc_5E6C0: Knuckles jumps from the collapsing island and leaves on the Tornado. */
 public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInstance implements RewindRecreatable, EndingFlightChildHost, NativeSstStateSource {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private int routine;
     private int timer;
     private int xFixed, yFixed;
@@ -185,7 +198,7 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
         services().levelGamestate().pauseTimer();
         var player=services().playerQuery().mainPlayerOrNull();
         if(player instanceof AbstractPlayableSprite p1) {
-            ObjectControlState.nativeBit7FullControl().applyTo(p1);p1.setObjectMappingFrameControl(true);p1.setMappingFrame(0);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(p1));p1.setObjectMappingFrameControl(true);p1.setMappingFrame(0);
         }
         if(ending().progress()>=0){animation.mappingFrame=4;
             makeChild(EndingKnucklesFlightChildObjectInstance.MASTER,0,4,-0x10);}

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.camera.Camera;
@@ -18,7 +19,6 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -42,6 +42,20 @@ import java.util.logging.Logger;
  */
 public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic1EggPrisonObjectInstance.class.getName());
 
     // === Native width and SolidObject collision from Pri_Var/Pri_BodyMain ===
@@ -244,8 +258,8 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
         // Keep player locked to right during opening sequence
         if (buttonTriggered && state != State.IDLE && state != State.COMPLETE) {
-            player.setForceInputRight(true);
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setForceInputRight(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
         }
     }
 

@@ -1,9 +1,10 @@
 package com.openggf.game.sonic1.objects;
+
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
-
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
@@ -17,7 +18,6 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -44,6 +44,21 @@ import java.util.logging.Logger;
 public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
     public static final String AUTHORED_GOAL_KEY = "openggf:authored-goal";
+
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic1SignpostObjectInstance.class.getName());
 
     // Routine states matching disassembly Sign_Index offsets
@@ -347,8 +362,8 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         // ROM re-applies control lock every frame while player is on the ground.
         // If player is in air, skip the control lock (original S1 behavior).
         if (!player.getAir()) {
-            player.setForceInputRight(true);
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setForceInputRight(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
         }
 
         // Check if player has walked far enough off-screen

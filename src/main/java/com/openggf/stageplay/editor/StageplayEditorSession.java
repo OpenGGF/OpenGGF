@@ -35,10 +35,12 @@ public final class StageplayEditorSession implements AutoCloseable {
     private SceneSurface surface;
     private StageplayDocument prepared;
     private final StageplayExportJob export = new StageplayExportJob();
+    private final StageplayRouteJob route;
 
     public StageplayEditorSession(Supplier<GameModule> module, RomManager roms, AudioManager audioManager) {
         this.module = Objects.requireNonNull(module); this.roms = Objects.requireNonNull(roms);
         this.audioManager = Objects.requireNonNull(audioManager);
+        this.route = new StageplayRouteJob(roms);
     }
 
     private void ensure(Path root) throws IOException {
@@ -71,15 +73,23 @@ public final class StageplayEditorSession implements AutoCloseable {
     private void presentNativeSound(StageplayDocument document, int frame) {
         if (resources == null) return;
         var authored = StageplayTimeline.sample(document, frame);
-        if (authored.set().worldPolicy() != StageplayDocument.WorldPolicy.LIVE) return;
         resources.resolveFrame(document, authored);
         audio.playNativeFrame(frame, resources.previewSound(frame));
     }
 
     /** Random-access native physics preview; repeated reads never advance its simulation. */
     public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) throws IOException {
+        return resolvePreview(document, root, StageplayTimeline.sample(document, frame));
+    }
+
+    /** Resolve paused director framing through the isolated worker without advancing native state. */
+    public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame frame) throws IOException {
         ensure(root);
-        return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+        return resources.resolveFrame(document, frame);
+    }
+
+    public java.util.List<com.openggf.stageplay.runtime.StageplayObjectInspection> objectInspection() {
+        return resources == null ? java.util.List.of() : resources.objectInspection();
     }
 
     /** Draws in the engine's current offscreen viewport; no desktop focus or window is created. */
@@ -121,6 +131,22 @@ public final class StageplayEditorSession implements AutoCloseable {
     }
     public String pollExport() { return export.poll(); }
 
+    public java.util.Set<com.openggf.game.CharacterDefinition.MovementAbility> movementAbilities(
+            StageplayDocument.Actor actor, Path root) throws IOException {
+        ensure(root);
+        var donor=library.module(actor.gameId());
+        return donor.getPlayableCharacterRegistry().movementAbilities(
+                com.openggf.game.CharacterKey.parsePersisted(actor.character()),donor);
+    }
+
+    /** Independent input snapshots: never ensure/release or advance the editor's preview session. */
+    public void startRoute(StageplayDocument document, Path root, com.openggf.stageplay.route.StageplayRouteRequest request) throws IOException {
+        route.start(document,root,request);
+    }
+    public StageplayRouteJob.Update pollRoute() { return route.poll(); }
+    public void requestRouteApply(StageplayDocument document, Path root) throws IOException { route.requestApply(document,root); }
+    public void cancelRoute() { route.cancel(); }
+
     /** Call before replacing a native session, while its borrowed ROM is still valid. */
     public void release() {
         prepared = null;
@@ -131,5 +157,8 @@ public final class StageplayEditorSession implements AutoCloseable {
         if (surface != null) surface.releaseTextures();
     }
 
-    @Override public void close() { export.close(); release(); if (surface != null) { surface.close(); surface = null; } }
+    @Override public void close() {
+        try { route.close(); }
+        finally { try { export.close(); } finally { release(); if (surface != null) { surface.close(); surface = null; } } }
+    }
 }

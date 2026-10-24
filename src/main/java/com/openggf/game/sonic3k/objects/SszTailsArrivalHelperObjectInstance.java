@@ -46,13 +46,21 @@ public final class SszTailsArrivalHelperObjectInstance extends AbstractObjectIns
     /** {@code subtype(a0)}: the {@code $C} frame delay. */
     private int delay;
     private boolean swinging;
+    @com.openggf.game.rewind.RewindTransient(reason = "Captured explicitly through PlayerRefId in the subclass snapshot.")
+    private AbstractPlayableSprite ownedPlayer;
     private final S3kGradualSwing swing = new S3kGradualSwing();
 
-    private record RewindExtra(int delay, boolean swinging, S3kGradualSwing.Value swing)
+    private record RewindExtra(int delay, boolean swinging, S3kGradualSwing.Value swing,
+                               com.openggf.game.rewind.identity.PlayerRefId playerId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public SszTailsArrivalHelperObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null);
+    }
+
+    public SszTailsArrivalHelperObjectInstance(ObjectSpawn spawn, AbstractPlayableSprite player) {
         super(spawn, "SszTailsArrivalHelper");
+        ownedPlayer = player;
         this.x = spawn.x();
         this.baseY = spawn.y();
         this.delay = spawn.subtype();
@@ -66,7 +74,8 @@ public final class SszTailsArrivalHelperObjectInstance extends AbstractObjectIns
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                delay, swinging, swing.captureRewindStateValue()));
+                delay, swinging, swing.captureRewindStateValue(),
+                context.identityTable().map(table -> table.encodePlayer(ownedPlayer)).orElse(null)));
     }
 
     @Override
@@ -76,15 +85,18 @@ public final class SszTailsArrivalHelperObjectInstance extends AbstractObjectIns
             delay = extra.delay();
             swinging = extra.swinging();
             swing.restoreRewindStateValue(extra.swing());
+            ownedPlayer = extra.playerId() == null ? null : (AbstractPlayableSprite)
+                    context.requireIdentityTable().resolvePlayer(extra.playerId(), true);
         }
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        AbstractPlayableSprite sidekick = sidekick();
+        AbstractPlayableSprite sidekick = ownedPlayer == null ? sidekick() : ownedPlayer;
         if (sidekick == null) {
             return;
         }
+        ownedPlayer = sidekick;
         if (!swinging) {
             // tst.w subtype(a0) / beq.s loc_57DFA: the counter is tested before it is decremented,
             // so a zero subtype would swing on the first pass.
@@ -105,12 +117,22 @@ public final class SszTailsArrivalHelperObjectInstance extends AbstractObjectIns
         if (swing.rising()) {
             return;
         }
+        releasePlayerControl(sidekick);
+        com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+    }
+
+    private void releasePlayerControl(AbstractPlayableSprite sidekick) {
         ObjectControlState.none().applyTo(sidekick);
         sidekick.setObjectMappingFrameControl(false);
         sidekick.setAnimationId(0);
         // clr.w (Tails_CPU_flight_timer).w / move.w #6,(Tails_CPU_routine).w
         SidekickLevelEventRelease.toNormalFollow(sidekick);
-        com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
+        if (ownedPlayer == sidekick) ownedPlayer = null;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        if (ownedPlayer != null) releasePlayerControl(ownedPlayer);
     }
 
     private AbstractPlayableSprite sidekick() {

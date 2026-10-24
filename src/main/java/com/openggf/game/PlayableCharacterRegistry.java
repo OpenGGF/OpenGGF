@@ -44,6 +44,14 @@ public final class PlayableCharacterRegistry {
         return Optional.ofNullable(definitions.get(Objects.requireNonNull(key, "key")));
     }
 
+    /** Actor declarations intersected with the native donor's enabled moves. */
+    public Set<CharacterDefinition.MovementAbility> movementAbilities(CharacterKey key, GameModule donor) {
+        var declared = find(key).map(CharacterDefinition::movementAbilities).orElse(Set.of());
+        return declared.stream().filter(ability -> switch (ability) {
+            case SPINDASH -> donor.getRules().playerCapability().spindashEnabled();
+        }).collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
     /** Returns the immutable insertion-ordered definition view. */
     public Map<CharacterKey, CharacterDefinition> definitions() { return definitions; }
 

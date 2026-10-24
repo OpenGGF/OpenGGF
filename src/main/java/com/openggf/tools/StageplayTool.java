@@ -36,6 +36,8 @@ public final class StageplayTool {
 
     static int execute(String[] args, PrintStream output) {
         try {
+            if (args.length > 0 && args[0].equals("route"))
+                return StageplayRouteTool.execute(Arrays.copyOfRange(args, 1, args.length), output);
             Object result = run(args);
             output.println(JSON.writeValueAsString(Map.of("ok", true, "result", result)));
             return 0;
@@ -49,6 +51,14 @@ public final class StageplayTool {
 
     static Object run(String[] args) throws IOException {
         String command = args.length == 0 ? "help" : args[0];
+        if (command.equals("object-coverage")) {
+            var output = new java.io.ByteArrayOutputStream();
+            int status = StageplayObjectCoverageTool.execute(Arrays.copyOfRange(args, 1, args.length),
+                    new PrintStream(output, true, java.nio.charset.StandardCharsets.UTF_8));
+            var result = JSON.readTree(output.toByteArray());
+            if (status != 0) throw new IOException(result.path("error").asText("Object coverage failed"));
+            return result;
+        }
         if (command.equals("render")) {
             var parsed = StageplayCaptureTool.Arguments.parse(Arrays.copyOfRange(args, 1, args.length));
             Path movie = StageplayCaptureTool.run(parsed);
@@ -61,6 +71,9 @@ public final class StageplayTool {
                 yield Map.of("commands", List.of(
                         "init --out screenplay.json",
                         "compile --script screenplay.json --out film.stageplay",
+                        "decompile --scene film.stageplay --out screenplay.json",
+                        "route --scene film.stageplay --actor hero --frame 0 --x 320 --y 640 --out routed.stageplay --s2-rom PATH",
+                        "object-coverage --out coverage.json [--game all|s1|s2|s3k --format json|markdown --observations reviewed.json]",
                         "validate --scene film.stageplay",
                         "inspect --scene film.stageplay [--frame N]",
                         "timeline --scene film.stageplay --out authored.jsonl [--every N]",
@@ -68,7 +81,7 @@ public final class StageplayTool {
                         "level --game s3k --rom PATH --zone 11 --act 1",
                         "catalog --game s2 --rom /absolute/game.gen [--character tails] [--zone 0 --act 0]",
                         "render --scene film.stageplay --out film.mkv --s1-rom PATH --s2-rom PATH --s3k-rom PATH"),
-                        "screenplayVersion", 3, "stageplayVersion", StageplayDocument.VERSION,
+                        "screenplayVersion", StageplayScriptCompiler.VERSION, "stageplayVersion", StageplayDocument.VERSION,
                         "fps", 60, "indices", "Frames, zones and acts are zero-based; every shot uses local frames.",
                         "outputs", "JSON result on stdout; exit 0 success, 2 invalid input/failure. Outputs are never overwritten.",
                         "resources", "catalog and simulate need supplied ROMs; simulate resolves native puppet physics without a window, graphics or audio playback. Render preflights resources and uses offline audio.");
@@ -80,18 +93,19 @@ public final class StageplayTool {
             }
             case "compile" -> {
                 allow(flags, "script", "out"); Path input = path(flags, "script"), out = path(flags, "out");
-                StageplayDocument document = StageplayScriptCompiler.compile(read(input));
+                StageplayDocument document = StageplayScriptCompiler.compile(read(input, StageplayScriptCompiler.MAX_BYTES));
                 // Relative resources retain their meaning only beside the source recipe.
-                boolean relative = !document.set().levelProject().isEmpty()
-                        || document.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
-                        || document.audio().stream().anyMatch(c -> !c.asset().isEmpty())
-                        || document.dialogueSkins().stream().anyMatch(s -> !s.decorationAsset().isEmpty())
-                        || document.dialogue().stream().anyMatch(c -> !c.portraitAsset().isEmpty());
-                if (relative && !input.toAbsolutePath().normalize().getParent().toRealPath()
-                        .equals(out.toAbsolutePath().normalize().getParent().toRealPath()))
-                    throw new IOException("Compile scenes with relative assets beside their screenplay");
+                requireAssetRoot(document, input, out, "Compile scenes with relative assets beside their screenplay");
                 publish(out, StageplayStore.encode(document));
                 yield summary(document);
+            }
+            case "decompile" -> {
+                allow(flags, "scene", "out"); Path input = path(flags, "scene"), out = path(flags, "out");
+                StageplayDocument document = StageplayStore.read(input);
+                requireAssetRoot(document, input, out, "Decompile scenes with relative assets beside their canonical scene");
+                publish(out, StageplayScriptDecompiler.decompile(document));
+                yield Map.of("screenplay", out.toAbsolutePath().toString(), "screenplayVersion", StageplayScriptCompiler.VERSION,
+                        "scene", summary(document));
             }
             case "validate", "inspect" -> {
                 allow(flags, "scene", "frame");
@@ -148,7 +162,7 @@ public final class StageplayTool {
              var resources = new StageplayResources(library, false)) {
             resources.setProjectRoot(scene.getParent());
             resources.validate(document);
-            if (usesLiveWorld(document)) resources.setLiveWorld(com.openggf.stageplay.runtime.StageplayLiveWorld.openOffline(library));
+            resources.setLiveWorld(com.openggf.stageplay.runtime.StageplayLiveWorld.openOffline(library));
             publish(out, staged -> {
                 try (var writer = Files.newBufferedWriter(staged, java.nio.charset.StandardCharsets.UTF_8)) {
                     for (int frame = 0; frame < document.durationFrames(); frame++) {
@@ -167,12 +181,7 @@ public final class StageplayTool {
         }
         return Map.of("timeline", out.toAbsolutePath().toString(), "every", every,
                 "samples", (document.durationFrames() + every - 1) / every,
-                "kind", usesLiveWorld(document) ? "native shared live-world gameplay" : "native player physics against detached terrain; no live gameplay objects or events");
-    }
-
-    static boolean usesLiveWorld(StageplayDocument document) {
-        return document.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE
-                || document.sceneChanges().stream().anyMatch(c -> c.set().worldPolicy() == StageplayDocument.WorldPolicy.LIVE);
+                "kind", "native shared live-world gameplay");
     }
 
     private static Object inspectLevel(Map<String, String> flags) throws IOException {
@@ -255,15 +264,33 @@ public final class StageplayTool {
         result.put("dialogueTypers", document.dialogueTypers()); result.put("dialogueSkins", document.dialogueSkins());
         result.put("dialogue", document.dialogue());
         result.put("puppets", document.puppets());
+        result.put("objectActors", document.objectActors());
+        result.put("worldCommands", document.worldCommands());
         return result;
     }
 
+    private static void requireAssetRoot(StageplayDocument document, Path input, Path out, String message)
+            throws IOException {
+        boolean relative = !document.set().levelProject().isEmpty()
+                || document.sceneChanges().stream().anyMatch(c -> !c.set().levelProject().isEmpty())
+                || document.audio().stream().anyMatch(c -> !c.asset().isEmpty())
+                || document.dialogueSkins().stream().anyMatch(s -> !s.decorationAsset().isEmpty())
+                || document.dialogue().stream().anyMatch(c -> !c.portraitAsset().isEmpty());
+        if (relative && !input.toAbsolutePath().normalize().getParent().toRealPath()
+                .equals(out.toAbsolutePath().normalize().getParent().toRealPath()))
+            throw new IOException(message);
+    }
+
     static byte[] read(Path path) throws IOException {
-        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) || Files.size(path) > StageplayStore.MAX_BYTES)
-            throw new IOException("Input must be a regular file no larger than 8 MiB");
+        return read(path, StageplayStore.MAX_BYTES);
+    }
+
+    private static byte[] read(Path path, int maxBytes) throws IOException {
+        if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) || Files.size(path) > maxBytes)
+            throw new IOException("Input must be a regular file no larger than " + maxBytes + " bytes");
         try (var input = Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)) {
-            byte[] bytes = input.readNBytes(StageplayStore.MAX_BYTES + 1);
-            if (bytes.length > StageplayStore.MAX_BYTES) throw new IOException("Input exceeds 8 MiB");
+            byte[] bytes = input.readNBytes(maxBytes + 1);
+            if (bytes.length > maxBytes) throw new IOException("Input exceeds " + maxBytes + " bytes");
             return bytes;
         }
     }
@@ -304,8 +331,9 @@ public final class StageplayTool {
     static String scaffold() {
         return """
                 {
-                  "version": 2, "name": "First take", "width": 400, "height": 224,
+                  "version": %d, "name": "First take", "width": 400, "height": 224,
                   "cast": [{"id":"tails","name":"Tails","gameId":"s2","character":"tails"}],
+                  "objectCast": [],
                   "shots": [{
                     "id":"opening", "durationFrames":300,
                     "set":{"gameId":"s2","zone":0,"act":0},
@@ -315,9 +343,9 @@ public final class StageplayTool {
                       {"frame":30,"kind":"JUMP","holdFrames":12}]},
                     "dialogue":[{"startFrame":75,"endFrame":260,"speakerActor":"tails",
                       "text":"Ready for our first take!"}],
-                    "audio":[], "cameraEffects":[]
+                    "audio":[], "cameraEffects":[], "objects":{}, "objectActions":{}, "worldCommands":[]
                   }]
                 }
-                """;
+                """.formatted(StageplayScriptCompiler.VERSION);
     }
 }

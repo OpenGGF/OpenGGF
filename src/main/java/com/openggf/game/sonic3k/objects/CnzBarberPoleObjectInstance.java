@@ -46,6 +46,12 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : riders.entrySet())
+            if (entry.getValue().latched) release(entry.getKey(), entry.getValue());
+    }
+
+    @Override
     public CnzBarberPoleObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new CnzBarberPoleObjectInstance(ctx.spawn());
     }

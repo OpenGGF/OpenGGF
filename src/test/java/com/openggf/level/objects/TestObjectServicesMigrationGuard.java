@@ -3,6 +3,8 @@ package com.openggf.level.objects;
 import com.openggf.game.session.EngineContext;
 import com.openggf.tests.ObjectGuardSourceScanner;
 import com.openggf.tests.ObjectGuardSourceScanner.SourceText;
+import com.openggf.tests.RuntimeAccessSourceScanner;
+import com.openggf.tests.RuntimeAccessSourceScanner.Access;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -11,6 +13,8 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -72,42 +76,30 @@ class TestObjectServicesMigrationGuard {
     private static final String SHARED_OBJECT_PACKAGE = "com/openggf/level/objects";
     private static final String[] OBJECT_GLOBAL_ACCESS_PACKAGES = ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS;
 
-    /**
-     * Approved object-service bridge lines. Normal object implementations must
-     * use ObjectServices via services(); these entries document the remaining
-     * compatibility seams at the source-line level.
-     */
+    /** Approved compatibility accesses, pinned to lexical caller, operation and multiplicity. */
     private static final List<ApprovedGlobalRuntimeAccess> APPROVED_GLOBAL_RUNTIME_ACCESSES = List.of(
-            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
-                    "GameServices.configuration()",
-                    "lazy configuration bridge for legacy direct-construction tests"),
-            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
-                    "GameServices.debugOverlay()",
-                    "optional debug-overlay fallback"),
-            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
-                    "GameServices.rom()",
-                    "optional ROM-service fallback"),
-            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
-                    "GameServices.levelOrNull()",
-                    "optional level-manager fallback while direct object construction remains supported"),
-            approved("com.openggf.level.objects.AbstractObjectRegistry", "GameServices.",
-                    "GameServices.levelOrNull()",
-                    "registry placement bootstrap fallback"),
-            approved("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "staticObjectManager(",
-                    "var objectManager = staticObjectManager();",
-                    "SYZ level-event bootstrap creates the initial boss blocks outside an object callback"),
-            approved("com.openggf.level.objects.BootstrapObjectServices", "EngineServices.",
-                    "EngineServices.current()",
-                    "ObjectServices composition boundary"),
-            approved("com.openggf.level.objects.BootstrapObjectServices", "SessionManager.",
-                    "SessionManager.getCurrentGameplayMode()",
-                    "ObjectServices composition boundary"),
-            approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
-                    "EngineServices.current()",
-                    "ObjectServices composition boundary"),
-            approved("com.openggf.level.objects.ObjectManager", "SessionManager.",
-                    "SessionManager.getCurrentGameplayMode()",
-                    "ObjectServices composition boundary")
+            approved("com.openggf.level.objects.AbstractObjectInstance", "staticDebugViewEnabled()",
+                    "GameServices.configuration()", "lazy configuration bridge for legacy direct-construction tests"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "staticDebugOverlay()",
+                    "GameServices.debugOverlay()", "optional debug-overlay fallback"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "staticRomManager()",
+                    "GameServices.rom()", "optional ROM-service fallback"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "staticLevelManager()",
+                    "GameServices.levelOrNull()", "optional level-manager fallback for direct object construction"),
+            approved("com.openggf.level.objects.AbstractObjectRegistry", "currentRomZoneId()",
+                    "GameServices.levelOrNull()", "registry placement bootstrap fallback"),
+            approved("com.openggf.level.objects.AbstractObjectRegistry", "currentLevel()",
+                    "GameServices.levelOrNull()", "registry level bootstrap fallback"),
+            approved("com.openggf.game.sonic1.objects.bosses.Sonic1BossBlockInstance", "spawnAllBlocks()",
+                    "staticObjectManager()", "SYZ level-event bootstrap creates initial boss blocks outside an object callback"),
+            approved("com.openggf.level.objects.BootstrapObjectServices", "<init>()",
+                    "EngineServices.current()", "ObjectServices composition boundary"),
+            approved("com.openggf.level.objects.BootstrapObjectServices", "requireGameplayMode()",
+                    "SessionManager.getCurrentGameplayMode()", "ObjectServices composition boundary"),
+            approved("com.openggf.level.objects.ObjectManager", "defaultServices()",
+                    "EngineServices.current()", "ObjectServices composition boundary"),
+            approved("com.openggf.level.objects.ObjectManager", "defaultServices()",
+                    "SessionManager.getCurrentGameplayMode()", "ObjectServices composition boundary")
     );
 
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
@@ -122,10 +114,6 @@ class TestObjectServicesMigrationGuard {
     @Test
     void objectImplementationClasses_shouldNotAccessGlobalRuntimeRootsExceptApprovedBridges() throws IOException {
         Path srcMain = Path.of("src/main/java");
-        if (!Files.isDirectory(srcMain)) {
-            return;
-        }
-
         List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
 
         if (!violations.isEmpty()) {
@@ -138,21 +126,19 @@ class TestObjectServicesMigrationGuard {
     @Test
     void approvedGlobalRuntimeAccessEntriesStillMatchCurrentSource() throws IOException {
         Path srcMain = Path.of("src/main/java");
-        for (ApprovedGlobalRuntimeAccess approved : APPROVED_GLOBAL_RUNTIME_ACCESSES) {
-            Path sourceFile = srcMain.resolve(approved.className().replace('.', '/') + ".java");
-            assertTrue(Files.isRegularFile(sourceFile),
-                    "approved global-access class must still exist: " + approved.className());
-            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
-            assertTrue(source.text().contains(approved.pattern())
-                            && source.text().contains(approved.sourceFragment()),
-                    "approved global-access entry must match current source: "
-                            + approved.className() + " / " + approved.sourceFragment());
-        }
+        Map<Access, Integer> actual = scanGlobalAccesses(srcMain);
+        Map<Access, Integer> approved = approvedAccessCounts();
+        Map<Access, Integer> observedApproved = new TreeMap<>();
+        actual.forEach((access, count) -> {
+            if (approved.containsKey(access)) observedApproved.put(access, count);
+        });
+        assertEquals(List.of(), RuntimeAccessSourceScanner.differences(observedApproved, approved),
+                "Approved bridge accesses must still exist in the exact caller with the exact multiplicity");
     }
 
     @Test
     void consolidatedGlobalAccessScan_coversSharedObjectInstances(@TempDir Path tempDir) throws IOException {
-        Path srcMain = tempDir.resolve("src/main/java");
+        Path srcMain = fixtureSourceRoot(tempDir);
         Path source = srcMain.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
@@ -174,7 +160,7 @@ class TestObjectServicesMigrationGuard {
 
     @Test
     void consolidatedGlobalAccessScan_rejectsLeafManagerBridgeCalls(@TempDir Path tempDir) throws IOException {
-        Path srcMain = tempDir.resolve("src/main/java");
+        Path srcMain = fixtureSourceRoot(tempDir);
         Path source = srcMain.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
@@ -196,7 +182,7 @@ class TestObjectServicesMigrationGuard {
 
     @Test
     void consolidatedGlobalAccessScan_coversGameObjectRuntimeFallbacks(@TempDir Path tempDir) throws IOException {
-        Path srcMain = tempDir.resolve("src/main/java");
+        Path srcMain = fixtureSourceRoot(tempDir);
         Path source = srcMain.resolve("com/openggf/game/sonic1/objects/GameFixtureObjectInstance.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
@@ -218,7 +204,7 @@ class TestObjectServicesMigrationGuard {
 
     @Test
     void consolidatedGlobalAccessScan_doesNotTrustWholeBridgeClasses(@TempDir Path tempDir) throws IOException {
-        Path srcMain = tempDir.resolve("src/main/java");
+        Path srcMain = fixtureSourceRoot(tempDir);
         Path source = srcMain.resolve("com/openggf/level/objects/DefaultObjectServices.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
@@ -239,16 +225,16 @@ class TestObjectServicesMigrationGuard {
     }
 
     @Test
-    void consolidatedGlobalAccessScan_allowsDocumentedLineLevelBridgeAccess(@TempDir Path tempDir)
+    void consolidatedGlobalAccessScan_allowsDocumentedCallerBridgeAccess(@TempDir Path tempDir)
             throws IOException {
-        Path srcMain = tempDir.resolve("src/main/java");
+        Path srcMain = fixtureSourceRoot(tempDir);
         Path source = srcMain.resolve("com/openggf/level/objects/ObjectManager.java");
         Files.createDirectories(source.getParent());
         Files.writeString(source, """
                 package com.openggf.level.objects;
 
                 final class ObjectManager {
-                    void composeServices() {
+                    void defaultServices() {
                         EngineServices.current();
                     }
                 }
@@ -258,6 +244,92 @@ class TestObjectServicesMigrationGuard {
 
         assertTrue(violations.isEmpty(),
                 () -> "Expected documented bridge access to be allowed, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_rejectsApprovedOperationInAnotherCaller(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Files.writeString(root.resolve("com/openggf/level/objects/ObjectManager.java"), """
+                class ObjectManager {
+                    void replacementCaller() { EngineServices /* split */ . current(); }
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(root);
+        assertEquals(1, violations.size());
+        assertTrue(violations.getFirst().contains("ObjectManager#replacementCaller()->EngineServices.current()"));
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_rejectsDuplicateApprovedOperationOnOneLine(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Files.writeString(root.resolve("com/openggf/level/objects/ObjectManager.java"), """
+                class ObjectManager {
+                    void defaultServices() { EngineServices.current(); EngineServices.current(); }
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(root);
+        assertEquals(1, violations.size());
+        assertTrue(violations.getFirst().contains("observed=2 approved=1"));
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_rejectsRedistributedRegistryCallsAndStaleCaller(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Files.writeString(root.resolve("com/openggf/level/objects/AbstractObjectRegistry.java"), """
+                class AbstractObjectRegistry {
+                    void currentRomZoneId() { GameServices.levelOrNull(); GameServices.levelOrNull(); }
+                    void currentLevel() {}
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(root);
+        assertEquals(1, violations.size());
+        assertTrue(violations.getFirst().contains("currentRomZoneId()") && violations.getFirst().contains("observed=2 approved=1"));
+        List<String> inventory = RuntimeAccessSourceScanner.differences(scanGlobalAccesses(root), approvedAccessCounts());
+        assertTrue(inventory.stream().anyMatch(line -> line.contains("AbstractObjectRegistry#currentLevel()")
+                && line.contains("observed=0 approved=1")));
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_rejectsMethodReferencesToRuntimeFallbacks(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Path source = root.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+                final class SharedFixtureObjectInstance {
+                    Object manager = LevelManager::getInstance;
+                    Object runtime = RuntimeManager::getCurrent;
+                    Object registry = GameModuleRegistry::getCurrent;
+                    Object bootstrap = EngineContext::fromLegacySingletonsForBootstrap;
+                    Object bridge = this::staticObjectManager;
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(root);
+        assertEquals(5, violations.size());
+        for (String operation : List.of("LevelManager.getInstance", "RuntimeManager.getCurrent",
+                "GameModuleRegistry.getCurrent", "EngineContext.fromLegacySingletonsForBootstrap",
+                "staticObjectManager")) {
+            assertTrue(violations.stream().anyMatch(line -> line.contains(operation + "::reference")),
+                    () -> "Expected runtime method reference to be reported: " + operation + " / " + violations);
+        }
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_failsOnMissingPackageOrUnreadableInput(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Path source = root.resolve("com/openggf/level/objects/Broken.java");
+        Files.createDirectory(source);
+        assertThrows(IOException.class, () -> collectForbiddenGlobalAccessViolations(root));
+        Files.delete(source);
+        Path directory = root.resolve(OBJECT_GLOBAL_ACCESS_PACKAGES[0]);
+        Files.delete(directory.resolve("Clean.java"));
+        Files.delete(directory);
+        assertThrows(IOException.class, () -> collectForbiddenGlobalAccessViolations(root));
     }
 
     /**
@@ -584,20 +656,42 @@ class TestObjectServicesMigrationGuard {
     }
 
     private List<String> collectForbiddenGlobalAccessViolations(Path srcMain) throws IOException {
+        Map<Access, Integer> actual = scanGlobalAccesses(srcMain);
+        Map<Access, Integer> approved = approvedAccessCounts();
         List<String> violations = new ArrayList<>();
-        for (String pkg : OBJECT_GLOBAL_ACCESS_PACKAGES) {
-            Path pkgDir = srcMain.resolve(pkg);
-            if (!Files.isDirectory(pkgDir)) {
-                continue;
-            }
+        actual.forEach((access, count) -> {
+            int allowed = approved.getOrDefault(access, 0);
+            if (count > allowed) violations.add(access + " observed=" + count + " approved=" + allowed);
+        });
+        return violations;
+    }
 
-            try (Stream<Path> files = Files.walk(pkgDir)) {
-                files.filter(path -> path.toString().endsWith(".java"))
-                        .forEach(path -> collectForbiddenGlobalAccessViolations(srcMain, path, violations));
+    private static Map<Access, Integer> scanGlobalAccesses(Path srcMain) throws IOException {
+        Map<String, String> sources = RuntimeAccessSourceScanner.readRequiredSources(srcMain, OBJECT_GLOBAL_ACCESS_PACKAGES);
+        Map<Access, Integer> actual = RuntimeAccessSourceScanner.scan(sources, forbiddenGlobalAccessPatterns());
+        // The base owns the existing construction-first manager bridges.
+        actual.keySet().removeIf(access -> access.path().equals("com/openggf/level/objects/AbstractObjectInstance.java")
+                && MANAGER_BRIDGE_PATTERNS.stream().anyMatch(access.operation()::startsWith));
+        return actual;
+    }
+
+    private static Map<Access, Integer> approvedAccessCounts() {
+        Map<Access, Integer> counts = new TreeMap<>();
+        for (ApprovedGlobalRuntimeAccess approved : APPROVED_GLOBAL_RUNTIME_ACCESSES) {
+            if (counts.putIfAbsent(approved.access(), approved.count()) != null) {
+                throw new IllegalStateException("Duplicate approved bridge: " + approved.access());
             }
         }
-        Collections.sort(violations);
-        return violations;
+        return counts;
+    }
+
+    private static Path fixtureSourceRoot(Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        for (String pkg : OBJECT_GLOBAL_ACCESS_PACKAGES) {
+            Path directory = Files.createDirectories(srcMain.resolve(pkg));
+            Files.writeString(directory.resolve("Clean.java"), "class Clean {}");
+        }
+        return srcMain;
     }
 
     private void collectForbiddenConstructionContextWrites(Path srcMain, Path sourceFile, List<String> violations) {
@@ -635,38 +729,6 @@ class TestObjectServicesMigrationGuard {
                 "PRE_ALLOCATED_SLOT.remove(");
     }
 
-    private void collectForbiddenGlobalAccessViolations(Path srcMain, Path sourceFile, List<String> violations) {
-        try {
-            String className = ObjectGuardSourceScanner.className(srcMain, sourceFile);
-
-            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
-            for (String pattern : forbiddenGlobalAccessPatterns()) {
-                // The base owns these construction-first compatibility bridges.
-                // Leaf consumers must use injected services or an explicit bootstrap exception.
-                if (className.equals("com.openggf.level.objects.AbstractObjectInstance")
-                        && MANAGER_BRIDGE_PATTERNS.contains(pattern)) continue;
-                int searchFrom = 0;
-                while (true) {
-                    int match = source.text().indexOf(pattern, searchFrom);
-                    if (match < 0) {
-                        break;
-                    }
-                    GlobalRuntimeAccess access = new GlobalRuntimeAccess(
-                            className,
-                            source.lineAt(match),
-                            pattern,
-                            source.lineTextAt(match).trim());
-                    if (!isApprovedGlobalAccess(access)) {
-                        violations.add(String.format("%s:%d uses %s in `%s`",
-                                access.className(), access.lineNumber(), access.pattern(), access.lineText()));
-                    }
-                    searchFrom = match + pattern.length();
-                }
-            }
-        } catch (IOException ignored) {
-        }
-    }
-
     private static List<String> forbiddenGlobalAccessPatterns() {
         List<String> patterns = new ArrayList<>();
         patterns.addAll(MANAGER_BRIDGE_PATTERNS);
@@ -685,31 +747,18 @@ class TestObjectServicesMigrationGuard {
     private static final List<String> MANAGER_BRIDGE_PATTERNS = List.of(
             "staticObjectManager(", "staticLevelManager(", "staticRingManager(");
 
-    private static boolean isApprovedGlobalAccess(GlobalRuntimeAccess access) {
-        return APPROVED_GLOBAL_RUNTIME_ACCESSES.stream().anyMatch(approved -> approved.matches(access));
-    }
-
     private static ApprovedGlobalRuntimeAccess approved(
-            String className, String pattern, String sourceFragment, String reason) {
-        return new ApprovedGlobalRuntimeAccess(className, pattern, sourceFragment, reason);
+            String className, String caller, String operation, String reason) {
+        String simpleName = className.substring(className.lastIndexOf('.') + 1);
+        return new ApprovedGlobalRuntimeAccess(new Access(className.replace('.', '/') + ".java",
+                simpleName + "#" + caller, operation), 1, reason);
     }
 
-    private record GlobalRuntimeAccess(String className, int lineNumber, String pattern, String lineText) {
-    }
-
-    private record ApprovedGlobalRuntimeAccess(
-            String className, String pattern, String sourceFragment, String reason) {
+    private record ApprovedGlobalRuntimeAccess(Access access, int count, String reason) {
         private ApprovedGlobalRuntimeAccess {
-            if (reason == null || reason.isBlank()) {
-                throw new IllegalArgumentException("Approved global access must document a reason");
+            if (count <= 0 || reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException("Approved global access requires a positive count and reason");
             }
         }
-
-        private boolean matches(GlobalRuntimeAccess access) {
-            return className.equals(access.className())
-                    && pattern.equals(access.pattern())
-                    && access.lineText().contains(sourceFragment);
-        }
     }
-
 }

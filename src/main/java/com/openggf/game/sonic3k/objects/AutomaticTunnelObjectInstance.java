@@ -293,6 +293,11 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public AutomaticTunnelObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new AutomaticTunnelObjectInstance(ctx.spawn());
     }

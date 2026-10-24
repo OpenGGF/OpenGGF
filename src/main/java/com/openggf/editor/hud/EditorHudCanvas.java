@@ -124,6 +124,27 @@ final class EditorHudCanvas implements AutoCloseable {
         quad(white, x, y, w, h, 0, 0, 1, 1, rgb, alpha);
     }
 
+    /** Screen-space stroke through the HUD's batched quad renderer, including diagonal routes. */
+    void line(float x1, float y1, float x2, float y2, int rgb, float width) {
+        double length = Math.hypot(x2 - x1, y2 - y1);
+        if (length < .001) return;
+        float nx = (float) ((y1 - y2) / length * width / 2);
+        float ny = (float) ((x2 - x1) / length * width / 2);
+        if (white != batchTexture) flush();
+        batchTexture = white;
+        int needed = (quads + 1) * FLOATS_PER_QUAD;
+        if (needed > vertices.length) vertices = Arrays.copyOf(vertices, Math.max(needed, vertices.length * 2));
+        float r = ((rgb >> 16) & 255) / 255f, g = ((rgb >> 8) & 255) / 255f, b = (rgb & 255) / 255f;
+        int i = quads * FLOATS_PER_QUAD;
+        i = vertex(i, x1 + nx, FONT_ORIGIN - y1 - ny, 0, 0, r, g, b, 1);
+        i = vertex(i, x1 - nx, FONT_ORIGIN - y1 + ny, 0, 0, r, g, b, 1);
+        i = vertex(i, x2 - nx, FONT_ORIGIN - y2 + ny, 0, 0, r, g, b, 1);
+        i = vertex(i, x1 + nx, FONT_ORIGIN - y1 - ny, 0, 0, r, g, b, 1);
+        i = vertex(i, x2 - nx, FONT_ORIGIN - y2 + ny, 0, 0, r, g, b, 1);
+        vertex(i, x2 + nx, FONT_ORIGIN - y2 - ny, 0, 0, r, g, b, 1);
+        quads++;
+    }
+
     /** One-unit outline drawn inside the rectangle. */
     void frame(float x, float y, float w, float h, float thickness, int rgb, float alpha) {
         rect(x, y, w, thickness, rgb, alpha);

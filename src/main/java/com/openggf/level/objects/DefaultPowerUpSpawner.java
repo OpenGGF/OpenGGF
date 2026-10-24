@@ -288,7 +288,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         return cachedServices;
     }
 
-    private <T extends AbstractObjectInstance> T constructWithServices(Supplier<T> factory) {
+    protected final <T extends AbstractObjectInstance> T constructWithServices(Supplier<T> factory) {
         ObjectServices services = objectServices();
         if (services == null) {
             return factory.get();

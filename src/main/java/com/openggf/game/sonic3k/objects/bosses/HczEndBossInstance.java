@@ -61,6 +61,11 @@ public class HczEndBossInstance extends AbstractBossInstance
     private static final int ROUTINE_ATTACK = 12;
     private static final int ROUTINE_DEFEATED = 14;
     private static final int ROUTINE_FLEE = 16;
+    private final com.openggf.level.objects.PlayerControlOwners terminalInputOwners =
+            new com.openggf.level.objects.PlayerControlOwners();
+    private final com.openggf.level.objects.PlayerControlOwners terminalCpuOwners =
+            new com.openggf.level.objects.PlayerControlOwners();
+
     private static final int ROUTINE_CAPSULE_WAIT = 18;
     private static final int ROUTINE_DONE = 20;
 
@@ -771,17 +776,18 @@ public class HczEndBossInstance extends AbstractBossInstance
         if (main != null) {
             main.clearLogicalInputState();
             main.setForcedInputMask(0);
-            main.setControlLocked(true);
+            terminalInputOwners.acquire(main).setControlLocked(true);
             ObjectControlState.nativeBit7FullControl().applyTo(main);
         }
         if (sidekick != null) {
             sidekick.clearLogicalInputState();
             sidekick.setForcedInputMask(0);
             if (sidekick.getCpuController() != null) {
+                terminalCpuOwners.add(sidekick);
                 sidekick.getCpuController().clearController2LogicalLatch();
                 sidekick.getCpuController().setController2SignedLocked(true);
             } else {
-                sidekick.setControlLocked(true);
+                terminalInputOwners.acquire(sidekick).setControlLocked(true);
             }
         }
         restoreNativeTerminalControl(main);
@@ -802,6 +808,17 @@ public class HczEndBossInstance extends AbstractBossInstance
         spawnFreeChild(() -> HczEndBossGeyserCutscene.createWithQueuedArt(0, 0));
         camera.setMinY((short) 0);
         state.routine = ROUTINE_DONE; // Go_Delete_Sprite_2; also selected when allocation fails.
+    }
+
+    /** Releases only locks acquired by this root, without dispatching its native tail. */
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : terminalInputOwners.players()) player.setControlLocked(false);
+        for (var player : terminalCpuOwners.players()) {
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        terminalInputOwners.clear();
+        terminalCpuOwners.clear();
     }
 
     private static void restoreNativeTerminalControl(AbstractPlayableSprite player) {

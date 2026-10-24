@@ -4900,3 +4900,549 @@ There are no live jobs/children, no executable edit or validation after these
 results, and original07:00Z expiry is unchanged. Root authorized only this factual
 append and one normal-hook local two-test-file leaf for an ancestry receipt.
 No PR/Main push, draft/manual CI, broad run, native or passive observation follows.
+
+
+## Pinned PR223/develop intent join and bounded qualification — 2026-10-24
+
+This records one receiving merge, not a combined smoke or PR-green result. The
+receiving PR head was `aa1bf5ee253f9c48c93f5c0a7b14b37e4ae3fb0d`; the sole
+incoming parent was pinned `591c679b39c61f162a839cde6baaedd387135bc4`.
+Previous develop was `0b2c3c2a`. Exactly one `git merge --no-commit --no-ff`
+received that pinned successor. No leaves were replayed, no whole-file side was
+selected to discard receiving contracts, and no further ref chase occurred.
+Root owned the combined-delivery gate; the PR lead owned the merge/index,
+coherent source freeze and each bounded command's sole observer. Source workers
+had disjoint manifests and stopped before compiler or test submission.
+
+### Conflict ownership and receiving contracts
+
+The original 30 conflict paths were:
+
+```text
+.agents/skills/s2-implement-object/rom-pitfalls.md
+.claude/skills/s2-implement-object/rom-pitfalls.md
+.githooks/validate-policy.ps1
+.githooks/validate-policy.sh
+docs/agent-workflow/briefing-trace-rounds.md
+docs/architecture/implementation-pitfalls.md
+docs/architecture/mod-api-compatibility.md
+docs/status/level-test-coverage.md
+src/main/java/com/openggf/game/rewind/schema/DefaultObjectRewindPolicies.java
+src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FZBossInstance.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlGhz.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlLz.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlMz.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlSbz.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlSlz.java
+src/main/java/com/openggf/game/sonic1/scroll/SwScrlSyz.java
+src/main/java/com/openggf/game/sonic1/scroll/UniformQuarterSpeedScroll.java
+src/main/java/com/openggf/game/sonic3k/objects/CnzTeleporterInstance.java
+src/main/java/com/openggf/game/sonic3k/objects/SszRotatingPlatformObjectInstance.java
+src/main/java/com/openggf/game/sonic3k/objects/bosses/HczEndBossEggCapsuleInstance.java
+src/main/java/com/openggf/game/sonic3k/scroll/SwScrlCnz.java
+src/main/java/com/openggf/graphics/GraphicsManager.java
+src/main/java/com/openggf/graphics/SpriteSatMaskPostProcessor.java
+src/main/java/com/openggf/level/LevelRenderer.java
+src/main/java/com/openggf/level/LevelTilemapManager.java
+src/main/java/com/openggf/level/objects/ObjectManager.java
+src/main/java/com/openggf/level/objects/ObjectRenderParts.java
+src/main/java/com/openggf/level/rings/RingManagerInternalAccess.java
+src/main/java/com/openggf/physics/ObjectTerrainUtils.java
+src/test/java/com/openggf/game/rewind/schema/TestCapturedPolicyCompactReachabilityGuard.java
+```
+
+Graphics/background owned four paths; object/world/rewind/ring ownership five;
+S1 scroll/FZ eight; S3K CNZ/SSZ/HCZ four; terrain one; parent prose, hook mirrors
+and guidance eight. Dependency hunks followed their actual receiving owners:
+
+- Native sprite calls retain the authenticated slot/bucket ledger, capacity 63,
+  duplicates, admission ordinals, raw native-pass presence, current physical owner
+  resolution and ID-zero refusal. Active-object iteration, sorting or deduplication
+  cannot reconstruct accepted native calls. Directed replacement runs once at the
+  qualified native-entry draw point, including directed children. Explicit held
+  Puppet/Pose pictures use a separate non-native suffix, still charged to actual
+  SAT piece/row/pixel budgets. Raw accepted addresses suppress picture and legacy
+  external-anchor fallback even for ID-zero/orphan entries; this extra external
+  filter is an intentional receiving change, not byte-unchanged transport. Typed
+  external qualification, current-owner precedence, accepted repeats and the
+  original unsubmitted legacy lane remain. No persistent admission bank was added.
+- Masks are immutable call-time metadata. Default low/high masks remain 15/0;
+  ordinary explicit 7 stays 7 independently of directing leases. Incoming tests
+  that selected ordinary 7 but expected 15 instead establish the default through
+  the priority setter and retain a separate explicit-mask freeze discriminator.
+  Last-visual attachment/clipping replaces the leaf in the active fragment or
+  ordinary list, preserving operation, ghost, subject and fragment topology.
+  Empty active fragments and unsupported completed groups fail closed; no mutable
+  identity-map mask owner or silent group-only attachment was retained.
+- Cinematic backgrounds capture bounded full 16-bit retained images, independent
+  foreground/background activation, explicit inactive authority, revision plus
+  image-generation identity, private residency, frozen arena bounds and vertical
+  wrap policy. Copies contain no live plane/provider authority and do not inherit
+  native residency keys. View, camera and tile/slice paths restore private lookup
+  textures, pending native residency and owned state on success or failure. The
+  ordinary arena-mask method is byte-identical. Native-publication frozen build
+  data is distinct from the existing one-time entry mode resolution under the
+  unchanged native camera/frame; arbitrary contributors are not claimed pure.
+  Replacing that entry operation with published sprite-scroll state was rejected.
+- Removal captures an ephemeral exact-receiver/registered-owner token before the
+  first unregister, then invokes only that receiver's removal notification at its
+  original later point. Moving unload/notification, restoring registration, an
+  ownerless router call after unregister, class/slot matching or a new retained
+  ownership bank were rejected. Only removal may elide an already established
+  same-router/same-owner boundary. Normal null-owner/absent-boundary direct calls,
+  ambient owner restoration, A-to-B reentry, graph order and the native full-delete
+  single outer callback boundary remain; its removal fault skips later unload and
+  is attributed once. Materialization wraps the existing post-construction writes
+  without changing failed-construction or slot-release timing. Word2C still
+  distinguishes unknown cells from known residue and rejects unprojected owners.
+- S1 projections coexist with checkpoint word transport, complete fractional/cloud
+  rewind state and SBZ3's independent Labyrinth handler. Sampling does not advance
+  native clocks. FZ visual release uses only acquired identities and the existing
+  forced-mask setter to zero; clearing forced input through the broader latch-reset
+  helper or rewriting native UP/zero/logical history was rejected. CNZ retains its
+  native hidden/Y-word phase and separate actual control acquisitions; no removed
+  `playerCaptured` field was restored. HCZ ending release belongs to the retained
+  root's actual control/CPU owners, not a resurrected capsule geyser handoff. The
+  central acquired-player identity codec covers the resulting owner sets. SSZ
+  keeps positive-control solid permission and signed-negative refusal. Terrain
+  probes retain explicit level/path/layer/solidity ownership rather than global
+  player-query fallback.
+- Engine/Loop ports preserve contextual provider/proxy authentication and exact
+  operands, four native modes, live capture and completion/fade/PLC ordering.
+  Results forwarding uses the existing special-stage lifecycle owner; it does not
+  call the native provider's deliberately throwing context-free default or create
+  a shared-game-to-S3K cycle. Bonus fixtures supply their actual owned context.
+  Audio playlist admission leases coexist with native transport and exact backend
+  identity. The separate recording detach and its regression remain unchanged.
+  Strict zero concrete Sonic references, the incoming 3305 Loop budget, 3073 OM
+  budget and the actual candidate API additions/union remain enforced; no cap,
+  pin, version or guard baseline was relaxed.
+
+### Source frames, closure builds and bounded results
+
+A frame below is the conservative tested-input SHA-256 over sorted stage-zero
+`src/`, `racing/`, `examples/`, `.mvn/`, `tools/testing/` and `pom.xml` entries:
+relative path, Git mode, mtime-nanoseconds and actual bytes, each NUL-delimited;
+gitlinks use their object bytes and zero mtime. It is attribution for this owned
+input frame, not a promise that a new checkout reproduces filesystem timestamps.
+All later frames contain 13,178 paths. Prose is outside that executable frame.
+
+| Boundary | Git tree | Complete input frame |
+| --- | --- | --- |
+| First closure compile | `d2feb901a9da6836de69a426c90859803149c395` | `489e0cba1b8d797924bc2e0d3c7cd920cd964e799a71cc0ced5c8558032ba7a3` |
+| Ring bridge repair / G1 | `44ce2b13656868804c31d82db7ddd8753c9a0f92` | `5f7fff9c5645364b344dfec071e78a915e0b687dc81d0c22077e4a8b99b3904d` |
+| Explicit camera-owner / hand diagnostic | `49146348bbfc79a2901f56808bc292ec18db921d` | `93c09a09b0f4ec33074db067118c030e7d80b0852745f1aaefc9f0507b43cb9a` |
+| Logical viewport + hand visual release | `360565e8ff899319b7643c5f416609915925e278` | `9c553e34a18ae45ce6ce2d531999f3e65cc1fca31b01156e09a4040167bef46a` |
+| Optional-clip test correction / G2 / G3 | `c994f349ad85838d4d8cba035b1bb298dbd941fa` | `6dc38ae534c1d1dd59391122d8269ce7dc6afed9191d5bb08fdcf2cf315aaeed` |
+| Sole stale exact-policy removal, final executable boundary | `5cf7cce510f6121cbfbb7e99f99e71823a7c539c` | `c578ae28d1e468ebe0afcdd4238fe2163de147adc7256078c464d0099b0c20ee` |
+
+The resolved closure initially changed 634 paths versus the receiving head:
+395 runtime, 174 test/resource and 65 other. The B/C source freeze changed 639:
+397 runtime, 177 test/resource and 65 other. Its nine-path delta from `49146348`
+was +659/-10; newly changed paths explain the five-path footprint increase.
+The subsequent one-method test correction and one-row policy removal did not
+increase that path count. This factual Plan append adds the Plan path to the
+commit footprint; it does not change the frozen executable boundary, which is
+856,426,018 bytes. A footprint or source-class count is not JUnit discovery.
+
+Before the first compile, only the owned `target/classes` and `target/test-classes`
+were moved under the supported worktree build lock, then the lock was released
+before invoking the normal wrapper. Every old contained artifact was accounted
+for as superseded generated output before its exact prior directories were
+removed after readback. No prior classfiles were copied back or put on a classpath;
+unknown target outputs and native extraction were preserved.
+
+| Actual invocation | Tested boundary | Observed result | Queue wait | Execution reported by command |
+| --- | --- | --- | --- | --- |
+| Build-only 25270 | `d2feb901` | EXIT1, 4545 main sources attempted; no testCompile, zero tests | no test admission | Maven 1:02 |
+| Build-only 14559 | `44ce2b13` | EXIT0, 4545 main + 4762 test sources, release 25; zero tests/Surefire | no test admission | Maven 1:29 |
+| Python 84597 | `44ce2b13` | 59 actual cases, 0F/0E/0S | no Maven queue | unittest 1.103s |
+| G1 88209 | `44ce2b13` | 337 unique: 326P/2F/9E/0S, 28 families | 53s | Maven 1:05 |
+| ba85 2922 | `49146348` | 39 unique: cinematic 14P + retained 24P + hand diagnostic 1F, 0E/0S | 35s | Maven 31.135s |
+| B/C 90084 | `360565e8` | 146 unique: 145P/1F/0E/0S, 14 families | 150s | Maven 1:47 |
+| Limits 4878 | `c994f349` | whole owning class: 23 unique, 0F/0E/0S | 0s | Maven 33.366s |
+| G2 55986 | `c994f349` | 479 unique, 0F/0E/0S, 44 families; OPEN art faults below | 27s | Maven 41.300s |
+| G3 88563 | `c994f349` | 167 unique: 166P/1F/0E/0S, seven families | 15s | Maven 45.512s |
+| Policy 24469 | `5cf7cce5` | four owning classes: 25 unique, 0F/0E/0S | 0s | Maven 1:29 |
+
+These are separate invocations/source epochs. Rounded queue messages, Maven time,
+JUnit suite time, source work and user-response waits measure different intervals;
+none are summed into whole-delivery elapsed time. Actual duration of unexecuted
+work is unknown. No profile/dashboard measurement or watcher ran: Python exercised
+only the three mocked/temp-root safety modules named below.
+
+The first compile's sole blocker was the native DRAW bridge in
+`Sonic1RingInstance.appendRenderCommands`, not a restore-placement helper. Only
+`drawPlacedObject(manager, ringSpawn.getFirst(), frame)` replaced its wrapper
+argument, consuming the current restore-rebound reference without a cast/cache or
+changed guard, priority, frame clock or control flow. The fresh second compile
+proved Java source closure, not runtime or API green.
+
+G1's exact red identities were:
+
+```text
+com.openggf.level.TestCinematicScrollPublication#entryModeResolvesOnceUnderNativeCameraWhileArenaAndBuildRemainPublicationFrozen [error]
+com.openggf.level.TestCinematicScrollPublication#cameraOnlyScopeInstallsColdFrozenPlanesAndRestoresNativeResidencyAfterAnAbort [failure]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[1] [error]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[2] [error]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[3] [error]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[4] [error]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[5] [error]
+com.openggf.level.TestRetainedPlaneDescriptors#cinematicDeferredWrapUsesFrozenLayoutFlagAndTheSelectedPhysicalRetainedPlane(boolean, boolean, boolean, boolean, boolean)[6] [error]
+com.openggf.level.TestStageplayDirectedBackgroundRendering#directedRasterAndAbortedTilesLeaveNativeRamPublicationResidencyAndPictureUntouched(int)[1] [error]
+com.openggf.level.TestStageplayDirectedBackgroundRendering#directedRasterAndAbortedTilesLeaveNativeRamPublicationResidencyAndPictureUntouched(int)[2] [error]
+com.openggf.level.objects.TestStageplayObjectDirection#directionAndRemovalReleaseNativeVineTubeAndGrabberOwnersWithoutUnloadingWorldState [failure]
+```
+
+Eight focused-owner boundaries account for one failure plus seven errors: two
+cinematic methods and six retained-wrap rows reached `Camera.restore` with no
+focused sprite; the abort test therefore received NPE instead of its expected
+abort. The two original width-350 Stageplay acts failed the old aligned Raster
+constructor before reaching their directed-body oracles. The final failure was
+an unchanged monolithic release expectation; its original G1 kind/remove operands
+were UNKNOWN. G1 nevertheless executed real EGL ownership/shadow/replay pixels
+(23), API/signature/pin/release/hook cases (77), actual native FIFO/repeat/ID-zero
+controls and other selected cases. Those positives remain on `44ce2b13`.
+
+The ba85 correction added three explicit default mock focused owners before the
+original camera position/publication setup and seven exact-owner preservation
+assertions, preserving every original operand, mutation and abort. Its sole
+release diagnostic changed only the existing mock's name to include both kind
+and remove, preserving its default answer, 20-row loop and failure timing. All
+38 cinematic/retained identities passed; the remaining failure identified
+`kind=hand,remove=false` at the expected NONE call. No later loop rows were claimed
+from that failed invocation. No Camera fallback or release-oracle weakening was
+introduced.
+
+B then separated exact logical width from an aligned hardware descriptor. Public
+Raster constructors/factories/guards, the admission body and `appendReplay` stayed
+byte-identical. H40 remains 80 table entries / 20 pieces / 320 pixels; H32 remains
+64 / 16 / 256. Whole declared columns are admitted and charged before destination
+projection/viewport clipping: [344,352) contributes pixels 344..349 to an exact
+350 view; a piece starting at 350 emits nothing but still consumes declared width.
+Rounding to 352, changing guards/budgets, clamping replay to whole visible tiles,
+or adding a Stageplay/game/fixture branch were rejected. Distinct package-private
+logical collection ingress preserves the public GraphicsManager signature and
+existing engine authentication, H32 adapters, shadow-restart rollback and fragment
+metadata. The pixel discriminator uses 384x224 backing with exact 350x224 projection
+and viewport, both replay paths/H/V asymmetry and untouched pixels at 350+; all
+original Stageplay width/input/oracles remain unchanged.
+
+C changed only `HCZHandLauncherObjectInstance.releasePlayersForVisualDirection`:
+release the existing acquired P1/P2 states through two `releaseWithoutLaunch`
+calls, then the original `onUnload`. Native unload deliberately retires metadata
+without releasing native players; its complete body, helper, updates, launch and
+rewind fields remain exact. Four new existing-probe controls acquire real owners
+through dispatch after declared real engine-ride bootstrap, covering both players,
+extension cleanup once, never-acquired unrelated control/ride, native unload,
+idempotence and no launch/routine/timer advance. Progress reflection is read-only;
+no private ownership state was seeded.
+
+B/C 90084 passed both original 350 acts, all hand unit/native-unload/graph owners,
+the full 33-case Stageplay direction class, real EGL pixel paths and 15 signature/
+pin cases. Its sole new failure was
+`TestSpriteSatLimits#logical350RetainsPixelCarryCountOnlyAndEmptyLineReset:327`,
+expected 18 but actual `Integer.MIN_VALUE`. Only the first count-only iteration's
+first assertion ran; full-pixel and later assertions were UNREACHED in that epoch.
+`visibleTopY` is an optional clip bound, not geometry: an unchanged full entry
+retains `UNCLIPPED_TOP`, while its piece Y remains 18. The approved one-method
+correction retains effective top `fullPixels ? 19 : 18` via max(piece Y, clip top),
+asserts piece Y 18, raw clipped 19 for full pixels, and original pattern-200 entry
+identity plus both unclipped sentinels for count-only. Original pattern, empty-line
+identity and repeat-call assertions remain exact. Whole-file inverse is exact;
+4878's whole 23-case class completed both iterations and all later oracles. No
+production admission correction or change of expected geometry was justified.
+
+G2 executed the removal-token unregister/reentry/failure controls, actual C/D
+acquired owners, known-cell Word2C birth/restore, rings/current-spawn drawing,
+Loop/world callback ports, playlist lease and mandatory S3K keeper selections.
+Its 479 JUnit passes do not mean fault-free art coverage. Thirteen SEVERE logs are
+explicit negative controls: two notification-fixture and two child-fixture faults
+in `TestNativeCompetitionOccupiedFullDelete#removalAndUnloadFaultsRetainOrderedEffectsAndTheSelectedOwnerBoundary`;
+six missing/wrong world-PLC owner faults and three absent results-world ROM faults
+in `TestS3kNativeWorldCallbackDispatch`, with owner/cause/finding-count and no-other-
+world-publication assertions. The collision-bounds negative, synthetic null-WAV
+ring-shadow warning, JOML deprecation and FAST/NONE notices are separate from the
+art-loading limitation below.
+
+G3's sole failure was
+`TestExactRewindPolicyGuard#everyExactDispositionNamesADeclaredRuntimeField:20`:
+`AizMinibossInstance#defeatExplosionController` named no declared runtime field.
+Actual AIZ defeat creates independent `MhzMinibossExplosionController` through
+AfterCurrent. Root's immutable comparison found no field occurrence in 659/aa1/current
+but nine in incoming 591; the obsolete row was an incoming ownership-policy remnant.
+Only that one obsolete DEFERRED map row was removed; reinserting it
+restores the whole policy file exactly to `c994f349`. Other bosses, following
+barrel comments/CAPTURED entries, codecs, baselines and guard oracles are unchanged.
+24469 passed the exact-key guard and all 25 cases in its four owning classes;
+it is not a fictional fresh 167-case guard run. On `c994f349`, the other 166 guard
+identities included 77 source, 33 ArchUnit, 32 physics, nine compact reachability,
+one coverage, one field and 13 other exact-policy cases. The acquired-player
+codec report's 254 audited fields are not JUnit cases. Both FieldDisposition
+reports contained only two existing baseline keys, not new waivers:
+`LbzEndBossInstance#launchedSpikeBallRomSubtypes` and `LbzFinalBoss1Instance#spawned`
+(List, compact path). The generated lifecycle inventory's 510 exact caller/count
+rows match the unchanged baseline; they establish neither native equivalence nor
+permission for false-then-true wrapper substitution.
+
+### Reproducible command and selector shapes
+
+The following records completed commands, not new execution authority. Work from
+`<PR_WORKTREE>`; set `OPENGGF_QUEUE_WRAPPER` to
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py` and `OPENGGF_ROM_DIR` to the existing
+stock-ROM directory. Use JDK 25 and Lua 5.4 via `JAVA_HOME=<JDK25_HOME>` and
+`LUA_BIN=<LUA54_BIN>`, `ALSOFT_DRIVERS=null`, `EGL_PLATFORM=surfaceless`, and
+`PYTHONDONTWRITEBYTECODE=1`. Unset `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
+`_JAVA_OPTIONS`, `MAVEN_OPTS`, `JAVA_OPTS`, `MAVEN_ARGS`, `DISPLAY`,
+`WAYLAND_DISPLAY`, `LD_LIBRARY_PATH`, `LIBGL_DRIVERS_PATH`,
+`LIBGL_ALWAYS_SOFTWARE` and `MESA_LOADER_DRIVER_OVERRIDE`. No heap/fork/resource
+or timeout override was added. The recorded Main wrapper SHA was
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`, with its ten
+local import-module pins captured for attribution; no duplicate version/preflight
+probe was run. Later suites report Java 25.0.5.0.2 and class version 69.
+
+```bash
+# Closure builds, no ROM properties, -Dtest or test goal:
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl test-compile -B
+
+# Actual Python safety request, from <PR_WORKTREE>/tools/testing:
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest \
+  test_run_category_small test_run_category_small_profile test_run_category_dashboard
+
+# JUnit shape; SELECTOR is the comma-joined block below, with no extra members.
+# G3 and POLICY additionally include -Pguards in a separate fresh JVM.
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  "-Dtest=$SELECTOR" \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Stock CRC32/SHA1 identities are S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`, S2 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`, and S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Images were reread for the specified
+checks; G3 and the final policy request reused the fresh identity only after exact
+file device/inode/size/mtime/ctime agreement. No ROM was copied, linked or renamed.
+
+G1 (28 source classes; API destination property included):
+
+```text
+com.openggf.graphics.TestGraphicsManagerSpriteSatReplay
+com.openggf.graphics.TestSpritePiece
+com.openggf.level.render.TestSpritePieceRendererSatPreparation
+com.openggf.graphics.TestSpriteSatLimits
+com.openggf.graphics.TestSpriteSatMaskPostProcessor
+com.openggf.graphics.TestPresentationPatternBatching
+com.openggf.level.render.TestSpritePreparationHeadComposition
+com.openggf.graphics.TestNativeSpriteOwnershipPixels
+com.openggf.graphics.TestNativeShadow15Pixels
+com.openggf.level.TestSatGhostLayering
+com.openggf.graphics.TestSpriteSatReplayPixels
+com.openggf.graphics.TestObjectVisualSatMasks
+com.openggf.graphics.TestCinematicBackgroundResidency
+com.openggf.level.TestCinematicScrollPublication
+com.openggf.level.TestStageplayDirectedBackgroundRendering
+com.openggf.level.TestBackgroundBuildParameters
+com.openggf.level.TestRetainedPlaneDescriptors
+com.openggf.level.TestRetainedPlaneRendering
+com.openggf.graphics.TestTilemapGpuRendererPerLineSampling
+com.openggf.level.objects.TestStageplayObjectDirection
+com.openggf.level.objects.TestObjectManagerNativeSpriteSubmissions
+com.openggf.level.objects.TestNativeSpriteSubmissionQueue
+com.openggf.level.objects.TestNativeSpriteResolvedAdmissions
+com.openggf.level.objects.TestStageplayObjectRingProvenance
+com.openggf.mods.TestModApiSignatureSurface
+com.openggf.mods.TestModApiPinPolicy
+com.openggf.mods.TestModApiReleasePolicy
+com.openggf.tests.TestModApiHookPolicy
+```
+
+ba85 (two whole classes plus the exact release method; the actual command omitted
+`-DmodApi.destinationBranch=develop`):
+
+```text
+com.openggf.level.TestCinematicScrollPublication
+com.openggf.level.TestRetainedPlaneDescriptors
+com.openggf.level.objects.TestStageplayObjectDirection#directionAndRemovalReleaseNativeVineTubeAndGrabberOwnersWithoutUnloadingWorldState
+```
+
+B/C (14 whole classes, selector SHA-256
+`28ce82ee0d24054d0d747395a8c1ecfbe9095c91f6131141a6558ff238dcad24`):
+
+```text
+com.openggf.graphics.TestSpriteSatLimits
+com.openggf.graphics.TestGraphicsManagerSpriteSatReplay
+com.openggf.graphics.TestSpriteSatPixels
+com.openggf.graphics.TestSpriteSatMaskPostProcessor
+com.openggf.graphics.TestNativeSpriteOwnershipPixels
+com.openggf.graphics.TestNativeShadow15Pixels
+com.openggf.graphics.TestSpriteSatReplayPixels
+com.openggf.level.TestStageplayDirectedBackgroundRendering
+com.openggf.game.sonic3k.objects.TestHCZHandLauncherObjectInstance
+com.openggf.game.sonic3k.objects.TestHczHandLauncherNativeUnload
+com.openggf.game.rewind.TestS3kHczHandLauncherGraphRewind
+com.openggf.level.objects.TestStageplayObjectDirection
+com.openggf.mods.TestModApiSignatureSurface
+com.openggf.mods.TestModApiPinPolicy
+```
+
+4878 selects only `com.openggf.graphics.TestSpriteSatLimits`. G2 (44 source classes):
+
+```text
+com.openggf.level.objects.TestObjectRemovalCallbackOwnership
+com.openggf.level.objects.TestObjectCallbackDispatch
+com.openggf.level.objects.TestObjectManagerLifecycle
+com.openggf.level.objects.TestNativeCompetitionOccupiedFullDelete
+com.openggf.level.objects.TestObjectManagerRewindSnapshot
+com.openggf.level.objects.TestNativeSstWord2C
+com.openggf.level.objects.TestTwoPhaseRestoreOrdering
+com.openggf.level.objects.TestStageplayAcquiredControlRelease
+com.openggf.game.sonic3k.objects.TestStageplayLateHolderRelease
+com.openggf.game.sonic3k.objects.TestStageplayCapsuleControlRelease
+com.openggf.game.sonic3k.objects.bosses.TestHczEndBossTerminalOwnership
+com.openggf.game.rewind.TestS3kHczEndBossGraphRewind
+com.openggf.game.sonic3k.objects.TestTeleporterDefaultRewindGraph
+com.openggf.game.sonic3k.objects.TestSszRotatingPlatformSolidContacts
+com.openggf.game.sonic3k.TestSonic3kCnzScroll
+com.openggf.tests.TestS3kCnzBossScrollHandler
+com.openggf.game.sonic1.scroll.TestSonic1ScrollProjection
+com.openggf.game.TestCheckpointBackgroundScrollTransport
+com.openggf.game.sonic1.scroll.TestSonic1ScrollLifecycle
+com.openggf.game.sonic1.scroll.TestSonic1ScrollLoadBoundary
+com.openggf.game.sonic1.scroll.TestSonic1Sbz3ScrollAlias
+com.openggf.game.rewind.TestS1FzBossGraphRewind
+com.openggf.game.sonic1.objects.bosses.TestS1FzEscapeNativeInput
+com.openggf.physics.TestObjectTerrainUtils
+com.openggf.physics.TestNativeRouteTerrainProbe
+com.openggf.sprites.managers.TestS3kGlidePlayerSolidityQuery
+com.openggf.level.rings.TestRingNativeSlotDispatch
+com.openggf.level.rings.TestRingManagerRewindSnapshot
+com.openggf.level.rings.TestNativeCompetitionRingStreaming
+com.openggf.game.sonic3k.objects.TestGameLoopBonusStageOwnership
+com.openggf.TestEngineEditorProjectObjectNames
+com.openggf.stageplay.runtime.TestStageplayAudioLifecycle
+com.openggf.TestGameLoopSpecialStageResultsHandoff
+com.openggf.mods.code.TestS3kNativeWorldCallbackDispatch
+com.openggf.tests.TestS3kAiz1SkipHeadless
+com.openggf.game.sonic3k.TestSonic3kLevelLoading
+com.openggf.tests.TestSonic3kLevelLoading
+com.openggf.game.sonic3k.TestSonic3kBootstrapResolver
+com.openggf.game.sonic3k.TestSonic3kDecodingUtils
+com.openggf.game.sonic1.objects.TestSonic1RingInstance
+com.openggf.tests.TestSonic1RingInstance
+com.openggf.game.rewind.TestS1RingGroupGraphRewind
+com.openggf.game.rewind.TestS1RingNullRecipeRewind
+com.openggf.game.sonic1.TestSonic1RingPlacement
+```
+
+G3 (seven source classes, with `-Pguards`):
+
+```text
+com.openggf.tests.TestArchitecturalSourceGuard
+com.openggf.tests.TestArchUnitRules
+com.openggf.level.objects.TestObjectPhysicsStandardizationGuard
+com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard
+com.openggf.game.rewind.schema.TestExactRewindPolicyGuard
+com.openggf.game.rewind.coverage.TestRewindCoverageGuard
+com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard
+```
+
+The original amended G1/G2/G3 manifest had 79 source classes, including the
+explicit seventh FieldDisposition owner; it did not run the held G2/G3 requests
+after G1 red. The later fresh G2/G3 group manifest uses UTF-8 group name + NUL +
+comma-selector + NUL, in G2/G3 order, SHA-256
+`957229e2e07d3f8c4d2ee1581fb7dc499ec235bc6cdeb882b3bf28026026cea4`.
+No old unspent request was borrowed as a repair budget.
+
+POLICY / 24469 (four whole classes, with `-Pguards`; selector SHA-256
+`02996f506aaba300f1ee7da6103b82b92697e9aa6b8ac54168bbb7e7949f3530`):
+
+```text
+com.openggf.game.rewind.schema.TestExactRewindPolicyGuard
+com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard
+com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard
+com.openggf.game.rewind.coverage.TestRewindCoverageGuard
+```
+
+### Open art warning, evidence limits and delivery boundary
+
+G2 logged 25 real caught mapping-load failures in 19 positive-ROM identities.
+`Sonic1ObjectArtProvider.loadGhzEdgeWallArt` calls the normal sheet builder;
+`S1SpriteDataLoader` reads `0x0600` at `0xE8DF`, derives 768 frames, rejects it,
+and `Sonic1ObjectArt.buildArtSheetFromRom` logs and returns null. No declared
+missing-map negative precondition covers those emissions. The exact distribution
+is retained here rather than reclassifying a JUnit pass as successful art loading:
+
+```text
+2 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#progressedDynamicChildrenRestoreFreshWithoutDuplicatingAndReplaySparkleRetirement(int)[1]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#progressedDynamicChildrenRestoreFreshWithoutDuplicatingAndReplaySparkleRetirement(int)[2]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[1]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[2]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[3]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[4]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int)[1]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int)[2]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int)[3]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#dynamicPreInitPreservesSuppliedOrderAndReplaysAllocationAndRetirement(int)[4]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#unmanagedDefaultCaptureRestoresCaptureTimeRecipeWithoutAnIdentityTable
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#dynamicUnregisteredRecipeKeepsValuesEvenAtRegisteredCoordinates
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#registryRecipeCaptureFreezesSequenceOnlyAtCaptureAndRebindsDuplicateCoordinates(boolean)[1]
+1 x com.openggf.game.rewind.TestS1RingGroupGraphRewind#registryRecipeCaptureFreezesSequenceOnlyAtCaptureAndRebindsDuplicateCoordinates(boolean)[2]
+1 x com.openggf.game.sonic1.objects.bosses.TestS1FzEscapeNativeInput#lateUpSurvivesTheNextProductionPlayerDispatchAndRestoreThenForward
+4 x com.openggf.game.sonic1.scroll.TestSonic1Sbz3ScrollAlias#productionProgressionCheckpointAndFractionalReplayKeepTheAlias
+1 x com.openggf.game.sonic1.scroll.TestSonic1Sbz3ScrollAlias#productionFullLoadRendersTheRomLabyrinthScrollAtTheScrapBrainIdentity
+2 x com.openggf.game.sonic1.scroll.TestSonic1ScrollLoadBoundary#sameActProductionReloadDiscardsThePreviousBackgroundSeed
+2 x com.openggf.game.sonic1.scroll.TestSonic1ScrollLoadBoundary#realLamppostBanksBackgroundWordsRatherThanReseedingFromRespawnCamera
+```
+
+Root's immutable-source lineage audit found complete `Sonic1Constants.java`
+(`7ff5b9d70c8da9839e9f096b02db67954e3b7e7170ad9c696b172c36523d66eb`) and
+`S1SpriteDataLoader.java`
+(`d048a2651db70cb8c0c18842fcd08fee100294284f8879e96951a22a16441f78`)
+byte-identical at 659/0b2/591/aa1/current. Complete `Sonic1ObjectArt.java`
+(`22d2e3fba45feb0958d828c23ceee80bc89eb3ae8c1ea436e9f7ec15b07c47b8`)
+and the exact `loadGhzEdgeWallArt` body
+(`b93e9a0b20bd08ae5daa3562b37a621e2cb6c0f6344cf15ee323ec8d2add5dc9`)
+are identical at 659/591/aa1/current. `MAP_GHZ_EDGE_WALL_ADDR=0x00E8DF` and its
+catch are inherited. Historical positive-run records already name this warning:
+[Mutator Lab expansion](2026-10-08-mutator-lab-expansion.md), lines 421–423;
+[Infinite Sonic GHZ1 validation](../validation/levels/infinite-sonic-ghz1.md),
+lines 45–46; this Plan's earlier session 26802/90-case record; and the
+[playable completion Plan](2026-10-13-s3k-playable-completion.md), line 31376.
+An initial over-broad `--all` history query was discarded in favor of named-aa1
+ancestry/blame. No correct ROM offset, disassembly asset bytes or runtime newness
+was established. This supports an OPEN inherited art-loading limitation, not a
+matched 19-test baseline, known frequency delta, art-coverage effect, asset-gap
+closure or permission to guess an off-by-one fix. G3 progression was explicitly
+dispositioned only after that bounded finding; no loader/fixture/catch suppression
+or guard waiver was used.
+
+The original complete f340 smoke remains 41,023 ordinary tests / 121 failures /
+68 errors / 108 skips, with 733 separate fresh guards passing: all 189 failed
+identities and 108 skips remain unchanged evidence. Its 41 disputed route causes
+are UNKNOWN. Old passive/native work and the historical DEZ matched plan are
+SOURCE-ONLY / NO EXECUTION; this join authorizes no native, route or comparison
+observation. Warm secondary caches still precede catalogue lookup and do not prove
+donor-image identity. Multi-plane publication scheduling/atomicity is unqualified.
+Reentrant structural changes during dynamic cleanup may still cause its existing
+iterator failure; collection semantics were not tuned to conceal that limit.
+
+Every listed original invocation reached terminal and its actual identities,
+failures, skips, properties, recursive streams, text, full bounded console and
+owned diagnostics were read before consumption. Both final FieldDisposition
+rows and the lifecycle inventory were read and removed. All consumed raw owned
+reports/logs/messages and superseded generated prior outputs were removed without
+an archive, new validation receipt or pass cache; useful source, current compiled
+outputs, native extraction, unknown outputs and the PR worktree remain. No live
+validation jobs or children remain. No engine/Python tests, preflight, profiling,
+native capture or broad run follows from this documentation slice.
+
+Only this bounded factual append and folded existing prerelease wording precede
+one normal-hook local merge commit with the two pinned parents. There is no
+push, body/draft change, Main/develop mutation or manual CI dispatch. Root will
+receive the committed successor once by ancestry and prepare an updated smoke
+selection/count/cost/stopping-rule plan. Any new broad/manual-CI execution still
+requires explicit Farrell approval; the old f340 approval is not reusable.

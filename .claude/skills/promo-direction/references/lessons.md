@@ -73,8 +73,9 @@ for default floor contact and native physical direction. Revision three is there
 a superseded take, despite its successful decoding and bounded agent review.
 The terrain follow-up uses `TERRAIN_ONLY` Puppet mode: destination/urgency and
 jump commands feed native inputs, with actual terrain collision, gravity and
-landing. The later `LIVE` policy runs actors, placed objects, rings and events in
-one native world, with authored shot spawns, routes and bounded waits. Poser mode retains manual
+landing. The later `LIVE` policy (since unified: every set is one native world and
+terrain-only pictures clear objects with a world command) runs actors, placed
+objects, rings and events in one native world, with authored shot spawns, routes and bounded waits. Poser mode retains manual
 position, animation and frame control for intentional nonphysical staging. Inspect
 simulation state before rendering and review the resulting movement; never substitute
 a fitted position curve for a requested native jump. Code and codec checks alone
@@ -93,8 +94,8 @@ unchanged. The exact source and replacement captures are preserved in the
 
 Review feet and supporting surfaces through vertical pans and follow handoffs,
 including the landing consequence. Keep native background behavior distinct from
-foreground alignment: Death Egg is intentionally stationary, and current LIVE
-backgrounds retain the native camera phase. A transparent native floor-art tile
+foreground alignment: Death Egg is intentionally stationary, and directed
+backgrounds follow the directed camera through the native projection. A transparent native floor-art tile
 can still have collision. Diagnose the rendered transform and native art before
 changing movement, adding fake terrain or making every background scroll alike.
 
@@ -112,10 +113,10 @@ changing movement, adding fake terrain or making every background scroll alike.
   hard to read (ring repulsion, an invisible boss). Reframe or recapture.
 - Cutting every shot from the same idle point makes the reel look like "the
   same jump with a new label". Vary the entry points.
-- Staged performance needs direction. `TERRAIN_ONLY` Puppets run native player
-  physics against detached static terrain without placed-object AI, rings or zone
-  events. `LIVE` runs those production world owners together; destinations can
-  still be blocked and do not add universal pathfinding. Author explicit jumps,
+- Staged performance needs direction. Puppets run native player physics in one
+  production native world; clearing objects removes placed-object AI, not rings or
+  events. Destinations can still be blocked, and the basic route helper reports
+  failures rather than finding every detour. Author explicit jumps,
   ability intents and bounded waits. Poser mode keeps manual choreography.
   Check actual entrances, exits, floor contact, facing and reactions in motion.
 - Names and consistent placement identify a speaker; color alone does not,
@@ -123,12 +124,12 @@ changing movement, adding fake terrain or making every background scroll alike.
   reading and response their own time instead of forcing each line onto a beat.
 - Do not confuse the compositor's filtered camera with engine world rendering.
   `promo_kit.game_view` enlarges with integer nearest-neighbour and applies a BOX
-  area filter. `TERRAIN_ONLY` zoom holds between keys; `LIVE` keeps zoom 1. Avoid animated fractional
-  nearest-neighbour source zoom. Scaling the finished frame cannot reconstruct
+  area filter. Stageplay zoom animates with eased keys over a filtered world
+  picture; review it in motion. Scaling the finished frame cannot reconstruct
   stable edges that were lost to changing pixel steps in the source.
 - Authored `timeline` JSONL describes directing intent with physical actors
-  `UNRESOLVED`. `simulate` JSONL resolves either `TERRAIN_ONLY` native actor motion
-  on static terrain or `LIVE` native world state/events in `sample.world`. Normal
+  `UNRESOLVED`. `simulate` JSONL resolves native actor motion and native world
+  state/events in `sample.world`. Normal
   gameplay CSV describes an observed gameplay run; retain its input and actual
   entry method. Authored spawns, positioned starts and cuts cannot establish a
   continuous cold completion, and none of these alone proves ROM parity. Keep

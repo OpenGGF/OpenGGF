@@ -4,7 +4,7 @@ import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 
 /** SSZ2 sub_58D3E / sub_58FBC: the encounter, the island redraw and background routine 4. */
 final class SszAct2Deformation {
-    private SszAct2Deformation() { }
+    private SszAct2Deformation() {}
 
     /** loc_58F52: descending four-line ramp, using the old signed16.16 accumulator. */
     static void islandParameters(SszZoneRuntimeState state) {
@@ -16,9 +16,12 @@ final class SszAct2Deformation {
             for (int line = 0; line < 4; line++) put(state, destination -= 2, value >> 16);
             value -= step;
         }
-        put(state, 0x10, -word(state, 0x14)); put(state, 8, -word(state, 0x14));
-        put(state, 0xC, -word(state, 0x1C)); put(state, 0x12, -word(state, 0x24));
-        put(state, 6, -word(state, 0x2C)); put(state, 0xA, -word(state, 0x34));
+        put(state, 0x10, -word(state, 0x14));
+        put(state, 8, -word(state, 0x14));
+        put(state, 0xC, -word(state, 0x1C));
+        put(state, 0x12, -word(state, 0x24));
+        put(state, 6, -word(state, 0x2C));
+        put(state, 0xA, -word(state, 0x34));
         put(state, 0xE, -word(state, 0x3C));
     }
 
@@ -34,7 +37,7 @@ final class SszAct2Deformation {
         if ((bands[band] & 0x8000) != 0) source += skip * 2;
         int remaining = (bands[band] & 0x7FFF) - skip;
         int bg = -state.backgroundCameraX() & 0xFFFF;
-        for (int line = 0; line < 224; line++) {
+        for (int line = 0; line < output.length; line++) {
             output[line] = ((-word(state, source) & 0xFFFF) << 16) | bg;
             if ((bands[band] & 0x8000) != 0) source += 2;
             if (--remaining == 0) {
@@ -68,14 +71,18 @@ final class SszAct2Deformation {
             // loc_58E3A's ordered in-place remapping, based at HScroll_table+$004.
             put(state, 0x30, word(state, 0x2E));
             int middle = word(state, 0x2C);
-            put(state, 0x2E, middle); put(state, 0x32, middle);
-            put(state, 0x2C, word(state, 0x2A)); put(state, 0x2A, word(state, 0x28));
-            put(state, 0x34, word(state, 0x26)); put(state, 0x36, word(state, 0x22));
+            put(state, 0x2E, middle);
+            put(state, 0x32, middle);
+            put(state, 0x2C, word(state, 0x2A));
+            put(state, 0x2A, word(state, 0x28));
+            put(state, 0x34, word(state, 0x26));
+            put(state, 0x36, word(state, 0x22));
             put(state, 0x38, word(state, 0x1E));
         }
         int bgY = cameraY - 0x320 - state.cloudOscillator();
         if (state.specialVIntRoutine() != 4 && state.specialVIntRoutine() != 8) bgY += 8;
-        state.setBackgroundCameraY(bgY); state.setBackgroundCameraX(0x5E);
+        state.setBackgroundCameraY(bgY);
+        state.setBackgroundCameraX(0x5E);
         int swing = (short) state.eventsBgWord(0);
         ramp(state, 0xD0, 64, 128, swing);
         ramp(state, 0x160, 8, 8, swing);
@@ -83,13 +90,16 @@ final class SszAct2Deformation {
         // overlap the first two destination words; snapshotting the source
         // into a separate array before copying would change those edge columns.
         int source = 0x140 + (((0x5E + 0x10) >> 3) & 0xFFFE);
-        for (int i = 0; i < 20; i++) put(state, 0x170 + i * 2, word(state, source + i * 2) + bgY + 8);
+        for (int i = 0; i < 20; i++)
+            put(state, 0x170 + i * 2, word(state, source + i * 2) + bgY + 8);
     }
 
     private static void scatter(SszZoneRuntimeState state, int value, int... offsets) {
         for (int offset : offsets) put(state, 6 + offset, value);
     }
-    private static void ramp(SszZoneRuntimeState state, int centre, int count, int divisor, int swing) {
+
+    private static void ramp(
+            SszZoneRuntimeState state, int centre, int count, int divisor, int swing) {
         int increment = (Math.abs(swing) << 16) / divisor;
         int accumulator = 0;
         for (int i = 0; i < count; i++) {
@@ -106,13 +116,15 @@ final class SszAct2Deformation {
         int band = 0, skip = Math.max(0, (short) cameraY);
         while (band < heights.length - 1 && skip >= heights[band]) skip -= heights[band++];
         int remaining = heights[band] - skip;
-        for (int line = 0; line < 224; line++) {
-            if (remaining-- == 0) { remaining = heights[++band] - 1; }
+        for (int line = 0; line < output.length; line++) {
+            if (remaining-- == 0) {
+                remaining = heights[++band] - 1;
+            }
             output[line] = ((-word(state, 4 + band * 2) & 0xFFFF) << 16) | 0xFFA2;
         }
         int bgY = (short) state.backgroundCameraY();
         int first = Math.max(0, 0x100 - bgY);
-        int end = Math.min(224, 0x180 - bgY);
+        int end = Math.min(output.length, 0x180 - bgY);
         int source = 0x50 + Math.max(0, bgY - 0x100) * 2;
         for (int line = first; line < end; line++) {
             int bg = word(state, source) - 0x5E;
@@ -122,10 +134,10 @@ final class SszAct2Deformation {
     }
 
     /**
-     * {@code loc_58D44} (sonic3k.asm:118061-118078), taken by {@code sub_58D3E} once
-     * {@code Events_routine_bg} is non-zero: {@code HScroll_table}'s longword gains {@code $8000}
-     * and its old integer word seeds eight words that each drop by an eighth, from {@code +$16}
-     * down to {@code +$08}, under a fixed {@code $5E} at {@code +$18}.
+     * {@code loc_58D44} (sonic3k.asm:118061-118078), taken by {@code sub_58D3E} once {@code
+     * Events_routine_bg} is non-zero: {@code HScroll_table}'s longword gains {@code $8000} and its
+     * old integer word seeds eight words that each drop by an eighth, from {@code +$16} down to
+     * {@code +$08}, under a fixed {@code $5E} at {@code +$18}.
      */
     static void endingBackgroundParameters(SszZoneRuntimeState state) {
         int value = state.cloudDrift() & 0xFFFF0000;
@@ -140,11 +152,12 @@ final class SszAct2Deformation {
 
     /**
      * {@code ApplyDeformation} (sonic3k.asm:103710-103806) as {@code sub_58FBC} enters it with
-     * {@code SSZ2_BGDeformArray} and {@code HScroll_table+$004}: bands measured down from
-     * {@code Camera_Y_pos_BG_copy}, each line pairing {@code -Camera_X_pos_copy} with the
-     * negated band word, or one word per line for a band with bit 15 set.
+     * {@code SSZ2_BGDeformArray} and {@code HScroll_table+$004}: bands measured down from {@code
+     * Camera_Y_pos_BG_copy}, each line pairing {@code -Camera_X_pos_copy} with the negated band
+     * word, or one word per line for a band with bit 15 set.
      */
-    static void composeEndingBackground(SszZoneRuntimeState state, int[] output, int cameraXCopy, int[] bands) {
+    static void composeEndingBackground(
+            SszZoneRuntimeState state, int[] output, int cameraXCopy, int[] bands) {
         int foreground = (-cameraXCopy & 0xFFFF) << 16;
         int y = (short) state.backgroundCameraY(), band = 0, source = 4, height;
         boolean perLine;
@@ -157,8 +170,8 @@ final class SszAct2Deformation {
             source += perLine ? height * 2 : 2;
         }
         if (perLine) source += (height + y) * 2;
-        int count = -y, remaining = (0xE0 - 1) - count, line = 0; // move.w #$E0-1,d1
-        if (remaining < 0) count = 0xE0;
+        int count = -y, remaining = (output.length - 1) - count, line = 0; // move.w #$E0-1,d1
+        if (remaining < 0) count = output.length;
         while (true) {
             if (perLine) {
                 for (int i = 0; i < count; i++, source += 2)
@@ -183,10 +196,17 @@ final class SszAct2Deformation {
         // ROM supplies twenty columns. Beyond that native window, continue the
         // final column's vertical offset, rather than reading unrelated work RAM.
         // Native columns and the horizontal wave remain byte-for-byte unchanged.
-        for (int i = 0; i < columns.length; i++) columns[i] = (short)
-                (word(state, 0x170 + Math.min(i, 19) * 2) - state.backgroundCameraY());
+        for (int i = 0; i < columns.length; i++)
+            columns[i] =
+                    (short) (word(state, 0x170 + Math.min(i, 19) * 2) - state.backgroundCameraY());
         return columns;
     }
-    private static int word(SszZoneRuntimeState state, int offset) { return state.act2ScrollWord(offset); }
-    private static void put(SszZoneRuntimeState state, int offset, int value) { state.setAct2ScrollWord(offset, value); }
+
+    private static int word(SszZoneRuntimeState state, int offset) {
+        return state.act2ScrollWord(offset);
+    }
+
+    private static void put(SszZoneRuntimeState state, int offset, int value) {
+        state.setAct2ScrollWord(offset, value);
+    }
 }

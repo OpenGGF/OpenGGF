@@ -54,6 +54,13 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
      * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        releaseWithoutLaunch(p1Owner, nativeStates[0]);
+        releaseWithoutLaunch(p2Owner, nativeStates[1]);
+        onUnload();
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         return 0x0003;
     }

@@ -156,6 +156,58 @@ class TestHczEndBossTerminalOwnership {
     }
 
     @Test
+    void visualReleaseUsesTheRetainedRootsActualAcquisitionsAndRestoresTheirIdentities() throws Exception {
+        World world = new World("sonic");
+        List<Integer> music = world.recordMusic();
+        var p2 = world.nativeP2();
+        assertNotNull(p2);
+        assertNotNull(p2.getCpuController());
+        world.main.setControlLocked(true);
+        p2.getCpuController().setController2SignedLocked(true);
+        world.boss.releasePlayersForVisualDirection();
+        assertTrue(world.main.isControlLocked(), "The root has not acquired this lock yet");
+        assertTrue(p2.getCpuController().isController2SignedLocked());
+        assertTrue(music.isEmpty());
+        world.main.setControlLocked(false);
+        p2.getCpuController().setController2SignedLocked(false);
+
+        world.boss.update(0, world.main);
+        GameServices.gameState().setEndOfLevelActive(false); // Existing declared publication inlet.
+        world.boss.update(1, world.main);
+        assertTrue(world.main.isControlLocked());
+        assertTrue(p2.getCpuController().isController2SignedLocked());
+        var context = world.manager.captureIdentityContext();
+        var snapshot = world.boss.captureRewindState(context);
+        var graph = List.copyOf(world.manager.getActiveObjects());
+        int routine = world.boss.getState().routine;
+        int x = world.main.getCentreX(), y = world.main.getCentreY();
+        int mapping = world.main.getMappingFrame();
+        int logical = world.main.getLogicalInputState();
+        int musicCount = music.size();
+        world.boss.releasePlayersForVisualDirection();
+        assertFalse(world.main.isControlLocked());
+        assertFalse(p2.getCpuController().isController2SignedLocked());
+        assertEquals(routine, world.boss.getState().routine);
+        assertFalse(world.boss.isDestroyed());
+        assertEquals(graph, List.copyOf(world.manager.getActiveObjects()));
+        assertEquals(x, world.main.getCentreX());
+        assertEquals(y, world.main.getCentreY());
+        assertEquals(mapping, world.main.getMappingFrame());
+        assertEquals(logical, world.main.getLogicalInputState());
+        assertEquals(musicCount, music.size());
+
+        world.boss.restoreRewindState(snapshot, context);
+        world.main.setControlLocked(true);
+        p2.getCpuController().setController2SignedLocked(true);
+        world.boss.releasePlayersForVisualDirection();
+        assertFalse(world.main.isControlLocked(), "Restored owner metadata must still name P1");
+        assertFalse(p2.getCpuController().isController2SignedLocked(), "Restored CPU ownership must still name P2");
+        assertEquals(routine, world.boss.getState().routine);
+        assertEquals(graph, List.copyOf(world.manager.getActiveObjects()));
+        assertEquals(musicCount, music.size());
+    }
+
+    @Test
     void fullNativePoolKeepsFailedCapsuleWaitAndStillSelectsDeleteWhenGeyserCannotAllocate() throws Exception {
         World world = new World("sonic");
         List<Integer> music = world.recordMusic();

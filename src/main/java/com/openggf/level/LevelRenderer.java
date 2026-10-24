@@ -657,7 +657,10 @@ public final class LevelRenderer {
             bools[4] = r.pendingBgTilePassHasWater;
             bools[5] = r.pendingBgTilePassPerLineScroll;
             bools[6] = r.retainedPlane(foregroundPlaneSource(r.currentAdvancedRenderFrameState)) != null
-                    || r.lm.foregroundPlaneWrapsVertically();
+                    || (r.cinematicFullScroll != null
+                        ? r.cinematicFullScroll.backgroundBuildParameters().foregroundVerticalWrap()
+                            || r.cinematicFullScroll.backgroundBuildParameters().foregroundRingRows() > 0
+                        : r.lm.foregroundPlaneWrapsVertically());
             bools[7] = r.pendingFboSuppressFrontScenery;
             refs[0] = r.pendingFgAtlasId_low;
             refs[1] = r.pendingFgPaletteId_low;
@@ -973,12 +976,111 @@ public final class LevelRenderer {
     /** Select the VDP scroll generation paired with the displayed sprite table. */
     private boolean cinematicDraw;
     private LevelScrollPresentation cinematicScroll;
+    private LevelScrollPresentation cinematicFullScroll;
+    private LevelTilemapManager cinematicBackground;
+    private final com.openggf.graphics.CinematicBackgroundResidency cinematicBackgroundGpu =
+            new com.openggf.graphics.CinematicBackgroundResidency();
+
+    void withCinematicView(com.openggf.level.scroll.ScrollView view, Runnable draw) {
+        withCinematicView(view.cameraX(), view.cameraY(), view.width(), view.height(), draw);
+    }
+
+    /** Capture one immutable phase for the complete bounded raster, before slicing native tiles. */
+    void withCinematicView(int x, int y, int width, int height, Runnable draw) {
+        if (cinematicFullScroll != null || cinematicScroll != null)
+            throw new IllegalStateException("Nested cinematic view");
+        var savedMode = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState).renderMode();
+        var savedScroll = currentScrollPresentation;
+        try {
+            resolveAdvancedRenderFrameState(lm.frameCounter);
+            cinematicFullScroll = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState)
+                    .forCinematicView(x, y, width, height);
+            withCinematicBackgroundResidency(cinematicFullScroll, draw);
+        } catch (RuntimeException | Error failure) {
+            lm.graphicsManager.discardQueuedCommands();
+            throw failure;
+        } finally {
+            cinematicFullScroll = null;
+            currentScrollPresentation = savedScroll;
+            currentAdvancedRenderFrameState = savedMode;
+        }
+    }
+
+    /** Both director entry points install frozen authority before touching private texture residency. */
+    private void withCinematicBackgroundResidency(LevelScrollPresentation scroll, Runnable draw) {
+        var parameters = java.util.Objects.requireNonNull(scroll.backgroundBuildParameters(),
+                "Native scroll has no captured background build policy");
+        var nativeTilemaps = lm.tilemapManager;
+        try {
+            cinematicBackground = nativeTilemaps == null ? null : nativeTilemaps.cinematicBackgroundCopy();
+            if (cinematicBackground != null) {
+                cinematicBackground.setCinematicBackgroundParameters(parameters);
+                cinematicBackground.setForegroundRingCamera(scroll.registers().cameraX(), lm.camera.getWidth());
+                lm.tilemapManager = cinematicBackground;
+            }
+            var gpu = lm.graphicsManager.getTilemapGpuRenderer();
+            Runnable privateDraw = () -> {
+                if (cinematicBackground != null) cinematicBackground.publishCinematicBackgroundBaseline();
+                draw.run();
+            };
+            if (gpu == null) privateDraw.run();
+            else com.openggf.graphics.TilemapGpuRendererInternalAccess.withCinematicBackground(
+                    gpu, cinematicBackgroundGpu, privateDraw);
+        } finally {
+            lm.tilemapManager = nativeTilemaps;
+            cinematicBackground = null;
+        }
+    }
+
+    void withCinematicTile(int left, int top, int width, int height, Runnable draw) {
+        if (cinematicFullScroll == null || cinematicScroll != null)
+            throw new IllegalStateException("Cinematic tile requires its outer view");
+        var camera = lm.camera;
+        var savedCamera = camera.capture();
+        var savedScroll = currentScrollPresentation;
+        try {
+            camera.setX((short) (cinematicFullScroll.registers().cameraX() + left));
+            camera.setY((short) (cinematicFullScroll.registers().cameraY() + top));
+            camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
+            cinematicScroll = cinematicFullScroll.slice(left, top, width, height);
+            if (cinematicBackground != null)
+                cinematicBackground.setForegroundRingCamera(camera.getX(), width);
+            withCinematicColumnPhase(cinematicScroll.columnPhaseX(), draw);
+        } catch (RuntimeException | Error failure) {
+            lm.graphicsManager.discardQueuedCommands();
+            throw failure;
+        } finally {
+            cinematicScroll = null;
+            camera.restore(savedCamera, camera.getFocusedSprite());
+            currentScrollPresentation = savedScroll;
+        }
+    }
+
+    com.openggf.level.scroll.ScrollSpritePosition spritePositionForDraw(
+            com.openggf.level.scroll.ScrollSpriteKey key) {
+        return cinematicFullScroll == null || currentScrollPresentation == null ? null
+                : currentScrollPresentation.spritePositionForDraw(key);
+    }
+
+    private void withCinematicColumnPhase(int phase, Runnable draw) {
+        var gpu = lm.graphicsManager.getTilemapGpuRenderer();
+        var bg = lm.graphicsManager.getBackgroundRenderer();
+        if (gpu != null) com.openggf.graphics.TilemapGpuRendererInternalAccess.setCinematicColumnPhase(gpu, phase);
+        if (bg != null) com.openggf.level.render.BackgroundRendererInternalAccess.setCinematicColumnPhase(bg, phase);
+        try { draw.run(); }
+        finally {
+            if (gpu != null) com.openggf.graphics.TilemapGpuRendererInternalAccess.setCinematicColumnPhase(gpu, 0);
+            if (bg != null) com.openggf.level.render.BackgroundRendererInternalAccess.setCinematicColumnPhase(bg, 0);
+        }
+    }
+
 
     /** A directed view consumes a private scroll snapshot; gameplay camera, deformation,
      * published SAT/scroll and the previous draw's presentation remain native-owned.
      */
     void withCinematicCamera(int x, int y, Runnable draw) {
-        if (cinematicScroll != null) throw new IllegalStateException("Nested cinematic camera");
+        if (cinematicFullScroll != null || cinematicScroll != null)
+            throw new IllegalStateException("Nested cinematic camera");
         var camera = lm.camera;
         var savedCamera = camera.capture();
         var savedScroll = currentScrollPresentation;
@@ -990,14 +1092,15 @@ public final class LevelRenderer {
             var nativeScroll = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
             camera.setX((short) x); camera.setY((short) y);
             camera.setXCopy(camera.getX()); camera.setYCopy(camera.getY());
-            cinematicScroll = nativeScroll.forCinematicCamera(camera.getX(), camera.getY(),
-                    LevelScrollPresentation.captureArenaMask(lm));
-            draw.run();
+            cinematicScroll = nativeScroll.forCinematicCamera(camera.getX(), camera.getY(), camera.getWidth());
+            cinematicFullScroll = cinematicScroll;
+            withCinematicBackgroundResidency(cinematicFullScroll, draw);
         } catch (RuntimeException | Error failure) {
             lm.graphicsManager.discardQueuedCommands();
             throw failure;
         } finally {
             cinematicScroll = null;
+            cinematicFullScroll = null;
             camera.restore(savedCamera, camera.getFocusedSprite());
             currentScrollPresentation = savedScroll;
             currentAdvancedRenderFrameState = savedMode;
@@ -1106,7 +1209,10 @@ public final class LevelRenderer {
     void resetState() {
         spriteTables.reset();
         liveSpriteFrame = null;
-        if (lm != null && lm.graphicsManager != null && lm.graphicsManager.isGlInitialized()) scenePresentationPass.cleanup();
+        if (lm != null && lm.graphicsManager != null && lm.graphicsManager.isGlInitialized()) {
+            scenePresentationPass.cleanup();
+            cinematicBackgroundGpu.close();
+        }
         boundsMask.reset();
         currentScrollPresentation = null;
         frameCommandPool.cancelOutstanding();
@@ -1163,11 +1269,16 @@ public final class LevelRenderer {
         com.openggf.graphics.TilemapGpuRendererInternalAccess.setClipHorizontal(tilemapRenderer, lm.camera.getWidth() > 320
                 && foregroundPlaneSource(currentAdvancedRenderFrameState) == TilemapGpuRenderer.Layer.FOREGROUND
                 && retainedPlane(foregroundPlaneSource(currentAdvancedRenderFrameState)) == null
-                && (lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
-        tilemapRenderer.setForegroundWindow(lm.zoneFeatureProvider == null
-                ? null : lm.zoneFeatureProvider.foregroundWindow());
-        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundVerticalScrollSplit(tilemapRenderer, lm.zoneFeatureProvider instanceof
-                com.openggf.game.internal.ForegroundVerticalScrollSplit owner
+                && (cinematicFullScroll != null ? !cinematicFullScroll.backgroundBuildParameters().foregroundWraps()
+                : lm.zoneFeatureProvider == null || !lm.zoneFeatureProvider.foregroundWrapsHorizontally()));
+        boolean completeForeground = retainedPlane(TilemapGpuRenderer.Layer.FOREGROUND) != null;
+        tilemapRenderer.setForegroundWindow(completeForeground ? null : cinematicFullScroll != null
+                ? cinematicFullScroll.backgroundBuildParameters().foregroundWindow()
+                : lm.zoneFeatureProvider == null ? null : lm.zoneFeatureProvider.foregroundWindow());
+        com.openggf.graphics.TilemapGpuRendererInternalAccess.setForegroundVerticalScrollSplit(tilemapRenderer,
+                completeForeground ? null : cinematicFullScroll != null
+                ? cinematicFullScroll.backgroundBuildParameters().foregroundSplit()
+                : lm.zoneFeatureProvider instanceof com.openggf.game.internal.ForegroundVerticalScrollSplit owner
                 ? owner.foregroundVerticalScrollSplit() : null);
         if (currentAdvancedRenderFrameState.enableForegroundHeatHaze()
                 || currentAdvancedRenderFrameState.enablePerLineForegroundScroll()) {
@@ -1177,6 +1288,13 @@ public final class LevelRenderer {
 
     private com.openggf.game.internal.RetainedPlaneDescriptorSource.Plane retainedPlane(
             TilemapGpuRenderer.Layer layer) {
+        if (cinematicFullScroll != null) {
+            var parameters = java.util.Objects.requireNonNull(cinematicFullScroll.backgroundBuildParameters(),
+                    "Directed draw requires captured plane authority");
+            var image = layer == TilemapGpuRenderer.Layer.FOREGROUND
+                    ? parameters.retainedForeground() : parameters.retainedBackground();
+            return image.active() ? image : null;
+        }
         if (!(lm.zoneFeatureProvider instanceof com.openggf.game.internal.RetainedPlaneDescriptorSource source)) {
             return null;
         }
@@ -1550,16 +1668,20 @@ public final class LevelRenderer {
 
         int bgCameraX = currentScrollPresentation == null ? lm.parallaxManager.getBgCameraX()
                 : currentScrollPresentation.registers().backgroundX();
-        boolean mgzStateEightPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
-        // Side-effect-only: tilemap manager has been refreshed.
+        var backgroundTiles = cinematicBackground == null ? lm.tilemapManager : cinematicBackground;
+        boolean mgzStateEightPerLineTilemap;
+        if (cinematicBackground == null) {
+            mgzStateEightPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
+            lm.ensureBackgroundTilemapData();
+        } else {
+            mgzStateEightPerLineTilemap = LevelCinematicBackground.prepare(lm, backgroundTiles, currentScrollPresentation);
+        }
 
-        lm.ensureBackgroundTilemapData();
-
-        int bgPeriodWidthPixels = lm.tilemapManager.getBackgroundTilemapWidthTiles() * Pattern.PATTERN_WIDTH;
+        int bgPeriodWidthPixels = backgroundTiles.getBackgroundTilemapWidthTiles() * Pattern.PATTERN_WIDTH;
         // Pass the tilemap's source anchor to the shader so it offsets worldX before wrapping.
         // Shader: fboWorldOffsetX = -ScrollMidpoint - ExtraBuffer
         // We want fboWorldOffsetX = sourceX, so ScrollMidpoint = -sourceX.
-        int shaderScrollMidpoint = -lm.tilemapManager.getBackgroundTilemapSourceX();
+        int shaderScrollMidpoint = -backgroundTiles.getBackgroundTilemapSourceX();
         int shaderExtraBuffer = 0;
         float bgTilemapWorldOffsetX = 0.0f;
         boolean perLineScrollActive = false;
@@ -1567,7 +1689,7 @@ public final class LevelRenderer {
         float nametableBaseTile = 0.0f;
         float upperBandWrapHeightPx = 0.0f;
         float upperBandWrapWidthTiles = 0.0f;
-        boolean retainedBackground = retainedPlane(TilemapGpuRenderer.Layer.BACKGROUND) != null;
+        boolean retainedBackground = retainedPlane(backgroundPlaneSource(currentAdvancedRenderFrameState)) != null;
         if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
             // This pass now reads the foreground world texture. A 512px
             // background cache window would wrap camera X into unrelated
@@ -1578,11 +1700,10 @@ public final class LevelRenderer {
             shaderExtraBuffer = 0;
             perLineScrollActive = true;
         } else if (retainedBackground) {
-            // The complete owner-authored image is anchored at zero. Its exact
-            // period replaces ordinary layout windows and zone build heuristics;
-            // the compositor still owns native per-line HScroll/VScroll ordering.
+            // Complete images keep their captured zero anchor and exact period.
             shaderScrollMidpoint = 0;
-        } else if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
+        } else if (cinematicFullScroll != null ? currentScrollPresentation.backgroundBuildParameters().introOcean()
+                : lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
             // Per-scanline HScroll in the tilemap shader, matching VDP behavior.
             // Each pixel computes worldX = pixelX - hScroll[scanline] directly,
             // then looks up the correct tile from the full-width tilemap.
@@ -1597,8 +1718,10 @@ public final class LevelRenderer {
             // Ocean phase (introScrollOffset < 0): overflow=0 (all ocean).
             // Camera tracking: overflow gradually increases, revealing beach tiles.
             vdpWrapWidthTiles = 64.0f;
-            nametableBaseTile = lm.zoneFeatureProvider.getVdpNametableBase(
-                    lm.currentZone, lm.currentAct, presentationCameraX(), lm.tilemapManager.getBackgroundTilemapWidthTiles());
+            nametableBaseTile = cinematicFullScroll != null
+                    ? (float) currentScrollPresentation.backgroundBuildParameters().projection().nametableBase().applyAsDouble(cinematicFullScroll.registers().cameraX())
+                    : lm.zoneFeatureProvider.getVdpNametableBase(lm.currentZone, lm.currentAct,
+                            presentationCameraX(), backgroundTiles.getBackgroundTilemapWidthTiles());
         } else if (mgzStateEightPerLineTilemap) {
             // MGZ2 state 8 still uses Draw_BG on hardware, but the 64-cell plane is
             // refreshed incrementally as the camera advances. Our rebuild-from-scratch
@@ -1673,13 +1796,13 @@ public final class LevelRenderer {
         int vOffset = actualBgScrollY - alignedBgY;
         int tilePassWorldOffsetY =
                 alignedBgY - (currentAdvancedRenderFrameState.reversePlaneAssignment()
-                        ? 0 : lm.tilemapManager.getBackgroundTilemapSourceY());
+                        ? 0 : backgroundTiles.getBackgroundTilemapSourceY());
         float fboWaterlineY = (float) ((waterLevelWorldY - presentationCameraY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
         float bgWaterlineScreenY = (float) (waterLevelWorldY - presentationCameraY());
 
-        lm.ensureBackgroundTilemapData();
+        if (cinematicBackground == null) lm.ensureBackgroundTilemapData();
         pendingBgTilePassRenderWidth = renderWidth;
         pendingBgTilePassRenderHeight = renderHeight;
         pendingBgTilePassHasWater = hasWater && !suppressUnderwaterPalette;
@@ -1717,8 +1840,9 @@ public final class LevelRenderer {
             if (shaderVOffset < 0)
                 shaderVOffset += LevelConstants.CHUNK_HEIGHT; // Handle negative modulo
 
-            pendingBgColumns = lm.zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundColumnRemap owner
-                    ? owner.backgroundColumns() : null;
+            pendingBgColumns = cinematicFullScroll != null ? currentScrollPresentation.backgroundColumnsRemap()
+                    : lm.zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundColumnRemap owner
+                            ? owner.backgroundColumns() : null;
             pendingBgHScrollData = hScrollData;
             pendingBgVScrollData = vScrollData;
             pendingBgVScrollColumnData = vScrollColumnData;
@@ -1807,10 +1931,17 @@ public final class LevelRenderer {
                 zoneFeatureProvider instanceof com.openggf.level.render.PriorityBucketSpriteSource source
                         ? source : null;
         {
-            com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
-                    com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.extended(
-                            lm.camera.getXWithShake(), lm.camera.getYWithShake(),
-                            lm.cachedScreenWidth, lm.cachedScreenHeight));
+            if ((lm.cachedScreenWidth & 7) == 0) {
+                com.openggf.graphics.SpriteSatInternalAccess.beginCollection(graphicsManager,
+                        com.openggf.graphics.SpriteSatMaskPostProcessor.Raster.extended(
+                                lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                                lm.cachedScreenWidth, lm.cachedScreenHeight));
+            } else {
+                com.openggf.graphics.SpriteSatInternalAccess.beginLogicalCollection(graphicsManager,
+                        com.openggf.graphics.SpriteSatMaskPostProcessor.LogicalViewport.h40(
+                                lm.camera.getXWithShake(), lm.camera.getYWithShake(),
+                                lm.cachedScreenWidth, lm.cachedScreenHeight));
+            }
             // BuildHUD/Render_HUD occupy the table head, before ordinary object buckets.
             // Its decoded native footprints compete once, even though digits have scattered art.
             if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {

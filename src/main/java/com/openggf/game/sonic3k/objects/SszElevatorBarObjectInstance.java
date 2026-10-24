@@ -100,6 +100,13 @@ public final class SszElevatorBarObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (holding(0) && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) letGo(0, player, HURT_COOLDOWN);
+        if (holding(1) && query.nativeP2OrNull() instanceof AbstractPlayableSprite player) letGo(1, player, HURT_COOLDOWN);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (tryServices() == null) {
             return;

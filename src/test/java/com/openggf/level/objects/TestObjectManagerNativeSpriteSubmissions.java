@@ -653,6 +653,43 @@ class TestObjectManagerNativeSpriteSubmissions {
         assertEquals(List.of(), drawSat(manager, 2));
     }
 
+    @Test void rawAcceptedZeroIdAndOrphanAddressesCannotFallThroughToLegacyExternalAnchors() {
+        ObjectManager manager = manager();
+        Probe zero = add(manager, 60, 6);
+        zero.liveId = 0;
+        assertTrue(submit(manager, zero, 3));
+        assertTrue(submit(manager, 61, 3));
+        var ledger = manager.nativeSpriteSubmissions().capture();
+        DRAWS.get().clear();
+        ObjectDrawInternalAccess.drawBucket(manager, 3, sat,
+                List.of(emission(60, 3, 60), emission(61, 3, 61)));
+        assertEquals(List.of(), DRAWS.get());
+        assertEquals(ledger, manager.nativeSpriteSubmissions().capture());
+    }
+
+    @Test void rawAddressSuppressionPreservesTypedRepeatsAndUnsubmittedLegacyAnchorOrder() {
+        ObjectManager manager = manager();
+        manager.addDynamicObjectAtSlot(new Legacy(spawn(40)), 40);
+        manager.addDynamicObjectAtSlot(new Legacy(spawn(70)), 70);
+        DRAWS.get().clear();
+        ObjectDrawInternalAccess.drawBucket(manager, 3, sat, List.of(emission(60, 3, 60)));
+        assertEquals(List.of(40, 60, 70), DRAWS.get(), "No accepted address: keep the original legacy lane");
+
+        bindExternalResolver(manager, slot -> slot == 60 ? emission(slot, 7, 9) : null);
+        assertTrue(submit(manager, 60, 3));
+        assertTrue(submit(manager, 60, 3));
+        var ledger = manager.nativeSpriteSubmissions().capture();
+        DRAWS.get().clear();
+        ObjectDrawInternalAccess.drawBucket(manager, 3, sat,
+                List.of(emission(60, 3, 60), emission(61, 3, 61)));
+        assertEquals(List.of(9, 9, 40, 61, 70), DRAWS.get(),
+                "Typed accepted calls repeat in their captured bucket; only the matching legacy address is suppressed");
+        assertEquals(ledger, manager.nativeSpriteSubmissions().capture());
+        assertEquals(List.of(0, 1), satEntries(manager, 3).stream()
+                .filter(ObjectRenderParts.RenderEntry::nativeSubmission)
+                .map(ObjectRenderParts.RenderEntry::admissionOrdinal).toList());
+    }
+
     private ObjectManager manager() {
         Camera camera = mock(Camera.class);
         when(camera.getWidth()).thenReturn((short) 320);

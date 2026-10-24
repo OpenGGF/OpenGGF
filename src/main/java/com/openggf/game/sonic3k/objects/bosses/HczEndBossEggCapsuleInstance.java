@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -90,6 +92,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     // State
     private int mappingFrame;
     private boolean opened;
+
+    private final PlayerControlOwners resultControlOwners = new PlayerControlOwners();
+
+    private final PlayerControlOwners sidekickControlOwners = new PlayerControlOwners();
+
+    private final PlayerControlOwners sidekickPoseOwners = new PlayerControlOwners();
+
     private boolean resultsStarted;
     private int postOpenTimer;
     private boolean buttonSpawned;
@@ -108,6 +117,28 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     private HczEndBossEggCapsuleInstance() {
         this(0, 0);
+    }
+
+    /** Player-only hand-back; the retained boss root owns the later geyser handoff. */
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var sprite : resultControlOwners.players()) {
+            ObjectControlState.none().applyTo(sprite);
+            sprite.setControlLocked(false);
+        }
+        for (var sprite : sidekickPoseOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().cancelQueuedNativeEndingPose();
+            if (sprite.isObjectControlled() && sprite.getAnimationId() == Sonic3kAnimationIds.VICTORY.id()) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setControlLocked(false);
+            }
+        }
+        for (var sprite : sidekickControlOwners.players()) {
+            if (sprite.getCpuController() != null) sprite.getCpuController().setController2SignedLocked(false);
+        }
+        resultControlOwners.clear();
+        sidekickControlOwners.clear();
+        sidekickPoseOwners.clear();
     }
 
     // ===== Position / lifecycle =====
@@ -210,6 +241,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // the signed lock suppresses Tails_CPU_Control beginning next frame.
         if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                 && sidekick.getCpuController() != null) {
+            sidekickControlOwners.add(sidekick);
             sidekick.getCpuController().setController2SignedLocked(true);
         }
 
@@ -306,11 +338,13 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         // Set_PlayerEndingPose (sonic3k.asm:182010-182031).
         tailsEndingPoseApplied = true;
         if (sidekick.getCpuController() != null) {
+            sidekickPoseOwners.add(sidekick);
             sidekick.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
         }
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
+        resultControlOwners.add(sprite);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         // Set_PlayerEndingPose does not write Ctrl_1_locked/Ctrl_2_locked.
         sprite.setControlLocked(false);
@@ -348,6 +382,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     private static final class HczEndBossResultsScreenObjectInstance
             extends S3kResultsScreenObjectInstance {
+
         private HczEndBossResultsScreenObjectInstance(PlayerCharacter character, int act) {
             super(character, act);
         }

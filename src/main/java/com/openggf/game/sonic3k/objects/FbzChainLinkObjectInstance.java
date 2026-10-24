@@ -9,7 +9,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZChainLink} ($72), sonic3k.asm $3A7D4-$3AD88. */
@@ -29,6 +28,17 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         rangePixels=horizontalMode?(spawn.subtype()&0x3F)<<4:(spawn.subtype()&0x7F)<<3;
         currentLength=horizontalMode?rangePixels:0;
     }
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entity : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = participants.slot(player);
+                if (participants.flag(slot, 0)) releaseInvalid(player, slot);
+            }
+        }
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity ignored){
         if(!horizontalMode){currentLength+=anyGrabbed()?2:-2;if(currentLength<0)currentLength=0;if(currentLength>rangePixels)currentLength=rangePixels;}
         services().playerQuery().visitPlayers(participationPolicy(),this,UPDATE_PLAYER);

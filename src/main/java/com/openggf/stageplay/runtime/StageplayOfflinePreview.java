@@ -17,31 +17,40 @@ import java.util.concurrent.*;
 final class StageplayOfflinePreview implements AutoCloseable {
     private static final ObjectMapper JSON = new ObjectMapper();
     private Process process;
-    private BufferedReader output;
+    private StageplayProcessInput output;
     private BufferedWriter input;
     private StageplayDocument document;
     private StageplayTimeline.Frame sample;
     private SceneImage image;
     private com.openggf.audio.StreamedMusicPort.SfxPcm sound;
+    private List<StageplayObjectInspection> objectInspection = List.of();
     private StageplayTimeline.CameraPose requestedCamera;
     private final ArrayDeque<String> diagnostics = new ArrayDeque<>();
+    private final StageplayPreviewAssets.Source assets;
 
-    StageplayTimeline.Frame resolve(StageplayDocument value, int frame, StageplayTimeline.CameraPose camera) {
+    StageplayOfflinePreview(StageplayPreviewAssets.Source assets) { this.assets = Objects.requireNonNull(assets); }
+
+    StageplayTimeline.Frame resolve(StageplayDocument value, StageplayTimeline.Frame authoredFrame) {
+        int frame = authoredFrame.frame();
+        var camera = authoredFrame.world() == null ? null : authoredFrame.camera();
         try {
             if (!value.equals(document)) start(value);
-            if (camera != null && camera.zoom() != 1) throw new IOException("LIVE preview uses fixed zoom 1");
-            if (sample != null && sample.frame()==frame && (Objects.equals(camera,requestedCamera) || camera != null && camera.equals(sample.camera()))) return sample;
+            // Drawing an exact resolved response must not reinterpret its clipped camera
+            // as a new raw draft. Otherwise clipping can change the unshaken origin twice.
+            if (sample == authoredFrame || sample != null && sample.frame()==frame && Objects.equals(camera,requestedCamera)) return sample;
             var requestValue = JSON.createObjectNode().put("frame",frame);
             if (camera != null) requestValue.set("camera",JSON.valueToTree(camera));
             input.write(JSON.writeValueAsString(requestValue)); input.newLine(); input.flush();
             var request = CompletableFuture.supplyAsync(() -> {
-                try { return output.readLine(); } catch(IOException error) { throw new UncheckedIOException(error); }
+                try { return output.readLine(20*1024*1024); } catch(IOException error) { throw new UncheckedIOException(error); }
             });
             String response=request.get(90,TimeUnit.SECONDS);
             if(response==null || response.length()>20*1024*1024) throw new IOException("Live preview worker exited or exceeded response limit: "+String.join(" | ",diagnostics));
             var tree=JSON.readTree(response);
             if(tree.has("error")) throw new IOException(tree.get("error").asText());
             var resolved=JSON.treeToValue(tree.get("sample"),StageplayTimeline.Frame.class);
+            var inspections = tree.path("objectInspection");
+            objectInspection = inspections.isArray() ? List.of(JSON.treeToValue(inspections, StageplayObjectInspection[].class)) : List.of();
             if(resolved.frame()!=frame) throw new IOException("Live preview returned a different frame");
             byte[] rgba=Base64.getDecoder().decode(tree.path("rgba").asText());
             if(rgba.length!=value.width()*value.height()*4) throw new IOException("Live preview pixel size mismatch");
@@ -68,6 +77,7 @@ final class StageplayOfflinePreview implements AutoCloseable {
     }
     long processId() { return process == null ? 0 : process.pid(); }
     SceneImage image() { return image; }
+    List<StageplayObjectInspection> objectInspection() { return objectInspection; }
     com.openggf.audio.StreamedMusicPort.SfxPcm sound(int frame) { return sample!=null && sample.frame()==frame ? sound : null; }
     private void start(StageplayDocument value) throws IOException {
         close();
@@ -77,15 +87,17 @@ final class StageplayOfflinePreview implements AutoCloseable {
         String os=System.getProperty("os.name","").toLowerCase(Locale.ROOT);
         if(os.contains("linux")) command.add("-Dopenggf.headless.gl=surfaceless-egl");
         else if(os.contains("mac")) command.add("-XstartOnFirstThread");
-        command.add("-cp"); command.add(System.getProperty("surefire.test.class.path",System.getProperty("java.class.path")));
+        command.add("-cp"); command.add(System.getProperty("java.class.path"));
         command.add("com.openggf.tools.StageplayPreviewTool");
-        var games=new LinkedHashSet<String>(); games.add(value.set().gameId()); value.sceneChanges().forEach(c->games.add(c.set().gameId()));
-        for(String game:games) {
+        command.add("--rom-descriptor");
+        var resolutions=new LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();
+        for(String game:StageplayRomTransport.requiredGames(value)) {
             var identity=switch(game) { case "s1"->RomIdentity.S1; case "s2"->RomIdentity.S2; default->RomIdentity.S3K; };
-            Path rom=EngineServices.current().roms().resolveLogicalRom(identity).flatMap(r->r.wholeImagePath())
-                    .orElseThrow(()->new IOException("LIVE preview needs the configured original whole-image "+game+" ROM path"));
-            command.add(game); command.add(rom.toAbsolutePath().toString());
+            resolutions.put(game,EngineServices.current().roms().resolveLogicalRom(identity)
+                    .orElseThrow(()->new IOException("LIVE preview needs the configured logical "+game+" ROM")));
         }
+        String descriptor=StageplayRomTransport.encode(resolutions);
+        String assetDescriptor=assets.encode(value);
         var builder=new ProcessBuilder(command); builder.environment().remove("DISPLAY"); builder.environment().remove("WAYLAND_DISPLAY");
         process=builder.start();
         Process owned=process;
@@ -96,9 +108,11 @@ final class StageplayOfflinePreview implements AutoCloseable {
                 }
             } catch(IOException ignored) { }
         });
-        output=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+        output=new StageplayProcessInput(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
         input=new BufferedWriter(new OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
-        input.write(Base64.getEncoder().encodeToString(StageplayStore.encode(value))); input.newLine(); input.flush(); document=value;
+        input.write(descriptor); input.newLine();
+        input.write(Base64.getEncoder().encodeToString(StageplayStore.encode(value))); input.newLine();
+        input.write(assetDescriptor); input.newLine(); input.flush(); document=value;
     }
     @Override public void close() {
         if(process!=null) {
@@ -107,6 +121,6 @@ final class StageplayOfflinePreview implements AutoCloseable {
             catch(IOException ignored) { owned.destroyForcibly(); }
             catch(InterruptedException interrupted) { owned.destroyForcibly(); Thread.currentThread().interrupt(); }
         }
-        document=null; sample=null; image=null; sound=null; requestedCamera=null;
+        document=null; sample=null; image=null; sound=null; requestedCamera=null; objectInspection=List.of();
     }
 }

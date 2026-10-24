@@ -295,3 +295,15 @@ semantic `sonic`, `tails` or `knuckles` key while its callbacks belong to the mo
 that publishes it. Factories create a fresh sprite for each player/session;
 reusing an instance from an earlier construction is rejected because it retains
 its previous runtime callback boundary.
+
+
+### Movement ability declarations
+
+`CharacterDefinition.movementAbilities` is an immutable set of declared native
+moves. Existing convenience constructors declare an empty set; use the full
+constructor with `Set.of(CharacterDefinition.MovementAbility.SPINDASH)` when the
+actor implements native spindash. The registry intersects each actor's declaration
+with its donor's enabled native rules. Stageplay uses that result to offer and
+validate route starting actions, without branching on actor or game names. The
+contract is extensible to future moves and mod actors; Stageplay's current stock
+cast/asset limits still apply.

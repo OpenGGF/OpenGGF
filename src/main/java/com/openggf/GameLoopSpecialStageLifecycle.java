@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
+import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageDebugCapabilities;
 import com.openggf.game.SpecialStageEntryPresentationController;
@@ -21,6 +22,15 @@ import java.util.function.IntPredicate;
 /** Owns the SPECIAL_STAGE frame body so {@link GameLoop} remains a mode dispatcher. */
 final class GameLoopSpecialStageLifecycle {
     private GameLoopSpecialStageLifecycle() {
+    }
+
+    /** Keeps native results creation bound to the executing provider and world. */
+    static ResultsScreen createResults(SpecialStageProvider provider,
+                                       GameplayModeContext context,
+                                       int ringsCollected, boolean gotEmerald,
+                                       int stageIndex, int totalEmeraldCount) {
+        return com.openggf.game.sonic3k.specialstage.S3kSpecialStageWorldAccess.createResults(
+                provider, context, ringsCollected, gotEmerald, stageIndex, totalEmeraldCount);
     }
 
     static void update(SpecialStageProvider provider,

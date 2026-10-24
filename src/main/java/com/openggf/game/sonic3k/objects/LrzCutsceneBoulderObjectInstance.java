@@ -16,6 +16,19 @@ import java.util.List;
 
 /** loc_63C3E: pushed boulder, light-gravity bounce, and sub_65EFE's orbiting riders. */
 public final class LrzCutsceneBoulderObjectInstance extends AbstractObjectInstance implements ZeroArgRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0x3A08, 0xE2, 0, 0, 0, 0);
     private int routine, frame, timer;
     private int[] angles = new int[0];
@@ -68,7 +81,7 @@ public final class LrzCutsceneBoulderObjectInstance extends AbstractObjectInstan
                 angles[i] = S3kNativeObjectAngle.angleTowards(getX(), getY(), player.getCentreX(), player.getCentreY());
                 services().camera().setScrollLocked(false);
                 services().levelManager().getLevelGamestate().pauseTimer();
-                ObjectControlState.nativeBit7FullControl().applyTo(player); // object_control=$83
+                ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player)); // object_control=$83
                 player.setObjectMappingFrameControl(true);
                 player.setAnimationId(0);
                 player.setMappingFrame(i == 0 ? 0x8D : 0x8A);

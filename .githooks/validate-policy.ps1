@@ -201,6 +201,8 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 }
 
 # Mirrors the declaration/owner/reachability pass in mod_api_surface_text (SH).
+# Direct nested-type exposure requires member visibility; retained references
+# still reach hidden owner types, as the exact compiled surface requires.
 # The compiled signature guard remains authoritative for Java name resolution.
 function Get-ModApiSurfaceText([string]$Text) {
     if ($Text -cmatch '\\u') { return $Text }

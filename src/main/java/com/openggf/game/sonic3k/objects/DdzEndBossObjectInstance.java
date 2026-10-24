@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kFullSaveGame;
@@ -12,7 +13,6 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 import java.util.Objects;
 
@@ -46,6 +46,18 @@ import java.util.Objects;
  */
 public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         implements DdzCreateBossExplosionObjectInstance.ExplosionStopFlag {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     static final int ROUTINE_ENTER = 2;
     static final int ROUTINE_FIGHT = 4;
     static final int ROUTINE_DEFEAT_EXPLODE = 6;
@@ -442,7 +454,7 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         statusDestroyed = true;
         AbstractPlayableSprite player = DdzObjectSupport.player(services());
         if (player != null) {
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
             if (player.getSuperStateController() instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController superState) {
                 superState.holdDoomsdayRingDrain();
             }

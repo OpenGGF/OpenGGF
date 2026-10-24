@@ -315,6 +315,21 @@ public class PatternSpriteRenderer {
 
     private void drawFramePieces(List<? extends SpriteFramePiece> pieces,
             int originX, int originY, boolean hFlip, boolean vFlip, int paletteIndex) {
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
+                this,
+                spriteSheet,
+                pieces,
+                originX,
+                originY,
+                hFlip,
+                vFlip,
+                paletteIndex,
+                null,
+                null,
+                this.graphicsManager.getCurrentSpriteTileOcclusionPaletteMask(),
+                com.openggf.graphics.SpritePresentation.subject(this.graphicsManager),
+                () -> drawNativeFramePieces(pieces, originX, originY, hFlip, vFlip, paletteIndex)))
+            return;
         if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
                 index -> drawNativeFramePieces(List.of(pieces.get(index)),
                         originX, originY, hFlip, vFlip, paletteIndex))) return;
@@ -398,6 +413,31 @@ public class PatternSpriteRenderer {
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
         int paletteIndex = paletteOverride >= 0 ? paletteOverride : spriteSheet.getPaletteIndex();
         List<? extends SpriteFramePiece> pieces = frame.pieces();
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
+                this,
+                spriteSheet,
+                pieces,
+                originX,
+                originY,
+                hFlip,
+                vFlip,
+                paletteIndex,
+                priorityFilter,
+                null,
+                this.graphicsManager.getCurrentSpriteTileOcclusionPaletteMask(),
+                com.openggf.graphics.SpritePresentation.subject(this.graphicsManager),
+                () -> {
+                    for (int i = pieces.size() - 1; i >= 0; i--)
+                        drawNativeFilteredPiece(
+                                pieces.get(i),
+                                originX,
+                                originY,
+                                hFlip,
+                                vFlip,
+                                paletteIndex,
+                                priorityFilter,
+                                satReplayRole);
+                })) return;
         if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
                 index -> drawNativeFilteredPiece(pieces.get(index), originX, originY,
                         hFlip, vFlip, paletteIndex, priorityFilter, satReplayRole))) return;
@@ -468,6 +508,28 @@ public class PatternSpriteRenderer {
             boolean vFlip,
             int paletteIndex,
             boolean forcedPriority) {
+        if (ObjectSpriteCapture.isObserving() && ObjectSpriteCapture.intercept(
+                this,
+                spriteSheet,
+                pieces,
+                originX,
+                originY,
+                hFlip,
+                vFlip,
+                paletteIndex,
+                null,
+                forcedPriority,
+                this.graphicsManager.getCurrentSpriteTileOcclusionPaletteMask(),
+                com.openggf.graphics.SpritePresentation.subject(this.graphicsManager),
+                () ->
+                        drawFramePiecesForcedPriority(
+                                pieces,
+                                originX,
+                                originY,
+                                hFlip,
+                                vFlip,
+                                paletteIndex,
+                                forcedPriority))) return;
         if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
                 index -> drawFramePiecesForcedPriority(List.of(pieces.get(index)),
                         originX, originY, hFlip, vFlip, paletteIndex, forcedPriority))) return;

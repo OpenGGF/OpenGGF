@@ -658,6 +658,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 
     private java.util.Map<String, PlayerInputState> scriptedActorInputs;
 
+    boolean ownsScriptedInput(AbstractPlayableSprite sprite) {
+        return scriptedActorInputs != null && getSprite(sprite.getCode()) == sprite
+                && scriptedActorInputs.containsKey(sprite.getCode());
+    }
+
     /** Frame-scoped independent controllers; the canonical playable/object passes still own updates. */
     public void withScriptedInputs(java.util.Map<String, PlayerInputState> inputs,
                                    java.util.function.Consumer<InputHandler> frame) {

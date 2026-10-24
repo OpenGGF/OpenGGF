@@ -128,10 +128,20 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         super(spawn, "LRZCorkscrew");
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (isRiding(true) && query.mainPlayerOrNull() instanceof AbstractPlayableSprite player)
+            releaseControl(player, true);
+        if (isRiding(false) && query.nativeP2OrNull() instanceof AbstractPlayableSprite player)
+            releaseControl(player, false);
+    }
+
     /**
      * {@code Obj_LRZCorkscrew} sits at ROM {@code $0004224E} (sonic3k.lst); its whole code block
      * lies in one bank, so the high word {@code sub_13EFC} latches is {@code $0004}.
      */
+
     @Override
     public int romObjectCodePointerHighWord() {
         return 0x0004;
@@ -301,7 +311,7 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         setRiding(isPlayerOne, false);
         setAccumulator(isPlayerOne, 0);
         player.setOnObject(false);
-        ObjectControlState.none().applyTo(player);
+        releaseControl(player, isPlayerOne);
         // move.w #1,anim(a1) is a WORD write, so anim becomes 0 and prev_anim 1.
         player.setAnimationId(Sonic3kAnimationIds.WALK.id());
         int reversed = -player.getGSpeed();
@@ -311,6 +321,12 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
     }
 
     /** {@code move.w a0,interact(a1)} (sonic3k.asm:87600). */
+    private void releaseControl(AbstractPlayableSprite player, boolean playerOne) {
+        setRiding(playerOne, false);
+        player.setOnObject(false);
+        ObjectControlState.none().applyTo(player);
+    }
+
     private void setInteractSlot(AbstractPlayableSprite player) {
         try {
             player.setInteractSlotIndex(getSlotIndex());

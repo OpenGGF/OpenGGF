@@ -2,7 +2,7 @@ package com.openggf.level.rings;
 
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-/** Engine-only Ringfall full-inventory spill seams, deliberately outside the creator-facing Mod API. */
+/** Engine-only ring seams, deliberately outside the creator-facing Mod API. */
 public final class RingManagerInternalAccess {
     private RingManagerInternalAccess() { }
 
@@ -28,6 +28,16 @@ public final class RingManagerInternalAccess {
 
     public static void swapNativeCompetitionStreamingSlots(RingManager manager) {
         manager.swapNativeCompetitionStreamingSlots();
+    }
+
+    /** Capture the placement index used by collection, including equal legacy records. */
+    public static int spawnIndexForRewind(RingManager rings, RingSpawn spawn) {
+        return rings.spawnIndexForRewind(spawn);
+    }
+
+    /** Rebind a copied placement value to the restore-time collection owner. */
+    public static RingSpawn resolveSpawnForRewind(RingManager rings, RingSpawn value, int index) {
+        return rings.resolveSpawnForRewind(value, index);
     }
 
     /** Immediate spill that may exceed Obj37_Init's native 32-ring ceiling. */

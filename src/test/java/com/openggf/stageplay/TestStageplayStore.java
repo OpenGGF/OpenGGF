@@ -19,6 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayStore {
     @TempDir Path directory;
 
+    @Test void rejectsRomCueGainWhenLoadingCanonicalScenes() throws Exception {
+        for (var kind : List.of(AudioKind.ROM_MUSIC, AudioKind.ROM_SFX)) {
+            var valid = scene().withAudio(List.of(new AudioCue("cue", 0, kind, "s2", 1, "", 1)));
+            var mapper = new JsonMapper();
+            var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(valid));
+            ((ObjectNode) tree.path("audio").get(0)).put("gain", .58);
+            var error = assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)));
+            assertTrue(error.getMessage().contains("ROM cue gain must be 1; gain is available for voice clips"), error.getMessage());
+        }
+    }
+
     @Test
     void roundTripsEveryTrackAndLinkedProjectWithoutEmbeddingRomBytes() throws IOException {
         var doc = scene().withName("Arrival 🎬")
@@ -59,72 +70,24 @@ class TestStageplayStore {
     }
 
     @Test
-    void versionOneMigrationIsStrictAndSavingPublishesCurrentTracks() throws IOException {
-        String legacy = """
-                {"version":1,"name":"Legacy","durationFrames":120,"width":320,"height":224,
-                 "set":{"gameId":"s2","zone":0,"act":0,"romSha1":"","levelProject":""},
-                 "actors":[],"camera":[{"frame":0,"x":0,"y":0,"zoom":1,"interpolation":"HOLD"}],
-                 "captions":[],"audio":[]}
-                """;
-        var migrated = StageplayStore.decode(legacy.getBytes(StandardCharsets.UTF_8));
-        assertEquals(VERSION, migrated.version());
-        assertTrue(migrated.cameraEffects().isEmpty());
-        assertTrue(migrated.sceneChanges().isEmpty());
-        assertTrue(migrated.dialogueTypers().isEmpty());
-        assertTrue(migrated.dialogueSkins().isEmpty());
-        assertTrue(migrated.dialogue().isEmpty());
-        var upgraded = migrated.withCamera(List.of(migrated.camera().getFirst(),
-                        new CameraKey(60, 500, 300, 2, Interpolation.SMOOTH)))
-                .withCameraEffects(List.of(new CameraEffect("rumble", 10, 100, 8, 3, 6, 123)))
-                .withSceneChanges(List.of(new SceneChange("shot-two", 60,
-                        new SetSource("s3k", 0, 1, "", "sets/arrival.ogfproject"), Transition.WIPE_RIGHT, 20)));
-        assertEquals(upgraded, StageplayStore.decode(StageplayStore.encode(upgraded)));
-        for (String bad : List.of(legacy.replace("\"audio\":[]", "\"audio\":[],\"cameraEffects\":[]"),
-                legacy.replace("\"audio\":[]", "\"audio\":[],\"sceneChanges\":[]"),
-                legacy.replace("\"audio\":[]", "\"unknown\":[]"),
-                legacy.replace("\"version\":1", "\"version\":\"1\""),
-                legacy.replace("\"version\":1", "\"version\":1.0"),
-                legacy.replace("\"version\":1", "\"version\":2"))) {
-            assertThrows(IOException.class, () -> StageplayStore.decode(bad.getBytes(StandardCharsets.UTF_8)), bad);
-        }
-    }
-
-    @Test
-    void versionTwoMigrationPreservesDirectingAndRejectsLaterOrMissingFields() throws IOException {
-        var source = scene().withCamera(List.of(scene().camera().getFirst(),
-                        new CameraKey(100, 500, 400, 1.25, Interpolation.SMOOTH)))
-                .withSceneChanges(List.of(new SceneChange("arrival", 100,
-                        new SetSource("s2", 1, 0, "", "sets/second.ogfproject"), Transition.FADE_BLACK, 20)))
-                .withCameraEffects(List.of(new CameraEffect("quake", 50, 100, 5, 3, 6, 7)));
+    void rejectsEveryUnsupportedVersionAndRequiresTheCompleteCurrentShape() throws IOException {
         var mapper = new JsonMapper();
-        ObjectNode legacy = (ObjectNode) mapper.readTree(StageplayStore.encode(source));
-        legacy.put("version", 2);
-        ((ObjectNode) legacy.get("set")).remove("worldPolicy");
-        for (var change : legacy.withArray("sceneChanges")) ((ObjectNode) change.get("set")).remove("worldPolicy");
-        for (var key : legacy.withArray("camera")) ((ObjectNode) key).remove("follow");
-        legacy.remove("puppets");
-        legacy.remove(List.of("dialogueTypers", "dialogueSkins", "dialogue"));
-        var migrated = StageplayStore.decode(mapper.writeValueAsBytes(legacy));
-        assertEquals(source, migrated);
-        assertEquals(1.25, StageplayTimeline.sample(migrated, 101).camera().zoom());
-        for (String field : List.of("dialogueTypers", "dialogueSkins", "dialogue")) {
-            ObjectNode masquerading = legacy.deepCopy();
-            masquerading.putArray(field);
-            assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(masquerading)), field);
+        for (int version : new int[]{-1, 0, 1, 2, 3, 4, 5, 6, VERSION + 1}) {
+            var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(scene()));
+            tree.put("version", version);
+            assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)));
         }
-        ObjectNode missing = legacy.deepCopy();
-        missing.remove("cameraEffects");
-        assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(missing)));
-        ObjectNode current = legacy.deepCopy();
-        current.put("version", VERSION);
-        assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(current)),
-                "A current document must include every root field, even empty tracks");
-        ObjectNode versionOne = legacy.deepCopy();
-        versionOne.put("version", 1);
-        versionOne.remove(List.of("cameraEffects", "sceneChanges"));
-        versionOne.putNull("dialogue");
-        assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(versionOne)),
-                "Even null newer fields are unknown in the exact version-one shape");
+        for (String field : List.of("cameraEffects", "sceneChanges", "dialogueTypers", "dialogueSkins",
+                "dialogue", "puppets", "objectActors", "worldCommands")) {
+            var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(scene()));
+            tree.remove(field);
+            assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)), field);
+        }
+        for (String policy : List.of("LIVE", "TERRAIN_ONLY", "LEGACY_LIVE", "LEGACY_TERRAIN_ONLY")) {
+            var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(scene()));
+            ((ObjectNode) tree.get("set")).put("worldPolicy", policy);
+            assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)), policy);
+        }
     }
 
     @Test

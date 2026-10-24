@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -34,7 +35,6 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -55,6 +55,20 @@ import java.util.logging.Logger;
  */
 public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            restorePlayerControl(player);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOG = Logger.getLogger(LbzFinalBoss2Instance.class.getName());
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE =
             TouchResponseProfile.fromCanonical(
@@ -811,7 +825,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         ensurePostCapsuleArtLoaded();
         restorePlayerControl(player);
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setControlLocked(true);
+            visualControlOwners.acquire(sprite).setControlLocked(true);
             sprite.setForcedInputMask(0);
         }
         defeatStage = DefeatStage.AUTOWALK;
@@ -827,7 +841,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         int target = cameraX() + 0x50;
         int dx = (short) (target - sprite.getCentreX());
         if (Math.abs(dx) >= 8) {
-            sprite.setForcedInputMask(dx >= 0
+            visualControlOwners.acquire(sprite).setForcedInputMask(dx >= 0
                     ? AbstractPlayableSprite.INPUT_RIGHT
                     : AbstractPlayableSprite.INPUT_LEFT);
             return;
@@ -853,7 +867,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
 
     private void updateShipRise(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
         int nextY = (y + 1) & 0xFFFF;
         if (unsignedLess(nextY, cameraY() + 0x40)) {
@@ -870,7 +884,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
 
     private void updateShipCruise(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
         swingAndMove();
         if (player instanceof AbstractPlayableSprite sprite) {
@@ -898,7 +912,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
 
     private void updateShipEscape(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         }
         swingAndMove();
         if (unsignedLess(x, cameraX() + 0x1C0)) {
@@ -922,7 +936,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
             return;
         }
         if (player instanceof AbstractPlayableSprite sprite) {
-            sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+            visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         }
         defeatStage = DefeatStage.WALK_TO_FALL;
     }
@@ -934,8 +948,8 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         }
         x = sprite.getCentreX() & 0xFFFF;
         y = sprite.getCentreY() & 0xFFFF;
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
-        sprite.setControlLocked(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
+        visualControlOwners.acquire(sprite).setControlLocked(true);
         sprite.setForcedInputMask(0);
         sprite.setObjectMappingFrameControl(true);
         sprite.setMappingFrame(0x8C);
@@ -1177,7 +1191,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
 
     private void restorePlayerControl(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            ObjectControlState.none().applyTo(sprite);
+            ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
             sprite.setControlLocked(false);
         }
     }
@@ -1191,7 +1205,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
             sprite.applyHurt(getCentreX());
             return;
         }
-        ObjectControlState.none().applyTo(sprite);
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
         sprite.setXSpeed((short) -xVel);
         sprite.setYSpeed((short) -0x400);
         sprite.setAir(true);
@@ -2092,6 +2106,18 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
 
     /** loc_74C24: player-range grab helper; root routine transitions are native. */
     public static final class GrabOwnerChild extends BossChild {
+        // Player-only native control tail; directing must not advance this controller's
+        // routine, timers, world flags, camera or level transition.
+        private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var player : visualControlOwners.players()) {
+                ObjectControlState.none().applyTo(player);
+            }
+            visualControlOwners.clear();
+        }
+
         private ArmControllerChild controller;
         private AbstractPlayableSprite grabbedPlayer;
         private int releaseCooldown;
@@ -2142,7 +2168,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
             refreshPositionFrom(controller);
             if ((boss.statusBits & STATUS_DEFEATED) != 0) {
                 if (player instanceof AbstractPlayableSprite sprite) {
-                    ObjectControlState.none().applyTo(sprite);
+                    ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
                 }
                 boss.forgetChild(this);
                 ObjectLifetimeOps.expireDynamic(this);
@@ -2165,7 +2191,7 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
                 boss.routine = ROUTINE_GRAB_WAIT;
                 boss.waitTimer = GRAB_WAIT;
                 boss.waitTarget = WaitTarget.GRAB_RISE;
-                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+                ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
                 sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
                 sprite.setXSpeed((short) 0);
                 sprite.setYSpeed((short) 0);

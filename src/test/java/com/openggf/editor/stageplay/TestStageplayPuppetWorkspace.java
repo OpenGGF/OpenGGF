@@ -25,7 +25,7 @@ class TestStageplayPuppetWorkspace {
     private final class PreviewHost implements StageplayWorkspace.Host {
         int reads;
         boolean fail;
-        public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224); }
+        public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224).withSet(new SetSource("s2",0,0,"","")); }
         public Path initialAssetRoot() { return root; }
         public Frame resolvePreview(StageplayDocument doc,Path assets,int frame) throws IOException {
             reads++;
@@ -48,8 +48,8 @@ class TestStageplayPuppetWorkspace {
         if (!physical) workspace.menu().setValue("mode","POSER");
         workspace.menu().submit(); assertNull(workspace.menu().error());
     }
-    private static void actionForm(StageplayWorkspace workspace,int row) {
-        workspace.invoke(SET_KEY); choose(workspace.menu(),row);
+    private static void actionForm(StageplayWorkspace workspace,String label) {
+        workspace.invoke(SET_KEY); choose(workspace.menu(),label);
     }
 
     @Test void newActorsDefaultToFloorPhysicsAndLegacyManualRemainsAnExplicitChoice() throws Exception {
@@ -83,16 +83,18 @@ class TestStageplayPuppetWorkspace {
 
     @Test void moveJumpStopFormsEditAndDeleteActualInstructionsWithoutPositionKeys() {
         var workspace=workspace(new PreviewHost()); add(workspace,true);
-        workspace.seek(10); actionForm(workspace,0);
+        workspace.seek(10); actionForm(workspace,"Move to destination");
         assertEquals("Move to destination",workspace.menu().title());
         assertEquals("506.0",workspace.menu().values().get("x"),"goal defaults from resolved x, not authored spawn");
         workspace.menu().setValue("x","900"); workspace.menu().setValue("y","300"); workspace.menu().setValue("urgency","0.5"); workspace.menu().submit();
-        actionForm(workspace,1); workspace.menu().setValue("hold","8"); workspace.menu().submit();
-        workspace.seek(40); actionForm(workspace,2); workspace.menu().submit();
+        actionForm(workspace,"Jump"); workspace.menu().setValue("hold","8"); workspace.menu().submit();
+        workspace.seek(40); actionForm(workspace,"Stop / brake"); workspace.menu().submit();
         var before=workspace.controller().document(); var commands=before.puppets().getFirst().commands();
         assertEquals(List.of(PuppetCommandKind.MOVE_TO,PuppetCommandKind.JUMP,PuppetCommandKind.STOP),commands.stream().map(PuppetCommand::kind).toList());
         assertEquals(1,before.actors().getFirst().keys().size());
-        workspace.invoke(PUPPET_ACTIONS); choose(workspace.menu(),5); choose(workspace.menu(),0);
+        workspace.invoke(PUPPET_ACTIONS);
+        choose(workspace.menu(), commands.getFirst().frame() + ": " + commands.getFirst().kind());
+        choose(workspace.menu(), "Edit");
         workspace.menu().setValue("urgency","0"); workspace.menu().submit();
         assertNotNull(workspace.menu().error()); assertEquals(before,workspace.controller().document());
         workspace.menu().setValue("urgency","0.75"); workspace.menu().submit();
@@ -123,7 +125,7 @@ class TestStageplayPuppetWorkspace {
 
     @Test void recordingJumpRespectsFutureJumpAndShotBoundaries() {
         var workspace=workspace(new PreviewHost()); add(workspace,true);
-        workspace.seek(5); actionForm(workspace,1); workspace.menu().setValue("hold","2"); workspace.menu().submit();
+        workspace.seek(5); actionForm(workspace,"Jump"); workspace.menu().setValue("hold","2"); workspace.menu().submit();
         workspace.seek(0); workspace.invoke(RECORD); workspace.recordStep(false,false,false,true); workspace.stop();
         var jumps=workspace.controller().document().puppets().getFirst().commands().stream().filter(c -> c.kind()==PuppetCommandKind.JUMP).toList();
         assertEquals(4,jumps.getFirst().holdFrames()); assertEquals(5,jumps.getLast().frame());
@@ -185,8 +187,8 @@ class TestStageplayPuppetWorkspace {
     @Test void shotPlacementVisibilityAndShotRemovalRemainValidAndUndoable() {
         var workspace=workspace(new PreviewHost()); add(workspace,true);
         workspace.seek(40); workspace.invoke(SCENE_CHANGES); choose(workspace.menu(),0); workspace.menu().submit();
-        actionForm(workspace,3); workspace.menu().setValue("x","800"); workspace.menu().submit();
-        workspace.seek(50); actionForm(workspace,4); workspace.menu().setValue("visible","false"); workspace.menu().submit();
+        actionForm(workspace,"Spawn / current shot placement"); workspace.menu().setValue("x","800"); workspace.menu().submit();
+        workspace.seek(50); actionForm(workspace,"Visibility at playhead"); workspace.menu().setValue("visible","false"); workspace.menu().submit();
         var before=workspace.controller().document(); var keys=before.actors().getFirst().keys();
         assertEquals(800,keys.getLast().x()); assertFalse(keys.getLast().visible());
         workspace.invoke(SCENE_CHANGES); choose(workspace.menu(),1); choose(workspace.menu(),1);
@@ -196,6 +198,24 @@ class TestStageplayPuppetWorkspace {
         workspace.invoke(UNDO); assertEquals(before,workspace.controller().document());
         workspace.invoke(DELETE_ACTOR); assertTrue(workspace.controller().document().puppets().isEmpty());
         workspace.invoke(UNDO); assertEquals(before,workspace.controller().document());
+    }
+
+    /** Resolve the actual action label, then exercise the same keyboard menu path as either editor. */
+    private static void choose(EditorProjectMenu menu,String label) {
+        try {
+            var field = EditorProjectMenu.class.getDeclaredField("actions");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked") var actions = (List<EditorProjectMenu.Action>) field.get(menu);
+            for (int row = 0; row < actions.size(); row++) {
+                if (actions.get(row).label().equals(label)) {
+                    choose(menu,row);
+                    return;
+                }
+            }
+            fail("Missing action '" + label + "' in " + menu.title());
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static void choose(EditorProjectMenu menu,int row) {

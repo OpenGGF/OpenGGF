@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -33,7 +34,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.NativePositionOps;
-
 import java.util.List;
 import java.io.IOException;
 
@@ -49,6 +49,18 @@ import java.io.IOException;
  */
 public final class CnzEndBossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            releaseSprite(player);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
             com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy(true));
     private static final int START_CAMERA_X_MIN = 0x4660;
@@ -639,7 +651,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
             services().camera().setMaxYTarget((short) 0x0200);
             S3kCnzEventWriteSupport.requestSidekickBoundsPublishAfterCameraEasing(
                     services());
-            sprite.setControlLocked(true);
+            visualControlOwners.acquire(sprite).setControlLocked(true);
             return;
         }
         if (cannonArmed && !cannonLaunched) {
@@ -658,7 +670,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
                 if (endCannon == null || endCannon.getSpinAngle() != 0x12) {
                     return;
                 }
-                sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
+                visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_JUMP);
                 cannonLaunchInputForced = true;
                 return;
             }
@@ -739,7 +751,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance
         if (sprite.getCpuController() != null) {
             sprite.getCpuController().setController2SignedLocked(false);
         }
-        sprite.setControlLocked(false);
+        visualControlOwners.relinquish(sprite).setControlLocked(false);
         ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);

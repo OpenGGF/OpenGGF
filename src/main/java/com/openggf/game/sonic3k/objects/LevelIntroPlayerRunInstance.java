@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -7,7 +8,6 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 
 /**
@@ -21,6 +21,20 @@ import java.util.List;
  * {@code x_pos + $10 >= $30(a0)} (unsigned) it clears both control locks and deletes itself.
  */
 public final class LevelIntroPlayerRunInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int RUN_DISTANCE = 0xB0;
     private static final int RELEASE_MARGIN = 0x10;
 
@@ -53,19 +67,19 @@ public final class LevelIntroPlayerRunInstance extends AbstractObjectInstance im
             captureStartTarget(leader.getCentreX(), leader.getCentreY());
         }
         // loc_44A26: Ctrl_1_locked = 1, Ctrl_1_logical = button_right_mask<<8 (held, no press).
-        leader.setControlLocked(true);
-        leader.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+        visualControlOwners.acquire(leader).setControlLocked(true);
+        visualControlOwners.acquire(leader).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
         services().camera().requestForcedScroll(targetX, targetY);
         if (((leader.getCentreX() + RELEASE_MARGIN) & 0xFFFF) < targetX) {
             return;
         }
         // loc_44A56: clear Ctrl_1_locked and Ctrl_2_locked, then delete.
-        leader.setControlLocked(false);
+        visualControlOwners.relinquish(leader).setControlLocked(false);
         leader.clearForcedInputMask();
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (entity != leader && entity instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(false);
+                visualControlOwners.relinquish(sprite).setControlLocked(false);
             }
         }
         setDestroyed(true);
