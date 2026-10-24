@@ -3356,3 +3356,65 @@ identically after setup/import normalization. The shared fixture implementation
 is byte-identical to the preceding commit. Exactly four keys disappear; no
 allowance, production logic or assertion changes. Complete joint guards and
 parent integration/push/cleanup remain pending.
+
+
+### Qualified lifecycle-fixture continuation
+
+Source-only triage held several keys pending deeper ordering proof. A bounded
+follow-up now qualifies five using existing owners; no new fixture API or
+production change is needed. `TestTraceSessionLauncherRewindPresentation` uses
+`resetAll()` before installing its recording audio backend, preserving the
+original initially attached gameplay world. `TestLiveRewindManagerAudioCleanup`
+uses `resetEngineOnly()` before its config writes/backend installation, retaining
+explicit world creation inside consumer bodies. Never reset after those backends
+are installed.
+
+Provider tests retain their explicit early session clear and then use the
+engine-only reset, so host resolution still falls back to the bootstrap module
+selected in each body. Its nested ROM fixture and all body-level module/world
+choices stay intact. The edit uses raw bytes to preserve the two unrelated CRLF
+endings previously restored by independent art-provider review.
+
+`TestGraphicsManagerFadeRebinding` uses engine-only setup; its actual raw
+bootstrap calls and identity assertions inside bodies/teardown remain intact.
+`TestGraphicsManagerSpriteSatReplay` keeps graphics destruction first, then
+engine-only setup before retrieving/initializing the reconstructed headless
+host. The supplied body operations still establish and assert the intended
+compatibility boundary. No shared GL fixture, display fallback or shader change
+is introduced.
+
+All five setup keys are removed provisionally (38 to33,32 files). Imports/setup
+are the only test-source differences. The complete five-class selection and
+singleton guard must pass, with nested ROM cases and exact skip inspection,
+before closing these obligations. The four legacy GLFW visual keys and
+preference-preserving GameLoop/trace-config boundaries remain outside this slice.
+
+
+The five lifecycle candidates passed47 cases with zero failures/errors/skips:
+trace-launch6, donor provider11 (including both real-ROM nested S3K Tails host
+translations), live-rewind audio12, fade rebinding4, SAT replay6 and guard8.
+All47 identities were unique across seven XML reports; nested class attribution
+was checked by testcase classname rather than report filename. Java25/EGL and
+all four absolute ROM properties were inspected. Queue wait306 seconds; Maven
+execution30.092 seconds. The14 XML/text reports were consumed.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestTraceSessionLauncherRewindPresentation,TestCrossGameFeatureProviderRefactor,TestLiveRewindManagerAudioCleanup,TestGraphicsManagerFadeRebinding,TestGraphicsManagerSpriteSatReplay,TestSingletonLifecycleGuard' \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" test -B
+```
+
+Raw-byte comparison from the top-level class declarations, normalizing only the
+setup member, preserves every field, consumer body/assertion and teardown. The
+provider's two CRLF endings remain intact. No helper implementation or production
+code changed. These observations supersede the earlier source-only triage hold
+for these five keys; no assertion was removed to make isolation work. They do
+not certify the separate legacy GLFW visual fixtures, external WAV references
+or arbitrary incoming user preferences. Joint final guards and delivery remain
+with the parent.

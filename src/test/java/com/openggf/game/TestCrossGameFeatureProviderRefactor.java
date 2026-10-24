@@ -89,7 +89,7 @@ class TestCrossGameFeatureProviderRefactor {
         // so resolveHostGameId() falls back to the GameModuleRegistry bootstrap
         // default that this fixture configures via setCurrent().
         SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

@@ -151,7 +151,7 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 38 methods across 37 files,
+The ambient singleton-setup inventory now contains 33 methods across 32 files,
 down from 102/100 after direct manager construction and named module fixtures
 replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
@@ -649,3 +649,11 @@ rendering/controller controls and injected ICZ freezer/MGZ pulley-mantis tests.
 Their explicit world-creation helpers, camera bounds and consumer bodies remain
 unchanged. The local inventory is38 methods across37 files; all110 focused/guard cases passed
 with zero failures/errors/skips. No production or shared fixture helper changed.
+
+Five formerly held fixture keys are being qualified with their existing
+lifecycle owners: trace-launch setup retains a gameplay world before installing
+its recording backend; live-rewind audio keeps engine reset before its backend;
+provider tests keep no world; graphics binding/SAT tests retain their explicit
+bootstrap/reconstruction operations in consumer bodies. No helper was added.
+The current local allowance is33 methods across32 files. All47 focused/guard cases
+passed with zero failures/errors/skips, including both nested real-ROM controls.

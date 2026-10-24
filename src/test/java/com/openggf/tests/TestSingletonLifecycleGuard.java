@@ -18,16 +18,13 @@ class TestSingletonLifecycleGuard {
     private static final Path TEST_ROOT = Path.of("src/test/java");
     private static final Set<String> AMBIENT_GAMEPLAY_MODE_SETUP_BASELINE = baseline("""
             src/test/java/com/openggf/TestGameLoop.java#setUp
-            src/test/java/com/openggf/TestTraceSessionLauncherRewindPresentation.java#setUp
             src/test/java/com/openggf/audio/AudioRegressionTest.java#setUpClass
-            src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
             src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
             src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java#resetCamera
             src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
             src/test/java/com/openggf/game/TestSpindashGating.java#setUp
-            src/test/java/com/openggf/game/rewind/TestLiveRewindManagerAudioCleanup.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
@@ -37,8 +34,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
-            src/test/java/com/openggf/graphics/TestGraphicsManagerFadeRebinding.java#setUp
-            src/test/java/com/openggf/graphics/TestGraphicsManagerSpriteSatReplay.java#setUp
             src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
             src/test/java/com/openggf/level/TestLevelManagerSlotBackgroundCopy.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
