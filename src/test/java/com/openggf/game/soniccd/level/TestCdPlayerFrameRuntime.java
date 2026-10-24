@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
+import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -69,6 +70,146 @@ class TestCdPlayerFrameRuntime {
         assertEquals(0, f.captureShared().vIntClock().deltaSinceAdmittedCut());
         assertTrue(f.display().isEmpty()); assertFalse(f.paused()); assertFalse(f.closed());
         assertTrue(fixture.dmas.isEmpty()); assertThrows(IllegalStateException.class, () -> f.runBody(1));
+    }
+
+    // S3 validates a pure call's final values before the pool owner commits that call.
+    @Test void nativeStandAndReleaseCommitOnlyTheirActorAndGlobalPartitionsAndReplay() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        var captured = f.captureActor(); var s = captured.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), 1899 << 16, 0x180, 0x111, 0x77,
+                4, 0x66, 4, m.spriteFlags(), 7, 14, 2, m.previousAnimation(), 1, m.charge(),
+                m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var seeded = new CdPlayerBody.State(motion, s.animation(), s.header(),
+                new CdPlayerBody.Timers(7, s.timers().invincibility(), s.timers().speedShoes(), s.timers().reset()),
+                s.history(), s.rotationDistance(), new CdPlayerBody.ObjectLinks(47, 0));
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
+        var player = solidPlayer(f); var globals = solidGlobals(f);
+        var pool = new CdObjectPool(); var object = solidObject(pool);
+        var result = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.STAND_ON_OBJECT, object,
+                player, new CdSolidObject.Gates(0, 0), globals, pool.capture());
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared(); var display = f.display();
+        f.validateObjectSolidResult(player, globals, result);
+        assertEquals(beforeActor, f.captureActor()); assertEquals(beforeShared, f.captureShared());
+        f.applyObjectSolidResult(player, globals, result);
+        var after = f.captureActor(); var afterShared = f.captureShared();
+        assertEquals(2, f.state().motion().routine()); assertEquals(120, f.state().timers().hurt());
+        assertEquals(1894 << 16, f.state().motion().centreY16_16());
+        assertEquals(9, f.state().motion().xRadius()); assertEquals(19, f.state().motion().yRadius());
+        assertEquals(8, f.state().motion().flags()); assertEquals(0, f.state().motion().animation());
+        assertEquals(0, f.state().motion().playerJump()); assertEquals(0, f.state().motion().angle());
+        assertEquals(0, f.state().motion().yVelocity()); assertEquals(0x180, f.state().motion().groundVelocity());
+        assertEquals(new CdPlayerBody.ObjectLinks(47, 32), f.state().objectLinks());
+        assertEquals(seeded.history(), f.state().history()); assertEquals(seeded.animation(), f.state().animation());
+        assertEquals(display, f.display(), "The earlier native DrawObject cut is not republished");
+        assertEquals(object, pool.state(32), "The Frame does not commit a pool image");
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSolidResult(player, globals, result));
+        assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        f.applyObjectSolidResult(player, globals, result);
+        assertEquals(after, f.captureActor()); assertEquals(afterShared, f.captureShared());
+        var current = solidPlayer(f); var currentGlobals = solidGlobals(f);
+        var release = CdSolidObject.fromAssets(f.assets()).run(CdSolidObject.Entry.GET_OFF_OBJECT, result.object(),
+                current, new CdSolidObject.Gates(0, 0), currentGlobals, pool.capture());
+        f.applyObjectSolidResult(current, currentGlobals, release);
+        assertEquals(new CdPlayerBody.ObjectLinks(47, 0), f.state().objectLinks());
+        assertEquals(2, f.state().motion().flags() & 10);
+    }
+
+    @Test void declaredSolidGlobalWritesReachTheirSingleStoresAndKeepTheActorAndServiceState() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        var player = solidPlayer(f); var globals = solidGlobals(f);
+        var after = new CdSolidObject.Globals(1, 0x1234, 0x45, 0x67);
+        var result = solidResult(solidObject(new CdObjectPool()), player, after, java.util.Set.of(),
+                java.util.EnumSet.allOf(CdSolidObject.GlobalField.class));
+        var actor = f.captureActor(); var shared = f.captureShared(); var env = f.environment();
+        f.validateObjectSolidResult(player, globals, result); assertEquals(shared, f.captureShared());
+        f.applyObjectSolidResult(player, globals, result);
+        assertEquals(1, f.environment().globals().invincible());
+        assertEquals(0x1234, f.environment().movement().globals().scoreChain());
+        assertEquals(0x45, f.environment().movement().globals().primaryAngle());
+        assertEquals(0x67, f.environment().movement().globals().secondaryAngle());
+        assertEquals(actor, f.captureActor()); assertEquals(shared.artState(), f.artState());
+        assertEquals(shared.vIntClock(), f.vIntClock()); assertEquals(env.controls(), f.environment().controls());
+        assertEquals(env.movement().physics(), f.environment().movement().physics());
+        assertEquals(env.movement().bounds(), f.environment().movement().bounds());
+        assertEquals(env.movement().gates(), f.environment().movement().gates());
+        assertEquals(env.globals().levelFrames(), f.environment().globals().levelFrames());
+    }
+
+    @Test void objectSolidResultRejectsStaleGlobalsAndUndeclaredValuesBeforeAnyCommit() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var pool = new CdObjectPool(); var object = solidObject(pool);
+        var same = solidResult(object, player, globals, java.util.Set.of(), java.util.Set.of());
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var staleGlobals = new CdSolidObject.Globals(globals.invincible() ^ 1, globals.scoreChain(), globals.primaryAngle(), globals.secondaryAngle());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSolidResult(player, staleGlobals, same));
+        var a = player.actor();
+        var tile = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(a.motion(), a.tile() ^ 0x8000,
+                a.priority(), a.hurt(), a.rotationDistance()), player.slotId(), player.pushObject(), player.standObject());
+        var undeclaredTile = solidResult(object, tile, globals, java.util.Set.of(), java.util.Set.of());
+        assertThrows(IllegalArgumentException.class, () -> f.validateObjectSolidResult(player, globals, undeclaredTile));
+        var undeclaredGlobal = solidResult(object, player, staleGlobals, java.util.Set.of(), java.util.Set.of());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSolidResult(player, globals, undeclaredGlobal));
+        var undeclaredLink = new CdSolidObject.Player(a, player.slotId(), 32, player.standObject());
+        var links = solidResult(object, undeclaredLink, globals, java.util.Set.of(), java.util.Set.of());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSolidResult(player, globals, links));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void knownWriteSetsCannotAuthorizeAnUnrepresentedMotionChange() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var a = player.actor(); var m = a.motion();
+        var charge = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(),
+                m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                m.playerJump(), m.charge() ^ 1, m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var changed = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(charge, a.tile(), a.priority(), a.hurt(), a.rotationDistance()),
+                player.slotId(), player.pushObject(), player.standObject());
+        var pool = new CdObjectPool();
+        var result = solidResult(solidObject(pool), changed, globals,
+                java.util.EnumSet.allOf(CdSolidObject.PlayerField.class), java.util.EnumSet.allOf(CdSolidObject.GlobalField.class));
+        var actor = f.captureActor(); var shared = f.captureShared();
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSolidResult(player, globals, result));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void objectSolidPortsRequireClosedFrameAndRejectNullWithoutAdvancingAnything() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var result = solidResult(solidObject(new CdObjectPool()), player, globals, java.util.Set.of(), java.util.Set.of());
+        var before = f.captureActor(); var shared = f.captureShared();
+        assertThrows(NullPointerException.class, () -> f.validateObjectSolidResult(null, globals, result));
+        assertThrows(NullPointerException.class, () -> f.validateObjectSolidResult(player, null, result));
+        assertThrows(NullPointerException.class, () -> f.validateObjectSolidResult(player, globals, null));
+        assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSolidResult(player, globals, result));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSolidResult(player, globals, result));
+        f.clearPendingInput(); f.close();
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSolidResult(player, globals, result));
+    }
+
+    /** Explicit pool/player inputs for a component test, not World gameplay or a source identity. */
+    private static CdObjectState solidObject(CdObjectPool pool) {
+        var object = pool.state(32).moveByte(CdObjectState.ByteField.ID, 0x12)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x80)
+                .moveByte(CdObjectState.ByteField.WIDTH, 12).moveByte(CdObjectState.ByteField.Y_RADIUS, 12)
+                .moveWord(CdObjectState.WordField.X, 64).moveWord(CdObjectState.WordField.Y, 1920);
+        pool.write(object); return object;
+    }
+    private static CdSolidObject.Player solidPlayer(CdPlayerFrameRuntime f) {
+        var s = f.state(); var a = new CdPlayerTouchResponse.Actor(s.motion(), s.header().tile(),
+                s.header().priority(), s.timers().hurt(), s.rotationDistance());
+        return new CdSolidObject.Player(a, s.header().slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+    }
+    private static CdSolidObject.Globals solidGlobals(CdPlayerFrameRuntime f) {
+        var e = f.environment(); var g = e.movement().globals();
+        return new CdSolidObject.Globals(e.globals().invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle());
+    }
+    private static CdSolidObject.Result solidResult(CdObjectState object, CdSolidObject.Player player,
+            CdSolidObject.Globals globals, java.util.Set<CdSolidObject.PlayerField> writes,
+            java.util.Set<CdSolidObject.GlobalField> globalWrites) {
+        return new CdSolidObject.Result(CdSolidObject.Entry.GET_OFF_OBJECT, object, player, globals, List.of(),
+                java.util.Set.of(), writes, globalWrites, List.of(), CdSolidObject.Path.ROUTINE_RETURN,
+                Optional.empty(), java.util.OptionalInt.empty());
     }
 
     @ParameterizedTest @CsvSource({"0,0", "32,127", "161,254"})

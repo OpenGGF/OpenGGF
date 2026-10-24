@@ -5,6 +5,7 @@ import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
 import java.util.ArrayList;
@@ -526,6 +527,108 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
+    }
+
+    /**
+     * Pure value-CAS preflight for one completed native Object Solid call. Root owns the physical pass,
+     * the same call-cut pool capture, synchronous commit order and sounds. Values are not an identity token
+     * or proof that a call ran. No callback, pool, sound, display, art, clock or input work occurs here.
+     */
+    public void validateObjectSolidResult(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
+                                          CdSolidObject.Result result) {
+        requireOpenIdle(); requireClosedFrame();
+        Objects.requireNonNull(expectedPlayer, "solid call player");
+        Objects.requireNonNull(expectedGlobals, "solid call globals");
+        Objects.requireNonNull(result, "solid result");
+        var s = state; var h = s.header(); var g = environment.movement().globals();
+        var currentPlayer = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+        var currentGlobals = new CdSolidObject.Globals(environment.globals().invincible(), g.scoreChain(),
+                g.primaryAngle(), g.secondaryAngle());
+        if (!expectedPlayer.equals(currentPlayer) || !expectedGlobals.equals(currentGlobals)) {
+            throw new IllegalArgumentException("Stale SolidObject player/global call cut");
+        }
+        var next = result.player(); var before = expectedPlayer.actor().motion(); var after = next.actor().motion();
+        if (next.slotId() != expectedPlayer.slotId() || after.spriteFlags() != before.spriteFlags()
+                || after.previousAnimation() != before.previousAnimation() || after.charge() != before.charge()
+                || after.moveLock() != before.moveLock() || after.previousPrimaryAngle() != before.previousPrimaryAngle()
+                || after.previousSecondaryAngle() != before.previousSecondaryAngle()) {
+            throw new IllegalArgumentException("SolidObject result changes an unowned player field");
+        }
+        for (var field : CdSolidObject.PlayerField.values()) {
+            if (!result.playerWrites().contains(field) && solidPlayerValue(expectedPlayer, field) != solidPlayerValue(next, field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject player write: " + field);
+            }
+        }
+        for (var field : CdSolidObject.GlobalField.values()) {
+            if (!result.globalWrites().contains(field)
+                    && solidGlobalValue(expectedGlobals, field) != solidGlobalValue(result.globals(), field)) {
+                throw new IllegalArgumentException("Undeclared SolidObject global write: " + field);
+            }
+        }
+    }
+
+    /**
+     * Adopt the checked final values once, preserving every field outside the declared native write sets.
+     * Root preflights this before pool CAS, then calls it synchronously after that CAS, with no callback between.
+     * All new immutable values are built before the first assignment. No ordered call/write metadata is replayed.
+     */
+    public void applyObjectSolidResult(CdSolidObject.Player expectedPlayer, CdSolidObject.Globals expectedGlobals,
+                                       CdSolidObject.Result result) {
+        validateObjectSolidResult(expectedPlayer, expectedGlobals, result);
+        var player = result.player(); var actor = player.actor(); var globals = result.globals();
+        var h = state.header(); var timers = state.timers();
+        var nextState = new CdPlayerBody.State(actor.motion(), state.animation(),
+                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), actor.tile(), actor.priority(), h.width()),
+                new CdPlayerBody.Timers(actor.hurt(), timers.invincibility(), timers.speedShoes(), timers.reset()),
+                state.history(), actor.rotationDistance(), new CdPlayerBody.ObjectLinks(player.pushObject(), player.standObject()));
+        var m = environment.movement(); var g = m.globals(); var body = environment.globals();
+        var movementGlobals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), globals.primaryAngle(),
+                globals.secondaryAngle(), g.boredTimer(), globals.scoreChain(), g.debugAngle(), g.debugAngleShift(),
+                g.debugQuadrant(), g.debugFloorDistance());
+        var nextEnvironment = new CdPlayerBody.Environment(
+                new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), movementGlobals), environment.controls(),
+                new CdPlayerBody.Globals(body.levelFrames(), body.cameraXCentre(), body.timeAttackMode(), body.debugMode(),
+                        body.debugCheat(), body.timeWarpTimer(), globals.invincible(), body.bossMusic()), environment.dynamicSlots());
+        state = nextState;
+        environment = nextEnvironment;
+    }
+
+    private static int solidPlayerValue(CdSolidObject.Player player, CdSolidObject.PlayerField field) {
+        var a = player.actor(); var m = a.motion();
+        return switch (field) {
+            case TILE -> a.tile();
+            case CENTRE_X -> m.centreX16_16() >>> 16;
+            case CENTRE_X_FRACTION -> m.centreX16_16() & 0xFFFF;
+            case CENTRE_Y -> m.centreY16_16() >>> 16;
+            case CENTRE_Y_FRACTION -> m.centreY16_16() & 0xFFFF;
+            case X_VELOCITY -> m.xVelocity();
+            case Y_VELOCITY -> m.yVelocity();
+            case GROUND_VELOCITY -> m.groundVelocity();
+            case Y_RADIUS -> m.yRadius();
+            case X_RADIUS -> m.xRadius();
+            case PRIORITY -> a.priority();
+            case ANIMATION -> m.animation();
+            case PUSH_OBJECT -> player.pushObject();
+            case FLAGS -> m.flags();
+            case ROUTINE -> m.routine();
+            case ANGLE -> m.angle();
+            case PLAYER_CONTROL -> m.playerControl();
+            case HURT -> a.hurt();
+            case STICK -> m.stick();
+            case ROTATION_DISTANCE -> a.rotationDistance();
+            case PLAYER_JUMP -> m.playerJump();
+            case STAND_OBJECT -> player.standObject();
+        };
+    }
+
+    private static int solidGlobalValue(CdSolidObject.Globals globals, CdSolidObject.GlobalField field) {
+        return switch (field) {
+            case INVINCIBLE -> globals.invincible();
+            case SCORE_CHAIN -> globals.scoreChain();
+            case PRIMARY_ANGLE -> globals.primaryAngle();
+            case SECONDARY_ANGLE -> globals.secondaryAngle();
+        };
     }
 
     /**

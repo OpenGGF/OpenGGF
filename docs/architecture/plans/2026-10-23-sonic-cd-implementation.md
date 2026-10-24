@@ -3683,3 +3683,24 @@ source-only verdict is separate from Root's execution. The Draw test stand-in
 fuses enqueue and later culling; the real queue/live-slot path remains S4 work.
 No live World dispatch, mapping/art-bank admission, supported-object MODE,
 route reachability, act completion or native timing/pixel parity is claimed.
+
+### Guarded solid player/global commit — 24 October 2026
+
+Frame now validates and applies the final SolidObject Player/Globals against
+the live value cut. Every native PlayerField and GlobalField has a projection;
+integer/fraction words are checked independently, and unrepresented motion,
+slot identity and undeclared changes reject. Validation is pure. Apply builds
+all immutable state before assignment and adopts once into the existing actor
+and shared owners. Display, history, non-hurt timers, art, clocks, input and
+publication remain untouched. There is no pool, effect replay or sound work.
+Value equality preserves admission; it is not a source-call identity token.
+
+The five new component cases execute within Root79585's311/0/0/0 result above,
+including pure preflight, a real StandOn/GetOff pair, both rewind partitions,
+replay, all four globals, stale/undeclared writes and lifecycle rejection.
+Independent source review found noP1/P2. Its nonblocking coverage advisory
+is retained: direct nonzero-fraction and Solid-triggered KillPlayer port cases
+are not yet present, though the implementation and separate owner paths were
+checked. S4 still owns same-cut pool coherence/CAS before publication, a
+synchronous apply without intervening callbacks, ordered FM forwarding and
+failure closure. Next supported-object MODE is not admitted by this port.
