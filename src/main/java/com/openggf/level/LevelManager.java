@@ -697,9 +697,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Establishes the current game's production audio/request service. */
     public void configureAudio() throws IOException {
-        // Installing the profile builds its loader immediately; bind the current data source first.
-        audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
-        audioManager.setAudioProfile(gameModule.getAudioProfile());
+        var rom = worldSession.getDataSource().rom().orElse(null);
+        com.openggf.audio.AudioManagerInternalAccess.installMatchedSource(
+                audioManager, rom, gameModule.getAudioProfile());
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
     }

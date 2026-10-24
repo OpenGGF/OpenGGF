@@ -6948,3 +6948,159 @@ and earlier category/guard epochs retain their own attribution. This local
 stack includes B9 once by ancestry and stays held from Root receipt. Main,
 provider activation and paired MHZ windows, remote, PR/CI and new Root ancestry
 actions remain closed.
+
+
+## Matched world audio source installation — 2026-10-24
+
+This isolated successor is based on `7f5302cf48f3b11cfe1c4aa2e84765dcb4068d7f`,
+which already includes the stock B9 PCM and ordinary special-stage failure
+fixture leaves once. Root remains at `1d7201b2`; new ancestry reception, Main,
+remote/PR/CI actions, provider activation and paired MHZ observations remain held.
+Nothing in this section changes the earlier category, guard or route results.
+
+### Source contract and implementation
+
+Actual level and standalone special-stage setup selected a complete ROM/profile
+pair through two individual setters. The first setter could therefore construct
+one selected dependency with the previous dependency before the second setter
+installed the intended pair. The old source tuple itself was immutable; that did
+not prevent eager preparation against a transient cross-pair. This is a setup
+contract defect, not an attribution of the lost historical B9 warning or proof of
+an ordinary user-facing regression/newness.
+
+`AudioManagerInternalAccess.installMatchedSource` now forwards to one
+package-private synchronized manager operation. It prepares the selected ROM,
+profile, loader, DAC, sequencer configuration and generation, configures the
+backend/coordination owner, then publishes one tuple and invokes the existing
+presentation boundary once. Preparation/handler/backend failure retains the old
+publication and existing rollback/suppression behavior. Tuple assignment remains
+the commit point; no broader rollback after publication is promised. The legacy
+individual setters retain their distinct configuration, null and reinstall
+semantics through private shared helpers.
+
+The new operation rejects re-entry before checking identity. An identical pair
+is inert even when its ROM, profile or native loader is absent; absence never
+borrows a previous reader. Trace setup obtains its selected reader first, and
+level setup resolves its world data-source capability first. Source replacement
+uses the existing producer/history boundary and carried recording lease; exact
+reinstall retains the actual producer and its complete diagnostic state.
+
+There are four production paths and three owning test paths. Public
+`AudioManager`/`LevelManager` signatures, API descriptors, normalized pins,
+inventory/terminal lists and version policy are unchanged. The existing internal
+access class remains outside the creator surface; the fresh recursive signature
+checks below passed without a waiver or resnapshot. The two B9 fixture/helper
+files and the previously qualified ordinary failure method remain unchanged.
+
+### Test-first evidence and the two rejected test assumptions
+
+The first two regressions call the existing real standalone setup and
+`LevelManager.initAudio` seams. Identity-aware byte-free factories reject the
+wrong pair. Every mock/module is constructed before stubbing, and world/context
+construction follows completed stubbing. The tests do not reference the new
+operation before production is authored.
+
+| Completed invocation | Tested staged tree | Actual result | Meaning and limits |
+| --- | --- | --- | --- |
+| Two original setup regressions, old production | `9e38ecfa3afca1c4ae38d6eb95f27b0dbb621875` | 2 tests, 0 failures, 2 errors, 0 skips | Both intended factories threw `factory received an unmatched ROM/profile pair`: selected profile/previous reader through `setAudioProfile`, previous profile/selected reader through `setRom`. Genuine contract RED; final tuple/reinstall assertions were unreached. |
+| Original affected cohort, 13 families | `b6aa1f9160ba7b06dea428d107bbc71da2f64bf2` | 153 distinct, 152 pass, 1 failure, 0 errors/skips | The new capture test incorrectly compared producer-local identity tokens across producers. Both setup regressions, stock B9 PCM, recording/boot controls and all 60 S3K keeper cases passed in this red epoch. |
+| Two owner classes after reference-identity correction and review response | `1c9198e0dcdd305674ebe2f81eab52e2e4af4440` | 70 distinct, 69 pass, 1 failure, 0 errors/skips | Actual producer replacement and both new exact-installed-pair re-entry rows passed. The next capture assertion incorrectly treated a current lease's clock count as the manager's cumulative recording count. |
+| Whole live-capture owner after source-contract migration | `6e87197b84eb60df37df266cfba286aea628ca02` | 9 distinct pass, 0 failures/errors/skips | All actual producer-reference, phase, cumulative-total, inert-reinstall and original owner controls execute. |
+| Fresh selected guards, separate JVM | same `6e87197b84eb60df37df266cfba286aea628ca02` | 50 distinct pass, 0 failures/errors/skips | Audio architecture 38, backend bypass 1, API signature surface 11. This is not the earlier 774-case whole-guard invocation. |
+
+The rejected token comparison was an oracle mistake: each producer owns its own
+`IdentityTokenRegistry`, whose numbering starts at one. The new test reads the
+actual producer reference without mutating it, requires a different reference on
+source replacement, and requires that exact reference plus unchanged complete
+fingerprint on reinstall. Per-producer fingerprints remain suitable for state
+comparisons within the same owner.
+
+The second rejected assumption confused two documented owners. A replacement
+capture lease starts its own sample count at zero and carries the old fractional
+remainder. The manager separately adds totals from retired leases. The final
+synthetic 3 Hz / 2 fps test independently requires drains `1, 2, 1`: after the
+first drain the lease is `(total=1,remainder=1)`; after rebind it is `(0,1)` with
+manager total 1; after the second drain it is `(2,0)` with manager total 3; the
+third drain after inert reinstall is `(3,1)` with manager total 4. Dropping the
+remainder would make the second drain one. This strengthens the phase oracle;
+it is not a native synthesis or waveform test. All three original presentation
+calls and the complete original eight live-capture methods remain.
+
+The independent source review found one material coverage gap: nested matched
+calls always selected a different pair. Two added parameter rows now call the
+exact installed pair from a factory callback, once with a reader and once with
+an absent reader. Both reject before the identity no-op, retain tuple/generation,
+backend/handler/producer state, and allow a later retry consuming one generation.
+The 36 existing callback combinations and all previous reset assertions remain.
+
+### Selection, readback and measurements
+
+Every invocation used the normal current queue wrapper, Java 25.0.5.0.2,
+`-Dmse=off`, explicit surfaceless EGL, the reviewed no-device environment and the
+three original absolute stock ROM properties. The existing verified ROM
+identities were reused only after unchanged device/inode/size/mtime/ctime checks.
+No ROM alias/copy/link, separate build, preflight, version probe, resource override,
+narrowed category, API pin refresh or unchanged broad repeat was used.
+
+The original affected selector comprised the whole lifecycle class,
+`TestAudioManagerResetState`, `AudioManagerLiveCaptureTest`,
+`TestAudioManagerRuntimeInstallation`, `TestAudioManagerDiagnosticObserverLease`,
+the unchanged stock unified-PCM method, recording-restart and headless-boot audio
+owners, `TestS3kAiz1SkipHeadless`, both actual packages named
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`. Later checks selected only the changed two owners,
+then the one changed owner. Historical reproduction shapes are:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestSpecialStageHardwareTimingLifecycle#standaloneAudioInstallsOnlyItsMatchedProfileRomPair+levelInitAudioInstallsOnlyItsMatchedProfileRomPair' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The final ordinary selector was
+`com.openggf.audio.AudioManagerLiveCaptureTest`. The fresh guard request added
+`-Pguards -DmodApi.destinationBranch=develop` and selected
+`com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.audio.TestAudioBackendBypassGuard,com.openggf.mods.TestModApiSignatureSurface`.
+The exact expanded argv/environment and identities were inspected in each owned
+validation registry before consuming its raw diagnostics.
+
+| Invocation | Rounded reported queue | Maven lifecycle | Supervised wall |
+| --- | ---: | ---: | ---: |
+| Contract RED | 52 s | 29.653 s | 82.623 s |
+| Original 153 | 18 s | 01:39 min | 117.411 s |
+| Owner correction 70 | 162 s | 30.763 s | 193.178 s |
+| Final owner 9 | 111 s | 29.146 s | 140.802 s |
+| Fresh guards 50 | 417 s | 44.847 s | 462.035 s |
+
+These distinguish queue, lifecycle and unmeasured overhead; peer review/source
+intervals overlap and are not added as delivery time. Counts are actual expanded
+JUnit identities, not compiler totals, fields or planned source cases. No epochs
+are summed into a new 153/155-case or aggregate-green claim.
+
+Full XML identities, all report texts, recursive streams, console, fork metadata,
+classpath ownership and complete tracked source frames were read. The final
+ordinary and guard reports had 69 and 70 properties respectively (one identical
+set per invocation), all 79 nonempty classpath entries existed, and no prior or
+foreign worktree classpath was present. Both final invocations had zero XML
+streams; console FAST/NONE and compiler deprecations remain bounded limitations.
+Earlier caught messages were bound to the exact intended ordinary launch failure,
+stale-profile restore rejection, injected device failures and explicit invalid
+collision-index control. Backend-name fall-through fixtures do not assert WAV
+availability or PCM. No fresh dump/launcher/VM failure was found.
+
+The final complete tracked source/input frame stayed
+`88ce2d803691d66cc515b6c0c991d3cfc6d0a2195342bc9bca11b964c0d450bf`
+(15,167 paths / 957,227,103 bytes) through both final readbacks. All four production
+pins, other qualified fixtures, API inputs, wrapper closure and ROM metadata
+matched. Consumed owned XML/text/logs and verified native extractions were removed
+under the metadata lock; useful classes/source and unknown outputs were preserved.
+
+This supports the bounded matched-source change and its affected positive checks.
+It does not authenticate the lost old B9 warning, establish native waveform/art
+parity, close the 41 route failures or skipped coverage, complete the interrupted
+original smoke, qualify the future native-camera design, receive held ancestry,
+or authorize Main/remote/provider/MHZ delivery. The broader combined validation
+and delivery gates remain separate.

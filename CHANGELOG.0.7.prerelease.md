@@ -905,7 +905,9 @@ Unreleased. The earlier development themes remain in
   cleanup. Sonic 1 palette fades retain prepared player art; full loads clear
   unpublished readiness, and results enter the next-level routine on the following
   object pass. Audio's installed
-  source stays in one immutable, typed tuple. Terminal streamed-music cleanup
+  source stays in one immutable, typed tuple; level and special-stage setup
+  prepare the selected ROM and sound profile together, and identical selections
+  preserve the running presentation and live capture. Terminal streamed-music cleanup
   releases presentation slots without recapturing retired cursors, while ordinary
   reset commands retain transactional rollback. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM

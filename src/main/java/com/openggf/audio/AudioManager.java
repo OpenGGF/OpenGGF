@@ -920,17 +920,25 @@ public class AudioManager implements MusicRestoreSink {
         if (reinstallsInstalledSource(audioProfile, baseAudioSource.rom())) {
             return;
         }
+        replaceProfileSource(audioProfile, baseAudioSource.rom(), false);
+    }
+
+    /** Host-owned complete source selection, including an absent ROM or profile. */
+    synchronized void installMatchedSource(Rom rom, GameAudioProfile audioProfile) {
+        replaceProfileSource(audioProfile, rom, true);
+    }
+
+    private void replaceProfileSource(
+            GameAudioProfile audioProfile, Rom rom, boolean unchangedPairIsNoOp) {
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
-            long candidateGeneration = nextGeneration(previous.generation());
-            Rom sourceRom = previous.rom();
-            SmpsLoader candidateLoader = audioProfile != null
-                    && sourceRom != null
-                    ? audioProfile.createSmpsLoader(sourceRom) : null;
-            DacData candidateDac = loadDac(candidateLoader);
-            SmpsSequencerConfig candidateConfig = audioProfile != null
-                    ? audioProfile.getSequencerConfig() : null;
+            if (unchangedPairIsNoOp
+                    && previous.profile() == audioProfile && previous.rom() == rom) {
+                return;
+            }
+            BaseAudioSource candidate = prepareBaseSource(
+                    previous, rom, audioProfile, true);
             PresentationCoordHandlerPreparation presentationPreparation =
                     preparePresentationCoordHandlers(audioProfile, true);
             boolean[] backendConfigurationAttempted = {false};
@@ -960,16 +968,7 @@ public class AudioManager implements MusicRestoreSink {
                 throw failure;
             }
             publishPresentationCoordHandlers(presentationPreparation);
-            baseAudioSource = new BaseAudioSource(
-                    previous.rom(), audioProfile,
-                    candidateLoader, candidateDac,
-                    candidateConfig, candidateGeneration);
-            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
-            if (shadowProducer != null) {
-                replaceShadowPresentationForBaseMutation();
-            } else if (shadowFactory != null) {
-                shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
-            }
+            publishBaseSource(candidate, true);
         } finally {
             endSourceMutation();
         }
@@ -986,21 +985,33 @@ public class AudioManager implements MusicRestoreSink {
         beginSourceMutation();
         try {
             BaseAudioSource previous = baseAudioSource;
-            long candidateGeneration = nextGeneration(previous.generation());
-            SmpsLoader candidateLoader = previous.profile() != null
-                    && rom != null
-                    ? previous.profile().createSmpsLoader(rom) : null;
-            DacData candidateDac = loadDac(candidateLoader);
-            baseAudioSource = new BaseAudioSource(
-                    rom, previous.profile(), candidateLoader, candidateDac,
-                    previous.config(),
-                    candidateGeneration);
-            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
-            if (shadowProducer != null) {
-                replaceShadowPresentationForBaseMutation();
-            }
+            BaseAudioSource candidate = prepareBaseSource(
+                    previous, rom, previous.profile(), false);
+            publishBaseSource(candidate, false);
         } finally {
             endSourceMutation();
+        }
+    }
+
+    private BaseAudioSource prepareBaseSource(BaseAudioSource previous,
+            Rom rom, GameAudioProfile profile, boolean prepareProfileConfig) {
+        long generation = nextGeneration(previous.generation());
+        SmpsLoader loader = profile != null && rom != null
+                ? profile.createSmpsLoader(rom) : null;
+        DacData dac = loadDac(loader);
+        SmpsSequencerConfig config = prepareProfileConfig
+                ? profile != null ? profile.getSequencerConfig() : null
+                : previous.config();
+        return new BaseAudioSource(rom, profile, loader, dac, config, generation);
+    }
+
+    private void publishBaseSource(BaseAudioSource candidate, boolean refreshSfxPolicy) {
+        baseAudioSource = candidate;
+        mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
+        if (shadowProducer != null) {
+            replaceShadowPresentationForBaseMutation();
+        } else if (refreshSfxPolicy && shadowFactory != null) {
+            shadowFactory.setSfxAdmissionPolicy(sfxAdmissionPolicy());
         }
     }
 
