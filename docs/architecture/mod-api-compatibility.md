@@ -340,9 +340,12 @@ java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
 The pre-commit and CI policy hooks require the candidate pin to be staged whenever a
 `@ModApi` source changes its declaration text: comments are ignored; interfaces,
 records, enums and annotation types compare every remaining line; classes compare
-annotations, type declarations and `public`/`protected` declarations. A body-only
-edit to an annotated class therefore commits without a pin change, and
-`TestModApiSignatureSurface` remains the exact check.
+annotations, type declarations and `public`/`protected` declarations. Nested types
+follow member visibility: a package-private or private nested class is
+implementation, while `public`/`protected` nested types and types implicitly public
+inside interfaces, records and enums still couple. A body-only edit to an annotated
+class, or moving a package-private nested helper out of it, therefore commits
+without a pin change, and `TestModApiSignatureSurface` remains the exact check.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine

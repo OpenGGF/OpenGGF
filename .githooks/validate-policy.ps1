@@ -269,7 +269,9 @@ function Get-ModApiSurfaceText([string]$Text) {
                     ($implicit[$top] -or $code -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]')
             $header += $c; $code += $c
             if ($kind -ne "") {
-                $allowed = ($top -eq 0 -or $visible[$top]) -and $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]'
+                # Nested types follow member visibility: package-private ones are
+                # implementation the exact signature pin cannot express either.
+                $allowed = if ($top -eq 0) { $code -cnotmatch '(?:^|[^A-Za-z0-9_])private[ \t]' } else { $memberVisible }
                 if ($allowed) { $kept.Add($header.Trim()) }
                 $top++; $visible[$top] = $allowed; $implicit[$top] = $kind -cne "class"
             } else {
