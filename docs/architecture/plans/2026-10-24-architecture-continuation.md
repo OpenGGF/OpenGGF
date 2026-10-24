@@ -1094,3 +1094,71 @@ all donors/hosts, traces, native zone-water derivation or all colour profiles.
 Distinct synthetic water rows exercise the existing per-character provider
 contract; the actual native-water donor control is S1. Parent-owned composed
 guards/API/S3K/integration/push remain outstanding.
+
+### Independent-review correction in the same owner slice
+
+Review of `fe60ed29a76aea7108c38d302f4bae92964f06fd` identified a missing
+qualification: equal normal colours do not establish equal water policy. A mod
+main can use S1's normal colours with host-derived water, while its donated
+Sonic follower needs S1's native underwater row. The prepared initializer reused
+the mod main's context, then wrote the follower's native water into it. The
+reverse arrangement also reused the donated main's native-water context for a
+mod follower. The original 93-case observations above remain valid for their
+tested state and selection; they did not cover these mixed-policy aliases.
+
+On unchanged `fe60ed29a` runtime, the following selector used the same common
+environment, wrapper, ROM properties and `test -B` recorded above:
+
+```text
+TestLevelPlayableArtInitializerModArt#equalNormalModMainKeepsDerivedWaterBesideDonatedSonic+equalNormalModFollowerKeepsDerivedWaterBesideDonatedMain+equalNormalBuiltinSharingRequiresEqualWaterInBothRoutes,TestDonatedTeamPalettes#missingSelectedDonorAbortsBeforeAnyHostBoot
+```
+
+Eight cases executed: six failures, zero errors/skips. The initializer report
+contains six cases: the supplied-S1-ROM mod-main/Sonic follower case, reverse
+mod-follower case, and differing-water cases in both initialization routes
+failed their alias assertions. Both equal-normal/equal-native-water sharing
+controls passed. The donor-availability report contains two failures: mocked
+missing S1 and S3K discovery returned null and caused `NullPointerException`
+instead of aborting the affected invocation. Admission took five seconds and
+Maven 27.210 seconds. Both XML/text report pairs were inspected and removed.
+No user ROM file was renamed, removed or otherwise changed.
+
+Compare two small allocation shapes: always allocate a separate context for a
+donated follower, or retain sharing when normal colours and native-water policy
+match. Choose the latter on source comparison, preserving equal-water sharing
+and existing allocation behavior where compatible. Null means host-derived
+water and differs from any native row. The existing initializer reads each
+donated built-in character's native row before deciding compatibility, installs
+it only on a newly allocated context, and never writes a follower's water into
+a reused main context. Mod followers retain derived water; native scripted
+followers retain their host binding in both routes. No new registry, API,
+palette framework or colour model is introduced.
+
+The donor test now assumes availability before converting the selected donor
+file to a path. Two controls mock only discovery and catch the expected abort;
+they do not turn the configured real-ROM invocations into skips or touch ROM
+files. The mod-main initializer regression uses actual S1 donor normal/water
+palettes and art with an S2 host module; its mocked manager boundaries make it
+completed-initializer evidence, not a full installed-mod gameplay boot.
+
+The completed affected-family selector is
+`TestLevelPlayableArtInitializerModArt,TestDonatedTeamPalettes,TestGameplayCaptureDonorEntry,TestDonorTailsTailBanks`.
+It passed **68 distinct cases, zero failures/errors/skips**, in four XML
+reports: initializer 24, donated-team palette seven, native capture entry 28,
+and donor-tail banks nine. Admission took 113 seconds; Maven took 1 minute 29
+seconds. All five configured real-ROM palette invocations executed. The two
+missing-donor controls passed by catching the expected abort before any host
+boot; they are passing controls, not skipped ROM cases. The ROM-backed
+mod-main regression, reverse mod follower, equal/different native-water cases
+and native-scripted host-binding cases in both routes all executed and passed.
+XML identities and absence of failures/errors/skips were inspected; the eight
+consumed XML/text reports were removed. No task-owned command remains live.
+
+The correction changes only the initializer, its two affected test files and
+this bounded audit section. The prior 93-case result remains attributed to
+`fe60ed29a`, not relabeled as a run of this correction. No unchanged broad
+suite, provider or API selection was repeated. This is the focused affected
+family recheck, with the common Java 25/Lua 5.4/EGL/verified-ROM command above.
+The branch remains on the reviewed worker lineage; parent main `591c679b3` is
+not imported or changed. Composed gates and delivery stay parent-owned; this
+correction does not close donor-colour rewind ownership.

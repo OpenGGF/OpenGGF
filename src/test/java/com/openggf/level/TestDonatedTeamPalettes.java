@@ -15,24 +15,44 @@ import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.GameplayCaptureSession;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.opentest4j.TestAbortedException;
 
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.opengl.GL11.*;
+import static org.mockito.Mockito.*;
 
 /** Completed production team setup, independently checked against supplied ROM colour words. */
 @RequiresRom(SonicGame.SONIC_2)
 class TestDonatedTeamPalettes {
+    @ParameterizedTest
+    @ValueSource(strings = {"s1", "s3k"})
+    void missingSelectedDonorAbortsBeforeAnyHostBoot(String donor) {
+        try (var discovery = mockStatic(RomTestUtils.class)) {
+            TestAbortedException unavailable = assertThrows(TestAbortedException.class,
+                    () -> completedTeamKeepsEachCharactersPaletteAcrossRefreshAndProviderReinit(
+                            donor, "sonic", "sonic"));
+            assertTrue(unavailable.getMessage().contains(donor));
+            discovery.verify(donor.equals("s1") ? RomTestUtils::ensureSonic1RomAvailable
+                    : RomTestUtils::ensureSonic3kRomAvailable);
+            discovery.verifyNoMoreInteractions();
+        }
+    }
+
     @ParameterizedTest(name = "{0}: {1} + {2}")
     @CsvSource({"s3k,sonic,knuckles", "s3k,knuckles,sonic", "s3k,sonic,tails",
             "s3k,sonic,sonic", "s1,sonic,sonic"})
     void completedTeamKeepsEachCharactersPaletteAcrossRefreshAndProviderReinit(
             String donor, String main, String sidekick) throws Exception {
-        Path donorRom = (donor.equals("s1") ? RomTestUtils.ensureSonic1RomAvailable()
-                : RomTestUtils.ensureSonic3kRomAvailable()).toPath();
+        var donorFile = donor.equals("s1") ? RomTestUtils.ensureSonic1RomAvailable()
+                : RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(donorFile != null, () -> "Selected donor ROM unavailable: " + donor);
+        Path donorRom = donorFile.toPath();
         byte[] rom = Files.readAllBytes(donorRom);
         var settings = new GameplayCaptureSession.Settings(320, main, sidekick,
                 donor, donorRom, null, null);

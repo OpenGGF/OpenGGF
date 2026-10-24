@@ -141,6 +141,8 @@ final class LevelPlayableArtInitializer {
             SpriteArtSet mainArt = loadPlayableArt(playable, artProvider);
             Palette mainPalette = loadCharacterPalette(playable,
                     playable.characterKey().persisted(), artProvider);
+            Palette mainWaterPalette = loadNativeDonorWater(playable,
+                    playable.characterKey().persisted());
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
             List<SpriteArtSet> sidekickArts = new ArrayList<>(sidekicks.size());
             List<Palette> sidekickPalettes = new ArrayList<>(sidekicks.size());
@@ -208,7 +210,7 @@ final class LevelPlayableArtInitializer {
                 initializeSidekick(sidekicks.get(i), sidekickNames.get(i), mainName,
                         sidekickArts.get(i), crossGame,
                         sidekickBases.get(i),
-                        sidekickPalettes.get(i), mainPalette, mainCharacterContext,
+                        sidekickPalettes.get(i), mainPalette, mainWaterPalette, mainCharacterContext,
                         auxiliaries.get(i + 1));
             }
         } catch (IOException e) {
@@ -221,6 +223,16 @@ final class LevelPlayableArtInitializer {
     private boolean usesDonation(AbstractPlayableSprite playable) {
         return CrossGameFeatureProvider.isActive()
                 && !SpriteManagerInternalAccess.usesNativeScriptedArt(spriteManager, playable);
+    }
+
+    private Palette loadNativeDonorWater(AbstractPlayableSprite playable, String character) {
+        return playable.characterKey().isBuiltin() && usesDonation(playable)
+                ? crossGameFeatures.loadUnderwaterCharacterPalette(character) : null;
+    }
+
+    private static boolean sameNativeWater(Palette first, Palette second) {
+        // Null denotes host-derived water, a different policy from any native row.
+        return first == second || first != null && first.dataEquals(second);
     }
 
     private PlayerSpriteArtProvider artProviderFor(AbstractPlayableSprite playable,
@@ -267,7 +279,8 @@ final class LevelPlayableArtInitializer {
             return;
         }
         initializeMainPlayableLegacy(playable, artProvider, crossGame);
-        initializeSidekicksLegacy(artProvider, crossGame);
+        initializeSidekicksLegacy(artProvider, crossGame,
+                loadNativeDonorWater(playable, playable.characterKey().persisted()));
         uploadTeamPalettes(playable);
     }
 
@@ -377,7 +390,8 @@ final class LevelPlayableArtInitializer {
     }
 
     private void initializeSidekicksLegacy(PlayerSpriteArtProvider artProvider,
-                                           CrossGameFeatureProvider crossGame) {
+                                           CrossGameFeatureProvider crossGame,
+                                           Palette mainWaterPalette) {
         List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
         String mainCharName = resolveMainCharacterCode();
         List<String> sidekickCharNames = new ArrayList<>(sidekicks.size());
@@ -420,7 +434,7 @@ final class LevelPlayableArtInitializer {
                 continue;
             }
             initializeSidekickLegacy(sidekick, sidekickCharName, mainCharName,
-                    sourceArt, sidekickProviders.get(i), artProvider, crossGame, i);
+                    sourceArt, sidekickProviders.get(i), artProvider, crossGame, mainWaterPalette, i);
         }
     }
 
@@ -431,18 +445,17 @@ final class LevelPlayableArtInitializer {
                                            PlayerSpriteArtProvider artProvider,
                                            PlayerSpriteArtProvider mainArtProvider,
                                            CrossGameFeatureProvider crossGame,
+                                           Palette mainWaterPalette,
                                            int index) {
         try {
             int shiftedBase = reserveSidekickPatternBank(sourceArt.bankSize());
             SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
             PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt);
+            Palette sidekickWaterPalette = loadNativeDonorWater(sidekick, sidekickCharName);
             RenderContext sidekickPaletteCtx = createSidekickPaletteContextLegacy(
-                    artProvider, mainArtProvider, sidekickCharName, mainCharName);
+                    artProvider, mainArtProvider, sidekickCharName, mainCharName,
+                    usesDonation(sidekick) ? mainWaterPalette : null, sidekickWaterPalette);
             if (sidekickPaletteCtx != null) {
-                if (usesDonation(sidekick)) {
-                    sidekickPaletteCtx.setUnderwaterPalette(0,
-                            crossGame.loadUnderwaterCharacterPalette(sidekickCharName));
-                }
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
@@ -462,8 +475,10 @@ final class LevelPlayableArtInitializer {
 
     private RenderContext createSidekickPaletteContextLegacy(
             PlayerSpriteArtProvider artProvider, PlayerSpriteArtProvider mainArtProvider,
-            String sidekickCharName, String mainCharName) {
-        if (sidekickCharName.equalsIgnoreCase(mainCharName)) {
+            String sidekickCharName, String mainCharName,
+            Palette mainWaterPalette, Palette sidekickWaterPalette) {
+        boolean sameWater = sameNativeWater(mainWaterPalette, sidekickWaterPalette);
+        if (sidekickCharName.equalsIgnoreCase(mainCharName) && sameWater) {
             return null;
         }
         Palette sidekickPalette = artProvider.loadCharacterPalette(sidekickCharName);
@@ -471,7 +486,7 @@ final class LevelPlayableArtInitializer {
             return null;
         }
         Palette mainPalette = mainArtProvider == null ? null : mainArtProvider.loadCharacterPalette(mainCharName);
-        if (mainPalette != null && sidekickPalette.dataEquals(mainPalette)) {
+        if (mainPalette != null && sidekickPalette.dataEquals(mainPalette) && sameWater) {
             return null;
         }
         GameModule activeModule = levelManager.gameModule;
@@ -481,6 +496,7 @@ final class LevelPlayableArtInitializer {
         GameId gameId = activeModule != null ? activeModule.getGameId() : null;
         RenderContext ctx = RenderContext.createSidekickContext(gameId);
         ctx.setPalette(0, sidekickPalette);
+        ctx.setUnderwaterPalette(0, sidekickWaterPalette);
         return ctx;
     }
 
@@ -507,19 +523,17 @@ final class LevelPlayableArtInitializer {
                                    SpriteArtSet sourceArt,
                                    CrossGameFeatureProvider crossGame,
                                    int shiftedBase,
-                                   Palette sidekickPalette, Palette mainPalette,
+                                   Palette sidekickPalette, Palette mainPalette, Palette mainWaterPalette,
                                    RenderContext mainCharacterContext,
                                    PreparedAuxiliaryArt auxiliary) throws IOException {
             SpriteArtSet sidekickArt = shiftToBank(sourceArt, shiftedBase);
             PlayerSpriteRenderer sidekickRenderer = new PlayerSpriteRenderer(sidekickArt, graphicsManager);
+            Palette sidekickWaterPalette = loadNativeDonorWater(sidekick, sidekickCharName);
             RenderContext sidekickPaletteCtx = createSidekickPaletteContext(
                     sidekickCharName, mainCharName, sidekickPalette, mainPalette,
+                    usesDonation(sidekick) ? mainWaterPalette : null, sidekickWaterPalette,
                     mainCharacterContext, sourceArt.paletteIndex());
             if (sidekickPaletteCtx != null) {
-                if (sidekick.characterKey().isBuiltin() && usesDonation(sidekick)) {
-                    sidekickPaletteCtx.setUnderwaterPalette(sourceArt.paletteIndex(),
-                            crossGame.loadUnderwaterCharacterPalette(sidekickCharName));
-                }
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
@@ -570,22 +584,24 @@ final class LevelPlayableArtInitializer {
     private RenderContext createSidekickPaletteContext(
             String sidekickCharName, String mainCharName,
             Palette sidekickPalette, Palette mainPalette,
+            Palette mainWaterPalette, Palette sidekickWaterPalette,
             RenderContext mainCharacterContext, int paletteIndex) {
         boolean sameName = sidekickCharName.equalsIgnoreCase(mainCharName);
         boolean samePalette = mainPalette != null && sidekickPalette != null
                 && sidekickPalette.dataEquals(mainPalette);
-        if (mainCharacterContext != null && (sameName || samePalette)) {
+        boolean sameWater = sameNativeWater(mainWaterPalette, sidekickWaterPalette);
+        if (mainCharacterContext != null && (sameName || samePalette) && sameWater) {
             Palette populated = mainCharacterContext.getPalette(paletteIndex);
             if (populated != null && sidekickPalette != null
                     && populated.dataEquals(sidekickPalette)) {
                 return mainCharacterContext;
             }
         }
-        if (sameName && mainCharacterContext == null) return null;
+        if (sameName && mainCharacterContext == null && sameWater) return null;
         if (sidekickPalette == null) {
             return null;
         }
-        if (samePalette && mainCharacterContext == null) return null;
+        if (samePalette && mainCharacterContext == null && sameWater) return null;
         GameModule activeModule = levelManager.gameModule;
         if (activeModule == null && GameServices.hasRuntime()) {
             activeModule = GameServices.module();
@@ -593,6 +609,7 @@ final class LevelPlayableArtInitializer {
         GameId gameId = activeModule != null ? activeModule.getGameId() : null;
         RenderContext ctx = RenderContext.createSidekickContext(gameId);
         ctx.setPalette(paletteIndex, sidekickPalette);
+        ctx.setUnderwaterPalette(paletteIndex, sidekickWaterPalette);
         return ctx;
     }
 
