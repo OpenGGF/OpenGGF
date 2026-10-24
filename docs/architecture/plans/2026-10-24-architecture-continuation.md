@@ -921,3 +921,73 @@ with queue wait separate and unbounded. Finish the selected invocation, inspect
 all exact identities/failures/skips, repair regressions narrowly, and expand only
 for new evidence or unresolved coupling. Do not repeat unchanged broad coverage.
 Later Knuckles, freezer and initialized-box-rig work stays outside this candidate.
+
+### Fifth-loop focused results, correction and acceptance
+
+The 41-selector composed run at `e849ed5a4` passed 354 distinct cases across
+42 reports, with zero failures, errors or skips. Admission took 189 seconds and
+Maven 1 minute 41 seconds. Both physical level-loading classes, all mandatory S3K
+identities, and the explicitly selected nested ROM-backed WAV case executed.
+The exact selector, with the common display-free environment, absolute wrapper
+and three verified absolute ROM properties above, was:
+
+```text
+-Dtest=TestEngineEditorProjectObjectNames,TestGameLoopBonusStageOwnership,TestGameLoop,TestGameLoopBonusPlayerPriority,TestBonusStageBootstrapInstaller,TestGumballDebugVisibilityFilter,TestS3kBonusStageHeadlessBoot,TestEditorProjectLifecycle#s3kObjectFamilyPropertiesRefreshLabelsAndUndoToTheDocumentSavepoint,TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestS3kLbz1MinibossAndTransitionHeadless#fatalHitInstallsWaitBeforeFirstDecrementForNativePlayersAndRewinds,TestLbzWallExplosionsRewind,TestLbzWallExplosionsEmptyRewind,TestRewindFieldDispositionAudit,TestS1RingGroupGraphRewind,TestSmpsHeaderConstruction,TestSonic1SfxData,TestSmpsSequencerInstrumentLoading,TestSmpsDataEndianParsing,TestSmpsInstrumentParsing,TestSmpsFmVoiceWriteProfiles,TestSonic1UnifiedAudioPresentationRomIntegration,TestSoundTestWavExport,TestSoundTestWavExport$RomBackedSfxExport,TestHubMusicRomThemes#sonic1TitleThemeLoadsAndPresentsWithoutADevice,TestS3kAizIntroGraphRewind,TestAizPlaneIntroInstance,TestS3kAizIntroInventoryRewind,TestModZoneRuntimeProfile,TestSonic1PaletteOwnershipFallbackResolution,TestSonic2PatternAnimatorGraphAdapter,TestSonic2PaletteOwnershipIntegration,TestS3kZoneAnimateTilesPublication,TestS3kHczPaletteCycling,TestS3kPaletteOwnershipRegistryIntegration,TestModApiSignatureSurface,TestModApiPinPolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+A targeted second AIZ review then rejected previously untested compatibility
+edges. A bound emerald's no-table public capture newly required a table. The
+intro had a discriminating live phase after routine `$16` and
+`releasePlayersForVisualDirection()`: its captured player owner is cleared but
+Knuckles remains. Initially null no-table captures also began clearing later
+links. The annotated inherited API provides no applicable managed-only
+restriction. Separately, a full SST rejects the collector after the parent has
+stored it, leaving an unregistered strict reference. These were source findings,
+not failures in the earlier 354-case selection.
+
+Commit `5216bea2612d2f8596c4770a128561455246a1ed`, merged as `aa843d5d8`,
+reproduced 11 failures in 26 controls, then passed 106 affected cases including
+the original 42 AIZ checks, with zero failures/errors/skips. Exactly two fields
+select a private context-compatible, managed-strict reference mode: missing
+context leaves the current link uncaptured, while a supplied table retains strict
+identity validation and authoritative nulls. Default strict and S2 optional-native
+wire behavior remain unchanged. The owner clears a rejected collector only after
+the original allocation attempt; routine advancement and player flags are intact.
+Independent review accepted the exact tree
+`7d6db8a6aec8c9071334669805b080527a581e18`. Arbitrary early collector retirement
+remains unproven and strict. No signature, annotation, capture override or allowance
+grew.
+
+Source, tests, POM and testing tools in the composed correction match the worker
+exactly. Fresh parent API/S3K verification at `aa843d5d8` passed all 75 distinct
+cases across seven reports, zero failures/errors/skips: API surface 11, pin policy
+four, AIZ skip eight, level loading 43, bootstrap six and decoding three. Admission
+was zero and Maven 1 minute 32 seconds. Its exact selector was:
+
+```text
+-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The complete fresh guards command then passed **755 distinct cases across 91
+reports**, zero failures/errors/skips. Admission took six seconds and Maven
+5 minutes 22 seconds. All 33 ArchUnit checks, eight compact-policy checks, four
+rewind architecture checks and eight singleton-lifecycle checks executed. This
+used the common environment and absolute ROM properties with:
+
+```text
+-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+The earlier 354-case invocation qualifies its unchanged components; it is not
+claimed as a rerun after the codec correction. The affected 106-case evidence,
+fresh 75-case API/S3K run and complete guards qualify the correction within their
+stated bounds. The 84 focused, 14 API/S3K and 182 guard XML/text reports, plus two
+inspected inventories, were consumed and removed. The current censuses are seven
+field keys and 513 lifecycle identities matching their baselines.
+
+A final fetch found main and origin still at delivered `a236a1276`. This fifth
+candidate contains 147 low-level records, zero naming records and zero concrete
+root references; its seven field obligations, 98 setup methods/97 files and
+154 package permissions remain explicit. The sixth candidate's newer graph
+changes and exact-policy guard remain outside this result. Final prose and
+policy checks, integration, push and fully accounted-for cleanup follow.
