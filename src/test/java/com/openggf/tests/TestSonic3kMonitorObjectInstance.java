@@ -1,8 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -13,6 +12,7 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,13 +25,13 @@ class TestSonic3kMonitorObjectInstance {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+        GameModuleRegistry.reset();
     }
 
     @Test
