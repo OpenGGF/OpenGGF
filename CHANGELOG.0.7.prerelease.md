@@ -240,7 +240,9 @@ Unreleased. The earlier development themes remain in
   Limited caps palette RGB at 238 after fades and profile conversion, including
   creator colours, with live normal and underwater palette refresh. The palette
   backdrop and headless gameplay captures use the same saved setting. Underwater
-  donor, appearance and texture colours share one tint policy.
+  donor, appearance and texture colours share one tint policy. Palette sampling
+  follows each texture's own row capacity when sidekick banks are reclaimed or
+  independent graphics hosts retain different texture sizes.
 
 - **Main menu:** Compact and bold lettering now share one pixel-font family,
   with clear navy lettering on gold launch buttons. Holding Escape freezes a
@@ -617,7 +619,9 @@ Unreleased. The earlier development themes remain in
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
   audio callers supply their selected profile to the reusable presentation host;
-  desktop sound-test composition lives with the developer tools. Rewinding a
+  desktop sound-test composition lives with the developer tools. Native SMPS
+  loaders retain their own ROM references while the shared cache and hexadecimal
+  dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
   and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
   current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
@@ -636,7 +640,22 @@ Unreleased. The earlier development themes remain in
   Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts
-  live with their managers.
+  live with their managers. Palette ROM and byte decoding lives beside the
+  canonical palette model without changing its input or color semantics.
+  The unpublished art-provider candidate moves `PlayerSpriteArtProvider` and
+  `SpindashDustArtProvider` from `com.openggf.data` to `com.openggf.sprites.art`,
+  preserving game-owned construction and donation. This intentionally breaks
+  old imports and binaries: mods, donor implementations and callers must rebuild
+  against matching artifacts even when their manifest range still accepts `0.7.0`.
+  See the [import migration](docs/modding/getting-started.md#player-art-provider-import-migration).
+  The complete annotated abstract `Game` moves from `com.openggf.data` to
+  `com.openggf.game`, beside its module and standalone composition contracts.
+  Its methods and behavior are preserved; imports, class identity, `ModGame`'s
+  superclass and factory/getter binary descriptors change. Rebuild compiled mods,
+  donors and callers, including inferred-type and declarative standalone users,
+  against matching SDK/engine artifacts. The unchanged candidate manifest range
+  cannot distinguish old binaries and does not automatically reject every one.
+  See the [Game migration](docs/modding/getting-started.md#game-contract-import-migration).
   Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the
@@ -688,6 +707,9 @@ display hold and retirement through their native movement and visibility latches
 Hidden-monitor conversion retains the occupied native SST through replacement
 cleanup. Both special-stage return prefixes pass; broader complete-route parity
 remains separate from these scoped native-owner checks.
+S3K item monitors retain contents only when a later object slot admits them.
+A full tail leaves a remembered broken shell without an icon or reward, and
+rewind can capture that state immediately after the break.
 
 The AIZ2 bombing ship's two propellers are now native objects. They take
 the slots after the ship, turn at the original three-frame rate, and

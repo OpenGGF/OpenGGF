@@ -37,7 +37,7 @@ public class TestSonic1SBZEvents {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         GameServices.camera().resetState();
         cam = GameServices.camera();
         TestObjectServices testServices = new TestObjectServices();

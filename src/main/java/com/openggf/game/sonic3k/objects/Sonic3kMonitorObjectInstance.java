@@ -345,7 +345,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     /**
      * Break the monitor: spawn explosion, start icon rising, mark persistence.
-     * ROM: Mon_BreakOpen (sonic3k.asm ~line 40685)
+     * ROM: Obj_MonitorSpawnIcon (sonic3k.asm:40685-40710).
      */
     private void breakMonitor(AbstractPlayableSprite player, int frameCounter) {
         broken = true;
@@ -372,7 +372,8 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 && renderManager.getExplosionRenderer() != null) {
             // ROM Obj_MonitorSpawnIcon creates Obj_MonitorContents, then
             // Obj_Explosion, with AllocateObjectAfterCurrent both times
-            // (docs/skdisasm/sonic3k.asm:40680-40699; allocator at 37911-37925).
+            // Obj_MonitorSpawnIcon (sonic3k.asm:40685-40710), allocator
+            // AllocateObjectAfterCurrent (sonic3k.asm:37957-37972).
             objectManager.addDynamicObjectAfterSlot(
                     new ExplosionObjectInstance(0x27, posX(), posY(), renderManager),
                     getSlotIndex());
@@ -385,12 +386,22 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (objectManager == null || monitorContentsSlot != null) {
             return;
         }
-        monitorContentsSlot = new MonitorContentsSlot(this, buildSpawnAt(posX(), posY()));
+        MonitorContentsSlot contents = new MonitorContentsSlot(this, buildSpawnAt(posX(), posY()));
         // The parent shell can be broken by TouchResponse before ObjectManager
         // is executing the monitor slot. Anchor AllocateObjectAfterCurrent to
         // this monitor's SST slot so the content object still lands after the
         // shell, matching Obj_MonitorSpawnIcon (sonic3k.asm:40680-40692).
-        objectManager.addDynamicObjectAfterSlot(monitorContentsSlot, getSlotIndex());
+        objectManager.addDynamicObjectAfterSlot(contents, getSlotIndex());
+        if (contents.isDestroyed()) {
+            // Obj_MonitorSpawnIcon.skipiconcreation (sonic3k.asm:40688-40699):
+            // rejected contents have no icon or reward routine. Keep initialization
+            // before admission because registration reads the embedded icon position,
+            // but retain neither activation nor an unregistered child on failure.
+            iconActive = false;
+            effectTarget = null;
+            return;
+        }
+        monitorContentsSlot = contents;
     }
 
     /**

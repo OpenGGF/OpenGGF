@@ -1,11 +1,9 @@
 package com.openggf.game.sonic3k;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.AizPreparedTransitionArtState;
@@ -43,8 +41,7 @@ class TestSonic3kLevelEventRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

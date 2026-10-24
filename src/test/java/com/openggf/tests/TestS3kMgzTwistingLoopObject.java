@@ -1,8 +1,6 @@
 package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -37,7 +35,7 @@ class TestS3kMgzTwistingLoopObject {
     @BeforeEach
     void setUp() {
         SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
     }
 

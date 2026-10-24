@@ -1,14 +1,11 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindRegistry;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
@@ -51,9 +48,7 @@ class TestSonic3kMgz2CollapseEvents {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         GameServices.level().setLevel(new SyntheticMgzCollapseLevel());
     }
 

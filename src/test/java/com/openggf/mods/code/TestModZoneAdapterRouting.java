@@ -4,7 +4,7 @@ import com.openggf.game.modzone.ModZoneAdapter;
 import com.openggf.game.modzone.ModZoneLevelData;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.AbstractStandaloneGameModule;
 import com.openggf.game.GameDataSource;

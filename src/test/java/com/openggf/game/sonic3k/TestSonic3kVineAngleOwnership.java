@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * giant-ring / special-stage round trip.
  *
  * <p>{@link com.openggf.level.LevelManager#initGameModule} builds a fresh
- * {@link com.openggf.data.Game} on every level load, so a {@code Sonic3k}-owned
+ * {@link com.openggf.game.Game} on every level load, so a {@code Sonic3k}-owned
  * carrier was reset by each load. The session-lived {@link Sonic3kGameModule}
  * owns it instead; this test fails if that ownership moves back.
  */

@@ -53,8 +53,7 @@ class TestTraceSessionLauncherRewindPresentation {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         config = SonicConfigurationService.getInstance();
         audio = AudioManager.getInstance();
         audio.resetState();

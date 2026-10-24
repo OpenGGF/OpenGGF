@@ -1,10 +1,8 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import org.junit.jupiter.api.AfterEach;
@@ -25,8 +23,7 @@ class TestSonic2LevelEventRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

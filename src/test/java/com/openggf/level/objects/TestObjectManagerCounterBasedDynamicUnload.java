@@ -1,16 +1,14 @@
 package com.openggf.level.objects;
 
-import com.openggf.tests.TestEnvironment;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.badniks.Sonic1BurrobotBadnikInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1OrbinautBadnikInstance;
 import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
 import com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugRenderContext;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
@@ -31,19 +29,22 @@ import static org.mockito.Mockito.mock;
 public class TestObjectManagerCounterBasedDynamicUnload {
 
     private ObjectManager objectManager;
+    private Camera camera;
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
-        GameServices.camera().resetState();
-        GameServices.camera().setX((short) 0);
-        GameServices.camera().setY((short) 0);
+        SessionManager.clear();
+        SonicConfigurationService configuration = SonicConfigurationService.createStandalone();
+        configuration.resetToDefaults();
+        camera = new Camera(configuration);
+        camera.resetState();
+        camera.setX((short) 0);
+        camera.setY((short) 0);
 
         ObjectServices services = new StubObjectServices() {
             @Override
             public com.openggf.camera.Camera camera() {
-                return GameServices.camera();
+                return camera;
             }
         };
 
@@ -61,7 +62,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
             public String getPrimaryName(int objectId) {
                 return "Test";
             }
-        }, 0, null, null, null, GameServices.camera(), services);
+        }, 0, null, null, null, camera, services);
         objectManager.enableCounterBasedRespawn();
         objectManager.reset(0);
     }
@@ -105,10 +106,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x31, 0, 0, false, 0);
         TrackingRegistry registry = new TrackingRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableCounterBasedRespawn();
@@ -130,10 +131,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x31, 0, 0, false, 0);
         TrackingRegistry registry = new TrackingRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableCounterBasedRespawn();
@@ -154,10 +155,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x31, 0, 0, false, 0);
         InRangeButMovedRegistry registry = new InRangeButMovedRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableCounterBasedRespawn();
@@ -180,10 +181,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x0650, 0x00D0, Sonic1ObjectIds.BURROBOT, 0, 0, true, 0);
         BurrobotRegistry registry = new BurrobotRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
         });
         objectManager.enableCounterBasedRespawn();
@@ -204,14 +205,14 @@ public class TestObjectManagerCounterBasedDynamicUnload {
     public void s3kAizDrawBridgeUnloadsAndClearsItsRespawnLatchAtTheRomTail() {
         ObjectSpawn spawn = new ObjectSpawn(0x0200, 0x0100, 0x32, 0, 2, true, 0x8100, 0);
         AizDrawBridgeRegistry registry = new AizDrawBridgeRegistry();
-        GameServices.camera().setMinY((short) 0);
-        GameServices.camera().setMaxY((short) 0x0300);
-        GameServices.camera().setY((short) 0x0080);
+        camera.setMinY((short) 0);
+        camera.setMaxY((short) 0x0300);
+        camera.setY((short) 0x0080);
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
         });
         objectManager.enableExecThenLoadPlacement();
@@ -239,10 +240,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
     public void s3kAizDrawBridgeCollapseCountdownSurvivesOutOfRangeUntilItsTimedDelete() {
         AizDrawBridgeRegistry registry = new AizDrawBridgeRegistry();
         objectManager = new ObjectManager(List.of(), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableExecThenLoadPlacement();
@@ -277,10 +278,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x09E0, 0x06E0, Sonic1ObjectIds.ORBINAUT, 0, 0, true, 0);
         OrbinautRegistry registry = new OrbinautRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
         });
         objectManager.enableCounterBasedRespawn();
@@ -289,7 +290,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         Sonic1OrbinautBadnikInstance orbinaut = registry.instance;
         assertNotNull(orbinaut, "Reset should preload the Orbinaut before the exec pass");
 
-        GameServices.camera().setX((short) 0x0A81);
+        camera.setX((short) 0x0A81);
         objectManager.update(0x0A81, null, List.of(), 1);
 
         assertFalse(objectManager.getActiveObjects().contains(orbinaut),
@@ -319,8 +320,8 @@ public class TestObjectManagerCounterBasedDynamicUnload {
 
     @Test
     public void numberedBreathingBubbleSurvivesRomAppearAndFlashWindow() {
-        GameServices.camera().setX((short) 0x0BA5);
-        GameServices.camera().setY((short) 0x058C);
+        camera.setX((short) 0x0BA5);
+        camera.setY((short) 0x058C);
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
                 0x0C2F, 0x05EB, true, 4, "test", new int[] { 13, 18, 17, 16, 15, 14 }, 6, -0x88);
         objectManager.addDynamicObject(bubble);
@@ -358,14 +359,14 @@ public class TestObjectManagerCounterBasedDynamicUnload {
 
     @Test
     public void breathingBubbleSurfacePopFreesSlotOnNextExecuteObjectsPass() {
-        GameServices.camera().setX((short) 0x0600);
+        camera.setX((short) 0x0600);
         ObjectServices waterServices = new StubObjectServices() {
             private final Level level = mock(Level.class);
             private final WaterSystem water = new SurfaceAtBubbleWaterSystem(0x0510);
 
             @Override
             public com.openggf.camera.Camera camera() {
-                return GameServices.camera();
+                return camera;
             }
 
             @Override
@@ -379,7 +380,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
             }
         };
         objectManager = new ObjectManager(List.of(), new TrackingRegistry(), 0, null, null,
-                null, GameServices.camera(), waterServices);
+                null, camera, waterServices);
         objectManager.reset(0);
 
         BreathingBubbleInstance bubble = new BreathingBubbleInstance(
@@ -405,10 +406,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x52, 0, 0, true, 0);
         DirectDeleteRegistry registry = new DirectDeleteRegistry();
         objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableCounterBasedRespawn();
@@ -446,10 +447,10 @@ public class TestObjectManagerCounterBasedDynamicUnload {
         ObjectSpawn farSpawn = new ObjectSpawn(0x1000, 0x0100, 0x31, 0, 0, false, 0);
         TrackingRegistry registry = new TrackingRegistry();
         objectManager = new ObjectManager(List.of(farSpawn), registry, 0, null, null,
-                null, GameServices.camera(), new StubObjectServices() {
+                null, camera, new StubObjectServices() {
                     @Override
                     public com.openggf.camera.Camera camera() {
-                        return GameServices.camera();
+                        return camera;
                     }
                 });
         objectManager.enableCounterBasedRespawn();

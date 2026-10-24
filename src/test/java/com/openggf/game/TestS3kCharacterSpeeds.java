@@ -1,7 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kPhysicsProvider;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestablePlayableSprite;
@@ -24,9 +24,7 @@ class TestS3kCharacterSpeeds {
 
     @BeforeEach
     void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach

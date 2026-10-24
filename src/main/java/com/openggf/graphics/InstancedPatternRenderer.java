@@ -3,8 +3,6 @@ package com.openggf.graphics;
 import org.lwjgl.system.MemoryUtil;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameServices;
-import com.openggf.level.PatternDesc;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -80,10 +78,6 @@ public class InstancedPatternRenderer {
     private int cachedWaterEnabledLoc = -1;
 
     private final ArrayDeque<InstancedBatchCommand> commandPool = new ArrayDeque<>();
-
-    public InstancedPatternRenderer() {
-        this(GameServices.graphics(), GameServices.configuration());
-    }
 
     public InstancedPatternRenderer(GraphicsManager graphicsManager, SonicConfigurationService configService) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
@@ -213,7 +207,8 @@ public class InstancedPatternRenderer {
         batchActive = false;
     }
 
-    public boolean addPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
+    /** Admission invokes manager callbacks before the caller samples cached tile attributes. */
+    boolean admitPattern(PatternAtlas.Entry entry) {
         if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH
                 || entry.atlasIndex() != batchAtlasIndex
                 || batchUsePriorityShader != (graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null)
@@ -224,28 +219,33 @@ public class InstancedPatternRenderer {
                 || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
             return false;
         }
+        return true;
+    }
+
+    /** Appends an admitted tile once, without repeating admission callbacks. */
+    void appendAdmittedPattern(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, int x, int y) {
         // Display height resolved once per batch in beginBatch() (FBO-aware)
         int screenY = batchDisplayHeight - y - 8;
         float u0 = entry.u0();
         float u1 = entry.u1();
         float v0 = entry.v0();
         float v1 = entry.v1();
-        if (desc.getHFlip()) {
+        if (hFlip) {
             float tmp = u0;
             u0 = u1;
             u1 = tmp;
         }
-        if (!desc.getVFlip()) {
+        if (!vFlip) {
             float tmp = v0;
             v0 = v1;
             v1 = tmp;
         }
 
-        // Per-piece VDP priority: use the ROM's per-tile priority bit from the
-        // PatternDesc (bit 15), OR'd with the global override for backward compat
-        // (lost rings, hurt state, bonus stage player override).
+        // High-priority tiles bypass occlusion. The manager mask already includes
+        // global overrides (lost rings, hurt state, bonus stage player override).
         GraphicsManager gm = graphicsManager;
-        float highPriority = desc.getPriority()
+        float highPriority = piecePriority
                 ? 0.0f : gm.getCurrentSpriteTileOcclusionPaletteMask();
 
         int offset = instanceCount * FLOATS_PER_INSTANCE;
@@ -260,13 +260,12 @@ public class InstancedPatternRenderer {
         instanceData[offset + 8] = paletteIndex;
         instanceData[offset + 9] = highPriority;
         instanceCount++;
-        return true;
     }
 
     /**
      * Adds pixel rows {@code [rowStart, rowEnd)} (screen order, 0 = tile top) of an
      * 8x8 tile whose top is at {@code y}. V is interpolated along the same top/bottom
-     * mapping {@link #addPattern} uses, so rows 0-8 reproduce it exactly. Takes the
+     * mapping {@link #appendAdmittedPattern} uses, so rows 0-8 reproduce it exactly. Takes the
      * tile attributes as primitives to keep this layer free of level types.
      */
     public boolean addPatternRows(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip,
@@ -310,18 +309,8 @@ public class InstancedPatternRenderer {
         return true;
     }
 
-    public boolean addStripPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc,
-            int x, int y, int stripIndex) {
-        if (!batchActive || instanceCount >= MAX_PATTERNS_PER_BATCH
-                || entry.atlasIndex() != batchAtlasIndex
-                || batchUsePriorityShader != (graphicsManager.isUseSpritePriorityShader() && instancedPriorityShader != null)
-                || batchUseWaterShader != (graphicsManager.getShaderProgram() instanceof WaterShaderProgram)
-                || batchUnderwaterPalette != graphicsManager.isUseUnderwaterPaletteForBackground()
-                || batchGhostEffectActive != graphicsManager.isGhostRenderEffectActive()
-                || batchGhostColour != graphicsManager.isGhostRenderColourPreserved()
-                || batchGhostAlpha != graphicsManager.getGhostRenderAlpha()) {
-            return false;
-        }
+    void appendAdmittedStripPattern(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, int x, int y, int stripIndex) {
         // Display height resolved once per batch in beginBatch() (FBO-aware)
         int screenY = batchDisplayHeight - y - 2;
 
@@ -333,7 +322,7 @@ public class InstancedPatternRenderer {
 
         float u0;
         float u1;
-        if (desc.getHFlip()) {
+        if (hFlip) {
             u0 = entry.u1();
             u1 = entry.u0();
         } else {
@@ -343,7 +332,7 @@ public class InstancedPatternRenderer {
 
         float v0;
         float v1;
-        if (desc.getVFlip()) {
+        if (vFlip) {
             v0 = stripTop;
             v1 = stripBottom;
         } else {
@@ -351,9 +340,9 @@ public class InstancedPatternRenderer {
             v1 = stripTop;
         }
 
-        // Per-piece VDP priority (same OR logic as addPattern)
+        // High-priority tiles bypass the already mapped global occlusion mask.
         GraphicsManager gm = graphicsManager;
-        float highPriority = desc.getPriority()
+        float highPriority = piecePriority
                 ? 0.0f : gm.getCurrentSpriteTileOcclusionPaletteMask();
 
         int offset = instanceCount * FLOATS_PER_INSTANCE;
@@ -368,7 +357,6 @@ public class InstancedPatternRenderer {
         instanceData[offset + 8] = paletteIndex;
         instanceData[offset + 9] = highPriority;
         instanceCount++;
-        return true;
     }
 
     // Debug counter to limit log spam (enable for debugging sprite rendering issues)

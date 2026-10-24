@@ -1,8 +1,7 @@
 package com.openggf.level.rings;
 
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rewind.snapshot.RingSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +20,7 @@ class TestRingManagerRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

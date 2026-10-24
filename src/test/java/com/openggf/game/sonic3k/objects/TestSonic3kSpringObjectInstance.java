@@ -1,14 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
@@ -159,10 +157,7 @@ class TestSonic3kSpringObjectInstance {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach

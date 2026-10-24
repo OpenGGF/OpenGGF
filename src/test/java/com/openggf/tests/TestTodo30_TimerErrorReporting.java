@@ -4,7 +4,6 @@ import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.openggf.game.GameServices;
 import com.openggf.timer.AbstractTimer;
 import com.openggf.timer.TimerManager;
 
@@ -27,8 +26,7 @@ public class TestTodo30_TimerErrorReporting {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
-        manager = GameServices.timers();
+        manager = new TimerManager();
         manager.resetState();
     }
 

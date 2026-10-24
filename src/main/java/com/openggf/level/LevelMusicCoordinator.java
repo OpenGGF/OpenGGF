@@ -1,7 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.audio.AudioManager;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneRegistry;

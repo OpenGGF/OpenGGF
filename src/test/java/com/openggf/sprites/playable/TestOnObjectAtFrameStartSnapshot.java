@@ -1,9 +1,8 @@
 package com.openggf.sprites.playable;
 
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.openggf.game.session.EngineContext;
 import com.openggf.physics.Sensor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +27,7 @@ class TestOnObjectAtFrameStartSnapshot {
 
     @BeforeEach
     void configureRuntime() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @Test

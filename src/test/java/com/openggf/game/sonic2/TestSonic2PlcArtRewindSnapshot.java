@@ -1,8 +1,7 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,7 @@ class TestSonic2PlcArtRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

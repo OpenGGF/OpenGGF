@@ -1,6 +1,6 @@
 package com.openggf.sprites.ghost;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.graphics.GraphicsManager;

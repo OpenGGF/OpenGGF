@@ -1,6 +1,7 @@
-package com.openggf.data;
+package com.openggf.game;
 
 import com.openggf.audio.GameSound;
+import com.openggf.data.Rom;
 import com.openggf.level.Level;
 
 import java.io.IOException;

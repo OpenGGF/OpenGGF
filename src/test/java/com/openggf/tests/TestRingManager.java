@@ -1,8 +1,6 @@
 package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.rules.GameRules;
@@ -47,8 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class TestRingManager {
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

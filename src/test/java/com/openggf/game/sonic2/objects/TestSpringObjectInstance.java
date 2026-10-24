@@ -1,16 +1,14 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -52,10 +50,7 @@ class TestSpringObjectInstance {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
     }
 
     @AfterEach

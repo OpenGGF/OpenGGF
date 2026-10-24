@@ -3,8 +3,6 @@ package com.openggf.game.sonic1;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.Block;
@@ -42,7 +40,6 @@ public class TestSonic1PatternAnimatorRewindSnapshot {
     @BeforeEach
     void setUp() {
         OscillationManager.reset();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach

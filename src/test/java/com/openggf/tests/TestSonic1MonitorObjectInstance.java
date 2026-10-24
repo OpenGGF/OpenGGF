@@ -2,9 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance;
@@ -44,8 +42,7 @@ class TestSonic1MonitorObjectInstance {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

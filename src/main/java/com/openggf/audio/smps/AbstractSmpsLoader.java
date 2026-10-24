@@ -1,14 +1,12 @@
 package com.openggf.audio.smps;
 
-import com.openggf.data.Rom;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
 /**
- * Base class for game-specific SMPS loaders. Provides shared fields (ROM reference,
- * music/SFX caches) and a default {@link #loadSfx(String)} implementation that
+ * Base class for game-specific SMPS loaders. Provides shared music/SFX
+ * caches and a default {@link #loadSfx(String)} implementation that
  * parses the name as a hex SFX ID and delegates to {@link #loadSfx(int)}.
  *
  * <p>Subclasses must implement the abstract loading methods and provide an
@@ -17,12 +15,10 @@ import java.util.logging.Logger;
 public abstract class AbstractSmpsLoader implements SmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(AbstractSmpsLoader.class.getName());
 
-    protected final Rom rom;
     protected final Map<Integer, AbstractSmpsData> musicCache = new HashMap<>();
     protected final Map<Integer, AbstractSmpsData> sfxCache = new HashMap<>();
 
-    protected AbstractSmpsLoader(Rom rom) {
-        this.rom = rom;
+    protected AbstractSmpsLoader() {
     }
 
     // -----------------------------------------------------------------------

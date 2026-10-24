@@ -47,7 +47,7 @@ class TestLiveRewindManagerAudioCleanup {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         audio = AudioManager.getInstance();

@@ -1,7 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.audio.GameSound;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 
 import java.util.List;
