@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.SpecialStageViewport;
 import com.openggf.graphics.GraphicsManager;
@@ -51,7 +52,7 @@ class TestSonic2SpecialStageResultsWidescreenCommands {
     @Test
     void ringCountsUseTheNativeFourDigitColumnsWhileScoreKeepsItsFixedZero() throws Exception {
         List<Command> commands = render(320, 0);
-        var sourceBase = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("SOURCE_DIGITS_PATTERN_BASE");
+        var sourceBase = Sonic2SpecialStageResultsScreen.class.getDeclaredField("SOURCE_DIGITS_PATTERN_BASE");
         sourceBase.setAccessible(true);
         int base = sourceBase.getInt(null);
         List<Command> ringDigits = commands.stream()
@@ -74,7 +75,7 @@ class TestSonic2SpecialStageResultsWidescreenCommands {
 
     private static int privateInt(String name) {
         try {
-            Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField(name);
+            Field field = Sonic2SpecialStageResultsScreen.class.getDeclaredField(name);
             field.setAccessible(true);
             return field.getInt(null);
         } catch (ReflectiveOperationException e) {
@@ -90,8 +91,8 @@ class TestSonic2SpecialStageResultsWidescreenCommands {
         RecordingGraphics graphics = new RecordingGraphics();
         TestObjectServices services = new TestObjectServices()
                 .withGraphicsManager(graphics).withGameState(mock(GameStateManager.class));
-        SpecialStageResultsScreenObjectInstance results =
-                new SpecialStageResultsScreenObjectInstance(17, p2, false, 2, 0, services);
+        Sonic2SpecialStageResultsScreen results =
+                new Sonic2SpecialStageResultsScreen(17, p2, false, 2, 0, services);
         setField(results, "artLoaded", true);
         setField(results, "artCached", true);
         Pattern[] patterns = new Pattern[0x0710 - 0x0002];

@@ -155,6 +155,10 @@ class TestCrossGameFeatureProviderRefactor {
         doReturn(sonicPalette).when(provider).loadCharacterPalette(null);
         doReturn(sonicPalette).when(provider).loadCharacterPalette("sonic");
         doReturn(knucklesPalette).when(provider).loadCharacterPalette("knuckles");
+        Palette sonicWater = paletteWithRedMarker();
+        Palette knucklesWater = paletteWithBlueMarker();
+        doReturn(sonicWater).when(provider).loadUnderwaterCharacterPalette("sonic");
+        doReturn(knucklesWater).when(provider).loadUnderwaterCharacterPalette("knuckles");
         RenderContext context = RenderContext.getOrCreateDonor(GameId.S3K);
         context.setPalette(0, sonicPalette);
         setField(provider, "donorRenderContext", context);
@@ -166,6 +170,19 @@ class TestCrossGameFeatureProviderRefactor {
         provider.loadPlayerSpriteArt("knuckles");
 
         assertSame(knucklesPalette, context.getPalette(0));
+        assertSame(knucklesWater, context.getUnderwaterPalette(0));
+        assertSame(context, provider.getDonorRenderContext());
+
+        provider.loadPlayerSpriteArt("sonic");
+        assertSame(sonicPalette, context.getPalette(0));
+        assertSame(sonicWater, context.getUnderwaterPalette(0));
+        doReturn(null).when(provider).loadUnderwaterCharacterPalette("sonic");
+        provider.loadPlayerSpriteArt("sonic");
+        assertNull(context.getUnderwaterPalette(0), "a missing native row clears the prior selection");
+
+        provider.loadPlayerSpriteArt(null);
+        assertSame(sonicPalette, context.getPalette(0), "null retains the standalone default selection");
+        assertSame(context, provider.getDonorRenderContext());
     }
 
     @Test

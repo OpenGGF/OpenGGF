@@ -10,10 +10,18 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SecondaryAbility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import com.openggf.data.RomByteReader;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
@@ -26,6 +34,205 @@ import static org.mockito.Mockito.withSettings;
 
 class TestLevelPlayableArtInitializerModArt {
     @AfterEach void resetContexts() { RenderContext.reset(); }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void equalNormalModMainKeepsDerivedWaterBesideDonatedSonic() throws Exception {
+        var source = new com.openggf.game.sonic1.Sonic1GameModule().getCrossGameDonorProvider();
+        var reader = RomByteReader.fromRom(TestEnvironment.currentRom());
+        Palette normal = source.loadCharacterPalette(reader, "sonic");
+        Palette nativeWater = source.loadUnderwaterCharacterPalette(reader, "sonic");
+        org.junit.jupiter.api.Assertions.assertFalse(normal.dataEquals(nativeWater));
+        CharacterKey mainKey = CharacterKey.mod("owner", "main");
+        PlayableCharacterRegistry registry = PlayableCharacterRegistry.empty().register(mainKey,
+                definition(mainKey, code -> art(4), code -> normal));
+        AbstractPlayableSprite sonic = sprite(CharacterKey.SONIC, "sonic_p2");
+        Fixture fixture = fixture(registry, mainKey, List.of(sonic));
+        fixture.level().gameModule = new com.openggf.game.sonic2.Sonic2GameModule();
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        when(donor.loadPlayerSpriteArt(anyString())).thenReturn(
+                source.createPlayerArtProvider(reader).loadPlayerSpriteArt("sonic"));
+        when(donor.loadCharacterPalette("sonic")).thenReturn(normal);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(nativeWater);
+        when(donor.getDonorRenderContext()).thenReturn(RenderContext.getOrCreateDonor(GameId.S1));
+
+        initializeDonated(fixture, donor);
+
+        RenderContext mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        RenderContext sideContext = capturedRenderer(sonic).getRenderContext();
+        org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        org.junit.jupiter.api.Assertions.assertNull(mainContext.getUnderwaterPalette(0),
+                "the mod main keeps host-derived water");
+        org.junit.jupiter.api.Assertions.assertSame(nativeWater, sideContext.getUnderwaterPalette(0));
+        assertEquals(normal, mainContext.getPalette(0));
+        assertEquals(normal, sideContext.getPalette(0));
+    }
+
+    @Test
+    void equalNormalModFollowerKeepsDerivedWaterBesideDonatedMain() throws Exception {
+        CharacterKey sideKey = CharacterKey.mod("owner", "side");
+        Palette normal = new Palette();
+        normal.colors[2].b = (byte) 255;
+        Palette nativeWater = new Palette();
+        nativeWater.colors[2].r = (byte) 146;
+        PlayableCharacterRegistry registry = PlayableCharacterRegistry.empty().register(sideKey,
+                definition(sideKey, code -> art(4), code -> normal));
+        AbstractPlayableSprite side = sprite(sideKey, sideKey.persisted());
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, List.of(side));
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        RenderContext shared = RenderContext.getOrCreateDonor(GameId.S1);
+        shared.setPalette(0, normal);
+        shared.setUnderwaterPalette(0, nativeWater);
+        when(donor.getDonorRenderContext()).thenReturn(shared);
+        when(donor.loadPlayerSpriteArt("sonic")).thenReturn(art(4));
+        when(donor.loadCharacterPalette("sonic")).thenReturn(normal);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(nativeWater);
+
+        initializeDonated(fixture, donor);
+
+        RenderContext mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        RenderContext sideContext = capturedRenderer(side).getRenderContext();
+        org.junit.jupiter.api.Assertions.assertSame(shared, mainContext);
+        org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        org.junit.jupiter.api.Assertions.assertSame(nativeWater, mainContext.getUnderwaterPalette(0));
+        org.junit.jupiter.api.Assertions.assertNull(sideContext.getUnderwaterPalette(0));
+        assertEquals(normal, sideContext.getPalette(0));
+    }
+
+    @ParameterizedTest(name = "prepared={0}, equal water={1}")
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void equalNormalBuiltinSharingRequiresEqualWaterInBothRoutes(boolean prepared, boolean equalWater)
+            throws Exception {
+        CharacterKey extraKey = CharacterKey.mod("owner", "extra");
+        PlayableCharacterRegistry registry = prepared
+                ? PlayableCharacterRegistry.empty().register(extraKey, definition(extraKey, code -> art(4)))
+                : PlayableCharacterRegistry.empty();
+        AbstractPlayableSprite side = sprite(CharacterKey.KNUCKLES, "knuckles_p2");
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, prepared
+                ? List.of(side, sprite(extraKey, extraKey.persisted())) : List.of(side));
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        Palette normal = new Palette();
+        normal.colors[2].b = (byte) 255;
+        Palette mainWater = new Palette();
+        mainWater.colors[2].r = (byte) 146;
+        Palette sideWater = new Palette();
+        if (equalWater) sideWater.colors[2].r = (byte) 146;
+        else sideWater.colors[2].b = (byte) 73;
+        RenderContext shared = RenderContext.getOrCreateDonor(GameId.S3K);
+        when(donor.getDonorRenderContext()).thenReturn(shared);
+        when(donor.loadPlayerSpriteArt(anyString())).thenReturn(art(4));
+        when(donor.loadCharacterPalette(anyString())).thenReturn(normal);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(mainWater);
+        when(donor.loadUnderwaterCharacterPalette("knuckles")).thenReturn(sideWater);
+
+        initializeDonated(fixture, donor);
+
+        RenderContext mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        RenderContext sideContext = capturedRenderer(side).getRenderContext();
+        if (equalWater) org.junit.jupiter.api.Assertions.assertSame(mainContext, sideContext);
+        else org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        assertEquals(146, mainContext.getUnderwaterPalette(0).red(2) & 255);
+        assertEquals(equalWater ? 146 : 0, sideContext.getUnderwaterPalette(0).red(2) & 255);
+        assertEquals(equalWater ? 0 : 73, sideContext.getUnderwaterPalette(0).blue(2) & 255);
+    }
+
+    private static void initializeDonated(Fixture fixture, CrossGameFeatureProvider donor) {
+        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+            active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
+            new LevelPlayableArtInitializer(fixture.level(), fixture.sprites(), mock(GraphicsManager.class),
+                    fixture.config(), donor).initialize();
+        }
+    }
+
+    @ParameterizedTest(name = "native follower, prepared={0}")
+    @ValueSource(booleans = {false, true})
+    void equalNormalNativeScriptedFollowerKeepsHostBindingInBothRoutes(boolean prepared) throws Exception {
+        CharacterKey extraKey = CharacterKey.mod("owner", "extra");
+        PlayableCharacterRegistry registry = prepared
+                ? PlayableCharacterRegistry.empty().register(extraKey, definition(extraKey, code -> art(4)))
+                : PlayableCharacterRegistry.empty();
+        AbstractPlayableSprite nativeSide = sprite(CharacterKey.SONIC, "sonic_p2");
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, prepared
+                ? List.of(nativeSide, sprite(extraKey, extraKey.persisted())) : List.of(nativeSide));
+        com.openggf.data.Game host = mock(com.openggf.data.Game.class,
+                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        fixture.level().game = host;
+        var hostArt = (com.openggf.data.PlayerSpriteArtProvider) host;
+        Palette normal = new Palette();
+        Palette nativeWater = new Palette();
+        nativeWater.colors[2].r = (byte) 146;
+        when(hostArt.loadPlayerSpriteArt(anyString())).thenReturn(art(4));
+        when(hostArt.loadCharacterPalette(anyString())).thenReturn(normal);
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        RenderContext shared = RenderContext.getOrCreateDonor(GameId.S1);
+        when(donor.getDonorRenderContext()).thenReturn(shared);
+        when(donor.loadPlayerSpriteArt(anyString())).thenReturn(art(4));
+        when(donor.loadCharacterPalette(anyString())).thenReturn(normal);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(nativeWater);
+        try (var nativeBinding = mockStatic(SpriteManagerInternalAccess.class)) {
+            nativeBinding.when(() -> SpriteManagerInternalAccess.usesNativeScriptedArt(
+                    fixture.sprites(), nativeSide)).thenReturn(true);
+            initializeDonated(fixture, donor);
+        }
+        org.junit.jupiter.api.Assertions.assertNull(capturedRenderer(nativeSide).getRenderContext(),
+                "a native-scripted follower still uses the host's base palette binding");
+        org.junit.jupiter.api.Assertions.assertSame(nativeWater, shared.getUnderwaterPalette(0));
+        verify(hostArt).loadPlayerSpriteArt(prepared ? "sonic_p2" : "sonic");
+    }
+
+    @ParameterizedTest(name = "prepared team: {0}")
+    @ValueSource(booleans = {false, true})
+    void donatedTeamPublishesMainNormalAndEachCharactersNativeWater(boolean prepared) throws Exception {
+        CharacterKey extraKey = CharacterKey.mod("owner", "extra");
+        PlayableCharacterRegistry registry = prepared
+                ? PlayableCharacterRegistry.empty().register(extraKey, definition(extraKey, code -> art(4)))
+                : PlayableCharacterRegistry.empty();
+        AbstractPlayableSprite knuckles = sprite(CharacterKey.KNUCKLES, "knuckles_p2");
+        List<AbstractPlayableSprite> sidekicks = prepared
+                ? List.of(knuckles, sprite(extraKey, extraKey.persisted())) : List.of(knuckles);
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, sidekicks);
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        RenderContext shared = RenderContext.getOrCreateDonor(GameId.S3K);
+        Palette sonic = new Palette();
+        sonic.colors[2].b = (byte) 255;
+        Palette knux = new Palette();
+        knux.colors[2].r = (byte) 255;
+        Palette sonicWater = new Palette();
+        sonicWater.colors[2].g = (byte) 73;
+        Palette knuxWater = new Palette();
+        knuxWater.colors[2].r = (byte) 146;
+        when(donor.getDonorRenderContext()).thenReturn(shared);
+        when(donor.loadCharacterPalette("sonic")).thenReturn(sonic);
+        when(donor.loadCharacterPalette("knuckles")).thenReturn(knux);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(sonicWater);
+        when(donor.loadUnderwaterCharacterPalette("knuckles")).thenReturn(knuxWater);
+        when(donor.loadPlayerSpriteArt(anyString())).thenAnswer(invocation -> {
+            boolean isKnuckles = invocation.<String>getArgument(0).startsWith("knuckles");
+            // Reproduce the provider's existing standalone refresh contract.
+            shared.setPalette(0, isKnuckles ? knux : sonic);
+            shared.setUnderwaterPalette(0, isKnuckles ? knuxWater : sonicWater);
+            return art(8);
+        });
+        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+            active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
+            new LevelPlayableArtInitializer(fixture.level(), fixture.sprites(), graphics,
+                    fixture.config(), donor).initialize();
+        }
+        RenderContext mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        RenderContext sideContext = capturedRenderer(knuckles).getRenderContext();
+        org.junit.jupiter.api.Assertions.assertSame(shared, mainContext);
+        org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertEquals(255, mainContext.getPalette(0).blue(2) & 255),
+                () -> assertEquals(255, sideContext.getPalette(0).red(2) & 255),
+                () -> org.junit.jupiter.api.Assertions.assertNotNull(mainContext.getUnderwaterPalette(0)),
+                () -> org.junit.jupiter.api.Assertions.assertNotNull(sideContext.getUnderwaterPalette(0)));
+        assertEquals(73, mainContext.getUnderwaterPalette(0).green(2) & 255);
+        assertEquals(146, sideContext.getUnderwaterPalette(0).red(2) & 255);
+        verify(graphics).cachePaletteTexture(sonic, shared.getEffectivePaletteLine(0));
+        verify(graphics).cachePaletteTexture(knux, sideContext.getEffectivePaletteLine(0));
+    }
 
     @Test
     void supplierFailureLeavesExistingRendererAndPaletteContextsUntouched() throws Exception {

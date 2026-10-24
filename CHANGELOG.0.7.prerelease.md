@@ -630,6 +630,9 @@ Unreleased. The earlier development themes remain in
   saved swing anchors restore with their encounter. Freezer debris keeps its
   managed lifetime, S1 ring groups retain ordered placement recipes, and lightning
   sparks restore their supplied art and refresh atlas residency.
+  Donated teams keep each character's normal and underwater palette policy through
+  art refresh. Rewinding a donor's Super colors restores the first redraw while
+  keeping replacement palette banks isolated from older captures.
   Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts

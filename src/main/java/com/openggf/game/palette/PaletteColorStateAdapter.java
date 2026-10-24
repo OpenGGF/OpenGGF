@@ -3,14 +3,21 @@ package com.openggf.game.palette;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.PaletteColorSnapshot;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 
+import java.util.Collection;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
  * Captures and restores live palette COLOR words for the normal and
- * underwater surfaces, and re-caches GPU palette textures on restore.
+ * underwater surfaces and shared donor palettes, and re-caches GPU palette textures on restore.
  *
  * <p>{@link PaletteOwnershipRegistry} snapshots ownership metadata only;
  * the colors themselves are mutated in place on {@code Level} palettes and
@@ -29,13 +36,25 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
     private final Supplier<Palette[]> normalPalettes;
     private final Supplier<Palette[]> underwaterPalettes;
     private final Supplier<GraphicsManager> graphics;
+    private final Supplier<Collection<RenderContext>> donorContexts;
+    // Only current registered banks are retained. Replacing a row within one bank keeps its lifetime;
+    // resetting/replacing a bank or creating a new adapter cannot adopt an old capture by GameId/row.
+    private final Map<RenderContext, UUID> donorLifetimes = new IdentityHashMap<>();
 
     public PaletteColorStateAdapter(Supplier<Palette[]> normalPalettes,
                                     Supplier<Palette[]> underwaterPalettes,
                                     Supplier<GraphicsManager> graphics) {
+        this(normalPalettes, underwaterPalettes, graphics, List::of);
+    }
+
+    public PaletteColorStateAdapter(Supplier<Palette[]> normalPalettes,
+                                    Supplier<Palette[]> underwaterPalettes,
+                                    Supplier<GraphicsManager> graphics,
+                                    Supplier<Collection<RenderContext>> donorContexts) {
         this.normalPalettes = Objects.requireNonNull(normalPalettes, "normalPalettes");
         this.underwaterPalettes = Objects.requireNonNull(underwaterPalettes, "underwaterPalettes");
         this.graphics = Objects.requireNonNull(graphics, "graphics");
+        this.donorContexts = Objects.requireNonNull(donorContexts, "donorContexts");
     }
 
     @Override
@@ -45,7 +64,13 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
 
     @Override
     public PaletteColorSnapshot capture() {
-        return new PaletteColorSnapshot(pack(normalPalettes.get()), pack(underwaterPalettes.get()));
+        var donors = currentDonors().stream().map(context -> {
+            Palette[] rows = donorRows(context);
+            int present = 0;
+            for (int line = 0; line < rows.length; line++) if (rows[line] != null) present |= 1 << line;
+            return new PaletteColorSnapshot.DonorColors(donorLifetimes.get(context), present, pack(rows));
+        }).toList();
+        return new PaletteColorSnapshot(pack(normalPalettes.get()), pack(underwaterPalettes.get()), donors);
     }
 
     @Override
@@ -54,12 +79,37 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
         Palette[] underwater = underwaterPalettes.get();
         unpack(normal, snapshot.normalRgb());
         unpack(underwater, snapshot.underwaterRgb());
-        recacheTextures(normal, underwater);
+        var restoredDonors = new LinkedHashMap<RenderContext, Integer>();
+        for (RenderContext context : currentDonors()) {
+            for (var donor : snapshot.donors()) {
+                if (!donor.lifetime().equals(donorLifetimes.get(context))) continue;
+                for (int line = 0; line < RenderContext.LINES_PER_CONTEXT; line++) {
+                    Palette row = context.getPalette(line);
+                    if ((donor.presentLines() & (1 << line)) != 0 && row != null)
+                        unpackLine(row, donor.rgb(), line * BYTES_PER_LINE);
+                }
+                restoredDonors.put(context, donor.presentLines());
+            }
+        }
+        recacheTextures(normal, underwater, restoredDonors);
     }
 
     @Override
     public void resetForMissingSnapshot() {
         // Colors simply stay live; nothing to reset.
+    }
+
+    private List<RenderContext> currentDonors() {
+        var current = List.copyOf(donorContexts.get());
+        donorLifetimes.keySet().retainAll(current);
+        for (RenderContext context : current) donorLifetimes.computeIfAbsent(context, ignored -> UUID.randomUUID());
+        return current;
+    }
+
+    private static Palette[] donorRows(RenderContext context) {
+        Palette[] rows = new Palette[RenderContext.LINES_PER_CONTEXT];
+        for (int line = 0; line < rows.length; line++) rows[line] = context.getPalette(line);
+        return rows;
     }
 
     private static byte[] pack(Palette[] palettes) {
@@ -94,17 +144,23 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
                 i += BYTES_PER_LINE;
                 continue;
             }
-            for (int c = 0; c < Palette.PALETTE_SIZE; c++) {
-                // Write fields in place: other code aliases Color references.
-                Palette.Color color = palettes[l].colors[c];
-                color.r = rgb[i++];
-                color.g = rgb[i++];
-                color.b = rgb[i++];
-            }
+            unpackLine(palettes[l], rgb, i);
+            i += BYTES_PER_LINE;
         }
     }
 
-    private void recacheTextures(Palette[] normal, Palette[] underwater) {
+    private static void unpackLine(Palette palette, byte[] rgb, int offset) {
+        for (int c = 0; c < Palette.PALETTE_SIZE; c++) {
+            // Write fields in place: other code aliases Color references.
+            Palette.Color color = palette.colors[c];
+            color.r = rgb[offset++];
+            color.g = rgb[offset++];
+            color.b = rgb[offset++];
+        }
+    }
+
+    private void recacheTextures(Palette[] normal, Palette[] underwater,
+                                 Map<RenderContext, Integer> restoredDonors) {
         GraphicsManager g = graphics.get();
         if (g == null || !g.isGlInitialized()) {
             return;
@@ -116,6 +172,15 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
                 }
             }
         }
+        // Match donor super writes' immediate upload, using the live bank's rows. Restore donors
+        // before deriving native-water expanded rows; leave native write/fade/profile owners alone.
+        restoredDonors.forEach((context, present) -> {
+            for (int line = 0; line < RenderContext.LINES_PER_CONTEXT; line++) {
+                Palette row = context.getPalette(line);
+                if ((present & (1 << line)) != 0 && row != null)
+                    g.cachePaletteTexture(row, context.getEffectivePaletteLine(line));
+            }
+        });
         if (underwater != null) {
             Palette normalLine0 = normal != null && normal.length > 0 ? normal[0] : null;
             g.cacheUnderwaterPaletteTexture(underwater, normalLine0);

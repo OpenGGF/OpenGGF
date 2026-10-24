@@ -12,6 +12,8 @@ import com.openggf.data.Rom;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -19,6 +21,7 @@ import com.openggf.physics.TerrainCheckResult;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -180,13 +183,29 @@ class TestLbzEndBossInstance {
 
     @Test
     void fireCycleGatesPlatformsAndLaunchesRomSubtypeSequence() {
-        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
+        TestObjectServices services = new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0));
+        List<Integer> submittedSubtypes = new ArrayList<>();
+        ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                0, null, null, null, services.camera(), services) {
+            @Override
+            public void addDynamicObjectAfterCurrent(ObjectInstance object) {
+                super.addDynamicObjectAfterCurrent(object);
+                if (object instanceof LbzEndBossInstance.LbzEndBossSpikeBallChild ball
+                        && !ball.isDestroyed() && ball.getSlotIndex() >= 0) {
+                    submittedSubtypes.add(ball.getRomSubtypeForTests());
+                }
+            }
+        };
+        services.withDirectObjectManager(manager);
+        LbzEndBossInstance boss = constructBoss(services);
 
         enterFireCycle(boss);
-        runUntilSpikeCount(boss, 8, 4000);
+        for (int frame = 0; frame < 4000 && submittedSubtypes.size() < 8; frame++) {
+            boss.update(frame, null);
+        }
 
-        assertEquals(List.of(0, 2, 1, 2, 0, 1, 2, 1), boss.getLaunchedSpikeBallRomSubtypesForTests(),
-                "byte_73F3A subtype sequence is used raw: 0,2,1,2,0,1,2,1");
+        assertEquals(List.of(0, 2, 1, 2, 0, 1, 2, 1), submittedSubtypes,
+                "observe admitted projectiles at submission, independently of later retirement");
         assertTrue(boss.getPlatformChildrenForTests().stream().anyMatch(LbzEndBossInstance.LbzEndBossPlatformChild::hasRunBobGateForTests),
                 "leader platform runs the parent bit1 bob gate before the next launch");
     }
@@ -479,18 +498,15 @@ class TestLbzEndBossInstance {
 
     private static LbzEndBossInstance.LbzEndBossSpikeBallChild launchFirstSpikeBall(LbzEndBossInstance boss) {
         enterFireCycle(boss);
-        runUntilSpikeCount(boss, 1, 512);
+        for (int frame = 0; frame < 512 && boss.getOwnedChildrenForTests().stream()
+                .noneMatch(LbzEndBossInstance.LbzEndBossSpikeBallChild.class::isInstance); frame++) {
+            boss.update(frame, null);
+        }
         return boss.getOwnedChildrenForTests().stream()
                 .filter(LbzEndBossInstance.LbzEndBossSpikeBallChild.class::isInstance)
                 .map(LbzEndBossInstance.LbzEndBossSpikeBallChild.class::cast)
                 .findFirst()
                 .orElseThrow();
-    }
-
-    private static void runUntilSpikeCount(LbzEndBossInstance boss, int count, int maxFrames) {
-        for (int i = 0; i < maxFrames && boss.getLaunchedSpikeBallRomSubtypesForTests().size() < count; i++) {
-            boss.update(i, null);
-        }
     }
 
     private static void triggerDefeat(LbzEndBossInstance boss) {

@@ -1166,3 +1166,602 @@ Main fetch/fast-forward pull found no intervening upstream changes at this
 checkpoint. All parent jobs have completed. Documentation/policy checks, final
 integration, push and accounted-for cleanup remain delivery obligations. Later
 boss-inventory and donated-team work is outside these completed runs.
+
+### Seventh-loop transition and S1 fixture ownership
+
+The sixth loop was integrated and pushed as `591c679b39c61f162a839cde6baaedd387135bc4`.
+Its tree matches accepted `a286d527e`; the policy audit checked 14,593 entries.
+Remote develop was verified at the integration SHA. All seven fully merged owned
+worktrees and branches were removed after checking tracked/untracked content,
+generated configuration examples, setup links and retained test identities.
+The main checkout's four dirty submodules and five untracked user files remain
+untouched. No parent job or cleanup obligation remains from that wave.
+
+The seventh coordinator starts at that SHA in
+`.worktrees/ai-architecture-loop7-20261024`. Its first slice changes only tests
+and exact fixture accounting. Gargoyle render tests receive their recording
+ObjectRenderManager through supplied ObjectServices instead of reflecting into a
+session LevelManager. Their renderer also receives an explicitly constructed
+GraphicsManager, avoiding the convenience constructor's process fallback. Geyser
+checks use the existing named S1 fixture instead of manual engine/bootstrap and
+ambient session setup. All nine test identities and assertions remain; the
+lifecycle guard removes precisely those two setup keys, reaching 95 methods in
+94 files. No runtime implementation, API signature or architecture permission
+changes.
+
+On the first source delta, the two classes plus TestSingletonLifecycleGuard
+passed 17 distinct cases, zero failures/errors/skips. Admission took 20 seconds;
+Maven reported 90 seconds. A final inspection found the renderer convenience
+constructor still obtains process graphics; after supplying its own manager,
+both affected Gargoyle cases passed again, zero failures/errors/skips, with 40
+seconds admission and 25.033 seconds Maven execution. No test source changed
+while either request was queued or running. Exact identities were read from XML;
+six initial and two final XML/text reports were consumed and removed.
+
+Both commands used the absolute current main-checkout wrapper, Java 25, Lua 5.4,
+and unset DISPLAY, WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS. These
+are CPU argument/camera checks and do not require a native GL context or ROM:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestSonic1GargoyleObjectInstanceRender,TestSonic1LavaGeyserOutOfRange,TestSingletonLifecycleGuard' test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestSonic1GargoyleObjectInstanceRender' test -B
+```
+
+This evidence covers the fixture change only. The end-boss launch-history slice
+`c82d81f2d` has independent static review acceptance and awaits composition.
+The final-boss inventory work is still running. Donated-team candidate
+`fe60ed29a` is held for review corrections: sharing normal colors does not
+establish identical mod-main/follower water policy, and missing donor ROMs must
+abort their test invocation safely. Its original 93-case evidence does not
+qualify those pending corrections. Mutable donor-color rewind is a separate
+reproduction, with no runtime failure claimed yet. Parent combined validation,
+integration, push and cleanup remain outstanding for the seventh loop.
+
+### S2 special-stage overlay ownership
+
+The remaining object-base naming allowance described a standalone ResultsScreen,
+not a managed ObjectInstance. Its provider owns update/completion/presentation;
+it has no object slot, spawn or collision lifecycle. Making it inherit the object
+base would add a false lifecycle merely to satisfy its misleading name. Renaming
+inside `objects` was also rejected because it leaves the mode overlay misplaced.
+The chosen bounded migration moves the whole responsibility to existing
+`game.sonic2.specialstage`: Sonic2SpecialStageResultsScreen, its mappings and its
+split-name message clock helper. All three class bodies are identical after
+normalizing the screen's name. Constructors, ResultsScreen entry points and
+update/draw logic are unchanged. No forwarding class, service hierarchy or new
+public signature is added. These concrete helpers are absent from curated API
+roots and pins; implementing the unsealed ResultsScreen interface does not add
+its implementations to that surface. All maintained Java callers are migrated.
+
+One production results factory, two art loaders, seven test classes and S1's
+explanatory comments now name the new locations. Only the exact stored naming
+record in `09f6f5b4-f1d1-4f5b-b31a-a55517616ebe` is pruned, one to zero.
+The historical rule-description key and disabled freeze updates are unchanged.
+The 147 low-level records and API pins are byte-identical. This is responsibility
+placement and an honest name, not an algorithm or object-lifecycle migration.
+
+The unchanged overlay at `873e06478` passed 22 cases across its six existing test
+classes, zero failures/errors/skips. Admission took 28 seconds; Maven reported
+83 seconds. The first post-move attempt stopped during production compilation:
+SplitNameResultsMessages had relied on same-package visibility/import resolution.
+Zero tests ran; Maven reported 56.971 seconds after 44 seconds admission. Moving
+that helper with its sole overlay responsibility, and migrating its two loader
+imports plus unit test, corrected the complete owner boundary rather than adding
+an unrelated public seam. The final source passed 64 distinct cases across nine
+reports, zero failures/errors/skips: the same 22 screen cases, four existing
+message-clock cases, eleven API checks and 27 ArchUnit field checks. XML confirms
+the object-instance naming rule executed. Admission was ten seconds; Maven
+reported 96 seconds. Twelve baseline and eighteen final XML/text reports were
+inspected and removed. No source changed while a request was queued/running.
+
+Commands used this coordinator, the absolute current main wrapper, display and
+JVM-option variables unset, Java 25, Lua 5.4 and surfaceless EGL. The existing
+absolute S2 World REV01 ROM was supplied, without creating links:
+
+```bash
+SCREEN_CASES='TestKis2ResultsMessageHandoff,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageSuperResults'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES,TestModApiSignatureSurface,TestArchUnitRules#object_instance_named_classes_extend_object_instance_base" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES,TestSplitNameResultsMessages,TestModApiSignatureSurface,TestArchUnitRules#object_instance_named_classes_extend_object_instance_base" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+The final-boss change `c678ba49c` also has independent source-review acceptance
+and is merged as `85803e286`. Its constructor-local unmanaged bootstrap retains
+allocation expressions/order; managed turrets keep their deferred construction
+and existing link codecs. The assigned history key alone leaves the baseline,
+which is now empty. Its 58-case worker evidence remains bounded and separate;
+parent composed behavior/API/S3K and full guards have not yet run on this seventh
+candidate. The two accepted donor-palette changes are still unmerged at this
+checkpoint. No integration, push or cleanup is claimed here.
+
+## Donated-team palette selection owner — 2026-10-24
+
+The isolated worker starts at `3ca14002fa2fafeabe1d3e6e370a3f559b6cba4e`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-db2087fd`, on local
+`bugfix/ai-donated-team-palette-owner-20261024`. Its boundary is completed
+team normal/native-water selection in playable-art initialization. Registry,
+allocator, colour models, water transforms, public API and frozen identities
+are outside the change; no frozen-identity reduction is expected. The parent
+owns composed guards, API/S3K coverage, integration and push.
+
+The reproduced cause: `loadPlayerSpriteArt` intentionally refreshes the
+shared donor row for the requested character. Built-in initialization binds
+the main renderer before loading sidekick art; the prepared path loads all art
+before binding. Both can therefore leave the shared row selected for the last
+loaded sidekick. Separate sidekick contexts do not restore the main selection.
+On unchanged runtime code, actual S2-host/S3K-donor boot reproduced both orders:
+Sonic's colour 2 red was 255 instead of the ROM's 109 (`$0E66`), and Knuckles'
+was 109 instead of 255 (`$064E`). The two smaller initializer controls also
+reproduced the overwritten main normal row and missing distinct sidekick water
+row. Sonic/Tails and duplicate Sonic passed.
+
+The two bounded shapes compared are an explicit secondary-art loading
+path that does not select the shared donor row, and completed-team selection by
+the initializer before final upload. Adopt the latter: the existing initializer
+owns the completed team, reselects its actual built-in donated main before
+upload, and attaches each distinct donated sidekick's native-water row at its
+existing context binding. This covers built-in and prepared paths, including
+runtime refresh. Native scripted host art and mod-supplied palettes retain
+their existing owners. `CrossGameFeatureProvider` runtime code is unchanged;
+standalone character/default refresh, context identity and typed API remain.
+
+Reject the secondary loader on source comparison, not an implemented A/B run:
+it would require a new cross-package provider seam, migrate secondary callers
+and still establish sidekick water binding. Re-decoding main art as a final
+selection would obscure the owner and repeat observable loading. Final
+selection uses only existing palette reads and does not alter art or decode
+order. No registry/allocator, colour-profile, water-math, API-pin or frozen-store
+change is claimed.
+
+Reproduction controls use actual `GameplayCaptureSession` boot with S2 as host,
+S3K Sonic/Knuckles in both orders, Sonic/Tails, duplicate Sonic, and S1 duplicate
+Sonic including its existing native underwater row. Expected colours come from
+independent supplied-ROM words, not a new selection helper. They inspect both
+renderer bindings and actual normal/native-water texture rows, repeat playable
+refresh, and reset/reinitialize the provider. Smaller initializer controls cover
+different per-character native-water rows in built-in and prepared teams.
+
+Hooks are installed. All three existing absolute ROMs match the documented
+CRC32/SHA-1 identities. The leased version probe reported Java 25.0.5.0.2
+(353 seconds admission); `/usr/bin/lua5.4 -v` reported Lua 5.4.9. All tests run
+from this worker's own cwd with the following common command.
+`MAIN_CHECKOUT` denotes the existing parent checkout (and its verified ROMs);
+only that path is parameterized here to avoid committing a machine-local home
+path. The selectors below are the executed selectors:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SELECTOR" \
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+- Red selector:
+  `TestDonatedTeamPalettes,TestLevelPlayableArtInitializerModArt#donatedTeamPublishesMainNormalAndEachCharactersNativeWater`.
+  Seven cases ran, five failed, no errors/skips (123 seconds admission,
+  Maven 1 minute 26 seconds). Four are the reproduced defects above. The S1
+  control's fifth failure was an independent-oracle mistake: REV01 Pal_Sonic
+  is PalPointers entry 2 (`$2380`), not REV00's entry 3. Correct the test only;
+  retain revision-aware production loading. Both XML and text report pairs
+  were inspected and removed.
+- Candidate selector:
+  `TestDonatedTeamPalettes,TestLevelPlayableArtInitializerModArt,TestCrossGameFeatureProviderRefactor,TestPlayerSpriteRendererPaletteContext,TestGameplayCaptureDonorEntry,TestDonorTailsTailBanks,TestUnderwaterPaletteUpload`.
+  **93 distinct cases passed, zero failures/errors/skips**, across eight XML
+  reports (one empty outer report; its nested report also contains the outer
+  provider test identities). Counts: provider 11, underwater upload 22,
+  production team palette five, donor-tail banks nine, initializer 16,
+  renderer palette context two, native capture entry 28. Admission took 40
+  seconds; Maven took 1 minute 31 seconds. Both original swap failures now pass
+  the independent ROM checks and actual GPU row reads. All five production
+  cases repeat refresh and provider reset/reinit; shared-context identity and
+  same-palette sharing hold. Standalone/default refresh and clearing an absent
+  native-water selection also executed. The 16 consumed XML/text reports were
+  inspected and removed; no test command remains live.
+
+The tested candidate is the unchanged base above plus only the initializer and
+three test files in this worker commit. Existing main/sidekick art loading order,
+selection and animation translation stay at their original owners. The native
+entry matrix supplies stock S3K and S1/S2 donor controls; it is bounded entry
+coverage rather than full route certification. This worker stops at its local
+review-ready commit, leaving the checkout and branch for parent review.
+
+Limits: supplied-ROM palette values, completed bindings and identified GPU
+uploads establish this owner correction. They do not certify full gameplay,
+all donors/hosts, traces, native zone-water derivation or all colour profiles.
+Distinct synthetic water rows exercise the existing per-character provider
+contract; the actual native-water donor control is S1. Parent-owned composed
+guards/API/S3K/integration/push remain outstanding.
+
+### Independent-review correction in the same owner slice
+
+Review of `fe60ed29a76aea7108c38d302f4bae92964f06fd` identified a missing
+qualification: equal normal colours do not establish equal water policy. A mod
+main can use S1's normal colours with host-derived water, while its donated
+Sonic follower needs S1's native underwater row. The prepared initializer reused
+the mod main's context, then wrote the follower's native water into it. The
+reverse arrangement also reused the donated main's native-water context for a
+mod follower. The original 93-case observations above remain valid for their
+tested state and selection; they did not cover these mixed-policy aliases.
+
+On unchanged `fe60ed29a` runtime, the following selector used the same common
+environment, wrapper, ROM properties and `test -B` recorded above:
+
+```text
+TestLevelPlayableArtInitializerModArt#equalNormalModMainKeepsDerivedWaterBesideDonatedSonic+equalNormalModFollowerKeepsDerivedWaterBesideDonatedMain+equalNormalBuiltinSharingRequiresEqualWaterInBothRoutes,TestDonatedTeamPalettes#missingSelectedDonorAbortsBeforeAnyHostBoot
+```
+
+Eight cases executed: six failures, zero errors/skips. The initializer report
+contains six cases: the supplied-S1-ROM mod-main/Sonic follower case, reverse
+mod-follower case, and differing-water cases in both initialization routes
+failed their alias assertions. Both equal-normal/equal-native-water sharing
+controls passed. The donor-availability report contains two failures: mocked
+missing S1 and S3K discovery returned null and caused `NullPointerException`
+instead of aborting the affected invocation. Admission took five seconds and
+Maven 27.210 seconds. Both XML/text report pairs were inspected and removed.
+No user ROM file was renamed, removed or otherwise changed.
+
+Compare two small allocation shapes: always allocate a separate context for a
+donated follower, or retain sharing when normal colours and native-water policy
+match. Choose the latter on source comparison, preserving equal-water sharing
+and existing allocation behavior where compatible. Null means host-derived
+water and differs from any native row. The existing initializer reads each
+donated built-in character's native row before deciding compatibility, installs
+it only on a newly allocated context, and never writes a follower's water into
+a reused main context. Mod followers retain derived water; native scripted
+followers retain their host binding in both routes. No new registry, API,
+palette framework or colour model is introduced.
+
+The donor test now assumes availability before converting the selected donor
+file to a path. Two controls mock only discovery and catch the expected abort;
+they do not turn the configured real-ROM invocations into skips or touch ROM
+files. The mod-main initializer regression uses actual S1 donor normal/water
+palettes and art with an S2 host module; its mocked manager boundaries make it
+completed-initializer evidence, not a full installed-mod gameplay boot.
+
+The completed affected-family selector is
+`TestLevelPlayableArtInitializerModArt,TestDonatedTeamPalettes,TestGameplayCaptureDonorEntry,TestDonorTailsTailBanks`.
+It passed **68 distinct cases, zero failures/errors/skips**, in four XML
+reports: initializer 24, donated-team palette seven, native capture entry 28,
+and donor-tail banks nine. Admission took 113 seconds; Maven took 1 minute 29
+seconds. All five configured real-ROM palette invocations executed. The two
+missing-donor controls passed by catching the expected abort before any host
+boot; they are passing controls, not skipped ROM cases. The ROM-backed
+mod-main regression, reverse mod follower, equal/different native-water cases
+and native-scripted host-binding cases in both routes all executed and passed.
+XML identities and absence of failures/errors/skips were inspected; the eight
+consumed XML/text reports were removed. No task-owned command remains live.
+
+The correction changes only the initializer, its two affected test files and
+this bounded audit section. The prior 93-case result remains attributed to
+`fe60ed29a`, not relabeled as a run of this correction. No unchanged broad
+suite, provider or API selection was repeated. This is the focused affected
+family recheck, with the common Java 25/Lua 5.4/EGL/verified-ROM command above.
+The branch remains on the reviewed worker lineage; parent main `591c679b3` is
+not imported or changed. Composed gates and delivery stay parent-owned; this
+correction does not close donor-colour rewind ownership.
+
+### Shared donor palette color rewind owner (bounded follow-up)
+
+The isolated implementation checkout is
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9db4cd35`, branch
+`bugfix/ai-donor-palette-rewind-owner-20261024`, based on
+`591c679b39c61f162a839cde6baaedd387135bc4`. This follows the read-only
+RenderContext study at `3ca14002f`. The shared typed static bank API, allocation
+and reset boundaries remain justified. The separate completed-team initializer
+candidate `fe60ed29a` is neither merged nor modified here. No allowance decrease
+is claimed.
+
+Grounding: `GameplayModeContext.attachLevelManagers` registers the existing
+`palette-colors` adapter for level and native-water colors. The active S2 super
+controller resolves `SuperStateController.resolvePaletteTarget` to the donor's
+normal row, writes ROM transformation colors into its existing Color cells and
+immediately calls `GraphicsManager.cachePaletteTexture` for the expanded row.
+Controller restore restores its RAM/scripts/physics, explicitly leaving palette
+cells to the world owner. `RewindRegistry.restore` uses production registration
+order and then its production callbacks. `LevelRewindSnapshotAdapter` does not
+replace palettes. Thus donor CPU colors had no registered value capture owner.
+
+The first actual-path reproduction used one S2 Sonic, no followers, on an S3K
+MGZ1 host through `GameplayCaptureSession`. It loads normal expected RGB from a
+separate donor-ROM palette load, identifies visible blue body pixels against a
+tiles-only draw, captures the active gameplay registry, executes 24 ordinary
+frames of the actual transformation, restores and redraws without a forward
+tick. It does not fabricate snapshot entries or restore a renderer snapshot.
+At the unchanged production base, XML identity
+`com.openggf.tools.TestDonorPaletteRewind#donatedSuperWriteRestoresLiveAliasesAndPresentedPixelsWithoutForwardTick`
+executed once: one failure, zero errors/skips. Its grouped assertions found
+color 2 still `0x6D6D6D` instead of prior ROM `0x2424B6`, and 198 differing
+previously visible blue body pixels. Palette/Color aliases and shared bank
+identity survived. This converts the source-inspection risk into a reproduced
+CPU and immediate-presentation defect. Admission was zero; Maven reported
+78 seconds. Its XML was inspected and the consumed XML/text reports deleted.
+
+Two complete bounded ownership shapes were compared after grounding these routes:
+
+- Extend the existing gameplay palette color adapter. Capture populated normal
+  donor rows as RGB values, rebind each row through the same live registered bank
+  on restore, update Color fields in place, and immediately recache using that
+  bank's current effective row. Restore donor CPU values before uploads and donor
+  uploads before native-water derivation. Keep the native fade/publication owners
+  and controller/profile order unchanged. An adapter-local bank lifetime token
+  prevents captures from another adapter or retired/replaced bank adopting a new
+  bank merely because its GameId or numeric GPU rows match; tokens and RGB values
+  contain no renderer references or GPU addresses. Only currently registered banks
+  remain in the local binding map. Replacing a Palette within the same live bank
+  deliberately rebinds to the current Palette/Color aliases.
+- Give CrossGameFeatureProvider a separate registered palette adapter. It would
+  capture the active donor's normal RGB, resolve its current render context at
+  restore, perform the same in-place write/immediate upload, and need equivalent
+  lifetime isolation plus attach/detach and restore-order wiring. Its provider
+  pointer resets at level teardown, while the shared bank registry can retain a
+  bank and supplies standalone typed access. It therefore adds a second color
+  ownership/registration route and does not naturally cover the registered shared
+  donor banks. Rejected in favor of the existing world color owner; no alternative
+  production implementation, relocation or framework was added.
+
+The selected extension captures only shared donor normal colors. Sidekick bank
+height/lifetime, private appearances, donor native-water palette authority,
+completed-team initialization and cross-reset gameplay reconstruction are outside
+this slice. A reset/replacement control must leave retired rows detached, avoid
+recreating missing banks, and avoid recoloring a replacement bank at the same
+GameId/row. Existing native surfaces keep their stock three-argument adapter path.
+
+Commands below use the existing `MAIN_CHECKOUT` convention, resolving the actual
+absolute wrapper and ROM paths without retaining a machine-local home path:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+```
+
+Commands use the verified existing S2 World REV01
+`$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen`
+(CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`) and
+S3K locked-on
+`$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+(CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`). Hooks
+are installed. The red command, from this checkout with only the new reproduction
+uncommitted, was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestDonorPaletteRewind' \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The change-based planner at the pinned base selects all 3,741 smoke classes
+because the internal snapshot and gameplay composition files are shared. That is
+disproportionate to adding donor values to the existing color adapter and a single
+constructor wiring site: native controllers, renderer bodies, public API pins,
+allocation and reset boundaries are unchanged. The worker uses affected palette,
+production donor-replay and presentation checks; the parent owns composed API,
+mandatory S3K and complete fresh guards, integration and push. No broad engine or
+release-only full-suite run was requested by this worker.
+
+The initial green selection was the red command with the exact selector
+`-Dtest=TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind`.
+It passed 17 cases in three XML reports, zero failures/errors/skips. Admission was
+31 seconds and Maven 77 seconds. This qualified the first owner extension and
+the original CPU/body-pixel reproduction. The reports were inspected and removed.
+A subsequent bounded refinement preserves donor registry upload order and adds
+actual GPU-row readback before redraw/V-int, displayed native-fade generation,
+forward replay/seek and combined native/donor/water upload-order assertions. The
+final check below qualifies those final executable inputs rather than reusing
+the earlier 17-case result for them.
+
+The final affected invocation passed **45 distinct XML cases in five reports**,
+zero failures/errors/skips, with the final executable sources stable throughout
+submission and execution. Admission was 79 seconds; Maven reported 78 seconds.
+The original failing identity now passes CPU RGB, immediate GPU-row readback,
+visible body pixels, displayed native-fade generation, ordinary forward writes
+and forward seek without a palette tick. Alias, same-bank row replacement,
+uncaptured-row preservation, upload order, retired/replaced-bank isolation and
+new-adapter isolation controls passed. The 22 water cases include all six actual
+EGL fade/profile pixel parameters. This command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind,TestPaletteUploadLatch,TestUnderwaterPaletteUpload' \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Exact final XML identities follow (each method is qualified by its preceding
+class; parameter suffixes are the XML identities). All executed, none skipped:
+
+`com.openggf.game.palette.TestPaletteColorStateAdapter`:
+
+```text
+nullSurfacesCaptureEmptyAndRestoreNoops
+captureRestoreRoundTripsBothSurfaces
+keyIsStable
+resetForMissingSnapshotLeavesLiveColorsUnchanged
+restoreRecachesUnderwaterEvenWhenNormalSurfaceMissing
+donorRestoreRebindsCurrentRowsAndPreservesTheirAliasesAndUncapturedRows
+restoreDoesNotRecacheWhenGlIsNotInitialized
+restoreWritesInPlaceWithoutReplacingColorObjects
+donorResetAndReplacementCannotAdoptAnOldCaptureByGameOrGpuRow
+restoreRecachesNormalLinesAndUnderwaterWhenGlInitialized
+restoreToleratesNullGraphicsSupplierResult
+snapshotDefensivelyCopiesConstructorInputs
+```
+
+`com.openggf.game.sonic2.TestSonic2DonorSuperStateRewind`:
+
+```text
+normalStateStillCapturesTheInFlightRevertPaletteAndShippedResidualByte
+activeToRevertedWorldRecreationDeletesTheCurrentStarsOwnerAndRestoresMappings
+normalTailsRestoreKeepsTheCharacterPhysicsProfile
+midTransformationRestoresPaletteTimerDrainAndOrdinaryMapping
+```
+
+`com.openggf.graphics.TestPaletteUploadLatch`:
+
+```text
+releaseUploadsPendingLinesAndRestoresImmediateUploads
+immediateScenePublicationReleasesARewindHeldFadeWithoutALevelLatch
+scenesOutsideTheLevelPipelineUploadImmediatelyWhileLatched
+cinematicRevealRestoresNativeFadeAndPublicationOwnershipEvenWhenDrawingFails
+latchedWritesReachTheGpuAtTheNextPublication
+rangeChangesDoNotPublishPendingNativeLinesBeforeVInt
+```
+
+`com.openggf.graphics.TestUnderwaterPaletteUpload`:
+
+```text
+unchangedContentReusesPreparedStaging
+wholePaletteWhiteFadeAlsoReachesScopedRowsBeyondTheMaskWidth
+whiteWaterPublicationKeepsRawWritersPendingAndRestoresTheDisplayedGeneration
+whiteWaterCacheUsesTheSaturatedColourStepRatherThanAWrappedByte
+nativeStagingBufferIsReusedAndOnlyGrows
+toWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio
+headlessOwnerCleanupReleasesNativeStagingAndContentCache
+clearingPaletteTexturesReleasesStagingAndAllowsReinitialization
+inPlacePaletteMutationForcesAnotherUploadAndPreservesRgbaRules
+fromWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio
+expansionToggleReuploadsDirectAndDerivedRowsWithoutChangingNativePaletteBytes
+donorRowCacheRecomputesOnlyRowsWhoseContributingContentChanges
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[1]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[2]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[3]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[4]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[5]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[6]
+structurallyDifferentRowsCannotShareAnUploadKey
+limitedExpansionFollowsFadeAndRetainsTransparentColourZero
+scopedPublishedBasisTracksNativePublicationAndExactWorldLifetime
+realCacheBoundaryUploadsOnceForBothConsumersAndInvalidatesContributingContent
+```
+
+`com.openggf.tools.TestDonorPaletteRewind`:
+
+```text
+donatedSuperWriteRestoresLiveAliasesAndPresentedPixelsWithoutForwardTick
+```
+
+The first green run's 17 identities are precisely the final palette-adapter,
+S2-controller and reproduction groups above; the red run executed only the
+reproduction identity. All ten final XML/text reports were consumed and removed;
+no archive, receipt or retained capture was created. Java 25 was selected explicitly
+and accepted by the build JDK gate; the selected Lua binary reports 5.4.9. Headless
+capture uses the production no-device audio boot and owned EGL path.
+
+Limits: actual donated gameplay coverage is the supported solo S2 Sonic on dry
+S3K MGZ1, not S3K-as-donor or an underwater gameplay route. Water/fade/profile
+coverage is the existing renderer component contract. Reset tests prove isolation,
+not reconstruction across a reset or migration between gameplay owners. Sidekick
+rows, native-water donor authority, completed-team initialization and texture
+height concerns remain separate. There are no API-pin, annotation/exclusion,
+manual owner override, frozen baseline or allowance edits. Parent-composed checks
+and delivery remain outstanding; this worker stops at a local review-ready commit
+without pushing or removing its branch/worktree. All worker test jobs completed.
+
+### Seventh-loop composed acceptance
+
+The seventh executable composition is `8b9793756b68b9518d2c4358869cb23837a8cc76`,
+based on pushed main `591c679b39c61f162a839cde6baaedd387135bc4`. It contains both
+accepted boss-history closures, the S1 fixture slice, the intact S2 overlay move,
+donated-team correction `53ff4fa89` and donor RGB restoration `ce52bf334`.
+The latter two merges touch separate production owners. Their append-only plan
+histories were merged against their actual bases, retaining the earlier rejected
+water-sharing shape and its correction. No production or test source changed
+after submission of the following composed checks.
+
+The planner selected 3,745 smoke classes because it classifies the snapshot DTO,
+mode context, guard accounting and several renamed/comment-only paths as shared.
+Inspection established the actual boundary: the existing palette adapter/key is
+extended, its legacy constructor and two-array snapshot constructor remain, and
+gameplay passes an additional donor-context supplier. There is no new timing,
+physics, generic capture algorithm, public API pin or test-selection policy.
+The owner-local boss changes and unchanged overlay bodies have focused graph and
+behavior evidence. A combined consumer matrix, API/pin checks, required S3K
+checks and complete fresh-JVM structural guards therefore replace the broad
+selection. Tool preflight passed in the actual Java 25/Lua environment. This is
+bounded validation, not all-smoke, full-suite or route certification.
+
+The composed focused invocation passed **437 distinct cases in 45 reports**,
+zero failures/errors/skips. All 43 selector names matched executed classes.
+Both S3K loading classes executed, along with API pins, registry/legacy palette
+consumers, both boss graphs, the results screens, S1 fixtures and the required
+S3K controls. The seven donated-team cases include all five real-ROM team cases
+and two missing-donor prerequisite controls; the donor-rewind case executed real
+CPU/GPU/pixel checks. Admission was 68 seconds; Maven reported 94 seconds.
+
+A separate fresh-JVM, unfiltered guards profile passed **769 distinct cases in
+92 reports**, zero failures/errors/skips. Admission was 54 seconds; Maven
+reported 325 seconds. Actual XML identities include all 33 ArchUnit checks,
+14 exact-policy controls, eight compact-policy controls, four rewind architecture
+checks and eight singleton-lifecycle checks. The generated field census and its
+baseline are both empty. The lifecycle census still matches all 513 keys and
+their counts; no allocation or destruction permission changed. The 90 focused
+and 184 guard XML/text reports and both inspected censuses were consumed and
+removed after exact identities and skip elements were checked.
+
+Commands used this coordinator's target, existing absolute ROM paths, display
+and JVM-option variables unset, Java 25 and Lua 5.4. The MAIN_CHECKOUT/ROM_ROOT
+bindings above expand to the current main checkout and its existing ROMs:
+
+```bash
+FOCUSED_SEVEN='TestLbzEndBossLaunchRewind,TestLbzEndBossInstance,TestS3kLbzEndBossChildLinksRewind,TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1FieldDisposition,TestDonatedTeamPalettes,TestCrossGameFeatureProviderRefactor,TestLevelPlayableArtInitializerModArt,TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind,TestSonic3kSuperStateRewind,TestPaletteColorRewindRegistration,TestGameplayModeContextRewindRegistry,TestGameplayModeContextPlaybackController,TestSessionManager,TestSessionManagerReadAccessors,TestRenderContext,TestPaletteUploadLatch,TestUnderwaterPaletteUpload,TestPaletteFadePresentation,TestAppearancePalettes,TestScopedPalettePresentationRewind,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestRewindFieldDispositionAudit,TestRewindPolicyRegistry,TestS3kSuperProfiles,TestSonic1GargoyleObjectInstanceRender,TestSonic1LavaGeyserOutOfRange,TestKis2ResultsMessageHandoff,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageSuperResults,TestSplitNameResultsMessages'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED_SEVEN" \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Current allowances are 147 low-level records, zero object-base naming records,
+zero earlier package-naming records, zero concrete Engine/GameLoop references,
+95 ambient setup methods across 94 files and 154 top-level package permissions.
+Cross-game host donation remains ten members in two grouped records. Empty
+stored cycles follow explicit ignores; this is not a proof of a globally acyclic
+production graph. Empty field debt establishes this audit's dispositions, not
+capture/replay correctness for arbitrary routes or handwritten owners.
+
+Donor rewind's gameplay proof remains solo S2 Sonic on dry S3K MGZ1. The
+completed-team cases broaden initialization coverage, not team Super-state
+rewind, underwater gameplay or every host/donor route. The overlay's tally,
+readiness, mapping and command checks do not certify full special-stage routing.
+These limits remain explicit despite a green guard profile.
+
+The next components are separate: reviewed shader capacity `187e15346` has
+98 focused passes and no frozen delta; reviewed staged GPU command
+`ff2f79ad1` has 123 focused passes and exact component accounting
+147 − 9 + 5 = 143, retaining the other 138 identities including the four SAT
+adapter records. Neither is part of this seventh composition. The native
+allocation-bridge study retains all ten count-one permissions: existing child
+helpers also alter ownership/probe/reconstruction handling, and changing call
+spelling alone removes no responsibility. Specific roles include lowest-free
+independent effects, monitor/puff-source SST anchoring, fixed/auxiliary fallback
+and movement bootstrap. Their native references use the main SHA's recorded
+disassembly pins rather than dirty working heads. Monitor rejected admission
+and boss-explosion RNG-before-admission are source-derived concerns needing
+real-manager reproduction; no new native failure is claimed from that study.
+The monitor concern now has a bounded implementation worker, with the ten
+permissions intentionally retained.
+
+A main fetch/fast-forward pull found no intervening upstream changes. All parent
+jobs have completed. Final documentation/source-link and policy checks,
+integration, push and cleanup still follow; the four dirty submodules and five
+untracked user files in main remain outside this work. Shader/command, the next
+S1 fixture family and monitor admission remain owned, unmerged follow-ons.

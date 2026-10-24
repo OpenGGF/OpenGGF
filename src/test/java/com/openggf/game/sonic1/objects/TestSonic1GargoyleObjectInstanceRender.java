@@ -1,15 +1,9 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
-import com.openggf.game.session.SessionManager;
-import com.openggf.tests.TestEnvironment;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -21,7 +15,6 @@ import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,24 +24,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1GargoyleObjectInstanceRender {
 
-    private Field objectRenderManagerField;
-    private ObjectRenderManager originalRenderManager;
-    private LevelManager runtimeLevelManager;
-
-    @BeforeEach
-    public void setUp() throws Exception {
-        TestEnvironment.activeGameplayMode();
-        runtimeLevelManager = GameServices.level();
-        objectRenderManagerField = LevelManager.class.getDeclaredField("objectRenderManager");
-        objectRenderManagerField.setAccessible(true);
-        originalRenderManager = (ObjectRenderManager) objectRenderManagerField.get(runtimeLevelManager);
-    }
-
-    @AfterEach
-    public void tearDown() throws Exception {
-        objectRenderManagerField.set(runtimeLevelManager, originalRenderManager);
-        SessionManager.clear();
-    }
+    private ObjectRenderManager renderManager;
+    private final TestObjectServices services = new TestObjectServices() {
+        @Override
+        public ObjectRenderManager renderManager() {
+            return renderManager;
+        }
+    };
 
     @Test
     public void headRenderFlipMatchesStatusBit0() throws Exception {
@@ -57,7 +39,7 @@ public class TestSonic1GargoyleObjectInstanceRender {
 
         Sonic1GargoyleObjectInstance leftFacing = new Sonic1GargoyleObjectInstance(
                 new ObjectSpawn(100, 100, Sonic1ObjectIds.GARGOYLE, 0, 0, false, 0));
-        leftFacing.setServices(new TestObjectServices().withLevelManager(runtimeLevelManager));
+        leftFacing.setServices(services);
         leftFacing.appendRenderCommands(new ArrayList<>());
 
         assertEquals(1, renderer.drawCount);
@@ -65,7 +47,7 @@ public class TestSonic1GargoyleObjectInstanceRender {
 
         Sonic1GargoyleObjectInstance rightFacing = new Sonic1GargoyleObjectInstance(
                 new ObjectSpawn(120, 100, Sonic1ObjectIds.GARGOYLE, 0, 1, false, 0));
-        rightFacing.setServices(new TestObjectServices().withLevelManager(runtimeLevelManager));
+        rightFacing.setServices(services);
         rightFacing.appendRenderCommands(new ArrayList<>());
 
         assertEquals(2, renderer.drawCount);
@@ -79,7 +61,7 @@ public class TestSonic1GargoyleObjectInstanceRender {
 
         Sonic1GargoyleObjectInstance.Fireball fireball =
                 new Sonic1GargoyleObjectInstance.Fireball(100, 100, true);
-        fireball.setServices(new TestObjectServices().withLevelManager(runtimeLevelManager));
+        fireball.setServices(services);
         fireball.appendRenderCommands(new ArrayList<>());
 
         assertEquals(1, renderer.drawCount);
@@ -88,8 +70,7 @@ public class TestSonic1GargoyleObjectInstanceRender {
     }
 
     private void installRenderer(RecordingRenderer renderer) throws Exception {
-        ObjectRenderManager renderManager = new ObjectRenderManager(new StubObjectArtProvider(renderer));
-        objectRenderManagerField.set(runtimeLevelManager, renderManager);
+        renderManager = new ObjectRenderManager(new StubObjectArtProvider(renderer));
     }
 
     private static final class StubObjectArtProvider implements ObjectArtProvider {
@@ -166,7 +147,7 @@ public class TestSonic1GargoyleObjectInstanceRender {
         private int lastPaletteOverride = -1;
 
         private RecordingRenderer() {
-            super(dummySheet());
+            super(dummySheet(), new GraphicsManager());
         }
 
         @Override

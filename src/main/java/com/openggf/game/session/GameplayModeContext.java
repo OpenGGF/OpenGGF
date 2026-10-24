@@ -437,7 +437,8 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.register(new PaletteColorStateAdapter(
                     () -> levelPalettesOrNull(levelManager),
                     () -> underwaterPalettesOrNull(waterSystem, levelManager),
-                    GameServices::graphics));
+                    GameServices::graphics,
+                    com.openggf.graphics.RenderContext::getDonorContexts));
             rewindRegistry.registerPostRestoreCallback(
                     "parallax-derived-state",
                     levelManager::recomputeParallaxAfterRewindRestore);
