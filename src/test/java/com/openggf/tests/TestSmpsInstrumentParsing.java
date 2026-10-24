@@ -1,6 +1,7 @@
 package com.openggf.tests;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -78,7 +79,7 @@ public class TestSmpsInstrumentParsing {
         MockSynthesizer synth = new MockSynthesizer();
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
 
-        SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[2000];
         seq.advanceSamples(buf.length);

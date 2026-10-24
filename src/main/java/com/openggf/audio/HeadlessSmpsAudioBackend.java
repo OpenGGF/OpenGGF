@@ -22,15 +22,17 @@ public final class HeadlessSmpsAudioBackend extends AbstractSmpsAudioBackend {
     private static final int HEADLESS_SAMPLE_RATE = 48_000;
     private final int sampleRate;
 
-    public HeadlessSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
-        this(configService, profiler, HEADLESS_SAMPLE_RATE);
+    public HeadlessSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink) {
+        this(configService, profiler, HEADLESS_SAMPLE_RATE, musicRestoreSink);
     }
 
     HeadlessSmpsAudioBackend(
             SonicConfigurationService configService,
             PerformanceProfiler profiler,
-            int sampleRate) {
-        super(configService, profiler);
+            int sampleRate,
+            MusicRestoreSink musicRestoreSink) {
+        super(configService, profiler, musicRestoreSink);
         if (sampleRate <= 0) {
             throw new IllegalArgumentException(
                     "sampleRate must be positive");

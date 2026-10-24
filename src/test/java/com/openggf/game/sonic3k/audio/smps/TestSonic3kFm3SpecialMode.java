@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.audio.smps;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -345,7 +346,7 @@ class TestSonic3kFm3SpecialMode {
         setLe16(data, 0x06 + headerIndex * 4, 0x40);
         System.arraycopy(stream, 0, data, 0x40, stream.length);
         return new SmpsSequencer(new Sonic3kSmpsData(data, 0), EMPTY_DAC,
-                synth, Sonic3kSmpsSequencerConfig.CONFIG);
+                synth, GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
     }
 
     private static SmpsSequencer psgSequencer(int channel, byte[] stream,
@@ -358,7 +359,7 @@ class TestSonic3kFm3SpecialMode {
         setLe16(data, 0x06 + channel * 6, 0x40);
         System.arraycopy(stream, 0, data, 0x40, stream.length);
         return new SmpsSequencer(new Sonic3kSmpsData(data, 0), EMPTY_DAC,
-                synth, Sonic3kSmpsSequencerConfig.CONFIG);
+                synth, GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
     }
 
     private static SmpsSequencer.Track onlyTrack(SmpsSequencer sequencer) {

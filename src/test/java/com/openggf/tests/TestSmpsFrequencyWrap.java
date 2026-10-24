@@ -1,6 +1,7 @@
 package com.openggf.tests;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -83,7 +84,7 @@ public class TestSmpsFrequencyWrap {
         AbstractSmpsData smps = new Sonic2SmpsData(data, 0);
         MockSynthesizer synth = new MockSynthesizer();
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
-        SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[2000];
         seq.advanceSamples(buf.length);

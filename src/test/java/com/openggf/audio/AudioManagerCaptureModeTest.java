@@ -91,7 +91,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance(), 44_100));
+                config, PerformanceProfiler.getInstance(), 44_100, audio));
 
         audio.beginCaptureMode(44_100, 60);
 
@@ -382,7 +382,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
 
         AudioTestFixtures.StubSmpsLoader loader =
                 new AudioTestFixtures.StubSmpsLoader();
@@ -462,7 +462,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
 
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertInstanceOf(NoDeviceAudioSink.class, sinkBefore,
@@ -497,7 +497,7 @@ class AudioManagerCaptureModeTest {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         audio.setBackend(new HeadlessSmpsAudioBackend(
-                config, PerformanceProfiler.getInstance()));
+                config, PerformanceProfiler.getInstance(), audio));
         try {
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());

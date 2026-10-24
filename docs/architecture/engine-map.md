@@ -484,6 +484,17 @@ Emulates Mega Drive sound hardware: **YM2612** (FM synthesis, 6 channels), **PSG
 `game.sonicX.audio`. `audio.runtime` holds the deterministic FIFO/PCM ring buffers used by
 gameplay rewind.
 
+SMPS backends receive a non-null `MusicRestoreSink` at construction. Production
+passes the manager receiving that backend; the restore-request destination stays
+fixed for the backend's usable lifetime, including new sequencers after engine
+root replacement. A replacement backend is required when changing that pairing.
+Interactive SoundTest windows similarly capture their configured destination for
+later WAV exports. Normal snapshot reconstruction preserves the captured sink;
+explicit dependency resolvers retain their existing override authority. Explicit
+manager restoration records `RESTORE` intent and an accepted timeline command;
+presentation-owned natural restoration retains its separate deferred publication
+path. Legacy singleton configuration binding remains a distinct contract.
+
 **Accuracy expectation:** implement features identically to hardware. The FM core is the
 Nuked-OPN2 port (`audio.synth.nuked`, pinned by `tools/audio/nuked-opn2/PIN.md`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it (write pacing,

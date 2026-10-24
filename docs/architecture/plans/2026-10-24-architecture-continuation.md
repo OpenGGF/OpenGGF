@@ -5068,3 +5068,250 @@ this preliminary state. The final SMPS composition will be planned afresh and
 validated once stable. Its new source cannot be certified by completed component
 checks. The next bonus-stage ownership candidate is being grounded read-only;
 it does not extend the current frozen validation source.
+
+
+### Explicit SMPS restore-request destination lifetime migration (2026-10-24)
+
+This bounded implementation slice starts at the required
+`97eb86f186b432722024ca419a00b901b38f5ec2` in the clean T3-created isolated
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-23df97c4` worktree. Its setup branch was
+renamed to `bugfix/ai-smps-restore-owner-20261024`; hooks were installed. Main
+`develop` was not changed. The renewed cleanup goal reopened the qualified
+retention above. This implementation deliberately chooses a stable destination
+lifetime as an architectural change; no previously observed gameplay defect is
+claimed. The parent owns combined smoke, composed S3K, fresh
+full guards, integration, push and cleanup; this worker owns characterization,
+caller-complete migration, focused checks and a local commit only.
+
+A backend requires a nonnull `MusicRestoreSink` at composition and retains it for
+its usable lifetime. Production supplies the exact manager receiving that backend.
+Reconfiguring root A to B does not transfer a retained backend; music, mixed SFX
+and standalone SFX constructed later still request restore from A. Another
+receiving manager requires a replacement backend. Existing owner-thread and
+retirement rules apply; mismatched composition remains a caller violation,
+without a new ownership registry or concurrent independent-root guarantee.
+`MusicRestoreSink` does not become owner of every backend mutation.
+
+SoundTest captures the configured-root restore sink at window composition and
+threads it into WAV rendering, intentionally retaining A across a later A->B
+root change in the same window. Its private playback host remains private. The
+reference generator captures its configured CLI owner in main, requires the sink
+in its constructor and passes its retained field to all five sequencers. Normal
+snapshot entries store the actual sink; default live-reference reconstruction
+retains it within that lifetime. Explicit resolvers can supply another sink, with
+existing resolution/fallback behavior unchanged.
+
+Rejected alternatives remain the previous lazy singleton/presentation-owner
+substitution, backend-local `restoreMusic` callback, no-op manager-intent
+replacement, per-sequencer callback adapters, new manager/locator/registry/facade,
+and executor/thread-marshalling. None is needed for this composition migration.
+The existing singleton legacy-config binder and handler/freeze policy remain;
+so do two-argument backend music behavior, inferred hosts, source descriptors,
+`LEGACY_RECOMPUTE`, nullable sequencer DAC and presentation source factories.
+Explicit constructor failure order remains inferred-target null rejection before
+the canonical chain; canonical order is data, trust, required/computed descriptor,
+sink, target, host, config. The removed ambient lookup-before-validation was
+intentional. Backend validation is config before sink, and the package-private
+headless rate seam remains `(config, profiler, sampleRate, sink)`, validating rate
+after super.
+
+`AudioManager.restoreMusic()` continues to publish RESTORE mutator intent before
+rewind suppression, then EXPLICIT timeline/mirror work when unsuppressed.
+`sendLiveBackendCommands=false` means this is not a direct legacy stack-pop
+contract. `this::restoreShadowMusic` remains NATURAL_RESTORE authority plus registry
+request and deferred outer publication; it must not acquire an extra EXPLICIT
+command.
+
+The census migrates all 104 former convenience calls: three backend construction
+sites plus SoundTest WAV, and100 fixture calls across 18 files (three detached,
+97 target-bound). Already explicit overloads and deliberate raw-tool no-ops are
+preserved. The backend census includes six production constructions,21 existing
+test constructions across15 files, the separate NativeGameplayCheck construction,
+and three subclasses/twelve instantiations. The two previously missed receiving
+sites are TestModSceneActBridge and NativeGameplayCheck. Performance fixtures are
+compiled only; no performance measurement or external audio-local-wave reference
+is justified or run. The sole frozen delta removes the two obsolete sequencer
+constructor->GameServices.audio records from
+`40afa018-d450-4b84-8cb9-d539d75d8062`,121->119 with zero replacements and every
+remaining byte/order preserved. Other stores,151 package permissions, API pins,
+terminals, versions and descriptor stay unchanged.
+
+Characterization used the original absolute S1/S2/S3K ROMs under
+the existing main checkout (`$MAIN_CHECKOUT`), verifying SHA1/CRC32 against the documented
+identities; KiS2 SHA1 was `6cd0537a3aee0e012bb86d5837ddff9342595004`.
+No ROM was copied, renamed or linked. All Maven requests run from this worktree
+through the updated main wrapper, without desktop environment or injected JVM
+options. Reusable command definitions below are notation for the actual exact
+arguments, not a stored validation receipt:
+
+```bash
+MAIN_CHECKOUT="${MAIN_CHECKOUT:?set to the existing main checkout}"
+run_focused() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+    python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off "$@" \
+    "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+    "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen" \
+    "-Dsonic.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+}
+run_focused '-Dtest=TestSmpsRestoreOwnerContract,TestSoundTestWavExport,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestSmpsFadeInRestoreDriverModes,TestMusicOverrideRestore'
+run_focused '-Dtest=TestSmpsRestoreOwnerContract'
+```
+
+Before any production edit, 39 focused cases passed without failures/errors/skips
+on 97eb86f186b4 plus the new characterization fixture (15s admission wait, Maven
+1:24). A second unchanged-production run pinned and verified the four oracle
+hash pairs in TestSmpsRestoreOwnerContract:2 passes, zero skips (24s admission
+wait, Maven 28.185s). Each fixed-rate/fixed-input window hashes exact PCM and the
+ordered chip-write/service/lifecycle stream with driver logical snapshots and
+backend state: music 18 frames, mixed SFX 18, standalone SFX 18, one-up 360,48kHz,
+800 stereo frames per step. These hashes characterize this engine baseline;
+they are not an independent ROM parity oracle. No golden WAV was regenerated.
+The same fixture also pins explicit constructor failure order, nullable DAC and
+legacy descriptor trust. Java25.0.5.0.2, exact XML identities and all skips were
+inspected; consumed XML/text reports were deleted. Source stayed stable during
+each request. Remaining migration verification is recorded below at completion.
+
+
+#### Focused migration verification and local handoff
+
+All executable inputs stayed fixed from the final core request through the
+caller, API/accounting and package/native checks. The only subsequent edits are
+this evidence and the standalone ledger wording; no gameplay, timing, fades,
+admission, chip-write or snapshot resolver implementation changed.
+
+The first migrated request selected TestSmpsRestoreOwnerContract and
+TestSoundTestWavExport:15 passes and 3 errors, zero skips (27s admission wait,
+Maven 1:24). The errors were the new natural-restore observer attempting a full
+manager snapshot while the producer's presentation boundary was active. The
+existing producer correctly rejected that test observation. The fixture now
+observes intent and mirror count inside the service, asserts that full snapshot
+capture is still rejected there, and compares foreground state outside the
+boundary. No production behavior was adjusted to make the checks pass. The four
+unchanged-root PCM/event oracle pairs matched even on that first migrated run.
+
+Final commands, using run_focused above:
+
+```bash
+run_focused -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSmpsRestoreOwnerContract,TestSoundTestWavExport,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestSmpsFadeInRestoreDriverModes,TestMusicOverrideRestore,TestAudioCommandTimeline,TestAudioManagerRuntimeInstallation,TestAudioPresentationSnapshotParity,TestSmpsDriverSnapshot,TestSmpsSequencerSnapshot,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity'
+run_focused -Dopenggf.headless.gl=surfaceless-egl '-Dtest=AudioRegressionTest#testHybridReadModeMatchesFallbackForMusicEhz+testHybridReadModeMatchesFallbackForMixedMusicSfx+testHybridReadModeMatchesFallbackForResultsTallyStress+testResultsTallyStressBenchmarkWorkloadUsesExactSampleCount,TestSmpsFadeHybridParity,TestSmpsFmVoiceWriteProfiles,TestSmpsNoteListener,TestSonic3kFm3SpecialMode,TestSonic3kSmpsMetaCommandOperands,TestRomAudioIntegration,TestSmpsDriver,TestSmpsFrequencyWrap,TestSmpsInstrumentParsing,TestSmpsKeyDisplacement,TestSmpsSequencer,TestSonic1AudioPriority,TestSonic3kCoordFlagParity,TestSonic3kVoiceData,TestTitleScreenAudioRegression,AudioManagerCaptureModeTest,TestAudioDiagnosticObservers,TestAudioManagerSfxCatalogReuse,TestDonorAudioRouting,TestS3kFadeOutPsgSilence,TestStreamedBackendIntegration,TestLiveRewindManagerAudioCleanup,TestEngineConfiguredHeadlessStartup,TraceCaptureSessionTest,TestTraceCaptureUnifiedAudio,TestProductionBk2AudioRunner,TestPhase3StandaloneSampleIntegration'
+run_focused -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \\
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -DskipTests package -B
+ENGINE="$PWD/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar"
+SDK="$PWD/target/OpenGGF-0.7.prerelease-openggf-mod-sdk.jar"
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk /usr/lib/jvm/java-25-openjdk/bin/javac \\
+  --release 25 -cp "$ENGINE:$SDK:$PWD/target/classes" -d "$PWD/target/native-restore-owner-classes" \\
+  "$PWD/tools/modding/native-linux/NativeSceneInspection.java" \\
+  "$PWD/tools/modding/native-linux/NativeGameplayCheck.java"
+```
+
+- Core restore/ownership: 102 passes, zero failures/errors/skips; admission 7s,
+  Maven 1:25. The 13 new restore-contract cases cover retained A requests after
+  root B for music/mixed/standalone sources; actual RESTORE intent before ordered
+  EXPLICIT ledger/mirror work and foreground restoration; rewind suppression
+  retaining intent without timeline/mirror; destructive default reconstruction
+  retaining the captured sink and explicit resolver override to B; reset,
+  replacement retirement versus ledger, failure and headless teardown. Each
+  S1/S2/S3K natural case restores a mid-jingle snapshot after root replacement,
+  sees exactly one NATURAL_RESTORE and one deferred outer publication, and no
+  EXPLICIT restore. Existing real-ROM mid-fade and driver/sequence snapshot cases
+  remain green. WAV checks execute real E4 against supplied A, retain A through
+  a window's later export after root B, close on failure and preserve exact
+  truncation/frame counts and ROM SFX completion. The fixed-input PCM, ordered
+  writes/services and logical-state hashes all match the pre-edit source.
+- Caller regressions: 266 passes across 28 requested classes, zero
+  failures/errors/skips; admission 1s, Maven 37.428s. This covers the migrated
+  sequencer fixtures and actual backend/capture/catalog/donor/streamed/cleanup
+  consumers. AudioRegressionTest ran exactly its three hybrid/fallback PCM
+  comparisons and exact workload-size control; no benchmark or external WAV
+  identity executed. TestModSceneActBridge, allocation/throughput fixtures and
+  the reference-generator CLI were compiled rather than measured/run.
+- API/accounting: 52 passes, zero failures/errors/skips; admission 3s,
+  Maven 36.884s. ArchUnit's field selector expanded to all 27 TestArchUnitRules
+  fields, all passing; this is recorded rather than claimed as a one-rule run.
+  Signature 11, pins 4, architectural review 9 and the one affected source guard
+  also passed. No store-update flags or pin/terminal/permission/descriptor edits
+  were used. This is not the parent's complete fresh guard selection.
+- Build-only package passed (Maven 41.685s, no test admission requested).
+  All 4344 production and 4453 maintained Maven/racing/test sources compiled in
+  the focused/build requests, including performance fixtures. Bundled mod
+  packaging and engine/SDK artifacts completed. NativeGameplayCheck plus its
+  NativeSceneInspection dependency compiled separately with Java25 against the
+  newly packaged own-worktree engine/SDK/classes, matching its native build's
+  Java release/classpath shape; javac elapsed 0.603s. No native-image, display,
+  gameplay or native runtime qualification is claimed. Compiled
+  NativeGameplayCheck.class SHA256:
+  da4fcaaf9dabcd77f0bd5a90325256302318e31a2cf45a65efe7da9a28432c5f.
+
+Exact XML identities, outcomes, skips and Java25.0.5.0.2/EGL properties were
+inspected for each completed final request; all consumed XML/text reports were
+deleted. The current-source final selections total 420 passing cases. These
+bounded selections are not a smoke/full-suite or universal parity result.
+Queue wait and Maven execution above are distinct; other work time is unmeasured,
+and these numbers are not elapsed delivery time or performance evidence.
+
+A source-matched census independently verified 104 convenience migrations,
+including exactly three detached calls; all 11 already-explicit four-argument
+calls remain text-identical. The tracked constructor-arity census moved from
+3:3 /4:112 /5:86 /7:4 /8:12 to4:14 /5:187 /7:4 /8:12. All surviving sequencer
+constructor bodies and the rest of that source are byte-identical after only
+the two specified overloads and unused import are removed. Source scans include
+wildcard consumers, method references/reflection and maintained Java outside
+Maven; NativeGameplayCheck is the sole outside-Maven backend construction.
+
+The exact frozen-byte comparison passed: only the two specified records removed,
+all other bytes/order/stores preserved. SHA256 old:
+59a620bd64e55dd9bf8113259bb48997af7e07656e9ccbf8cac8fd12f4c112de;
+new:7858e1dd1e6905c17cd7e6e479cd15bf72e07751b02a32de485845d7cd11bb50.
+Published standalone counts are 119 low-level records, 151 directed permissions,
+and the inherited 6 ambient setup methods / 5 files. AGENTS/CLAUDE and all skill
+mirrors match; git diff --check passes. No API terminal/version/descriptor or
+other frozen-store change occurred. The parent must reconcile these standalone
+counts with any separately composed slice.
+
+The work stops at a local commit on the isolated task branch. Parent-owned
+combined smoke, mandatory composed S3K, full fresh guards, integration/push and
+cleanup have not been performed by this worker. No broad/full suite,
+performance measurement, external audio-local-wave fixture, desktop automation,
+subdelegation or push was launched. No live job handles or retained diagnostics
+remain; generated compilation/package output stays only under this target/.
+
+Final tested source/fixture/tool patch SHA256 (`git diff --cached --binary
+97eb86f186b432722024ca419a00b901b38f5ec2 -- src tools`):
+`545bc3c041a4eac09b8771a9e619125d571b299491da5af52b1aa844a5394b53`. Documentation-only checkpoint edits after validation do not
+change that fingerprint. The final commit/tree identity belongs to the task
+handoff, avoiding a self-referential evidence commit.
+
+### Three-owner parent composition and next candidate
+
+SMPS componentf2b77c313d9f8ba38c28e07ba589915774c4ec97 is merged into the
+ending/palette composition. Java merged without conflicts. Both documentation
+conflicts were independent appended evidence; both records are retained. The
+ending component's121-record statement is now explicitly historical, followed
+by the composed119 count. The parent also corrects attribution: stable backend
+and window destinations are implementation choices within the renewed cleanup
+goal, not an exact lifetime rule dictated by the user.
+
+SMPS independent source review is active. Its102 restore/ownership,266 caller
+and52 API/accounting passes, packaging and standalone native-tool compilation
+are component observations, not composed results. The parent will now run the
+composed ending/ROM/GPU/restore controls, including the four required S3K selectors,
+then wait for review before the final all-smoke/guard request. No broader success
+is claimed. Future bonus/special-stage research does not modify this source.
+
+The completed read-only bonus brief at8b4ff54d6 recommends a loop-owned visit
+session with its own existing level-state coordinator, pending/active/deferred
+provider obligations, star-post mark and pending shield. The coordinator and
+provider retain their separate state responsibilities. Two write-only deferred
+type/state fields can disappear after meaningful test migration. The loop's
+retained provider and context-published provider have different identity/lifetime
+semantics; the owner must preserve both. Captured entry context, live post-load
+manager reads, delayed ring/reward capture, one-shot title release, rewind
+assembly floor and park/resume are concrete controls. Independent design review
+is pending. Special-stage/results ownership is being grounded separately; neither
+proposal is an implemented or validated part of this delivery.
