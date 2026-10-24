@@ -1,12 +1,11 @@
 package com.openggf.tests;
 
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.runtime.HtzRuntimeState;
@@ -32,12 +31,7 @@ public class TestHTZRisingLavaDisassemblyParity {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        com.openggf.game.session.SessionManager.clear();
-        com.openggf.game.GameModuleRegistry.reset();
-        com.openggf.game.GameModuleRegistry.setCurrent(new com.openggf.game.sonic2.Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         GameServices.camera().resetState();
         GameServices.gameState().resetSession();
 

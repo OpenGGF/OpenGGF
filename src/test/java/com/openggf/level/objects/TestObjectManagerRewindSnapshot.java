@@ -2,10 +2,8 @@ package com.openggf.level.objects;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.rings.LostRingObjectInstance;
@@ -31,8 +29,7 @@ class TestObjectManagerRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

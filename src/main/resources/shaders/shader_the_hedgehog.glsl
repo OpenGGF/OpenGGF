@@ -42,7 +42,8 @@ void main()
 
     // Map the index to palette coordinates (16 colors per line)
     float paletteX = (index + 0.5) / 16.0;
-    float paletteY = (paletteLine + 0.5) / TotalPaletteLines;
+    // Logical bank reclamation can leave this host's texture with spare rows.
+    float paletteY = (paletteLine + 0.5) / float(textureSize(Palette, 0).y);
 
     // Sample the palette texture to get the actual color
     vec4 indexedColor = texture(Palette, vec2(paletteX, paletteY));

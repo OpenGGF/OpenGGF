@@ -40,6 +40,8 @@ import java.util.logging.Logger;
 public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSmpsLoader.class.getName());
 
+    private final Rom rom;
+
     /** Maximum reasonable size for a single SMPS song/SFX blob. */
     private static final int MAX_BLOB_SIZE = 0x8000; // 32 KB (one Z80 bank)
 
@@ -65,7 +67,7 @@ public class Sonic3kSmpsLoader extends AbstractSmpsLoader {
     private int[] s3MusicPointers;
 
     public Sonic3kSmpsLoader(Rom rom) {
-        super(rom);
+        this.rom = rom;
         decompressZ80Data();
         parseZ80Tables();
         parseS3MusicTables();

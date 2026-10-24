@@ -4,17 +4,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.tests.TestEnvironment;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.StubObjectServices;
 
 import java.util.List;
 
@@ -36,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * of the camera, preventing premature removal.
  */
 public class TestBuzzBomberLifecycle {
+    private Camera camera;
+    private ObjectServices objectServices;
 
     /**
      * Simulates the key Buzz Bomber behaviour relevant to this bug:
@@ -130,14 +130,24 @@ public class TestBuzzBomberLifecycle {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
-        GameServices.camera().resetState();
+        // These placement/persistence cases need a real manager and camera,
+        // but neither a gameplay session nor a game-module physics profile.
+        SonicConfigurationService configuration = SonicConfigurationService.createStandalone();
+        configuration.resetToDefaults();
+        camera = new Camera(configuration);
+        camera.resetState();
+        objectServices = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+        };
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
     @AfterEach
     public void tearDown() {
-        SessionManager.clear();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
     /**
@@ -161,11 +171,11 @@ public class TestBuzzBomberLifecycle {
 
         List<ObjectSpawn> spawns = List.of(staticSpawn, flyingSpawn);
         TestRegistry registry = new TestRegistry(0x22, 160);
-        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null);
+        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null,
+                null, camera, objectServices);
 
         // --- Frame 1: Camera at X=400, windowEnd = 400+640 = 1040.
         //     Spawn at X=1000 â‰¤ 1040 â†’ object created.
-        Camera camera = GameServices.camera();
         camera.setX((short) 400);
         manager.reset(400);
         manager.update(400, null, null, 1);
@@ -199,10 +209,10 @@ public class TestBuzzBomberLifecycle {
         ObjectSpawn flyingSpawn = new ObjectSpawn(1000, 400, 0x22, 0, 0, false, 0);
         List<ObjectSpawn> spawns = List.of(flyingSpawn);
         TestRegistry registry = new TestRegistry(0x22, 160);
-        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null);
+        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null,
+                null, camera, objectServices);
 
         // Camera at X=400, spawn at 1000 in window â†’ object created.
-        Camera camera = GameServices.camera();
         camera.setX((short) 400);
         manager.reset(400);
         manager.update(400, null, null, 1);
@@ -237,9 +247,9 @@ public class TestBuzzBomberLifecycle {
         ObjectSpawn staticSpawn = new ObjectSpawn(1000, 400, 0x01, 0, 0, false, 0);
         List<ObjectSpawn> spawns = List.of(staticSpawn);
         TestRegistry registry = new TestRegistry(0x22, 160); // 0x22 doesn't match 0x01
-        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null);
+        ObjectManager manager = new ObjectManager(spawns, registry, 0, null, null,
+                null, camera, objectServices);
 
-        Camera camera = GameServices.camera();
         camera.setX((short) 400);
         manager.reset(400);
         manager.update(400, null, null, 1);

@@ -693,6 +693,14 @@ publish the parent's ROM retirement flag before removing its identity:
 An exact-id sidecar may encode an already-retired parent as null so a child
 awaiting its next update remains an orphan; do not silently accept an unregistered
 live owner.
+Admission rejection is another boundary: ObjectManager marks the constructed
+child destroyed before assigning an identity and does not call its unload hook.
+Retain owner references only after successful admission. If a managed child
+represents embedded icon/reward state, clear that activation on rejection too.
+S3K monitor contents exposed both the invalid snapshot reference and an unearned
+reward. Test zero, one and two available tail slots with a real manager and
+capture before the next child dispatch; weakening identity validation hides the
+ownership error. The independent explosion attempt still follows the icon attempt.
 DEZ's tunnel controller has the opposite lifetime: its ring-trail channel starts
 10 updates before the player channels and can delete its spawner while they still
 run. `DEZTunnelControl_Done` never dereferences that completed channel, so release

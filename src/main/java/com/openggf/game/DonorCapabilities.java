@@ -1,6 +1,6 @@
 package com.openggf.game;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.RomByteReader;
 
 import java.util.Collections;

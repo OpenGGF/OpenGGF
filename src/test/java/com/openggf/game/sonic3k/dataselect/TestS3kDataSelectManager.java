@@ -23,6 +23,7 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class TestS3kDataSelectManager {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, "");

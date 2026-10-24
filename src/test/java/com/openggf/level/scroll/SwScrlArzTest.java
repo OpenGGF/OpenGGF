@@ -20,7 +20,7 @@ public class SwScrlArzTest {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         // Create handler with null tables (uses hardcoded row heights)
         handler = new SwScrlArz(null);
         horizScrollBuf = new int[224];

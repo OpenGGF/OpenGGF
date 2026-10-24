@@ -1,10 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
@@ -25,9 +23,7 @@ class TestAizVineHandleLogic {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

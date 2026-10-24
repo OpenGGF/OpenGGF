@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
@@ -47,7 +48,7 @@ public class TestTodo12_WFZEventSpecs {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         GameServices.camera().resetState();
         cam = GameServices.camera();
         events = new Sonic2WFZEvents();

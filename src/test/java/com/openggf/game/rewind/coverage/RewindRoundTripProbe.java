@@ -1,8 +1,9 @@
 package com.openggf.game.rewind.coverage;
 
 import com.openggf.game.rewind.RewindRoundTripHarness;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindFieldPolicy;
+import com.openggf.game.rewind.schema.RewindSchemaRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.StubObjectServices;
@@ -14,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +55,9 @@ import java.util.logging.Logger;
  *   <li>Reflectively walk every non-static, non-synthetic field in the
  *       concrete class and its superclasses (stopping at
  *       {@code AbstractObjectInstance}, whose base fields are already
- *       known to survive).  Any primitive/enum/String field whose value
- *       differs = REAL gap.</li>
+ *       known to survive). Schema {@code TRANSIENT} fields are excluded.
+ *       Any remaining primitive/enum/String field whose value differs = REAL gap,
+ *       including final/structural scalars.</li>
  * </ol>
  *
  * <h2>Limitations / honest coverage caveats</h2>
@@ -67,6 +70,9 @@ import java.util.logging.Logger;
  *   <li>Object-reference fields (non-primitive, non-enum, non-String) are not
  *       compared because they cannot be meaningfully equality-tested without
  *       a live session; they appear in the field-exclusion notes.</li>
+ *   <li>Declared {@code TRANSIENT} metadata excludes fields from this diagnostic;
+ *       it does not prove that their transient classification is correct.
+ *       The annotation architecture guard remains independent.</li>
  * </ul>
  */
 public final class RewindRoundTripProbe {
@@ -77,7 +83,7 @@ public final class RewindRoundTripProbe {
     // Public result types
     // -------------------------------------------------------------------------
 
-    /** A field that differs between captured and restored state — a real gap. */
+    /** A compared, non-TRANSIENT field that differs between captured and restored state. */
     public record GapRecord(
             String className,
             String fieldName,
@@ -218,8 +224,13 @@ public final class RewindRoundTripProbe {
         md.append("in the concrete class hierarchy, stopping at `AbstractObjectInstance` ");
         md.append("(whose base fields are managed by the base restore path and not re-tested here).\n\n");
         md.append("**Fields NOT diffed:** object references (not equality-comparable without a live session), ");
-        md.append("`@RewindTransient`-annotated fields (intentionally excluded from capture), ");
+        md.append("fields classified `TRANSIENT` by `RewindSchemaRegistry` ");
+        md.append("(including Java `transient` and `@RewindTransient`), ");
         md.append("array/collection/record compound fields (require deep-equals beyond scope).\n\n");
+        md.append("**Metadata boundary:** declared `TRANSIENT` metadata excludes a field from this diagnostic; ");
+        md.append("this is not proof that its transient classification is correct. ");
+        md.append("The annotation architecture guard remains independent. ");
+        md.append("Other dispositions remain compared within the scalar scope, including final/structural fields.\n\n");
         md.append("**No frame-stepping:** capture runs immediately after construction. ");
         md.append("Fields that only diverge after one or more `update()` calls are NOT detected by this probe.\n");
 
@@ -303,8 +314,9 @@ public final class RewindRoundTripProbe {
      * Reflectively diffs all comparable subclass fields between {@code original} and {@code restored}.
      *
      * <p>Only walks fields declared between the concrete class and {@code AbstractObjectInstance}
-     * (exclusive). Compares primitives, enums, and Strings. Object references are excluded
-     * (not equality-testable without a live session).
+     * (exclusive). Compares primitives, enums, and Strings unless their schema field plan
+     * is TRANSIENT. Other dispositions, including final/structural scalars, remain compared.
+     * Object references are excluded (not equality-testable without a live session).
      */
     private List<GapRecord> diffFields(
             String fqn,
@@ -313,6 +325,12 @@ public final class RewindRoundTripProbe {
             Class<? extends AbstractObjectInstance> cls) {
 
         List<GapRecord> gaps = new ArrayList<>();
+        Set<Field> transientFields = new HashSet<>();
+        for (var plan : RewindSchemaRegistry.schemaFor(cls).fields()) {
+            if (plan.policy() == RewindFieldPolicy.TRANSIENT) {
+                transientFields.add(plan.field());
+            }
+        }
 
         for (Class<?> c = cls;
                 c != null && c != AbstractObjectInstance.class && c != Object.class;
@@ -320,6 +338,7 @@ public final class RewindRoundTripProbe {
             for (Field field : c.getDeclaredFields()) {
                 if (Modifier.isStatic(field.getModifiers())) continue;
                 if (field.isSynthetic()) continue;
+                if (transientFields.contains(field)) continue;
 
                 Class<?> type = field.getType();
                 // Only diff primitive / enum / String — comparable without live session

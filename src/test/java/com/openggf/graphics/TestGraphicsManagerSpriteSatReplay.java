@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -21,7 +22,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     @BeforeEach
     public void setUp() {
         GraphicsManager.destroyForReinit();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         graphicsManager = GraphicsManager.getInstance();
         graphicsManager.initHeadless();
     }
@@ -182,6 +183,34 @@ public class TestGraphicsManagerSpriteSatReplay {
         graphicsManager.submitSpriteSatPiece(legacy);
         assertNull(collectedEntries().getFirst().piece().maskReplayRole());
         assertNull(collectedEntries().getFirst().piece().debugSource());
+    }
+
+    @Test
+    void wholeTileFallbackRetainsExpandedPaletteFlagsAndFloatGeometryAtIntegerExtremes() throws Exception {
+        int id = PatternAtlasRange.OBJECTS.base();
+        graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), id);
+        for (int flags = 0; flags < 8; flags++) {
+            boolean h = (flags & 1) != 0, v = (flags & 2) != 0, priority = (flags & 4) != 0;
+            graphicsManager.beginSpriteSatCollection();
+            graphicsManager.submitSpriteSatPiece(new SpritePieceRenderer.PreparedPiece(
+                    Integer.MAX_VALUE, Integer.MIN_VALUE, 1, 1, id, 0x123, 7,
+                    h, v, priority, false, SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, null));
+            graphicsManager.endSpriteSatCollectionAndReplay();
+            assertEquals(1, graphicsManager.commands.size());
+            Object command = graphicsManager.commands.getFirst();
+            assertEquals(7, field(command, "paletteIndex"));
+            assertEquals(h, field(command, "hFlip")); assertEquals(v, field(command, "vFlip"));
+            assertEquals(priority, field(command, "piecePriority"));
+            assertEquals(false, field(command, "textureCoordinatesResolved"));
+            assertEquals((float) Integer.MAX_VALUE, getFloatField(command, "x"));
+            assertEquals(224f - (float) Integer.MIN_VALUE - 8f, getFloatField(command, "y"),
+                    "whole commands convert to float before subtracting; obtainRows has int overflow here");
+            graphicsManager.commands.forEach(GLCommandable::discard); graphicsManager.commands.clear();
+        }
+    }
+
+    private static Object field(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target);
     }
 
     @SuppressWarnings("unchecked")

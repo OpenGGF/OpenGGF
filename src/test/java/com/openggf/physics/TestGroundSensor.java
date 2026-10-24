@@ -1,10 +1,9 @@
 package com.openggf.physics;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -48,10 +47,7 @@ public class TestGroundSensor {
         fgChunkMap = new ChunkDesc[20][20];
         bgChunkMap = new ChunkDesc[20][20];
 
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
 
         mockLevelManager = mock(LevelManager.class);
         when(mockLevelManager.getChunkDescAt(anyByte(), anyInt(), anyInt()))

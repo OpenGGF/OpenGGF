@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2.kis2;
 
-import com.openggf.data.Game;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.game.Game;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.BuiltInRomDetectors;

@@ -1,5 +1,6 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.camera.Camera;
@@ -20,7 +21,7 @@ public class TestGraphicsManagerFadeRebinding {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         SessionManager.clear();
     }
 

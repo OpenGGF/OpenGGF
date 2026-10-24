@@ -85,6 +85,17 @@ retains callback and returned-object attribution.
 
 Module overrides remain available. Use `.objects(MyObjectRegistry::new)` for a
 custom expert registry; it cannot be mixed with declarative `.object(...)` calls.
+The unpublished candidate now owns the complete loader abstraction at
+`com.openggf.game.Game` (previously `com.openggf.data.Game`). Update explicit
+imports and rebuild custom `ModGame` subclasses and all compiled standalone
+modules against matching SDK/engine artifacts. Declarative `StandaloneGameSpec`
+users and inferred factory callers need rebuilding too: the superclass and
+factory/getter JVM descriptors changed. The unchanged `>=0.7.0 <0.8.0` manifest
+cannot distinguish old binaries, and does not cause every old binary to be
+rejected automatically. There is no forwarding class; nullable `getRom()`, owner
+identity/fault boundaries and the default no-op runtime-art callback are preserved.
+See the [migration steps](getting-started.md#game-contract-import-migration).
+
 An expert module can use the no-argument base constructor and implement `getIdentifier()`, `createGame(GameDataSource)`, its
 registry, physics, touch responses and initialization directly. `ModGame` remains
 the expert base for a custom loader. Use literal `GameRules` and `PhysicsProfile`

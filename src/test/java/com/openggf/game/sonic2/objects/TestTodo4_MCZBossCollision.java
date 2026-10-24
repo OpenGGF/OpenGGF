@@ -57,7 +57,7 @@ public class TestTodo4_MCZBossCollision {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         GameServices.camera().resetState();
         cam = GameServices.camera();
         events = new Sonic2MCZEvents();

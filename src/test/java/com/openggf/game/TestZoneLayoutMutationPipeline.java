@@ -53,9 +53,7 @@ class TestZoneLayoutMutationPipeline {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        GameModuleRegistry.reset();
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

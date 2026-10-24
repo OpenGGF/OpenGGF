@@ -7,8 +7,6 @@ import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.GroundMode;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -42,7 +40,7 @@ class TestS3kMgzPulleyAndMantis {
     @BeforeEach
     void setUp() {
         SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
     }
 

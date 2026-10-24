@@ -1,9 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -23,8 +21,7 @@ class TestMonitorIconTiming {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

@@ -1,6 +1,6 @@
-package com.openggf.data;
+package com.openggf.level;
 
-import com.openggf.level.Palette;
+import com.openggf.data.Rom;
 
 import java.io.IOException;
 

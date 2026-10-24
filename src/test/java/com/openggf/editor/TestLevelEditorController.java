@@ -4,8 +4,6 @@ import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.session.SessionManager;
@@ -52,7 +50,7 @@ class TestLevelEditorController {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @Test

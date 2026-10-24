@@ -1,32 +1,61 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.audio.GameSound;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 
 class TestS3kMonitorGraphRewind {
     private static final String CONTENTS_CLASS =
@@ -38,12 +67,15 @@ class TestS3kMonitorGraphRewind {
 
     @BeforeEach
     void initHeadless() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         GraphicsManager.getInstance().initHeadless();
     }
 
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
+        SessionManager.clear();
+        GameModuleRegistry.reset();
     }
 
     @Test
@@ -118,6 +150,251 @@ class TestS3kMonitorGraphRewind {
                 "S3K monitor must restore through generic recreate");
         assertTrue(RewindRecreatable.class.isAssignableFrom(Class.forName(CONTENTS_CLASS)),
                 "S3K monitor contents slot must restore through generic graph recreate");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,false", "1,false", "2,false", "0,true", "1,true", "2,true"})
+    void nativeAdmissionCapturesBeforeDispatchAndReplaysExactGraph(int freeTailSlots, boolean eggman)
+            throws Exception {
+        AdmissionHarness h = AdmissionHarness.create(freeTailSlots, eggman);
+        var manager = h.manager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var monitor = only(manager, Sonic3kMonitorObjectInstance.class);
+        ObjectRefId monitorId = objectId(manager, monitor);
+        var adapter = manager.rewindSnapshottable();
+        var intact = adapter.capture();
+        long rngSeed = h.services().rng().getSeed();
+
+        breakMonitor(monitor, h.player());
+        // Capture at the predicted boundary, before the shell can clean up a rejected child.
+        var broken = assertDoesNotThrow(adapter::capture);
+        assertTrue(manager.isRemembered(MONITOR_SPAWN));
+        assertEquals(List.of(CONTENTS_CLASS, ExplosionObjectInstance.class.getName()),
+                manager.admissions.stream().map(a -> a.object().getClass().getName()).toList());
+        assertTrue(manager.admissions.stream().allMatch(a -> a.anchor() == monitor.getSlotIndex()));
+        assertEquals(List.of(freeTailSlots > 0, freeTailSlots > 1),
+                manager.admissions.stream().map(a -> !a.object().isDestroyed()).toList());
+        for (int i = 0; i < 2; i++) {
+            ObjectInstance child = manager.admissions.get(i).object();
+            boolean admitted = freeTailSlots > i;
+            assertEquals(admitted ? monitor.getSlotIndex() + 1 + i * 2 : -1,
+                    ((AbstractObjectInstance) child).getSlotIndex());
+            assertEquals(admitted, manager.captureIdentityContext().requireIdentityTable().idFor(child) != null);
+        }
+        assertEquals(freeTailSlots > 0, readBooleanField(monitor, "iconActive"));
+        assertEquals(0, monitor.getCollisionFlags());
+        assertEquals(0x0B, readIntField(monitor, "mappingFrame"));
+        assertEquals(List.of("sfx:" + Sonic3kSfx.BREAK.id), h.events(),
+                "the existing parent-owned break SFX request remains unchanged even on allocation failure");
+        ObjectInstance contents = manager.admissions.getFirst().object();
+        if (freeTailSlots == 0) {
+            assertNull(readObjectField(monitor, "monitorContentsSlot"));
+            assertNull(readObjectField(monitor, "effectTarget"));
+        } else {
+            assertSame(contents, readObjectField(monitor, "monitorContentsSlot"));
+            assertSame(monitor, readObjectField(contents, "parent"));
+        }
+        // Public no-table capture remains strict for non-null managed object links.
+        if (freeTailSlots > 0) {
+            assertThrows(IllegalStateException.class, () -> monitor.captureRewindState());
+        } else {
+            var noTable = assertDoesNotThrow(() -> monitor.captureRewindState());
+            monitor.restoreRewindState(noTable);
+            assertNull(readObjectField(monitor, "monitorContentsSlot"));
+        }
+        var outcomes = new ArrayList<Object>();
+        int eventsAtBreak = h.events().size();
+        for (int tick = 1; tick <= 65; tick++) {
+            manager.update(0x0500, h.player(), List.of(), tick);
+            if (tick == 1) {
+                assertEquals((MONITOR_SPAWN.y() << 8) - (freeTailSlots > 0 ? 0x300 : 0),
+                        readIntField(monitor, "iconSubY"));
+            }
+            outcomes.add(adapter.capture());
+        }
+        assertEquals(freeTailSlots == 0 ? 0 : 1,
+                h.events().stream().filter("reward"::equals).count());
+        verify(h.player(), times(freeTailSlots > 0 && !eggman ? 1 : 0)).addRings(10);
+        verify(h.player(), times(freeTailSlots > 0 && eggman ? 1 : 0)).applyHurtOrDeath(0, false, true);
+        assertEquals(rngSeed, h.services().rng().getSeed(), "monitor admission consumes no RNG");
+        List<String> replayEvents = List.copyOf(h.events().subList(eventsAtBreak, h.events().size()));
+
+        for (ObjectInstance object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+        adapter.restore(broken);
+        var restored = objectById(manager, Sonic3kMonitorObjectInstance.class, monitorId);
+        assertNotSame(monitor, restored);
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", broken, adapter.capture()));
+        if (freeTailSlots > 0) {
+            var restoredContents = onlyContents(manager);
+            assertNotSame(contents, restoredContents);
+            assertEquals(manager.admissions.getFirst().id(), objectId(manager, restoredContents));
+            assertSame(restored, readObjectField(restoredContents, "parent"));
+            assertSame(restoredContents, readObjectField(restored, "monitorContentsSlot"));
+        }
+        h.events().clear();
+        int callsAtRestore = manager.admissions.size();
+        for (int tick = 1; tick <= 65; tick++) {
+            manager.update(0x0500, h.player(), List.of(), tick);
+            assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", outcomes.get(tick - 1), adapter.capture()),
+                    "exact IDs, slots, occupant state and deletion at tick " + tick);
+        }
+        assertEquals(replayEvents, h.events());
+        assertEquals(callsAtRestore, manager.admissions.size(), "restore cannot retry a rejected allocation");
+        assertEquals(rngSeed, h.services().rng().getSeed());
+
+        // Rewind before the break, then remint exactly the same graph and allocation ordinals.
+        adapter.restore(intact);
+        h.events().clear();
+        manager.admissions.clear();
+        breakMonitor(objectById(manager, Sonic3kMonitorObjectInstance.class, monitorId), h.player());
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", broken, adapter.capture()));
+        assertEquals(2, manager.admissions.size());
+
+        var persistence = manager.capturePersistentRespawn();
+        manager.reset(0x0500, persistence);
+        manager.update(0x0500, h.player(), List.of(), 66);
+        var rememberedShell = only(manager, Sonic3kMonitorObjectInstance.class);
+        assertTrue(readBooleanField(rememberedShell, "broken"));
+        assertFalse(readBooleanField(rememberedShell, "iconActive"));
+        assertNull(readObjectField(rememberedShell, "monitorContentsSlot"));
+        breakMonitor(rememberedShell, h.player());
+        assertEquals(2, manager.admissions.size(), "remembered respawn cannot retry either allocation");
+    }
+
+    @Test
+    void rejectedContentsNeverAwardEvenWithoutAnImmediateCapture() throws Exception {
+        AdmissionHarness h = AdmissionHarness.create(0, false);
+        var monitor = only(h.manager(), Sonic3kMonitorObjectInstance.class);
+        breakMonitor(monitor, h.player());
+        for (int tick = 1; tick <= 65; tick++) h.manager().update(0x0500, h.player(), List.of(), tick);
+        assertFalse(h.events().contains("reward"), "rejected native contents have no reward routine");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {3, 80})
+    void touchDuringAnotherSlotKeepsMonitorAnchorAndDispatchPhase(int callbackSlot) throws Exception {
+        AdmissionHarness h = AdmissionHarness.create(2, false);
+        var manager = h.manager();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        var monitor = only(manager, Sonic3kMonitorObjectInstance.class);
+        manager.getActiveObjects().stream()
+                .filter(o -> o instanceof InertOccupant a && a.getSlotIndex() == callbackSlot)
+                .findFirst().ifPresent(manager::removeDynamicObject);
+        manager.addDynamicObjectAtSlot(new BreakTrigger(MONITOR_SPAWN, monitor), callbackSlot);
+
+        manager.update(0x0500, h.player(), List.of(), 1);
+        assertEquals(2, manager.admissions.size());
+        assertTrue(manager.admissions.stream().allMatch(a -> a.anchor() == monitor.getSlotIndex()));
+        assertEquals(List.of(monitor.getSlotIndex() + 1, monitor.getSlotIndex() + 3),
+                manager.admissions.stream().map(a -> ((AbstractObjectInstance) a.object()).getSlotIndex()).toList());
+        int firstY = (MONITOR_SPAWN.y() << 8) - (callbackSlot < monitor.getSlotIndex() ? 0x300 : 0);
+        assertEquals(firstY, readIntField(monitor, "iconSubY"),
+                "touch before the monitor executes consumes this pass; touch after it waits for the next");
+        var adapter = manager.rewindSnapshottable();
+        var pending = adapter.capture();
+        manager.update(0x0500, h.player(), List.of(), 2);
+        var dispatched = adapter.capture();
+        for (var object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+        adapter.restore(pending);
+        manager.update(0x0500, h.player(), List.of(), 2);
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", dispatched, adapter.capture()));
+        assertEquals(2, manager.admissions.size(), "replaying a fired callback cannot allocate another child pair");
+    }
+
+    private static void breakMonitor(Sonic3kMonitorObjectInstance monitor, AbstractPlayableSprite player) {
+        monitor.onTouchResponse(player, new TouchResponseResult(0, 14, 14, TouchCategory.SPECIAL), 1);
+    }
+
+    private record Admission(ObjectInstance object, int anchor, ObjectRefId id) { }
+
+    /** Records the actual calls after running the production allocator and identity registration. */
+    private static final class AdmissionManager extends ObjectManager {
+        private final List<Admission> admissions = new ArrayList<>();
+
+        private AdmissionManager(Camera camera, ObjectServices services, boolean eggman) {
+            super(List.of(MONITOR_SPAWN), new Sonic3kObjectRegistry() {
+                @Override public ObjectInstance create(ObjectSpawn spawn) {
+                    return eggman && spawn.objectId() == Sonic3kObjectIds.MONITOR
+                            ? Sonic3kMonitorFactory.eggman(spawn) : super.create(spawn);
+                }
+            }, 0, null, null,
+                    GraphicsManager.getInstance(), camera, services);
+        }
+
+        @Override public void addDynamicObjectAfterSlot(ObjectInstance object, int anchor) {
+            super.addDynamicObjectAfterSlot(object, anchor);
+            admissions.add(new Admission(object, anchor, captureIdentityContext().requireIdentityTable().idFor(object)));
+        }
+    }
+
+    private record AdmissionHarness(AdmissionManager manager, AbstractPlayableSprite player,
+                                    ObjectServices services, List<String> events) {
+        static AdmissionHarness create(int freeTailSlots, boolean eggman) {
+            var player = mock(AbstractPlayableSprite.class);
+            when(player.getCode()).thenReturn("sonic");
+            when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+            when(player.getRingCount()).thenReturn(1);
+            var events = new ArrayList<String>();
+            doAnswer(call -> { events.add("reward"); return null; }).when(player).addRings(10);
+            doAnswer(call -> { events.add("reward"); return null; }).when(player).applyHurtOrDeath(0, false, true);
+            var sprites = mock(SpriteManager.class);
+            when(sprites.getSprite("sonic")).thenReturn(player);
+            var render = mock(ObjectRenderManager.class);
+            when(render.getExplosionRenderer()).thenReturn(mock(PatternSpriteRenderer.class));
+            var holder = new AdmissionManager[1];
+            Camera camera = mockCameraAtMonitor();
+            var services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+                @Override public SpriteManager spriteManager() { return sprites; }
+                @Override public ObjectRenderManager renderManager() { return render; }
+                @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> player, List::of); }
+                @Override public void playSfx(int id) { events.add("sfx:" + id); }
+                @Override public void playSfx(GameSound sound) { events.add("sound:" + sound); }
+            };
+            var manager = new AdmissionManager(camera, services, eggman);
+            holder[0] = manager;
+            manager.reset(camera.getX());
+            var monitor = only(manager, Sonic3kMonitorObjectInstance.class);
+            manager.update(camera.getX(), player, List.of(), 0);
+            int firstHole = monitor.getSlotIndex() + 1;
+            int end = ObjectSlotLayout.SONIC_3K.firstDynamicSlot() + ObjectSlotLayout.SONIC_3K.dynamicSlotCount();
+            for (int slot = firstHole; slot < end; slot++) {
+                if ((freeTailSlots >= 1 && slot == firstHole) || (freeTailSlots == 2 && slot == firstHole + 2)) continue;
+                manager.addDynamicObjectAtSlot(new InertOccupant(
+                        new ObjectSpawn(MONITOR_SPAWN.x(), MONITOR_SPAWN.y(), 0xFE, 0, 0, false, slot)), slot);
+            }
+            return new AdmissionHarness(manager, player, services, events);
+        }
+    }
+
+    private static final class InertOccupant extends AbstractObjectInstance implements RewindRecreatable {
+        private int updates;
+        private InertOccupant(ObjectSpawn spawn) { super(spawn, "admission-occupant"); }
+        @Override public InertOccupant recreateForRewind(RewindRecreateContext context) {
+            return new InertOccupant(context.spawn());
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { updates++; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class BreakTrigger extends AbstractObjectInstance implements RewindRecreatable {
+        private Sonic3kMonitorObjectInstance monitor;
+        private boolean fired;
+        private BreakTrigger(ObjectSpawn spawn, Sonic3kMonitorObjectInstance monitor) {
+            super(spawn, "monitor-touch-callback");
+            this.monitor = monitor;
+        }
+        @Override public BreakTrigger recreateForRewind(RewindRecreateContext context) {
+            return new BreakTrigger(context.spawn(), null);
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            if (!fired) {
+                fired = true;
+                breakMonitor(monitor, (AbstractPlayableSprite) player);
+            }
+        }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
     }
 
     private record Harness(ObjectManager objectManager, Camera camera, ObjectServices services) {

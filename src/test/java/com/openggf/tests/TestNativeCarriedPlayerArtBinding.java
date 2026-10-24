@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.configuration.WidescreenAspect;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;

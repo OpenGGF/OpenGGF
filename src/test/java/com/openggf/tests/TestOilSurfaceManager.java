@@ -1,8 +1,6 @@
 package com.openggf.tests;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,8 +27,7 @@ public class TestOilSurfaceManager {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
         manager = new OilSurfaceManager();
         sprite = new TestOilSprite("test", (short) 0, (short) 0);
     }
