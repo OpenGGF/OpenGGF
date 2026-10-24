@@ -17,27 +17,6 @@ Entries should include:
 
 ---
 
-## KiS2 special-stage return rejects its replacement PLC adapter — 2026-10-24
-
-- **Location:** `Kis2GameModule.createGame/rewindAdapters`,
-  `GameplayModeContext.registerGameModuleRewindAdapters` and native-root adapter
-  publication; exact ownership repair remains to be grounded separately.
-- **Symptom:** `TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
-  boots the real patched module, enters the chip-backed special stage and actual
-  results, then errors on return reload: `RuntimeException` → `IOException:
-  Failed to load level due to unexpected error.` → `IllegalStateException:
-  RewindSnapshottable already registered: sonic2-plc-service`.
-- **Evidence:** reproduced on unchanged `a79e3295a`, before the lifecycle transfer.
-  The results screen and retained provider have been retired when reload fails;
-  this is incomplete return coverage, not a passing roundtrip. The chip PLC
-  incarnation is replaced by `createGame`; the effective adapter substitutes it
-  for base S2 while native-root publication resolves to base S2. See the
-  [continuation evidence and exact bounded command](../architecture/plans/2026-10-24-architecture-continuation.md#special-stageresults-owner--isolated-next-slice-2026-10-24).
-- **Removal condition:** a separately justified replacement-ownership repair lets
-  the unchanged pilot complete actual results → reload → title release with its
-  normal provider, checkpoint and ring assertions. Do not clear/disable the
-  registry or weaken return assertions to bypass the failure.
-
 ## Current stock parity frontiers — 2026-10-08
 
 The [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md)

@@ -6362,3 +6362,42 @@ block used only to classify the old KiS2 failure. The ordinary controller loop
 and all intended successful-return assertions are retained. Historical failure
 identity/partial state remains in the component evidence and original commit;
 new failures propagate directly. No production behavior changed in this cleanup.
+
+
+### Composed KiS2 controller return qualification
+
+At `aafe14c012075aac40a2e337f980a39370ab3a5c`, the parent executed the normal
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+pilot: one case, zero failures/errors/skips. It used the genuine patched module
+and chip provider through entry, actual results, return reload, native title and
+LEVEL release. The normal provider identity, captured stage, emerald award,
+checkpoint index, saved 47 rings and released control assertions all executed.
+The previous failing pilot and its original partial-state diagnostic remain in
+component history; the successful-return conditions were not weakened.
+
+XML confirmed the exact selector, Java 25.0.5.0.2, surfaceless EGL and all four
+verified existing absolute ROM properties. Admission waited 137 seconds; Maven
+execution was 1:27, and the case reported 0.755 seconds. Both inspected XML/text
+reports were consumed. This establishes the repaired controller route on that
+composition, not a native-pixel, uninterrupted campaign or complete-game claim.
+The canonical open KiS2 adapter-replacement entry is removed because its stated
+repair and real-return condition is met; the unrelated Sideways gap remains.
+
+```bash
+SELECTION='TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=${SELECTION}" \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" test -B
+```
+
+The following title transfer is a different source state and will need its
+affected composed checks. The preceding fixed three-owner smoke also remains
+separate and incomplete here. Its editor pattern-window fixture error has a
+matched passing `97eb` baseline and a narrow constructor-owned test correction
+in progress; neither observation is claimed as a completed delivery.
