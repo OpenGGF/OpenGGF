@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+S2 manager-only camera/retirement fixtures must publish the separate
+`postCameraPlacementUpdate()` phase before the following object pass
+(2026-10-24, Sideways admission qualification at `8f34cad77`).
+`ObjectManager.update(cameraX, ...)` alone does not advance the S2 unload-camera
+latch; a moved camera can leave a pair apparently alive against the reset-time
+coarse camera. Check live graph removal and SST reuse as well as flags on stale
+Java references. The [qualification evidence](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-sideways-platform-allocation-failure-qualification)
+separates these fixture faults from the actual strict-capture gap.
+
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
 bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive

@@ -2526,6 +2526,280 @@ Only the exact assigned baseline key is removed; no aggregate baseline counts
 are edited. No complete guards, API/S3K stability selection, broad smoke,
 release-only full suite, integration, push or task-worktree cleanup is claimed.
 
+## S2 Sideways Platform allocation-failure qualification
+
+This independent qualification starts at `97eb86f186b432722024ca419a00b901b38f5ec2`
+and fast-forwards its isolated T3 task branch
+`bugfix/ai-s2-sideways-admission-owner-20261024` to
+`8f34cad77297663523100fb7fdbf120cd9b259c1` before edits. The production
+`SidewaysPformObjectInstance` Git blob is unchanged at
+`583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, SHA-256
+`4fa8ca206cc93956b0969f15b75dc0e47d6134df3b18199a34f8ed652dc553c1`.
+The assigned question is whether rejected child admission permits a bounded,
+native-correct ownership repair. It is not an allowance-removal exercise.
+
+The native failure branch prevents assuming either a null or a self link.
+Evidence was read only from the recorded S2 submodule Git object
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`; the user-dirty working reference
+was not checked out, reset, updated or fetched. Its `s2.asm` blob is
+`b6fde6212f05cc9179ee8c9053c0484bf0581349`, and `s2.constants.asm` is
+`7857fe5ad3221cfab36e9086b17e892fcb09013b`.
+
+- `Obj7A_Init` (s2.asm:56295-56310) initializes the parent through
+  `Obj7A_LoadSubObject` with `a1=a0`. For the single-platform subtypes, the
+  first `dbf` exits without allocating, and the two link writes therefore
+  establish a self link.
+- `AllocateObjectAfterCurrent` (s2.asm:33705-33726) starts `a1` at `a0`, tests
+  occupied entries and advances it by `next_object` before each `dbf`. With
+  no free later slot, including a parent in the last dynamic slot, it returns
+  with a nonzero test result and `a1=Dynamic_Object_RAM_End`. `lea` and `dbf`
+  do not restore the pointer or change the last occupied-ID test's flags.
+- `Obj7A_SubObjectLoop` / `Obj7A_SubObjectLoop_End`
+  (s2.asm:56313-56351) skips the child ID/routine/art initialization on that
+  nonzero result but still exits the child count loop and writes both
+  `objoff_3C` links. It then writes both boundaries, offsets the parent by
+  `parentXOffset`, and adds `childXOffset` through the returned `a1`.
+- The pinned `object_size_bits` / `object_size`
+  (s2.constants.asm:189-193) select the shipped `$40` branch.
+  `Dynamic_Object_RAM_End` / `Tails_Tails`
+  (s2.constants.asm:1139-1151) identify the exhausted pointer as the fixed
+  Tails-tail slot, `$FFFFD000`, rather than a newly allocated platform.
+- `loc_294C4` (s2.asm:56374-56387) skips paired deletion only for an exact
+  self link. Otherwise it calls `DeleteObject2` through the link, then clears
+  the parent's live respawn bit and deletes the parent. `DeleteObject2`
+  (s2.asm:30334-30345) clears the pointed-to slot. The exhausted alias thus
+  matters to retirement as well as graph capture. `Obj05_Main`
+  (s2.asm:41723-41728) normally rewrites that fixed tail's position from its
+  character; it does not turn it into an Obj7A child.
+
+These are source-derived register/control-flow conclusions, not an emulator
+capture. `fixBugs = 0` (s2.asm:27) is the governing native policy. Clearing the
+Java rejected child to null/self, retaining a fabricated admitted child, or
+teaching strict capture to ignore it would not reproduce this branch. The
+current `linkedPlatform` field can point only to another Sideways platform;
+it cannot express the native fixed-tail alias or its deletion. Resolving that
+representation and fixed-slot owner is additional work beyond the assigned
+single-object reject-only cut. No production repair is selected from this
+source evidence alone.
+
+The real-manager golden baseline is reproduced at the same source. A dynamic
+parent is constructed and submitted at SST 40 through
+`createDynamicObjectAtSlot`; every other dynamic SST 16-127 contains a real,
+registered, `RewindRecreatable` inert occupant. The pressure graph itself
+captures before initialization. One normal manager dispatch then constructs
+the child under the existing services scope and submits it through the real
+`addDynamicObjectAfterSlot` allocator. The recording override delegates to that
+allocator; it does not mock admission or mint identities. The rejected child
+has slot -1, is destroyed, has no identity and remains reachable through the
+parent's reciprocal link. Immediate strict capture fails at exactly
+`SidewaysPformObjectInstance#linkedPlatform` with
+`RewindIdentityTable has no registered id for object reference`.
+
+The golden command ran **1 case, 1 failure, 0 errors, 0 skips**. This is an
+actual capture failure, not a compile/import/signature failure. Admission waited
+440 seconds; Maven reported 1:23 execution. XML confirmed Java `25.0.5.0.2`,
+the own-worktree working directory, `mse=off`, exact selected identity
+`TestS2SidewaysPformAdmissionQualification#strictCaptureAfterExhaustedTail`,
+and the complete contextual missing-reference error. The production blob above
+was unchanged; the uncommitted qualification source had SHA-256
+`2091b99b5889bf368c62f76c1d49f4ea138d31487ab408038762959ff1825734`.
+That intentionally red acceptance method is diagnostic evidence, not a
+committed failing test or a claimed repair.
+
+`MAIN_CHECKOUT` denotes the existing main checkout, which supplies the current
+queue wrapper. Commands run from this isolated task checkout with no ROM
+properties and no desktop/graphics context:
+
+```bash
+qualification_maven=(env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  PATH="/usr/lib/jvm/java-25-openjdk/bin:$PATH"
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --lean -Dmse=off)
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#strictCaptureAfterExhaustedTail' test -B
+```
+
+The follow-up command used the same command prefix:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay+admittedPairRetiresAndReleasesRememberFlagAndSlots+noManagerBootstrapRetainsExistingUnmanagedPair,TestS2SidewaysPformGraphRewind,TestObjectManagerChildSlotAllocation,TestObjectManagerRewindReferenceClosure,TestObjectManagerDynamicChainRewindRestore,TestScalarOnlyCodecDeletion#s2SidewaysPformGraphRecreateClassesImplementRewindRecreatable,TestRewindSchemaRegistry#exactDefaultObjectPolicyCapturesSidewaysPlatformLink' test -B
+```
+
+That completed **34 cases: 32 passes, 1 failure, 1 error, 0 skips**. All nine
+real-manager pressure cases passed: subtype `$06` with a full pool, occupied tail
+and free earlier slots, parent at SST 127, an explicit earlier hole with no later
+hole, one later hole and two noncontiguous later holes; subtype `$0C` with a full
+pool, one later hole and two later holes. Rejected candidates stay outside the
+identity registry and strict capture still fails. A tail-only case frees a
+genuine later occupant and confirms no initialization retry after capacity
+returns. Admitted children use the parent's explicit SST anchor, select the first
+later hole, and move in the same ascending dispatch pass. Both admitted subtypes
+capture immediately, restore destructively with exact parent/child IDs and SSTs,
+restore every pressure occupant at its captured SST, rebuild reciprocal fresh
+links, and match the next parent/child positions on forward replay.
+
+The other 23 passing cases are the existing Sideways graph/lifetime checks (4),
+child-slot allocation checks (8), strict reference-closure checks (8), dynamic
+reconstruction chain (1), Sideways `RewindRecreatable` contract (1) and exact
+default link schema (1). The existing unmanaged-link negative control still
+rejects capture. This run waited 1,340 seconds for admission; Maven reported
+28.764 seconds execution. Every exact XML case identity, failure/error/skip
+element and the Java/mse/selector/working-directory properties were inspected.
+
+The two new peripheral fixture faults are separate from the reproduced capture
+gap. `admittedPairRetiresAndReleasesRememberFlagAndSlots` incorrectly expected
+the retained Java parent reference to become destroyed; the manager's placed
+unload removes it without setting that flag. The corrected check uses absence
+from the live graph and reclaimed SSTs, while retaining child retirement,
+remember-flag release and cursor-return respawn assertions.
+`noManagerBootstrapRetainsExistingUnmanagedPair` updated its object after the
+temporary construction context closed without binding services. It now injects
+the explicit no-manager stub before update, matching the existing services
+contract. Neither fault establishes another production defect.
+
+The corrected-peripheral command was:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#admittedPairRetiresAndReleasesRememberFlagAndSlots+noManagerBootstrapRetainsExistingUnmanagedPair,TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage' test -B
+```
+
+It ran **3 cases: 2 passes, 1 failure, 0 errors/skips**, waiting 66 seconds and
+reporting 28.129 seconds Maven execution. The no-manager bootstrap contract and
+ambient-setup guard passed. The retirement fixture still omitted the separate
+S2 post-camera placement phase: `ObjectManager.objectUnloadCameraX()` reads the
+previous `postCameraPlacementUpdate()` latch, which remained zero after reset.
+The corrected fixture now publishes that phase before the next object pass,
+including on camera return. The two new fixture faults and this omitted phase
+are not attributed to the production admission gap. This retry's qualification
+source SHA-256 was
+`df5e1cf4eec0a8cf495e438cbf03ce664f275d53865b8d644bf4d19bb621439f`.
+
+The final corrected retirement command was:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#admittedPairRetiresAndReleasesRememberFlagAndSlots' test -B
+```
+
+It passed **1 case, 0 failures/errors/skips**, with an 18-second queue wait and
+27.929 seconds Maven execution. It confirms pair removal from the live graph,
+child retirement, unremembered placement, exact parent/child SST reuse and a
+second child submission attempt on camera return. That last assertion alone did
+not establish fresh live admission, registration, reciprocal links or successful
+capture after return; the follow-up below addresses that evidence limit.
+The original qualification source SHA-256 is
+`9ff7263ac4267de9642ab052b835fbc2a0f4903e934fe3c6a76a654f00ddac52`.
+Only that corrected method changed after the preceding retry. The nine
+unchanged pressure cases and 23 existing passes are not repeated as a ceremony.
+The deliberately red diagnostic method is removed, and the retained
+qualification class explicitly labels its rejected-child assertions as an open
+capture gap rather than repaired behavior. The different command results above
+are separate completed runs, not one green combined run. Waiting and Maven
+execution intervals are separate; other delivery time is unmeasured.
+
+Final disposition: **qualified capture gap; production unchanged; native fixed
+slot ownership deferred**. All ten dynamic-add bridges remain **QUALIFIED
+RETAIN**, count one each. The 119-record frozen store, six ambient setup keys,
+package permissions, descriptor, API version/pins, allocator and strict codecs
+are unchanged. The next owner must account for both empty and live fixed
+`Tails_Tails` SST states, the failed allocation's link/boundary/offset writes,
+and paired deletion/respawn release before choosing an admissible Java link
+representation and reversible capture/restore behavior. No representation or
+broader framework is selected here, and no null/self substitute is justified by
+this branch.
+
+Coverage is bounded logic qualification with a real S2 manager, SST allocator,
+identity registry, reconstructible pressure occupants and strict compact
+snapshots. It is not an emulator/ROM execution, full act/trace sweep, player
+collision or art validation, arbitrary roster/donor/viewport certification,
+out-of-cursor dispatch probe, full guards or smoke-suite result. Pressure uses
+the 320-pixel viewport; the unchanged graph class separately checks endpoint
+buckets at widths 320/528/800. Failed exhausted-tail capture prevents a fresh
+restore of the exhausted case; it is explicitly not certified by the successful
+pair restores. The existing level-route/matrix gaps remain inherited.
+
+All own XML case identities, properties and failure/error/skip elements were
+inspected and consumed after each run; no logs, pass caches or validation
+receipts are retained. The new citation ranges were checked against the pinned
+Git objects, and documentation fences/links and `git diff --check` are checked
+before the local evidence commit. No push, integration or worktree removal is
+part of this slice. The parent owns combined delivery and final guards.
+
+### Sideways qualification assertion and open-ledger follow-up
+
+This implementation follow-up preserves local commit
+`f350a9007b85bfcdd6f5b94b192f3c0eeaa20882` and its history on the same owned
+branch/worktree. Accepted review found two assertion limits and an absent
+canonical open-bug entry. The original pressure matcher accepted a generic
+missing-reference substring, so another failing owner/field could satisfy it;
+the original return check counted a pre-admission attempt rather than proving
+a fresh live pair. The earlier golden red's inspected XML remains actual
+`SidewaysPformObjectInstance#linkedPlatform` evidence, while the weaker retained
+assertions are not retroactively described as having enforced that context.
+
+The pressure cases now compare the actual exception's complete field and
+parent context: exact `SidewaysPformObjectInstance#linkedPlatform`, owner class,
+registered parent ID, actual SST slot and current spawn. They also match the
+missing reference to this particular rejected child and its underlying cause.
+An unrelated field, parent, slot or missing target cannot satisfy the equality;
+no production message or strict codec is changed.
+
+The return check now requires new parent and child instances, both live in the
+manager, reciprocal links, distinct newly registered IDs resolving to those
+same instances, the next actual free SSTs after the two reused slots, absence of
+the retired objects from the identity table, and successful strict capture.
+Both genuine pressure occupants must remain live at the original reclaimed
+SSTs with their unchanged registered IDs. The attempt counter is described as
+an attempt, and the manager must contain exactly those four objects. No slot
+reservation, occupant removal or fabricated capacity is added to make this
+claim pass.
+
+The [canonical open-bug ledger](../../status/known-bugs.md#s2-sideways-platform-allocation-and-strict-rewind-gap)
+now records the unrepaired allocation/strict-rewind gap and links the retained
+qualification. Removal requires native empty/live fixed-Tails state, failed
+pointer/boundary/offset writes, paired deletion/respawn release, and reversible
+strict capture/restore to be resolved. The intentional-discrepancy ledger and
+release notes remain unchanged. The documentation checklist and hook mapping
+were inspected: `Known-Discrepancies` maps only to the unchanged intentional
+ledger, so its required policy value remains `n/a`.
+
+Affected validation ran with the same verified environment and command
+prefix above, using only the nine pressure cases and retirement method:
+
+```bash
+"${qualification_maven[@]}" '-Dtest=TestS2SidewaysPformAdmissionQualification#characterizeRealAdmissionAndFreshReplay+admittedPairRetiresAndReleasesRememberFlagAndSlots' test -B
+```
+
+The tested input was `f350a9007` plus this qualification patch, SHA-256
+`bd74251920c88045988c603f961e3152792b0dbac74aa21b56782c87c2762850`;
+the ledger/audit prose also differed. The completed run passed **10 cases,
+0 failures, 0 errors, 0 skips**: all nine parameterized pressure cases and the
+retirement/return case. It waited 811 seconds for shared admission; Maven
+reported 29.546 seconds execution. These intervals are separate; other work
+time is unmeasured. XML inspection confirmed each exact case identity, all
+failure/error/skip elements, Java `25.0.5.0.2`, `mse=off`, the exact selector
+and this task's working directory. The reports were then consumed.
+
+The failed-admission cases now establish the exact field, owning parent
+ID/SST/spawn and rejected target from the actual capture exception. Under this
+same fixture, camera return establishes a fresh live reciprocal parent/child
+pair with fresh identities, registered instances, the next free real SSTs and
+successful capture while both reused-SST pressure occupants remain present.
+The earlier attempt-only claim is therefore replaced with this narrower,
+discriminating runtime proof. The open exhausted-tail capture gap remains
+unrepaired, and the existing native fixed-Tails/modeling and broader coverage
+limits above remain in force.
+
+No production or scanner-obligation change requires another guard or an
+unchanged existing multi-class run. Protected production/resource/tool/policy
+paths are byte-identical to `f350a9007`: the production blob remains
+`583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten bridges stay count one,
+the frozen store stays 119, and pins/package permissions are unchanged.
+New ledger/test/audit links, heading anchors, shell snippets, Markdown fences
+and `git diff --check` pass. Only documentation changed after this run.
+This follow-up creates a new local commit; no history rewrite, production
+change, integration, push, broad/full suite, subdelegation or worktree removal
+is part of it. The parent owns any fresh review and future composition.
+
 ## S3K monitor contents admission
 
 Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch

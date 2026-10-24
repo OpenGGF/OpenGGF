@@ -5622,8 +5622,9 @@ closure and the complete bonus evidence above are retained. The two independentl
 reviewed SMPS prose corrections also remain: earlier retention is historical,
 and removed unsupported constructor consumers must migrate and rebuild.
 
-All runtime/test/tooling/policy inputs under `src/`, `tools/`, `.githooks/`,
-`pom.xml` and the release descriptor match the accepted bonus commit exactly.
+At that bonus merge, all runtime/test/tooling/policy inputs under `src/`,
+`tools/`, `.githooks/`, `pom.xml` and the release descriptor matched the accepted
+bonus commit exactly.
 Its source diff over `850948ad9` retains SHA-256
 `623d654fb4a690860a95e63abba28833aecf0e0a0b8d55a633aa2d2d723fed61`.
 The independent bonus review found no actionable findings and matched its
@@ -5640,3 +5641,23 @@ in a separate checkout. That request cannot validate this bonus composition.
 Special-stage/results ownership and the separately qualified Sideways admission
 gap remain future inputs. Final composed checks, main integration, push and
 owned-worktree cleanup are outstanding; main remains on `develop`.
+
+
+### Sideways admission qualification joined to the next composition
+
+The next composition also merges qualification commits `f350a9007` and
+`190220882f6b0a32f7f32c236d31df23baee882f`. Independent source review accepted
+the follow-up after all three P2 findings were resolved: exact rejected-link
+context, genuinely admitted fresh return pairs, and a canonical open-bug entry.
+The qualification source retains SHA-256
+`bd74251920c88045988c603f961e3152792b0dbac74aa21b56782c87c2762850`.
+The worker observed ten affected cases passing with zero failures/errors/skips;
+the reviewer ran no tests. This merge adds no new execution claim.
+
+Production is unchanged by this qualification. Exhausted native allocation
+aliases the fixed Tails slot and requires a separate complete model for failure
+writes, empty/live fixed-slot state, paired deletion/respawn and reversible
+capture. The canonical bug and retained audit state those removal conditions.
+Strict codecs, all ten count-one bridges, the119-record store, pins and package
+permissions remain unchanged. The next composition still requires its eventual
+combined verification and delivery; the preceding live smoke source is untouched.
