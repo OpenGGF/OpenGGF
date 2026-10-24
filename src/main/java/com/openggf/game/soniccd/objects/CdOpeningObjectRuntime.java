@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.Supplier;
 
 import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
@@ -329,7 +330,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public DevGlobals devGlobals() { return devGlobals; }
     public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
     public ScoreGlobals scoreGlobals() { return scoreGlobals; }
-    /** The one level-flow store; no setter or native writer (DeadChkGone, Restart, $3B) is admitted yet. */
+    /** The one level-flow store; Body summaries commit here without retaining their call context. */
     public CdLevelGlobals levelGlobals() { return levelGlobals; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
@@ -395,13 +396,23 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     new CdPlayerTouchResponse.WorldGlobals(ringGlobals.rings(), ringGlobals.lives(),
                             ringGlobals.updateHudLives(), scoreGlobals.score(), scoreGlobals.nextLifeScore(),
                             scoreGlobals.updateHudScore()));
+            var level = new CdPlayerBody.LevelContext(callCut, ringGlobals, levelGlobals);
             var publication = frame.runBody(levelFrames,
-                    Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)));
+                    Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)), Optional.of(level));
             checkActive(Phase.PLAYER_BODY);
             boolean displaySeen = false;
             boolean touchSeen = false;
+            boolean levelSeen = false;
             for (var effect : publication.result().effects()) {
-                if (effect instanceof CdPlayerBody.DisplayEligibility cut) {
+                if (effect instanceof CdPlayerBody.DeadCheckGone gone) {
+                    if (levelSeen) throw new IllegalStateException("Body published more than one level summary");
+                    levelSeen = true;
+                    commitDeadGone(callCut, gone, publication.result().effects());
+                } else if (effect instanceof CdPlayerBody.RestartCut restart) {
+                    if (levelSeen) throw new IllegalStateException("Body published more than one level summary");
+                    levelSeen = true;
+                    commitRestart(restart, publication.result().effects());
+                } else if (effect instanceof CdPlayerBody.DisplayEligibility cut) {
                     if (displaySeen) { throw new IllegalStateException("Body published more than one Display cut"); }
                     displaySeen = true;
                     if (cut.eligible()) { expectedPlayerCut = cut; }
@@ -428,6 +439,56 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             for (var sound : publication.sounds()) { appendSound(new PlayerSound(sound)); }
             return publication;
         });
+    }
+
+    /** DeadChkGone's final world values commit once after the complete pure Body succeeds. */
+    private void commitDeadGone(CdObjectPool.Snapshot cut, CdPlayerBody.DeadCheckGone gone,
+                                List<CdPlayerBody.Effect> effects) {
+        var pool = placement.pool(); pool.validateRestore(cut);
+        if (!pool.capture().slots().equals(cut.slots())) {
+            throw new IllegalStateException("CD pool changed after the death call cut");
+        }
+        var nextRing = new CdRingGlobals(ringGlobals.rings(), gone.lives(), ringGlobals.livesFlags(),
+                ringGlobals.updateHudRings(), gone.updateHudLives(), ringGlobals.timeStopTimer(),
+                ringGlobals.ringAnimationTimer(), ringGlobals.ringAnimationFrame());
+        var old = levelGlobals;
+        var nextLevel = new CdLevelGlobals(old.levelRestart(), gone.updateHudTime(), old.checkpoint(),
+                old.spawnMode(), old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), old.powerup(), old.timeOver());
+        OptionalInt found = gone.allocation().map(CdPlayerTouchResponse.FindObjSlot::wholeIndex).orElse(OptionalInt.empty());
+        if (gone.allocation().isPresent()) {
+            OptionalInt expected = OptionalInt.empty();
+            for (var slot : cut.slots()) {
+                if (slot.id() == 0) { expected = OptionalInt.of(slot.identity().wholeIndex()); break; }
+            }
+            if (!expected.equals(found)) throw new IllegalStateException("Death allocation differs from native first-free slot");
+        }
+        var aliases = effects.stream().filter(CdPlayerBody.UncheckedAliasWrite.class::isInstance)
+                .map(CdPlayerBody.UncheckedAliasWrite.class::cast).toList();
+        boolean unchecked = gone.allocation().isPresent() && found.isEmpty();
+        var expectedAliases = unchecked ? List.of(new CdPlayerBody.UncheckedAliasWrite(0xFFF000, 0x3B)) : List.of();
+        if (!aliases.equals(expectedAliases)) throw new IllegalStateException("Death alias does not match the exhausted slot search");
+        gone.gameOverImage().ifPresent(image -> {
+            var expected = cut.slots().get(image.identity().dynamicIndex()).moveByte(ID, CdGameOver.OBJECT_ID);
+            if (!image.equals(expected)) throw new IllegalStateException("Death GameOver image changed bytes other than oID");
+            pool.validateWrite(image);
+        });
+        // All immutable values, ownership, allocation and alias checks precede the first write.
+        gone.gameOverImage().ifPresent(pool::write);
+        ringGlobals = nextRing; levelGlobals = nextLevel;
+        // UncheckedAliasWrite stays typed Body metadata; no pool slot or host RAM buffer represents $FFF000.
+    }
+
+    /** Restart's long clear includes the three independent count bytes and adjacent fade byte. */
+    private void commitRestart(CdPlayerBody.RestartCut restart, List<CdPlayerBody.Effect> effects) {
+        long resets = effects.stream().filter(CdPlayerBody.ResetSavedObjectFlagsRequest.class::isInstance).count();
+        var next = restart.next();
+        if (!restart.resetSavedObjectFlags() || resets != 1 || next.levelRestart() != 1
+                || next.flowerCount() != 0 || next.fadeEnableDisplay() != 0) {
+            throw new IllegalStateException("Restart summary lacks its native saved-flags/count/fade cut");
+        }
+        // The record already checked every native width; no callbacks or later validation follow this reset.
+        placement.resetSavedObjectFlags();
+        levelGlobals = next;
     }
 
     /** Same call-cut/owner preflight for all images precedes every commit; no callbacks can observe a partial patch. */

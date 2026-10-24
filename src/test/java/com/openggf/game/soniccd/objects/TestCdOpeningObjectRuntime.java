@@ -1221,6 +1221,76 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // Source Sonic/Main.asm:2410-2447. Constructed body-call cut, not a normal-input death route.
+    @Test void deadGoneCommitsLivesHudAndOnlyTheAllocatedGameOverIdBeforeDynamicSlots() throws Exception {
+        var initial = new CdRingGlobals(7, 3, 0x81, 2, 0xFF, 0, 5, 2);
+        var level = new CdLevelGlobals(0, 1, 0, 0, 3, 0x112233, 2, 0, 0);
+        try (var f = new Fixture(initial, CONTACT, SCORE, level, OptionalLong.of(0))) {
+            f.firstCycle(); seedLevelPlayer(f, 6, 0);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            var free = pool.state(32).moveWord(X, 0x1234).moveByte(SPRITE_FLAGS, 0xA5);
+            pool.write(free);
+            var before = f.runtime.ringGlobals();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var publication = f.body(2);
+            assertEquals(CdPlayerBody.Boundary.DEAD_RETURN, publication.result().boundary());
+            assertEquals(8, f.frame.state().motion().routine()); assertEquals(60, f.frame.state().timers().reset());
+            assertEquals(free.moveByte(ID, 0x3B), pool.state(32), "only native oID changes on the allocated dirty slot");
+            assertEquals(new CdRingGlobals(7, 2, 0x81, 2, 0, 0, before.ringAnimationTimer(),
+                    before.ringAnimationFrame()), f.runtime.ringGlobals());
+            assertEquals(new CdLevelGlobals(0, 0, 0, 0, 3, 0x112233, 2, 0, 0), f.runtime.levelGlobals());
+            assertEquals(SCORE, f.runtime.scoreGlobals()); assertEquals(CONTACT, f.runtime.contactGlobals());
+        }
+    }
+
+    @Test void deadGoneFullPoolKeepsTheUncheckedAliasAsMetadataAndNeverOverwritesAnObject() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); seedLevelPlayer(f, 6, 0);
+            var pool = f.runtime.placement().pool();
+            for (int whole = 32; whole < 128; whole++) pool.write(pool.state(whole).moveByte(ID, 1));
+            var slots = pool.capture().slots();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+            assertEquals(slots, pool.capture().slots());
+            assertEquals(List.of(new CdPlayerBody.UncheckedAliasWrite(0xFFF000, 0x3B)),
+                    publication.result().effects().stream().filter(CdPlayerBody.UncheckedAliasWrite.class::isInstance)
+                            .map(CdPlayerBody.UncheckedAliasWrite.class::cast).toList());
+            assertEquals(2, f.runtime.ringGlobals().lives()); assertEquals(60, f.frame.state().timers().reset());
+        }
+    }
+
+    @Test void restartZeroCommitsTheSavedFlagResetAndBothCountFadeFieldsBeforeLaterObjects() throws Exception {
+        var level = new CdLevelGlobals(0, 1, 0, 0, 3, 0x112233, 0x80, 8, 0);
+        try (var f = new Fixture(level)) {
+            f.firstCycle(); seedLevelPlayer(f, 8, 1);
+            f.runtime.placement().bsetSavedFlag(3, 1, CdObjectPlacementRuntime.SavedBit.LOADED);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+            assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, publication.result().boundary());
+            assertEquals(0, f.frame.state().timers().reset());
+            assertEquals(new CdLevelGlobals(1, 1, 0, 0, 1, 0, 0, 8, 0), f.runtime.levelGlobals());
+            assertEquals(0, f.runtime.placement().savedFlag(3, 1));
+            var flags = f.runtime.placement().capture().savedFlags();
+            assertEquals(1, flags.unsignedByte(0)); assertEquals(1, flags.unsignedByte(1));
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E, 1)),
+                    new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))),
+                    f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LEVEL_RESTART,
+                    assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, f.runtime::beforeCameraStep).boundary());
+        }
+    }
+
+    private static void seedLevelPlayer(Fixture f, int routine, int reset) {
+        var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
+        int y = f.frame.environment().movement().bounds().bottom() + 0x110;
+        var next = new CdPlayerMotionState(64 << 16, y << 16, 0, -0x700, 0, routine, 0, 2, 4, 9, 19,
+                0x18, 0x18, 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var timers = s.timers();
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
+                new CdPlayerBody.State(next, new CdPlayerBody.AnimationCursor(0, 0, 0), s.header(),
+                        new CdPlayerBody.Timers(timers.hurt(), timers.invincibility(), timers.speedShoes(), reset),
+                        s.history(), s.rotationDistance()), Optional.empty()));
+    }
+
     /** Constructed ingress for transaction tests, not evidence of a normal-input route to this cut. */
     private static void seedContactPlayer(Fixture f) {
         var cut = f.frame.captureActor(); var s = cut.state();

@@ -3399,3 +3399,22 @@ Root's unrelated old Ring sound assertion edit was restored exactly in R2;
 all40Runtime cases then passed in82194. Independent review's sole finding
 was that same resolved test literal; no unaddressed P1/P2 remains. It was a
 static review, not execution. No natural-input death or native parity is claimed.
+
+
+### World-owned death and restart summaries — 24 October 2026
+
+The Runtime passes the same pool snapshot to touch and level contexts. After
+the complete Body succeeds, one validated summary commits lives/HUD and the
+ID-only Game Over slot image, or resets the actual saved-object bank and
+accepts the restart level record. All immutable values, allocation, owner,
+image and alias checks precede the first pool write. Full-pool $FFF000/$3B
+remains typed Body metadata, with no invented pool slot or host RAM buffer.
+Final actor values and descriptive LevelWrite/call effects are not replayed.
+
+Tests-first Root70992 hit the intended missing-context boundaries in all three
+new cases (two DEAD_ROUTINE, one RESTART_ROUTINE). After the production change,
+Root92167 passed all60affected checks:43Runtime+17actualWorldLoad, zero failures,
+errors or skips. Java25.0.5.0.2 and supplied-media properties were inspected in
+both fresh XML reports. Queue366s, execution86s; finished18:03:49BST. Independent
+source review is pending. The later live $3B dispatch and actual LevelStart
+reconstruction remain separate; this does not claim a completed death route.
