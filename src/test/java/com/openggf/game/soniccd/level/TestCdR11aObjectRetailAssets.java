@@ -5,6 +5,9 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.media.CdProgramAssets;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdObjectState;
+import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -95,6 +98,21 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(new CdR11aObjectAssets.Delta(-0x20, 0x20), objects.ringDelta(11));
         assertEquals(new CdR11aObjectAssets.TouchSize(6, 6), objects.touchSize(0x47));
         assertEquals(new CdR11aObjectAssets.TouchSize(12, 12), objects.touchSize(0x2B));
+        var pool = new CdObjectPool();
+        var ring = pool.state(32)
+                .moveByte(CdObjectState.ByteField.ID, 0x10)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x80)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0x47)
+                .moveByte(CdObjectState.ByteField.ROUTINE, 2)
+                .moveWord(CdObjectState.WordField.X, 0xF0)
+                .moveWord(CdObjectState.WordField.Y, 0x720);
+        pool.write(ring);
+        var touch = CdPlayerObjectTouch.fromAssets(objects).scan(
+                new CdPlayerObjectTouch.PlayerCut(0xF0, 0x720, 19, 0, 0), pool.capture());
+        assertEquals(CdPlayerObjectTouch.Kind.ITEM, touch.kind());
+        assertSame(ring, touch.selectedSlot().orElseThrow());
+        assertEquals(4, touch.changedSlot().orElseThrow().routine());
+        assertSame(ring, pool.state(32), "the authenticated table consumer stages, rather than commits, its item write");
         assertThrows(IndexOutOfBoundsException.class, () -> objects.ringDelta(16));
         assertThrows(IllegalArgumentException.class, () -> objects.touchSize(0));
         assertThrows(IllegalArgumentException.class, () -> objects.touchSize(0x40));

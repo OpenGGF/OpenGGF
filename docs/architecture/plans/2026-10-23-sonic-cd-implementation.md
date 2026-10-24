@@ -2111,3 +2111,72 @@ slot/placement candidates are a separate uncommitted component under review,
 not part of this data/animation checkpoint. Their successful compilation cannot
 be used as evidence of object execution, touch, live Ring/Mosqui presentation,
 shared sprite queues, PLC lifetime, whole-act or complete-game parity.
+
+
+## Native placement and player touch prerequisite, 24 October 2026
+
+This local component builds on `8c8a975fb` in the separate object worktree;
+the primary `9598c663c` remains frozen under its own running smoke selection.
+It does not admit objects to either stock/static or terrain-player gameplay.
+
+`CdObjectPool` owns only physical dynamic slots 32..127. Immutable 64-byte
+images preserve aliased fields, dirty ID-zero bytes and native write widths.
+Null clears only ID; Delete clears the complete slot. Allocation does not
+clear or reserve the result. The final FindNext boundary accepts whole-index
+31..127: callers 0..30 could read reserved slots this owner cannot observe and
+are rejected. The pinned native decoder confirms this restriction; the last
+reserved slot31 still begins at32 and every dynamic caller remains exact.
+Fable's A1 advisory motivated this explicit boundary rather than pretending
+to observe unowned reserved state. No admitted R11A caller changes behavior.
+
+`CdObjectPlacementRuntime` ports native cursor/header/saved-bank state,
+initialization, forward/backward streaming, period checks, loaded-bit order,
+allocation-failure rollback and unchanged-chunk behavior. Capture owns its
+pool exactly once with its own saved flags/cursors. USA admission binds actual
+loaded assets; pure constructed-format inputs retain their separate contract.
+The actual USA camera0 Present pass produces parent slots32/33/34 with Ring,
+Ring and Mosqui, matching the source list and dispatch pointers. Ring children,
+body execution and complete RunObjects order are still separate work.
+
+`CdPlayerObjectTouch` consumes all96 physical images, testing source sprite
+sign/type gates before dimension lookup. It preserves word carry/borrow,
+radius-byte underflow, exact duck shape, physical first-return order and the
+unsigned hurt threshold. A generic item yields a detached routine-byte patch;
+no pool mutation occurs during the scan. Enemy/special/hazard/monitor handlers
+remain explicit unsupported call boundaries. The root must stage an item patch
+at Body's post-animation/pre-SpecialChunks cut and commit only with the completed
+body. This prerequisite adds no Body, frame, sprite-queue or reward writer.
+
+Astra's touch review and Fable's slot/placement review found no P1/P2 defect.
+Their frozen candidates remain unchanged externally. Root's only production
+adjustment is the FindNext lower-bound restriction above; its caller-visible
+regression was edited first and all six pool methods were then executed.
+The actual-retail USA test now also constructs the touch consumer from the
+loaded table and checks a detached item patch with the real owned slot pool.
+
+| Parent command | Observed execution | Coverage and limits |
+| --- | --- | --- |
+| 83004 | 26 tests, zero failures/errors/skips; queue31s, Maven1m25s | Six pool,18 constructed streaming and two actual-media methods; original finite allocator contract |
+| 13459 | 22 tests, zero failures/errors/skips; queue28s, Maven1m25s |19 touch methods and three regional object-asset cases, including the actual-USA factory/slot assertion |
+| 11699 | Six tests, zero failures/errors/skips; queue41s, Maven1m19s | Final pool contract, including all31 earlier reserved-caller rejections,31/32/126/127 bounds, dirty reuse and capture ownership |
+
+Java25.0.5.0.2 and each selected XML identity were inspected. The two media
+selections used all three configured discs and had zero skips. Fresh source
+compilation occurred for the final pool edit. Counts overlap; they are not one
+combined suite or distinct aggregate. Source reviews did not execute Java.
+
+Commands from the object worktree used display variables unset, Lua5.4 and the
+current main queue wrapper; all targets remained worktree-local:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectPool,TestCdObjectPlacementRuntime,TestCdObjectPlacementRetailAssets' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerObjectTouch,TestCdR11aObjectRetailAssets' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectPool' test -B
+```
+
+Focused validation is proportionate to new, unadmitted CD data/state owners.
+No shared loop, timing/physics, renderer, public API pin or current world
+execution is changed. The sole existing test edit consumes the new real-data
+factory. The primary's broad smoke remains a separate unfinished result.
+No live object, Ring pickup, Mosqui route, source sprite queue, native audio,
+whole act, USA MVP or regional/full-game parity is certified by this unit.
