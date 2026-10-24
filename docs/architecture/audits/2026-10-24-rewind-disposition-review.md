@@ -43,7 +43,7 @@ obligation is not a passing test claim.
 | 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Retained. This field is inherited from AbstractBossInstance, whose central policy requests identity capture. The class's actual fallback path still drops it. Its shard/orb helper arrays have their own state model, so an unconditional transient policy would hide a capture-path problem. | `TestS3kIczMinibossObject` tests encounter behavior, not complete destructive registry restoration. Required evidence includes the actual capture route, managed child identities, shard/orb state, pending defeat work, and a forward encounter replay. An empty inherited list in a default probe is insufficient. |
 | 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Retained gameplay debt. It records camera/flame/boss children. `releaseExhaustFlameForBossSpawn` consumes the list to remove the flame before boss allocation, so this inventory is not merely diagnostic. Recreation does not rebuild it. | `TestLbz2RideCameoInstances` covers the allocation choreography without a rewind split. Capture with the flame live, destructively restore, then advance through release and boss allocation; compare exact slots and child retirement. Do not replace deletion semantics to make this pass. |
 | 18 | [`sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossBoxKnuxInstance.java) | Retained gameplay debt. The list owns mutable S3kBossExplosionController instances; `tickWallExplosions` advances them and DONE waits for completion. Recreating an empty list changes completion and emitted effects. | [`TestS3kLbzMinibossGraphRewind.knucklesMinibossesRestoreFreshWithRestoredBoxParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kLbzMinibossGraphRewind.java) does not populate and restore these controllers. Capture nonempty controllers with pending explosions, verify RNG/effect consumption, and replay DONE before closing this key. Managed-child identity codecs alone cannot capture these helpers. |
-| 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Retained gameplay debt. PanelState is a mutable inner helper with motion, callback, timer, detach, and deletion fields. The list is rebuilt during initialization, but its progressed state is not reconstructed from scalar parent fields. | The LBZ miniboss graph check covers the Knuckles box-parent path, not the Sonic/Tails panel ring. Capture a progressed nonempty ring, alter its timers and detach state, recreate, and compare drawing, collision, and forward dispatch. A new helper-state contract needs separate design evidence. |
+| 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Closed with a private owner-local `RewindStateful` holder and typed value snapshots. The default compact owner capture includes the holder; restoration constructs fresh nonstatic helpers in captured centre/ring/index order. No transient policy is used. | `TestS3kLbzMinibossGraphRewind.progressedPanelRingsRestoreFreshAndReplayRotationDetachAndRetirement` executes ten managed destructive fresh-restore cases at five progressed boundaries with Sonic/Tails attack sources, nonempty immediate draw/collision controls and 300-tick replay through detach and retirement. The focused owner disposition check confirms actual compact field capture. See the LBZ panel-ring follow-up for rejected payload evidence and renderer-input/route limits. |
 | 20 | [`sonic3k.objects.LightningSparkObjectInstance#sparkTiles`](../../../src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java) | Retained rendering obligation. `forRewindRecreate` fetches the shield art set from the current Sonic3kObjectArtProvider. A final Pattern array is mutable render data, not proof that the exact resident patterns were recovered. | Verify nonzero pattern content and matching animation mapping under a real art provider before removal, immediately after reconstruction, and during forward drawing. Null-art isolated passes do not establish that result. No runtime assets are loaded from disassembly files. |
 | 21 | [`sonic3k.objects.badniks.CaterkillerJrHeadInstance#bodySegments`](../../../src/main/java/com/openggf/game/sonic3k/objects/badniks/CaterkillerJrHeadInstance.java) | Closed with central `TRANSIENT`. `afterRewindRestoreSettled` rebuilds the list only after each body's captured owner identity resolves, filters live bodies belonging to this exact head, and sorts by captured segment index. | [`TestS3kBadnikChildGraphRewind.caterkillerJrHeadRestoresBodySegmentListToRestoredChildren`](../../../src/test/java/com/openggf/game/rewind/TestS3kBadnikChildGraphRewind.java) restores two adjacent heads and twelve fresh bodies, checks exact parent inventories, rejects stale pre-restore references, restores changed indices/scalars, and drops a divergent extra head. This is exact graph evidence rather than an isolated scalar pass. |
 | 22 | [`sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes`](../../../src/main/java/com/openggf/game/sonic3k/objects/bosses/LbzEndBossInstance.java) | Retained diagnostic-history obligation. `launchSpikeBall` appends ROM subtypes, but gameplay selection uses the separately captured `launchCount` and table. The public test accessor reads the history. Reconstruction initializes a new empty history. | `TestLbzEndBossInstance` checks native spawn behavior but contains no destructive rewind test for this history. Establish the accessor's intended rewind contract and verify current-child subtype/launchCount replay before an explicit diagnostic-only exclusion. Do not fabricate past launches from surviving children. |
@@ -332,3 +332,122 @@ piece checks distinguish offsets, dimensions, tile, palette, flips and priority.
 This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
 HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
 S3K check, API check or release-only full suite ran in this follow-up.
+
+## LBZ miniboss panel-ring follow-up
+
+This bounded follow-up starts at `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`
+on `bugfix/ai-lbz-panels-rewind-20261024`, in the isolated
+`t3-e8ef5527` worktree. It owns only `LbzMinibossInstance#panels` and its
+focused evidence. The parent owns composition with the water, Rexon/Sol,
+LBZ-ship and ICZ work, fresh combined guards, API checks, the four required
+S3K stability classes, integration, release prose, push and worktree cleanup.
+
+The actual consumers require an ordered centre plus two six-link rings.
+`linkedParent`, `resolvePanelAnchor` and `detachAndPropagate` address original
+positions, including retained deleted helpers. Update, collision publication
+and bucket-filtered drawing consume their progressed values. Re-running
+initialization loses timers, callback phases, fractional positions, rotation
+direction, detach signals and flight lifetime. Generic construction of a
+nonstatic inner helper cannot establish its enclosing miniboss.
+
+Two complete shapes were compared. The existing `LbzMinibossBoxRig` implements
+`RewindStateful` around owner-bound pieces and captures typed values; its
+constructor supplies a fixed piece shape. The selected private `PanelRingState`
+uses that same value-snapshot boundary but rebuilds the exact captured list,
+including empty pre-init state and the retained deleted entries. Each fresh
+`PanelState` is explicitly constructed against the restored miniboss using its
+captured centre/ring/index, then receives every mutable value. Capture returns
+a typed record with a defensively copied array of scalar/enum records, matching
+the box rig's codec-compatible snapshot shape. It carries no helper or renderer
+references and invents no retired history. Direct reflective collection
+restoration and shallow helper copies were rejected because neither supplies
+the right enclosing owner.
+
+There is no handwritten object capture override or extra that could disable
+generic owner capture. The final holder uses the existing stateful codec through
+`AbstractObjectInstance`'s default compact subclass path, alongside the parent's
+motion, boss scalars, explosion-state holder and managed Knuckles parent link.
+Base destruction/spawn/slot/respawn state remains on the base snapshot path.
+The focused disposition method checks both eligibility predicates, the actual
+captured `panels` field plan and the owner's complete gap list. No transient
+policy or public API pin is changed. The runtime update, allocation, deletion,
+clock, collision and renderer ordering code is unchanged.
+
+The new managed graph regression initializes through `ObjectManager`, with
+distinct concrete Sonic and Tails test sprites passed as main/sidekick and
+alternated as attack sources. It captures five boundaries for each attacker:
+257 ticks after initial placement (initial wait just borrowed), 282 ticks
+(progressed rotation), third-hit detach pending, 17 ticks of detached flight,
+and 128 ticks (near detached lifetime expiry). It first proves fourteen
+nonempty draw calls and live arm collision regions, then records 300 manager
+updates through rotation, the three-hit second-ring detach and all six links'
+retirement. It removes the source, adds a divergent boss, restores through a
+real `RewindRegistry`, requires a fresh boss and fresh owner-bound helpers,
+compares immediate ordered draw arguments/collision regions, and compares every
+helper scalar/enum plus parent scalars/motion/spawn/slot on each forward tick.
+
+The first unchanged-runtime selection ran 13 tests: three existing passes,
+six empty-restored-ring failures, and four test-only premature-attack failures.
+The native body collision gate correctly ignored those early attacks. The test
+was corrected to attack at replay ticks 60/94/128 and replay 300 ticks instead
+of 240. Runtime source was still unchanged. The corrected baseline ran the same
+13 identities: all ten new cases failed `fresh restore must retain progressed
+rings`, expected 13 and observed 0; the existing three passed. Both runs had
+zero errors and skips. Queue waits were 77 and 10 seconds; Maven reported
+80 seconds and 25.344 seconds respectively, separately from waiting.
+
+
+The first post-change selection ran 34 cases: 21 passed, 13 errored, zero
+assertion failures and zero skips. The initial holder returned an immutable
+`List` directly. The stateful codec calls `deepCopySnapshotValue`, which rejects
+`java.util.ImmutableCollections$ListN`; all eleven graph capture/restore cases
+and both native-player fatal-hit rewind cases failed with that exact error.
+This payload shape was rejected. The final holder uses the existing box-rig
+record/defensively-copied-array shape; no shared codec change was made. Its
+remaining 21 checks included the field plan, part buckets, native init/tracking,
+arm waits, linked drawing, collision phases, detach and defeat. Queue waiting
+was 325 seconds; Maven reported 82 seconds of execution. After this localized
+capture-format correction, only the affected capture/restore checks and the
+exact owner disposition check are repeated.
+
+
+The final affected selection passed 16 cases with zero failures, errors or skips:
+all thirteen LBZ graph cases, the exact owner disposition case, and both
+`fatalHitInstallsWaitBeforeFirstDecrementForNativePlayersAndRewinds` cases using
+actual ROM-backed Sonic/Tails team members and the gameplay registry. Queue
+waiting was 72 seconds; Maven reported 81 seconds of execution. The completed
+selections cover 34 distinct identities, with the eighteen unaffected behavior
+cases retained from the earlier selection and sixteen passing final cases.
+There was no single all-green 34-case invocation. The ten new graph cases compare
+all 21 helper values and reject every stale source helper. Their draw evidence
+is ordered renderer arguments, not GPU pixels; their test sprites do not certify
+player physics, automatic touch callbacks, a complete act route, all donor/team
+variants or independently allocated native child-slot admission. Those inherited
+route/graph obligations remain outside this one-field cleanup.
+
+The exact selections, using the verified existing main-checkout ROMs and its
+current queue wrapper from this worktree, were:
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+export LUA_BIN=/usr/bin/lua5.4
+# MAIN_CHECKOUT identifies the existing main checkout; no ROM links are created.
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kLbzMinibossGraphRewind' "-Dsonic1.rom.path=$MAIN_CHECKOUT/s1.gen" "-Dsonic2.rom.path=$MAIN_CHECKOUT/s2.gen" "-Ds3k.rom.path=$MAIN_CHECKOUT/s3k.gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestRewindFieldDispositionAudit#lbzPanelHolderIsCapturedWithoutDisablingTheDefaultOwnerPath,TestS3kLbz1MinibossAndTransitionHeadless#miniboss*+fatalHit*,TestS3kLbz1KnucklesSequenceHeadless#lbzMiniboss*' "-Dsonic1.rom.path=$MAIN_CHECKOUT/s1.gen" "-Dsonic2.rom.path=$MAIN_CHECKOUT/s2.gen" "-Ds3k.rom.path=$MAIN_CHECKOUT/s3k.gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kLbzMinibossGraphRewind,TestRewindFieldDispositionAudit#lbzPanelHolderIsCapturedWithoutDisablingTheDefaultOwnerPath,TestS3kLbz1MinibossAndTransitionHeadless#fatalHitInstallsWaitBeforeFirstDecrementForNativePlayersAndRewinds' "-Dsonic1.rom.path=$MAIN_CHECKOUT/s1.gen" "-Dsonic2.rom.path=$MAIN_CHECKOUT/s2.gen" "-Ds3k.rom.path=$MAIN_CHECKOUT/s3k.gen" test -B
+```
+
+The first command ran twice before runtime edits, with the test correction
+recorded above. The second exercised the rejected list payload; the third
+verified the final typed-array payload. Exact XML identities, failures and skips
+were inspected for every completed run, then consumed reports were removed.
+No live job, retained diagnostic archive or pass cache remains. A change-based
+dry plan against the pinned base selected 2,986 smoke classes; bounded local
+capture behavior and this delegation's explicit limits justify the focused
+selection. No broad smoke run, full guard profile, API gate, four-class S3K
+stability selection or release-only full suite ran here. Only the positively
+verified `LbzMinibossInstance#panels` baseline key is removed; other rows, totals
+and obligations are unchanged by this follow-up. Parent composition and delivery
+remain pending.

@@ -14,7 +14,6 @@ com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debr
 com.openggf.game.sonic3k.objects.IczMinibossInstance#childComponents
 com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren
 com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions
-com.openggf.game.sonic3k.objects.LbzMinibossInstance#panels
 com.openggf.game.sonic3k.objects.LightningSparkObjectInstance#sparkTiles
 com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes
 com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned
