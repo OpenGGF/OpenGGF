@@ -983,6 +983,341 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // Constructed device contracts below use actual authenticated media/owners, not natural route evidence.
+    @Test void eleventhSpringBankDerivesAfterFloatForEveryLegacyConstructorAndRejectsBeforeAdmission() throws Exception {
+        assertThrows(NullPointerException.class, () -> new CdOpeningObjectRuntime.SpringFm(null));
+        assertEquals(12326, BANKS.spring());
+        var explicit = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449, 464);
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413));
+        assertEquals(explicit, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 299, 369, 374, 413, 449));
+        assertEquals(98, new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8, 47, 83).spring());
+        var assets = load();
+        var saved = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
+        var window = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
+        // Float's last tile, Powerup, player, a negative and the 36-tile end overflow. Empty SAT cannot hide them.
+        for (int spring : List.of(12325, 12275, 10000, -1, Integer.MAX_VALUE - 34)) {
+            var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098,
+                    12161, 12231, 12236, 12275, 12311, spring);
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }));
+                assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, saved, window, new byte[640], banks));
+                assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    // Init RTS precedes Solid: all three normal families draw in physical order without a player launch.
+    @Test void springInitUsesActualIndependentRootsAndNormalArtThroughThePhysicalQueue() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f);
+            var pool = f.runtime.placement().pool();
+            pool.write(pool.state(40).moveByte(ID, 0x0A).moveWord(X, 0x40).moveWord(Y, 0x780));
+            pool.write(pool.state(41).moveByte(ID, 0x0A).moveWord(X, 0x80).moveWord(Y, 0x780).moveByte(SUBTYPE, 6));
+            pool.write(pool.state(42).moveByte(ID, 0x0A).moveWord(X, 0xC0).moveWord(Y, 0x780).moveByte(SPRITE_FLAGS, 2));
+            var before = f.frame.state(); var environment = f.frame.environment(); var sounds = f.runtime.lastSoundRequests();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(before, f.frame.state()); assertEquals(environment, f.frame.environment());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(List.of(2, 8, 14), List.of(f.slot(40).routine(), f.slot(41).routine(), f.slot(42).routine()));
+            assertEquals(List.of(0x209BA0, 0x209BA6, 0x209BA0),
+                    List.of(f.slot(40).longBits(MAPPINGS), f.slot(41).longBits(MAPPINGS), f.slot(42).longBits(MAPPINGS)));
+            assertEquals(List.of(0x520, 0x2520, 0x520), List.of(f.slot(40).word(TILE), f.slot(41).word(TILE), f.slot(42).word(TILE)));
+            assertEquals(List.of(-4096, -2560, -4096), List.of((int) f.slot(40).signedWord(SPRING_SPEED),
+                    (int) f.slot(41).signedWord(SPRING_SPEED), (int) f.slot(42).signedWord(SPRING_SPEED)));
+            assertEquals(List.of(16, 8, 16), List.of(f.slot(40).unsignedByte(WIDTH), f.slot(41).unsignedByte(WIDTH), f.slot(42).unsignedByte(WIDTH)));
+            assertEquals(List.of(8, 16, 8), List.of(f.slot(40).unsignedByte(Y_RADIUS), f.slot(41).unsignedByte(Y_RADIUS), f.slot(42).unsignedByte(Y_RADIUS)));
+            assertEquals(2, f.slot(42).flags());
+            for (int whole : List.of(40, 41, 42)) {
+                assertEquals(f.slot(whole).centreX(), f.slot(whole).word(SPRING_ANCHOR_X));
+                assertEquals(0, f.slot(whole).spriteFlags() & 0x80);
+            }
+            var sat = f.runtime.finishAfterCamera(POST);
+            var springPieces = sat.provenance().stream().filter(v -> v.slotRef().wholeIndex() >= 40).toList();
+            assertEquals(List.of(40, 40, 41, 41, 42, 42), springPieces.stream().map(v -> v.slotRef().wholeIndex()).toList());
+            assertEquals(List.of(0, 0, 1, 1, 2, 2), springPieces.stream().map(Provenance::queueOrdinal).toList());
+            assertTrue(springPieces.stream().allMatch(v -> v.queueBucket() == 4));
+            for (int whole : List.of(40, 41, 42)) assertEquals(0x80, f.slot(whole).spriteFlags() & 0x80);
+            f.runtime.finishOrdinaryTail(); f.service(0x80);
+            var shown = f.runtime.displayedFrame();
+            var ids = shown.patternVersions().keySet().stream().filter(id -> id >= BANKS.spring() && id < BANKS.spring() + 36).toList();
+            assertFalse(ids.isEmpty());
+            for (int id : ids) assertEquals(CdObjectPresentation.patternVersion(
+                    f.assets.openingObjects().springArtBank().tile(0x520 + id - BANKS.spring())), shown.patternVersions().get(id));
+        }
+    }
+
+    // Solid lands at $780-(8+19)=$765; Spring's integer +8 gives $76D and keeps both fractions.
+    @Test void springUpCommitsSolidThenExactLaunchFieldsAndKeepsAllOtherFrameOwners() throws Exception {
+        for (int subtype : List.of(0, 2)) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                seedSpringPlayer(f, 0x01008000, 0x07671234, 0x234, 0x100, 2, 0, 17);
+                pool.write(spring(f, pool.state(40), 2, 0x84, 0, subtype));
+                var before = f.frame.state(); var env = f.frame.environment(); var display = f.frame.display();
+                var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                var m = before.motion();
+                var expected = new CdPlayerMotionState(0x01008000, 0x076D1234, 0x234, subtype == 0 ? -4096 : -2560,
+                        0x345, 2, 0, 2, m.spriteFlags(), 9, 19, 0x10, 0x12, 0, 17, 0x4567, 1, 1, 0x31, 0x42);
+                assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
+                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 40)), f.frame.state());
+                assertEquals(env, f.frame.environment()); assertEquals(display, f.frame.display());
+                assertEquals(4, f.slot(40).routine()); assertEquals(0, f.slot(40).flags() & 8);
+                sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
+                assertEquals(sounds, f.runtime.lastSoundRequests());
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                assertEquals(subtype == 0 ? -4096 : -2560, f.frame.state().motion().yVelocity(), "no effect replay at build/tail");
+            }
+        }
+    }
+
+    // Native bottom Solid gives $79D; Spring -8 gives $795. GetOff's sound precedes the separate Spring call.
+    @Test void springDownCommitsChargeStopThenLaunchThenSpringFmAndItsFirstAnimation() throws Exception {
+        for (int subtype : List.of(0, 2)) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                seedSpringPlayer(f, 0x01008000, 0x079B1234, 0x234, -0x400, 0x0A, 40, 17);
+                pool.write(spring(f, pool.state(40), 14, 0x86, 0x0A, subtype).moveByte(ROUTINE_2, 0xA7));
+                var before = f.frame.state(); var sounds = new ArrayList<>(f.runtime.lastSoundRequests());
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                var expected = new CdPlayerMotionState(0x01008000, 0x07951234, 0x234, subtype == 0 ? 4096 : 2560,
+                        0x345, 2, 0x40, 2, before.motion().spriteFlags(), 9, 19, 0x1A, 0x12, 1, 17, 0x4567, 0, 0, 0x31, 0x42);
+                assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
+                        before.history(), before.rotationDistance(), new CdPlayerBody.ObjectLinks(0, 0)), f.frame.state());
+                sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+                sounds.add(new CdOpeningObjectRuntime.SpringFm(CdSpring.FmSound.FM_SPRING));
+                assertEquals(sounds, f.runtime.lastSoundRequests());
+                assertEquals(16, f.slot(40).routine()); assertEquals(0, f.slot(40).unsignedByte(ROUTINE_2));
+                assertEquals(1, f.slot(40).unsignedByte(ANIMATION_FRAME)); assertEquals(0, f.slot(40).unsignedByte(MAP_FRAME));
+                assertEquals(0, f.slot(40).flags() & 8);
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                assertEquals(sounds, f.runtime.lastSoundRequests());
+            }
+        }
+    }
+
+    // Width8 gives half18: X$F0 is depth2, Solid resolves to $EE, then Spring gives $E6 or $F6.
+    @Test void springSideKeepsFractionsUsesMoveLock3eAndFinalPlayerSatInsteadOfEarlierBodyPose() throws Exception {
+        for (int flip : List.of(0, 1)) for (int rolling : List.of(0, 4)) {
+            try (var f = new Fixture()) {
+                var publication = springDeviceCut(f); var pool = f.runtime.placement().pool();
+                var cut = publication.result().effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                        .map(CdPlayerBody.DisplayEligibility.class::cast).filter(CdPlayerBody.DisplayEligibility::eligible).findFirst().orElseThrow();
+                seedSpringPlayer(f, 0x00F08000, 0x07801234, 0x234, 0, rolling, 0, 9);
+                pool.write(spring(f, pool.state(40), 8, 0x84 | flip, flip, 4));
+                var before = f.frame.state(); var display = f.frame.display();
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                int x = flip == 0 ? 0xE6 : 0xF6, speed = flip == 0 ? 4096 : -4096;
+                var expected = new CdPlayerMotionState((x << 16) | 0x8000, 0x07801234, speed, 0, speed, 2, 0,
+                        rolling | flip, before.motion().spriteFlags(), 9, 19, rolling == 0 ? 0 : 0x1A, 0x12, 1, 9, 15, 1, 1, 0x31, 0x42);
+                assertEquals(new CdPlayerBody.State(expected, before.animation(), before.header(), before.timers(),
+                        before.history(), before.rotationDistance(), before.objectLinks()), f.frame.state());
+                assertEquals(0x2233, f.frame.state().timers().invincibility(), "$32 is not Spring's $3E move lock");
+                assertEquals(display, f.frame.display(), "earlier Body projection is not rewritten by launch");
+                assertEquals(10, f.slot(40).routine()); assertEquals(flip, f.slot(40).flags());
+                var sat = f.runtime.finishAfterCamera(POST); int at = satEntry(sat, 0);
+                var provenance = sat.provenance().get(at / 8);
+                assertEquals(cut.priority() & 7, provenance.queueBucket());
+                assertNotEquals(cut.centreXWord(), x); assertEquals(0, expected.spriteFlags() & 3);
+                var map = f.assets.sonic().mappingFrames().get(before.animation().mapFrame());
+                assertTrue(map.pieceCount() > 0);
+                assertEquals((128 + x + map.bytes().signedByte(5)) & 0x1FF, word(sat.bytes(), at + 6));
+                assertNotEquals((128 + cut.centreXWord() + map.bytes().signedByte(5)) & 0x1FF, word(sat.bytes(), at + 6));
+                assertEquals((128 + 0x780 - PRE.yWord() + map.bytes().signedByte(1)) & 0x1FF, word(sat.bytes(), at));
+                f.runtime.finishOrdinaryTail();
+            }
+        }
+    }
+
+    // Real pure Solid is a composition oracle here, not a fabricated Result or an independent physics proof.
+    @Test void springSolidPublishesProbeGlobalsAndOlderStandImageBeforeTheLaterPhysicalSlots() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0x234, 0x100, 8, 41, 0);
+            var shared = f.frame.captureShared(); var e = shared.environment(); var m = e.movement(); var g = m.globals();
+            var seeded = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), 0x55, 0x66, g.boredTimer(), g.scoreChain(),
+                    g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
+            f.frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), new CdPlayerBody.Environment(
+                    new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), seeded), e.controls(), e.globals(), e.dynamicSlots()),
+                    shared.artState(), shared.paused(), shared.vIntClock()));
+            pool.write(spring(f, pool.state(40), 2, 0x84, 0, 0).moveWord(X_VELOCITY, 0x123).moveWord(Y_VELOCITY, -0x180));
+            pool.write(floatBlock(pool.state(41), 2, 4, 0xA8));
+            pool.write(spring(f, pool.state(42), 2, 4, 0, 0).moveByte(ROUTINE_2, 5)
+                    .moveWord(X_FRACTION, 0x4567).moveWord(Y_FRACTION, 0x89AB));
+            var state = f.frame.state(); var h = state.header(); var env = f.frame.environment();
+            var expected = CdSolidObject.fromAssets(f.assets).run(CdSolidObject.Entry.SOLID_OBJECT, f.slot(40),
+                    new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(state.motion(), h.tile(), h.priority(), state.timers().hurt(), state.rotationDistance()),
+                            h.slotId(), state.objectLinks().pushObject(), state.objectLinks().standObject()),
+                    new CdSolidObject.Gates(env.globals().debugMode(), env.movement().gates().miniSonic()),
+                    new CdSolidObject.Globals(env.globals().invincible(), g.scoreChain(), 0x55, 0x66), pool.capture());
+            assertEquals(CdSolidObject.Path.STAND_ON, expected.path());
+            assertEquals(List.of(41), expected.otherSlots().stream().map(v -> v.identity().wholeIndex()).toList());
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.PRIMARY_ANGLE));
+            assertTrue(expected.globalWrites().contains(CdSolidObject.GlobalField.SECONDARY_ANGLE));
+            int angleCalls = f.angleWrites.size();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var after = f.frame.state().motion(); var actual = f.frame.environment().movement().globals();
+            assertEquals(0xA0, f.slot(41).flags(), "native StandOn releases the older a2 image");
+            assertEquals(40, f.frame.state().objectLinks().standObject());
+            assertEquals(expected.player().actor().motion().centreX16_16(), after.centreX16_16());
+            assertEquals(0xA300, after.centreX16_16() & 0xFFFF, "$8000 + ($123<<8) retains the native longword carry");
+            assertEquals(0x076B9234, after.centreY16_16(), "$765.1234 - $180<<8, then integer +8");
+            assertEquals(expected.globals().primaryAngle(), actual.primaryAngle());
+            assertEquals(expected.globals().secondaryAngle(), actual.secondaryAngle());
+            assertEquals(angleCalls, f.angleWrites.size(), "Frame adopts both buffers once; no PrimaryAngle metadata replay");
+            assertEquals(after.centreX16_16() >>> 16, f.slot(42).centreX());
+            assertEquals(0x76B, f.slot(42).centreY(), "later mirror reads this physical pass's launched player");
+            assertEquals(0x4567, f.slot(42).word(X_FRACTION)); assertEquals(0x89AB, f.slot(42).word(Y_FRACTION));
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SpringFm.class::isInstance).count());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void springCompositeRestoreKeepsTheLaunchAndReplaysTheNextRealBodyAnimationAndPicture() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0, 0x100, 2, 0, 0, 0);
+            pool.write(spring(f, pool.state(40), 2, 0x84, 0, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var objects = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var cpu = f.runtime.cpuSat(); var picture = f.runtime.displayedFrame();
+            assertEquals(-4096, actor.state().motion().yVelocity()); assertEquals(4, f.slot(40).routine());
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var nextCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var next = f.runtime.captureClosedCut(); var nextActor = f.frame.captureActor(); var nextShared = f.frame.captureShared();
+            assertNotEquals(actor.state().animation(), nextActor.state().animation(), "the next real Body animates the launched actor");
+            f.service(0x80); var shown = f.runtime.displayedFrame(); int publications = f.artPublications.size();
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertSame(cpu, f.runtime.cpuSat()); assertSame(picture, f.runtime.displayedFrame());
+            assertEquals(actor, f.frame.captureActor()); assertEquals(shared.environment(), f.frame.environment());
+            assertEquals(objects.lastSoundRequests(), f.runtime.lastSoundRequests());
+            assertEquals(publications, f.artPublications.size(), "restore performs no service or upload");
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.body(3).result().boundary());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail(); var current = f.runtime.captureClosedCut();
+            assertEquals(nextActor, f.frame.captureActor());
+            assertEquals(nextShared.environment(), f.frame.environment()); assertEquals(nextShared.vIntClock(), f.frame.vIntClock());
+            assertEquals(nextShared.artState().lastFrame(), f.frame.artState().lastFrame());
+            assertEquals(nextShared.artState().dirty(), f.frame.artState().dirty());
+            assertArrayEquals(nextShared.artState().cpuBuffer().copy(), f.frame.artState().cpuBuffer().copy());
+            assertArrayEquals(nextShared.artState().residentBank().copy(), f.frame.artState().residentBank().copy());
+            assertEquals(nextShared.paused(), f.frame.paused());
+            assertArrayEquals(nextCpu.bytes(), replay.bytes()); assertEquals(nextCpu.provenance(), replay.provenance());
+            assertEquals(next.displayedFrame(), current.displayedFrame()); assertEquals(next.lastSoundRequests(), current.lastSoundRequests());
+            assertEquals(next.placement().pool().slots(), current.placement().pool().slots());
+            assertArrayEquals(next.placement().savedFlags().copy(), current.placement().savedFlags().copy());
+            assertEquals(next.placement().status(), current.placement().status());
+            assertEquals(next.ringGlobals(), current.ringGlobals()); assertEquals(next.spillGlobals(), current.spillGlobals());
+            assertEquals(next.contactGlobals(), current.contactGlobals()); assertEquals(next.scoreGlobals(), current.scoreGlobals());
+            assertEquals(next.devGlobals(), current.devGlobals()); assertEquals(next.levelGlobals(), current.levelGlobals());
+            assertEquals(next.powerupArtState(), current.powerupArtState());
+            f.service(0x80); assertEquals(shown, f.runtime.displayedFrame());
+        }
+    }
+
+    // Dynamic ID0 is still real owned RAM. DrawObject clears bit7 before following; the SAT fetches final XY.
+    @Test void springParentReadsAnEmptyLiveDynamicImageAndDeletedQueuedSlotsStayAbsentAtDrain() throws Exception {
+        for (boolean delete : List.of(false, true)) {
+            try (var f = new Fixture()) {
+                springDeviceCut(f); var pool = f.runtime.placement().pool();
+                pool.write(pool.state(41).moveWord(X, 0x140).moveWord(Y, 0x800)); // ID remains 0, never dispatched.
+                var initial = spring(f, pool.state(40), 6, 0x84, 8, 0).moveByte(MAP_FRAME, 2)
+                        .moveWord(X_FRACTION, 0x4321).moveWord(Y_FRACTION, 0x8765).moveWord(SPRING_PARENT, 0xDA40)
+                        .moveByte(SPRING_PARENT_X_OFFSET, -128).moveByte(SPRING_PARENT_Y_OFFSET, -128)
+                        .moveWord(SPRING_ANCHOR_X, delete ? 0x380 : 0x100);
+                pool.write(initial); f.runtime.runDynamicSlotsAfterReservedSlots();
+                if (delete) assertArrayEquals(new byte[64], f.slot(40).copyBytes());
+                else assertEquals(initial.moveByte(ROUTINE, 2).moveByte(FLAGS, initial.flags() & ~8)
+                        .moveByte(PREVIOUS_ANIMATION, 1).moveByte(MAP_FRAME, 0)
+                        .moveByte(SPRITE_FLAGS, 4).moveWord(X, 0xC0).moveWord(Y, 0x780), f.slot(40));
+                var sat = f.runtime.finishAfterCamera(POST);
+                assertTrue(sat.provenance().stream().noneMatch(v -> v.slotRef().wholeIndex() == 41));
+                if (delete) assertTrue(sat.provenance().stream().noneMatch(v -> v.slotRef().wholeIndex() == 40));
+                else {
+                    int at = satEntry(sat, 40);
+                    assertEquals(128 + 0xC0 - 16, word(sat.bytes(), at + 6), "final parent-follow X, not DrawObject X$100");
+                    assertEquals(128 + 0x780 - PRE.yWord() - 8, word(sat.bytes(), at));
+                    assertEquals(0x80, f.slot(40).spriteFlags() & 0x80);
+                    assertEquals(0x4321, f.slot(40).word(X_FRACTION)); assertEquals(0x8765, f.slot(40).word(Y_FRACTION));
+                }
+                f.runtime.finishOrdinaryTail();
+            }
+        }
+    }
+
+    @Test void springLaunchPrecedesAnUnknownLaterIdAndItsCompletedPrefixSurvivesTerminalClosure() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool();
+            seedSpringPlayer(f, 0x01008000, 0x07671234, 0, 0x100, 2, 0, 0);
+            pool.write(spring(f, pool.state(40), 2, 0x84, 0, 0));
+            pool.write(pool.state(41).moveByte(ID, 0x7E));
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("41")); assertTrue(failure.getMessage().contains("7e"));
+            assertEquals(4, f.slot(40).routine()); assertEquals(0, f.slot(40).spriteFlags() & 0x80);
+            assertEquals(0x076D1234, f.frame.state().motion().centreY16_16()); assertEquals(-4096, f.frame.state().motion().yVelocity());
+            assertEquals(1, f.runtime.lastSoundRequests().stream().filter(CdOpeningObjectRuntime.SpringFm.class::isInstance).count());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertThrows(IllegalStateException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+        }
+    }
+
+    @Test void reachedDiagonalSpringStillStopsAtItsNativeSelectorAfterOnlyTheInitPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            springDeviceCut(f); var pool = f.runtime.placement().pool(); var before = f.frame.state();
+            pool.write(pool.state(40).moveByte(ID, 0x0A).moveByte(SUBTYPE, 8).moveWord(X, 0x100).moveWord(Y, 0x780));
+            var failure = assertThrows(CdSpring.UnsupportedSpring.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSpring.UnsupportedBoundary.DIAGONAL_TILE_SELECTOR, failure.boundary()); assertEquals(15, failure.value());
+            assertEquals(20, f.slot(40).routine()); assertEquals(0x209BF0, f.slot(40).longBits(MAPPINGS));
+            assertEquals(0x520, f.slot(40).word(TILE)); assertEquals(0, f.slot(40).word(SPRING_SPEED));
+            assertEquals(before, f.frame.state()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertTrue(f.runtime.lastSoundRequests().stream().noneMatch(CdOpeningObjectRuntime.SpringFm.class::isInstance));
+        }
+    }
+
+    /** Existing public owner edits after the completed player slot: constructed device ingress, never a route. */
+    private static CdPlayerFrameRuntime.BodyPublication springDeviceCut(Fixture f) {
+        f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+        f.runtime.placement().pool().clearDynamicSlots();
+        return publication;
+    }
+
+    private static CdObjectState spring(Fixture f, CdObjectState s, int routine, int spriteFlags, int flags, int subtype) throws java.io.IOException {
+        var assets = CdSpring.Assets.fromObjectAssets(f.assets.openingObjects());
+        boolean side = (subtype & 4) != 0;
+        return s.moveByte(ID, CdSpring.OBJECT_ID).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
+                .moveByte(SUBTYPE, subtype).moveByte(FLAGS, flags).moveLong(MAPPINGS, assets.mappingsAddress() + (side ? 6 : 0))
+                .moveWord(TILE, (subtype & 2) == 0 ? 0x520 : 0x2520).moveWord(SPRING_SPEED, assets.speedWord(subtype))
+                .moveByte(WIDTH, side ? 8 : 16).moveByte(Y_RADIUS, side ? 16 : 8).moveByte(PRIORITY, 4)
+                .moveWord(X, 0x100).moveWord(Y, 0x780).moveWord(SPRING_ANCHOR_X, 0x100);
+    }
+
+    private static void seedSpringPlayer(Fixture f, int x, int y, int xv, int yv, int flags, int stand, int charge) {
+        seedSpringPlayer(f, x, y, xv, yv, flags, stand, charge, 1);
+    }
+
+    private static void seedSpringPlayer(Fixture f, int x, int y, int xv, int yv, int flags, int stand, int charge,
+                                         int playerControl) {
+        var actor = f.frame.captureActor(); var s = actor.state();
+        var motion = new CdPlayerMotionState(x, y, xv, yv, 0x345, 2, 0x40, flags, s.motion().spriteFlags(),
+                9, 19, 0x1A, 0x12, 1, charge, 0x4567, 1, playerControl, 0x31, 0x42);
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
+                s.header(), new CdPlayerBody.Timers(0x123, 0x2233, 0x3344, 0x55), s.history(), s.rotationDistance(),
+                new CdPlayerBody.ObjectLinks(0, stand)), actor.display()));
+    }
+
+    private static int satEntry(CpuSat sat, int whole) {
+        for (int i = 0; i < sat.provenance().size(); i++) if (sat.provenance().get(i).slotRef().wholeIndex() == whole) return i * 8;
+        fail("Missing SAT slot " + whole); return -1;
+    }
+
     private static CdObjectState floatBlock(CdObjectState s, int routine, int spriteFlags, int flags) {
         return s.moveByte(ID, 0x12).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
                 .moveLong(MAPPINGS, 0x20A3FA).moveWord(TILE, 0x4334).moveByte(PRIORITY, 1)

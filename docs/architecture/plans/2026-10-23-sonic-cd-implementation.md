@@ -4114,3 +4114,73 @@ measured native draw calls. The renderer still uses development planes: no nativ
 PlaneB image, native priority/PLC/timing, route/act/game or region-parity claim.
 The next client must consume selected immutable words with explicit residency
 authority; it may not replay observations or advance source state during draw.
+
+### Live normal Spring composition and rendered picture — 24 October 2026
+
+The physical dynamic walk now dispatches normal Spring ID0A with current
+post-Body player/global values and one shared Solid owner. Each genuine Solid
+call checks actual snapshot/image ownership and the current pool cut before
+pool writes, then applies exactly its declared player/global writes. Launch
+has a separate guarded motion-only port after the native object prefix and
+before FM_SPRING. Both integer coordinates preserve their fractions; move-lock
+WORD3E stays distinct from invincibility WORD32. Completed Solid sounds precede
+Spring sound; no call/effect is replayed. The final SAT lens still reads actual
+post-object actor state with the earlier Body eligibility/bucket. Cold/restart
+admission and each serviced picture validate all eleven actual art spans.
+The existing governed picture range now owns400 patterns and removes the same
+400 on close; normal Spring art contributes36 after the old364. No extra state
+or mutable snapshot partition was added. Native sources are ObjSpring/Index,
+Init/Action/Reset (_Objects/Spring/Main.asm:130-409), DrawObjects
+(Object Functions.asm:263-420), and PLC_Std (PP Data Act1 Present:54-83), pin1ecc5f3a.
+
+Root60408 ran the nine-class combined selection at9e6d6c973 plus four imported
+Java files:477 tests,2failures,1error,0skips, exit23:42:10BST. Runtime76 had a
+reset full-image expectation omitting FLAGS bit3 clear and a replay fixture
+retaining unsupported playerControl1; WorldLoad32 still expected unowned0A,
+but the actual400-Right-input route reached unowned34 at physical58. Frame165,
+picture19, EGL8, API11, Spring65, Solid88 and mappings13 passed. Independent
+source review identified both Runtime fixture defects and a masked art-wrapper
+equality defect. Test-only R2 preserves dirty-control preservation cases,
+seeds control0 only for next-Body replay, asserts MAIN_RETURN and a real animation
+change, checks both art buffers/scalars by content, and clears the expected
+reset flag. The same World recipe now asserts the actual SpinTunnel tag34
+frontier, without admitting that body, changing inputs or adding a camera fence.
+Root33975 reran complete Runtime76/WorldLoad32:108/0/0/0, exit23:45:16BST,
+13squeue/32.987sMaven. Production stayed byte-identical to reviewed frozenRuntime.
+
+A new constructed actual-EGL test clears all dynamic slots after real player
+Init, places up/side/down Springs40/41/42, runs real native Init, then explicitly
+selects animation routines4/10/16. Sonic remains live. Six actual source-animator
+rows check independent native piece/SAT/painter literals, all36 normal tile
+nibbles, family-local framebuffer differences against completed-scroll terrain,
+full/course state and every-row pixel replay, real atlas textures, and absence
+of all400 logical entries after World close before PASS is written. It proves
+constructed rendering and retirement, not a natural contact/launch route.
+Only57 entries were actually materialized in this fixture, including all36
+Spring IDs; checking400 policy/reservation/removal is not rendering all400.
+Root34863 ran complete EGL class9/0/0/0, exit23:49:35BST,
+33squeue/43.403sMaven. Actual PNGs/input/outcome are retained externally under
+native/engine-spring-picture-r1. The previous eight EGL routes remain intact.
+Independent client review found no P1/P2. Its nonblocking GPU oracle limit
+remains: per-family presence and complete phase-image changes do not separately
+prove every family's GPU animation/color change against native RGB. No stronger
+per-family or native-pixel claim is made.
+
+Commands were queued exact selectors with -Dmse=off and supplied absolute
+media/S2 properties: combined -Dtest=TestCdOpeningObjectRuntime,
+TestCdPlayerFrameRuntime,TestCdObjectPresentation,TestSonicCdOpeningWorldLoad,
+TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface,TestCdSpring,
+TestCdSolidObject,TestCdObjectMappings; corrected Runtime/WorldLoad selection;
+then -Dtest=TestSonicCdOpeningWorldEgl with fresh soniccd.spring.output.
+All used Java25.0.5.0.2, DISPLAY/WAYLAND_DISPLAY unset, actual surfaceless-EGL
+opt-in and no-device audio. Every selected XML identity/skip/property was
+inspected; stale XML from other runs was excluded. The original477 run stays
+red, overlapping results are not summed, and no broad/full-suite pass follows.
+
+The native PlaneB CPU image/service/rewind is present, but drawing still uses
+development planes. Cold/terrain-only rendering needs a shared owner scope
+before descriptor mutation; its feasibility audit stopped without importing
+unchanged client snapshots. Native section PLC residency, diagonal Springs,
+mixed plane/sprite priority, natural Spring launches, remaining USA gameplay
+and Japan/Europe parity remain outside these bounded checks. Work stays private
+and local with no destination integration, push, PR or complete-game claim.

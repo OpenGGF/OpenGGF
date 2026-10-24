@@ -834,12 +834,12 @@ class TestSonicCdOpeningWorldLoad {
         assertThrows(IllegalStateException.class, () -> step(h, LogicalInputSnapshot.neutral()));
     }
 
-    @Test void ordinaryRampApproachStillStopsAtTheActualUnownedSpringDispatcher() throws Exception {
+    @Test void ordinaryRampApproachPassesOwnedSpringsAndStopsAtTheSpinTunnelTagDispatcher() throws Exception {
         var h = opening();
         var failure = assertThrows(UnsupportedOperationException.class, () -> {
             for (int call = 0; call < 400; call++) step(h, input(8, 0, false));
         });
-        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $a at live physical slot "), failure.getMessage());
+        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $34 at live physical slot "), failure.getMessage());
     }
 
     // ClearScreen/InitLevelDrawBG: this is post-initial-draw, before any represented V-int.

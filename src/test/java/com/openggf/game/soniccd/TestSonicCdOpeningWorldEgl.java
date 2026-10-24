@@ -38,6 +38,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import static com.openggf.game.soniccd.objects.CdObjectState.ByteField.*;
+import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
+import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.*;
 
@@ -144,22 +147,19 @@ class TestSonicCdOpeningWorldEgl {
                 var neutral = new Bk2FrameInput(pickupIndex + 1, 0, 0, false, "post-pickup neutral");
                 var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
+                int pictureBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(pictureBase, pictureBase + 24, pictureBase + 38,
+                        pictureBase + 108, pictureBase + 136, pictureBase + 199, pictureBase + 269,
+                        pictureBase + 274, pictureBase + 313, pictureBase + 349, pictureBase + 364);
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aSpringDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
                                 source.assets().openingObjects().floatBlockArtBank(),
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base(),
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 24,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 38,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 108,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 136,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 199,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 269,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 274,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 313,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 349));
+                                source.assets().openingObjects().springArtBank(),
+                                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring()));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -676,6 +676,223 @@ class TestSonicCdOpeningWorldEgl {
                         + "All dynamic slots were explicitly cleared, then one routine4 FloatBlock was placed at(200,$740). No player/global setter.\n"
                         + "This is constructed component ingress, not a Present route into Future falling or standing-object MODE support.\n"
                         + "USA DEV preload only; no native timing, live PLC residency, pixel, act or full-game parity claim.\n", StandardOpenOption.CREATE_NEW);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
+    @Test void actualEglConstructedNormalSpringWorldAnimatesAll36TilesReplaysAndRetires400Patterns() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media); assertFalse(media.isBlank());
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("8 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-normal-spring-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.spring.output");
+        // Hand literals from MapSpr_Spring1/2 (Spring/Data/Mappings.asm:1-44, native pin1ecc5f3af):
+        // each piece is {signed Y, size, tile offset, signed X}; each root has its own three-frame index.
+        int[][][] pieces = {
+                {{-8, 12, 0, -16}, {0, 12, 4, -16}}, {{0, 12, 0, -16}},
+                {{-32, 12, 0, -16}, {-24, 6, 8, -8}, {0, 12, 14, -16}},
+                {{-16, 3, 18, 0}, {-16, 3, 22, -8}}, {{-16, 3, 18, -8}},
+                {{-16, 3, 18, 24}, {-8, 9, 26, 0}, {-16, 3, 32, -8}}
+        };
+        var offsets = List.of(List.of(4, 5, 6, 7, 0, 1, 2, 3), List.of(0, 1, 2, 3),
+                List.of(14, 15, 16, 17, 8, 11, 9, 12, 10, 13, 0, 1, 2, 3),
+                List.of(22, 23, 24, 25, 18, 19, 20, 21), List.of(18, 19, 20, 21),
+                List.of(32, 33, 34, 35, 26, 28, 30, 27, 29, 31, 18, 19, 20, 21));
+        // .Compress (Spring/Data/Animations.asm:4-8): delay0, frames0,1,1,2,... .
+        // Six real animator calls prepare [0,1,1,2,2,2]; the NEXT V-int displays [0,0,1,1,2,2].
+        int[] cpuFrames = {0, 1, 1, 2, 2, 2}, displayedFrames = {0, 0, 1, 1, 2, 2};
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var frame = module.requirePlayerFrame();
+                step(loop, movie.getFrame(0)); // Real player Init before the explicit constructed object ingress.
+                var pool = runtime.placement().pool();
+                pool.clearDynamicSlots(); // Deliberately isolate glyphs: ALL dynamic objects are cleared; Sonic remains live.
+                int cameraX = GameServices.camera().getX(), cameraY = GameServices.camera().getY();
+                int[] worldX = {cameraX + 112, cameraX + 192, cameraX + 272};
+                int worldY = cameraY + 72;
+                for (int family = 0; family < 3; family++) {
+                    pool.write(pool.state(40 + family).moveByte(ID, 0x0A).moveWord(X, worldX[family]).moveWord(Y, worldY)
+                            .moveByte(SUBTYPE, family == 1 ? 6 : 0).moveByte(SPRITE_FLAGS, family == 2 ? 2 : 0));
+                }
+                step(loop, movie.getFrame(1)); // Actual physical ID$0A dispatcher runs native Init, not a direct body call.
+                assertEquals(List.of(2, 8, 14), List.of(pool.state(40).routine(), pool.state(41).routine(), pool.state(42).routine()));
+                assertEquals(List.of(0x209BA0, 0x209BA6, 0x209BA0), List.of(pool.state(40).longBits(MAPPINGS),
+                        pool.state(41).longBits(MAPPINGS), pool.state(42).longBits(MAPPINGS)));
+                assertEquals(List.of(0x520, 0x2520, 0x520), List.of(pool.state(40).word(TILE), pool.state(41).word(TILE), pool.state(42).word(TILE)));
+                int[] animationRoutines = {4, 10, 16};
+                for (int family = 0; family < 3; family++) {
+                    assertEquals(0x80, pool.state(40 + family).spriteFlags() & 0x80, "The real queue made this Spring visible");
+                    // EXPLICIT constructed routine cuts after actual Init. This does NOT prove a contact/launch route.
+                    // No MAP_FRAME/script/timer patch: each later frame comes from the real source animator dispatch.
+                    pool.write(pool.state(40 + family).moveByte(ROUTINE, animationRoutines[family]));
+                }
+                var atlas = GameServices.graphics().getPatternAtlas();
+                int base = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+                assertEquals(base + 364, banks.spring());
+                // Reservation is the existing exclusive governed OBJECTS range; only the400 picture IDs are retired.
+                for (int offset = 0; offset < 400; offset++) {
+                    int id = base + offset;
+                    assertEquals(1, atlas.registeredRangesForTesting().stream()
+                            .filter(range -> id >= range.base() && id < range.base() + range.size()).count(), "reservation " + id);
+                }
+                var objects = source.assets().openingObjects(); var springArt = objects.springArtBank();
+                var policy = com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aSpringDevPreloadedArt(
+                        frame.artState(), runtime.powerupArtState(), objects, objects.frontierArtBank(), objects.contactArtBank(),
+                        objects.floatBlockArtBank(), springArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                        banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock(), banks.spring());
+                int[] nativeFirst = {0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520};
+                int[] counts = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36};
+                int logical = base;
+                for (int span = 0; span < counts.length; span++) for (int tile = 0; tile < counts[span]; tile++) {
+                    assertEquals(logical++, policy.resolve(nativeFirst[span] + tile).logicalPatternId());
+                }
+                assertEquals(base + 400, logical, "All eleven actual policy spans cover exactly400 logical IDs");
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var expected = new ArrayList<Capture>(); var expectedPixels = new ArrayList<int[]>();
+                var reached = new java.util.TreeSet<Integer>();
+                var phasePictures = new RgbaImage[3];
+                var previousCpu = runtime.cpuSat();
+                int previousCameraX = GameServices.camera().getX(), previousCameraY = GameServices.camera().getY();
+                for (int row = 2; row < 8; row++) {
+                    step(loop, movie.getFrame(row));
+                    var completed = capture(module); expected.add(completed);
+                    var published = completed.publication().published();
+                    assertEquals(previousCameraX, published.cameraX()); assertEquals(previousCameraY, published.cameraY());
+                    // Validate BOTH the prior CPU SAT now displayed and the newly completed CPU SAT, without calling convert.
+                    for (int cut = 0; cut < 2; cut++) {
+                        var sat = cut == 0 ? previousCpu : runtime.cpuSat(); var raw = sat.bytes();
+                        int mapFrame = cut == 0 ? displayedFrames[row - 2] : cpuFrames[row - 2];
+                        int cx = cut == 0 ? previousCameraX : GameServices.camera().getX();
+                        int cy = cut == 0 ? previousCameraY : GameServices.camera().getY();
+                        for (int family = 0; family < 3; family++) {
+                            var literal = pieces[(family == 1 ? 3 : 0) + mapFrame]; int seen = 0;
+                            for (int entry = 0; entry < sat.spriteCount(); entry++) {
+                                var origin = sat.provenance().get(entry);
+                                if (origin.slotRef().wholeIndex() != 40 + family) continue;
+                                assertTrue(seen < literal.length); var p = literal[seen];
+                                assertEquals(4, origin.queueBucket()); assertEquals(seen++, origin.mappingPieceOrdinal());
+                                int height = (p[1] & 3) + 1, relativeY = family == 2 ? -p[0] - height * 8 : p[0];
+                                int at = entry * 8;
+                                assertEquals(worldY - cy + 128 + relativeY, ((raw[at] & 255) << 8) | (raw[at + 1] & 255));
+                                assertEquals(p[1], raw[at + 2] & 255); assertEquals(entry + 1, raw[at + 3] & 255);
+                                assertEquals(((family == 1 ? 0x2520 : 0x520) + p[2]) ^ (family == 2 ? 0x1000 : 0),
+                                        ((raw[at + 4] & 255) << 8) | (raw[at + 5] & 255));
+                                assertEquals((worldX[family] - cx + 128 + p[3]) & 0x1FF,
+                                        ((raw[at + 6] & 255) << 8) | (raw[at + 7] & 255));
+                            }
+                            assertEquals(literal.length, seen, "Every native Spring piece must traverse its physical queue slot");
+                        }
+                    }
+                    var picture = runtime.displayedFrame();
+                    var image = render(module, true); expectedPixels.add(image.pixels().clone());
+                    var terrain = renderTerrain(module, published);
+                    assertTerrainOutsideSprites(image, terrain, picture);
+                    for (int family = 0; family < 3; family++) {
+                        int centreX = worldX[family] - previousCameraX, centreY = worldY - previousCameraY;
+                        var tiles = picture.tiles().stream().filter(t -> t.patternId() >= banks.spring() && t.patternId() < banks.spring() + 36
+                                && t.x() >= centreX - 32 && t.x() < centreX + 40).toList();
+                        int index = (family == 1 ? 3 : 0) + displayedFrames[row - 2];
+                        var expectedOffsets = offsets.get(index);
+                        assertEquals(expectedOffsets.stream().map(offset -> banks.spring() + offset).toList(),
+                                tiles.stream().map(com.openggf.graphics.SpritePresentation.Tile::patternId).toList());
+                        int tileIndex = 0, changed = 0;
+                        // DrawObjects/DrawSprite source order, then reverse-piece painter order; these are literal mappings above.
+                        for (int piece = pieces[index].length - 1; piece >= 0; piece--) {
+                            var p = pieces[index][piece]; int width = (p[1] >>> 2) + 1, height = (p[1] & 3) + 1;
+                            int relativeY = family == 2 ? -p[0] - height * 8 : p[0];
+                            for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) {
+                                var tile = tiles.get(tileIndex++);
+                                assertEquals((float) (centreX + p[3] + x * 8), tile.x());
+                                assertEquals((float) (centreY + relativeY + (family == 2 ? height - 1 - y : y) * 8), tile.y());
+                                assertEquals(8f, tile.width()); assertEquals(8f, tile.height());
+                                assertEquals(family == 1 ? 1 : 0, tile.palette());
+                                assertFalse(tile.hFlip()); assertEquals(family == 2, tile.vFlip()); assertFalse(tile.priority());
+                                int offset = tile.patternId() - banks.spring(); reached.add(offset);
+                                var version = picture.patternVersions().get(tile.patternId()); assertNotNull(version);
+                                var decoded = new com.openggf.level.Pattern(); decoded.fromSegaFormat(springArt.tile(0x520 + offset).copy());
+                                long[] words = {version.a(), version.b(), version.c(), version.d()};
+                                for (int pixel = 0; pixel < 64; pixel++) assertEquals(decoded.getPixel(pixel % 8, pixel / 8) & 15,
+                                        (int) ((words[pixel / 16] >>> ((pixel % 16) * 4)) & 15), "actual Spring pixel " + offset + ":" + pixel);
+                                for (var other : picture.tiles()) {
+                                    if (other.patternId() >= banks.spring() && other.patternId() < banks.spring() + 36) continue;
+                                    assertTrue(other.x() + other.width() <= tile.x() || other.x() >= tile.x() + tile.width()
+                                                    || other.y() + other.height() <= tile.y() || other.y() >= tile.y() + tile.height(),
+                                            "Sonic/other glyphs must not contaminate the isolated Spring GPU footprint");
+                                }
+                                for (int py = (int) tile.y(); py < tile.y() + 8; py++) for (int px = (int) tile.x(); px < tile.x() + 8; px++) {
+                                    assertTrue(px >= 0 && px < 320 && py >= 0 && py < 224);
+                                    if (image.pixels()[py * 320 + px] != terrain.pixels()[py * 320 + px]) changed++;
+                                }
+                            }
+                        }
+                        assertTrue(changed > 0, "Actual EGL must draw this Spring family/frame independently of Sonic");
+                        assertEquals(cpuFrames[row - 2], pool.state(40 + family).unsignedByte(MAP_FRAME));
+                        assertEquals(row - 1, pool.state(40 + family).unsignedByte(ANIMATION_FRAME), "One real animator call per physical dispatch");
+                        assertEquals(animationRoutines[family], pool.state(40 + family).routine());
+                        assertEquals(0x80, pool.state(40 + family).spriteFlags() & 0x80);
+                    }
+                    assertCapture(completed, module); // Rendering/control must leave complete World state, Plane bytes/copies and sounds intact.
+                    int phase = displayedFrames[row - 2];
+                    if (phasePictures[phase] == null) {
+                        phasePictures[phase] = image;
+                        if (output != null) {
+                            ScreenshotCapture.savePNG(image, output.resolve("constructed-up-side-down-frame-" + phase + ".png"));
+                            ScreenshotCapture.savePNG(terrain, output.resolve("terrain-control-frame-" + phase + ".png"));
+                        }
+                    }
+                    previousCpu = runtime.cpuSat(); previousCameraX = GameServices.camera().getX(); previousCameraY = GameServices.camera().getY();
+                }
+                assertEquals(java.util.stream.IntStream.range(0, 36).boxed().collect(java.util.stream.Collectors.toSet()), reached);
+                assertFalse(Arrays.equals(phasePictures[0].pixels(), phasePictures[1].pixels()));
+                assertFalse(Arrays.equals(phasePictures[1].pixels(), phasePictures[2].pixels()), "The constructed animation must change actual rendered output");
+                var after = capture(module); var afterPixels = render(module, true);
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    assertCapture(before, module);
+                    for (int row = 2; row < 8; row++) {
+                        step(loop, movie.getFrame(row)); assertCapture(expected.get(row - 2), module);
+                        assertArrayEquals(expectedPixels.get(row - 2), render(module, true).pixels(), "Spring rendered replay row " + row);
+                        assertCapture(expected.get(row - 2), module);
+                    }
+                    assertCapture(after, module); assertArrayEquals(afterPixels.pixels(), render(module, true).pixels());
+                }
+                int materialized = 0;
+                for (int offset = 0; offset < 400; offset++) if (atlas.getEntry(base + offset) != null) materialized++;
+                for (int offset = 0; offset < 36; offset++) {
+                    var entry = atlas.getEntry(banks.spring() + offset); assertNotNull(entry, "All36 source tiles reached actual presentation/GPU");
+                    assertTrue(glIsTexture(atlas.getTextureId(entry.atlasIndex())), "Real EGL atlas page, never a headless texture fake");
+                }
+                assertNotNull(atlas.getEntry(banks.spring())); assertNotNull(atlas.getEntry(banks.spring() + 35));
+                module.closeTerrainPlayer();
+                assertTrue(runtime.closed()); assertTrue(frame.closed());
+                assertSame(atlas, GameServices.graphics().getPatternAtlas(), "Check logical retirement before graphics/context destruction");
+                assertNull(atlas.getEntry(banks.spring())); assertNull(atlas.getEntry(banks.spring() + 35));
+                for (int offset = 0; offset < 400; offset++) assertNull(atlas.getEntry(base + offset), "retired picture ID " + (base + offset));
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: constructed normal up/side/down Spring World; real ID$0A Init and source animator, six rendered forward rows, all36 normal tiles, full/course byte-and-pixel replay,400-ID reservation/removal.\n"
+                        + "All dynamic object slots were explicitly cleared after real player Init; slots40/41/42 were seeded and routines4/10/16 explicitly selected after Spring Init. Sonic remained live; isolated Spring footprints excluded him.\n"
+                        + "This is constructed component evidence, NOT a natural controller route/contact/launch proof.\n"
+                        + "All400 actual preload policy IDs were checked; " + materialized + " entries were resident before close, including first/last and all36 Spring logical textures; all400 entries were absent after close. No fabricated atlas entries were supplied.\n"
+                        + "USA DEV preload and bounded overlay priority only; no native pixel/timing parity, diagonal art, live PLC/section residency, act or full-game claim.\n",
+                        StandardOpenOption.CREATE_NEW);
             } finally {
                 try { SessionManager.closeGameplaySession(); }
                 finally { GraphicsManager.destroyForReinit(); }
