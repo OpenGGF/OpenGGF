@@ -72,10 +72,13 @@ Unreleased. The earlier development themes remain in
   commands. Interrupting a native holder, including nested ending/P2 helpers, releases its
   acquired players while preserving native routine progress; seeking restores
   that ownership. A generated ID/context catalog reports native arena and appearance
-  restrictions. See the [guide](docs/guide/creating/stageplay.md) and
-  [directing examples](examples/stageplay-demo/README.md), including a 26-second
-  beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
-  and a single-setting jump comparison.
+  restrictions. The [Stageplay guide](docs/guide/creating/stageplay.md) has a
+  first-film tutorial for the editor and screenplays, task chapters,
+  troubleshooting, a glossary, a complete reference and a case study of the
+  *Day Off* film, whose screenplay joins the
+  [directing examples](examples/stageplay-demo/README.md) beside a 26-second
+  beginner scene with native reactions, timed dialogue and a single-setting jump
+  comparison.
 
 - **Recording imports:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,

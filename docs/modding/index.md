@@ -35,7 +35,8 @@ and the remaining qualification work. This does not change native mod support.
 5. [Playable character](quickstarts/character.md)
 6. [Standalone game](quickstarts/standalone.md)
 7. [Scene or non-platformer game](guides/mod-scenes.md)
-8. [Stageplay directing and cutscenes](../guide/creating/stageplay.md)
+8. [Stageplay directing and cutscenes](../guide/creating/stageplay.md); to play a scene
+   in your mod, see [use a scene in a mod](../guide/creating/stageplay-directing.md#use-a-scene-in-a-mod)
 
 ## What you can build
 

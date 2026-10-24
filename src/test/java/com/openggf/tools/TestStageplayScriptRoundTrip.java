@@ -35,8 +35,8 @@ class TestStageplayScriptRoundTrip {
             files = paths.filter(Files::isRegularFile).filter(p -> p.toString().endsWith(".stageplay")
                     || p.toString().endsWith(".screenplay.json") || p.toString().endsWith(".script.json")).sorted().toList();
         }
-        assertEquals(8, files.stream().filter(p -> p.toString().endsWith(".stageplay")).count());
-        assertEquals(7, files.stream().filter(p -> p.toString().endsWith(".json")).count());
+        assertEquals(9, files.stream().filter(p -> p.toString().endsWith(".stageplay")).count());
+        assertEquals(9, files.stream().filter(p -> p.toString().endsWith(".json")).count());
         return files.stream().map(path -> DynamicTest.dynamicTest(EXAMPLES.relativize(path).toString(), () -> {
             byte[] bytes = Files.readAllBytes(path);
             StageplayDocument document = path.toString().endsWith(".stageplay")

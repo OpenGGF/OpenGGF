@@ -1,0 +1,40 @@
+{
+  "version": 7,
+  "name": "First take",
+  "width": 400,
+  "height": 224,
+  "cast": [
+    {"id": "sonic", "name": "Sonic", "gameId": "s1", "character": "sonic"},
+    {"id": "tails", "name": "Tails", "gameId": "s2", "character": "tails"}
+  ],
+  "shots": [
+    {
+      "id": "hello",
+      "durationFrames": 600,
+      "set": {"gameId": "s1", "zone": 0, "act": 0},
+      "camera": [
+        {"frame": 0, "x": 0, "y": 768, "interpolation": "SMOOTH"},
+        {"frame": 240, "x": 140, "y": 768, "interpolation": "HOLD"}
+      ],
+      "actors": {
+        "sonic": [{"frame": 0, "x": 100, "y": 942}],
+        "tails": [{"frame": 0, "x": 460, "y": 944, "facing": "LEFT"}]
+      },
+      "actions": {
+        "sonic": [{"frame": 120, "kind": "MOVE_TO", "x": 380, "y": 940, "urgency": 0.4}],
+        "tails": [{"frame": 432, "kind": "JUMP", "holdFrames": 12}]
+      },
+      "captions": [
+        {"startFrame": 10, "endFrame": 130, "text": "GREEN HILL ZONE", "x": 12, "y": 196}
+      ],
+      "dialogue": [
+        {"startFrame": 20, "endFrame": 140, "speakerActor": "tails", "text": "Sonic! Over here!"},
+        {"startFrame": 300, "endFrame": 430, "speakerActor": "sonic", "text": "Race you to the loop?"},
+        {"startFrame": 500, "endFrame": 590, "speakerActor": "tails", "text": "You're on!"}
+      ],
+      "audio": [
+        {"frame": 0, "kind": "ROM_MUSIC", "gameId": "s1", "soundId": 129}
+      ]
+    }
+  ]
+}
