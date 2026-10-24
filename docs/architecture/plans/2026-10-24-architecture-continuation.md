@@ -8909,3 +8909,268 @@ evidence and focused tests are durable. Baseline and composition remain in
 history; the worktree/branch remain local and retained for the parent's independent
 content-matched review and composed delivery. No push, integration into main,
 subdelegation or lifecycle cleanup occurred.
+
+### Logical audio source publication: original-production characterization (2026-10-24)
+
+**Outcome and boundary.** This is a test-only baseline before any source-owner
+extraction. The initial retention recommendation grouped logical route publication
+with physical residency. Independent design review instead qualified one private,
+manager-lifetime logical namespace: `baseAudioSource`, `donorAudioSources`,
+`donorGenerationCounters`, `sourceMutationInProgress`, `donorSoundBindings` and
+`donorMusicBindings`, together with their admission, generation, rollback, scoped
+restoration and compatibility-completion decisions. Producer construction,
+session membership, catalog identity/residency, playing-resource retirement and
+eager/held ledger choreography stay with their existing owners. Qualification and
+these original-production observations do not authorize or verify an extraction.
+Unified physical retirement and an all-or-nothing reset were rejected: the tests
+positively observe different source/resource lifetimes and partial reset effects.
+
+**Owned checkout and source identity.** T3 supplied the isolated checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5d4149a9`, initially clean on
+`audio-source-publication-policy`. Only that branch was renamed to
+`bugfix/ai-audio-source-publication-owner-20261024`; hooks were installed, then
+`git merge --ff-only ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40` preserved the
+complete suspension/SMPS history. No main branch switch, fetch, parent target/job
+access, subdelegation, integration, push or worktree lifecycle cleanup occurred.
+The parent later reported SMPS source review accepted and its prose-only follow-up
+`1df6f362`; this characterization deliberately stayed on the requested `ade6b66d`
+base. Parent frozen smoke handle `61664` is neither changed nor certification here.
+
+| Identity | Initial checkout | Fast-forward / tested production base |
+| --- | --- | --- |
+| Commit | `4eb8e8e1a8b5dd01474d9905fae2c85256582138` | `ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40` |
+| Whole tree | `c2f2786670e5eca6c36c7b1e42336db8b869900f` | `d1e97cadbb5907180f0ef95a91dad1cf7a65d098` |
+| `src/main/java` tree | `b4a9dca2392504cea9b2fc9bd1e9fe802a9c58db` | `3024f457b1c1e85a6dfe4d266c3f066e112cb1df` |
+| AudioManager blob | `4f47a72678dcfcdb961624949e882060cfe48f85` | `4f47a72678dcfcdb961624949e882060cfe48f85` |
+
+Pinned suspension `11db9f2945920804f308e9fa7d449b858c5e088f` has whole tree
+`9c7a678f40d2278603f75a27f9e74c0e68c855b7` and Java source tree
+`cdb72a0c19c2785f609ecd6f2b56f340d148bc54`; its AudioManager is that same blob.
+Git-object comparisons also show no `11db` → `ade6` changes to the presentation
+factory, SMPS catalog, coord-handler owner or frozen store. The additive SMPS work
+remains separate; no review finding was repaired or absorbed in these fixtures.
+
+Own scope is exactly two new test classes, additions to two existing audio test
+classes, and this existing continuation record. Existing assertions are retained;
+the two existing test-file diffs contain additions only. Production, guards,
+POM/build policy, descriptor/version, API/terminal pins, stores and exemptions have
+zero edits. The signature pin itself has **22,541 rows / 1,250 `TYPE` rows**; the
+frozen directory has **13 unchanged blobs**, including **119 lines** in store
+`40afa018-d450-4b84-8cb9-d539d75d8062`, blob
+`147edd565a161cadc818045665e8444f2a4b1135`. The pinned audited ambient **6 across
+5 files** and executable package-pair **151** accounting is unchanged by source
+identity; it was not presented as a new compiled recount. No compiled API rebuild
+or frozen-store update was needed for these private test fixtures.
+
+Future extraction still predicts **119 → 120**, not zero frozen-accounting change:
+retain the current BaseAudioSource ROM constructor/field/accessor, public
+`AudioManager.setRom(Rom)` and `configuredServicesOrNull()` → configuration
+identities; remove root `reinstallsInstalledSource(GameAudioProfile,Rom)`, add its
+private SourcePublication equivalent and private `SourcePublication.setRom(Rom)`.
+That is a future source prediction, subject to parent authorization and compiled
+verification. No such class, store adjustment or structural expectation exists in
+this baseline. BaseAudioSource, DonorAudioSource, DonorSfxBinding and DonorKeyState
+retain their current binary owners.
+
+**Falsifiable controls and observed effects.** The new
+[TestAudioSourcePublicationContract](../../../src/test/java/com/openggf/audio/TestAudioSourcePublicationContract.java)
+has 21 methods / 26 case IDs. It constructs the manager spy with
+`spy(AudioManager.class)`, so final nested owners capture the actual receiver.
+Its narrow diagnostics read the original tuple/maps/guard, inspect the actual
+resolver's Sources projection and exercise generation limits; they do not copy a
+manager, impose a replacement-owner layout or introduce production hooks. New
+[creator epoch controls](../../../src/test/java/com/openggf/mods/scene/host/TestSceneRomAudioSourcesPublication.java)
+use real constructor-backed managers and the existing library/module seam. No new
+fixture replaces `AudioManager.instance` or `EngineServices.current`.
+
+| Policy distinction | Positive observations / discriminating control |
+| --- | --- |
+| Same identity / changed identity during active admission | Both public reinstall calls bypass before admission, preserve tuple identity and return under the manager monitor; changed ROM/profile calls reject without releasing the outer guard. The three-/four-argument donor overloads still dispatch virtually to the five-argument entry. |
+| Base / donor overflow timing | Both base setters overflow before loader/config/backend preparation. Donor config runs under admission **before** overflow and may publish sound/music bindings without acquiring the source guard. A config Error wins over a pending donor overflow and retains the old route. This corrects the earlier blanket overflow-before-callback prediction. |
+| Preparation / postpublication failure | Loader failure leaves the tuple and creator untouched. Creator Error and accepted old-sink close failure occur after tuple/generation publication and leave it published. Same-identity retry does not repair partial teardown. The closed producer reference can remain because later root clearing was not reached. |
+| Then-current collaborators / rollback disposition | Preparation may install another backend; configuration uses that receiver. Base and donor failure callbacks replace the backend, and restoration uses the replacement. Restoration exception identity is suppressed on the original failure. Successful donor rollback retains the old route/generation; failed rollback removes it and consumes the candidate generation. A retired factory's admission-policy identity remains untouched after a postpublication callback replaces it. |
+| Reset ordering and stopping points | Creator STOP consumes its binding, then streamed invalidation/backend reset/port close occur before nested admission rejection. Admitted reset stops the backend before clearing base; sink close observes base zero, cleared ring/timeline/root effects, and retained donor maps/counters. Close failure leaves those partial effects and releases admission. A later donor-clear overflow occurs after presentation close and prevents both donor publication and final counter disposal. Successful reset empties everything and restarts donor generation at one. |
+| Scoped publication / consumed close token | The backend restoration callback observes the restored route at a fresh generation and both binding maps already restored. RuntimeException and Error leave those publications effective, guard released, and second close makes no retry. Later unrelated registration does not make an older scope stale. Virtual registration observes the already captured key state; its binding callback is not resampled on close. |
+| Logical publication / physical provenance | Four finite queued-or-playing × clear-or-replace cases reuse the existing CountingSfxData fixture and actual factory/registry/session stream. Old descriptors, frozen program and DAC remain resident and tracks remain active. Fresh missing-route requests publish no command, and ordinary resolver submission does not recreate an old cached voice. A reentrant replacement during load retains one captured handle; a subsequent submission selects the new generation. The retained private legacy replay branch reads the installed route and dispatches its DAC/config directly. |
+| Deferred compatibility completion / lookup moment | ShadowSources reads a config-less route without completing it. Actual completion succeeds while mutation admission is already active, retaining generation. An identity mismatch selects the current tuple; after removal it returns the observed tuple without republishing or losing the tombstone. Existing actual-presentation config-less donor cases remain controls. |
+| Logical rewind / source and music namespace | Eager and held restoration publish selected sound bindings/cursor/ring, but retain current base, route tables, generation-map identities and music bindings. Eager cursor rejection restores the prior presentation/ledger/bindings. Existing held controls retain counter → ring → cursor → binding partial-publication and pre-/post-producer failure behavior; no HeldReverseRestore or capture policy is reopened. |
+| Creator lifetime / manager lifetime | Same manager/profile leases share references; equal-but-distinct profiles create new identity epochs, and different managers stay separate. A stale close leaves the fresh scene route active before fresh close restores its own captured route. Abandonment and profile changes do not restore stale routes. Acquisition samples profile before module callbacks. Standalone construction starts at generation one without ROM/loader; backend replacement and destroy retain routes/bindings/tombstones, unlike successful reset. |
+
+The new provenance cases intentionally use bounded synthetic test programs, not
+runtime fallback assets or trace observation hydration. They establish active
+stream/provenance behavior, not stock waveform parity. The unchanged supplied-ROM
+scene control separately renders real S1 donor / S3K host PCM, tests route return,
+stop and the 1-up handoff; its reported relative PCM change while the jingle plays
+was 1.37. This is no speaker-device, pixel, exhaustive route, timing or soak claim.
+
+**Actual selection and forecast correction.** The first progress forecast of 42
+was a simple counting error: it counted the contract class as 27 rather than 26.
+The declared and executed inventory was **26 + 6 + 5 + 4 = 41**. Source-derived
+expected IDs were compared with the first invocation's physical XML IDs: missing
+set empty, extra set empty. No tags, nested classes, class-level exclusions or
+skips explain the difference. No required control was omitted and no unchanged
+run was repeated merely to fix that forecast.
+
+| First selector | Selected methods | Parameterized methods | Expected / executed IDs |
+| --- | --- | --- | --- |
+| TestAudioSourcePublicationContract | 21 | 5 binary | 26 / 26 |
+| TestScopedDonorAudio | 5 | 1 binary | 6 / 6 |
+| TestAudioManagerSfxCatalogReuse: two added methods | 2 | 1 four-case CSV | 5 / 5 |
+| TestSceneRomAudioSourcesPublication | 4 | 0 | 4 / 4 |
+
+The five contract expansions are exactly
+`baseOverflowPrecedesEveryPreparationCallback(boolean)[1]` / `[2]`,
+`creatorFailureAfterBasePublicationKeepsThePublishedTuple(boolean)[1]` / `[2]`,
+`baseRollbackReadsTheThenCurrentBackendAndSuppressesItsRestorationFailure(boolean)[1]` / `[2]`,
+`donorRollbackUsesTheBackendInstalledDuringTheFailedCallback(boolean)[1]` / `[2]`,
+and `logicalRestorePublishesOnlySoundBindingsWithoutRewindingSourceOrMusic(boolean)[1]` / `[2]`.
+The remaining 16 contract IDs are the unparameterized declared method names.
+Scoped expansion is `failedCloseKeepsPublishedRouteAndBothBindingMapsAndConsumesTheToken(boolean)[1]` / `[2]`;
+provenance expansion is
+`registeredQueuedAndPlayingDonorProvenanceSurvivesRouteRemovalOrReplacement(boolean, boolean)[1]`
+through `[4]`. The selectors below and the unchanged method declarations identify
+the complete ID sets; all were present in XML.
+
+The first invocation had **40 pass / 0 failure / 1 error / 0 skip**. Its sole error
+ID was
+`com.openggf.audio.TestAudioSourcePublicationContract#rejectedNestedResetStillNotifiesCreatorAndInvalidatesStreamedSessionFirst`:
+Mockito UnfinishedStubbingException at draft line 359, before production reset,
+because `audio.outputSampleRate()` called a spy inside `thenReturn(...)`.
+Hoisting that rate read before stubbing fixed only fixture setup; the positive
+creator/stream/guard/tuple assertions remained and the exact one-case rerun passed.
+
+Earlier compile attempts also exposed only draft type/signature errors: PlaySfx
+constructor argument order, `GameSound.ROLL` versus `ROLLING` in two test files,
+and the two-consumer sink-factory signature (the first correction still omitted
+its failure consumer). Source inspection before behavior launch also corrected
+silent scene managers, which would suppress route probes, to constructor-backed
+spies, and located the virtual registration callback under its synchronized
+wrapper's monitor. After passing controls, two positive observers were strengthened
+(retired factory policy identity and fresh route playback before fresh epoch
+close); only those two affected IDs were rechecked, both passing. No production
+failure hook, weakened assertion, inherited behavior repair or SMPS change followed.
+
+**Commands, sessions and timing.** All Maven commands used current own-tree
+`tools/testing/maven_queue.py`, `-Dmse=off`, Java home
+`/usr/lib/jvm/java-25-openjdk`, and `env -u DISPLAY -u WAYLAND_DISPLAY`.
+Maven 3.10.0 reported Java **25.0.5.0.2**; physical XML confirmed the same JVM and
+its home, selectors, supplied absolute ROM properties, failures and skips.
+ROM-free checks used explicit lean only after bounding managers/histories/programs
+and confirming no device or display was required. ROM and architecture controls
+used normal admission; the architecture class had its separate fresh `-Pguards`
+JVM. There was one session/observer per request and no duplicate queued request.
+
+| Owned session | Selection / outcome | Actual queue wait | Maven execution (not queue) |
+| --- | --- | --- | --- |
+| 23231 | `-v`, exit 0, Java 25 confirmed | 498 s | not separately measured |
+| 14405 | `test-compile`, exit 1, four fixture errors | build/activity lane; unmeasured | 1m23s |
+| 34071 | `test-compile`, exit 1, one remaining sink signature error | build/activity lane; unmeasured | 23.738 s |
+| 24099 | `test-compile`, exit 0 | build/activity lane; unmeasured | 27.590 s |
+| 39126 | first selection, 41 / 0 / 1 / 0 (tests / failures / errors / skips) | 50 s | 29.334 s |
+| 18413 | corrected setup `test-compile`, exit 0 | build/activity lane; unmeasured | 28.074 s |
+| 62330 | exact corrected reset ID, 1 / 0 / 0 / 0 | 0 s | 28.049 s |
+| 62598 | unchanged consumer selection, 106 / 0 / 0 / 0 | 305 s | 30.850 s |
+| 27369 | two strengthened observers `test-compile`, exit 0 | build/activity lane; unmeasured | 29.007 s |
+| 17368 | exactly those two IDs, 2 / 0 / 0 / 0 | 17 s | 29.240 s |
+| 17931 | TestAudioPresentationArchitectureGuard, 38 / 0 / 0 / 0 | 4 s | 36.618 s |
+
+Build/probe intervals overlap; summing these intervals is not delivery elapsed
+time. Other authoring/inspection time is unmeasured. Every owned session is
+terminal. No waiting, running or idle worker/service remains from this task.
+
+Exact behavioral selectors (one comma-separated `-Dtest` argument per paragraph):
+
+```text
+# 39126, --lean, first 41 IDs:
+TestAudioSourcePublicationContract,TestScopedDonorAudio,TestAudioManagerSfxCatalogReuse#registeredQueuedAndPlayingDonorProvenanceSurvivesRouteRemovalOrReplacement+ordinaryResolverCapturesOneCurrentHandleWhileLegacyReplayReadsTheInstalledRoute,TestSceneRomAudioSourcesPublication
+
+# 62330, --lean, corrected fixture only:
+TestAudioSourcePublicationContract#rejectedNestedResetStillNotifiesCreatorAndInvalidatesStreamedSessionFirst
+
+# 62598, --normal, unchanged controls, verified ROM properties below:
+TestAudioManagerResetState,TestAudioManagerRuntimeInstallation,TestDonorAudioRouting,TestAudioLogicalSnapshot,TestAudioManagerSfxCatalogReuse#repeatedBaseIdLoadsAndMaterializesOncePerKeyAndGeneration+nullBaseIdReturnsFalseAndPublishesNoCommand+repeatedBaseNameUsesRequestedKeyAndResolvedProgramId+nullBaseNameRetainsFallbackWithoutConsultingTheLoader+repeatedDirectDonorLoadsOnceAndNullDonorIsANoOp+configlessDirectDonorCapturesBaseOwnerAndReplacesByGeneration+configlessDonorMusicDefersUntilBaseOwnerWithoutChangingGeneration+repeatedGameSoundDonorLoadsOnceAndNullDonorFallsBackByName+configlessGameSoundDonorPresentsAndNullMissFallsBackByName+invalidRequestsProbeLoaderBeforeCatalogKeyValidation+reentrantBaseReplacementCannotMixTheCapturedSourceTuple+registrationConflictOccursBeforeTimelinePublication+queuedAdmissionRetainsPolicyFrozenByManagerRegistration+legacyCachedHitDispatchesTheRetainedProgramDacConfigAndPolicy+legacyCachedHitMakesRealBackendUseRetainedCompletePolicy,TestAudioPresentationSnapshotParity#preparedAThenSelectedBPublishesBLedgerWithAPresentation+negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn+eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService+reverseReleasePublicationFailureLeavesReleaseExactlyRetryable+reverseReleaseFailureAfterPreparingDuringTheAttemptRollsBackExactly+reverseReleaseFailureAfterTheProducerCommitCompletesTheRelease,TestAudioManagerPresentationModes#failedPreResetStopRetainsHeldLedgerUntilFullResetReachesItsClear+lifecycleInvalidatesAcknowledgmentBeforeFallibleProducerClose+sinkReleaseFailureConsumesProducerCursorBeforeManagerPublication,TestSceneDonorMusic#sceneRoutesEachGameAndExitRestoresTheBorrowedDonorKey
+
+# 17368, --lean, strengthened positive observers only:
+TestAudioSourcePublicationContract#postpublicationCallbackReplacementUsesTheThenCurrentPresentationFactory,TestSceneRomAudioSourcesPublication#equalButDifferentProfileStartsANewEpochAndOldCloseCannotRestoreItsRoute
+
+# 17931, --normal -Pguards, separate JVM:
+TestAudioPresentationArchitectureGuard
+```
+
+For each selector above the executable shape was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=$selector" test -B
+# Substitute --normal, optional -Pguards and the exact ROM flags where specified.
+# Build-only checks: same environment/wrapper, -Dmse=off test-compile -B.
+```
+
+Physical XML counts for 62598 were ResetState **35**, RuntimeInstallation **7**,
+DonorAudioRouting **25**, LogicalSnapshot **7**, the 15 original SfxCatalogReuse
+methods **15**, selected SnapshotParity **6**, selected PresentationModes **10**,
+and the supplied-ROM SceneDonorMusic method **1**. Each had zero skips/failures/
+errors. Their class execution times were respectively 0.164, 0.043, 0.069, 0.355,
+0.062, 0.084, 0.478 and 0.529 seconds. The first class times were contract 0.425,
+scoped 0.033, provenance 0.314 and creator epochs 0.076 seconds; corrected reset
+was 0.552 seconds. Strengthened factory/epoch cases were 0.587 / 0.117 seconds;
+the focused guard class was 8.960 seconds. Maven times above include lifecycle/
+compilation overhead and are not test-only execution times.
+
+ROM files already supplied by T3 setup were read through their existing own-tree
+paths; no copies, renames or handmade links were made. With `SOURCE_WT` equal to
+the exact owned checkout above, 62598 supplied:
+
+```bash
+"-Dsonic1.rom.path=$SOURCE_WT/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=$SOURCE_WT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=$SOURCE_WT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+| Supplied ROM | Bytes | Observed CRC32 | Observed SHA-1 |
+| --- | --- | --- | --- |
+| S1 World REV01 | 524288 | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| S2 World REV01 | 1048576 | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| S3&K locked-on | 4194304 | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+
+The ROM scene method exercises S1/S3K; the verified S2 property is not a claim of
+an additional S2 ROM route. Measurement-hazard guidance was consulted for source
+freeze, actual XML identities, mutable launch state, absolute ROM paths and PCM
+observation boundaries. Reports were inspected per completed selection, then
+consumed; no category run, pass cache, receipt or raw-log archive was created.
+
+**Final tested inputs and handoff limits.** SHA-256 over the four changed test
+files in sorted path order, each encoded as path + NUL + exact bytes + NUL, is
+`747dc47c6209b189662a1e620cdae723c4ac2a622d1fb68a003be37df94998df`.
+Per-file hashes are:
+
+```text
+TestAudioManagerSfxCatalogReuse.java dca334d9337de4eb201e412f14ebf2a0a0d96b0814cd6397dcbbdc0da3449edd
+TestAudioSourcePublicationContract.java 622d6e26a04f0e9d915ccc84d21883b7647aff8cba2811344574978926db1d99
+TestScopedDonorAudio.java 98dd4df3f81d90ad4cd2bfa1c5ffc748f2ac0116df35e07e71d002f8e8a520c2
+TestSceneRomAudioSourcesPublication.java 0755fe2bebd4e6ff33a68f8e52ecaa4c11d4cc79c674d30111f4a34104ba8868
+```
+
+The initial first-pass test fingerprint was
+`7e42b6e594e9064d2e68fc9304895f6cf5d45b4618711670d6894c73b3f84ef5`;
+the setup-corrected fingerprint used by 62330/62598 was
+`239167c56d3738cfb7d8a5363aac099da2949c88138c7e616e6d6e98287f196a`.
+Only the two documented positive-observer bodies changed after those runs, and
+17368 rechecked them against final bytes. All source was held fixed from each
+invocation's submission through terminal completion. No broad unchanged rerun was
+used to mask the fixture error or forecast correction.
+
+Collectively **185 distinct case IDs** passed: **39 new behavioral cases**, **108
+unchanged behavioral controls** (including the two original scoped cases in the
+first selection), and **38 focused architecture guard cases**. That is bounded
+coverage across separate completed invocations, not one 185-case run, a full suite,
+a broad smoke pass, an API recount, physical-speaker proof or extraction approval.
+No unresolved test failure remains in the selected controls. The manager's
+publication source and all frozen/pinned production authority remain original.
+
+Stop here for parent review of this test-only evidence. Reject a future cut if the
+root must choose generations, rollback disposition or scoped publication after
+receiving staged writes, or if it needs new physical-retirement/ledger policy.
+Future compiled accounting and runtime behavior of a private source owner remain
+unverified. The local commit retains tests plus this record in the clean T3-owned
+worktree/branch; T3 and the parent retain lifecycle and delivery ownership.
