@@ -39,7 +39,7 @@ obligation is not a passing test claim.
 | 12 | [`sonic3k.objects.AizPlaneIntroInstance#emeralds`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Retained. Emerald scattering appends managed children; unload clears the list. Recreation does not repopulate it. | The AIZ intro graph fixture does not exercise the seven scattered emeralds and their retirement boundary. Add that graph and a destructive restore/forward run before excluding the parent inventory. Emerald glow-child tests cover a different class. |
 | 13 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization finds or creates a managed pillar and records it. Generic spawn reconstruction with `initialized` restored does not run that creation path again. The public test accessor reads this inventory. | `TestLbz2RideCameoInstances` exercises production creation and cameo choreography, not destructive restoration of this list. Prove existing-pillar reuse, fresh pillar recreation, and list ownership after restore. |
 | 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization records four children. SwingChild recreation selects a nearest live cameo, without reattaching to its parent's inventory. | `TestLbz2RideCameoInstances` is named by the isolated sweep but does not perform registry capture/restore. Required evidence includes four exact child identities, parent inventory restoration, and shake/freefall replay. Do not equate that sweep label with executed graph proof. |
-| 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Retained. `spawnDebris` records managed IceDebris; FrozenPlayerBlock recreation starts an empty inventory. Current reads are the testing accessor, but the deletion and auxiliary-sidekick paths have distinct lifetimes. | [`TestS3kIczFreezerGraphRewind.iczFreezerGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) checks cloud/block/player graph links. It does not certify this nonempty debris inventory after the block breaks. Exercise the native and auxiliary-sidekick debris boundaries, including retirement and forward replay. |
+| 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Closed by removing the obsolete history list and its testing-only count accessor. Both callers now observe actual debris submissions to ObjectManager; live debris remains independently managed, including auxiliary-sidekick ownership. No reconstruction policy or historical inventory is introduced. | [`TestS3kIczFreezerGraphRewind.retiringBlockReplaysDebrisAllocationAndPlayerRelease`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) restores the native/auxiliary blocks with replacement player references and replays release/allocation. `nonemptyDebrisRestoresAndReplaysAfterBlockRetirement` destructively restores both real debris populations at immediate, moving and partially retired checkpoints, then compares exact identities, order, ownership, motion and animation through retirement. See the bounded follow-up below. |
 | 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Retained. This field is inherited from AbstractBossInstance, whose central policy requests identity capture. The class's actual fallback path still drops it. Its shard/orb helper arrays have their own state model, so an unconditional transient policy would hide a capture-path problem. | `TestS3kIczMinibossObject` tests encounter behavior, not complete destructive registry restoration. Required evidence includes the actual capture route, managed child identities, shard/orb state, pending defeat work, and a forward encounter replay. An empty inherited list in a default probe is insufficient. |
 | 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Retained gameplay debt. It records camera/flame/boss children. `releaseExhaustFlameForBossSpawn` consumes the list to remove the flame before boss allocation, so this inventory is not merely diagnostic. Recreation does not rebuild it. | `TestLbz2RideCameoInstances` covers the allocation choreography without a rewind split. Capture with the flame live, destructively restore, then advance through release and boss allocation; compare exact slots and child retirement. Do not replace deletion semantics to make this pass. |
 | 18 | [`sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossBoxKnuxInstance.java) | Retained gameplay debt. The list owns mutable S3kBossExplosionController instances; `tickWallExplosions` advances them and DONE waits for completion. Recreating an empty list changes completion and emitted effects. | [`TestS3kLbzMinibossGraphRewind.knucklesMinibossesRestoreFreshWithRestoredBoxParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kLbzMinibossGraphRewind.java) does not populate and restore these controllers. Capture nonempty controllers with pending explosions, verify RNG/effect consumption, and replay DONE before closing this key. Managed-child identity codecs alone cannot capture these helpers. |
@@ -332,3 +332,104 @@ piece checks distinguish offsets, dimensions, tile, palette, flips and priority.
 This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
 HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
 S3K check, API check or release-only full suite ran in this follow-up.
+
+
+## ICZ freezer debris follow-up
+
+This bounded follow-up starts at `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-679c48f4`, on
+`bugfix/ai-icz-freezer-debris-rewind-20261024`. It owns the frozen block's debris
+inventory, the two accessor callers, focused graph evidence, this row/append and
+one exact baseline key. The parent retains combined guards, API and required S3K
+checks, release/coverage prose, integration, push and worktree cleanup.
+
+The repository-wide producer/consumer census found one append site and only two
+reads, both `debrisSpawnedForTesting()` assertions in `TestS3kIczFreezerObject`.
+There is no runtime, tooling or Stageplay history consumer. Those tests now
+observe the twelve IceDebris registration attempts through their manager, while
+the graph tests observe the live managed population. This preserves the tests'
+spawn-count evidence without inventing a retired-block diagnostic contract.
+A narrow reconstruction disposition was rejected: the block has no gameplay
+consumer of this list, and rebuilding it from surviving debris would falsely
+represent history after retirement. Removing the list and migrating every caller
+is simpler and accurate. No `TRANSIENT` exclusion, manual capture override,
+mutable/shallow snapshot, strict-reference relaxation or API pin change is used.
+
+ROM loc_8A8BA (sonic3k.asm:188502-188509) releases the player, creates children
+and deletes the block. ChildObjDat_8AAEA (sonic3k.asm:188757-188782) defines twelve
+children; loc_8A8DC (sonic3k.asm:188512-188526) installs their independent routine.
+The existing twelve native `spawnChild` calls and auxiliary registration calls
+stay in the same loop/order. Native allocation attempts, Stageplay child
+notification, spawn-pass dispatch, respawn flags and retirement paths are
+unchanged. The tests independently check subtype order 0..22, native SSTs after
+the block versus auxiliary slot -1, engine ownership and absent player ownership.
+
+The graph fixture uses the real cloud producer for a native P2 or engine P3
+capture, then removes the cloud/freezer before the landed block boundary.
+In-place reuse is disabled. Two pre-break cases restore fresh blocks and current
+replacement player identities, then compare release flags, attacker bounce,
+invulnerability, exact debris identities/order/slots, spawn-pass motion and RNG.
+Six nonempty cases capture after 0, 7 or 20 moving ticks; the last pair require
+partial retirement. They discard the source and divergent same-class populations,
+restore fresh debris without the retired block, and compare every forward tick
+for 80 ticks through complete no-respawn retirement. Motion fractions/velocities,
+gravity and raw animation scalars are compared as immutable values. Captured
+entries must actually carry the default compact blob, with no generic fallback.
+The registered fixture RNG is restored after reconstruction through the existing
+registry contract, and the tests check its seed explicitly.
+
+The first test-only run on unchanged runtime source ran eight cases: six debris
+cases passed, and two pre-break cases errored because restoring replacement
+sprites lacked an active gameplay timer service. After supplying that service,
+the two-case request had one native animation mismatch and one pass. Only raw
+animation scalars differed: the fixture had omitted its constructor-consumed RNG
+from the registry. Registering that existing RNG made both pre-break cases pass
+on unchanged runtime source. These were fixture corrections, not attributed
+freezer runtime regressions; no unrelated restore change was made. The respective
+queue waits were 7, 0 and 0 seconds; Maven reported 82, 23.587 and 22.934 seconds
+of execution including compilation. These intervals are separate.
+
+All commands ran from this checkout, with source fixed while each job ran.
+The leased version probe reported Java 25.0.5; `/usr/bin/lua5.4 -v` reported
+5.4.9. The existing absolute ROM files below were read in place and matched all
+three AGENTS.md CRC32/SHA-1 pairs. No ROM was copied or linked. The following
+arrays spell out the common environment, wrapper and ROM arguments.
+`MAIN_CHECKOUT` substitutes the verified existing main-checkout absolute path;
+its ROM files are the exact verified files used by these commands. This follows
+the repository policy against committing machine-local user-home paths.
+
+```bash
+MAIN_CHECKOUT=/path/to/existing/OpenGGF-checkout
+mvnq=(env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py")
+roms=("-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen")
+"${mvnq[@]}" -v
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind#retiringBlockReplaysDebrisAllocationAndPlayerRelease+nonemptyDebrisRestoresAndReplaysAfterBlockRetirement' "${roms[@]}" test -B
+# Run twice: after timer fixture correction, then after RNG registration.
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind#retiringBlockReplaysDebrisAllocationAndPlayerRelease' "${roms[@]}" test -B
+"${mvnq[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kIczFreezerGraphRewind,TestS3kIczFreezerObject,TestRewindFieldDispositionGuard,TestS3kIczEndBossGraphRewind#iczEndBossRestoresQueuedExtendedSidekickFrostCapture' "${roms[@]}" test -B
+```
+
+The final focused selection passed all 44 tests with zero failures, errors or
+skips: 17 freezer graph cases (including all eight new parameter cases), 25 freezer
+behavior cases, the one selected boss frost check and the disposition guard.
+The generated field report exactly matches the 14 remaining baseline keys;
+only `IczFreezerObjectInstance$FrozenPlayerBlock#debris` was removed in this
+follow-up. Nine of the original 23 obligations are now closed at this boundary.
+The request waited 45 seconds; Maven reported 82 seconds of execution including
+compilation. The final four XML reports and the generated report were inspected.
+The parent receives the consumed files under this checkout's `target/` for its
+requested cleanup; this worker does not remove artifacts, worktrees or branches.
+No category run or validation receipt was created. Audit local links, all five
+disassembly citations and `git diff --check` passed.
+
+The measurement-hazard table was read before attributing results. These are
+bounded object/registry checks at a
+320-pixel viewport with TestablePlayableSprite participants and a landed-block
+setup; no complete ICZ route, character/donor/viewport matrix, terrain carry,
+GPU pixels or ROM parity expansion is certified. No broad smoke selection,
+complete guard profile, API check, required S3K combination or release-only full
+suite belongs to this worker. The checkout and local branch remain for the parent.

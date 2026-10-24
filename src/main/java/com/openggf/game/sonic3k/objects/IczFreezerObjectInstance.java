@@ -36,7 +36,6 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -549,7 +548,6 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         private static final int FLOOR_Y_RADIUS = 0x10;
 
         private AbstractPlayableSprite capturedPlayer;
-        private final List<IceDebris> debris = new ArrayList<>(DEBRIS_COUNT);
         private final SubpixelMotion.State motion;
 
         private int breakTimer = BREAK_TIMER;
@@ -782,19 +780,19 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         private void spawnDebris() {
+            // loc_8A8BA deletes this block after CreateChild1_Normal. The
+            // independently managed debris owns its lifetime and rewind state.
             for (int i = 0; i < DEBRIS_COUNT; i++) {
                 int[] velocity = VELOCITY_INDEX[i];
                 int debrisSubtype = i * 2;
-                IceDebris child;
                 if (engineSidekickExtension) {
-                    child = new IceDebris(
+                    IceDebris child = new IceDebris(
                             getX(), getY(), debrisSubtype, velocity[0], velocity[1]);
                     services().objectManager().addRewindableAuxiliaryDynamicObject(child);
                 } else {
-                    child = spawnChild(() -> new IceDebris(
+                    spawnChild(() -> new IceDebris(
                             getX(), getY(), debrisSubtype, velocity[0], velocity[1]));
                 }
-                debris.add(child);
             }
         }
 
@@ -823,10 +821,6 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         public AbstractPlayableSprite capturedPlayerForTesting() {
             return capturedPlayer;
-        }
-
-        public int debrisSpawnedForTesting() {
-            return debris.size();
         }
     }
 
