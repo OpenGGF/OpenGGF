@@ -1,6 +1,5 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.solid.ContactKind;
@@ -14,7 +13,6 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
@@ -82,9 +80,9 @@ public class TestTornadoObjectInstance {
         AbstractObjectInstance.resetCameraBoundsForTests();
         previousModule = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.openGameplaySession(GameModuleRegistry.getCurrent());
-        TestEnvironment.activeGameplayMode();
+        // Resolve before the fixture clears a live world: getCurrent() gives
+        // that world precedence over the bootstrap selection above.
+        TestEnvironment.configureGameModuleFixture(GameModuleRegistry.getCurrent());
         GameServices.camera().resetState();
         GameServices.sprites().resetState();
         GameServices.level().resetState();

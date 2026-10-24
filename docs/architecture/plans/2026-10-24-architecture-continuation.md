@@ -2102,3 +2102,88 @@ This is bounded fixture/guard evidence. No broad/full suite, unchanged frontend
 or engine-family rerun, ROM/trace replay or pixel validation was submitted.
 The parent retains the composed four-selector S3K/API/guards checks and delivery;
 this slice ends with a local commit and retained branch/worktree.
+
+
+### Module/world fixture family continuation
+
+This later-composition slice starts from accepted commit
+`279a4c858f444ee50977c72f9bc61092ac316ebb` on new local branch
+`bugfix/ai-module-fixture-family-20261024` in the same isolated worktree. The
+previous engine-only branch remains at that commit for parent cleanup. Initial
+state was clean with no owned Maven jobs. The frozen coordinator candidate is
+not changed. Scope is the ten test classes below, their exact guard keys and
+this appendix; production code and reviewed fixture helpers are unchanged.
+
+Module selection follows source authority rather than test names. SBZ events,
+S2 event snapshots, MCZ boss tests and ARZ/MCZ scroll tests previously selected no
+module; they now use `resetAll()`, preserving the ordinary S2 bootstrap/runtime
+baseline established by `GameModuleRegistry` and the global teardown extension.
+In particular, the SBZ class's locally constructed S1 handler does not justify
+silently changing its surrounding runtime to S1. CNZ retains its explicit S2
+selection through the enum fixture; spring, Mega Chopper and MGZ scrolling retain
+their explicit S3K selection through the S3K enum fixture.
+
+Tornado keeps its previous-module capture and S2 bootstrap write, then passes
+`GameModuleRegistry.getCurrent()` directly into the existing module fixture.
+Java evaluates that argument before fixture teardown, preserving the original
+getter's live-world precedence instead of forcing S2 based on the class name.
+MGZ captures its previous module before the S3K fixture. Both original restoration
+paths are byte-identical, including Tornado's ordering and camera-bound cleanup.
+SBZ construction-scope setup/cleanup, synthetic levels, Mega Chopper's level-state
+injection, camera initialization, input/tick loops and every teardown remain
+unchanged. ARZ still reads session screen-shake state; MCZ retains its one-argument
+handler and compatibility setter into that same state, with no unrelated supplier.
+
+Exact comparison after setup/import normalization preserves all 150 test bodies,
+identities, assertions and helper methods. The removed guard keys are exactly:
+
+```text
+src/test/java/com/openggf/game/sonic1/events/TestSonic1SBZEvents.java#setUp
+src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
+src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp
+src/test/java/com/openggf/game/sonic2/objects/TestTodo4_MCZBossCollision.java#setUp
+src/test/java/com/openggf/game/sonic2/objects/TestTornadoObjectInstance.java#setUp
+src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kSpringObjectInstance.java#setUp
+src/test/java/com/openggf/game/sonic3k/objects/badniks/TestMegaChopperBadnikInstance.java#setUp
+src/test/java/com/openggf/game/sonic3k/scroll/SwScrlMgzTest.java#setUpRuntime
+src/test/java/com/openggf/level/scroll/SwScrlArzTest.java#setUp
+src/test/java/com/openggf/level/scroll/SwScrlMczTest.java#setUp
+```
+
+No inspected key needs retention. The separate eighth-wave S1 moving-block,
+Buzz Bomber and Caterkiller keys remain untouched; integrated totals are not
+copied from this older branch or used to change parent count prose.
+
+The fixed ten-class run passed all 150 cases, with zero failures/errors/skips.
+XML confirms the exact selector and every source identity: SBZ 20, CNZ 1, S2 event
+snapshots 9, MCZ boss 17, Tornado 44, S3K spring 24, Mega Chopper 4, MGZ scroll 14,
+ARZ scroll 6 and MCZ scroll 11. The fork reports Java 25.0.5.0.2; Lua 5.4.9 is in
+the launch environment. Queue admission waited 20 seconds; Maven execution was
+27.719 seconds. These checks use synthetic data and injected services, with no
+real ROM/display prerequisite or observed skip; no GL context or ROM path is
+needed. The separate exact singleton lifecycle guard passed all eight cases with
+zero failures/errors/skips. Its fresh XML identities and Java 25 fork version
+were inspected. Queue admission waited 92 seconds; Maven execution was 26.946
+seconds. Both submitted jobs retained fixed selections/source until completion.
+Their 22 exact XML/text reports were consumed after inspection; no result archive
+or pass cache was created.
+
+The commands use the current absolute main-checkout wrapper from this worktree's
+own directory/target. `OPENGGF_MAIN_WORKSPACE` denotes that absolute checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=TestSonic1SBZEvents,TestSonic2CnzMutationPipeline,TestSonic2LevelEventRewindSnapshot,TestTodo4_MCZBossCollision,TestTornadoObjectInstance,TestSonic3kSpringObjectInstance,TestMegaChopperBadnikInstance,SwScrlMgzTest,SwScrlArzTest,SwScrlMczTest' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+This is bounded fixture/guard evidence, not broad smoke, full-suite, arbitrary
+incoming-module permutations, ROM route or pixel certification. No previous
+family was rerun. This branch remains local for a later parent composition;
+integration, push and branch/worktree removal are outside this slice.
