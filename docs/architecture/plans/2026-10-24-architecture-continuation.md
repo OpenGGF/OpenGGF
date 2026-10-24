@@ -1825,3 +1825,78 @@ XML/text reports were deleted. Admission waited 72 seconds; execution duration
 was not retained. These are ROM-free component checks, not full-route, native
 pixel or composed ninth-loop certification. No production source, API pin,
 allocation permission or test assertion changed. No task Maven handle remains.
+
+### Engine-only fixture boundary for session tests
+
+This bounded continuation starts at parent/development base
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7` on isolated branch
+`engine-only-test-fixture`. It owns only the three
+session test families below, their shared test fixture, the three matching
+singleton-lifecycle allowances and this appendix. No production behavior or
+other fixture family's allowances are part of the slice.
+
+Direct explicit `EngineContext` construction requires nine engine services;
+most have private constructors, so it would require ambient singleton lookups
+or unrelated mocks without handling existing session/resource state. The base's
+private `TestEnvironment.resetToBootstrapBaseline()` already owns configuration,
+static resets, engine-service binding, capture of the previous module's teardown
+profile, session disposal, module reset, teardown steps and post-teardown fixups,
+in that order. Naming that existing prefix `resetEngineOnly()` exposes the
+needed fixture boundary without another bootstrap implementation. `resetAll()`
+retains its camera-bounds reset and gameplay creation after that prefix.
+
+The no-world tests `enterEditorMode_withoutWorldSessionThrows` and
+`requireCurrentGameModule_withoutWorldSessionThrows` require no session.
+`installThrowsWhenRegistryNotInitialised` and `registryIsNullBeforeAttach`
+require an unattached local context. Their original identities and assertions
+remain intact. New controls exercise disposal of attached gameplay without a
+replacement (including graphics rebinding, replay-close count, art-run shutdown,
+idempotence and subsequent LIVE admission), and prior-module teardown/fixup
+ordering after clearing an editor session. Existing fixture controls cover
+`resetAll()` reopening gameplay and the singleton-reset extension. All 54
+original test methods (58 invocations) and their assertions remain byte-for-byte
+unchanged; the two new controls are
+`TestSessionManager.engineOnlyResetDisposesGameplayWithoutOpeningReplacement`
+and `TestSessionManager.engineOnlyResetKeepsPreviousModuleTeardownAndFixupOrder`.
+
+The removed allowance keys are exactly:
+
+```text
+src/test/java/com/openggf/game/session/TestSessionManager.java#configureServices
+src/test/java/com/openggf/game/session/TestGameplayModeContextPlaybackController.java#configureServices
+src/test/java/com/openggf/game/session/TestGameplayModeContextRewindRegistry.java#configureServices
+```
+
+This is component accounting, not an integrated ambient-inventory total; the
+parallel S1 fixture family owns different keys.
+
+Validation uses Java 25.0.5.0.2 and Lua 5.4.9 with `DISPLAY`, `WAYLAND_DISPLAY`
+and `XAUTHORITY` unset. Every Maven command uses the absolute main wrapper
+from this worktree. The leased version probe waited 315 seconds; build-only
+`test-compile` completed in 1:22. The two new controls were first run with their
+reset action calling `resetAll()`; both failed at the no-world assertion with a
+replacement `WorldSession`, with zero errors/skips. That rejected arm is not
+committed. After using `resetEngineOnly()`, the seven-class run below passed all
+76 cases with zero failures/errors/skips (15-second queue wait, 27.905-second
+Maven execution). XML confirmed the exact class set and the named negative
+preconditions and new controls. A separate exact `TestSingletonLifecycleGuard`
+run passed all eight cases with zero failures/errors/skips (428-second queue wait,
+29.637-second Maven execution); its XML was inspected. The source/test diff was
+unchanged between these passing runs; subsequent edits finish this appendix only.
+
+```bash
+# Run from the task worktree; set OPENGGF_MAIN_WORKSPACE to the absolute parent checkout.
+# Environment: env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+#   JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestSessionManager#engineOnlyResetDisposesGameplayWithoutOpeningReplacement+engineOnlyResetKeepsPreviousModuleTeardownAndFixupOrder' test -B
+python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestSessionManager,TestGameplayModeContextPlaybackController,TestGameplayModeContextRewindRegistry,TestGameplayModeTeardownFailures,TestHeadlessStateTeardownExtension,TestSingletonResetExtension,TestEngineContext' test -B
+python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+The dry change-based plan against `e9d8087ac` selected 3,745 smoke candidates
+because `TestEnvironment` and the guard are shared test infrastructure. That
+broad run was not launched: this slice promotes an unchanged reset body and
+preserves the existing `resetAll()` suffix, with the affected families and reset
+consumers covered directly. These are bounded ROM-free checks, not broad smoke,
+full-suite, all-guard or ROM/trace certification. Integration, push and worktree
+cleanup remain parent-owned.

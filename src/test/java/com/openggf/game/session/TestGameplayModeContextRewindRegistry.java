@@ -63,6 +63,7 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -98,7 +99,7 @@ class TestGameplayModeContextRewindRegistry {
 
     @BeforeEach
     void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     private static GameplayModeContext buildAttachedContext() {
