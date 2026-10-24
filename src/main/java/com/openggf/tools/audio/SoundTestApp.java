@@ -1,7 +1,9 @@
-package com.openggf.audio.debug;
+package com.openggf.tools.audio;
 
 import com.openggf.audio.ChannelType;
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.debug.SoundTestCatalog;
+import com.openggf.audio.debug.StandaloneAudioPresentationHost;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -109,7 +111,7 @@ public final class SoundTestApp {
 
         StandaloneAudioPresentationHost host =
                 StandaloneAudioPresentationHost.open(
-                        options.gameId,
+                        options.gameId, profile,
                         SonicConfigurationService.createStandalone(),
                         null, options.nullAudio);
         // Abnormal-exit safety net only; removed on the normal path below so
@@ -142,7 +144,7 @@ public final class SoundTestApp {
         }
     }
 
-    static GameAudioProfile createProfileForGame(String gameId) {
+    private static GameAudioProfile createProfileForGame(String gameId) {
         return switch (gameId) {
             case "s1" -> new Sonic1AudioProfile();
             case "s3k" -> new Sonic3kAudioProfile();
@@ -802,12 +804,12 @@ public final class SoundTestApp {
 
     private static void printUsage() {
         System.out.println("Sound test usage:");
-        System.out.println("  mvn -Psoundtest exec:java [-Dexec.args=\"--game <s1|s2|s3k> --rom <path> --song <hex> --null-audio\"]");
+        System.out.println("  scripts/soundTest.sh [--game <s1|s2|s3k> --rom <path> --song <id> --null-audio]");
         System.out.println("Args:");
         System.out.println("  --game <id>       Game: s1 (Sonic 1), s2 (Sonic 2), s3k (Sonic 3&K). Defaults to config DEFAULT_ROM.");
         System.out.println("  --rom <path>      Path to ROM file (defaults to config ROM for selected game)");
         System.out.println("  --song <id>       Song ID in hex or decimal (default varies by game)");
-        System.out.println("  --null-audio      Run without JOAL (parsing only)");
+        System.out.println("  --null-audio      Render audio without opening an output device");
         System.out.println("  --help            Show this help");
     }
 

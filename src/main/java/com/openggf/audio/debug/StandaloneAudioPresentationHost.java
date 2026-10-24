@@ -92,21 +92,22 @@ public final class StandaloneAudioPresentationHost
 
     public static StandaloneAudioPresentationHost open(
             String gameId,
+            GameAudioProfile profile,
             SonicConfigurationService config,
             PerformanceProfiler profiler,
             boolean noDevice) {
-        return open(gameId, config, profiler, noDevice, java.util.function.UnaryOperator.identity(), false);
+        return open(gameId, profile, config, profiler, noDevice, java.util.function.UnaryOperator.identity(), false);
     }
 
     /** Decorates the final PCM sink without changing synthesis or gameplay audio ownership. */
     public static StandaloneAudioPresentationHost open(
-            String gameId, SonicConfigurationService config, PerformanceProfiler profiler,
+            String gameId, GameAudioProfile profile, SonicConfigurationService config, PerformanceProfiler profiler,
             boolean noDevice, java.util.function.UnaryOperator<AudioPresentationSink> decorateSink) {
-        return open(gameId, config, profiler, noDevice, decorateSink, true);
+        return open(gameId, profile, config, profiler, noDevice, decorateSink, true);
     }
 
     private static StandaloneAudioPresentationHost open(
-            String gameId, SonicConfigurationService config, PerformanceProfiler profiler,
+            String gameId, GameAudioProfile profile, SonicConfigurationService config, PerformanceProfiler profiler,
             boolean noDevice, java.util.function.UnaryOperator<AudioPresentationSink> decorateSink, boolean isolateDevice) {
         ExecutorService ownerExecutor = Executors.newSingleThreadExecutor(
                 runnable -> {
@@ -120,7 +121,7 @@ public final class StandaloneAudioPresentationHost
                     return thread;
                 });
         Future<StandaloneAudioPresentationHost> creation = ownerExecutor.submit(
-                () -> create(gameId, config, profiler, noDevice, ownerExecutor, decorateSink, isolateDevice));
+                () -> create(gameId, profile, config, profiler, noDevice, ownerExecutor, decorateSink, isolateDevice));
         try {
             return creation.get(OWNER_CALL_TIMEOUT_SECONDS,
                     TimeUnit.SECONDS);
@@ -147,13 +148,14 @@ public final class StandaloneAudioPresentationHost
      */
     private static StandaloneAudioPresentationHost create(
             String gameId,
+            GameAudioProfile profile,
             SonicConfigurationService config,
             PerformanceProfiler profiler,
             boolean noDevice,
             ExecutorService ownerExecutor,
             java.util.function.UnaryOperator<AudioPresentationSink> decorateSink, boolean isolateDevice) {
         String boundGameId = normalizeGameId(gameId);
-        GameAudioProfile profile = profile(boundGameId);
+        java.util.Objects.requireNonNull(profile, "profile");
         AudioPresentationSink sink;
         AtomicReference<AudioManager> managerRef = new AtomicReference<>();
         if (noDevice) {
@@ -481,9 +483,5 @@ public final class StandaloneAudioPresentationHost
                     "Unsupported game id: " + gameId);
         }
         return normalized;
-    }
-
-    private static GameAudioProfile profile(String gameId) {
-        return SoundTestApp.createProfileForGame(gameId);
     }
 }
