@@ -531,3 +531,47 @@ These are bounded schema, object-graph and manager checks, not route/viewport/
 donor/team certification or a full-suite pass. Complete composed guards,
 change-based smoke, integration and delivery belong to the parent; no full-suite
 or duplicate complete-guards run was submitted. No live job remains.
+
+
+### Fourth-loop acceptance and delivery checkpoint
+
+Schema commit `043c869e8455a615118c848a1b0a11506d5ab737` is merged as
+`71d91902202d2cb1899633a78c33e45f5c1ca820`. Source, tests, POM and testing tools
+match the worker commit exactly. Independent static review found no blockers.
+Its final seven-file source/test diff fingerprint is
+`4291863f46b0c79ae010b45ec6c4ab8f369db57b09bc25aa96bd59e7c4773099`;
+the earlier `321124c` tree predates the corrected metadata test. Stale-key
+validation covers the three shared exact-policy constants, not arbitrary future
+optional-only metadata. No manual-override baseline, API pin or allowance grew.
+
+The complete fresh guard profile then passed at `71d919022`: **754 distinct
+cases across 91 XML reports, zero failures, errors or skips**. The previous
+manual-override blocker executed and passed; all seven compact-policy metadata
+cases and all 33 ArchUnit cases executed. Admission wait was zero, and Maven
+reported 6 minutes 21 seconds. The command used the same unset display/JVM-option
+environment, Java 25, Lua 5.4, absolute main-checkout wrapper and three verified
+absolute ROM paths documented above, with:
+
+```text
+-Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+This supersedes the red 753-case guard result after the schema correction. The
+89 rendering cases, repaired eight-case ship selection, unchanged other 179
+composed cases, and worker's corrected 19 S2 graph/28 codec controls retain their
+stated source and coverage limits. Required API/S3K checks passed in the composed
+selection; schema API checks passed again after the reference change. These are
+focused behavior and complete structural guards, not a complete smoke or public
+release full-suite claim. The new codec mode is field-selected only for the three
+S2 links; strict defaults have separate negative controls. That bounded impact
+supports the focused selection rather than the 3,727-class all-category plan.
+
+The committed allowance is 151 low-level records, with 11 field-disposition keys,
+98 ambient setup methods across 97 files and 154 top-level package permissions.
+The 582 destruction and 10 dynamic-add call inventory remains unchanged. The
+root orchestration, panel, ring-evidence, parser and AIZ work now being composed
+in a separate fifth-loop checkout is outside this result. In particular, root
+reference and naming reductions there are not delivered by this fourth loop.
+A final fetch found the destination still at `2020d2e57`; main's inherited dirty
+submodules and untracked files are preserved. Final prose/policy checks,
+integration, push and accounted-for worktree cleanup follow this checkpoint.
