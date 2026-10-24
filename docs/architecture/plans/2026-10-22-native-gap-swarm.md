@@ -5931,3 +5931,148 @@ limitation, warm secondary-cache identity limitation and all other epochs remain
 unchanged evidence. No all-family, all-native or aggregate PR-green claim, remote
 push, PR-body/draft change, Main/develop mutation, CI, native/passive observation,
 route profile or FBO/runtime work is included.
+
+### S2 authored entry music, common PLC ownership and terminal streamed teardown — 2026-10-24
+
+This is a separate successor epoch in the isolated S2 worktree, with sole parent
+`1537657c920bd3775e97a9abf6666ad8922721f6`. The parent's original focused
+38-case request ended **36 passes / 1 failure / 1 error**. Its common-only art
+test incorrectly required a vertical spring from the standard PLCs, and
+`authoredNamespacedMusicUsesPreparedPublicationAndHonorsBothSuppressionOwners`
+completed its body but errored in `closeSession()` during audio teardown. Those
+original results remain failed evidence; the new requests below do not rewrite
+or retroactively qualify that epoch.
+
+S2 authored entry now consumes the already-prepared stock or namespaced music
+through its publication owner, cancels stale native work and honors both
+automatic-playlist suppression and the level's one-shot suppression. Returning
+to stock retains the native deferred publication boundary. Common-only art
+uses the existing `-1` contract without consulting a native zone header; other
+invalid zone indices still reach the stock parser's rejection. Native PLC
+disposition established that Std1, Std2 and StdWtr do not contain ordinary
+vertical-spring art, while EHZ2 does. The positive sheet, renderer, decoded-pattern
+and mapping-frame assertions moved to `zonePlcOwnsVerticalSpringArt`; the common
+case checks their absence while retaining every other real common-art oracle.
+No spring asset, expected pixel, track length or integration assertion was
+removed to obtain a pass.
+
+The teardown error came from combining terminal disposal with a live rollback
+snapshot. `AudioManager` retires streamed session cursors and closes the port
+before producer close. The producer already marks itself closed and retires its
+capture handles before calling `AudioVoiceRegistry.clear()`, but that clear
+previously captured the still-referenced retired voice through the atomic stop
+helper. Terminal clear now captures all actual owned references, including
+suspended overrides, withdraws slots and resets metadata before callbacks, and
+disposes without snapshots. It attempts remaining disposals after either a
+`RuntimeException` or an `Error`, rethrowing the original failure with later
+failures suppressed. Both ordinary `HardReset` branches call a private atomic
+reset retaining the prior reset order and exact RuntimeException-only rollback
+catch. The mutation/rollback helpers and owned-reference enumeration are
+unchanged. Runtime producer, manager, streamed session, voice and factory remain
+byte-exact to `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`; strict retired-cursor
+snapshot rejection is preserved. No ongoing-render-after-explicit-detach claim
+is made.
+
+The coherent ten-file staged source tree is
+`5bd54c10b8a8120b7b37495c0c0f0ed7e19503bc`, rather than the unchanged parent
+HEAD's index tree. The whole working-input frame before and after both requests
+is `1de2f69a5d84b317458171a3ad9cbfa33534807ce122de88b7515cddbb92ae5a`:
+13,178 paths / 856,471,686 bytes. Its exact protocol is sorted stage-zero
+`src/`, `racing/`, `examples/`, `.mvn/`, `tools/testing/` and `pom.xml` entries,
+with relative path, Git mode, mtime-nanoseconds and actual working bytes each
+NUL-delimited; gitlinks use their object bytes and zero mtime. There are no
+untracked inputs in that scope. This is local timestamp attribution, not a
+portable cross-checkout hash. All ten tested SHA-256 pins, 22 selected source
+files, protected runtime/helper/build inputs and the ten current wrapper/import
+pins remain exact. Documentation below is outside that executable frame.
+
+Exactly two original queued requests ran from `<S2_WORKTREE>`. Both used the
+current absolute `<MAIN_WORKSPACE>/tools/testing/maven_queue.py`, SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`,
+normal admission, Java25, Lua5.4, null OpenAL, surfaceless EGL and
+`PYTHONDONTWRITEBYTECODE=1`, with ambient JVM/Maven/display/driver overrides
+unset. The original three absolute stock ROM paths were freshly CRC32/SHA-1
+verified against the documented identities. Own-worktree dedup was empty;
+report ownership was registered before launch and each original command session
+was retained through admission and terminal readback. The execution estimate was
+5–10 active minutes per cohort, with queue time unknown; no timeout, heap/fork
+override, preflight, standalone build, version probe or retry was added.
+
+The ordinary selector was exactly these 19 source families, with four selected
+Emerald methods:
+
+```text
+com.openggf.audio.TestAudioManagerStreamedPortOwnership,com.openggf.audio.presentation.TestStreamedPresentationSession,com.openggf.audio.presentation.TestStreamedAudioVoiceRegistry,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.audio.presentation.TestAudioVoiceRegistry,com.openggf.audio.AudioManagerCaptureModeTest,com.openggf.audio.AudioManagerLiveCaptureTest,com.openggf.audio.TestLiveCaptureSurvivesBackendSwap,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.game.sonic2.TestSonic2LevelInitProfile,com.openggf.level.TestLevelMusicCoordinator,com.openggf.game.sonic2.timing.TestSonic2PreBgmTimingModel,com.openggf.game.sonic2.timing.TestSonic2LevelMusicScheduler,com.openggf.game.sonic2.TestSonic2PlcParser,com.openggf.game.sonic2.TestSonic2SkippedPresentationPlcLifecycle,com.openggf.game.sonic2.TestSonic2VisibleTitleReleasePlcOrdering,com.openggf.mods.code.TestEmeraldRemix#sonicCompletesTheRemixedActAndCloverValley+cloverValleySlopesTurnSonicThroughEasedAngles+authoredMusicCancelsStockWorkAndReturningStockKeepsItsNativeBoundary+authoredNamespacedMusicUsesPreparedPublicationAndHonorsBothSuppressionOwners,com.openggf.tools.TestRecordingRestartAudioOwnership,com.openggf.tools.TestHeadlessGameBootAudioIdentity
+```
+
+The command shape was:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$ORDINARY_SELECTOR" \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+O, original session63943, EXIT0, completed at **17:22:41Z**: **201 distinct
+actual JUnit identities / 201 passes / 0 failures / 0 errors / 0 skips**, 19
+XMLs. Queue wait was **259 seconds**, Maven time **90 seconds**, and command
+wall time **349.918 seconds**. Real four-sample looping namespaced PCM is admitted
+before manager reset/backend/launch/destroy teardown, followed by usable fresh playback. The
+new terminal controls cover strict retired snapshots, capture/replay/sink/session
+retirement, suspended and later voices after RuntimeException/Error, suppressed
+later failures and reentrant close without duplicate disposal. Both ordinary
+HardReset paths retain snapshot, cursor identity and override retryability after
+an actual controlled port mutation. The selected capture/history/restore checks,
+four Emerald bodies and the real headless boot/restart ownership consumers pass.
+Source-configured parameter rows were not used to predict this JUnit total.
+
+Only after O's original terminal/full readback and owned raw consumption, G used
+the same command/environment/ROM properties, adding only `-Pguards` and replacing
+the selector with:
+
+```text
+com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules
+```
+
+G, original session1932, EXIT0, completed at **17:28:42Z** in a separate fresh
+invocation: **148 distinct actual identities / 148 passes / 0 failures /
+0 errors / 0 skips**, three XMLs: audio architecture38, architectural source77,
+ArchUnit33. Queue wait was **56 seconds**, Maven time **50.798 seconds**, and
+command wall time **107.504 seconds**. The ordinary selection excludes guards;
+no profile or POM setting was changed to admit them there. Intervals above are
+per-request measurements, not a summed elapsed-delivery claim.
+
+Every actual XML identity, all properties and owned/dependency classpath values,
+recursive output/error streams, text reports and full bounded consoles were
+read. Java25, selectors, owned cwd/target, EGL and all three ROM properties
+match. O's console has exactly the declared opaque-zone135 refusal (one),
+PLC99 negative (one), invalid zones -2 and17 (two each), and the existing
+48000-to-44100 capture-lease negative (one), all bound to their owning test
+methods. FAST/NONE fallback warnings remain explicit (O116, G2), separately
+from compiler deprecations (O26, G18). Stop-fault injections are controlled by
+their exact new test cases; they are not blanket permission for loader faults.
+No unexpected caught runtime fault, S2b9 fault, fresh dump, missing/empty report,
+skip, Maven/test infrastructure failure or source drift was observed. Base153's known
+S1 mapping address E8DF/frame-count768 limitation remains **OPEN**; it did not
+naturally emit in this cohort, and this result does not establish general
+fault-free art loading. FAST/NONE and unmeasured deterministic KOS fallback,
+hardware timing, physical video and broader native coverage remain limitations.
+
+The fully read owned O38 and G6 XML/text files and both consoles were consumed
+under the worktree metadata lock, without raw archives, pass caches or extra
+validation receipts. Compiled classes, source, pre-existing native extractions
+and the worktree are retained. No more JVM requests, source repairs, authors,
+reviewers, watchers, standalone engine/emulator/native probes, reserved provider
+activation, paired MHZ, remote or CI actions occurred in this epoch.
+
+Only these ten tested executable files plus this factual append and the folds
+into existing `CHANGELOG.0.7.prerelease.md` entries are authorized for one
+normal-hook local leaf with sole parent153. No executable bytes change after
+qualification. The local leaf and its ancestry/code receipt stay **HELD** until
+the parent confirms the original Root category71421 and its separate guard have
+reached terminal/full readback. No Root source, target, process, job, output or
+lease was inspected here; parent153 is not replayed. This is bounded affected
+and separate guard qualification, not an aggregate PR-green or full-suite claim.

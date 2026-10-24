@@ -2,6 +2,11 @@ package com.openggf.mods.code;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.LevelMusicAccess;
+import com.openggf.audio.NullAudioBackend;
+import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.data.Rom;
 import com.openggf.data.RomGame;
 import com.openggf.data.RomManager;
@@ -296,6 +301,170 @@ class TestEmeraldRemix {
             var playtest = EditorProjectRuntimeModule.prepare(module, reopened, parsed.start().x(), parsed.start().y());
             assertNotNull(playtest, "The project is accepted for playtest");
         }
+    }
+
+    @Test void authoredMusicCancelsStockWorkAndReturningStockKeepsItsNativeBoundary() throws Exception {
+        var romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
+            var play = play(rom, fixture);
+            var audio = GameServices.audio();
+            audio.setBackend(new NullAudioBackend()); // real synthesis over the default NoDeviceAudioSink
+            var profile = fixture.resolved.getLevelInitProfile();
+            int clover = fixture.resolved.getZoneRegistry().resolveZoneKey(CLOVER_KEY).orElseThrow();
+
+            enter(play, 0, 0);
+            assertTrue(profile.isLevelMusicPublicationPending());
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                    "stock preparation cannot publish before its native VBlank boundary");
+
+            enter(play, clover, 0);
+            assertFalse(profile.isLevelMusicPublicationPending(),
+                    "an authored destination must retire the previous stock countdown");
+            assertEquals(OptionalInt.of(0x91), play.manager.prepareCurrentLevelMusic());
+            for (int frame = 0; frame < 12; frame++) profile.serviceLevelLoadVBlank();
+            assertForwardMusicPcm(audio, 0x91, AudioSourceDescriptor.baseMusic(0x91));
+            assertTrue(audio.captureLogicalSnapshot().presentation().smpsLogical().sequencers().stream()
+                    .anyMatch(entry -> !entry.sfx() && entry.snapshot().tracks().stream().anyMatch(track -> track.active())),
+                    "the authored stock-music selection must reach a real ROM SMPS sequencer");
+
+            enter(play, 0, 0);
+            assertTrue(profile.isLevelMusicPublicationPending());
+            // EHZ, NTSC, Sonic alone: the existing independent timing-model
+            // regression pins this ROM workload to bucket 11.
+            for (int frame = 0; frame < 10; frame++) profile.serviceLevelLoadVBlank();
+            assertTrue(profile.isLevelMusicPublicationPending(), "returning stock must not publish early");
+            profile.serviceLevelLoadVBlank();
+            assertFalse(profile.isLevelMusicPublicationPending());
+            assertForwardMusicPcm(audio, 0x81, AudioSourceDescriptor.baseMusic(0x81));
+
+            try (var control = LevelMusicAccess.suppressAutomatic(audio)) {
+                enter(play, clover, 0);
+                assertFalse(profile.isLevelMusicPublicationPending());
+                for (int frame = 0; frame < 12; frame++) {
+                    profile.serviceLevelLoadVBlank();
+                    audio.presentFrame(PresentationMode.FORWARD);
+                }
+                var active = audio.captureLogicalSnapshot().presentation().activeMusic();
+                assertTrue(active == null || active.musicId() != 0x91,
+                        "authored stock music must respect the canonical automatic-music control");
+            }
+            profile.serviceLevelLoadVBlank();
+            audio.presentFrame(PresentationMode.FORWARD);
+            var active = audio.captureLogicalSnapshot().presentation().activeMusic();
+            assertTrue(active == null || active.musicId() != 0x91,
+                    "releasing a control must not resurrect a suppressed authored request");
+            assertTrue(fixture.runtime.runtimeDisabledOwners().isEmpty());
+        }
+    }
+
+    @Test void authoredNamespacedMusicUsesPreparedPublicationAndHonorsBothSuppressionOwners() throws Exception {
+        var romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
+            // Keep the admitted, decoded authored payload and runtime profile.
+            // Only this test's selected music changes to an exact namespaced key.
+            var original = ((ModZoneRegistry) fixture.resolved.getZoneRegistry()).contributions().getFirst();
+            var base = original.definition();
+            var key = new TrackKey("emerald-remix", "authored-theme");
+            var definition = new ModLevelDefinition(base.formatVersion(), base.zoneName(), base.zoneIndex(),
+                    base.levelIndex(), base.blockGridSide(), base.width(), base.height(), base.bounds(),
+                    base.start(), new ModLevelDefinition.TrackMusic(key), base.objects(), base.rings(),
+                    base.patternBytes(), base.chunkBytes(), base.blockBytes(), base.foregroundMap(),
+                    base.backgroundMap().orElse(null), base.solidHeights(), base.solidWidths(), base.solidAngles(),
+                    base.primaryCollisionIndices(), base.secondaryCollisionIndices(), base.paletteLines(),
+                    base.patternCount(), base.chunkCount(), base.blockCount(), base.solidProfileCount(),
+                    base.hostMetadata().orElse(null), base.paletteClaims(), base.settings());
+            var contributed = new PreparedModZone(original.ownerModId(), original.localKey(), original.insertAfter(),
+                    definition, original.eventFactory(), original.zoneName(), original.levelIndex(), original.authoredZoneIndex(),
+                    original.startX(), original.startY(), original.runtimeProfile(), original.hostData(), original.gameStart(),
+                    original.actIndex(), original.runtimeFactory(), original.terminalCampaign());
+            var registry = ModZoneRegistry.decorate(fixture.root.getZoneRegistry(), List.of(contributed));
+            var selected = new DelegatingGameModule(fixture.resolved, "test:authored-namespaced-music") {
+                @Override public ZoneRegistry getZoneRegistry() { return registry; }
+                @Override public MusicReference getLevelMusicReference(int zone, int act) {
+                    return registry.getMusicReference(zone, act);
+                }
+            };
+            var play = play(rom, new Fixture(fixture.runtime, fixture.root, selected));
+            var audio = GameServices.audio();
+            audio.setBackend(new NullAudioBackend());
+            int rate = audio.outputSampleRate();
+            var track = new PreparedTrack(key, PcmData.takeOwnership(rate, 1,
+                    new short[]{2048, -2048, 4096, -4096}), 0, 4, 1.0f, false, "a".repeat(64));
+            var manifest = new ModManifest(1, "emerald-remix", "Authored music", SemanticVersion.parse("1.0.0"),
+                    List.of("Test"), "Namespaced publication fixture", VersionRange.parse("*"), ModType.PATCH,
+                    "s2", null, List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
+            var descriptor = new ModDescriptor(Path.of("emerald-remix.jar"), manifest, "b".repeat(64), false, List.of());
+            var tracks = new ModTrackRegistry(List.of(new ModAudioTrack(key, "audio/theme.wav", true,
+                    0, OptionalLong.of(4), 1.0f, false)));
+            var music = PreparedModMusic.build(new EffectiveModCatalog(List.of(descriptor)), tracks,
+                    new PreparedAudioSession(List.of(track), List.of(), Set.of()), rate);
+            audio.installStreamedMusicPort(new com.openggf.ModStreamedMusicPort(music, new StreamedMusicPlayer(rate), "s2"));
+
+            int clover = registry.resolveZoneKey(CLOVER_KEY).orElseThrow();
+            var profile = selected.getLevelInitProfile();
+            enter(play, 0, 0);
+            assertTrue(profile.isLevelMusicPublicationPending());
+            // A preview selects real authored data without executing either
+            // entry-music step. Re-entering the ordered music step below must
+            // therefore cancel the still-prepared stock request itself.
+            play.manager.loadZoneAndAct(clover, 0, LevelLoadMode.PREVIEW_CAPTURE);
+            assertTrue(profile.isLevelMusicPublicationPending());
+            var ctx = new LevelLoadContext();
+            ctx.setLevelIndex(registry.getLevelDataForZone(clover).getFirst().levelIndex());
+            var schedule = profile.levelLoadSteps(ctx).stream()
+                    .filter(step -> step.name().equals("ScheduleLevelMusic")).findFirst().orElseThrow();
+            try (var control = LevelMusicAccess.suppressAutomatic(audio)) {
+                assertEquals(OptionalInt.of(-1), play.manager.prepareCurrentLevelMusic(),
+                        "namespaced preparation has no stock ID and does not itself publish");
+                schedule.execute();
+                assertFalse(profile.isLevelMusicPublicationPending());
+                audio.presentFrame(PresentationMode.FORWARD);
+                assertNull(audio.captureLogicalSnapshot().presentation().activeMusic());
+            }
+            play.manager.setSuppressNextMusicChange(true);
+            schedule.execute();
+            profile.serviceLevelLoadVBlank();
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                    "one-shot suppression must consume the prepared request without publishing");
+
+            schedule.execute();
+            assertFalse(profile.isLevelMusicPublicationPending(), "-1 must never arm a stock countdown");
+            assertNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                    "publication still awaits the ordinary forward presentation boundary");
+            assertForwardMusicPcm(audio, -1, AudioSourceDescriptor.streamedTrack("emerald-remix:authored-theme"));
+            assertTrue(fixture.runtime.runtimeDisabledOwners().isEmpty());
+        }
+    }
+
+    private static void assertForwardMusicPcm(AudioManager audio, int musicId, AudioSourceDescriptor source) {
+        boolean nonzero = false;
+        try (var capture = audio.beginLiveCaptureAudio(audio.presentationFrameRate())) {
+            short[] pcm = new short[capture.maxStereoFramesPerPacket() * 2];
+            for (int frame = 0; frame < 12; frame++) {
+                audio.presentFrame(PresentationMode.FORWARD);
+                int frames = capture.drainPresentationFrame(pcm);
+                assertTrue(frames > 0, "forward presentation must produce a capture packet");
+                var active = audio.captureLogicalSnapshot().presentation().activeMusic();
+                if (active != null && active.musicId() == musicId && source.equals(active.sourceDescriptor())) {
+                    for (int sample = 0; sample < frames * 2; sample++) nonzero |= pcm[sample] != 0;
+                }
+            }
+        }
+        var active = audio.captureLogicalSnapshot().presentation().activeMusic();
+        assertNotNull(active, "the selected authored/stock music must become an admitted voice");
+        assertEquals(musicId, active.musicId());
+        assertEquals(source, active.sourceDescriptor());
+        assertTrue(nonzero, "the real presentation owner must render forward music PCM");
     }
 
     @Test void remixedActIsAdoptedByTheEditorAndExportsAsAPlayableLevel() throws Exception {

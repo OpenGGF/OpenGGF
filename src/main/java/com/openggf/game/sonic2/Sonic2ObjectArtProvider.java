@@ -218,12 +218,16 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider, HudSatLayoutS
 
         // === PLC-driven art loading ===
         Rom rom = GameServices.rom().getRom();
-        int[] plcIds = Sonic2PlcLoader.getZonePlcIds(rom, zoneIndex);
+        // LevelManager passes -1 when an authored profile disables native zone
+        // PLCs. Keep common ROM object/HUD art, omitting only the absent header.
+        int[] plcIds = zoneIndex == -1 ? null : Sonic2PlcLoader.getZonePlcIds(rom, zoneIndex);
         loadPlcEntries(rom, Sonic2Constants.PLC_STD1);
         loadPlcEntries(rom, Sonic2Constants.PLC_STD2);
         loadPlcEntries(rom, Sonic2Constants.PLC_STD_WATER);
-        loadPlcEntries(rom, plcIds[0]);  // Zone primary PLC
-        loadPlcEntries(rom, plcIds[1]);  // Zone secondary PLC
+        if (plcIds != null) {
+            loadPlcEntries(rom, plcIds[0]);  // Zone primary PLC
+            loadPlcEntries(rom, plcIds[1]);  // Zone secondary PLC
+        }
 
         // === Art derivatives (same ROM art as PLC parent, different mappings) ===
         // Only load when the parent art was loaded by PLCs for this zone.

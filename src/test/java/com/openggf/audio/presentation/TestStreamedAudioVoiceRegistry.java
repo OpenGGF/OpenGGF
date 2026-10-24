@@ -3,6 +3,8 @@ package com.openggf.audio.presentation;
 import com.openggf.audio.StreamedMusicPort;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.presentation.AudioPresentationCommand.FadeMusic;
+import com.openggf.audio.presentation.AudioPresentationCommand.HardReset;
+import com.openggf.audio.presentation.AudioPresentationCommand.ResetRingAlternation;
 import com.openggf.audio.presentation.AudioPresentationCommand.SetSpeedShoes;
 import com.openggf.audio.presentation.AudioPresentationCommand.PushMusicOverride;
 import com.openggf.audio.presentation.AudioPresentationCommand.ReplaceMusic;
@@ -11,16 +13,52 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestStreamedAudioVoiceRegistry {
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void ordinaryHardResetFailureKeepsStreamedOverrideAndCursorRetryable(boolean sessionBacked) {
+        Fixture fixture = new Fixture(config(1, 0), true,
+                sessionBacked ? mock(SmpsDriverSession.class) : null);
+        fixture.replaceAndPush();
+        fixture.renderFrame();
+        fixture.registry.apply(new ResetRingAlternation(false));
+        fixture.registry.setPendingRestore(true);
+        AudioPresentationSnapshot before = fixture.registry.snapshot();
+        PresentationVoice active = fixture.registry.orderedVoiceAt(0);
+        IllegalStateException failure = new IllegalStateException("stop failed after changing the port");
+        fixture.port.stopFailure = failure;
+
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> fixture.registry.apply(new HardReset())));
+
+        assertSame(active, fixture.registry.orderedVoiceAt(0));
+        assertEquals(before, fixture.registry.snapshot(),
+                "ordinary reset must roll back playback and retain every slot and control");
+        assertFalse(active.isComplete());
+        assertEquals(2, fixture.factory.streamedCursorCountForTesting());
+        fixture.port.stopFailure = null;
+        fixture.registry.apply(new HardReset());
+        AudioPresentationSnapshot reset = fixture.registry.snapshot();
+        assertEquals(0, fixture.registry.orderedVoiceCount());
+        assertEquals(0, fixture.factory.streamedCursorCountForTesting());
+        assertTrue(reset.overrideStack().isEmpty());
+        assertFalse(reset.pendingRestore());
+        assertTrue(reset.ringLeft());
+    }
 
     @Test
     void sessionFadeAlsoFadesStreamedMusicAndRetainsClearedSpeedShoes() {
@@ -178,6 +216,7 @@ class TestStreamedAudioVoiceRegistry {
         private int fadeOutCount;
         private int lastFadeSteps;
         private int lastFadeDelay;
+        private RuntimeException stopFailure;
 
         @Override public int outputRate() { return 48_000; }
         @Override public boolean hasStockOverride(int musicId) { return true; }
@@ -239,7 +278,10 @@ class TestStreamedAudioVoiceRegistry {
                     state.sourceFramePosition(), state.pauseMask(), state.fade(),
                     multiplier == 1 ? 1 : 1.25);
         }
-        @Override public void stop() { state = null; }
+        @Override public void stop() {
+            state = null;
+            if (stopFailure != null) throw stopFailure;
+        }
         @Override public void reset() { state = null; }
         @Override public Optional<State> captureState() {
             return Optional.ofNullable(state);
