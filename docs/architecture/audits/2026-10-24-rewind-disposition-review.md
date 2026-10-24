@@ -3318,6 +3318,86 @@ The open bug, 119 frozen records and all ten bridges remain unchanged. Python
 syntax/source, usage links, pinned citations and `git diff --check` accompany
 the focused checks; all owned process/job handles are terminal before handoff.
 
+### Spawn-boundary cancellation follow-up
+
+Round-two source review closed runtime binding but identified one remaining
+launcher gap at `35caea37a83b4d85de503f74d9ec37d320d61ab2` (tree
+`4dfa167bc66c20e180d783c52d6d536a6753dfee`). `Popen` preceded the cleanup
+`try/finally`: a real cancellation after OS child creation, before its result
+was assigned, could bypass group cleanup and unwind build leases. This was a
+source-established failure path; it does not imply an orphan from either
+successful native recording.
+
+Two deterministic controls were added **before changing the launcher**:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py \
+  OwnedCompilerCleanupTests.test_spawn_boundary_sigterm_reaps_descendants_before_build_leases_release \
+  OwnedCompilerCleanupTests.test_spawn_boundary_sigint_reaps_descendants_before_build_leases_release -v
+```
+
+Each wrapper first invokes real `Popen`, waits for its owned compiler-like child
+and grandchild, then sends a **real SIGTERM or SIGINT** to the caller before
+returning the process object. Both controls fail against the unchanged 35caea
+launcher in **0.154 s**, specifically because the owned descendants still exist
+when fixture lease finalizers execute. This discriminates the uncovered spawn
+interval from the existing ready-child cancellation control. The outer fixture
+subreaper then kills/reaps only that known test-owned leaked group; no foreign
+process/queue sweep is used, and no fixture process is left behind.
+
+The correction places process creation inside the cleanup-protected region,
+with an initially absent process reference. SIGINT/SIGTERM parent handlers
+temporarily record delivery during `Popen`; pending delivery reaches the
+original handlers only after the returned object is bound and cleanup is
+registered. Handler swaps briefly block these signals in the **parent only**,
+before/after the spawn extent, never across `Popen`; the child's inherited mask
+is unchanged. Existing ignored signals remain ignored. Parent handlers are
+restored before pending delivery; a fatal default is delivered after owned
+cleanup. Timeout, ready-child cancellation and normal-exit group ownership keep
+using the existing stop/reap helper and the same lease ordering. No general
+subprocess framework or child pre-exec callback is introduced.
+
+The affected full Python selection then passes **14 cases in 1.444 s**, with
+zero failures/errors/skips:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py -v
+```
+
+The prior eight `RuntimeBindingTests` and three ownership cases remain covered.
+New exact IDs are the two spawn-boundary IDs above and
+`OwnedCompilerCleanupTests.test_child_cancellation_mask_and_ignored_handler_preserved`.
+All ownership fixtures also inspect the actual exec'd child's signal state:
+SIGINT/SIGTERM are unblocked, SIGTERM retains its default child disposition, and
+an intentionally ignored SIGINT remains ignored. They verify parent handler
+restoration, complete parent/grandchild reaping while both lease locks remain
+held, and survival of a separate peer group. Thus both cancellation intervals
+and the positive child signal contract are exercised with harmless owned
+subprocesses rather than mocked cancellation exceptions.
+
+Tested launcher SHA-256 is
+`3551bacc53a950f2b82c1476722463243ed30fe58a12d9dfa2aea11997be10f4`;
+test source is
+`3a31d3f69f4f082d6b665ce3cd6f7f68a95ea5d180dded358c1eebcf96bff6e9`.
+Python AST comparison with 35caea confirms `command` is the only changed
+existing launcher function; the two spawn-delivery helpers are new. Runtime
+binding, strict preflight, output verification, process-group cleanup and main
+admission logic are unchanged. Syntax/source, pinned citation and
+`git diff --check` checks accompany the focused tests.
+
+No native case is rerun: this changes parent-side cancellation registration,
+without changing child arguments/environment or positive-path inherited signal
+behavior, which the actual child controls verify. The previously recorded full
+prepare/run and all accepted six-case native observations retain their original
+provenance and facts. C# blob `70a1fecdde27f0ff1b4fc10ef21ceb8e017cf1b6`,
+engine/Java/API/guard files, 119 records and ten bridges remain unchanged. No
+Maven/engine tests, builds, emulator launches, upstream composition or storage
+implementation occur in this follow-up. A storage owner remains unqualified
+and unauthorized; natural placement/respawn, arbitrary dormant residue,
+nonzero-cache retirement, other reset paths, Java manager/controller/timeline/
+rewind ownership and published VRAM/pixels are not newly established. Only
+launcher/tests/this audit change; all owned handles are terminal at handoff.
+
 ## S3K monitor contents admission
 
 Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch

@@ -180,8 +180,20 @@ sys.path.insert(0,sys.argv[1])
 import run_s2_fixed_tail_pressure as p
 root=Path(sys.argv[2]);mode=sys.argv[3]
 grandchild="import os,signal,time;from pathlib import Path;signal.signal(signal.SIGTERM,signal.SIG_IGN);Path(%r).write_text(str(os.getpid()));time.sleep(30)" % str(root/'grandchild.pid')
-parent="import os,subprocess,sys,time;from pathlib import Path;Path(%r).write_text(str(os.getpid()));subprocess.Popen([sys.executable,'-c',%r],close_fds=False);\nwhile not Path(%r).exists():time.sleep(.01)\n" % (str(root/'parent.pid'),grandchild,str(root/'grandchild.pid'))
-parent += "time.sleep(30)" if mode!='success' else ""
+parent="import json,os,signal,subprocess,sys,time;from pathlib import Path;Path(%r).write_text(str(os.getpid()));Path(%r).write_text(json.dumps(dict(blocked=sorted(int(s) for s in signal.pthread_sigmask(signal.SIG_BLOCK,[]) if s in (signal.SIGINT,signal.SIGTERM)),sigint_ignored=signal.getsignal(signal.SIGINT)==signal.SIG_IGN,sigterm_default=signal.getsignal(signal.SIGTERM)==signal.SIG_DFL)));subprocess.Popen([sys.executable,'-c',%r],close_fds=False);\nwhile not Path(%r).exists():time.sleep(.01)\n" % (str(root/'parent.pid'),str(root/'child-signals.json'),grandchild,str(root/'grandchild.pid'))
+parent += "time.sleep(30)" if not mode.startswith('success') else ""
+if mode.startswith('spawn-'):
+ real_popen=p.subprocess.Popen
+ def signal_inside_popen(*args,**kwargs):
+  process=real_popen(*args,**kwargs)
+  deadline=time.monotonic()+5
+  while not (root/'grandchild.pid').exists() and time.monotonic()<deadline:time.sleep(.01)
+  assert (root/'grandchild.pid').exists(),'spawn boundary child did not become ready'
+  (root/'spawn-signal').write_text(str(process.pid))
+  os.kill(os.getpid(),signal.SIGTERM if mode=='spawn-term' else signal.SIGINT)
+  return process
+ p.subprocess.Popen=signal_inside_popen
+if mode=='success-ignore-int':signal.signal(signal.SIGINT,signal.SIG_IGN)
 @contextlib.contextmanager
 def lease(name):
  with (root/name).open('w') as lock:
@@ -202,10 +214,12 @@ def lease(name):
    fcntl.flock(lock,fcntl.LOCK_UN)
 try:
  with p.handle_termination(),lease('tree') as tree,lease('activity') as activity:
-  p.command([sys.executable,'-c',parent],os.environ.copy(),root/'compiler.log',(tree,activity),root,timeout=.7 if mode=='timeout' else 10)
+  handlers={s:signal.getsignal(s) for s in (signal.SIGINT,signal.SIGTERM)}
+  try:p.command([sys.executable,'-c',parent],os.environ.copy(),root/'compiler.log',(tree,activity),root,timeout=.7 if mode=='timeout' else 10)
+  finally:assert all(signal.getsignal(s)==h for s,h in handlers.items()),'parent handlers not restored'
 except subprocess.TimeoutExpired:assert mode=='timeout'
-except KeyboardInterrupt:assert mode=='cancel'
-else:assert mode=='success'
+except KeyboardInterrupt:assert mode in ('cancel','spawn-term','spawn-int')
+else:assert mode.startswith('success')
 (root/'completed').write_text(mode)
 '''
                 driver = subprocess.Popen([sys.executable, '-B', '-c', code, str(Path(__file__).resolve().parent), str(root), mode],
@@ -220,6 +234,11 @@ else:assert mode=='success'
                 self.assertEqual(mode, (root / 'completed').read_text())
                 self.assertTrue((root / 'tree.checked').is_file())
                 self.assertTrue((root / 'activity.checked').is_file())
+                child_signals = json.loads((root / 'child-signals.json').read_text())
+                self.assertEqual([], child_signals['blocked'])
+                self.assertTrue(child_signals['sigterm_default'])
+                self.assertEqual(mode == 'success-ignore-int', child_signals['sigint_ignored'])
+                if mode.startswith('spawn-'): self.assertTrue((root / 'spawn-signal').is_file())
                 self.assertIsNone(peer.poll(), 'cleanup signalled separate owned peer group')
             finally:
                 if driver is not None and driver.poll() is None:
@@ -236,6 +255,9 @@ else:assert mode=='success'
     def test_timeout_reaps_descendants_before_build_leases_release(self): self.exercise('timeout')
     def test_cancellation_reaps_descendants_before_build_leases_release(self): self.exercise('cancel')
     def test_successful_parent_cannot_leave_compiler_descendants(self): self.exercise('success')
+    def test_spawn_boundary_sigterm_reaps_descendants_before_build_leases_release(self): self.exercise('spawn-term')
+    def test_spawn_boundary_sigint_reaps_descendants_before_build_leases_release(self): self.exercise('spawn-int')
+    def test_child_cancellation_mask_and_ignored_handler_preserved(self): self.exercise('success-ignore-int')
 
 
 if __name__ == '__main__':

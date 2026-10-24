@@ -74,17 +74,64 @@ def finish_owned_group(process):
             signal.signal(sig, handler)
 
 
+class _SpawnDefaultSignal(BaseException):
+    def __init__(self, signum):
+        self.signum = signum
+
+
+@contextmanager
+def defer_spawn_cancellation():
+    """Defer parent handlers until Popen's result can be registered for cleanup."""
+    signals = (signal.SIGINT, signal.SIGTERM)
+    previous = {}
+    pending = []
+    def defer(signum, frame):
+        pending.append((signum, frame))
+    try:
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, signals)
+        try:
+            for sig in signals:
+                previous[sig] = signal.getsignal(sig)
+                if previous[sig] != signal.SIG_IGN:
+                    signal.signal(sig, defer)
+        finally:
+            # Never create a child under our temporary mask. Ignored signals stay ignored.
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        yield
+    finally:
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, signals)
+        try:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+        for sig, frame in pending:
+            handler = previous[sig]
+            if handler == signal.SIG_DFL:
+                # Deliver fatal defaults only after command's finally has reaped its group.
+                raise _SpawnDefaultSignal(sig)
+            if callable(handler):
+                handler(sig, frame)
+
+
 def command(args, env, log, leases, cwd, timeout=180):
     start = time.monotonic()
-    with owned_child_reaper(), log.open('w') as output:
-        process = subprocess.Popen(args, cwd=cwd, env=env, stdout=output,
-                                   stderr=subprocess.STDOUT, start_new_session=True,
-                                   **inherited_slot(leases))
-        try:
-            code = process.wait(timeout=timeout)
-        finally:
-            # Includes timeout, SIGTERM/Ctrl-C and a successful parent leaving helpers.
-            finish_owned_group(process)
+    try:
+        with owned_child_reaper(), log.open('w') as output:
+            process = None
+            try:
+                with defer_spawn_cancellation():
+                    process = subprocess.Popen(args, cwd=cwd, env=env, stdout=output,
+                                               stderr=subprocess.STDOUT, start_new_session=True,
+                                               **inherited_slot(leases))
+                code = process.wait(timeout=timeout)
+            finally:
+                if process is not None:
+                    # Spawn-boundary delivery, ready-child cancellation, timeout and normal exit.
+                    finish_owned_group(process)
+    except _SpawnDefaultSignal as cancellation:
+        signal.raise_signal(cancellation.signum)
+        raise RuntimeError('Default cancellation signal unexpectedly returned')
     return dict(command=list(map(str, args)), exit_code=code,
                 execution_seconds=time.monotonic() - start, log=str(log))
 
