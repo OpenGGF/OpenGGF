@@ -1273,3 +1273,174 @@ which is now empty. Its 58-case worker evidence remains bounded and separate;
 parent composed behavior/API/S3K and full guards have not yet run on this seventh
 candidate. The two accepted donor-palette changes are still unmerged at this
 checkpoint. No integration, push or cleanup is claimed here.
+
+## Donated-team palette selection owner — 2026-10-24
+
+The isolated worker starts at `3ca14002fa2fafeabe1d3e6e370a3f559b6cba4e`
+in `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-db2087fd`, on local
+`bugfix/ai-donated-team-palette-owner-20261024`. Its boundary is completed
+team normal/native-water selection in playable-art initialization. Registry,
+allocator, colour models, water transforms, public API and frozen identities
+are outside the change; no frozen-identity reduction is expected. The parent
+owns composed guards, API/S3K coverage, integration and push.
+
+The reproduced cause: `loadPlayerSpriteArt` intentionally refreshes the
+shared donor row for the requested character. Built-in initialization binds
+the main renderer before loading sidekick art; the prepared path loads all art
+before binding. Both can therefore leave the shared row selected for the last
+loaded sidekick. Separate sidekick contexts do not restore the main selection.
+On unchanged runtime code, actual S2-host/S3K-donor boot reproduced both orders:
+Sonic's colour 2 red was 255 instead of the ROM's 109 (`$0E66`), and Knuckles'
+was 109 instead of 255 (`$064E`). The two smaller initializer controls also
+reproduced the overwritten main normal row and missing distinct sidekick water
+row. Sonic/Tails and duplicate Sonic passed.
+
+The two bounded shapes compared are an explicit secondary-art loading
+path that does not select the shared donor row, and completed-team selection by
+the initializer before final upload. Adopt the latter: the existing initializer
+owns the completed team, reselects its actual built-in donated main before
+upload, and attaches each distinct donated sidekick's native-water row at its
+existing context binding. This covers built-in and prepared paths, including
+runtime refresh. Native scripted host art and mod-supplied palettes retain
+their existing owners. `CrossGameFeatureProvider` runtime code is unchanged;
+standalone character/default refresh, context identity and typed API remain.
+
+Reject the secondary loader on source comparison, not an implemented A/B run:
+it would require a new cross-package provider seam, migrate secondary callers
+and still establish sidekick water binding. Re-decoding main art as a final
+selection would obscure the owner and repeat observable loading. Final
+selection uses only existing palette reads and does not alter art or decode
+order. No registry/allocator, colour-profile, water-math, API-pin or frozen-store
+change is claimed.
+
+Reproduction controls use actual `GameplayCaptureSession` boot with S2 as host,
+S3K Sonic/Knuckles in both orders, Sonic/Tails, duplicate Sonic, and S1 duplicate
+Sonic including its existing native underwater row. Expected colours come from
+independent supplied-ROM words, not a new selection helper. They inspect both
+renderer bindings and actual normal/native-water texture rows, repeat playable
+refresh, and reset/reinitialize the provider. Smaller initializer controls cover
+different per-character native-water rows in built-in and prepared teams.
+
+Hooks are installed. All three existing absolute ROMs match the documented
+CRC32/SHA-1 identities. The leased version probe reported Java 25.0.5.0.2
+(353 seconds admission); `/usr/bin/lua5.4 -v` reported Lua 5.4.9. All tests run
+from this worker's own cwd with the following common command.
+`MAIN_CHECKOUT` denotes the existing parent checkout (and its verified ROMs);
+only that path is parameterized here to avoid committing a machine-local home
+path. The selectors below are the executed selectors:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SELECTOR" \
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+- Red selector:
+  `TestDonatedTeamPalettes,TestLevelPlayableArtInitializerModArt#donatedTeamPublishesMainNormalAndEachCharactersNativeWater`.
+  Seven cases ran, five failed, no errors/skips (123 seconds admission,
+  Maven 1 minute 26 seconds). Four are the reproduced defects above. The S1
+  control's fifth failure was an independent-oracle mistake: REV01 Pal_Sonic
+  is PalPointers entry 2 (`$2380`), not REV00's entry 3. Correct the test only;
+  retain revision-aware production loading. Both XML and text report pairs
+  were inspected and removed.
+- Candidate selector:
+  `TestDonatedTeamPalettes,TestLevelPlayableArtInitializerModArt,TestCrossGameFeatureProviderRefactor,TestPlayerSpriteRendererPaletteContext,TestGameplayCaptureDonorEntry,TestDonorTailsTailBanks,TestUnderwaterPaletteUpload`.
+  **93 distinct cases passed, zero failures/errors/skips**, across eight XML
+  reports (one empty outer report; its nested report also contains the outer
+  provider test identities). Counts: provider 11, underwater upload 22,
+  production team palette five, donor-tail banks nine, initializer 16,
+  renderer palette context two, native capture entry 28. Admission took 40
+  seconds; Maven took 1 minute 31 seconds. Both original swap failures now pass
+  the independent ROM checks and actual GPU row reads. All five production
+  cases repeat refresh and provider reset/reinit; shared-context identity and
+  same-palette sharing hold. Standalone/default refresh and clearing an absent
+  native-water selection also executed. The 16 consumed XML/text reports were
+  inspected and removed; no test command remains live.
+
+The tested candidate is the unchanged base above plus only the initializer and
+three test files in this worker commit. Existing main/sidekick art loading order,
+selection and animation translation stay at their original owners. The native
+entry matrix supplies stock S3K and S1/S2 donor controls; it is bounded entry
+coverage rather than full route certification. This worker stops at its local
+review-ready commit, leaving the checkout and branch for parent review.
+
+Limits: supplied-ROM palette values, completed bindings and identified GPU
+uploads establish this owner correction. They do not certify full gameplay,
+all donors/hosts, traces, native zone-water derivation or all colour profiles.
+Distinct synthetic water rows exercise the existing per-character provider
+contract; the actual native-water donor control is S1. Parent-owned composed
+guards/API/S3K/integration/push remain outstanding.
+
+### Independent-review correction in the same owner slice
+
+Review of `fe60ed29a76aea7108c38d302f4bae92964f06fd` identified a missing
+qualification: equal normal colours do not establish equal water policy. A mod
+main can use S1's normal colours with host-derived water, while its donated
+Sonic follower needs S1's native underwater row. The prepared initializer reused
+the mod main's context, then wrote the follower's native water into it. The
+reverse arrangement also reused the donated main's native-water context for a
+mod follower. The original 93-case observations above remain valid for their
+tested state and selection; they did not cover these mixed-policy aliases.
+
+On unchanged `fe60ed29a` runtime, the following selector used the same common
+environment, wrapper, ROM properties and `test -B` recorded above:
+
+```text
+TestLevelPlayableArtInitializerModArt#equalNormalModMainKeepsDerivedWaterBesideDonatedSonic+equalNormalModFollowerKeepsDerivedWaterBesideDonatedMain+equalNormalBuiltinSharingRequiresEqualWaterInBothRoutes,TestDonatedTeamPalettes#missingSelectedDonorAbortsBeforeAnyHostBoot
+```
+
+Eight cases executed: six failures, zero errors/skips. The initializer report
+contains six cases: the supplied-S1-ROM mod-main/Sonic follower case, reverse
+mod-follower case, and differing-water cases in both initialization routes
+failed their alias assertions. Both equal-normal/equal-native-water sharing
+controls passed. The donor-availability report contains two failures: mocked
+missing S1 and S3K discovery returned null and caused `NullPointerException`
+instead of aborting the affected invocation. Admission took five seconds and
+Maven 27.210 seconds. Both XML/text report pairs were inspected and removed.
+No user ROM file was renamed, removed or otherwise changed.
+
+Compare two small allocation shapes: always allocate a separate context for a
+donated follower, or retain sharing when normal colours and native-water policy
+match. Choose the latter on source comparison, preserving equal-water sharing
+and existing allocation behavior where compatible. Null means host-derived
+water and differs from any native row. The existing initializer reads each
+donated built-in character's native row before deciding compatibility, installs
+it only on a newly allocated context, and never writes a follower's water into
+a reused main context. Mod followers retain derived water; native scripted
+followers retain their host binding in both routes. No new registry, API,
+palette framework or colour model is introduced.
+
+The donor test now assumes availability before converting the selected donor
+file to a path. Two controls mock only discovery and catch the expected abort;
+they do not turn the configured real-ROM invocations into skips or touch ROM
+files. The mod-main initializer regression uses actual S1 donor normal/water
+palettes and art with an S2 host module; its mocked manager boundaries make it
+completed-initializer evidence, not a full installed-mod gameplay boot.
+
+The completed affected-family selector is
+`TestLevelPlayableArtInitializerModArt,TestDonatedTeamPalettes,TestGameplayCaptureDonorEntry,TestDonorTailsTailBanks`.
+It passed **68 distinct cases, zero failures/errors/skips**, in four XML
+reports: initializer 24, donated-team palette seven, native capture entry 28,
+and donor-tail banks nine. Admission took 113 seconds; Maven took 1 minute 29
+seconds. All five configured real-ROM palette invocations executed. The two
+missing-donor controls passed by catching the expected abort before any host
+boot; they are passing controls, not skipped ROM cases. The ROM-backed
+mod-main regression, reverse mod follower, equal/different native-water cases
+and native-scripted host-binding cases in both routes all executed and passed.
+XML identities and absence of failures/errors/skips were inspected; the eight
+consumed XML/text reports were removed. No task-owned command remains live.
+
+The correction changes only the initializer, its two affected test files and
+this bounded audit section. The prior 93-case result remains attributed to
+`fe60ed29a`, not relabeled as a run of this correction. No unchanged broad
+suite, provider or API selection was repeated. This is the focused affected
+family recheck, with the common Java 25/Lua 5.4/EGL/verified-ROM command above.
+The branch remains on the reviewed worker lineage; parent main `591c679b3` is
+not imported or changed. Composed gates and delivery stay parent-owned; this
+correction does not close donor-colour rewind ownership.
