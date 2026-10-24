@@ -4084,3 +4084,60 @@ or arbitrary incoming-world/module matrix was run. Earlier branches and the
 parent's separate closures remain unchanged. The branch stops at a clean local
 review-ready commit; review, composition, integration, push and branch/worktree
 cleanup remain the parent's responsibility.
+
+
+### Class-scoped audio regression fixture continuation
+
+Independent source qualification supports one final audio setup migration.
+Resolve `ensureRomAvailable()` before `resetEngineOnly()` so discovery still
+sees incoming configured paths. The utility consults properties/environment/
+configuration directly and does not require an engine root. Reset still occurs
+before a null return and before the private ROM is opened. Preserve `BeforeAll`
+cadence, all loader/DAC allocations, empty `BeforeEach` and unchanged `AfterAll`.
+The chip's static default rate is constant44100; direct render settings remain
+explicit. No helper, production or ROM-lifetime change is introduced.
+
+Remove only `AudioRegressionTest#setUpClass` (8 to7 keys,6 files). Qualification
+selects exactly the three hybrid/fallback PCM identities and the exact tally
+workload sample-count control, plus the singleton guard. Unlike an earlier
+assumption in the task prompt, three benchmark/memory methods are NOT tagged
+performance-measurement at this source; exact method selection excludes them.
+Seven external WAV cases are tagged `audio-local-wave` and remain outside scope;
+no fixture generation or measurement is requested. All three PCM controls must
+execute with the verified S2 REV01 ROM rather than assume-skip.
+
+The same queued command starts with `clean` to force fresh production/test
+compilation after the public Game relocation and private loader-field move.
+The old `data/Game.class` must not survive into recursive API discovery. All
+prior XML outputs in this owned target have been inspected and consumed.
+Results and final joint API/guard checks remain pending.
+
+
+The queued clean build passed12 checks, zero failures/errors/skips: exactly the
+four selected audio controls and all8 singleton lifecycle cases. All three
+PCM controls executed with the S2 REV01 ROM (SHA1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`), with both generic and S2 absolute
+path properties inspected. Java25/EGL propagation and exact method identities
+were verified; no WAV or measurement method was selected. Admission wait34
+seconds; Maven execution1:29. Four XML/text reports were consumed.
+
+Fresh compilation covered4336 production and4446 test/maintained-consumer
+sources. Compiled output has only the relocated Game, PaletteLoader and two art
+providers; all four old class paths are absent. The generic SMPS loader class
+contains no Rom type reference. These checks prevent stale old names from
+contaminating the subsequent recursive inventory. All audio consumer bodies
+remain unchanged outside imports/BeforeAll; class-scoped resources and existing
+AfterAll remain intact. No absolute WAV/native-hardware claim is made.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  '-Dtest=AudioRegressionTest#testHybridReadModeMatchesFallbackForMusicEhz+testHybridReadModeMatchesFallbackForMixedMusicSfx+testHybridReadModeMatchesFallbackForResultsTallyStress+testResultsTallyStressBenchmarkWorkloadUsesExactSampleCount,TestSingletonLifecycleGuard' \
+  clean test -B
+```
+
+Final joint contract/domain/API/guard checks and delivery remain pending.

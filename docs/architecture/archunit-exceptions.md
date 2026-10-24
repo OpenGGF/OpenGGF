@@ -151,7 +151,7 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 8 methods across 7 files,
+The ambient singleton-setup inventory now contains 7 methods across 6 files,
 down from 102/100 after direct manager construction and named module fixtures
 replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
@@ -694,3 +694,9 @@ owners, with205 behavior cases and8 guard controls passing without skips.
 The mixed ROM-free/method-level ROM PLC-art setup remains retained, as do the
 preference-sensitive and legacy visual boundaries. The local allowance is8
 methods across7 files; joint final verification remains pending.
+
+The audio regression class now resolves its configured S2 ROM before using the
+engine-only reset, then keeps one private ROM/loader/DAC initialization in
+`BeforeAll`. Only its setup key is removed; the three exact PCM identities and workload
+control executed without skips, alongside all8 singleton guard controls. External WAV comparisons and untagged
+measurement methods are not selected. The local inventory is7 methods/6 files.
