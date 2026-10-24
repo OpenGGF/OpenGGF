@@ -4534,3 +4534,38 @@ worker observations; parent final fresh guards follow on the composed tree.
 Both independent appendices were preserved against their common a273a43e base.
 Low-level121, permission151, ambient6/5 and API/descriptor identities are
 unchanged by the diagnostic correction.
+
+### Final composed verification and delivery decision
+
+At `0a841248bcd6e5c099babf41b69a425abc7321fa`, the separate fresh guard JVM
+passed769 cases across92 reports, zero failures/errors/skips. All769 exact
+identities and Java25/EGL properties were inspected, including33 ArchUnit rules,
+9 architectural-review checks,77 source guards and8 singleton lifecycle cases.
+Admission wait0s; Maven execution5:25. All184 XML/text files were consumed.
+Source and tracked state stayed fixed throughout this request.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' -Pguards "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
+
+Both Bash and PowerShell commit-range policy checks from pre-task destination
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7` passed on that source. Instruction
+and S3K pitfall mirrors match. The subsequent checkpoint edits only this plan
+and the current ledger wording; it changes no executable input or count.
+
+No further caller-complete migration was established by the final source audit
+without reopening retained typed contracts, callbacks, configured-root sampling,
+GPU/resource lifetimes or native allocation semantics. Six fixture obligations
+remain qualified: mixed ROM lifecycle, trace preference preservation and four
+legacy visual setups requiring owned compatible-context/pixel evidence. This is
+a stopping point for currently actionable guard work, not a zero-allowance or
+universal architectural/native correctness claim.
+
+The earlier broad smoke remains incomplete (68/75 batches, one reproduced
+baseline GLFW failure,93 skips). Required affected checks were completed through
+the recorded focused/domain/creator groups and fresh guards under proportionate
+validation policy; no green/full smoke claim follows. Main still has the exact
+pre-task develop SHA and its nine inherited status entries. Final integration
+will compare the tested tree, preserve those entries, rebuild current main
+artifacts and check actual API/count discovery after removing only four obsolete
+generated classfiles. Integration, push and owned-worktree cleanup follow.

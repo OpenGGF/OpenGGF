@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 pending joint contract checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -726,8 +726,8 @@ The parent observed669 runtime/loader/renderer cases,15 audio/DAC/lifecycle
 cases,458 fixture cases and119 creator/API/tooling cases with zero failures,
 errors or skips in their recorded selections. Engine/SDK packaging succeeded;
 canonical packaged Javadoc contains the new supported Game/art-provider pages
-and excludes their old identities. Fresh final guards and integration remain
-pending. The broad request completed68/75 batches then timed out with36,812
+and excludes their old identities. Fresh final guards passed769 cases with zero failures/errors/skips on the
+composed source; integration and push remain pending. The broad request completed68/75 batches then timed out with36,812
 tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
 green or complete smoke result. Exact commands, source states and limits are
 in the continuation plan. Remaining allowances have qualified retention reasons,
