@@ -2356,3 +2356,33 @@ terrain verifies the dive continuation; this does not prove its actual opening
 column, native capture parity, multibody World ordering or displayed pixels.
 Root's next composition owns those globals, shared queue, displayed-next-VInt
 latch, live Ring/Mosqui pass, unknown-ID rejection and capture/restore.
+
+
+### Authenticated mappings and immutable shared picture, 24 October 2026
+
+Added exact raw-pointer mapping resolution from the actual Sonic/Ring/normal-
+and damaged-Mosqui source views, plus pure CPU SAT conversion to the existing
+immutable SpritePresentation.Frame. Native full-word attributes, tile wrap,
+column-major pieces/flips and reverse-SAT painter order are retained. Unknown
+pointers/art and unsupported finite coordinate modes fail explicitly. Static
+one-piece mappings remain a distinct declared format; no unowned production
+static source is invented. Conversion neither clocks nor publishes a picture.
+
+Opus's independent four-file review found no P1/P2. Parent83759 then passed all18
+new methods, including actual-USA factory/bank checks, within58 selected cases
+(geometry10, retail3, module4, actor12, API11, mappings7, picture11), zero failures/
+errors/skips. Java25.0.5.0.2 and actual CD media were verified in all7XML reports.
+Other root geometry/rule corrections in this tree remain a separate guard repair.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestSonicCdLevelGeometry,TestSonicCdLevelRetail,TestSonicCdModuleContracts,TestCdPlayableSonic,TestModApiSignatureSurface,TestCdObjectMappings,TestCdObjectPresentation' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+```
+
+World composition must register one exclusive governed atlas range, subdivide
+its three logical pixel spans, recreate the player pixel source at every completed
+selector8 service and latch previous CPU SAT with now-serviced art. A one-time
+preload would freeze Sonic and is not permitted. The existing renderer's mixed
+sprite/plane-priority overlap approximation remains an explicit parity gap: native
+sprite winner precedes plane comparison; do not reorder SAT to compensate. This
+pure unit does not certify foreground compositing, native residency, actual
+opening-object rendering, shared World restore or gameplay parity.

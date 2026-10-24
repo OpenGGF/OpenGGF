@@ -1,0 +1,184 @@
+package com.openggf.game.soniccd.objects;
+
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdObjectVisualAssets;
+import com.openggf.game.soniccd.level.CdR11aAsset;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
+
+/**
+ * Pointer-owned, immutable DrawObjects mapping views. No ID dispatch, file IO or runtime source lookup.
+ * Source: scddisasm 1ecc5f3af, DrawObjects/.DrawSprite/.StaticMap
+ * (Level/Object Functions.asm:327-343): full unsigned frame, signed relative word,
+ * or exactly one header-free five-byte static piece at the actual pointer.
+ * Constructed declared views are format inputs, NOT authenticated media certificates.
+ */
+public final class CdObjectMappings implements CdDrawMappings {
+    /**
+     * One bounded byte source and ONE registered counted-table root within it.
+     * Negative relative words may address preceding bytes of this same view; aliases are preserved.
+     * Native addresses retain all 32 bits. This declaration establishes no runtime asset provenance.
+     */
+    public record DeclaredTable(int nativeStartBits, CdAssetBytes bytes, int tableOffset, int frameCount) {
+        public DeclaredTable {
+            Objects.requireNonNull(bytes, "mapping source bytes");
+            if (frameCount < 1 || frameCount > 256 || tableOffset < 0
+                    || (long) tableOffset + frameCount * 2L > bytes.length()) {
+                throw new IllegalArgumentException("Counted mapping table must fit its bounded source view");
+            }
+            if (Integer.toUnsignedLong(nativeStartBits) + bytes.length() > 0x1_0000_0000L) {
+                throw new IllegalArgumentException("Declared source crosses the native 32-bit address boundary");
+            }
+        }
+        public int tableAddressBits() { return nativeStartBits + tableOffset; }
+    }
+
+    /** Exactly the five bytes at this pointer; no count or frame-table header is present. */
+    public record DeclaredStaticPiece(int addressBits, CdAssetBytes bytes) {
+        public DeclaredStaticPiece {
+            Objects.requireNonNull(bytes, "static mapping bytes");
+            if (bytes.length() != 5 || Integer.toUnsignedLong(addressBits) + 5 > 0x1_0000_0000L) {
+                throw new IllegalArgumentException("Static mapping requires one bounded raw five-byte piece");
+            }
+        }
+    }
+
+    private final Map<Integer, DeclaredTable> tables;
+    private final Map<Integer, DeclaredStaticPiece> staticPieces;
+
+    private CdObjectMappings(List<DeclaredTable> tables, List<DeclaredStaticPiece> staticPieces) {
+        var indexedTables = new HashMap<Integer, DeclaredTable>();
+        for (var table : List.copyOf(tables)) {
+            if (indexedTables.putIfAbsent(table.tableAddressBits(), table) != null) {
+                throw new IllegalArgumentException("Duplicate counted mapping pointer registration");
+            }
+        }
+        var indexedStatic = new HashMap<Integer, DeclaredStaticPiece>();
+        for (var piece : List.copyOf(staticPieces)) {
+            if (indexedStatic.putIfAbsent(piece.addressBits(), piece) != null) {
+                throw new IllegalArgumentException("Duplicate static mapping pointer registration");
+            }
+        }
+        this.tables = Map.copyOf(indexedTables);
+        this.staticPieces = Map.copyOf(indexedStatic);
+    }
+
+    /** Pure declared-format binding. It does not authenticate media, an object owner or native execution. */
+    public static CdObjectMappings declaredSourceViews(List<DeclaredTable> tables,
+                                                       List<DeclaredStaticPiece> staticPieces) {
+        return new CdObjectMappings(tables, staticPieces);
+    }
+
+    /**
+     * Production factory over actual immutable loaded bytes. Opening objects are authenticated by
+     * CdR11aAssets.openingObjects(), which rehashes the retained MMD before decoding. Both owners must
+     * identify the same USA R11A source, including observed disc identity; decoded tables must equal
+     * their actual source views. A declared view/identity record alone cannot create either owner.
+     * No static opening source has been admitted: production bit-5 requests explicitly reject.
+     */
+    public static CdObjectMappings fromOpeningAssets(CdR11aAssets assets, CdR11aObjectAssets objects) {
+        Objects.requireNonNull(assets, "loaded R11A assets");
+        Objects.requireNonNull(objects, "loaded opening object assets");
+        if (!assets.identity().equals(objects.identity())) {
+            throw new IllegalArgumentException("Mapping assets and opening objects have different source identities");
+        }
+        var profile = assets.profile();
+        var identity = assets.identity();
+        if (identity.variant() != CdReleaseVariant.USA || profile.variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("Opening mapping binding is reviewed only for USA R11A");
+        }
+        if (!profile.stage().equals(identity.stage()) || profile.file() != identity.file()
+                || profile.domain() != identity.domain() || !profile.expectedMmdSha256().equals(identity.mmdSha256())) {
+            throw new IllegalArgumentException("Mapping asset profile/source identity mismatch");
+        }
+        var tables = new ArrayList<DeclaredTable>();
+        var sonic = assets.sonic();
+        var sonicView = assets.view(CdR11aAsset.MAP_SPR_SONIC);
+        requireEqualBytes(sonicView.bytes(), sonic.mappings());
+        // Reuse the decoded Sonic body bounds/counts, and retain its actual raw source bytes.
+        for (var frame : sonic.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), sonicView.bytes().slice(frame.relativeOffset(), 1 + frame.pieceCount() * 5));
+        }
+        tables.add(new DeclaredTable(sonicView.range().nativeAddress(), sonicView.bytes(), 0,
+                sonic.mappingFrames().size()));
+        addObject(tables, objects, CdR11aObjectAssets.Table.RING_MAPPINGS, objects.rings());
+        addObject(tables, objects, CdR11aObjectAssets.Table.MOSQUI_NORMAL_MAPPINGS, objects.normalMosqui());
+        addObject(tables, objects, CdR11aObjectAssets.Table.MOSQUI_DAMAGED_MAPPINGS, objects.damagedMosqui());
+        return new CdObjectMappings(tables, List.of());
+    }
+
+    @Override public MappingBody resolve(int addressBits, boolean staticPiece, int mapFrameByte) {
+        if (mapFrameByte < 0 || mapFrameByte > 255) {
+            throw new IllegalArgumentException("Mapping frame must be the full unsigned native byte");
+        }
+        if (staticPiece) {
+            var view = staticPieces.get(addressBits);
+            if (view == null) { throw unsupported(addressBits, true, mapFrameByte, "no admitted raw static piece at this pointer"); }
+            return new StaticMapping(piece(view.bytes(), 0));
+        }
+        var table = tables.get(addressBits); // Exact raw long bits: NEVER mask unsupported addresses to 24 bits.
+        if (table == null) { throw unsupported(addressBits, false, mapFrameByte, "no registered counted-table pointer"); }
+        if (mapFrameByte >= table.frameCount()) {
+            throw unsupported(addressBits, false, mapFrameByte, "frame outside the registered source table");
+        }
+        int relative = (short) table.bytes().unsignedWord(table.tableOffset() + mapFrameByte * 2);
+        int at = table.tableOffset() + relative;
+        if (at < 0 || at >= table.bytes().length()) {
+            throw new IllegalArgumentException("Signed mapping relative word escapes its bounded source view");
+        }
+        int count = table.bytes().unsignedByte(at);
+        if (count > 128) {
+            throw unsupported(addressBits, false, mapFrameByte,
+                    "count " + count + " takes the native empty branch; unsupported by bounded mapping policy");
+        }
+        int length = 1 + count * 5;
+        if (length > table.bytes().length() - at) {
+            throw new IllegalArgumentException("Counted mapping body escapes its bounded source view");
+        }
+        var pieces = new ArrayList<RawPiece>(count);
+        for (int index = 0; index < count; index++) { pieces.add(piece(table.bytes(), at + 1 + index * 5)); }
+        return new FrameMapping(count, pieces);
+    }
+
+    private static RawPiece piece(CdAssetBytes bytes, int at) {
+        // Share the existing visual piece's signed offsets, raw attribute word and finite size policy.
+        var piece = new CdObjectVisualAssets.Piece(bytes.signedByte(at), bytes.unsignedByte(at + 1),
+                bytes.unsignedWord(at + 2), bytes.signedByte(at + 4));
+        return new RawPiece(piece.y(), piece.sizeByte(), piece.rawTileWord(), piece.x());
+    }
+
+    private static void addObject(List<DeclaredTable> tables, CdR11aObjectAssets owner,
+                                  CdR11aObjectAssets.Table table, CdObjectVisualAssets visual) {
+        var view = owner.view(table);
+        if (view.table() != table || !view.range().equals(table.range())) {
+            throw new IllegalArgumentException("Object mapping source range mismatch");
+        }
+        requireEqualBytes(view.bytes(), visual.mappings());
+        for (var frame : visual.mappingFrames()) {
+            requireEqualBytes(frame.bytes(), view.bytes().slice(frame.relativeOffset(), 1 + frame.pieces().size() * 5));
+        }
+        tables.add(new DeclaredTable(view.range().nativeAddress(), view.bytes(), 0, visual.mappingFrames().size()));
+    }
+
+    private static void requireEqualBytes(CdAssetBytes source, CdAssetBytes decoded) {
+        if (!Arrays.equals(source.copy(), decoded.copy())) {
+            throw new IllegalArgumentException("Decoded mapping bytes differ from the loaded source view");
+        }
+    }
+
+    private static UnsupportedOperationException unsupported(int pointer, boolean staticPiece, int frame, String reason) {
+        return new UnsupportedOperationException(String.format(Locale.ROOT,
+                "CD mapping $%08X static=%s frame=%d: %s", pointer, staticPiece, frame, reason));
+    }
+}
