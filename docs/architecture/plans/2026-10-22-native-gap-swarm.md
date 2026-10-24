@@ -5799,3 +5799,244 @@ limitation and all prior test epochs remain unchanged evidence. No remote push,
 body/draft change, Main/develop mutation, manualCI, native/passive observation,
 route profile or new source phase follows. Consumed owned diagnostics are removed
 after readback; useful source, classes and the local worktree/branch remain retained.
+
+## 2026-10-24 — native ownership on renderbuffer-depth scene targets
+
+This bounded leaf starts from sole parent
+`3da9b979538ece909ad5d39a82f58d2c9b417534` in isolated worktree
+`<task-worktree>`, branch
+`bugfix/ai-pr223-native-depth-stencil-20261024`. The parent supplied two original
+3da errors in
+`TestStageplayLiveWorldRendering#nativeBodiesAppearAtTheResolvedDirectorCoordinatesWithoutTicking(String)`:
+`[4]` (`air`, `live-air-traffic`) failed on the frame-115 draw at original test
+line 49; `[5]` (`boundary`, `one-more-take`) failed on its initial frame-35 draw
+at original line 41, before its frame-1375 and frame-2255 draws. Both reported
+`NativeSpriteOwnership.requireComplete` status `0x8CDD` (`UNSUPPORTED`). This is
+supplied reproduction evidence, not a new baseline run or proof of newness or a
+particular driver's cause. The parent's broad source, targets and jobs were not
+read, changed or observed by this leaf.
+
+Source inspection identified the concrete portability gap: Stageplay's private
+tile target uses `FboHelper.createWithDepth`, an RGBA8 colour texture plus a D16
+depth renderbuffer without stencil or multisampling. Native ownership previously
+left that depth image attached while appending a separate S8 image. Simultaneous
+depth and stencil support is guaranteed for the same packed image, not that
+separate D16/S8 combination. Retaining separate S8 on this caller was therefore
+rejected; the observed unsupported status is consistent with that gap without
+establishing its exact driver cause.
+
+For the no-stencil, depth-renderbuffer case only, ownership now captures the
+foreign renderbuffer identity, width, height and sample count, allocates one
+owned D24S8 image, and attaches it to both depth and stencil. Depth testing and
+writes remain disabled during native drawing. The foreign image is detached,
+never cleared, copied, reallocated or drawn into; normal close, queued draw
+failure and begin failure restore its exact attachment and remove scratch
+stencil. The changed-attachment flag is set before either installation call.
+Colour-only S8 and existing-stencil backup/format/copy paths, native FIFO,
+first-opaque ownership, ghost order, palette masks, SHADOW_15 and SAT budgets
+retain their previous behavior. No shared FBO helper or public API changed.
+
+The two added cases in `TestNativeSpriteOwnershipPixels` were authored before
+the production edit:
+
+- `depthRenderbufferTargetsPreservePixelsDepthAndStateAfterDrawAndQueuedFailure`
+  uses real `createWithDepth(352,256)` with a 320×224 viewport, ordinary native
+  first-opaque drawing and both live/published ghost replay. It checks original
+  depth/colour attachment identity, full-image depth bytes with distinct
+  off-viewport sentinels, packed scratch dimensions and single-sample metadata,
+  bindings, read/draw buffers, viewport and graphics state after success and
+  queued draw failure, plus deletion of the captured scratch object names.
+- `depthRenderbufferAndStateSurviveBeginFailureAfterScratchInstallation`
+  deliberately injects `GL_INVALID_ENUM`; it requires the exact
+  `clearing native SAT coverage: GL error 0x500` failure after scratch installation
+  and verifies original attachment, depth bytes and state restoration. This is
+  an asserted negative control, not an unexpected validation error. Existing
+  injected draw failures and shadow validation/producer failures likewise remain
+  source-asserted negative controls.
+
+The Stageplay fixture now calls `GraphicsManager.cleanup()` in a local finally
+inside its boot try-with-resources, after private world/readback resources close
+and while its context is current. Removing only this wrapper reconstructs the
+entire old test file exactly: all five `first`, `hud`, `platform`, `air`,
+`boundary` parameters, frame bounds (0; 35; 35; 115; 35→1375→2255), coordinates
+and assertions are unchanged. Removing the added pixel cases/helpers and expanded
+state snapshot likewise reconstructs the old pixel test file exactly.
+
+### One affected request and actual readback
+
+The frozen three-source patch SHA-256 was
+`ddba47513a9b4c5caeaaf1aefc9bf1a7173074ed9e312af3a7c4da2e57b25813`.
+Post-run source SHA-256 values matched the reviewed pre-run values exactly:
+
+```text
+NativeSpriteOwnership.java        cd81980870d32b86908f058ef8684caa9b23faf9beaea91a8b210e71175fe0c2
+TestNativeSpriteOwnershipPixels   7a518f4012705d322c6a13baf9a093975de3185b5f8b97d81a44cfdb7d7b7ca9
+TestStageplayLiveWorldRendering   3b9329049e639811b9a5d511aec2355d0ebf344c7d88d49582a03813d667e2ca
+```
+
+Fresh reads of the three original stock ROM files named below matched the documented
+CRC32/SHA-1 identities: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 REV01 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3&K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROM links or copies were created.
+No owned Maven request was already queued/running. The current Main wrapper at
+`97eb86f186b432722024ca419a00b901b38f5ec2` had SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`;
+its static local-import closure also matched after execution. The sole command
+ran from the isolated worktree. This portable transcription uses `OPENGGF_MAIN`
+for the original Main checkout; the literal absolute argv was registered before
+execution in the task's external lifecycle registry:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.graphics.TestNativeSpriteOwnershipPixels,com.openggf.graphics.TestNativeShadow15Pixels,com.openggf.graphics.TestSpriteSatReplayPixels,com.openggf.stageplay.runtime.TestStageplayLiveWorldRendering' \
+  "-Dsonic1.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_MAIN/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_MAIN/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The launched environment used `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, `ALSOFT_DRIVERS=null`, `EGL_PLATFORM=surfaceless` and
+`PYTHONDONTWRITEBYTECODE=1`, with JDK bin first on PATH. Ambient JVM/Maven,
+desktop and graphics-driver overrides were removed. No standalone build,
+preflight or version probe preceded this one normal request; no retry, narrowed
+selector, custom timeout or resource override followed it. Command session
+`38860`, wrapper PID `1877905`, exact argv, source/import/ROM pins and handle were
+registered before result interpretation.
+
+The original request completed at `2026-10-24T12:33:16Z`, exit 0. Its own queue
+telemetry reported **131.4 seconds waiting** and **94.5 seconds holding execution**;
+Maven reported **93 seconds** for its lifecycle. Those intervals are distinct;
+the earlier 5–10 minute active estimate was not a measurement or cap. Actual XML
+contained exactly the 30 source-derived identities: ownership 13, SHADOW_15 11,
+SAT replay 1, Stageplay 5; **0 failures, 0 errors, 0 skips**. In particular both
+new depth cases and all original five scene invocations completed, including
+the air and boundary cases previously reported as errors.
+
+Readback covered all 30 identities, all four reports' 69 properties (Java 25,
+surfaceless EGL, selector, worktree and all three ROM paths), recursively nested
+streams, four text reports, the complete 146-line console log, new dump scan and
+post-run source/tree/head. Six nonempty XML streams contained only the known
+FAST-to-NONE load-profile warnings; the console contained ten such warnings.
+Compiler/JOML deprecation warnings also occurred. Maven's initial
+`java.io.tmpdir directory does not exist` warning preceded its normal
+`prepare-worktree-test-directories` creation of `target/maven-tmp`; the test JVM
+used the owned `target/test-tmp`. There were no caught-fault stack traces or new
+VM/Surefire dumps. Initial broad filename matches for `LevelLayoutDumpTool.class`
+and `SpriteSheetDump.class` were compiled classes, not diagnostic dumps, and were
+preserved. Raw owned XML/text/log diagnostics were consumed after readback;
+compiled classes, test resources, native extraction, source and worktree remain.
+
+This is one bounded affected pass, not aggregate smoke, guards, full-suite,
+route, hardware-timing or ROM-parity certification. No MSAA case was authored or
+executed; new depth cases are single-sample. Texture-depth and other non-renderbuffer
+attachment forms retain their previous behavior and are not newly covered.
+The begin-failure test verifies attachment/state/content cleanup after both scratch
+installation calls; its failed open does not expose the scratch name, so deletion
+there is supported by the finally-path source review rather than a name-based
+runtime assertion. No fault was injected between the two installation calls.
+Only this factual append and the folded existing Stageplay prerelease theme
+followed execution; the three tested source files stayed frozen. The local leaf
+does not authorize push, Main/PR/CI changes, another validation request, or
+observation of the parent's broad job; the parent owns final composition.
+
+
+### PR223 interrupted common smoke and qualified corrections — 2026-10-24
+
+The one common smoke invocation on `3da9b979538ece909ad5d39a82f58d2c9b417534`
+selected 4,052 candidates in 82 ordinary batches, followed by guards, against
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`. Its selection SHA-256 was
+`d31262d42be4ad5c31b9ee9351f703939f13c2cfd03448eed901f8e0fa955d40`.
+The original agent turn failed at 12:57:11 UTC; the runner subsequently disappeared
+without a terminal exit status or final summary. Its last retained ordinary output
+was at 13:57:05 UTC. The exact disappearance cause is unknown. No Maven/JVM remained
+in the owning worktree when recovery inspected it. This is incomplete execution,
+not a timeout verdict or a completed smoke result.
+
+The retained summary contains **75/82 completed batches, 39,927 reported tests,
+36 failures, 5 errors and 105 skips**. Preparation passed in 93.93 seconds; the
+75 summarized batches account for 6,710.53 seconds, with 4,480 seconds of printed
+admission waits separately across the 76 starts. The latter includes the stranded
+batch. Its duration is not established; parallel component times are not summed
+into delivery time. There was no guard invocation.
+
+Stranded batch 76 contains 50 well-formed XML reports matching its entire selected
+source-family set: **291 testcase elements, 9 failures, 0 errors and 3 skips**.
+Repeated factory display names leave 254 distinct class/name pairs, so 291 is not
+claimed as a unique-identity count. These reports are kept separate from the
+75-batch aggregate; batch completion and Maven exit remain unconfirmed. All 3,600
+properties have the same set: Java 25.0.5.0.2/class 69, the owning classpath and
+worktree, surfaceless EGL and the three original absolute stock-ROM properties.
+The available 145 recursive stream nodes contain 528,836 bytes, with FAST/NONE,
+deterministic KOS estimates and presentation-shadow SFX warnings; no unexpected
+fault marker or VM/Surefire dump was found in retained evidence. Rolling output is
+bounded to current/previous 2 MiB chunks, not an exhaustive stdout archive.
+
+The completed summary's nine early failures have independently qualified fixes:
+`ad613fd7a488e1585db2e5d0c2780e6ac94a80ad` (LIVE catalogue, one passing case),
+`2d604f66268ec494bf085aba4f5fe9a353bd86be` (captured background authority and real
+accepted-slot fixture admissions, 38 passing cases), and
+`fa7f88deca20ce9ea8b9a1f5107772113734366d` (registration catalogue and registered
+shield-role/ID assertions, seven passing cases). The separate framebuffer leaf
+`5dd01eb992ab908b1ad60b538e90e963e6a959fb` passed 30 affected cases, including all
+five original Stageplay native rendering scenes. The preceding component sections
+retain exact inputs, outcomes and limits. The fixture stack is received once by
+ancestry; the independent framebuffer leaf is merged once. Their Plan appends are
+preserved behind the complete common prefix. These are source composition and
+separate test epochs, not an aggregate green run.
+
+The remaining summarized reds are 32 cold-route assertions: DEZ upper (11), DEZ
+incoming final (5), DEZ solo Act Two (4), DEZ solo cold (3), LRZ Knuckles (6), MHZ
+Knuckles (2), and HPZ joined (1). The stranded reports add LRZ/HPZ/SSZ campaign (4),
+SOZ (3), and SSZ wide paired (2). Their causes/newness remain unknown; no gameplay,
+input, timing, oracle or checkpoint has been tuned. In particular, the eleven DEZ
+upper methods still fail the shared centre-X checkpoint, expected 9589 versus 3203.
+The 105 summarized skips include 32 geometry-conditioned Infinite Sonic cases,
+17 catalogue-prerequisite cases (Emerald Remix 4, Real Valley 13), 16 unavailable
+GL/shader cases, and 40 opt-in/missing-artifact or other prerequisites. The stranded
+three are explicit native/mod-artifact properties. None certifies the skipped
+feature. The inherited S1 E8DF mapping-art limit and previous route evidence remain
+open; no asset fallback, suppression, guard/cap change or baseline waiver is made.
+
+Recovery read all available failure details, skips and stranded report metadata,
+verified the original complete input frame unchanged (13,178 paths / 856,426,018
+bytes), and acknowledged the original diagnostics normally. Raw output is not
+archived. Old generated class directories remain isolated until accounted cleanup;
+compiled outputs and source worktrees are retained.
+
+A source-only coverage audit found the smallest union of complete existing
+categories covering all 302 unfinished candidates: `audio`, `rendering`, `rewind`,
+`content`, `mods`, `network`, and `tooling`, with automatic `common`. This is
+**2,011 candidates / 41 ordinary batches**, naturally repeating 1,709 completed
+candidates. It uses the normal focused-category CLI, not a hand-edited selection,
+internal resume, or a claim that the interrupted run completed. Physics/gameplay
+categories own no unfinished candidate; their runtime source is unchanged by these
+corrections. The sole production correction is private framebuffer ownership and
+has its real depth/stencil/pixel/failure controls plus complete rendering coverage
+in the focused union. The new invocation and fresh guards will be recorded as
+separate results. Their outcomes are **pending** at this checkpoint.
+
+From `<PR_WORKTREE>`, using the reviewed Java 25/Lua 5.4/no-device/EGL environment
+and original images under `OPENGGF_ROM_DIR`, the planned command is:
+
+```sh
+python3 tools/testing/run_categories.py \
+  --category audio --category rendering --category rewind --category content \
+  --category mods --category network --category tooling \
+  --workers 1 --headless-gl surfaceless-egl \
+  --rom-directory "$OPENGGF_ROM_DIR" --max-minutes 180 --run
+```
+
+Planning allowance is roughly one to two active hours plus unknown admission waits;
+180 cumulative minutes is a stop budget, not a completion promise. Preserve one
+invocation through JUnit reds and inspect exact failures/skips/omissions. Stop
+incomplete for source/selection drift, failed preparation, confirmed infrastructure
+or launcher failure, empty/wholly skipped work, cancellation, budget exhaustion,
+or ten minutes without Maven output. No source edits, blind retry or narrowing occur
+while it runs. Fresh guards follow once in a separate JVM if the category invocation
+completes; they do not waive ordinary failures. Routine necessary queued checks
+continue autonomously under the user's clarification about approval ceremonies.
+Main/develop, PR publication/draft state, manual CI and native/passive observations
+remain outside this recovery action. No PR-green or complete native-route claim is
+made.

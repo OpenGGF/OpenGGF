@@ -108,7 +108,9 @@ Unreleased. The earlier development themes remain in
   unpublished documents and screenplays accept only their current format. Native ROM worlds share moving objects, collision pickups, native hurt and per-actor controllers;
   bounded routes/placement targets, native flight/glide and actor/group
   camera follow use the production gameplay and rewind owners. Directed foreground,
-  characters and occlusion stay aligned through camera movement. Current native
+  characters and occlusion stay aligned through camera movement. Depth-backed scene
+  targets retain native sprite overlap and ghost blending while preserving their
+  original depth image. Current native
   scenes project background parallax/deformation at the directed camera without
   advancing native effect phases; separated performers share native object slots
   through independent activation windows. Inspect actual state
