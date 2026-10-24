@@ -231,3 +231,72 @@ against `HEAD` found **zero newly introduced citations**. Pins and existing
 citation text were preserved; this pre-existing corpus issue was not expanded
 into unrelated fixes. Diagnostic outputs and temporary bytecode/proof/shim files
 are consumed and removed after recording these results.
+
+
+## Integration follow-up: capture readiness precedes facing
+
+The voices/facing integration at `905a01cf4` regressed two existing
+`TestStageplayNativeCapturePurity` cases that the lead verified on develop
+`97eb86f18`: the MGZ Knuckles defeat fragment and ICZ snow-pile captures. Both
+fixtures intentionally provide no renderer. `StageplayObjectCapture` skipped
+per-entry facing lookup when no draw existed, but evaluated
+`ObjectVisualFacing.resolve(root)` as a constructor argument before
+`VisualTemplate` could reject its empty parts. That replaced the existing
+"no initialized native visual" refusal with an undeclared-facing refusal.
+An observed mapping draw whose every pose was empty had the same premature
+per-entry lookup.
+
+Capture now validates populated parts before resolving root facing, using the
+same readiness check as `VisualTemplate`, and resolves each entry's facing only
+when an actual visual part is added. This supplies no neutral fallback for a
+ready undeclared appearance. The ICZ pile remains unsupported as an object-sprite
+capture: its native append emits no sprite, while a separate background effect
+owner supplies the snow. It needs no invented object-facing declaration.
+
+`MgzEndBossKnuxDefeatPart` can emit native sprite mappings when its art is ready,
+so it now explicitly declares `PoseOwned`. Native subtype chooses the fragment
+mapping; its renderer always passes unflipped X/Y. Flight velocity establishes
+no horizontal body direction. No native update/draw body was changed.
+
+The bytecode guard deliberately enumerates registry allocation recipes and stops
+at constructors; it does **not** statically enumerate every gameplay child.
+Runtime capture resolves a dynamically created child when selected as its own
+performer, or when it owns an independent facing group under `Container`. A
+shared directional parent continues to own its assembly's orientation.
+`TestNativeObjectFacingGuard` now exercises the real `spawnChild` path, first
+with an observed but empty mapping and then with a populated mapping, both as a
+standalone child and as a container member. Empty appearances retain the readiness
+refusal; populated undeclared children still name the missing native Source.
+This regression runs in the existing guards profile without policy changes.
+
+The native purity fixture retains its original readiness-message assertion and
+now checks native counters after **each** rejected capture. An added initialized
+MGZ fragment case compares both complete templates, verifies native pose ownership
+and unchanged flicker after each capture, then proves ordinary append still
+consumes exactly one phase. The pre-fix focused run reproduced both reported
+failures, plus the new initialized-fragment error and empty-mapping child-guard
+failure: 51 tests, 3 failures, 1 error, 0 skips. The lead's target ownership marker
+was respected; no Maven, build or source edits began until it contained `done`.
+
+On the integration worktree, the same focused selection after the fix passed
+**51 tests, 0 failures/errors/skips**:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=TestStageplayNativeCapturePurity,TestNativeObjectFacingGuard,TestStageplayFacingGuard,TestObjectVisualFacing,TestStageplayObjectDirection test -B
+```
+
+The separate requested guards command is:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+The complete guards profile finished successfully on the same integration
+candidate at 2026-10-24 16:09 Europe/London: **778 tests, 0 failures/errors/skips**,
+including all four native-facing guard cases. No hook, selection policy, public
+signature pin, format or native gameplay routine changed. The existing purity
+assertions were strengthened, not relaxed. Broad smoke and final integration
+remain with the lead; this follow-up makes only the requested local commit.

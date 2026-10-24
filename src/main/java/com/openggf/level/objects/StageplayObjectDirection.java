@@ -141,11 +141,7 @@ public final class StageplayObjectDirection implements AutoCloseable {
             patterns = List.copyOf(patterns);
             palettes = List.copyOf(palettes);
             limitations = List.copyOf(limitations);
-            if (parts.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Object has no initialized native visual. Start as Free in its native set,"
-                                + " then switch after appearance initializes");
-            }
+            requireInitializedParts(parts);
             if (parts.size() > MAX_PARTS || patterns.size() > MAX_PATTERNS || palettes.size() > 4) {
                 throw new IllegalArgumentException(
                         "Object visual template exceeds bounded art budget");
@@ -180,6 +176,14 @@ public final class StageplayObjectDirection implements AutoCloseable {
                         }
                     }
                 }
+            }
+        }
+
+        static void requireInitializedParts(List<VisualPart> parts) {
+            if (parts.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Object has no initialized native visual. Start as Free in its native set,"
+                                + " then switch after appearance initializes");
             }
         }
     }
