@@ -1,6 +1,6 @@
-package com.openggf.graphics;
+package com.openggf.game.titlecard;
 
-import com.openggf.game.titlecard.TitleCardMappings;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 
 /**
