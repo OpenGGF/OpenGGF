@@ -312,3 +312,35 @@ Apply-selected states. Documentation whitespace and skill mirror checks pass.
 Only the engine feature branch changes in this round, with the required trailers;
 no merge, push, policy change or broad smoke run is performed. The lead retains
 integration and broad smoke ownership.
+
+### Lead review round 5
+
+Follow-up to engine `a1aaa699f`. Increase `HEADING_GAP` from four to six logical
+pixels (18 displayed pixels at the standard HUD scale), and `HEADING_HEIGHT` from
+fourteen to sixteen so the distance from each heading to its first row is retained.
+The 36-pixel row pitch, one-row selection fills and 21-pixel primary-button gap stay
+unchanged. The existing complete collapsed-form survey and all HUD picture fixtures
+verify that common fields, Advanced and primary actions still fit; a five-pixel
+heading gap is the authorized fallback only if that visibility check fails.
+
+This is a private drawing-constant adjustment. Native form metadata, picker drawing,
+field callbacks and dependency boundaries are unchanged; the previous architecture,
+picker and desktop interaction checks remain applicable. This round reruns the
+affected layout inventory and both HUD picture classes, with no broad smoke run.
+
+The final queued command, with Java 25, display variables unset and the same
+surfaceless EGL, HUD-picture and absolute ROM settings as round 4,
+`maven_queue.py -Dmse=off -Dtest=TestEditorProjectMenu,TestStageplayHudPictures,TestStageplayRouteOverlayPictures test`,
+passed **18 tests, zero skips**. The six-pixel gap fits every collapsed form;
+the five-pixel fallback is not needed. All 79 HUD pictures were regenerated and
+checked, including the full normal and Apply-selected Plan route forms. Pixel
+readback measures an 18-pixel gap between Who's 36-pixel highlight and Destination.
+All 57 visible primary buttons remain complete, with at least 21 displayed pixels
+clear above them. The refreshed lossless WebP copies match their original PNG pixels.
+
+Packaging/installing the engine into the Editor's private repository succeeded;
+the Editor's queued `maven_queue.py -Dmse=off -DskipTests package` also passed.
+The gallery retains 169 comparisons and the desktop branch remains at `4aa6c06`.
+No controls, authoring instructions, policies or release themes change in this
+spacing-only follow-up. Both worktrees are left clean, with a local engine commit
+and no merge or push.

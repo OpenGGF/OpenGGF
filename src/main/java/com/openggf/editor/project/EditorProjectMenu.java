@@ -97,8 +97,8 @@ public final class EditorProjectMenu {
     public boolean showingDetails() { return details != null; }
     public String helpText() { return help; }
 
-    // The standard HUD is 3x: 36px rows, 12px section gaps and 21px before buttons.
-    private static final int ROW_TOP = 44, ROW_HEIGHT = 12, HEADING_GAP = 4, HEADING_HEIGHT = 14,
+    // The standard HUD is 3x: 36px rows, 18px section gaps and 21px before buttons.
+    private static final int ROW_TOP = 44, ROW_HEIGHT = 12, HEADING_GAP = 6, HEADING_HEIGHT = 16,
             BUTTON_GAP = 7, ROW_BOTTOM = 205;
 
     /** Immutable presentation shared with desktop chrome; canonical values stay separate from labels. */
