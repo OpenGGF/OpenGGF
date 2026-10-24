@@ -1,6 +1,15 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.camera.Camera;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
+import com.openggf.level.render.ObjectSpriteCapture;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.graphics.GLCommand;
 import com.openggf.tests.ObjectGuardSourceScanner;
 import org.junit.jupiter.api.Test;
@@ -26,12 +35,16 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Enumerates native factory bytecode, without invoking registries or factories.
  * All branches of a factory are visited, including S3K pointer-table and stock-zone
  * overrides. Constructor calls are leaves, so ordinary non-castable descendants
  * are not pulled into the declaration obligation merely because a root spawns them.
+ * Dynamically spawned facing owners are checked on their initialized captured
+ * appearance; the runtime child regression below covers that separate boundary.
  */
 class TestNativeObjectFacingGuard {
     @Test void allNativeCastFactoriesDeclareTheirLogicalFacingOwner() throws Exception {
@@ -72,6 +85,83 @@ class TestNativeObjectFacingGuard {
         assertTrue(missing.getFirst().contains("FixtureFactories"));
         assertEquals(1, inventory.opaqueFactories().size(), "An opaque generic ObjectInstance helper must not disappear from coverage");
         assertEquals("borrowed", inventory.opaqueFactories().iterator().next().name());
+    }
+
+    @Test void runtimeFacingChecksDynamicChildrenOnceTheyHaveAVisualBothAloneAndInAContainer() {
+        try (var fixture = new RuntimeFacingFixture()) {
+            var parent = fixture.objects.createDynamicObject(RuntimeParent::new);
+            var child = parent.child(fixture.renderer(false));
+            assertTrue(fixture.direction.graph(parent).contains(child));
+            var draws = new ArrayList<ObjectSpriteCapture.Draw>();
+            ObjectSpriteCapture.observe(draws::add,
+                    () -> child.appendRenderCommands(new ArrayList<>()));
+            assertEquals(1, draws.size(), "Exercise an observed mapping draw with no populated poses");
+            for (var root : List.of(child, parent)) {
+                var failure = assertThrows(IllegalArgumentException.class, () -> fixture.direction.captureDynamic(root));
+                assertTrue(failure.getMessage().contains("no initialized native visual"), failure.getMessage());
+            }
+
+            // Readiness must not cache a neutral fallback for an undeclared child.
+            child.renderer = fixture.renderer(true);
+            for (var root : List.of(child, parent)) {
+                var failure = assertThrows(IllegalArgumentException.class, () -> fixture.direction.captureDynamic(root));
+                assertTrue(failure.getMessage().contains(RuntimeChild.class.getName()), failure.getMessage());
+                assertTrue(failure.getMessage().contains("ObjectVisualFacing.Source.nativeFacing()"), failure.getMessage());
+            }
+        }
+    }
+
+    private static final class RuntimeFacingFixture implements AutoCloseable {
+        final GraphicsManager graphics = new GraphicsManager();
+        final ObjectManager objects;
+        final StageplayObjectDirection direction;
+
+        RuntimeFacingFixture() {
+            graphics.setHeadlessMode(true);
+            graphics.cachePaletteTexture(new Palette(), 0);
+            var services = mock(ObjectServices.class);
+            when(services.graphicsManager()).thenReturn(graphics);
+            when(services.solidExecutionRegistry())
+                    .thenReturn(SolidExecutionRegistry.inert());
+            objects = new ObjectManager(List.of(), null, 0, null, null, graphics,
+                    new Camera(), services);
+            when(services.objectManager()).thenReturn(objects);
+            direction = ObjectDirectionAccess.forManager(objects);
+        }
+
+        PatternSpriteRenderer renderer(boolean populated) {
+            var pieces = populated
+                    ? List.of(new SpriteMappingPiece(0, 0, 1, 1, 0, false, false, 0))
+                    : List.<SpriteMappingPiece>of();
+            var renderer = new PatternSpriteRenderer(new ObjectSpriteSheet(
+                    new Pattern[] {new Pattern()},
+                    List.of(new SpriteMappingFrame(pieces)), 0, 1), graphics);
+            renderer.ensurePatternsCached(graphics, 512);
+            return renderer;
+        }
+
+        @Override public void close() { direction.close(); }
+    }
+
+    private static final class RuntimeParent extends AbstractObjectInstance implements ObjectVisualFacing.Container {
+        RuntimeParent() { super(new ObjectSpawn(100, 80, 1, 0, 0, false, 80), "runtime container"); }
+        RuntimeChild child(PatternSpriteRenderer renderer) {
+            return spawnChild(() -> new RuntimeChild(renderer));
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    private static final class RuntimeChild extends AbstractObjectInstance {
+        PatternSpriteRenderer renderer;
+        RuntimeChild(PatternSpriteRenderer renderer) {
+            super(new ObjectSpawn(120, 80, 1, 0, 0, false, 80), "undeclared runtime child");
+            this.renderer = renderer;
+        }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { }
+        @Override public void appendRenderCommands(List<GLCommand> commands) {
+            renderer.drawFrameIndex(0, getX(), getY());
+        }
     }
 
     private static Inventory nativeInventory() throws Exception {

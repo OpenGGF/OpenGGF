@@ -65,6 +65,9 @@ final class StageplayObjectCapture {
                 captureEntry(paths.get(entry.instance()), entry, b + RenderPriority.MIN);
             }
         }
+        // There is no facing-bearing appearance to resolve until some native
+        // visual exists. Keep the same readiness rejection for dynamic children.
+        VisualTemplate.requireInitializedParts(parts);
         limitations.add(
                 "Native PLC, palette and child-graph state is held at capture; mapping poses"
                         + " use that frozen ROM art bank");
@@ -111,10 +114,10 @@ final class StageplayObjectCapture {
         if (!residual.primitives().isEmpty()) {
             throw new UnsupportedRenderOrderException(root.getName());
         }
-        FacingGroup group = (draws.isEmpty() && residual.tiles().isEmpty())
-                ? new FacingGroup(ObjectVisualFacing.Basis.NON_DIRECTIONAL, 0) : facingGroup(entry.instance());
+        FacingGroup group = null;
         String prefix = path + "/bucket" + bucket + (entry.high() ? "h" : "l");
         if (!residual.tiles().isEmpty() || !residual.primitives().isEmpty()) {
+            group = facingGroup(entry.instance());
             parts.add(
                     new VisualPart(
                             prefix + "/native",
@@ -151,6 +154,9 @@ final class StageplayObjectCapture {
             }
             if (poses.stream()
                     .anyMatch(p -> !p.tiles().isEmpty() || !p.primitives().isEmpty())) {
+                // Observing a mapping draw is insufficient: every pose may be
+                // empty (Map_Offscreen), so resolve ownership only for real parts.
+                if (group == null) group = facingGroup(entry.instance());
                 parts.add(
                         new VisualPart(
                                 prefix + "/draw" + ordinal,

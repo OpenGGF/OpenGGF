@@ -6,13 +6,17 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** ChildObjDat_6D822 / loc_6CFBE defeat flicker parts. */
-final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance implements SpawnRewindRecreatable {
+final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance
+        implements SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
+    // Native subtype selects a fragment mapping frame; loc_6CFBE draws it
+    // unflipped. Flight velocity does not establish a horizontal body direction.
     private static final int[][] OFFSETS = {{0x0C, -0x14}, {-0x10, 8}, {0x14, 8}};
     /** Obj_VelocityIndex at byte offset $28 + subtype*2 (subtypes 0,2,4). */
     private static final int[][] VELOCITIES = {{0x300, -0x300}, {-0x400, -0x300}, {0x400, -0x300}};
