@@ -10,7 +10,8 @@ Unreleased. The earlier development themes remain in
   named choices, collapsed Advanced settings and full F1 diagnostics. In-level
   position picking pans through the level with coordinate tags and optional queried
   floor snapping, marked by a yellow floor line and dashed guide; numeric entry stays
-  available. Forms keep full-height rows and scroll when needed. Author actor movement, logical Left/Right facing, animation/poses,
+  available. Uniform HUD rows keep primary actions visible at the standard size;
+  expanded settings can scroll. Author actor movement, logical Left/Right facing, animation/poses,
   camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Authored music control holds off automatic level playlists through deferred entry

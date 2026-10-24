@@ -253,3 +253,62 @@ lossless copies of the refreshed PNGs. Documentation whitespace checks and the
 Stageplay skill mirror check pass. No further screen conversion, policy edit,
 physics change, merge or push is part of this follow-up; broad smoke remains with
 the lead. Both local commits carry the required parsed co-author trailers.
+
+### Lead review round 4
+
+Follow-up to engine `9c5e372bf`. The eighteen-logical-pixel rows introduced in
+round 3 were rejected: the standard HUD renders them at 3x, producing a 54-pixel
+pitch and pushing Plan route's Advanced and primary action off screen. Scrolling
+those default controls is also rejected. The shared grid now uses twelve logical
+pixels (36 displayed pixels), including the primary action and selected-row fill.
+Two-line text previews occupy two grid slots while their selected label uses one
+row. No form chooses its own pitch or compresses rows to fit.
+
+Spacing is now specified against the standard rendered size: four logical pixels
+before headings/Advanced (12 displayed pixels), seven before primary buttons
+(21 displayed pixels), and four after the subtitle block (12 displayed pixels).
+Headers retain their yellow style and a small gap below their text. This corrects
+the earlier mixing of logical layout units with review-picture pixels. The approved
+picker marker is unchanged. Expanded Advanced settings and long action lists can
+still scroll; collapsed forms must show every common field, Advanced and Apply.
+
+The focused regressions first reproduced both failures: the old 18-pixel pitch
+and the missing Advanced/primary controls. The replacement regression checks the
+12-pixel grid and that selecting Apply leaves Who visible in the same position.
+A separate survey check renders every collapsed Stageplay form through the shared
+component and requires every common label, Advanced and the complete primary
+button to be visible at 320x224.
+
+Focused layout iteration:
+`maven_queue.py --lean -Dmse=off -Dtest=TestEditorProjectMenu test` passed
+**10 tests, zero skips**, including the complete collapsed-form survey. Final
+engine pictures/authoring selection (display variables unset, Java 25, absolute
+ROM paths):
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.hudPictures=true -Dsonic1.rom.path=${ROM_ROOT}/s1.gen -Dsonic2.rom.path=${ROM_ROOT}/s2.gen -Ds3k.rom.path=${ROM_ROOT}/s3k.gen -Dtest=TestEditorProjectMenu,TestStageplayHud,TestStageplayPositionPicker,TestStageplayHudPictures,TestStageplayRouteOverlayPictures test`
+passed **35 tests, zero skips**. All 79 HUD pictures were regenerated and reviewed:
+every collapsed form has its full primary button visible, including both normal
+and Apply-selected Plan route views. The selected Who bar measures 36 displayed
+pixels; all 57 visible primary buttons have at least 21 displayed pixels clear
+above them, with button heights of 36 or 38 pixels at the captured viewport scales.
+No ordinary rows are squeezed or expanded per screen. Two-line dialogue previews
+still show both actual lines.
+
+`maven_queue.py -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B` passed
+**34 checks, zero skips**. The shared component changes no API or Stageplay boundary.
+The approved picker marker and all existing field/undo callbacks are unchanged.
+
+The final engine package/install into the Editor's private Maven repository passed.
+Desktop compatibility check (Java 25, display variables unset, surfaceless EGL,
+absolute ROM/demo paths and `-Dopenggf.stageplay.desktopPictures=true`):
+`maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.stageplay.desktopPictures=true '-Dtest=TestStageplayChrome,TestStageplayChromePictures#captureReadabilityCheckpoint' test`
+passed **21 tests, zero skips**. Its route, dialogue and floor form PNGs are
+pixel-identical to the approved native presentation. The Editor's queued
+`maven_queue.py -Dmse=off -DskipTests package` passed. No desktop source change is
+needed; its branch remains at `4aa6c06`.
+
+All refreshed lossless WebP images match their PNG pixels. The review page retains
+169 comparisons and now shows the complete Plan route in both its initial and
+Apply-selected states. Documentation whitespace and skill mirror checks pass.
+Only the engine feature branch changes in this round, with the required trailers;
+no merge, push, policy change or broad smoke run is performed. The lead retains
+integration and broad smoke ownership.

@@ -97,7 +97,9 @@ public final class EditorProjectMenu {
     public boolean showingDetails() { return details != null; }
     public String helpText() { return help; }
 
-    private static final int ROW_TOP = 52, ROW_HEIGHT = 18, HEADING_HEIGHT = 21, ROW_BOTTOM = 205;
+    // The standard HUD is 3x: 36px rows, 12px section gaps and 21px before buttons.
+    private static final int ROW_TOP = 44, ROW_HEIGHT = 12, HEADING_GAP = 4, HEADING_HEIGHT = 14,
+            BUTTON_GAP = 7, ROW_BOTTOM = 205;
 
     /** Immutable presentation shared with desktop chrome; canonical values stay separate from labels. */
     public record FormField(Field field, String value, String display, List<String> optionLabels, String unit,
@@ -412,15 +414,14 @@ public final class EditorProjectMenu {
         MenuFeedback.emit(MenuFeedback.Cue.NAVIGATE); return true;
     }
     private int gapBefore(int index, List<Row> rows) {
-        if (submit != null && index==rows.size()) return 20;
-        if (submit != null && index<rows.size() && rows.get(index).section()!=null) return 12;
+        if (submit != null && index==rows.size()) return BUTTON_GAP;
+        if (submit != null && index<rows.size() && rows.get(index).section()!=null) return HEADING_GAP;
         if (submit != null && index<rows.size() && rows.get(index).heading()!=null) return HEADING_HEIGHT;
-        if (submit == null && index==primaryAction) return 20;
+        if (submit == null && index==primaryAction) return BUTTON_GAP;
         return 0;
     }
     private int rowHeight(int index, List<Row> rows) {
-        if (submit != null && index == rows.size() || submit == null && index==primaryAction) return 16;
-        return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 22 : ROW_HEIGHT;
+        return index < rows.size() && rows.get(index).field() != null && multiline.contains(rows.get(index).field().key()) ? 2 * ROW_HEIGHT : ROW_HEIGHT;
     }
     private int rowCount() { return submit == null ? actions.size() : formRows().size() + 1; }
     private int visibleEnd(int first) {
@@ -505,7 +506,7 @@ public final class EditorProjectMenu {
         var view = fieldView(field);
         if (view.multiline()) {
             var lines = previewLines(view.display(), Math.max(1, valueWidth() / 6));
-            for (int i = 0; i < lines.size(); i++) MenuStyle.text(font, lines.get(i), valueColumn(), y + i * 10, valueWidth(), .88f, .92f, .98f);
+            for (int i = 0; i < lines.size(); i++) MenuStyle.text(font, lines.get(i), valueColumn(), y + i * ROW_HEIGHT, valueWidth(), .88f, .92f, .98f);
         } else if (view.partner() != null) {
             MenuStyle.text(font, view.display(), valueColumn(), y, valueWidth(), .88f, .92f, .98f);
         } else if (!field.choices().isEmpty()) options(font, field, y);
@@ -534,25 +535,25 @@ public final class EditorProjectMenu {
         for (int i = first; i < visibleEnd(first); i++) {
             var row = i < rows.size() ? rows.get(i) : null;
             if (submit != null && row != null && row.heading() != null) {
-                MenuStyle.text(font, row.heading(), 15, y + 12, this.width - 30, 1, .78f, .23f);
+                MenuStyle.text(font, row.heading(), 15, y + HEADING_GAP, this.width - 30, 1, .78f, .23f);
             }
             y += gapBefore(i,rows);
             int height = rowHeight(i, rows);
             if (i == selected) {
-                MenuStyle.fill(font, 12, y, this.width - 24, height, .045f, .075f, .115f, 1);
-                MenuStyle.fill(font, 12, y, 2, height, .4f, .86f, 1, 1);
+                MenuStyle.fill(font, 12, y, this.width - 24, ROW_HEIGHT, .045f, .075f, .115f, 1);
+                MenuStyle.fill(font, 12, y, 2, ROW_HEIGHT, .4f, .86f, 1, 1);
             }
             if (submit == null) {
                 String label=actionLabels.getOrDefault(i,actions.get(i).label());
                 if (i==primaryAction) {
                     int w=Math.min(this.width-30,label.length()*6+20); MenuStyle.fill(font,15,y,w,height,1,.78f,.23f,1);
-                    MenuStyle.text(font,label,25,y+4,w-20,.025f,.05f,.09f);
+                    MenuStyle.text(font,label,25,y+2,w-20,.025f,.05f,.09f);
                 } else MenuStyle.text(font,label,15,y+2,this.width-30,.87f,.91f,.96f);
             }
             else if (i == rows.size()) {
                 int buttonWidth = Math.min(this.width - 30, submitLabel.length() * 6 + 20);
                 MenuStyle.fill(font, 15, y, buttonWidth, height, 1, .78f, .23f, 1);
-                MenuStyle.text(font, submitLabel, 25, y + 4, buttonWidth - 20, .025f, .05f, .09f);
+                MenuStyle.text(font, submitLabel, 25, y + 2, buttonWidth - 20, .025f, .05f, .09f);
             } else if (row.section() != null) {
                 String section = row.section();
                 MenuStyle.text(font, (expanded.contains(section) ? "- " : "+ ") + section, 15, y + 2, this.width - 30, .6f, .69f, .8f);

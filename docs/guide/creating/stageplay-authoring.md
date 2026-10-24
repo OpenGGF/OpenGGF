@@ -679,7 +679,8 @@ and one **Advanced** section. Advanced keeps search limits, object footprints,
 follow tuning and optional assets out of the main view without resetting them.
 **F1 Help** retains full field descriptions, ranges and diagnostics; status lines
 and colour swatches summarize the current result. Text previews preserve actual
-line breaks.
+line breaks. At the standard HUD size, default forms show their common fields,
+Advanced and primary action together; expanded Advanced settings can scroll.
 
 Level positions have an in-level picker. In the HUD, press **Enter** on **Position**
 (or **Column** in Place on floor). The form hides while a yellow crosshair and

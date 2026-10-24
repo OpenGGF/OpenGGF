@@ -107,7 +107,9 @@ Place a physical spawn centre near the floor; floor snapping defaults on at spaw
 then native terrain collision controls contact during movement. A MOVE_TO destination
 is an attempt, and `BLOCKED` must be inspected rather than hidden with a teleport.
 Both editors use short grouped forms with one collapsed Advanced section. F1 keeps
-full descriptions, limits and native diagnostics. Level Position rows share a
+full descriptions, limits and native diagnostics. Default HUD forms keep all common
+fields and the primary action visible; expanded Advanced settings can scroll.
+Level Position rows share a
 picker: HUD Enter opens it, arrows/d-pad move with held acceleration, Shift/right
 bumper moves one pixel, S/controller X toggles floor snap, Enter confirms fields,
 Esc cancels; F2 preserves numeric entry. Desktop Pick opens canvas pointing; click

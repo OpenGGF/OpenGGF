@@ -14,7 +14,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 class TestEditorProjectMenu {
     @Test
-    void groupedRowsKeepNormalSpacingAndScrollInsteadOfShrinking() {
+    void groupedRowsUseOnePitchAndKeepThePrimaryActionVisible() {
         var menu=new EditorProjectMenu();
         menu.showForm("Plan route",List.of(
                 new EditorProjectMenu.Field("who","Who","Sonic",MenuTextEditor.Mode.TEXT),
@@ -28,18 +28,39 @@ class TestEditorProjectMenu {
         menu.setGroup("Destination","position");menu.setGroup("Motion","start","speed","stop","face");
         menu.setSection("Advanced","frames");
         var font=new RecordingFont();menu.render(font,320);
-        assertTrue(font.y.get("Who")-font.y.get("Choose a destination.")>=20,
-                "Leave twelve pixels below the eight-pixel subtitle");
+        assertTrue(font.y.get("Who")-font.y.get("Choose a destination.")>=12,
+                "Leave space below the subtitle at the standard HUD scale");
         for(var pair:List.of(List.of("Start","Speed"),List.of("Speed","Stop"),List.of("Stop","Face")))
-            assertEquals(18,font.y.get(pair.get(1))-font.y.get(pair.get(0)),"Keep normal row height");
-        assertFalse(font.text.contains("Find route"),"The primary button scrolls below the full-height rows");
+            assertEquals(12,font.y.get(pair.get(1))-font.y.get(pair.get(0)),"Use a 36-pixel pitch at the standard 3x HUD scale");
+        assertTrue(font.text.contains("+ Advanced"));
+        assertTrue(font.text.contains("Find route"),"The primary action must be visible before navigation");
+        var initialRows=java.util.Map.copyOf(font.y);
         var input=new InputHandler();for(int i=0;i<7;i++)press(menu,input,GLFW_KEY_DOWN);
         font.text.clear();font.y.clear();menu.render(font,320);
         assertTrue(font.text.contains("Find route"));
+        assertEquals(initialRows.get("Who"),font.y.get("Who"),"Selecting Apply must not scroll the default form");
         assertTrue(font.text.stream().anyMatch(t->t.contains("Enter Apply")&&t.endsWith("F1 Help")),
                 "Keep the complete footer when scrolling to Apply");
-        assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=40,
-                "Scrolling retains the twenty-pixel gap before the primary button");
+        assertTrue(font.y.get("Find route")-font.y.get("+ Advanced")>=19,
+                "Keep at least twenty displayed pixels clear above the primary button");
+    }
+
+    @Test
+    void everyCollapsedStageplayFormShowsItsFieldsAndPrimaryAction() throws Exception {
+        var checked=new AtomicInteger();
+        StageplayMenuSurvey.capture((name,workspace)->{
+            var menu=workspace.menu();var view=menu.formView();if(view==null)return;
+            var font=new RecordingFont();menu.render(font,320);
+            for(var group:view.groups()) {
+                if(group.advanced())assertTrue(font.text.contains("+ "+group.title()),name+" hides Advanced");
+                else for(var field:group.fields())
+                    assertTrue(font.text.contains(field.field().label()),name+" hides "+field.field().label());
+            }
+            assertTrue(font.text.contains(view.apply()),name+" hides "+view.apply());
+            assertTrue(font.y.get(view.apply())+10<=205,name+" clips its primary button");
+            checked.incrementAndGet();
+        });
+        assertTrue(checked.get()>=30,"Cover every form family, not just Plan route");
     }
 
     @Test
