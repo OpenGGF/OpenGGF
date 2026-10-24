@@ -40,7 +40,8 @@ import java.util.logging.Logger;
  * optional {@link LogicalRom#KIS2} image through the patch context; when the
  * user-supplied dump is absent the module keeps tier-one behaviour exactly.
  */
-final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile {
+final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile,
+        com.openggf.game.internal.NativeRewindPublicationOwner {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
 
