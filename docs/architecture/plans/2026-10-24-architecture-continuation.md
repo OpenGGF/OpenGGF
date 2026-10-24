@@ -7922,3 +7922,183 @@ with its four pre-existing dirty submodules and five user files preserved.
 Delivery proceeds by fast-forward integration of these tested inputs and a
 develop-only push after committed-range policy; accounted task worktrees and
 fully merged local branches are removed only after that succeeds.
+
+
+### Legacy SMPS configuration-authority baseline (test-only, 2026-10-24)
+
+This bounded characterization is based on local `4eb8e8e1a8b5dd01474d9905fae2c85256582138`
+in T3-owned `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-e0fb21d8`, renamed from
+`smps-config-authority` to `bugfix/ai-smps-config-authority-20261024`, with hooks installed.
+It neither implements nor claims the future explicit-manager route. Receiving
+manager A, current singleton S, configured root B and restore sink R are distinct.
+All production Java is unchanged relative to independently reviewed
+`a9d88d2c980c6562008e21c916d2b4d28362fd6f`; `git diff --name-only a9d88d2c HEAD -- src/main/java`
+is empty. Both commits have audio subtree `14cabce81b042859a039f232335f0ce6591aacac`
+and S3K-audio subtree `3759a488d5e21f14e8de21f81d6b5aeead83e552`.
+Individually checked identical blobs are:
+
+| Source | Git blob at both commits |
+| --- | --- |
+| AbstractSmpsAudioBackend.java | `9991815b9a4c326e39176d557ea20a6e1f7391c8` |
+| AudioManager.java | `4f47a72678dcfcdb961624949e882060cfe48f85` |
+| HeadlessSmpsAudioBackend.java | `199bdea5624bc30f67a302ea820549d03a484516` |
+| LWJGLAudioBackend.java | `4183b5ec536790eaad77831b616868d4b01523b9` |
+| SmpsSequencerConfig.java | `d2e35b2d809008834a0848a61f4d207e6272d686` |
+| AudioPresentationSourceFactory.java | `18e508082f09ba33bab3c94be4b23afbc380aed9` |
+| SmpsCoordFlagHandlerOwner.java | `ac61f9c5b290ec7dd364cd814c33dc186fe24dc8` |
+| Sonic3kCoordFlagHandler.java | `b54e61c38bf9ed5069ad90060a298d849c49dd1e` |
+
+The new fixture reads private nullable `AudioManager.instance` and
+`EngineServices.current` directly under their respective class monitors, without
+calling lazy accessors to save them. Its `finally` restores the exact incoming
+references after destroying only fixture-owned resources, including exceptional
+exits with null and populated entries. Maven disables JUnit parallel execution;
+fixture operations and session rendering run on the test owner thread. No
+production lifecycle setter, registry or constructor overload is added.
+
+The new ROM control uses 18 frames per music/mixed/standalone arm, 800 stereo
+frames per read, NTSC, 48 kHz, accurate FM, no interpolation and no device/display.
+Its independent comparison arm supplies a fresh handler owner to the existing
+factory and constructs an existing direct session; it loads fresh programs rather
+than hydrating from the observed backend. Logical snapshots exclude retained data,
+DAC, config and sink object references from JSON; handler state is recorded
+separately. Ordered resolved chip writes are logical YM/PSG callbacks, not a raw
+native-bus or emulator oracle. Engine preservation does not establish native parity.
+The input sequence uses AIZ1 music and, for SFX arms, authentic SPINDASH at frames
+0, 3, 9 and RING_LEFT at frame 6. Real E9 and ordinary-SFX reset assertions guard
+against comparing two inert streams. The separate synthetic backend-path controls
+exercise E9 transpose and FF07. Existing catalog/snapshot assertions are reused
+without alteration for settings/end-flag freeze and restore/rollback algorithms.
+
+No Engine/GameLoopSuspension edit, parent/main target or job inspection,
+subdelegation, integration, push, worktree cleanup, POM/guard/pin/store/API change,
+trace campaign, route matrix or performance measurement belongs to this slice.
+The unrelated S2 suspension report of 82 null-FileChannel preload errors remains
+an inherited limitation; it is not evidence of a configuration-routing defect.
+
+
+**Observed compatibility and original-production limits.** The 15 new ROM-free
+cases establish constructor laziness/config-sink-rate precedence/nullable profiler,
+per-binding S selection across root changes and singleton replacement for all
+three affected paths, independent restore sink R, ordinary-music bypass, admitted
+SFX reset/E9 transpose/FF07 effects, rejection/block/continuous-extension ordering,
+explicit-music binding before streamed suppression, `s3k` selection for a non-null
+handler, null-handler behavior without registration, missing-registration failure,
+reset/backend-replacement handler retirement, and independent supplied factory owners.
+The installed receiving manager does not become configuration authority. No explicit-A
+route exists in this source, and none is called or simulated as a future overload.
+
+The first draft falsified fixture assumptions rather than exposing a production
+repair: `eachBindingSelectsCurrentSingletonDespiteReceivingManagerRootAndRestoreSink(music)`
+and `ordinarySfxStartAndFf07ResetTheSelectedSessionThroughBackendPaths(music)` read
+only one 800-frame block, before the synthetic music E9 dispatched. The final
+synthetic helper makes two such reads; transpose and counter assertions remain
+positive controls. Both `nextBindingUsesFreshSessionAfterAuthorityRetirementButRawReferencesDoNotMigrate`
+variants observed **0**, not the draft's assumed 3, in the old owner's counter:
+`AudioPresentationProducer.close()` clears the registry, which resets that owner.
+Old config/sink references nevertheless survive; the independent raw backend can
+still render and later bindings get a fresh owner. Retention does **not** promise
+that mutable coordination state survives owner teardown.
+
+The draft ordinary-music and blocked-SFX setup passed null DAC into music playback;
+existing `SmpsDriver.selectDac()` rejected it with `NullPointerException("data")`
+after sequencer construction. Raw sequencer construction's nullable-DAC contract
+is separately preserved by the unchanged restore-owner test. The final new
+ordinary-music case asserts that original backend rejection, then proves successful
+bypass with empty DAC data; constructors acquire no new DAC requirement. The third
+error was a fixture requesting "standalone" while its previous music still existed;
+the final fixture explicitly stops it before choosing that path. The first ROM
+comparison shared loader caches between arms; the final one uses separate loaders
+and retains exactly the independently matching digests below. No production code
+or pre-existing assertion was repaired or weakened.
+
+**Bounded validation.** All commands ran in this worktree on unchanged production
+`4eb8e8e1` / main-Java tree `b4a9dca2392504cea9b2fc9bd1e9fe802a9c58db`.
+`python3 tools/testing/maven_queue.py -v` exited 0 and reported Java
+`25.0.5.0.2`, `/usr/lib/jvm/java-25-openjdk`, after a 439s queue wait.
+`python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` exited 0;
+Maven reported 1m26s and compiled 4,353 main / 4,480 test sources. Initial focused
+validation used this exact selection and absolute ROM properties. The command
+below substitutes `$OPENGGF_ROM_ROOT` for the verified absolute ROM directory to
+meet the repository resource policy against machine-local user-home prose paths:
+
+```bash
+python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestSmpsConfigAuthorityContract,TestSmpsConfigAuthorityRomContract,TestSmpsRestoreOwnerContract,TestSmpsAssetCatalog,TestAudioManagerSfxCatalogReuse,TestDonorAudioRouting,TestSonic3kCoordFlagParity,TestSmpsDriverSnapshot,TestSmpsSessionSnapshot,TestAudioVoiceRegistry#coordFlagRuntimeStateSnapshotsRestoresAndResetsWithRegistryLifecycle,TestAudioPresentationSnapshotParity#snapshotRestoresTheSolePresentationCoordFlagCounter' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The initial request waited 252s; Maven reported 28.822s. It exited 1 with
+134 cases / 4 failures / 3 errors / 0 skips, all seven confined to the new fixture
+assumptions enumerated above. Initial new-test blobs were
+`3ab74706fb8f5954feff6b11e0fea3402f092727` and
+`5d5997397a795443d8b72328af147f804ba7a7a3`. Exact XML class/method IDs were inspected;
+the sorted `classname#name` newline-delimited identity set has SHA-256
+`d225ca2a89381095dbcb9188998f6322c99764466d5acafd1e8e36e5e16649ca` (134 IDs).
+The unchanged cohort passed, with no skips:
+
+| Existing selector | Cases / failures / errors / skips |
+| --- | --- |
+| TestSmpsRestoreOwnerContract | 13 / 0 / 0 / 0 |
+| TestSmpsAssetCatalog | 14 / 0 / 0 / 0 |
+| TestAudioManagerSfxCatalogReuse | 15 / 0 / 0 / 0 |
+| TestDonorAudioRouting | 25 / 0 / 0 / 0 |
+| TestSonic3kCoordFlagParity | 29 / 0 / 0 / 0 |
+| TestSmpsDriverSnapshot | 13 / 0 / 0 / 0 |
+| TestSmpsSessionSnapshot | 5 / 0 / 0 / 0 |
+| TestAudioVoiceRegistry#coordFlagRuntimeStateSnapshotsRestoresAndResetsWithRegistryLifecycle | 1 / 0 / 0 / 0 |
+| TestAudioPresentationSnapshotParity#snapshotRestoresTheSolePresentationCoordFlagCounter | 1 / 0 / 0 / 0 |
+
+This includes the unchanged catalog freeze-before-supplier and invalid-config
+controls, snapshot/resolver/transaction-rollback assertions, the exactly-one-public-
+constructor assertion, natural-versus-explicit restore controls and the pre-existing
+S2 fixed-input digest oracle. All 116 existing cases ran only once.
+
+After correcting only the new fixtures and pinning the independently compared
+oracles, the second command used the same `--normal -Dmse=off`, three absolute ROM
+properties and `test -B`, with only
+`'-Dtest=TestSmpsConfigAuthorityContract,TestSmpsConfigAuthorityRomContract'`.
+It waited 18s; Maven reported 28.148s, exit 0: **15 + 3 cases / 0 failures /
+0 errors / 0 skips**. Final tested new-source Git blobs are
+`9a8da712962f904ba60922264522a39d5f3b28b9` and
+`24d9b3561b9e41aed4234d997e3ecd0510262fa7`, respectively. The 18 exact XML
+identities hash to `4900ba63adaeb3690a250b8fad9d75e823661bc1ba2683bfd65e2d30e067d682`
+with the same encoding. XML properties confirmed Java 25 and all supplied ROM
+paths; every selected case executed, including all three ROM parameters. No
+full-suite, broad-category, guard, trace or native-emulator run is claimed. These
+are composed focused results, not a single all-green broad run. Queue intervals,
+Maven execution times and compilation overlap; their sum is not delivery elapsed
+time, which was not measured.
+
+All three ROM files were read through their existing absolute paths (no links
+created or changed). CRC32 / SHA-1 independently matched:
+S1 `AFE05EEE` / `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`;
+S2 `7B905383` / `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`;
+S3K `63522553` / `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+**Preservation oracles.** Each digest is SHA-256. PCM is little-endian signed
+16-bit stereo; writes preserve callback order and frame delimiters; service/logical
+state includes begin/end ordinals and kinds, serialized driver state and the
+separate coordination counter. Both freshly loaded arms match these pins:
+
+| Route | PCM | Ordered resolved writes | Service/logical state |
+| --- | --- | --- | --- |
+| music | `137bd022f6603d640d15aa8980817604cf9a169f4aaf1002d4a918e8af28b91d` | `567bd389a188ef7b850ad94a364c0f4d84c29b0624175c057b01a8e0a86f7126` | `69218fad4e05e4c45dd7f165c38e7cc62271a3c4f35763385c43931b0b6e50bf` |
+| mixed | `0efd250bdeb836c695348f6e787cb76dc3f9f987d18e4a490415fa3eaf81f0d5` | `0005c45fd2bd9272d3b1f77a3f1668361f62b7a437d4aa4b84228fdc7f926c82` | `fef60de048faa7cccfae15c1b31a8b7cca07354ce3eacf24d2de8f4dd8726925` |
+| standalone | `28654cf7dc78fa0de55449db0ed5fbda7cc0cf20e68bfc5803d3f3ff717e93e9` | `51194222f497282fedb4d2b5a88d4cdf7ce0191c284dee2d959c4138e13eb600` | `e773e14bb55208fede13a5cef6046e4e8c75b82bbddc96f52f42a1a1cb6be23f` |
+
+For music/mixed/standalone respectively, resolved write counts are 2,210 / 2,351 /
+270; service counts 18 / 36 / 18; nonzero sample counts 27,187 / 28,798 / 28,798.
+Each arm renders 18 frames. SFX controls observe rev counts 1, 2, 0, 1 at frames
+0, 3, 6, 9. These are bounded engine oracles, not native parity, performance data,
+a pass cache or permission to repair inherited behavior.
+
+Owned terminal sessions: version `83087` exit 0, compile `78981` exit 0, initial
+focused `84694` exit 1, corrected focused `13728` exit 0. No task-owned job remains
+live. Raw XML and own invocation logs were consumed after exact IDs, skips,
+properties, failures and digest inspection; no diagnostic archive or extra receipt
+is retained. The test-only worktree and local branch remain for parent handoff;
+T3 owns their lifecycle. Production injection, its explicit-A controls and later
+composed validation remain a separate authorized slice for the parent.
