@@ -736,3 +736,50 @@ were inspected and consumed reports removed. No category-run diagnostics were
 created; no task-owned validation jobs or diagnostic files remain pending.
 These are bounded behavior/contract checks; no full suite, audio sweep, trace
 frontier or new zone certification is claimed.
+
+
+## Third continuing loop: isolated composition
+
+The fifth-loop coordinator starts from destination `2020d2e57`, then includes the
+fourth-loop schema composition `71d919022` before adding the independently
+reviewed follow-ups. Its branch is `bugfix/ai-architecture-loop5-20261024` in
+`.worktrees/ai-architecture-loop5-20261024`; no destination branch switch occurs.
+
+The composed heads are root orchestration `85d7e1f41`, panels `57fa987e7`,
+ring evidence `fc17fb82e`, S1 parser `b85ba5a1c`, AIZ actor links `493aeddd7`,
+and wall controllers `028cf0916` (including `6cf7d4bbe`). Append-only plan/audit
+conflicts retain every worker's complete evidence block. Audit rows 1, 11, 12,
+18 and 19 retain their respective reviewed dispositions. Baseline conflicts are
+resolved by the exact removed-key sets, preserving prior S2, ship and ICZ
+closures; both actual-path audit methods are retained as separate tests.
+The current baseline has seven keys. Root concrete references are zero/zero,
+GameLoop's source cap is 3,305, and the naming store is empty. The low-level
+store remains 151 until a separately qualified animation-contract move is merged.
+These are committed allowances and source budgets, not a combined test result.
+
+Root capability review found no blockers; its 134 behavior and 19 targeted
+API/guard passes remain worker observations. Panel snapshots retain their 21
+values and fresh enclosing owner; the reported 16 final affected passes and
+18 earlier unaffected passes do not form one all-green invocation. Ring work
+adds six real-GHZ1 graph cases, retaining the arbitrary-parent recipe obligation;
+no runtime or policy changes are hidden by that test-only slice. The parser body
+is byte-identical and all live callers move together, with no supported pin change.
+AIZ review accepts removal of two private histories and exact captured Knuckles
+links within the normal parent-first retirement path; early collector removal
+is untested. The wall-controller review confirms actual generic capture and deep
+snapshot copying, ordered current-RNG rebinding and unchanged retirement.
+
+The coordinator verified its empty-state compatibility edge: unconditional
+services lookup made a service-free empty public-object restore fail. Follow-up
+`028cf0916` reproduces three controls, then passes all 12 affected cases, with zero
+skips, after clearing entries and returning before lookup for an empty array.
+The original 48 behavior passes plus the corrected path audit remain separately
+scoped. A normal initialized encounter's nullable box rigs are an adjacent
+source-derived restoration risk, not yet a reproduced defect; the controller
+checks deliberately seed FIGHT/DONE with rigs null. This remains queued as a
+separate bounded investigation, not a claim of complete encounter restoration.
+
+The parent retains required composed S3K/API and fresh complete guards, actual
+change-plan/preflight inspection, documentation/policy checks, integration and
+push. Later Knuckles-inventory, freezer-debris and animation-provider work are
+still separate. No parent Maven job has been submitted for this candidate yet.
