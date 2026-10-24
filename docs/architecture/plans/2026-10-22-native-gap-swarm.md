@@ -5678,3 +5678,124 @@ claim. No production repair, fitted expectation, retiming, suppression, remote
 push, PR body/draft change, Main/develop mutation, CI, native/passive observation
 or route profile is included. Consumed owned diagnostics are deleted after
 readback; useful source, classes and the local worktree/branch remain retained.
+
+
+### Isolated registration catalogue and registered donor-effect identities — 2026-10-24
+
+This test-only slice starts at held local successor
+`2d604f66268ec494bf085aba4f5fe9a353bd86be`, whose ancestry already contains the
+LivePlayback leaf ad613 once. Root's original broad source remains 3da; this
+slice reads no Root jobs/targets and changes no Root source. The earlier
+LivePlayback session43951 one pass and background/draw session11787 38 passes
+retain their separate tested epochs; neither is rerun or added to this cohort.
+
+Only two existing test methods and their imports change. In
+`com.openggf.mods.code.TestStageplayRegistration#registeredDialogueCanPrepareAndDrawAfterItsOwnedFilesAndAssetRootClose`,
+the existing ROM discovery helper supplies the absolute normalized original S2
+image to an explicit `RomCatalogueFixture` binding on the actual GameServices
+configuration and ROM manager. Its scope begins before module/controller
+preparation, stays alive through controller close, restores selected catalogue
+values, and then runs the original environment reset. It opens/closes no borrowed
+annotation ROM and changes no configuration file or shared harness. Registration
+still occurs before the owner asset root closes; all three authored files are
+still deleted before preparation. Every original HOLD/PLAYING/draw/next-owner-frame
+assertion, including frame1, remains. The actual path reaches the isolated preview's
+configured logical-ROM lookup; an active annotation ROM alone does not populate
+that catalogue key. No production fallback, new helper, early return or skip was
+introduced. Native FBO implementation remains outside this slice.
+
+In `com.openggf.stageplay.runtime.TestStageplayDonorEffectsRom#twoSonicDonorsHaveIndependentNativeShieldOwnersArtBanksAndRewind`,
+the obsolete live `playerOwner()==follower` snapshot predicate is replaced by
+actual registered capture identity. `captureIdentityContext()` supplies the
+identity table; the follower encodes as `PlayerRefId.sidekick(0)` and resolves to
+the actual live follower. Its real Insta-Shield object has a nonnull ObjectRefId
+and exactly one matching snapshot row. That row is auxiliary, has the same
+registered role and actual class, and has a null legacy player-incarnation field.
+After the original real registry restore, the live effect belongs to the follower
+and not the main player; its ID, class, role and auxiliary classification persist,
+again in exactly one matching row with no legacy player reference. No ownership
+metadata or state is seeded privately.
+
+Both original frame53 effect-state captures/equalities remain byte-identical,
+as do independent art-bank, actor-owner, sound-count, repeated-frame, backward-seek
+and closed-audio-owner controls. At the actual end of the original forward run,
+full lead and follower effect snapshots are now captured with the real identity
+context at65. After the unchanged backward0-to-forward65 replay and its original
+Frame/silent-audio assertions, both live effects from the current roster/context
+must equal those captured states. Animation replay therefore has its own effect
+state oracle rather than relying only on Frame equality. There is no codec,
+expected-state, frame count, animation update or native timing change.
+
+Whole-file inverses of only the named method/import patches reproduce 2d604
+exactly. Registration is +18/-12 (including the resource-scope indentation),
+SHA-256 `aa1ea59df6a049a4e1c7fc9feb9759f489799e12ff17638efd47df4d3e6a20a7`,
+blob `3e6281d37c3164baccdb9043737821b2cbb88916`. Donor effects is +40/-3,
+SHA-256 `5d22a079e6261a2e23a989c305469d93a4ea8779d02438799948e6960091c267`,
+blob `b3b3ad1762f1ab0e2ad477110301e51f507c6d96`. All other methods and every
+original assertion except the explicitly obsolete predicate remain unchanged;
+the existing S3K-availability assumption is preserved, not supplemented.
+
+The frozen tested tree is `2ab505a0ccd4a91f1780ad9c32e357801f9f9a9f`; this
+worktree's prior path/mode/mtime/content input frame is
+`6ea45038b5ee28f5e1f4b42fa7e50780629636d762c0459fbb1e0900eb51e7f1`
+(13,178 paths / 856,432,897 bytes). It is local timestamp attribution, not a
+portable cross-worktree hash. The complete frame and selected/helper/prior-leaf
+source pins remain exact through terminal readback. Production, assets, shared
+helpers, runtime/codec/API/guard/baseline surfaces and expected values are unchanged.
+
+Exactly one normal queued request, session24998, ran from `<PR_WORKTREE>`:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  '-Dtest=com.openggf.mods.code.TestStageplayRegistration#registeredDialogueCanPrepareAndDrawAfterItsOwnedFilesAndAssetRootClose,com.openggf.stageplay.runtime.TestStageplayDonorEffectsRom#twoSonicDonorsHaveIndependentNativeShieldOwnersArtBanksAndRewind+followerShieldCompletesItsStructuralParentWithoutWritingThePassedMainPlayer,com.openggf.level.objects.TestShieldRewindPendingRestore#freshRegisteredOwnersRestoreCapturedIdsInReverseRefreshOrderAndLeaveNextOrdinal+capturedRegisteredOwnerMissingFromRestoredRosterFailsClosed,com.openggf.level.objects.TestObjectManagerRewindDynamicClassification#rewindPreservesExplicitAuxiliaryClassificationForSlotlessDynamics+rewindDoesNotReclassifyLogicalSlotlessDynamicAsAuxiliary' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+The seven source methods' actual FQCNs were checked before launch; selector
+SHA-256 is `02c17075d2dc69b265e81543e78340fff446cd68502d73cd01fcb0d8c421bd90`.
+`OPENGGF_QUEUE_WRAPPER` denotes the reviewed absolute current
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py` (77d3a3e5 prefix), with all ten
+module pins unchanged. The original three stock ROMs were freshly CRC32/SHA-1
+verified and their metadata matched at launch. The reviewed Java25/Lua5.4/
+null-audio/EGL environment and unset ambient launcher/display variables remain.
+Exact own-worktree dedup was empty. There was one author, no child/reviewer/watcher,
+no version probe, preflight, standalone build, guard/API check, retry or additional
+selector. The same queued handle survived admission waiting without a resource,
+flag or source change.
+
+Actual result: **7 distinct identities / 7 passes / 0 failures / 0 errors /
+0 skips**, four XML families: the exact classification2, pending-shield2,
+Registration1 and donor2 methods above. The missing-restored-roster negative
+still fails closed inside its original assertion; reverse refresh retains
+registered IDs and next ordinal. The explicit slotless auxiliary and logical
+non-auxiliary classifications remain distinct. The unchanged structural follower
+shield control still completes its own parent without writing the passed main
+player. Both frame53 and both new frame65 effect-state comparisons execute and
+pass, alongside all original registration/art/owner/audio/seek controls.
+
+Queue wait was **681 seconds**, separately from Maven **33.222 seconds**.
+Per-family suite times were classification0.312s, pending-shield0.028s,
+Registration1.683s and donor0.436s; no sum is presented as delivery elapsed time.
+The normal lifecycle found main classes current and compiled 4,762 test sources.
+All seven identities, 280 properties (the same70 per XML), owned/dependency
+79-entry classpaths, seven recursive streams / 2,652 bytes, four text reports and
+the full161-line / 21,419-byte console were read. Actual Java25.0.5.0.2, owned
+cwd/target, exact selector, EGL flag and three absolute ROM properties match.
+XML has17 FAST/NONE warnings, console21, plus18 test-compiler deprecation warnings;
+no unexpected caught runtime fault or fresh dump was observed. This is bounded
+fixture/identity/effect-state qualification, not native FBO, waveform, all donor
+lifetimes, whole-class coverage, a matched historical baseline or aggregate PR green.
+
+The one-request budget is exhausted. Only these two frozen tests and this factual
+existing-Plan append enter one normal-hook local leaf, parent2d604. Prior held
+leaves remain included once by ancestry, with no receipt into Root until its
+original3da broad invocation reaches terminal/full readback. Original f340
+189 failed identities/108 skips, the41 disputed route causes, inherited mapping
+limitation and all prior test epochs remain unchanged evidence. No remote push,
+body/draft change, Main/develop mutation, manualCI, native/passive observation,
+route profile or new source phase follows. Consumed owned diagnostics are removed
+after readback; useful source, classes and the local worktree/branch remain retained.
