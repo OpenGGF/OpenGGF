@@ -2180,3 +2180,67 @@ execution is changed. The sole existing test edit consumes the new real-data
 factory. The primary's broad smoke remains a separate unfinished result.
 No live object, Ring pickup, Mosqui route, source sprite queue, native audio,
 whole act, USA MVP or regional/full-game parity is certified by this unit.
+
+
+## Ring execution and shared CPU sprite queue, 24 October 2026
+
+These are finite, unadmitted components on the separate local object branch,
+based on `7309600e6`. No native object world or launch entry is installed by
+this checkpoint. The primary `9598c663c` smoke source remains untouched.
+
+`CdRing` uses the existing physical pool and placement-owned saved bank for
+Init group expansion, Main, Collect, Sparkle and next-dispatch Destroy. It
+preserves dirty slot/animation bytes, loaded-bit and allocation-failure order,
+the shipped warp D2/X clobber, source range/period arithmetic, reward thresholds
+and selected sound ordering. DrawObject is a synchronous source-cut port; no
+slot write follows it. The global Ring timer is a separate immutable value
+advanced once by the future entitled loop tail, never per object or render.
+The production factory binds the actual optional USA asset owner. Decoded art
+still establishes no preload, residency or complete native PLC lifecycle.
+
+`CdObjectDrawQueue` binds one live-slot port and one mapping port. It queues
+physical addresses only in eight buckets of 63 pointers, shared by player0
+and dynamic32..127 under this finite admission. It clears bit7 before culling,
+uses the old foreground camera at enqueue, then rereads every current occupant
+after camera movement, retaining append order and delete/reuse semantics.
+CPU SAT construction preserves native full-word attributes, flips, per-piece
+80-entry truncation, links, terminator and raw unused tail. Screen Y at0A is a
+word. Closed-cut snapshots own only this CPU partition; the parent still owns
+next-VInt displayed pixels, art, composite source/phase validation and closure.
+There is no ID-selected mapping, second player raw image, private Ring queue,
+generic RingManager, renderer or hardware scanline emulation in this unit.
+
+Opus's four-file Ring review and Astra's CPU queue review found no P1/P2
+source/expectation defect. Their mirrors remain frozen. The first parent queue
+build revealed a missing private putWord helper: compilation failed before
+any test ran. Root added only the big-endian two-byte writer; the subsequent
+26-case run passed. Final queue source SHA-256 is `3d9b4fd470ed6a40e3a42133b2b89323407329793d42f2ad80e129e5363f9074`.
+The reviews' UNRUN wording describes reviewer execution; it does not replace
+these separately observed parent runs:
+
+| Parent command | Observed execution | Scope |
+| --- | --- | --- |
+| 68837 |137 tests, zero failures/errors/skips; queue46s, Maven1m29s |28 new Ring cases, including two actual-USA retail methods;14 separate shared-phase checks and95 maintained frame/pause/S2/S3K/API cases |
+| 25374 | Compilation failure, no tests executed; queue383s, Maven55.794s | Missing putWord helper in the first queue source; no behavior result |
+| 84647 |26 tests, zero failures/errors/skips; queue120s, Maven1m23s |16 CPU arithmetic/order/SAT methods and10 phase/ownership/failure methods after the helper correction |
+
+All16 selected reports from68837 and both queue reports from84647 were
+inspected. Java25.0.5.0.2 was used;68837 had actual three-region media and all
+S1/S2/S3K ROM properties, with zero skips. The137 count includes unrelated
+maintained coverage and is not137 new component cases. These are separate
+bounded selections, not a complete smoke or whole-game pass.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestNativeDynamicObjectFrameOrder,TestNativeDynamicObjectPass,TestCdRing,TestCdRingRetailAssets,TestNativeFixedLevelObjectPass,TestFbzFramePhaseOrdering,TestLevelFrameHardwareTimingBoundaries,TestPlcVBlankOrdering,TestInGamePause,TestS2FrameOrderingExecThenLoad,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectDrawQueue,TestCdObjectDrawQueueLifecycle' test -B
+```
+
+The shared-phase source used by68837 remains a separate uncommitted change.
+Its later source review identified an earlier controlled V-int increment that
+can precede rejection of an invalid native binding. That P2 remains open until
+its caller-level guard regression/fix is executed; it is not hidden by137 green
+focused checks. No shared phase source is part of this component commit.
+Ephemeral player-touch integration and actual Mosqui execution also remain
+separate work. Next-VInt publication, art admission, real Ring pickup and
+rewind through the complete world loop are still unverified. Full USA MVP
+continues to mean the entire game, followed by regional certification.
