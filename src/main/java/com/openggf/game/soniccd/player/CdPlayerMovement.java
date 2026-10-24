@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * One R11A ordinary normal-sized MODE call (Main.asm:675-776).
+ * One R11A ordinary normal-sized MODE call (Main.asm:675-776), plus the shared
+ * native collision and level-bound subroutine ports used by Hurt.
  * Source pin: 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff. FixBugs=0 semantics;
  * no repaired sign asymmetry, byte/word overflow, skid-register or high-memory-byte Y read.
  *
@@ -102,6 +103,17 @@ public final class CdPlayerMovement {
         public ResetOnFloorResult { Objects.requireNonNull(motion); wordValue(scoreChain); sounds = List.copyOf(sounds); }
     }
 
+    /** One Player_LevelColInAir call; no MODE, input, integration, gravity or actor routine transition. */
+    public record AirCollisionResult(CdPlayerMotionState state, Environment environment, List<Effect> effects) {
+        public AirCollisionResult {
+            Objects.requireNonNull(state); Objects.requireNonNull(environment); effects = List.copyOf(effects);
+        }
+    }
+    /** ObjSonic_LevelBound returns just before its unowned KillPlayer call when killRequested is true. */
+    public record LevelBoundResult(CdPlayerMotionState state, Environment environment, boolean killRequested) {
+        public LevelBoundResult { Objects.requireNonNull(state); Objects.requireNonNull(environment); }
+    }
+
     private final CdR11aTerrain terrainData;
     private final CdR11aPlayerAssets assets;
     private final CdPlayerTerrain terrain;
@@ -114,6 +126,34 @@ public final class CdPlayerMovement {
         this.terrain = new CdPlayerTerrain(terrain);
         math = new CdPlayerMath(assets);
         ground = new CdPlayerGroundCollision(this.terrain);
+    }
+
+    /**
+     * The shared native collision subroutine (Main.asm:2046-2345), also called by HurtChkLand:2378.
+     * The caller owns its routine dispatch and must already have performed ObjMove/gravity when required.
+     * This port deliberately does not run MODE admission, charge advancement, JumpHeight or any tail.
+     * It uses the same terrain, math, scratch buffers and reset helpers as ordinary MODE.
+     */
+    public AirCollisionResult collideInAir(CdPlayerMotionState state, Environment environment) {
+        Objects.requireNonNull(state); Objects.requireNonNull(environment);
+        var c = new Cursor(state, new Input(0, 0), environment);
+        airCollision(c);
+        return new AirCollisionResult(c.motion(), c.environment(), c.effects);
+    }
+
+    /**
+     * The shared LevelBound subroutine (Main.asm:1673-1714), also called by Hurt:2362.
+     * Keeps its signed bottom comparison; HurtChkLand has an earlier, separate unsigned test.
+     * A true result stops BEFORE KillPlayer, without executing any continuation or integration.
+     * The separate bored-give-up bottom branch is explicitly unsupported at its native predicate.
+     */
+    public static LevelBoundResult applyLevelBounds(CdPlayerMotionState state, Environment environment) {
+        Objects.requireNonNull(state); Objects.requireNonNull(environment);
+        var c = new Cursor(state, new Input(0, 0), environment);
+        boolean kill = levelBound(c);
+        // Main.asm:1703-1707: this branch sets routine 6 directly, never calls KillPlayer.
+        if (kill && c.anim == 0x2B) unsupported(UnsupportedBoundary.BORED_GIVE_UP);
+        return new LevelBoundResult(c.motion(), c.environment(), kill);
     }
 
     /** ObjSonic.NormalCtrl/ModeIndex (Main.asm:314-319,355-359), one admitted routine-2 MODE call. */
@@ -648,8 +688,11 @@ public final class CdPlayerMovement {
         }
         Result finish(Boundary boundary, Continuation continuation) {
             var state = motion();
+            return new Result(state, environment(), effects, boundary, continuation);
+        }
+        Environment environment() {
             var globals = new Globals(look, cam, pri, sec, bored, score, debugAngle, debugShift, debugQuadrant, debugFloor);
-            return new Result(state, new Environment(env.physics(), env.bounds(), env.gates(), globals), effects, boundary, continuation);
+            return new Environment(env.physics(), env.bounds(), env.gates(), globals);
         }
     }
     private static void unsupported(UnsupportedBoundary boundary) { throw new UnsupportedMotion(boundary); }

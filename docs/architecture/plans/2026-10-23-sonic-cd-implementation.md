@@ -2959,3 +2959,26 @@ projection cannot mislabel that death frame's earlier queue bucket. The native
 three-slot FM drop policy and blocking subCPU timing remain unimplemented.
 TerrainPlayerLoad/Boot are additional maintained consumers for the next combined
 integration check. This commit alone admits no complete contact gameplay.
+
+
+### Shared CD collision call cuts for Hurt, 24 October 2026
+
+CdPlayerMovement exposes the existing native air-collision and LevelBound calls
+without MODE admission, input, charge, motion integration or a new terrain/math
+algorithm. The air call preserves routine4 and returns the actual scratch angle
+and typed effects. LevelBound retains its signed word comparison, distinct from
+HurtChkLand's earlier unsigned comparison, and stops before KillPlayer. Its
+separate bored2B bottom branch throws only at that native predicate
+(Sonic/Main.asm:1703-1707), because native sets routine6 directly there.
+
+The direct landing regression stores0138 so its high-memory-byte threshold-9
+rejects two-10 sensors; a wrong low-byte threshold-64 would land. The inside-bound
+bored case remains admitted. All96 Movement invocations passed in Root81731's
+406-case selection (one unrelated missing-S2-path skip was subsequently executed
+alone); exact fresh Java25/media/EGL XML was inspected. Earlier315-case helper
+coverage and the independent Opus source review found noP1/P2 or wrong assertion.
+These are bounded CD call ports, not routine4 or death gameplay admission.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdOpeningObjectRuntime,TestCdObjectPool,TestCdPlayerMovement,TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
+```

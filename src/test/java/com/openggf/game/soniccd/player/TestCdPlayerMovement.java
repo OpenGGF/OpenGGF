@@ -635,6 +635,80 @@ class TestCdPlayerMovement {
         assertEquals(boundary, ex.boundary());
     }
     private static Actor rolled() { Actor a = new Actor(); a.flags = 4; a.xr = 7; a.yr = 14; a.y = 81 << 16; a.anim = 2; return a; }
+    @Test void hurtAirCollisionUsesTheExistingFloorOwnerWithoutIntegratingOrRunningMode() {
+        var f = new Fixture(); Actor a = airborne(); a.routine = 4;
+        a.y = 0x0053ABCD; a.yv = 0x138; a.xv = 0x80; a.jump = 1; a.charge = 17;
+        var r = f.owner().collideInAir(a.state(), f.environment());
+        assertEquals(0x00400000, r.state().centreX16_16(), "the caller already executed ObjMove");
+        assertEquals(0x004CABCD, r.state().centreY16_16());
+        assertEquals(4, r.state().routine()); assertEquals(0, r.state().flags());
+        assertEquals(0, r.state().yVelocity()); assertEquals(0x80, r.state().groundVelocity());
+        assertEquals(17, r.state().charge(), "no predispatch or charge helper in the collision call");
+        assertEquals(0, r.environment().globals().scoreChain());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), r.effects());
+    }
+
+    @Test void directAirCollisionStillReadsTheHighMemoryYVelocityByteForTheLandingThreshold() {
+        Fixture f = new Fixture(); Arrays.fill(f.heights, 16, 32, (byte) 24);
+        Actor a = airborne(); a.routine = 4; a.y = 0x00530000; a.yv = 0x138; a.jump = 1;
+        var r = f.owner().collideInAir(a.state(), f.environment());
+        assertEquals(a.state(), r.state(), "two -10 sensors are below the high-memory-byte threshold -9");
+        assertEquals(0xF6, r.environment().globals().debugFloorDistance());
+        assertEquals(9, r.environment().globals().scoreChain()); assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void directCeilingCollisionUsesTheExistingSteepResetAndPreservesRoutineFour() {
+        Fixture f = new Fixture(false); f.row(2, 0x5003); f.angles[3] = 0x40;
+        Actor a = airborne(); a.routine = 4; a.y = 61 << 16; a.yv = -0x1C8; a.jump = 1;
+        var r = f.owner().collideInAir(a.state(), f.environment());
+        assertEquals(62 << 16, r.state().centreY16_16());
+        assertEquals(0x40, r.state().angle()); assertEquals(4, r.state().flags());
+        assertEquals(14, r.state().yRadius()); assertEquals(7, r.state().xRadius());
+        assertEquals(2, r.state().animation()); assertEquals(4, r.state().routine());
+        assertEquals(-0x1C8, r.state().groundVelocity()); assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void directLevelBoundsStopsAtTheKillCallAndNeverIntegratesAnActor() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.routine = 4;
+        a.x = 0x0010FFFF; a.xv = -0x100; a.y = 100 << 16;
+        var side = CdPlayerMovement.applyLevelBounds(a.state(), f.environment());
+        assertEquals(16 << 16, side.state().centreX16_16());
+        assertEquals(a.y, side.state().centreY16_16()); assertEquals(0, side.state().xVelocity());
+        assertEquals(4, side.state().routine()); assertFalse(side.killRequested());
+        a.x = 64 << 16; a.xv = 0x100; a.y = 0x1000ABCD;
+        var kill = CdPlayerMovement.applyLevelBounds(a.state(), f.environment());
+        assertTrue(kill.killRequested()); assertEquals(a.state(), kill.state());
+        assertEquals(f.environment(), kill.environment());
+    }
+
+    @Test void directLevelBoundKeepsItsSignedBottomCompareDistinctFromHurtChkLandUnsignedCompare() {
+        Fixture f = new Fixture(false); f.bounds = new CdPlayerMovement.Bounds(0, 0x1000, 0x7F10, 0);
+        Actor a = airborne(); a.routine = 4; a.y = 0x80001234;
+        assertFalse(CdPlayerMovement.applyLevelBounds(a.state(), f.environment()).killRequested());
+        a.y = 0x7FF11234;
+        assertTrue(CdPlayerMovement.applyLevelBounds(a.state(), f.environment()).killRequested());
+    }
+
+    @Test void directLevelBoundsRejectsTheUnownedBoredDeathBranchOnlyWhenBottomIsCrossed() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.routine = 4; a.anim = 0x2B;
+        a.y = 100 << 16;
+        assertFalse(CdPlayerMovement.applyLevelBounds(a.state(), f.environment()).killRequested());
+        a.y = 0x1000ABCD;
+        var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class,
+                () -> CdPlayerMovement.applyLevelBounds(a.state(), f.environment()));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.BORED_GIVE_UP, failure.boundary());
+    }
+
+    @Test void collisionAndBoundsPortsRejectNullInputsAndKeepTheirOutputListsImmutable() {
+        Fixture f = new Fixture(false); Actor a = airborne(); a.routine = 4; a.y = 200 << 16;
+        var owner = f.owner(); var r = owner.collideInAir(a.state(), f.environment());
+        assertThrows(UnsupportedOperationException.class, () -> r.effects().clear());
+        assertThrows(NullPointerException.class, () -> owner.collideInAir(null, f.environment()));
+        assertThrows(NullPointerException.class, () -> owner.collideInAir(a.state(), null));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.applyLevelBounds(null, f.environment()));
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.applyLevelBounds(a.state(), null));
+    }
+
     private static Actor airborne() { Actor a = rolled(); a.flags = 6; return a; }
     private static CdPlayerMovement.Globals globals(int look, int camera, int pri, int sec, int bored, int score) {
         return new CdPlayerMovement.Globals(look, camera, pri, sec, bored, score, 0, 0, 0, 0);
