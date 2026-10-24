@@ -8,8 +8,6 @@ com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#heads
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#fireballs
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#activeWaves
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#emeralds
-com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars
-com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris
 com.openggf.game.sonic3k.objects.IczMinibossInstance#childComponents
 com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren

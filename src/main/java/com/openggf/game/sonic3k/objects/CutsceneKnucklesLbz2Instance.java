@@ -9,21 +9,22 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -64,8 +65,10 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         FALL            // ROM routine $C
     }
 
-    private final List<SwingChild> swingChildren = new ArrayList<>(4);
-    private final List<LbzKnuxPillarInstance> supportPillars = new ArrayList<>(1);
+    // Diagnostic observation of the reused/created scenery, not lifetime ownership.
+    // A value identity also represents its absence after retirement/slot reuse without
+    // retaining an unregistered object reference in the compact snapshot.
+    private ObjectRefId supportPillarId;
     private final List<Integer> musicFadeTargets = new ArrayList<>(2);
     private final List<Integer> musicFadeWaitWords = new ArrayList<>(2);
     private int x;
@@ -93,6 +96,11 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         this.xFixed = x << 16;
         this.yFixed = y << 16;
         updateDynamicSpawn(x, y);
+        // Service binding happens after the restore-construction scope ends. Suppress
+        // its initialization now: phase two restores the captured initialized flag,
+        // music history and managed graph, including already-retired child absences.
+        initialized = ObjectConstructionContext.isRewindActiveRestore()
+                || ObjectConstructionContext.isProbeConstruction();
     }
 
     @Override
@@ -201,11 +209,30 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     }
 
     public List<SwingChild> swingChildrenForTest() {
-        return List.copyOf(swingChildren);
+        return services().objectQuery().activeObjectsOfType(SwingChild.class).stream()
+                .filter(child -> !child.isDestroyed() && child.parent == this)
+                .sorted(Comparator.comparingInt(child -> child.subtype))
+                .toList();
     }
 
     public List<LbzKnuxPillarInstance> supportPillarsForTest() {
-        return List.copyOf(supportPillars);
+        if (supportPillarId == null) {
+            return List.of();
+        }
+        var object = services().objectQuery().resolve(supportPillarId).orElse(null);
+        return object instanceof LbzKnuxPillarInstance pillar && !pillar.isDestroyed()
+                ? List.of(pillar) : List.of();
+    }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        // Preserve the existing child-expiry rule across the removal/capture boundary:
+        // the next child dispatch must see an orphan, never a recycled/nearest cameo.
+        for (SwingChild child : services().objectQuery().activeObjectsOfType(SwingChild.class)) {
+            if (child.parent == this) {
+                child.parent = null;
+            }
+        }
     }
 
     public List<Integer> musicFadeTargetsForTest() {
@@ -240,8 +267,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         ensureSupportPillar();
         for (int subtype = 0; subtype <= 6; subtype += 2) {
             int childSubtype = subtype;
-            SwingChild child = spawnChild(() -> new SwingChild(this, childSubtype));
-            swingChildren.add(child);
+            spawnChild(() -> new SwingChild(this, childSubtype));
         }
     }
 
@@ -249,22 +275,14 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         int pillarX = (x + SUPPORT_PILLAR_DX) & 0xFFFF;
         int pillarY = (y + SUPPORT_PILLAR_DY) & 0xFFFF;
         LbzKnuxPillarInstance existing = findExistingSupportPillar(pillarX, pillarY);
-        if (existing != null) {
-            supportPillars.add(existing);
-            return;
-        }
-        LbzKnuxPillarInstance pillar = spawnFreeChild(() -> new LbzKnuxPillarInstance(
+        LbzKnuxPillarInstance pillar = existing != null ? existing : spawnFreeChild(() -> new LbzKnuxPillarInstance(
                 new ObjectSpawn(pillarX, pillarY, Sonic3kObjectIds.LBZ_KNUX_PILLAR,
                         0, SUPPORT_PILLAR_RENDER_FLAGS, false, pillarY)));
-        supportPillars.add(pillar);
+        supportPillarId = services().objectQuery().identityOf(pillar).orElse(null);
     }
 
     private LbzKnuxPillarInstance findExistingSupportPillar(int pillarX, int pillarY) {
-        ObjectManager manager = services().objectManager();
-        if (manager == null) {
-            return null;
-        }
-        for (LbzKnuxPillarInstance pillar : manager.activeObjectsOfType(LbzKnuxPillarInstance.class)) {
+        for (LbzKnuxPillarInstance pillar : services().objectQuery().activeObjectsOfType(LbzKnuxPillarInstance.class)) {
             if (!pillar.isDestroyed()
                     && (pillar.getCentreX() & 0xFFFF) == pillarX
                     && (pillar.getCentreY() & 0xFFFF) == pillarY) {
@@ -449,14 +467,16 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
                 {0x080, 0x08}
         };
 
-        @RewindTransient(reason = "Structural parent link; restored by relinking to the live LBZ2 Knuckles cameo.")
-        private final CutsceneKnucklesLbz2Instance parent;
+        // ROM parent3 at loc_62A6C/loc_62A82 (sonic3k.asm:129790-129802).
+        // The compact object-id fixup binds this after every owner has been recreated.
+        private CutsceneKnucklesLbz2Instance parent;
         @RewindTransient(reason = "Constructor-derived from child spawn subtype.")
         private final int subtype;
         @RewindTransient(reason = "Constructor-derived from child spawn subtype.")
         private final int index;
-        @RewindTransient(reason = "Constructor-derived from parent position at child creation.")
-        private final int anchorX;
+        // ROM $3A is saved once by loc_629CE (sonic3k.asm:129746), even
+        // while subtype zero moves the parent. Re-deriving it shifts the pendulum.
+        private int anchorX;
         private int x;
         private int y;
         private int xFixed;
@@ -472,17 +492,20 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         private boolean freeFalling;
 
         private SwingChild(CutsceneKnucklesLbz2Instance parent, int subtype) {
-            super(new ObjectSpawn(parent.getCentreX() + 2,
+            this(new ObjectSpawn(parent.getCentreX() + 2,
                     // ROM loc_629CE: y += (2*subtype) << 3 stagger.
                     parent.getCentreY() + 0x24 + (subtype * 0x10),
-                    parent.spawn.objectId(), subtype, 0, false, parent.getCentreY()),
-                    "CutsceneKnucklesLBZ2Swing");
+                    parent.spawn.objectId(), subtype, 0, false, parent.getCentreY()), parent);
+        }
+
+        private SwingChild(ObjectSpawn spawn, CutsceneKnucklesLbz2Instance parent) {
+            super(spawn, "CutsceneKnucklesLBZ2Swing");
             this.parent = parent;
-            this.subtype = subtype;
+            this.subtype = spawn.subtype();
             this.index = Math.min(subtype / 2, INITIAL_PARAMS.length - 1);
-            this.anchorX = (parent.getCentreX() + 2) & 0xFFFF;
+            this.anchorX = spawn.x() & 0xFFFF;
             this.x = anchorX;
-            this.y = (parent.getCentreY() + 0x24 + (subtype * 0x10)) & 0xFFFF;
+            this.y = spawn.y() & 0xFFFF;
             this.xFixed = x << 16;
             this.yFixed = y << 16;
             this.accel = INITIAL_PARAMS[index][1];
@@ -491,14 +514,13 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            CutsceneKnucklesLbz2Instance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
-                    ctx, CutsceneKnucklesLbz2Instance.class);
-            return liveParent != null ? new SwingChild(liveParent, ctx.spawn().subtype()) : null;
+            // Pure shell: captured children may precede their owner in SST order.
+            return new SwingChild(ctx.spawn(), null);
         }
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            if (parent.isDestroyed()) {
+            if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
             }

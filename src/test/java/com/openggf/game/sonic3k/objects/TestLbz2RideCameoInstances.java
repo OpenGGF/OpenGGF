@@ -408,9 +408,12 @@ class TestLbz2RideCameoInstances {
         }
 
         CutsceneKnucklesLbz2Instance knuckles(int x, int y) {
+            services.withIsolatedObjectManager();
             CutsceneKnucklesLbz2Instance knuckles = new CutsceneKnucklesLbz2Instance(
                     new ObjectSpawn(x, y, OBJ_CUTSCENE_KNUCKLES, 0x18, 0, false, y));
-            knuckles.setServices(services);
+            services.objectManager().createDynamicObject(() -> knuckles);
+            // Knuckles' own route rejects this cameo during service initialization;
+            // retain that rejected instance for the existing deletion assertion.
             return knuckles;
         }
     }
