@@ -27,6 +27,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -118,6 +119,7 @@ class TestFalseFloorBlockRewindGenericRestore {
 
         Sonic1FalseFloorInstance restoredMaster = findMaster(objectManager);
         assertNotNull(restoredMaster, "master must still be active after restore");
+        assertNotSame(master, restoredMaster, "the list must rebuild on a fresh master");
         List<Sonic1FalseFloorInstance.FalseFloorBlock> relinked =
                 readChildBlocks(restoredMaster);
         assertEquals(8, relinked.size(),

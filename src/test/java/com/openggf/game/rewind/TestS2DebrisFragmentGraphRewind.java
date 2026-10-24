@@ -4,12 +4,20 @@ import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic2.objects.RisingPillarObjectInstance;
 import com.openggf.game.sonic2.objects.SmashableGroundObjectInstance;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.OwnedMocks;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +33,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestS2DebrisFragmentGraphRewind {
 
@@ -45,6 +56,49 @@ class TestS2DebrisFragmentGraphRewind {
                 SmashableGroundObjectInstance.SmashableGroundFragmentInstance.class)) {
             assertTrue(RewindRecreatable.class.isAssignableFrom(type),
                     type.getSimpleName() + " must restore through RewindRecreatable");
+        }
+    }
+
+    @Test
+    void smashableGroundFragmentRecreatesItsNonemptyMappingPieceAndReplaysTheDraw() {
+        try (OwnedMocks mocks = new OwnedMocks()) {
+            SpriteMappingPiece decoy = new SpriteMappingPiece(0, 0, 1, 1, 0, false, false, 0);
+            SpriteMappingPiece piece = new SpriteMappingPiece(-12, 7, 2, 3, 0x123, true, false, 2, true);
+            ObjectSpriteSheet sheet = new ObjectSpriteSheet(new Pattern[0], List.of(
+                    new SpriteMappingFrame(List.of(decoy)),
+                    new SpriteMappingFrame(List.of(decoy, piece))), 2, 0);
+            ObjectRenderManager renderManager = mocks.mock(ObjectRenderManager.class);
+            PatternSpriteRenderer renderer = mocks.mock(PatternSpriteRenderer.class);
+            when(renderManager.getSheet(Sonic2ObjectArtKeys.SMASHABLE_GROUND)).thenReturn(sheet);
+            when(renderManager.getRenderer(Sonic2ObjectArtKeys.SMASHABLE_GROUND)).thenReturn(renderer);
+            when(renderer.isReady()).thenReturn(true);
+            TestablePlayableSprite player = player("sonic");
+            Harness harness = Harness.create(player, renderManager);
+            ObjectManager manager = harness.objectManager();
+            var source = manager.createDynamicObject(() ->
+                    new SmashableGroundObjectInstance.SmashableGroundFragmentInstance(
+                            0x140, 0x80, -0x100, -0x200, piece, renderer, 1, 1));
+            RewindRegistry registry = registryFor(manager);
+            CompositeSnapshot captured = registry.capture();
+            source.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0x140, 0x80, false, false);
+            clearInvocations(renderer);
+            source.update(1, player);
+            source.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0x13F, 0x7E, false, false);
+            clearInvocations(renderer);
+            manager.removeDynamicObject(source);
+
+            registry.restore(captured);
+
+            var restored = only(manager, SmashableGroundObjectInstance.SmashableGroundFragmentInstance.class);
+            assertNotSame(source, restored);
+            restored.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0x140, 0x80, false, false);
+            clearInvocations(renderer);
+            restored.update(1, player);
+            restored.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0x13F, 0x7E, false, false);
         }
     }
 
@@ -221,9 +275,13 @@ class TestS2DebrisFragmentGraphRewind {
         }
 
         static Harness create(AbstractPlayableSprite main) {
+            return create(main, null);
+        }
+
+        static Harness create(AbstractPlayableSprite main, ObjectRenderManager renderManager) {
             TestCamera camera = new TestCamera();
             camera.setFocusedSprite(main);
-            MutableServices services = new MutableServices(camera);
+            MutableServices services = new MutableServices(camera, renderManager);
             ObjectManager objectManager = new ObjectManager(
                     List.of(),
                     null,
@@ -247,14 +305,17 @@ class TestS2DebrisFragmentGraphRewind {
     private static final class MutableServices extends StubObjectServices {
         private ObjectManager objectManager;
         private final Camera camera;
+        private final ObjectRenderManager renderManager;
 
-        private MutableServices(Camera camera) {
+        private MutableServices(Camera camera, ObjectRenderManager renderManager) {
             this.camera = camera;
+            this.renderManager = renderManager;
         }
 
         @Override public ObjectManager objectManager() { return objectManager; }
         @Override public Camera camera() { return camera; }
         @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+        @Override public ObjectRenderManager renderManager() { return renderManager; }
     }
 
     private static final class TestCamera extends Camera {
