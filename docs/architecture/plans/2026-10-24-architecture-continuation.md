@@ -7329,3 +7329,75 @@ explicit surfaceless-EGL property and discover the four verified original ROMs
 through their existing absolute main-checkout paths. No source state changes
 during an active check. Old-base partial runs remain historical component
 evidence and are being acknowledged/consumed; they are not a green final gate.
+
+### Updated-base focused evidence and authoritative smoke launch
+
+At `90e124f49bb546fac0b644a7e9f85bb516bac6d6` (tree
+`4f4b6fd5afeae512427fc522b86229da1a5de348`), the parent observed **395 unique
+cases, zero failures/errors/skips**, across 27 physical XML reports. Java
+25.0.5.0.2, explicit surfaceless EGL and all four verified original-ROM absolute
+properties were checked in every report. This includes Root 103, title 38, SS 29,
+bonus 21, ending 36, freeze 9, capture/trace 49, SMPS owner 13/one-up 24, S3K 60,
+actual KiS2 return 1, editor 1, generic reveal 1, native S1/S2 handoff 3 and upstream
+speech 4/facing 2/priority 1. Queue wait was 14s; Maven execution was 1:39. The 54
+XML/text reports were consumed. These are parent-observed results on the
+updated upstream composition, not inherited worker counts.
+
+With MAIN_CHECKOUT set to the existing main checkout, the exact focused command
+was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 ${MAIN_CHECKOUT}/tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" '-Dtest=TestGameLoop,TestGameLoopTitleCardOwnership,TestGameLoopSpecialStageLifecycle,TestGameLoopBonusStageSession,TestGameLoopEndingSession,TestGameLoopFreezeContractWiring,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider,TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching,TestGameLoopFreshLevelHandoff#genericProviderRetainsItsFadeFromBlack,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestTraceCaptureUnifiedAudio,TestStageplaySpeechAudio,TestStageplayObjectPriorityRendering,TestStageplayObjectFacingRendering,TestSmpsRestoreOwnerContract,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' test
+```
+
+The retired old-source continuation used the full original ordered 3756-class
+plan at 8f34cad77, partitioned into the same 50-class batches. Completed original
+batches 1–61 were retained; only original batches 62 onward were requested. Each
+pending batch used the standard queued full Maven test lifecycle with -Psmoke,
+its exact includesFile, failIfNoTests=false/failIfNoSpecifiedTests=false, own
+reports/tmp directories and the original EGL/four-ROM environment. No unsafe
+compiled-output reuse or persistent pass cache was introduced. It stopped
+explicitly for the changed destination during 70, not for a queue timeout.
+
+| Original batch | Reported tests | Queue wait | Maven execution |
+| --- | ---: | ---: | ---: |
+|62 |2303 |0s |16:45 |
+|63 |2560 |43s |9:54 |
+|64 |741 |58s |1:30 |
+|65 |2647 |68s |8:32 |
+|66 |417 |441s |1:09 |
+|67 |738 |5s |3:00 |
+|68 |340 |792s |4:30 |
+|69 |244 |383s |7:06 |
+
+All had zero failures/errors; batch 67 had the three opt-in SOZ capture skips.
+Partial 70 had 96 further testcases with zero failures/errors/skips, without a
+completed batch result. Timings overlap the following-tree run and must not be
+summed as elapsed delivery time. Both retired category run directories were
+acknowledged through the runner after inspecting complete failure/skip lists
+and zero omitted-record counts. The exact owned continuation directory,
+including temporary script/selectors/logs, was removed after all raw reports
+were inspected and consumed. No main-workspace reports or foreign diagnostics
+were touched.
+
+The authoritative candidate keeps all accepted engine owners plus upstream 81's
+contracts. The reference probe/launcher remains outside this engine candidate
+while its last spawn-cancellation correction is reviewed; those future tools
+change no Java/runtime contract. The complete unmodified change-based plan is
+3768 candidates in 76 batches and fresh guards. Its preceding preflight passed
+Java 25, Lua 5.4 and PowerShell in the actual launch environment. The command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \\
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \\
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \\
+  python3 tools/testing/run_categories.py \\
+  --base 81f25c89f04d402c68998106cab17c0ddd79d928 \\
+  --rom-directory "${MAIN_CHECKOUT}" --max-minutes 180 --run
+```
+
+This launch is required by the materially changed 723-file upstream state and
+combined owner interactions. It is neither a repeated unchanged baseline run
+nor release-only full-suite validation. Its actual completion, failure/skip
+identity attribution and guard results remain pending.
