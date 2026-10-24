@@ -21,7 +21,6 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +31,20 @@ import java.util.logging.Logger;
 /** Locked-on {@code Obj_FBZEndBoss} ($AC, sonic3k.asm:148698-149618). */
 public final class FbzEndBossInstance extends AbstractBossInstance
         implements SpawnConstructionContextRewindRecreatable, FbzEndBossGraphMember {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+        }
+        visualControlOwners.clear();
+    }
+
     public static final int OBJECT_ID = 0xAC;
     public static final int INITIAL_HITS = 8;
     public static final int ACTIVE_COLLISION_FLAGS = 0x16;
@@ -490,7 +503,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
             int mask = AbstractPlayableSprite.INPUT_RIGHT
                     | (input == ForcedExitInput.RIGHT ? 0 : AbstractPlayableSprite.INPUT_JUMP);
             boolean jumpPress = input == ForcedExitInput.A_RIGHT;
-            main.setForcedInputMask(mask);
+            visualControlOwners.acquire(main).setForcedInputMask(mask);
             // loc_86358 runs after Sonic_RecordPos in the player SST slot.
             // Publish the next logical word without rewriting that earlier sample.
             main.setLogicalInputState(false, false, false, true,
@@ -514,7 +527,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
         if (services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite main) {
             main.clearLogicalInputState();
             main.setForcedInputMask(0);
-            main.setControlLocked(true);
+            visualControlOwners.acquire(main).setControlLocked(true);
         }
     }
 
@@ -523,7 +536,7 @@ public final class FbzEndBossInstance extends AbstractBossInstance
             for (PlayableEntity entity : services().playerQuery().playersFor(
                     ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (entity instanceof AbstractPlayableSprite sprite) {
-                    sprite.setControlLocked(false);
+                    visualControlOwners.relinquish(sprite).setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     // loc_708AA calls Restore_PlayerControl / Restore_PlayerControl2:
                     // clear only air and reset the Wait animation word/clocks,

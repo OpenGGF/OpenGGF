@@ -14,7 +14,7 @@ import com.openggf.game.PlayableEntity;
 import java.util.List;
 
 public class AnimalObjectInstance extends AbstractObjectInstance
-        implements SpawnServicesDefaultArgsRewindRecreatable {
+        implements ObjectVisualAnimationSource, SpawnServicesDefaultArgsRewindRecreatable {
     private static final int GRAVITY = 0x38;
     private static final int FLY_GRAVITY = 0x18;
     private static final int INITIAL_POP_VEL = -0x400;
@@ -115,6 +115,17 @@ public class AnimalObjectInstance extends AbstractObjectInstance
         this.mappingSetIndex = definition.mappingSet().ordinal();
         this.groundXVelocity = definition.xVel();
         this.groundYVelocity = definition.yVel();
+    }
+
+    @Override
+    public java.util.Optional<Cycle> visualAnimationCycle(int mappingFrame) {
+        // Obj28_Fly (s2.asm:24690-24720) and loc_2CABA (sonic3k.asm:61209-61218)
+        // toggle 0/1 with an independent two-tick timer. Obj28_Walk
+        // (s2.asm:24671-24683) and loc_2CA3C (sonic3k.asm:61172-61182) instead
+        // test y_vel, so directed walking keeps that physics-owned hop frame held.
+        if (!definition.flying()) return java.util.Optional.empty();
+        int base = mappingFrame / FRAMES_PER_MAPPING * FRAMES_PER_MAPPING;
+        return java.util.Optional.of(new Cycle(1, List.of(base, base + 1)));
     }
 
     @Override
@@ -302,6 +313,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             return romRenderOnScreen;
         }
 
+        if (stageplayVisible(currentX, currentY, margin, margin)) return true;
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         int screenWidth = viewportWidth();
@@ -324,13 +336,16 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             return;
         }
         // BuildSprites updates render_flags.on_screen after Obj28 has displayed.
+        // Include the shared cast windows at this same boundary, preserving the native
+        // one-frame flag delay and ordinary gameplay bounds without suppressing destruction.
         Camera camera = services().camera();
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()
                 && currentX < cameraX + viewportWidth() + getOnScreenHalfWidth()
                 && currentY >= cameraY - APPROX_RENDER_HALF_HEIGHT
-                && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT;
+                && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT
+                || stageplayVisible(currentX, currentY, getOnScreenHalfWidth(), APPROX_RENDER_HALF_HEIGHT);
     }
 
     public int getX() {

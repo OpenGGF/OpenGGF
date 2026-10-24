@@ -17,7 +17,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * disassembly. The late LBZ2 Death Egg launch path switches to the event-owned
  * Death Egg deformation table while the LBZ launch runtime state is active.
  */
-public class SwScrlLbz extends AbstractZoneScrollHandler {
+public class SwScrlLbz extends AbstractZoneScrollHandler implements com.openggf.level.scroll.ScrollProjectionSource {
     private boolean detachedPresentation;
 
     /** Fresh steady-state presentation; never consults or consumes live zone event state. */
@@ -73,7 +73,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
     private final ScrollValueTable lbz1HScroll = ScrollValueTable.ofLength(9);
     private final ScrollValueTable lbz2HScroll = ScrollValueTable.ofLength(242);
     private final byte[] waterlineData;
@@ -83,15 +83,26 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private DeathEggFrame lastDeathEggFrame;
     private short deathEggBgY;
 
+    private LaunchProjectionInput lastLaunchProjectionInput;
+    private boolean presentationLaunch;
+
+    /** Inputs before the additive native launch compositor, not its already-waved output. */
+    private record LaunchProjectionInput(DeathEggFrame input, int fgAccum, int bgAccum,
+                                         int bgLaunchSpeed, int wrapLatch, short[] table) {
+        LaunchProjectionInput { table = table.clone(); }
+        @Override public short[] table() { return table.clone(); }
+    }
+
     private record DeathEggFrame(int x, int y, int frame, int shake, int yOffset) { }
     private record RewindState(int cloudBaseFrame, boolean cloudBaseFrameSet,
                                int deathEggYOffset, DeathEggFrame lastDeathEggFrame,
-                               short deathEggBgY, short[] table) { }
+                               short deathEggBgY, short[] table,
+                               LaunchProjectionInput launchProjectionInput, boolean presentationLaunch) { }
 
     @Override
     public Object captureRewindState() {
         return new RewindState(cloudBaseFrame, cloudBaseFrameSet, deathEggYOffset, lastDeathEggFrame,
-                deathEggBgY, lbz2HScroll.toArray());
+                deathEggBgY, lbz2HScroll.toArray(), lastLaunchProjectionInput, presentationLaunch);
     }
 
     @Override
@@ -102,6 +113,8 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             deathEggYOffset = saved.deathEggYOffset();
             lastDeathEggFrame = saved.lastDeathEggFrame();
             deathEggBgY = saved.deathEggBgY();
+            lastLaunchProjectionInput = saved.launchProjectionInput();
+            presentationLaunch = saved.presentationLaunch();
             for (int i = 0; i < lbz2HScroll.size(); i++) {
                 lbz2HScroll.set(i, saved.table()[i]);
             }
@@ -129,8 +142,13 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     }
 
     public SwScrlLbz(byte[] waterlineData, byte[] deathEggWaveData) {
+        this(waterlineData, deathEggWaveData, 224);
+    }
+
+    private SwScrlLbz(byte[] waterlineData, byte[] deathEggWaveData, int lines) {
         this.waterlineData = waterlineData;
         this.deathEggWaveData = deathEggWaveData;
+        composer = new ScrollEffectComposer(lines);
     }
 
     public void setScreenShakeOffset(int screenShakeOffset) {
@@ -144,6 +162,8 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         cloudBaseFrameSet = false;
         deathEggYOffset = 0;
         lastDeathEggFrame = null;
+        lastLaunchProjectionInput = null;
+        presentationLaunch = false;
         deathEggBgY = 0;
         lbz2HScroll.clear();
     }
@@ -196,9 +216,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
 
         short fgScroll = negWord(cameraX);
+        presentationLaunch = actId != 0 && runtimeState != null && runtimeState.isLaunchActive();
         if (actId == 0) {
             updateAct1(cameraX, cameraY, fgScroll);
-        } else if (runtimeState != null && runtimeState.isLaunchActive()) {
+        } else if (presentationLaunch) {
             // LBZ2BGE_Falling stops calling LBZ2_DeathEggDeform. Preserve the
             // nametable scroll words and cloud phase, including across rewind.
             DeathEggFrame input = lastDeathEggFrame;
@@ -207,6 +228,9 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             if (input == null || (!runtimeState.isFinalFallActive() && !sameDispatch)) {
                 input = new DeathEggFrame(cameraX, cameraY, frameCounter, screenShakeOffset, deathEggYOffset);
                 lastDeathEggFrame = input;
+                lastLaunchProjectionInput = new LaunchProjectionInput(input, runtimeState.getFgAccum(),
+                        runtimeState.getBgAccum(), runtimeState.getBgLaunchSpeed(),
+                        runtimeState.getDeathEggDeformWrapLatch(), lbz2HScroll.toArray());
                 updateAct2DeathEgg(input, negWord(input.x()), runtimeState);
             } else {
                 if (sameDispatch && !runtimeState.isFinalFallActive()) {
@@ -712,6 +736,10 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     }
 
     private static int computeBgPeriodWidth(int[] packedHScroll) {
+        return computeBgPeriodWidth(packedHScroll, VISIBLE_SCREEN_WIDTH_PX);
+    }
+
+    private static int computeBgPeriodWidth(int[] packedHScroll, int viewportWidth) {
         int minBgScroll = Integer.MAX_VALUE;
         int maxBgScroll = Integer.MIN_VALUE;
         for (int packed : packedHScroll) {
@@ -727,11 +755,58 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
             return DEFAULT_BG_PERIOD_WIDTH;
         }
 
-        int requiredWidth = VISIBLE_SCREEN_WIDTH_PX + (maxBgScroll - minBgScroll);
+        int requiredWidth = viewportWidth + (maxBgScroll - minBgScroll);
         int width = DEFAULT_BG_PERIOD_WIDTH;
         while (width < requiredWidth && width < MAX_BG_PERIOD_WIDTH) {
             width <<= 1;
         }
         return Math.min(width, MAX_BG_PERIOD_WIDTH);
     }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        boolean launch = presentationLaunch;
+        LaunchProjectionInput dispatch = lastLaunchProjectionInput;
+        if (launch && dispatch == null) throw new IllegalStateException("LBZ launch has no captured native dispatch");
+        byte[] waterline = waterlineData == null ? null : waterlineData.clone();
+        byte[] waves = deathEggWaveData == null ? null : deathEggWaveData.clone();
+        int cloudOrigin = cloudBaseFrame;
+        boolean cloudAnchored = cloudBaseFrameSet;
+        int shake = screenShakeOffset;
+        return view -> {
+            var scratch = new SwScrlLbz(waterline, waves, view.height());
+            scratch.detachedPresentation = true;
+            scratch.cloudBaseFrame = cloudOrigin;
+            scratch.cloudBaseFrameSet = cloudAnchored;
+            scratch.screenShakeOffset = shake;
+            if (context.act() == 0) {
+                scratch.updateAct1(view.cameraX(), view.cameraY(), negWord(view.cameraX()));
+                if (shake != 0) scratch.composer.setVscrollFactorBG((short) (scratch.composer.getVscrollFactorBG() + shake));
+            } else if (!launch) {
+                scratch.updateAct2(view.cameraX(), view.cameraY(), context.frameCounter(), negWord(view.cameraX()), null);
+            } else {
+                short[] previous = dispatch.table();
+                for (int i = 0; i < previous.length; i++) scratch.lbz2HScroll.set(i, previous[i]);
+                var input = dispatch.input();
+                int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+                var directed = new DeathEggFrame(input.x() + dx, input.y() + dy, input.frame(), input.shake(), input.yOffset());
+                // This private numeric owner receives only local compositor writes.
+                // It has no service references and never ticks gameplay/event routines.
+                var local = new LbzZoneRuntimeState(context.act(), com.openggf.game.PlayerCharacter.SONIC_ALONE);
+                local.setFgAccum(dispatch.fgAccum());
+                local.setBgAccum(dispatch.bgAccum());
+                local.setBgLaunchSpeed(dispatch.bgLaunchSpeed());
+                local.setDeathEggDeformWrapLatch(dispatch.wrapLatch());
+                scratch.updateAct2DeathEgg(directed, negWord(directed.x()), local);
+            }
+            int[] words = scratch.composer.packedScrollWords();
+            return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
+                    (short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()),
+                    scratch.composer.getVscrollFactorBG(), scratch.lastBgCameraX,
+                    computeBgPeriodWidth(words, view.width()), context.nativeOutput().shakeX(),
+                    context.nativeOutput().shakeY(), context.nativeOutput().tilemapMode());
+        };
+    }
+
 }

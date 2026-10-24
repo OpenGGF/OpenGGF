@@ -199,6 +199,11 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      */
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        releaseAllCapturedPlayers();
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: First-frame initialization (sonic3k.asm:66346-66382)
         if (!initialized) {

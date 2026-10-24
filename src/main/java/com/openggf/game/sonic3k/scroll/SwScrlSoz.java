@@ -139,7 +139,99 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
         }
     }
 
-    @Override public int getBgPeriodWidth() {
+    @Override public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        var state =
+                com.openggf.game.GameServices.hasRuntime()
+                        ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                                        com.openggf.game.GameServices.zoneRuntimeRegistry())
+                                .orElse(null)
+                        : null;
+        boolean matching = state != null && state.actIndex() == context.act();
+        int stage = matching ? state.events().backgroundRoutine() : 0;
+        int bossX = matching ? state.events().bossX() : 0;
+        int bossY = matching ? state.events().bossY() : 0;
+        int sand = matching ? state.events().sandHeight() : 0;
+        int savedX = matching ? state.events().savedBackgroundX() : 0;
+        int savedY = matching ? state.events().savedBackgroundY() : 0;
+        int[] wall = new int[13];
+        if (matching)
+            for (int i = 0; i < wall.length; i++) wall[i] = state.events().bossWall().rowOffset(i);
+        short[] wave = shimmer.clone();
+        int[] bands = bandHeights.clone();
+        int copyX =
+                matching
+                        ? com.openggf.game.GameServices.camera().getXCopy() - context.cameraX()
+                        : 0;
+        int copyY = foregroundY - (short) context.cameraY();
+        return view -> {
+            int x = view.cameraX() + copyX;
+            int y = (short) (view.cameraY() + copyY);
+            int bx = context.act() == 0 ? desertBackgroundX(x) : (short) x >> 1;
+            int by = (short) y >> (context.act() == 0 ? 4 : 1);
+            int[] horizontal = new int[view.height()];
+            boolean pyramid = context.act() == 0 && stage != 0;
+            if (context.act() != 0) {
+                if (stage == 0x24 || stage == 0x28) {
+                    bx = (short) (x + 0x1240 - bossX);
+                    by = (short) (y + 0x488 - bossY);
+                } else if (stage >= 0x2C) {
+                    bx = savedX != 0 ? savedX : (short) (((short) x >> 1) + 0x200);
+                } else if (stage == 0x14 || stage == 0x18) {
+                    bx = (short) (x - 0x1930);
+                    by = (short) (y + 0x2E0 + sand);
+                } else if (stage == 0x1C && savedX != 0) {
+                    bx = savedX;
+                    by = (short) savedY;
+                }
+                for (int line = 0; line < horizontal.length; line++) {
+                    int row = by + line < 0x440 ? 0 : Math.min(12, 1 + ((by + line - 0x440) >> 4));
+                    short bg = (short) -(bx + ((stage == 0x24 || stage == 0x28) ? wall[row] : 0));
+                    horizontal[line] = ((-x & 65535) << 16) | bg & 65535;
+                }
+            } else {
+                if (pyramid) {
+                    bx = (short) (x - 0x3CD0);
+                    by = (short) (y - 0x900 + sand);
+                }
+                int base = (((short) x) << 16) >> 4;
+                int increment = base >> 2;
+                int fgPhase = (((short) context.frameCounter() >> 1) + 2 * (short) y) & 0x3E;
+                int bgPhase =
+                        pyramid
+                                ? fgPhase
+                                : (((short) context.frameCounter() >> 1) + 2 * (short) by) & 0x3E;
+                int band = 0, remaining = bands[0] - (short) by;
+                while (remaining <= 0 && band < bands.length - 1) remaining += bands[++band];
+                for (int line = 0; line < horizontal.length; line++) {
+                    short fg = (short) (-x + wave[((fgPhase >> 1) + line) & 31]);
+                    short bg =
+                            (short)
+                                    ((pyramid ? -bx : -((base + increment * band) >> 16))
+                                            + wave[((bgPhase >> 1) + line) & 31]);
+                    horizontal[line] = ((fg & 65535) << 16) | bg & 65535;
+                    if (--remaining == 0 && band < bands.length - 1) remaining = bands[++band];
+                }
+            }
+            var output = context.nativeOutput();
+            int residencyX = pyramid ? bx - 1 : context.act() == 1 && stage >= 0x2C ? 0x200 : bx;
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    null,
+                    null,
+                    null,
+                    (short) y,
+                    (short) by,
+                    residencyX,
+                    pyramid ? Math.max(512, (view.width() + 31) & ~15) : 512,
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
+    }
+
+    @Override
+    public int getBgPeriodWidth() {
         var state = com.openggf.game.GameServices.hasRuntime()
                 ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
                         com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;

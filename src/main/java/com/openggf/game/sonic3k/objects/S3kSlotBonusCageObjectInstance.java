@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomData;
@@ -14,9 +15,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
-
 import static com.openggf.physics.TrigLookupTable.cosHex;
 import static com.openggf.physics.TrigLookupTable.sinHex;
 
@@ -26,6 +25,19 @@ import static com.openggf.physics.TrigLookupTable.sinHex;
  * <p>ROM reference: {@code sub_4C014} / {@code loc_4BF62}, lines 99308-99557.
  */
 public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
 
     private static final int CAPTURE_HALF_SPAN = 0x18;
     private static final int CAPTURE_SPAN = 0x30;
@@ -157,8 +169,8 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        visualControlOwners.acquire(player).setControlLocked(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAir(true);
         player.setOnObject(false);
         if (controller.isOptionCycleResolved()) {
@@ -266,7 +278,7 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         short vy = (short) (TrigLookupTable.cosHex(angle) * 4);
         player.setXSpeed(vx);
         player.setYSpeed(vy);
-        ObjectControlState.none().applyTo(player);
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(player));
         player.setControlLocked(false);
         player.setAir(true);
         controller.negateScalar();

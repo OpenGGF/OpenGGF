@@ -11,6 +11,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -116,6 +117,9 @@ public final class RewindCodecs {
         }
         if (type == ObjectAnimationState.class) {
             return Optional.of(new ObjectAnimationStateCodec());
+        }
+        if (type == PlayerControlOwners.class) {
+            return Optional.of(new PlayerControlOwnersCodec());
         }
         if (type == PlatformBobHelper.class) {
             return Optional.of(new PlatformBobHelperCodec());
@@ -672,6 +676,43 @@ public final class RewindCodecs {
             int length = scalarData.readInt();
             set(field, target, length < 0 ? null : BitSet.valueOf(scalarData.readBytes(length)));
         }
+    }
+
+    /** Mutable acquired-player sets retain their helper identity and encode only stable team references. */
+    private static final class PlayerControlOwnersCodec implements RewindCodec {
+        @Override
+        public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
+            capture(field, target, scalarData, opaqueValues, RewindCaptureContext.none());
+        }
+
+        @Override
+        public void capture(Field field, Object target, RewindStateBuffer scalarData,
+                List<Object> opaqueValues, RewindCaptureContext context) {
+            var owners = (PlayerControlOwners) requireExistingValue(field, target);
+            var refs = owners.capture(context);
+            scalarData.writeInt(refs.size());
+            for (var ref : refs) scalarData.writeInt(ref.encoded());
+        }
+
+        @Override
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+            restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
+        }
+
+        @Override
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues, OpaqueIndex opaqueIndex, RewindCaptureContext context) {
+            int count = scalarData.readInt();
+            if (count < 0) throw new IllegalStateException("Negative acquired-player reference count");
+            var refs = new ArrayList<PlayerRefId>(count);
+            for (int i = 0; i < count; i++) refs.add(new PlayerRefId(scalarData.readInt()));
+            ((PlayerControlOwners) requireExistingValue(field, target)).restore(refs, context);
+        }
+
+        @Override public boolean capturesFinalFields() { return true; }
+        @Override public boolean requiresExistingTargetValue() { return true; }
+        @Override public boolean requiresIdentityTable() { return true; }
     }
 
     private static final class PlayerReferenceCodec implements RewindCodec {
@@ -1717,6 +1758,9 @@ public final class RewindCodecs {
     }
 
     private static Object resolvePlayerRef(PlayerRefId id, RewindCaptureContext context, Class<?> declaredType) {
+        if (id.isNull()) {
+            return null;
+        }
         PlayableEntity player = context.requireIdentityTable().resolvePlayer(id, true);
         if (player != null && !declaredType.isInstance(player)) {
             throw new IllegalStateException("Resolved player reference " + id + " to "

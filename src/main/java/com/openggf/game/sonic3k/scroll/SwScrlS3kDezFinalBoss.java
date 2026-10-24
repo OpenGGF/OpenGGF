@@ -44,4 +44,42 @@ public final class SwScrlS3kDezFinalBoss extends SwScrlS3kDefault {
     @Override public short getVscrollFactorFG() { return foregroundY; }
     @Override public int getBgCameraX() { return backgroundX - 1; }
     @Override public int getBgPeriodWidth() { return 512; }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        var state =
+                GameServices.hasRuntime()
+                                && GameServices.zoneRuntimeState()
+                                        instanceof DezFinalBossZoneRuntimeState dez
+                        ? dez
+                        : null;
+        if (state == null) {
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+        }
+        int foregroundX = state.retainedPlaneX() != 0 ? state.retainedPlaneX() : state.planeX();
+        int planeY = state.planeY(), screenY = state.screenY();
+        int inset = NativeViewportFraming.inset(context.viewportWidth());
+        return view -> {
+            int[] words = new int[view.height()];
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            short foreground = (short) (-foregroundX + inset - dx);
+            for (int line = 0; line < words.length; line++) {
+                short background = screenY + line < 0xE0 ? (short) inset : (short) -view.cameraX();
+                words[line] = ((foreground & 0xffff) << 16) | (background & 0xffff);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    words,
+                    null,
+                    null,
+                    null,
+                    (short) (planeY + dy),
+                    (short) screenY,
+                    (view.cameraX() & 0x1ff) - 1,
+                    512,
+                    context.nativeOutput().shakeX(),
+                    context.nativeOutput().shakeY(),
+                    context.nativeOutput().tilemapMode());
+        };
+    }
 }

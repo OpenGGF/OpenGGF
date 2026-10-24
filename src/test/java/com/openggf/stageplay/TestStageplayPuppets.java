@@ -16,7 +16,7 @@ class TestStageplayPuppets {
         return new ActorKey(frame, x, 200, 0, -1, false, visible, 1, Interpolation.HOLD);
     }
     private static StageplayDocument manual() {
-        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
+        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withSet(new SetSource("s2",0,0,"","")).withActors(List.of(
                 new Actor("hero", "Hero", "s2", "sonic", List.of(key(0, 100, true)))));
     }
     private static PuppetCommand move(int frame) {
@@ -26,26 +26,14 @@ class TestStageplayPuppets {
         return new PuppetTrack("hero", true, 0, List.of(commands));
     }
 
-    @Test void oldVersionThreeConstructorAndPersistenceKeepAirborneManualChoreography() throws IOException {
-        var old = manual().withActors(List.of(new Actor("hero", "Hero", "s2", "sonic", List.of(
+    @Test void manualChoreographyRoundTripsWithoutCreatingPhysicsTracks() throws IOException {
+        var scene = manual().withActors(List.of(new Actor("hero", "Hero", "s2", "sonic", List.of(
                 new ActorKey(0, 100, 200, 2, -1, false, true, 1, Interpolation.LINEAR),
                 new ActorKey(30, 200, 50, 2, -1, false, true, 1, Interpolation.LINEAR)))));
-        var mapper = new ObjectMapper();
-        ObjectNode json = (ObjectNode) mapper.readTree(StageplayStore.encode(old));
-        json.put("version", 3); json.remove("puppets");
-        ((ObjectNode)json.get("set")).remove("worldPolicy");
-        for(var change:json.withArray("sceneChanges")) ((ObjectNode)change.get("set")).remove("worldPolicy");
-        for(var key:json.withArray("camera")) ((ObjectNode)key).remove("follow");
-        var migrated = StageplayStore.decode(mapper.writeValueAsBytes(json));
-        assertTrue(migrated.puppets().isEmpty());
-        assertEquals(125, StageplayTimeline.sample(migrated, 15).actors().getFirst().y());
-        assertEquals(old, migrated);
-        var source = new StageplayDocument(3, old.name(), old.durationFrames(), old.width(), old.height(),
-                old.set(), old.actors(), old.camera(), old.captions(), old.audio(), old.cameraEffects(),
-                old.sceneChanges(), old.dialogueTypers(), old.dialogueSkins(), old.dialogue());
-        assertEquals(old, source);
-        json.putArray("puppets");
-        assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(json)));
+        var decoded = StageplayStore.decode(StageplayStore.encode(scene));
+        assertTrue(decoded.puppets().isEmpty());
+        assertEquals(125, StageplayTimeline.sample(decoded, 15).actors().getFirst().y());
+        assertEquals(scene, decoded);
     }
 
     @Test void tracksAreImmutableAndSurviveAllExistingMutators() throws IOException {

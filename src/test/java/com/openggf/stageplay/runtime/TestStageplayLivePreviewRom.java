@@ -8,17 +8,75 @@ import com.openggf.stageplay.StageplayTimeline;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import java.util.concurrent.TimeUnit;
+import static com.openggf.stageplay.StageplayDocument.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStageplayLivePreviewRom {
-    @Test void isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld() throws Exception {
+    @Test
+    void pausedDraftClampsItsBaseAndShakeEvenWhenItsFinalCameraMatchesTheCachedPicture() throws Exception {
+        GameServices.graphics().initHeadless();
+        var path = Path.of(System.getProperty("s3k.rom.path"));
+        GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM, path.toString());
+        var parent = SessionManager.getCurrentGameplayMode();
+        try (var library = SceneRomLibrary.open(Map.of("s3k", path));
+             var resources = new StageplayResources(library, false)) {
+            var source = TestStageplayLiveWorldRom.platform();
+            var level = library.level("s3k", source.set().zone(), source.set().act());
+            var document = source.withCamera(List.of(new CameraKey(
+                    0, 5280, level.getMaxY(), 1, Interpolation.HOLD)))
+                    .withCameraEffects(List.of(new CameraEffect(
+                            "edge-shake", 0, source.durationFrames(), 0, 16, 8, 7)));
+            int at = IntStream.range(0, 30).filter(frame -> {
+                var sample = StageplayTimeline.sample(document, frame);
+                return sample.camera().y() - sample.baseCamera().y() > 1;
+            }).findFirst().orElseThrow();
+            var authored = StageplayTimeline.sample(document, at);
+            double shake = authored.camera().y() - authored.baseCamera().y();
+            var frame = resources.resolveFrame(document, authored);
+            assertEquals(level.getMaxY(), frame.baseCamera().y());
+            assertEquals(level.getMaxY(), frame.camera().y());
+            // Same final picture, different unshaken origin: cache identity must include the request.
+            var base = new StageplayTimeline.CameraPose(frame.baseCamera().x(), level.getMaxY() - shake, 1);
+            var draft = new StageplayTimeline.Frame(frame.frame(), frame.actors(), frame.camera(), frame.captions(),
+                    frame.set(), frame.transition(), base, frame.dialogue(), frame.puppets(), frame.world());
+            var directed = resources.resolveFrame(document, draft);
+            assertEquals(frame.camera(), directed.camera());
+            assertEquals(base, directed.baseCamera());
+            assertEquals(frame.world(), directed.world(), "Paused framing cannot tick the world");
+            assertSame(directed, resources.resolveFrame(document, draft));
+            assertSame(directed, resources.resolveFrame(document, directed),
+                    "Drawing an already resolved draft cannot reinterpret its clipped camera");
+
+            var outside = new StageplayTimeline.CameraPose(-1000, 100_000, 1);
+            var outsideDraft = new StageplayTimeline.Frame(frame.frame(), frame.actors(), outside, frame.captions(),
+                    frame.set(), frame.transition(), outside, frame.dialogue(), frame.puppets(), frame.world());
+            var clamped = resources.resolveFrame(document, outsideDraft);
+            assertEquals(level.getMinX(), clamped.camera().x());
+            assertEquals(level.getMaxY(), clamped.camera().y());
+            assertEquals(level.getMaxY(), clamped.baseCamera().y());
+            assertEquals(frame.world(), clamped.world());
+            assertSame(parent, SessionManager.getCurrentGameplayMode());
+        }
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void isolatedEditorWorkerReturnsNativePixelsAndStateWithoutReplacingItsParentWorld(boolean composite) throws Exception {
         GameServices.graphics().initHeadless();
         var path=Path.of(System.getProperty("s3k.rom.path"));
-        GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM,path.toString());
+        GameServices.configuration().setSessionOverride(SonicConfiguration.SONIC_3K_ROM,composite ? "" : path.toString());
+        if (composite) {
+            GameServices.configuration().setSessionOverride(SonicConfiguration.ROMS_DIRECTORY,path.toAbsolutePath().getParent().toString());
+            GameServices.configuration().setSessionOverride(SonicConfiguration.ROMS_PREFER_COMPOSITE,true);
+            assertTrue(GameServices.rom().resolveLogicalRom(com.openggf.data.RomIdentity.S3K).orElseThrow().isComposite());
+        }
         var parent=SessionManager.getCurrentGameplayMode(); var level=parent.getLevelManager().getCurrentLevel();
         ProcessHandle child;
         try(var library=SceneRomLibrary.open(Map.of("s3k",path));var resources=new StageplayResources(library,false)) {

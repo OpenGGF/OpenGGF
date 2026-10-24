@@ -524,7 +524,7 @@ public record ObjectManagerSnapshot(
     public record SpawnCounterEntry(int spawnIndex, int counter) {}
 
     /**
-     * Snapshot of {@code ObjectManager.PlaneSwitchers}' per-spawn, per-player
+     * Snapshot of {@code ObjectPlaneSwitcherController}' per-spawn, per-player
      * side latches. Plane switchers trigger only on side transitions, so
      * restoring player layer/top/lrb bits is not enough; the hidden previous
      * side controls whether the next frame crosses or only seeds the latch.

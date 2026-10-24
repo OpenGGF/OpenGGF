@@ -16,8 +16,8 @@ final class ObjectRewindTypeSafety {
                 @Override
                 protected DispatchRoute computeValue(Class<?> type) {
                     return new DispatchRoute(
-                            hasLegacyOverride(type, "captureRewindState"),
-                            hasLegacyOverride(
+                            usesNoContextOverride(type, "captureRewindState"),
+                            usesNoContextOverride(
                                     type,
                                     "restoreRewindState",
                                     PerObjectRewindSnapshot.class));
@@ -57,14 +57,21 @@ final class ObjectRewindTypeSafety {
         return DISPATCH_ROUTES.get(type);
     }
 
-    private static boolean hasLegacyOverride(
+    private static boolean usesNoContextOverride(
             Class<?> type, String name, Class<?>... parameterTypes) {
+        Class<?>[] contextualParameters = java.util.Arrays.copyOf(parameterTypes, parameterTypes.length + 1);
+        contextualParameters[parameterTypes.length] =
+                com.openggf.game.rewind.schema.RewindCaptureContext.class;
         for (Class<?> current = type;
                 current != null && current != AbstractObjectInstance.class;
                 current = current.getSuperclass()) {
             if (current == AbstractBadnikInstance.class) {
                 continue;
             }
+            // The nearest declaration owns dispatch. An explicit context overload at
+            // the same depth must keep the manager's stable identity table, even when
+            // a no-argument convenience wrapper is retained beside it.
+            if (declaresMethod(current, name, contextualParameters)) return false;
             try {
                 var method = current.getDeclaredMethod(name, parameterTypes);
                 if (!Modifier.isAbstract(method.getModifiers())
@@ -77,6 +84,15 @@ final class ObjectRewindTypeSafety {
             }
         }
         return false;
+    }
+
+    private static boolean declaresMethod(Class<?> owner, String name, Class<?>[] parameters) {
+        try {
+            var method = owner.getDeclaredMethod(name, parameters);
+            return !Modifier.isAbstract(method.getModifiers()) && !method.isSynthetic() && !method.isBridge();
+        } catch (NoSuchMethodException absent) {
+            return false;
+        }
     }
 
     record DispatchRoute(boolean legacyCapture, boolean legacyRestore) {

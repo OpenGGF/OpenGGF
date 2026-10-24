@@ -14,7 +14,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.TrigLookupTable;
-
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZWireCageStationary} ($70), sonic3k.asm $3A238-$3A568. */
@@ -35,6 +34,24 @@ public final class FbzWireCageStationaryObjectInstance extends AbstractObjectIns
         super(spawn, "FBZWireCageStationary");
         travelAngle = (spawn.subtype() & 0xFF) << 8;
         travelExtent = travelAngle << 2;
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        int ordinal = 0;
+        for (var entity : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = participants.slot(player);
+                boolean nativeP2 = ordinal == 1;
+                if (participants.flag(slot, 3) || (nativeP2 && nativeP2AliasStanding)) {
+                    release(player, slot, false, nativeP2, nativeP2 && nativeP2AliasStanding);
+                    participants.flag(slot, 3, false);
+                }
+                ordinal++;
+            }
+        }
+        nativeP2AliasStanding = false;
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity ignored) {

@@ -195,7 +195,8 @@ global frames or navigate menus. ROM catalog queries expose actual scripts and s
 bounds. Compilation and inspection require no ROM; capture validates resources and
 uses the existing no-device headless host. Rejected: a second playback evaluator,
 implicit cross-game native loads, copying ROM art into production sources, and
-schema coercions which could silently move cues. No round-trip decompiler is claimed.
+schema coercions which could silently move cues. This initial one-way limitation
+is superseded by the lossless screenplay revision below.
 
 
 ### Dialogue and visual feedback revision
@@ -258,3 +259,296 @@ state for editor preview, playback, capture and native handover. The pure timeli
 labels physical poses unresolved; it must not present an authored goal as a
 measured position. Seeking restores/replays isolated native state deterministically,
 and repeated reads/draws of one frame do not advance the simulation.
+
+## Native-world and complete-cast continuation (2026-10-22)
+
+New version-six documents use one native session for both LIVE and TERRAIN_ONLY.
+The latter clears initial layout objects and rings before the native load; it is
+a contents choice, not a different physics, camera or renderer. A clear is not a
+permanent ban on later event-created objects. Native world ownership remains in
+the isolated process and production LevelFrameStep; held interactive playback
+uses value poses and the existing visit-bound CourseControl player lease.
+
+Strict v1–v5 migration records LEGACY_TERRAIN_ONLY or LEGACY_LIVE, preserving
+previous choreography, simulation, donor constraints and presentation. Older
+screenplays compile through that same migration. New version-four screenplays
+select the current model. Compatibility is retained explicitly rather than
+silently replacing old detached physics with object/event simulation. Saved sets
+are isolated decoder snapshots; each current native performer has a donor module
+context over the shared world's terrain, collision, clocks and rewind owners.
+
+Editor preview/export transport exact logical-ROM descriptors, including source
+windows and fingerprints. Workers reconstruct immutable readers without joining
+or copying ROM files. Authored sets use a confined editor root or the original
+bounded bytes from the mod registration transaction, never the worker cwd.
+
+Presentation composes native viewport tiles into an opaque world texture, bounded
+to 4096 pixels per side and 8 MiPixels. Fractional sampling operates only on the
+completed world. Posed cast joins that picture before sampling; captions, dialogue
+and transitions follow it at output resolution. No global texture filter changes
+or straight-alpha sprite resampling are admitted. Native 224-line buffers,
+physics, camera dimensions and ordinary rendering keep their owners. Directed
+background phase and separated-ensemble activation are subsequent camera work.
+
+The user confirmed that Free means the real ROM routine, including arena-bound
+boss initialization that ignores a placed anchor. Do not add object-specific
+spatial adapters. Both editors, coverage and authoring diagnostics must display
+“Free: native arena position, anchor ignored” and cite the owning initialization
+routine. An unsupported native set/context fails explicitly. Puppet/Pose
+relocation must preserve composite child relationships; visual direction must
+never be described as relocated Free collision or arena behavior.
+
+Rejected: replacing legacy worlds silently; copying joined ROM images to temporary
+files; forwarding only whole-image paths; a global GL_LINEAR switch; resizing or
+reticking native scroll/physics owners to generate a larger picture; guessing
+object motion from private field names. Verification, evidence and final commit
+hashes are recorded in the live-world plan.
+
+Directed object modes use visual puppetry: only Free runs native routines and
+world effects. Puppet/Pose suspend native parent/child AI, drive position and
+ROM-backed pure animation/mapping presentation, and preserve native part offsets
+as render followers. State-machine-only appearance has an explicit held/authored
+frame fallback and cited per-object coverage exclusion. Never relocate the picture
+while leaving native effects active. Full private native graph ownership is deferred
+with the write-boundary analysis in the live-world plan.
+
+### Complete native cast contract
+
+Canonical v7 appends object roles and timed world commands; strict v1–v6 migration
+adds empty tracks, preserving old execution policy and data. Screenplay v5 carries
+shot-local object keys/actions and clear/removal cues. Object source context and
+portable layout tuple are document data; runtime slots/generations remain internal.
+Released animals have an explicit source kind using their existing factory instead
+of aliasing an unrelated S3K layout ID. The shared authoring forms expose every
+new field in both frontends.
+
+Registry enumeration is generic and constructor-free. Its complete ID/context
+report distinguishes registration, context acceptance, loaded ROM art and actual
+visual graph readiness. Game-owned metadata declares native arena restrictions;
+a semantic boss role alone does not establish that an anchor is ignored. New Free
+roles require matching native game/zone/act, giving a generic actionable rejection
+for incompatible arenas. No object-specific spatial relocation adapters are added.
+
+The object-manager direction owner freezes graph routines, contacts, unload effects
+and native drawing, separately from gameplay mutator policy ports. Immutable visual
+parts carry captured ROM patterns, palette values, mapping alternatives and pure
+animation scripts. Stable child paths follow parent creation relationships; changing
+frame or position cannot invoke the state machine. Missing/gated initialization and
+state-dependent appearance are explicit exclusions, with held/authored-frame fallback
+and citations. New constructor-ready visual preparation uses a short-lived owned
+offline context, retired before the scene; no continuously ticking private boss graph
+is installed. Existing initialized Free graphs can be captured at a directed mode key.
+Clear/removal suppression and visual state participate in rewind with native state.
+
+Directed visual capture preserves native per-tile terrain-occlusion masks and row
+clipping. It never infers that a missing SAT-control draw is an invisible child:
+active mask/control producers cause an explicit unsupported-appearance result.
+For example, SKL's DEZ miniboss and native SpriteMask entry carry a conditional
+exclusion citing `Obj_SpriteMask / loc_86308`; the S3KL alias does not inherit it.
+Templates retain child creation paths across rewind, including ordinal gaps left
+by deleted children. Draw-owned visual counters remain read-only during capture.
+Ordinary Free rendering and native SAT behavior keep their existing path.
+
+### Directed camera presentation and ensemble activation (complete-cast phase3)
+
+Current native worlds interpolate zoom with camera position using HOLD/LINEAR/SMOOTH.
+Only the completed opaque world framebuffer is filtered; text/dialogue/transitions
+remain outside that pass. Existing4096-side/8MiPixel bounds remain preflight gates.
+Legacy policies retain their previous held/fixed zoom and native-phase backgrounds.
+
+A game handler captures immutable animation/event phase at the real native update.
+A pure projection composes that phase for a directed camera and complete bounded
+raster. It never initializes, updates or restores a gameplay handler while drawing.
+The world pass samples once and slices that result across native viewport tiles;
+line/column origins remain global, including partial16pixel columns. Cinematic
+foreground/background CPU descriptors and GPU residency are private, preserving actual native
+persistent cells/ring origins and extending exposed regions through the ROM level
+pipeline. The internal Stageplay module opts into snapshot capture; ordinary modules
+never allocate these directed phase/descriptor snapshots. Descriptor images are
+bounded to 2097152 cells (8 MiB) per plane. Ordinary gameplay retains its native
+publication, physics and picture.
+
+A session-owned, rewind-captured activation policy supplies disjoint native-sized
+windows around performers. Supplemental layout admissions use portable identity,
+the existing native factories/SST, creator/removal gates and remembered destruction
+state. Standard visibility/contact/retirement helpers admit those windows without
+moving the gameplay camera. Free routines keep their native state machines and
+world effects; native damage/destruction is never suppressed. Object slot exhaustion
+fails explicitly and suggests clearing unnecessary objects or splitting the shot.
+S1 supplemental admissions retain the canonical layout even when initial contents
+are cleared or posed, project the native counter from both held loader cursors,
+and preserve lower bits plus loaded/kill/remember state. Counter aliases or shipped
+FixBugs=0 cursor drift fail explicitly rather than renumbering native identities.
+Only geometric culls admit supplemental windows; semantic retirement remains native.
+
+## Lossless screenplay revision (phase 4)
+
+Canonical version seven remains the sole playback contract. Screenplay version six
+adds literal cue/command/transition IDs, typed exact track-order permutations and
+whole cross-shot intervals owned by their starting shot. A deterministic decompiler
+emits ordinary shot-local fields and verifies recompiled document equality. It
+preserves unused profiles and legacy execution policies as well as current object
+casts. Original source formatting/comments/shot names are not document data.
+
+The screenplay input cap grows to 32 MiB for this expansion; old screenplay versions
+retain 8 MiB and canonical files remain 8 MiB. Reject opaque canonical blobs, splitting
+intervals (which would restart reveal/phase) and generated prefixes on already valid
+64-character IDs. Both frontends share import/export actions and relative-asset
+semantics. Import creates an unsaved canonical document; export preserves save and
+undo state. This adds no public Mod API surface or playback ownership change.
+
+## Bounded terrain route helper (phase 5)
+
+Routes compile to existing intent commands; canonical version seven and screenplay
+six are unchanged. Shot-entry player planning searches native private-playable
+checkpoints through real collision terrain and shared LIVE steering. Checkpoints
+retain logical audio ownership as well as body, RNG, timers and collision state.
+Proposal search cannot certify live objects/events/water, so success requires
+fresh linear cold LIVE replay of the complete candidate. No speculative LIVE
+branching or trace-state hydration is used. Limits and cancellation are explicit.
+
+Object routes are visual floor/headroom paths with an authored clearance envelope.
+They share the existing Euclidean per-tick movement kernel, emit only movement
+commands, and keep native graph AI/contact/world effects suspended. They do not
+claim native walking physics, jump across gaps or silently snap an anchor.
+An existing visible Puppet key may begin an object route inside a shot after
+explicit Free initialization; cold qualification replays that prefix. Player
+routes retain the shot-entry rule. No route creates an anchor or changes mode.
+
+A dedicated logic worker receives bounded immutable document/request/ROM/asset
+inputs. Content fingerprints and generation checks protect asynchronous results;
+only the requested command-track patch may apply, once, through normal undo.
+Freshness is checked off the UI thread before Apply. Neither frontend replaces
+its gameplay/preview/audio session for planning. Exhaustion and unsupported
+geometry are explicit outcomes, not evidence that no route exists.
+
+
+## Promo authoring corrections (2026-10-24)
+
+Reproductions start at `632a5f8c3` in the `feature/ai-stageplay-promo-bugfixes`
+worktree. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
+observed a frame-zero stop followed by track 129, and authored track 130 followed
+by 129. The no-control case retained native music. The first probe omitted outer
+audio presentation and therefore did not drain the native mailbox; that probe
+could not establish soundtrack admission. Presenting every frame reproduced both
+failures. Repeating stop cues at a fitted frame or filtering exported PCM was
+rejected: Sonic2LevelInitProfile's scheduled Level_PlayBgm publication is the owner,
+through LevelManager.publishPreparedLevelMusic. A counted audio-owned playlist
+scope gates that publisher while Stageplay owns ROM_MUSIC/MUSIC_STOP control.
+Direct cues/SFX retain their existing routes; native scheduler timing is unchanged.
+The scope starts at forward playback or restored playback ownership, follows native
+producer changes, and is released on stop, close or abandonment, independently of
+a particular export or world instance. Acquiring it during prepare was rejected:
+the editor also prepares merely to validate assets. A prepared-but-unplayed case
+must retain native playlists.
+
+`TestStageplayObjectCaptureRom.releasedAnimalCanBeDirectedAfterNativeTicks` failed
+in all four combinations of frames 5/60 and Pose/Puppet. Native art was present at
+construction. A bounded probe observed a live renderer and living root at frame 0,
+then destruction at frame 1 after the retained on-screen flag became false.
+The cast-window filter treated the camera's 128-pixel loading overscan as if it
+covered on-screen lifetime checks. The animal at x=564 in a 480-pixel view therefore
+lost its supplemental window; its custom native flag also omitted those windows.
+Graph capture correctly excludes destroyed instances and then reported no visual.
+Updating the animal query alone still failed all four cases, ruling out that
+single-site repair. The complete fix retains windows outside the visible native
+viewport and uses the same supplemental-window query as common object visibility
+helpers at the animal's original native flag-publication boundary. Ordinary camera
+bounds, the previous-frame flag, and semantic destruction remain authoritative.
+Badnik, monitor and multipart-boss transitions cover the other object families;
+direction never recreates a destroyed graph or substitutes constructor art for a
+living graph's current appearance.
+
+The compiler and canonical-store gain regressions both accepted ROM gain 0.58 on
+this base. The AudioCue constructor now enforces the existing renderer rule for
+ROM_MUSIC and ROM_SFX, so compilation, validation and editor loads share its
+message. Voice gain remains supported; no ROM gain implementation was added.
+
+
+Validation used the existing root S2 REV01 ROM (CRC32 `7B905383`, SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`) and S3&K image (CRC32 `63522553`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`) by absolute path; neither
+image nor the reporter's production directory was changed. These are focused
+Stageplay/native-owner checks, not broad smoke or release validation.
+
+Commands were run in `.worktrees/stageplay-promo-bugfixes`. The portable command
+forms below use absolute ROM paths resolved from the unchanged main-checkout files:
+
+```bash
+OPENGGF_S2_ROM="$(realpath ../../s2.gen)"
+OPENGGF_S3K_ROM="$(realpath ../../s3k.gen)"
+```
+
+The initial base regression command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle#authoredMusicOwnsTheLateNativeLevelEntry,TestStageplayObjectCaptureRom#releasedAnimalCanBeDirectedAfterNativeTicks,TestStageplayScriptCompiler#rejectsRomCueGainDuringCompilation,TestStageplayStore#rejectsRomCueGainWhenLoadingCanonicalScenes' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+It ran nine cases with zero skips: the two gain cases failed to reject input,
+four animal transitions reported missing visuals, and the music positive control
+failed because the probe had omitted outer presentation. After correcting only
+the music harness, this command ran three cases, with the uncontrolled positive
+control passing and both authored-control cases failing as described above:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle#authoredMusicOwnsTheLateNativeLevelEntry' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+The first implementation check ran 40 cases, zero skips: music, compiler and store
+passed; four animal cases remained red, exposing the missing viewport-window
+filter change:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayObjectCaptureRom,TestStageplayScriptCompiler,TestStageplayStore' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+This bounded diagnostic repeated only the four animal cases, confirming the
+frame-zero living root and frame-one retirement; its temporary instrumentation
+was removed:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayObjectCaptureRom#releasedAnimalCanBeDirectedAfterNativeTicks' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+After the complete object repair, the following 114-case selection had zero skips.
+Its 106 cases outside the audio class passed, including all 11 capture cases,
+the other cast families, ensemble/activation/direction and unchanged Mod API pins.
+The audio class's five existing cases passed; three extended music cases errored
+because the test added a shot change before its required camera key. Reordering
+the fixture setup corrected that harness error without changing production code.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayObjectCaptureRom,TestStageplayObjectCastRom,TestStageplayEnsembleRom,TestStageplayScriptCompiler,TestStageplayStore,TestStageplayObjectDirection,TestStageplayActivationPolicy,TestStageplayAudioSamples,TestLevelMusicCoordinator,TestSonic2AnimalObjectTiming,TestEggPrisonAnimalRelease,TestModApiSignatureSurface,TestModApiPinPolicy' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+The corrected audio class and actual isolated preview/live playback checks used:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestStageplayAudioLifecycle,TestStageplayLivePreviewRom,TestStageplayLivePlayback' -Dsonic2.rom.path="$OPENGGF_S2_ROM" -Ds3k.rom.path="$OPENGGF_S3K_ROM" test -B
+```
+
+The first run passed 12 cases, zero skips. Review then added a prepared-but-unplayed
+negative control: the focused music command above ran four cases, with only that
+new case failing (`[129,129]` expected, no native music observed). Ownership was
+therefore moved out of preparation and into playback/restored playback ownership.
+
+The updated EGL/audio command then passed 13 cases, zero skips, including the
+prepared-but-unplayed control. The final ownership bookkeeping also releases a
+scope when rewind restores a pre-playback entry (`entryAudio == null`); that path
+must allow a subsequent native playlist request without emitting an old cue.
+It is checked by the audio lifecycle case alongside Stop and replay ownership.
+The last focused check was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayPlayback' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+This final check passed all 18 cases (nine audio lifecycle and nine playback),
+with zero failures, errors or skips. Together with the unaffected 106 cases and
+four EGL preview/live-playback cases above, 128 distinct focused cases passed
+across these runs. This is not a single broad-suite pass. The final restore-null
+bookkeeping was covered by the last two-class check; unchanged EGL coverage was
+not repeated after it. `git diff --check` passed. The leased version probe
+`python3 tools/testing/maven_queue.py -v` reported Maven 3.10.0 and Java
+25.0.5.0.2 from `/usr/lib/jvm/java-25-openjdk`.

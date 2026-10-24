@@ -3,6 +3,9 @@ package com.openggf.game.sonic2.scroll;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.runtime.WfzRuntimeState;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.FrameScrollAccumulator;
 import com.openggf.level.scroll.M68KMath;
@@ -54,7 +57,7 @@ import java.util.Arrays;
  * normal table still covers every reachable visible span, so the guard path below
  * is only a malformed-table guard.
  */
-public class SwScrlWfz extends AbstractZoneScrollHandler {
+public class SwScrlWfz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
     private final BackgroundCamera bgCamera;
@@ -149,11 +152,47 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
             activeArray = tables.getWfzNormalArray();
         }
 
+        compose(composer, layerScrollWord, activeArray, cameraX, bgYPos);
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private WfzRuntimeState currentRuntimeState() {
+        return GameServices.hasRuntime()
+                ? GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class).orElse(null)
+                : null;
+    }
+
+    private int currentBgXPos() {
+        WfzRuntimeState runtimeState = currentRuntimeState();
+        return runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
+    }
+
+    @Override
+    public int getBgCameraX() {
+        return currentBgXPos();
+    }
+
+    @Override
+    public BgTilemapUpdateMode getBgTilemapUpdateMode() {
+        return BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
+    }
+
+    private static void fillFallback(ScrollEffectComposer composer, int cameraX) {
+        short fgScroll = M68KMath.negWord(cameraX);
+        short bgScroll = M68KMath.negWord(cameraX >> 4);
+        composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
+    }
+
+    private static void compose(ScrollEffectComposer composer, int[] layerScrollWord, byte[] activeArray,
+                                int cameraX, int bgYPos) {
         if (activeArray == null) {
-            fillFallback(horizScrollBuf, cameraX);
+            fillFallback(composer, cameraX);
             return;
         }
-
         // ==================== Step 4: Find first visible segment ====================
         // move.w (Camera_BG_Y_pos).w,d1
         // andi.w #$7FF,d1
@@ -174,6 +213,12 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
                 break;
             }
             arrayPos += 2; // Move to next pair
+        }
+
+        if (arrayPos + 1 >= activeArray.length) {
+            composer.fillPackedScrollWords(0, composer.visibleLineCount(), M68KMath.negWord(cameraX),
+                    M68KMath.negWord(layerScrollWord[LAYER_STATIC_BG]));
+            return;
         }
 
         // neg.w d1  ->  d1 = number of lines to draw in this segment
@@ -208,7 +253,7 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
         //   neg.w d0                ; flip sign
         // .next_row:
         //   dbf d2,.row_loop
-        for (int screenLine = 0; screenLine < M68KMath.VISIBLE_LINES; screenLine++) {
+        for (int screenLine = 0; screenLine < composer.visibleLineCount(); screenLine++) {
             composer.writePackedScrollWord(screenLine, fgScroll, bgScroll);
 
             linesInCurrentSeg--;
@@ -224,47 +269,32 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
                 } else {
                     // Malformed table guard. The ROM-backed WFZ arrays cover all
                     // reachable 224-line spans selected by BG Y & $7FF.
-                    linesInCurrentSeg = M68KMath.VISIBLE_LINES; // Won't run out again
+                    linesInCurrentSeg = composer.visibleLineCount(); // Won't run out again
                     bgScroll = M68KMath.negWord(layerScrollWord[LAYER_STATIC_BG]);
-                }
-            }
+    }
+
+}
         }
 
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
-    }
-
-    private WfzRuntimeState currentRuntimeState() {
-        return GameServices.hasRuntime()
-                ? GameServices.zoneRuntimeRegistry().currentAs(WfzRuntimeState.class).orElse(null)
-                : null;
-    }
-
-    private int currentBgXPos() {
-        WfzRuntimeState runtimeState = currentRuntimeState();
-        return runtimeState != null ? runtimeState.bgXPos() : bgCamera.getBgXPos();
     }
 
     @Override
-    public int getBgCameraX() {
-        return currentBgXPos();
-    }
-
-    @Override
-    public BgTilemapUpdateMode getBgTilemapUpdateMode() {
-        return BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32;
-    }
-
-    private void fillFallback(int[] horizScrollBuf, int cameraX) {
-        short fgScroll = M68KMath.negWord(cameraX);
-        short bgScroll = M68KMath.negWord(cameraX >> 4);
-        composer.fillPackedScrollWords(0, M68KMath.VISIBLE_LINES, fgScroll, bgScroll);
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        int[] layers = layerScrollWord.clone();
+        byte[] selected = context.cameraX() >= TRANSITION_THRESHOLD ? tables.getWfzTransArray() : tables.getWfzNormalArray();
+        byte[] rows = selected == null ? null : selected.clone();
+        int bgX = context.nativeOutput().backgroundX(), bgY = context.nativeOutput().backgroundY();
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            int[] values = layers.clone();
+            values[LAYER_STATIC_BG] = (values[LAYER_STATIC_BG] + dx) & 0xFFFF;
+            values[LAYER_SHIP] = (values[LAYER_SHIP] + dx) & 0xFFFF;
+            // The three cloud words intentionally have no camera term (fixBugs=0).
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) (bgY + dy));
+            compose(output, values, rows, view.cameraX(), bgY + dy);
+            return Sonic2ProjectionOutput.finish(context, view, output, bgX + dx);
+        };
     }
 
 }

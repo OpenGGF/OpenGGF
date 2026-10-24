@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -9,21 +11,21 @@ import com.openggf.level.scroll.compose.ScatterFillPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
  * Marble Garden Zone (MGZ) scroll handler for Sonic 3K.
  *
- * Ports MGZ1_Deform / MGZ2_BGDeform (normal path) from the S3K disassembly to
- * produce real per-line parallax rather than a flat fallback ratio.
+ * <p>Ports MGZ1_Deform / MGZ2_BGDeform (normal path) from the S3K disassembly to produce real
+ * per-line parallax rather than a flat fallback ratio.
  */
-public class SwScrlMgz extends AbstractZoneScrollHandler {
+public class SwScrlMgz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
     // Screen shake support (ROM: Screen_shake_flag, used by Tunnelbot / MGZ Miniboss).
     // Applied to FG and BG VScroll, while getShakeOffsetY() propagates the same
     // vertical delta to sprites. MGZ2_BGDeform compensates BG parallax math so
     // the shake lands 1:1 on the plane instead of being scaled away.
     private int screenShakeOffset;
     private int pendingScreenShakeOffset;
+
     /**
      * ROM {@code Screen_shake_offset}. {@code ShakeScreen_Setup} runs at the
      * tail of the zone's background event ({@code MGZ1BGE_Normal},
@@ -56,6 +58,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private int bgRiseRoutine;
     private int bgRiseOffset;
     private int bossBgScrollOffset = Integer.MIN_VALUE;
+
     /**
      * Cached BG camera X for {@link #getBgCameraX()}. {@link Integer#MIN_VALUE}
      * means "no override" — the dual-path collision uses the FG cameraX as the
@@ -208,7 +211,16 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
     // ROM accumulators that live in HScroll_table longwords and persist frame-to-frame.
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlMgz() {
+        this(224);
+    }
+
+    private SwScrlMgz(int lines) {
+        composer = new ScrollEffectComposer(lines);
+    }
+
     private final ScrollValueTable mgz1HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
     private final ScrollValueTable mgz2HScrollTable = ScrollValueTable.ofLength(HSCROLL_WORD_COUNT);
     private final ScrollValueTable mgz2ScatterSource = ScrollValueTable.ofLength(MGZ2_BG_DEFORM_INDEX.length);
@@ -364,10 +376,12 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         return !mgz2CloudsFrozen && bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE;
     }
 
-    /**
-     * Port of MGZ1_Deform's HScroll_table generation.
-     */
+    /** Port of MGZ1_Deform's HScroll_table generation. */
     private void buildMgz1HScrollTable(int cameraX, int frameCounter, ScrollValueTable table) {
+        composeMgz1Table(cameraX, mgz1CloudAccumulator.valueAt(frameCounter), table);
+    }
+
+    private static void composeMgz1Table(int cameraX, int cloudPhase, ScrollValueTable table) {
         table.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 2;
@@ -380,7 +394,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             d0 -= d1;
         }
 
-        int d2 = mgz1CloudAccumulator.valueAt(frameCounter);
+        int d2 = cloudPhase;
 
         d0 >>= 1;
         a1 = 0;
@@ -397,12 +411,21 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         table.set(8, swap);
     }
 
-    /**
-     * Port of MGZ2_BGDeform normal-path HScroll_table generation.
-     */
+    /** Port of MGZ2_BGDeform normal-path HScroll_table generation. */
     private void buildMgz2HScrollTable(int cameraX,
                                        boolean autoMoveClouds,
                                        int frameCounter,
+            ScrollValueTable table,
+            ScrollValueTable scatterSource) {
+        composeMgz2Table(
+                cameraX,
+                autoMoveClouds ? mgz2CloudAccumulator.valueAt(frameCounter) : 0,
+                table,
+                scatterSource);
+    }
+
+    private static void composeMgz2Table(
+            int cameraX, int cloudPhase,
                                        ScrollValueTable table,
                                        ScrollValueTable scatterSource) {
         table.clear();
@@ -421,7 +444,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
 
         // While auto-moving, the accumulator advances with the frame counter;
         // on the BG-rise freeze the ROM zeroes it, so the frozen value is 0.
-        int cloudAcc = autoMoveClouds ? mgz2CloudAccumulator.valueAt(frameCounter) : 0;
+        int cloudAcc = cloudPhase;
         int d0Cloud = d2;
         int d2Step = d2 >> 1;
         for (int i = 0; i < MGZ2_BG_DEFORM_INDEX.length; i++) {
@@ -479,5 +502,73 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         vscrollFactorBG = (short) (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
                 ? computeMgz2BgY(camera.getY() - MGZ2_AFTER_MOVE_Y_BASE)
                 : computeMgz2BgY(camera.getY()));
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int rise = bgRiseRoutine, riseY = bgRiseOffset, parallaxOverride = bossBgScrollOffset;
+        int shake = screenShakeOffset;
+        int cloud =
+                context.act() == 0
+                        ? mgz1CloudAccumulator.currentValue()
+                        : shouldAutoMoveMgz2Clouds() ? mgz2CloudAccumulator.currentValue() : 0;
+        return view -> {
+            SwScrlMgz scratch = new SwScrlMgz(view.height());
+            int bgX, bgY;
+            short foreground = negWord(view.cameraX());
+            if (context.act() == 0) {
+                bgX = Integer.MIN_VALUE;
+                bgY = 0;
+                composeMgz1Table(view.cameraX(), cloud, scratch.mgz1HScrollTable);
+                DeformationPlan.applyTableBands(
+                        scratch.composer,
+                        bgY,
+                        foreground,
+                        scratch.mgz1HScrollTable,
+                        MGZ1_BG_DEFORM,
+                        0,
+                        NEGATE_WORD);
+            } else {
+                int sourceX =
+                        parallaxOverride == Integer.MIN_VALUE
+                                ? view.cameraX()
+                                : parallaxOverride + view.cameraX() - context.cameraX();
+                if (rise == BG_RISE_SONIC_STATE) {
+                    bgX = ((short) view.cameraX()) - MGZ2_SONIC_RISE_X_BASE;
+                    bgY = ((short) view.cameraY()) - MGZ2_SONIC_RISE_Y_BASE + riseY;
+                } else {
+                    bgX = 0;
+                    bgY =
+                            scratch.computeMgz2BgY(
+                                    rise == BG_RISE_AFTER_MOVE_STATE
+                                            ? view.cameraY() - MGZ2_AFTER_MOVE_Y_BASE
+                                            : view.cameraY());
+                }
+                composeMgz2Table(
+                        sourceX, cloud, scratch.mgz2HScrollTable, scratch.mgz2ScatterSource);
+                if (rise == BG_RISE_SONIC_STATE) scratch.mgz2HScrollTable.set(27, (short) bgX);
+                DeformationPlan.applyTableBands(
+                        scratch.composer,
+                        bgY,
+                        foreground,
+                        scratch.mgz2HScrollTable,
+                        MGZ2_BG_DEFORM,
+                        4,
+                        NEGATE_WORD);
+            }
+            return new com.openggf.level.scroll.ScrollProjection(
+                    scratch.composer.packedScrollWords(),
+                    null,
+                    null,
+                    null,
+                    (short) (view.cameraY() + shake),
+                    (short) (bgY + shake),
+                    bgX,
+                    context.nativeOutput().backgroundPeriod(),
+                    context.nativeOutput().shakeX(),
+                    shake,
+                    context.nativeOutput().tilemapMode());
+        };
     }
 }

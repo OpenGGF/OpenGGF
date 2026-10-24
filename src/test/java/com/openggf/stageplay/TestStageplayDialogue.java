@@ -135,7 +135,7 @@ class TestStageplayDialogue {
                 "Hi", "", "", 0, 0, 80, 36, "", List.of()));
         assertThrows(IllegalArgumentException.class, () -> scene().withDialogue(cues));
         var source = scene().withCameraEffects(List.of(new CameraEffect("shake", 0, 20, 1, 2, 3, 4)));
-        for (int version : List.of(1, 2, VERSION)) {
+        for (int version : List.of(VERSION)) {
             var legacy = new StageplayDocument(version, source.name(), source.durationFrames(), source.width(), source.height(),
                     source.set(), source.actors(), source.camera(), source.captions(), source.audio());
             assertEquals(VERSION, legacy.version());

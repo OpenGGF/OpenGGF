@@ -90,6 +90,13 @@ public final class SszRotatingPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        releaseDirectedPlayer(query.mainPlayerOrNull(), 0);
+        releaseDirectedPlayer(query.nativeP2OrNull(), 1);
+    }
+
+    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
@@ -173,20 +180,29 @@ public final class SszRotatingPlatformObjectInstance extends AbstractObjectInsta
         }
     }
 
+    static void releaseControl(AbstractPlayableSprite sprite, com.openggf.level.objects.ObjectServices svc,
+            AbstractObjectInstance owner) {
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setObjectMappingFrameControl(false);
+        var objectManager = svc.objectManager();
+        if (objectManager != null) objectManager.releaseRidingObject(sprite, owner);
+    }
+
+    private void releaseDirectedPlayer(PlayableEntity entity, int slot) {
+        if (state(slot) == 0 || !(entity instanceof AbstractPlayableSprite player)) return;
+        setState(slot, 0);
+        releaseControl(player, services(), this);
+    }
+
     /** The A/B/C branch shared with the carrier: {@code y_vel -$680}, rolling, {@code sfx_Jump}. */
     static void jumpOff(AbstractPlayableSprite sprite, com.openggf.level.objects.ObjectServices svc,
             AbstractObjectInstance owner) {
         sprite.setYSpeed((short) RELEASE_Y_VEL);
-        ObjectControlState.none().applyTo(sprite);
-        sprite.setObjectMappingFrameControl(false);
+        releaseControl(sprite, svc, owner);
         sprite.setRolling(true);
         sprite.setAir(true);
         sprite.setJumping(true);
         sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
-        var objectManager = svc.objectManager();
-        if (objectManager != null) {
-            objectManager.releaseRidingObject(sprite, owner);
-        }
         svc.playSfx(Sonic3kSfx.JUMP.id);
     }
 

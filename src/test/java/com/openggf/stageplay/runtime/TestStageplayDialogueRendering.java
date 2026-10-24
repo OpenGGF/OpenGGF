@@ -32,7 +32,7 @@ class TestStageplayDialogueRendering {
             resources.validate(document); var renderer = new StageplayRenderer(resources);
             var decoration = resources.dialogueImage("panel.png"); var portraitImage = resources.dialogueImage("portrait.png");
             for (int at : new int[]{0, 20, 0}) {
-                surface.record(320, 224, canvas -> renderer.draw(document, StageplayTimeline.sample(document, at), canvas));
+                surface.record(320, 224, canvas -> renderer.drawLiveOverlay(document, StageplayTimeline.sample(document, at), canvas));
                 var ops = surface.recordedFrame();
                 var slices = ops.stream().filter(op -> op.image() == decoration).toList(); assertEquals(9, slices.size());
                 var corner = slices.getFirst(); assertEquals(12, corner.x0()); assertEquals(130, corner.y0());
@@ -77,7 +77,7 @@ class TestStageplayDialogueRendering {
     }
 
     private StageplayDocument scene() {
-        return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224)
+        return legacyScene("s2", 0, 0, 0, 0, 320, 224)
                 .withActors(List.of(new Actor("tails", "TAILS", "s2", "tails", List.of(
                         new ActorKey(0, 160, 80, 5, 1, false, true, 1, Interpolation.HOLD)))))
                 .withCamera(List.of(new CameraKey(0, 0, 0, 1, Interpolation.LINEAR),
@@ -97,4 +97,10 @@ class TestStageplayDialogueRendering {
                 List.of(new SceneBackdrop.Band(0, 224, 0, 0))));
         return kit;
     }
+    /** These fixtures exercise detached art/choreography, independent of a native session. */
+    private static StageplayDocument legacyScene(String gameId, int zone, int act, double x, double y, int width, int height) {
+        return StageplayDocument.empty(gameId, zone, act, x, y, width, height)
+                .withSet(new StageplayDocument.SetSource(gameId, zone, act, "", ""));
+    }
+
 }

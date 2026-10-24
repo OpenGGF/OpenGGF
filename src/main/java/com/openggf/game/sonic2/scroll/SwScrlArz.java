@@ -2,6 +2,9 @@ package com.openggf.game.sonic2.scroll;
 
 import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -31,7 +34,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * Row 2: 0x30 (48 pixels)
  * ... etc
  */
-public class SwScrlArz extends AbstractZoneScrollHandler {
+public class SwScrlArz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
 
@@ -148,6 +151,93 @@ public class SwScrlArz extends AbstractZoneScrollHandler {
         // Update vscrollFactorBG for external use
         composer.setVscrollFactorBG((short) (arzBgYPos >> 16));
 
+        // ==================== Step 6: Fill Scroll Buffer ====================
+        // Check for screen shake (ROM: Screen_Shaking_Flag)
+        //
+        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch. The
+        // conditionals at s2.asm:17703-17708, 17722-17725 and 17793-17796 add a d3 that
+        // carries the shake's Y component into the row-height walk (`add.w d3,d1`). The
+        // shipped ROM has no d3: the row search below uses the unshaken BG Y, so the ARZ
+        // boss shake distorts the background parallax. Reproduce that; the shake reaches
+        // only the Vscroll factors and the camera position copies.
+        boolean shaking = GameServices.gameState().isScreenShakeActive();
+
+        // Reset shake offsets each frame
+        this.shakeOffsetX = 0;
+        this.shakeOffsetY = 0;
+
+        if (shaking && tables != null) {
+            // ROM: Uses ripple data for shake offsets
+            // Horizontal offset at index (frameCounter & 0x3F) + 1
+            // Vertical offset at index (frameCounter & 0x3F)
+            int rippleIndex = frameCounter & 0x3F;
+            this.shakeOffsetY = tables.getRippleSigned(rippleIndex);
+            if (rippleIndex + 1 < tables.getRippleDataLength()) {
+                this.shakeOffsetX = tables.getRippleSigned(rippleIndex + 1);
+            }
+            // Apply vertical shake to vscrollFactorBG
+            composer.setVscrollFactorBG((short) ((arzBgYPos >> 16) + this.shakeOffsetY));
+        }
+
+        compose(composer, rowScrollPx, cameraX, arzBgXPosFast, arzBgYPos, shakeOffsetX, shakeOffsetY);
+
+        composer.copyPackedScrollWordsTo(horizScrollBuf);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    /**
+     * Reset state for zone/act change.
+     */
+    public void reset() {
+        initialized = false;
+        arzBgXPos = 0;
+        arzBgXPosFast = 0;
+        arzBgYPos = 0;
+        lastCameraX = 0;
+        lastCameraY = 0;
+    }
+
+    // ==================== Test Access Methods ====================
+
+    /**
+     * Get the target BG X position in pixels for testing.
+     */
+    public int getBgXTarget() {
+        return (int) (arzBgXPos >> 16);
+    }
+
+    /**
+     * Get the actual BG X position in pixels for testing.
+     */
+    public int getBgXActual() {
+        return (int) (arzBgXPosFast >> 16);
+    }
+
+    /**
+     * Get the BG Y position in pixels for testing.
+     */
+    public int getBgY() {
+        return arzBgYPos >> 16;
+    }
+
+    /**
+     * @return Horizontal shake offset for this frame (pixels)
+     */
+    public int getShakeOffsetX() {
+        return shakeOffsetX;
+    }
+
+    /**
+     * @return Vertical shake offset for this frame (pixels)
+     */
+    public int getShakeOffsetY() {
+        return shakeOffsetY;
+    }
+    private static void compose(ScrollEffectComposer composer, int[] rowScrollPx, int cameraX,
+                                long arzBgXPosFast, int arzBgYPos, int shakeX, int shakeY) {
+        composer.setVscrollFactorBG((short) ((arzBgYPos >> 16) + shakeY));
         // ==================== Step 4: Determine Starting Row ====================
         int bgY = arzBgYPos >> 16;
         // Normalize bgY to [0, TOTAL_ROW_HEIGHT)
@@ -233,45 +323,17 @@ public class SwScrlArz extends AbstractZoneScrollHandler {
         rowScrollPx[14] = fastSpeed;
         rowScrollPx[15] = fastSpeed;
 
-        // ==================== Step 6: Fill Scroll Buffer ====================
-        // Check for screen shake (ROM: Screen_Shaking_Flag)
-        //
-        // fixBugs (s2.asm:27 `fixBugs = 0`): this is the SHIPPED (fixBugs=0) branch. The
-        // conditionals at s2.asm:17703-17708, 17722-17725 and 17793-17796 add a d3 that
-        // carries the shake's Y component into the row-height walk (`add.w d3,d1`). The
-        // shipped ROM has no d3: the row search below uses the unshaken BG Y, so the ARZ
-        // boss shake distorts the background parallax. Reproduce that; the shake reaches
-        // only the Vscroll factors and the camera position copies.
-        boolean shaking = GameServices.gameState().isScreenShakeActive();
-
-        // Reset shake offsets each frame
-        this.shakeOffsetX = 0;
-        this.shakeOffsetY = 0;
-
-        if (shaking && tables != null) {
-            // ROM: Uses ripple data for shake offsets
-            // Horizontal offset at index (frameCounter & 0x3F) + 1
-            // Vertical offset at index (frameCounter & 0x3F)
-            int rippleIndex = frameCounter & 0x3F;
-            this.shakeOffsetY = tables.getRippleSigned(rippleIndex);
-            if (rippleIndex + 1 < tables.getRippleDataLength()) {
-                this.shakeOffsetX = tables.getRippleSigned(rippleIndex + 1);
-            }
-            // Apply vertical shake to vscrollFactorBG
-            composer.setVscrollFactorBG((short) ((arzBgYPos >> 16) + this.shakeOffsetY));
-        }
-
-        short fgScroll = M68KMath.negWord(cameraX + this.shakeOffsetX);
+        short fgScroll = M68KMath.negWord(cameraX + shakeX);
         int currentLine = 0;
         int rowIdx = currentRowIndex;
         int pixelsInRow = remainingInRow;
 
-        while (currentLine < M68KMath.VISIBLE_LINES) {
+        while (currentLine < composer.visibleLineCount()) {
             int speed = rowScrollPx[rowIdx];
-            int count = Math.min(pixelsInRow, M68KMath.VISIBLE_LINES - currentLine);
+            int count = Math.min(pixelsInRow, composer.visibleLineCount() - currentLine);
 
             for (int k = 0; k < count; k++) {
-                short bgScroll = M68KMath.negWord(speed + this.shakeOffsetX);
+                short bgScroll = M68KMath.negWord(speed + shakeX);
                 composer.writePackedScrollWord(currentLine++, fgScroll, bgScroll);
             }
 
@@ -279,58 +341,22 @@ public class SwScrlArz extends AbstractZoneScrollHandler {
             pixelsInRow = ROW_HEIGHTS[rowIdx];
         }
 
-        composer.copyPackedScrollWordsTo(horizScrollBuf);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    /**
-     * Reset state for zone/act change.
-     */
-    public void reset() {
-        initialized = false;
-        arzBgXPos = 0;
-        arzBgXPosFast = 0;
-        arzBgYPos = 0;
-        lastCameraX = 0;
-        lastCameraY = 0;
-    }
-
-    // ==================== Test Access Methods ====================
-
-    /**
-     * Get the target BG X position in pixels for testing.
-     */
-    public int getBgXTarget() {
-        return (int) (arzBgXPos >> 16);
-    }
-
-    /**
-     * Get the actual BG X position in pixels for testing.
-     */
-    public int getBgXActual() {
-        return (int) (arzBgXPosFast >> 16);
-    }
-
-    /**
-     * Get the BG Y position in pixels for testing.
-     */
-    public int getBgY() {
-        return arzBgYPos >> 16;
-    }
-
-    /**
-     * @return Horizontal shake offset for this frame (pixels)
-     */
-    public int getShakeOffsetX() {
-        return shakeOffsetX;
-    }
-
-    /**
-     * @return Vertical shake offset for this frame (pixels)
-     */
-    public int getShakeOffsetY() {
-        return shakeOffsetY;
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long fastX = arzBgXPosFast;
+        int capturedY = arzBgYPos, act = currentAct;
+        int shakeX = shakeOffsetX, shakeY = shakeOffsetY;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            // Preserve the current lag to the target; sampling does not execute
+            // another +/-16-pixel catch-up step of SwScrl_ARZ.
+            long x = fastX + ((long) dx * 0x0119L << 8);
+            int y = capturedY + (dy << (act == 0 ? 16 : 15));
+            var output = new ScrollEffectComposer(view.height());
+            compose(output, new int[16], view.cameraX(), x, y, shakeX, shakeY);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+    };
     }
 }

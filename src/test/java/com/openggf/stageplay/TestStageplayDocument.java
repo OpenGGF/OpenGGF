@@ -10,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestStageplayDocument {
     static StageplayDocument scene() {
-        return StageplayDocument.empty("s3k", 0, 0, 100, 200, 320, 224);
+        return StageplayDocument.empty("s3k", 0, 0, 100, 200, 320, 224)
+                .withSet(new SetSource("s3k", 0, 0, "", ""));
     }
 
     static ActorKey key(int frame, double x, int animation, int pose, Interpolation interpolation) {
@@ -100,7 +101,7 @@ class TestStageplayDocument {
                 .withDurationFrames(601).withActors(List.of()).withCamera(document.camera())
                 .withCaptions(List.of()).withAudio(List.of()).cameraEffects().size());
         assertThrows(UnsupportedOperationException.class, () -> document.cameraEffects().clear());
-        assertEquals(VERSION, new StageplayDocument(1, "Old source", 600, 320, 224,
+        assertEquals(VERSION, new StageplayDocument(VERSION, "Current source", 600, 320, 224,
                 scene().set(), List.of(), scene().camera(), List.of(), List.of()).version());
         assertThrows(IllegalArgumentException.class, () -> new CameraEffect("bad", 0, 1, Double.NaN, 0, 1, 0));
         assertThrows(IllegalArgumentException.class, () -> new CameraEffect("bad", 0, 1, 0, 0, 31, 0));

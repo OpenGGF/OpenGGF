@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -15,29 +16,28 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kMgzEventWriteSupport;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
-import com.openggf.game.rewind.RewindTransient;
-import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
-import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
+import com.openggf.physics.TerrainCheckResult;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -907,7 +907,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
                 services().playMusic(levelMusic);
             }
         } catch (Exception e) {
-            LOG.fine(() -> "MgzDrillingRobotnikInstance.restoreLevelMusicForCapsule: " + e.getMessage());
+            LOG.fine(
+                    () ->
+                            "MgzDrillingRobotnikInstance.restoreLevelMusicForCapsule: "
+                                    + e.getMessage());
         }
     }
 
@@ -1576,7 +1579,9 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (isHidden()) {
             return;
         }
-        renderTick++;
+        if (!com.openggf.level.render.ObjectSpriteCapture.isObserving()) {
+            renderTick++;
+        }
 
         PatternSpriteRenderer drillRenderer = getRenderer(Sonic3kObjectArtKeys.MGZ_ENDBOSS);
         if (endBossBodyHiddenAfterFadeHandoff) {
@@ -1590,7 +1595,6 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             drillRenderer.drawFrameIndex(currentDrillBodyFrame(), state.x, state.y, flipX, false);
         }
         drawAirZoomCue();
-
     }
 
     void appendCompositeChild(int role) {
@@ -1816,7 +1820,10 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
                     Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_ADDR,
                     Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE);
         } catch (Exception e) {
-            LOG.fine(() -> "MgzDrillingRobotnikInstance.loadAirZoomCueSourceRaster: " + e.getMessage());
+            LOG.fine(
+                    () ->
+                            "MgzDrillingRobotnikInstance.loadAirZoomCueSourceRaster: "
+                                    + e.getMessage());
             airZoomCueSourceRaster = new byte[0];
         }
         return airZoomCueSourceRaster;

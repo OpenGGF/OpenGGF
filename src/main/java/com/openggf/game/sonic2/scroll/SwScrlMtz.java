@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -18,7 +21,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  * negates/copies the BG-camera words into the scroll buffers. The foreground horizontal
  * scroll word is -Camera_X_pos.
  */
-public class SwScrlMtz extends AbstractZoneScrollHandler {
+public class SwScrlMtz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final BackgroundCamera bgCamera;
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
@@ -72,4 +75,17 @@ public class SwScrlMtz extends AbstractZoneScrollHandler {
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
     }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            // InitCam_Std / BackgroundCamera's MTZ tracking reads these exact word shifts.
+            output.setVscrollFactorBG((short) (view.cameraY() >> 2));
+            output.fillPackedScrollWords(0, view.height(), M68KMath.negWord(view.cameraX()),
+                    M68KMath.negWord(view.cameraX() >> 3));
+            return Sonic2ProjectionOutput.finish(context, view, output);
+        };
+    }
+
 }

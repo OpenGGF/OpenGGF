@@ -103,6 +103,12 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // Actual native control owners must survive recreation by stable team identity.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCranePlayerRelease", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
             // These lists rebuild from recreated managed children. Exact graph checks own the evidence.
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher", "activeBalls"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),

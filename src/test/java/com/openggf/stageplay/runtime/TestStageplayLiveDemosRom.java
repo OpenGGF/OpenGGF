@@ -35,11 +35,13 @@ class TestStageplayLiveDemosRom {
     @Test void airTrafficUsesNativeFlightHoverGlideReleaseAndLandingIncludingAccessories() throws Exception {
         try(var probe=new Probe("live-air-traffic")) {
             var rows=probe.frames();
-            for(int frame:new int[]{0,95,115,300,440}) for(var actor:rows.get(frame).actors()) {
+            for(int frame:new int[]{0,95,115,300,440,520}) for(var actor:rows.get(frame).actors()) {
                 var camera=rows.get(frame).camera();
-                assertTrue(actor.x()-camera.x()>=20 && actor.x()-camera.x()<300);
-                assertTrue(actor.y()-camera.y()>=20 && actor.y()-camera.y()<204,
-                        "Native camera bounds are origins, not terrain dimensions: "+frame);
+                double screenX=(actor.x()-camera.x())*camera.zoom();
+                double screenY=(actor.y()-camera.y())*camera.zoom();
+                String framing="Film framing at "+frame+" actor="+actor+" camera="+camera;
+                assertTrue(screenX>=20 && screenX<probe.document.width()-20,framing);
+                assertTrue(screenY>=20 && screenY<probe.document.height()-20,framing);
             }
             assertTrue(rows.get(95).puppets().getFirst().airborne());
             assertFalse(rows.get(95).puppets().get(1).airborne(),"Independent controller edges must not jump both actors");
@@ -51,8 +53,12 @@ class TestStageplayLiveDemosRom {
                 assertTrue(rows.get(f).world().actors().getFirst().abilityTimer()>0);
             }
             assertTrue(max-min<40,"Bounded hovering must stay near its actual entry altitude: "+min+".."+max);
-            assertTrue(rows.get(440).puppets().stream().noneMatch(StageplayTimeline.PuppetSample::airborne));
-            assertTrue(rows.get(440).world().actors().stream().allMatch(a->a.abilityState()==0));
+            // RELEASE stops new button edges; it does not cancel native flight or its current flap.
+            // Tails_Move_FlySwim (sonic3k.asm:27632-27674) owns descent until actual floor contact.
+            assertTrue(rows.get(440).puppets().stream().filter(p->p.actorId().equals("tails"))
+                    .allMatch(StageplayTimeline.PuppetSample::airborne),"Native flight continues after RELEASE");
+            assertTrue(rows.get(520).puppets().stream().noneMatch(StageplayTimeline.PuppetSample::airborne));
+            assertTrue(rows.get(520).world().actors().stream().allMatch(a->a.abilityState()==0));
             assertTrue(rows.get(300).world().actors().getFirst().abilityTimer()<rows.get(115).world().actors().getFirst().abilityTimer());
             probe.seek(60); assertEquals(rows.get(500),probe.seek(500)); assertClean(rows);
         }

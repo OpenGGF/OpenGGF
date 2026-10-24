@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -21,7 +22,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -42,6 +42,10 @@ import java.util.List;
  */
 public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
     static final int KNUCKLES_EXIT_CAMERA_Y = 0x240;
     static final int KNUCKLES_EXIT_PLAYER_X = 0xB00;
     static final int ALTAR_TELEPORTER_MIN_X = 0x1000;
@@ -271,8 +275,26 @@ public final class HpzTeleporterRouteHelperObjectInstance extends AbstractObject
         return false;
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.setForcedJumpPress(false);
+            player.clearLogicalInputState();
+            if (player.getCpuController() != null) {
+                player.getCpuController().setController2SignedLocked(false);
+                player.getCpuController().clearController2LogicalLatch();
+            }
+        }
+        directedControlPlayers.clear();
+    }
+
     /** {@code clr.w (a2)} / {@code st (a3)} on {@code Ctrl_1}/{@code Ctrl_2}. */
-    private static void lockController(AbstractPlayableSprite sprite, int index) {
+    private void lockController(AbstractPlayableSprite sprite, int index) {
+        directedControlPlayers.add(sprite);
         sprite.setControlLocked(true);
         sprite.clearLogicalInputState();
         sprite.setForcedInputMask(0);

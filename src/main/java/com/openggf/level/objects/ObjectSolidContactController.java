@@ -1169,6 +1169,19 @@ public final class ObjectSolidContactController {
         return false;
     }
 
+    void suspendForVisualDirection(ObjectInstance object) {
+        releaseObjectPushLatchForAllPlayers(object);
+        releaseObjectStandingLatchForAllPlayers(object);
+        for (var entry : java.util.List.copyOf(ridingStates.entrySet()))
+            if (entry.getValue().object == object) {
+                PlayableEntity player = entry.getKey();
+                clearRidingObject(player);
+                player.setOnObject(false);
+                player.setAir(true);
+                player.setPushing(false);
+            }
+    }
+
     void clearRidingObject(PlayableEntity player) {
         if (player != null) {
             ridingStates.remove(player);
@@ -1543,6 +1556,8 @@ public final class ObjectSolidContactController {
     private SolidCheckpointBatch resolveCheckpointBatch(ObjectInstance instance, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks, boolean postMovement,
             boolean compatibilityCallbacks) {
+        if (ObjectDirectionAccess.suspended(objectManager, instance))
+            return new SolidCheckpointBatch(instance, java.util.Map.of());
         return objectManager.callObjectCallback(instance,
                 () -> resolveCheckpointBatchInternal(instance, player, sidekicks,
                         postMovement, compatibilityCallbacks));
@@ -3625,6 +3640,7 @@ public final class ObjectSolidContactController {
     private SolidContact resolveContact(PlayableEntity player,
             int anchorX, int anchorY, int halfWidth, int halfHeight, SolidRoutineProfile profile,
             boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+        if (ObjectDirectionAccess.suspended(objectManager, instance)) return null;
         boolean topSolidOnly = profile.topSolidOnly();
         boolean monitorSolidity = profile.monitorSolidity();
         int monitorVerticalOffset = profile.monitorVerticalOffset();

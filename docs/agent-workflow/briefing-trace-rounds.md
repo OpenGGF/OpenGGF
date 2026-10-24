@@ -71,6 +71,27 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Stageplay native music requests may not appear in the logical command timeline
+until outer audio presentation drains the native mailbox (2026-10-24, promo
+bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive
+control appear silent. Present every frame when testing late playlist admission;
+assert an uncontrolled scene starts native music before trusting a stopped scene's
+absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
+uses both the no-control case and actual presented requests.
+
+A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
+native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
+so down input cannot establish the Duck animation that native spindash reads.
+Use supplied-ROM art and observe the native charge flag and launch; a command,
+pose or fast arrival is insufficient. After a facing tap, allow native friction
+and crouch selection before the fresh jump edge. Fixed tick warmup alone is unsafe
+on a downhill: the Duck test precedes friction, while slope resistance can retain
+inertia. Repeated opposite-input braking can also oscillate around native reverse
+`$80` floors. Coast to zero (brake uphill if slope pull defeats friction), wait
+for observed Duck, and require native charge **and release** in search and cold
+LIVE replay. The actual-incline fixture must observe a nonzero native angle;
+starting on a flat before traversing a slope does not establish this case.
+
 Standalone route authoring can boot a real engine from an immutable JAR while
 bypassing build/test admission. `GameplayInputBranchTool` is measurement
 interference even when its classes and output directory are isolated; an
@@ -101,7 +122,10 @@ outside the picture (2026-10-21, Stageplay live-world review). ROM level maxima
 are camera-origin limits, not terrain dimensions; subtracting the viewport again
 hid the airborne cast. Compare resolved centres with the picture and actual native
 body pixels in each distinct camera regime. A platform-only pixel check or a
-complete lossless decode does not establish airborne framing.
+complete lossless decode does not establish airborne framing. For editor route
+overlays, an endpoint inside the viewport bounds can still hide behind the fixed
+legend. Check its visible marker and clearance in the final zoomed framing, not
+only its projected coordinates.
 
 Grounded telemetry and visible actors do not prove floor alignment (2026-10-22,
 Stageplay ring-spill review). Sprites used director Y while foreground scroll
@@ -109,6 +133,15 @@ retained gameplay Y. Check contact pixels and the priority mask under several
 director offsets; preserve native background phase and restore published state
 after drawing. A transparent native floor-art tile can have valid collision, so
 contact oracles must distinguish missing art from a displaced rendered surface.
+
+Source edits during compilation can survive as stale bytecode even on the next
+incremental build (2026-10-23, Stageplay holder continuation). Javac had already
+read a class before a later source edit, then wrote its old class after the new
+source timestamp; Maven subsequently reported everything up to date. Keep source
+stable from submission until the job exits. If this boundary was violated,
+force recompilation of the affected source and repeat its checks before making a
+claim about the new field or behavior. A newer class-file timestamp alone does
+not prove that it contains the current source.
 
 A JVM launch property is mutable test state (2026-10-21, Stageplay smoke).
 `TestSurfacelessEglContext` clears `openggf.headless.gl`; a later
@@ -119,6 +152,13 @@ errors on the pinned baseline, while the isolated dimension check with explicit
 launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
 these cases with bounded matched tests and preserve their coverage limits; a
 launch setting alone does not prove which backend a later test used.
+
+A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
+GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO
+bindings through GL15; `TestFboReleaseFailure` still mocked only GL11/GL30 and
+crashed natively without a context. Extend the fixture's GL boundary and verify
+the caller's nonzero bindings survive failure. A process exit with no JUnit
+failure report is incomplete coverage, not evidence that the test passed.
 
 An inverse-affine pixel oracle can disagree with valid GPU edge ownership
 (2026-10-21, sprite presentation smoke). A clipped quad whose edge passes through
@@ -231,6 +271,16 @@ focus-loss commit appear broken. Save and restore viewport coordinates/dimension
 projection width/buffer and batching state in the capture's `finally`, including
 failed captures. The later focus-loss case passed after that restoration was
 added, even while the capture still exposed a separate editor-context error.
+
+A closed EGL context does not retire process-owned renderer caches (2026-10-22,
+Stageplay directed backgrounds). A custom HeadlessGameBoot fixture closed its
+world/context, then called initHeadless; ArenaMaskRenderer retained the previous
+program/VAO. The next context's first ordinary draw produced GL_INVALID_VALUE at
+glGetUniformLocation and GL_INVALID_OPERATION at glBindVertexArray. Its before/after
+pictures could still compare equal. Retire the fixture's GraphicsManager resources
+while the old context is current, after closing the world and before boot.close.
+Use stage-specific GL checks to distinguish boot, ordinary drawing and directed
+sampling; do not clear an unexplained GL error to make the final check green.
 
 Snapshot equality and its diagnostic walker must inspect the same captured
 content (2026-10-14, AIZ retained-scene qualification). Cross-package private

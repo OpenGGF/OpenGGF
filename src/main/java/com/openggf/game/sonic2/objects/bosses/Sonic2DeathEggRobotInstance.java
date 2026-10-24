@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -23,7 +24,6 @@ import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -55,6 +55,18 @@ import java.util.function.Supplier;
  * - Type 4: Stomp-Turn-Bombs (walk toward player, drop 2 bombs)
  */
 public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements RewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            releaseEndingPlayer(player);
+        }
+        visualControlOwners.clear();
+    }
+
 
     // ========================================================================
     // BODY STATE MACHINE CONSTANTS
@@ -1034,11 +1046,11 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
             // previous logical jump/left word survives for Sonic_JumpHeight.
             // loc_3D93C writes forced RIGHT on the next dispatch (s2.asm:82978-82980).
             int latchedLogicalInput = player.getLogicalInputState();
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
             if (defeatWalkFrameCounter == 0) {
-                player.setForcedInputMask(latchedLogicalInput);
+                visualControlOwners.acquire(player).setForcedInputMask(latchedLogicalInput);
             } else {
-                player.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
+                visualControlOwners.acquire(player).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
             }
             // Prevent pit death: clamp player Y to ground level during ending walk.
             // The level collision may not extend far enough to the credits trigger X,
@@ -1075,8 +1087,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     private void updateDefeatSetupEnding(int frameCounter, AbstractPlayableSprite player) {
         // Keep player controls locked and forcing right
         if (player != null) {
-            player.setControlLocked(true);
-            player.setForceInputRight(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
+            visualControlOwners.acquire(player).setForceInputRight(true);
             // Prevent pit death: clamp player Y to ground level during ending walk.
             // The level collision may not extend far enough, so force the player to
             // stay at the defeat floor height (matching ROM where the player walks
@@ -1513,16 +1525,20 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
                 }
                 endingControlledPlayers.add(player);
             }
-            player.setControlLocked(true);
-            player.setForceInputRight(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
+            visualControlOwners.acquire(player).setForceInputRight(true);
             clampPlayerToGround(player);
         }
     }
 
     private void releaseEndingSidekick(PlayableEntity entity) {
         if (!endingControlledPlayers.remove(entity) || !(entity instanceof AbstractPlayableSprite player)) return;
+        releaseEndingPlayer(player);
+    }
+
+    private void releaseEndingPlayer(AbstractPlayableSprite player) {
         player.clearForcedInputMask();
-        player.setControlLocked(false);
+        visualControlOwners.relinquish(player).setControlLocked(false);
     }
 
     private void releaseAllEndingSidekicks() {

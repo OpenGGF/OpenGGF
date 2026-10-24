@@ -5,13 +5,13 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZSpiderCrane} ($E5), $3D0A2-$3D2F6. */
@@ -34,6 +34,14 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
         x = spawn.x();
         y = spawn.y();
         xFixed = x << 16;
+    }
+
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) releaseMain(player);
+        visualControlOwners.clear();
     }
 
     @Override
@@ -64,7 +72,7 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
                 int nativeX = sprite.getCentreX();
                 int nativeY = sprite.getCentreY();
                 sprite.setAnimationId(0xE);
-                ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+                ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
                 sprite.setSpindash(false);
                 sprite.setXSpeed((short) 0);
                 sprite.setYSpeed((short) 0);
@@ -129,10 +137,10 @@ public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private static void releaseMain(PlayableEntity main) {
+    private void releaseMain(PlayableEntity main) {
         if (main instanceof AbstractPlayableSprite sprite) {
             sprite.setAnimationId(0);
-            ObjectControlState.none().applyTo(sprite);
+            ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
             sprite.setAir(true);
         }
     }

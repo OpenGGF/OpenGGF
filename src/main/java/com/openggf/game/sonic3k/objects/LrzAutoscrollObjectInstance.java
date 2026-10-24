@@ -17,6 +17,13 @@ import java.util.List;
 /** Obj_LRZ3Autoscroll ($9E), including the native flash, missiles and target/debris graph. */
 public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable, TouchResponseProvider, RomObjectCodePointerProvider {
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) player.setControlLocked(false);
+        visualControlOwners.clear();
+    }
+
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
     private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
     private LrzAutoscrollObjectInstance parent;
@@ -389,6 +396,8 @@ public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
         for (var player : services().playerQuery().playersFor(
                      ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED))
             if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+                if (locked) visualControlOwners.add(sprite);
+                else visualControlOwners.remove(sprite);
                 sprite.setControlLocked(locked);
                 if (locked)
                     sprite.clearLogicalInputState();

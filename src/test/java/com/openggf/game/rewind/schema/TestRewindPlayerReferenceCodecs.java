@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,6 +40,68 @@ class TestRewindPlayerReferenceCodecs {
     void clearRegistry() {
         RewindSchemaRegistry.clearForTest();
         SessionManager.clear();
+    }
+
+    @Test
+    void acquiredPlayerSetIsMutableCapturedStateAndRestoresRecreatedIdentitiesInPlace() {
+        var oldMain = player("old-main");
+        var oldSidekick = player("old-sidekick");
+        var fixture = new AcquiredPlayersFixture();
+        fixture.owners.add(oldSidekick);
+        fixture.owners.add(oldMain);
+        fixture.owners.add(oldMain);
+        var helper = fixture.owners;
+        var blob = CompactFieldCapturer.capture(fixture, context(oldMain, oldSidekick));
+        fixture.owners.clear();
+        var newMain = player("new-main");
+        var newSidekick = player("new-sidekick");
+        CompactFieldCapturer.restore(fixture, blob, context(newMain, newSidekick));
+        assertSame(helper, fixture.owners);
+        assertEquals(List.of(newMain, newSidekick), fixture.owners.players());
+        assertTrue(RewindSchemaRegistry.schemaFor(AcquiredPlayersFixture.class).capturedFields().stream()
+                .anyMatch(field -> field.field().getName().equals("owners")));
+        assertThrows(IllegalStateException.class, () -> CompactFieldCapturer.capture(fixture));
+    }
+
+    @Test
+    void craneReleaseRestoresItsAcquiredPlayerThroughTheCentralReferencePolicy() {
+        var oldMain = player("old-main");
+        oldMain.setObjectControlled(true);
+        var spawn = new com.openggf.level.objects.ObjectSpawn(100, 200, 0, 0, 0, false, 0);
+        var original = new com.openggf.game.sonic3k.objects.SszCranePlayerRelease(spawn, oldMain);
+        var snapshot = original.captureRewindState(context(oldMain, null));
+        var newMain = player("new-main");
+        newMain.setObjectControlled(true);
+        newMain.setObjectMappingFrameControl(true);
+        var restored = new com.openggf.game.sonic3k.objects.SszCranePlayerRelease(spawn);
+        restored.restoreRewindState(snapshot, context(newMain, null));
+        restored.releasePlayersForVisualDirection();
+        assertFalse(newMain.isObjectControlled());
+        assertFalse(newMain.isObjectMappingFrameControl());
+        assertTrue(oldMain.isObjectControlled(), "Restoration must release the recreated identity, not the original sprite");
+    }
+
+    @Test
+    void emptyAcquiredPlayerSetStillSnapshotsAndClearsWithoutAnIdentityTable() {
+        var fixture = new AcquiredPlayersFixture();
+        var blob = CompactFieldCapturer.capture(fixture);
+        fixture.owners.add(player("new-main"));
+        CompactFieldCapturer.restore(fixture, blob);
+        assertTrue(fixture.owners.isEmpty());
+    }
+
+    private static final class AcquiredPlayersFixture {
+        final com.openggf.level.objects.PlayerControlOwners owners = new com.openggf.level.objects.PlayerControlOwners();
+    }
+
+    @Test
+    void nullPlayerReferencesRestoreWithoutAnIdentityTable() {
+        var fixture = new PlayerReferenceFixture(null, null);
+        var snapshot = CompactFieldCapturer.capture(fixture);
+        fixture.sprite = player("later-owner");
+        CompactFieldCapturer.restore(fixture, snapshot);
+        assertNull(fixture.playable);
+        assertNull(fixture.sprite);
     }
 
     @Test

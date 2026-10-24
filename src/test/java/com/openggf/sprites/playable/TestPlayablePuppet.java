@@ -112,10 +112,11 @@ class TestPlayablePuppet {
         camera.setMinX((short) terrain.getMinX()); camera.setMaxX((short) terrain.getMaxX());
         camera.setMinY((short) terrain.getMinY()); camera.setMaxY((short) terrain.getMaxY());
         camera.setLevelStarted(false);
-        try (var puppet = puppet(terrain, 150, 230, true, 0)) {
+        try (var puppet = PlayablePuppet.createNativeWorldProbe(terrain, module, 0, 0, module,
+                "sonic", SpriteArtSet.EMPTY, 150, 230, 0, true, false)) {
             NativePositionOps.writeXPosResetSubpixel(ordinary, (int) puppet.sample().x());
             NativePositionOps.writeYPosResetSubpixel(ordinary, (int) puppet.sample().y());
-            ordinary.setAir(false);
+            ordinary.setAir(puppet.sample().airborne());
             boolean jumped = false, landed = false;
             for (int frame = 0; frame < 110; frame++) {
                 boolean right = frame < 60, left = frame >= 75 && frame < 95;
@@ -157,7 +158,7 @@ class TestPlayablePuppet {
                 tapApex = Math.min(tapApex, tap.sample().y());
                 heldApex = Math.min(heldApex, held.sample().y());
             }
-            assertTrue(heldApex < tapApex - 20, "jump-release latch must use native variable jump height");
+            assertTrue(heldApex < tapApex - 20, "jump-release latch: tap=" + tapApex + " held=" + heldApex + " final=" + tap.sample());
             assertTrue(tap.sample().onGround()); assertTrue(held.sample().onGround());
             // Native collision uses add.w/sub.w on the pixel word and retains
             // each jump's subpixel fraction; both feet rest on the same pixel.
@@ -169,7 +170,7 @@ class TestPlayablePuppet {
     @Test void rewindRestoresJumpLatchBodyAndTailAnimationAndRejectsForeignCheckpoints() {
         Level terrain = terrain(0xF001, 256, -1);
         var actorModule = new Sonic3kGameModule();
-        try (var puppet = PlayablePuppet.create(terrain, module, 0, 0, actorModule, "tails",
+        try (var puppet = PlayablePuppet.createNativeWorldProbe(terrain, module, 0, 0, actorModule, "tails",
                 SpriteArtSet.EMPTY, 200, 235, 0, true, true);
              var other = puppet(terrain, 150, 230, true, 0)) {
             assertEquals(actorModule.getPhysicsProvider().getProfile("tails").runAccel(), puppet.sample().runAccel());
@@ -202,7 +203,7 @@ class TestPlayablePuppet {
             var checkpoint = puppet.capture();
             for (int frame = 0; frame < 80; frame++) puppet.tick(false, true, frame < 8, frame);
             puppet.restore(checkpoint);
-            assertTrue(puppet.sample().onGround());
+            assertTrue(puppet.sample().onGround(), puppet.sample().toString());
         }
         assertSame(world, SessionManager.getCurrentWorldSession());
         assertSame(level, GameServices.level()); assertSame(camera, GameServices.camera());
@@ -214,7 +215,7 @@ class TestPlayablePuppet {
         assertEquals(seedBefore, GameServices.rng().getSeed());
     }
 
-    @Test void floorSnapRespectsNearbyStackedRoutesTopOnlySolidityAndAlternatePath() {
+    @Test void nativeAttachmentRespectsNearbyStackedRoutesTopOnlySolidityAndAlternatePath() {
         Level stacked = terrain(0xF001, 256, 128);
         try (var low = puppet(stacked, 200, 224, true, 0);
              var high = puppet(stacked, 200, 96, true, 0);
@@ -228,9 +229,9 @@ class TestPlayablePuppet {
                 assertTrue(low.sample().onGround()); assertEquals(low.sample().y(), alternate.sample().y());
             }
         }
-        assertThrows(IllegalArgumentException.class, () -> puppet(terrain(0x2001, 256, -1), 200, 230, true, 0));
-        assertThrows(IllegalArgumentException.class, () -> puppet(terrain(0xC001, 256, -1), 200, 230, true, 0));
-        assertThrows(IllegalArgumentException.class, () -> puppet(stacked, 200, -100, true, 0));
+        try (var missing = entry(terrain(0x2001, 256, -1), 200, 230, true, 0)) { assertTrue(missing.sample().airborne()); }
+        try (var missing = entry(terrain(0xC001, 256, -1), 200, 230, true, 0)) { assertTrue(missing.sample().airborne()); }
+        try (var missing = entry(stacked, 200, -100, true, 0)) { assertTrue(missing.sample().airborne()); }
     }
 
     @Test void nativeWallCollisionPreventsTheActorWalkingThroughASetObstacle() {
@@ -253,7 +254,16 @@ class TestPlayablePuppet {
     }
 
     private PlayablePuppet puppet(Level level, int x, int y, boolean snap, int path) {
-        return PlayablePuppet.create(level, module, 0, 0, module, "sonic", SpriteArtSet.EMPTY,
+        var probe = entry(level, x, y, snap, path);
+        // Let near-floor fixtures land through ordinary native physics before testing
+        // an already grounded jump. Missing terrain remains airborne; no search is added.
+        if (snap) for (int frame = 0; frame < 60 && probe.sample().airborne(); frame++)
+            probe.tick(false, false, false, frame);
+        return probe;
+    }
+
+    private PlayablePuppet entry(Level level, int x, int y, boolean snap, int path) {
+        return PlayablePuppet.createNativeWorldProbe(level, module, 0, 0, module, "sonic", SpriteArtSet.EMPTY,
                 x, y, path, snap, false);
     }
 

@@ -110,6 +110,13 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseDirectedPlayer(player, playerOneState);
+        if (query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseDirectedPlayer(player, playerTwoState);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectServices objectServices = tryServices();
         AbstractPlayableSprite playerOne = asSprite(objectServices == null
@@ -268,8 +275,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
      */
     private void finishRide(AbstractPlayableSprite player, RiderState state) {
         state.routine = Routine.RELEASE;
-        ObjectControlState.none().applyTo(player);
-        player.setObjectMappingFrameControl(false);
+        releaseControl(player);
         player.setYSpeed((short) 0);
 
         boolean tails = isTails(player);
@@ -294,6 +300,17 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
                     : -EXIT_NUDGE_SHORT + (tails ? EXIT_NUDGE_SHORT_TAILS_DELTA : 0);
         }
         NativePositionOps.addYPosPreserveSubpixel(player, nudge);
+    }
+
+    private void releaseControl(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
+    }
+
+    private void releaseDirectedPlayer(AbstractPlayableSprite player, RiderState state) {
+        if (state.routine == Routine.CAPTURE) return;
+        releaseControl(player);
+        state.reset();
     }
 
     /** {@code loc_48E94} (:95206-95214): the block is only reusable once the player leaves. */

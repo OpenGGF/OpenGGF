@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -43,7 +46,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  *
  * Ripple phase advances every 8 frames (matching EHZ behavior).
  */
-public class SwScrlCpz extends AbstractZoneScrollHandler {
+public class SwScrlCpz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private static final int LINES_PER_BLOCK = 16;
     private static final int SEAM_BLOCK_INDEX = 18; // The water boundary block
@@ -154,73 +157,8 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         // drifting off the update-call count.
         ripplePhase = -Math.floorDiv(frameCounter, 8);
 
-        // ==================== Step 4: Extract Integer Pixel Values
-        // ====================
-        int bg1Xpx = bg1X_16_16 >> 16;
-        int bg2Xpx = bg2X_16_16 >> 16;
-        int bgYpx = bgY_16_16 >> 16;
-
-        // Set vscrollFactorBG for external use (renderer vertical scroll)
-        composer.setVscrollFactorBG((short) bgYpx);
-
-        // ==================== Step 5: Calculate Block Position ====================
-        // Position within the current 16-pixel block (0-15)
-        int lineInBlock = bgYpx & 0xF;
-        // How many lines remain in this block before moving to the next
-        int remainingInBlock = LINES_PER_BLOCK - lineInBlock;
-        // Current block index (unwrapped to support deep levels)
-        int currentBlockIdx = (bgYpx >> 4);
-
-        // ==================== Step 6: Build Per-Scanline Scroll Buffer
-        // ====================
-        // FG scroll is constant for all lines
-        short fgScroll = M68KMath.negWord(cameraX);
-
-        int screenLine = 0;
-
-        while (screenLine < M68KMath.VISIBLE_LINES) {
-            // Use current block index directly for logic
-            int blockIdx = currentBlockIdx;
-
-            // How many lines to fill for this block (limited by screen end)
-            int linesToFill = Math.min(remainingInBlock, M68KMath.VISIBLE_LINES - screenLine);
-
-            // Determine BG X scroll for this block
-            short bgScroll;
-
-            if (blockIdx < SEAM_BLOCK_INDEX) {
-                // Above seam: use BG1 (slow scroll)
-                bgScroll = M68KMath.negWord(bg1Xpx);
-                composer.fillPackedScrollWords(screenLine, linesToFill, fgScroll, bgScroll);
-                screenLine += linesToFill;
-            } else if (blockIdx > SEAM_BLOCK_INDEX) {
-                // Below seam: use BG2 (fast scroll)
-                bgScroll = M68KMath.negWord(bg2Xpx);
-                composer.fillPackedScrollWords(screenLine, linesToFill, fgScroll, bgScroll);
-                screenLine += linesToFill;
-            } else {
-                // Seam block (blockIdx == 18): Apply ripple effect
-                int baseBg1Xpx = bg1Xpx;
-                int rippleStart = ripplePhase & 0x1F; // 0..31 index into ripple data
-
-                int posInBlock = LINES_PER_BLOCK - remainingInBlock;
-
-                for (int i = 0; i < linesToFill; i++) {
-                    int ripple = 0;
-                    if (tables != null) {
-                        int rippleIdx = (rippleStart + posInBlock + i) & 0x3F;
-                        ripple = tables.getRippleByte(rippleIdx) & 0xFF;
-                    }
-
-                    bgScroll = M68KMath.negWord(baseBg1Xpx + ripple);
-                    composer.writePackedScrollWord(screenLine++, fgScroll, bgScroll);
-                }
-            }
-
-            // Move to next block - reset to full 16 lines
-            currentBlockIdx++;
-            remainingInBlock = LINES_PER_BLOCK;
-        }
+        compose(composer, cameraX, bg1X_16_16, bg2X_16_16, bgY_16_16, ripplePhase,
+                tables == null ? null : tables::getRippleByte);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -269,5 +207,89 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
      */
     public int getRipplePhase() {
         return ripplePhase;
+    }
+    private static void compose(ScrollEffectComposer composer, int cameraX, int bg1X_16_16,
+                                int bg2X_16_16, int bgY_16_16, int ripplePhase,
+                                java.util.function.IntUnaryOperator rippleReader) {
+        // ==================== Step 4: Extract Integer Pixel Values
+        // ====================
+        int bg1Xpx = bg1X_16_16 >> 16;
+        int bg2Xpx = bg2X_16_16 >> 16;
+        int bgYpx = bgY_16_16 >> 16;
+
+        // Set vscrollFactorBG for external use (renderer vertical scroll)
+        composer.setVscrollFactorBG((short) bgYpx);
+
+        // ==================== Step 5: Calculate Block Position ====================
+        // Position within the current 16-pixel block (0-15)
+        int lineInBlock = bgYpx & 0xF;
+        // How many lines remain in this block before moving to the next
+        int remainingInBlock = LINES_PER_BLOCK - lineInBlock;
+        // Current block index (unwrapped to support deep levels)
+        int currentBlockIdx = (bgYpx >> 4);
+
+        // ==================== Step 6: Build Per-Scanline Scroll Buffer
+        // ====================
+        // FG scroll is constant for all lines
+        short fgScroll = M68KMath.negWord(cameraX);
+
+        int screenLine = 0;
+
+        while (screenLine < composer.visibleLineCount()) {
+            // Use current block index directly for logic
+            int blockIdx = currentBlockIdx;
+
+            // How many lines to fill for this block (limited by screen end)
+            int linesToFill = Math.min(remainingInBlock, composer.visibleLineCount() - screenLine);
+
+            // Determine BG X scroll for this block
+            short bgScroll;
+
+            if (blockIdx < SEAM_BLOCK_INDEX) {
+                // Above seam: use BG1 (slow scroll)
+                bgScroll = M68KMath.negWord(bg1Xpx);
+                composer.fillPackedScrollWords(screenLine, linesToFill, fgScroll, bgScroll);
+                screenLine += linesToFill;
+            } else if (blockIdx > SEAM_BLOCK_INDEX) {
+                // Below seam: use BG2 (fast scroll)
+                bgScroll = M68KMath.negWord(bg2Xpx);
+                composer.fillPackedScrollWords(screenLine, linesToFill, fgScroll, bgScroll);
+                screenLine += linesToFill;
+            } else {
+                // Seam block (blockIdx == 18): Apply ripple effect
+                int baseBg1Xpx = bg1Xpx;
+                int rippleStart = ripplePhase & 0x1F; // 0..31 index into ripple data
+
+                int posInBlock = LINES_PER_BLOCK - remainingInBlock;
+
+                for (int i = 0; i < linesToFill; i++) {
+                    int ripple = 0;
+                    if (rippleReader != null) {
+                        int rippleIdx = (rippleStart + posInBlock + i) & 0x3F;
+                        ripple = rippleReader.applyAsInt(rippleIdx) & 0xFF;
+                    }
+
+                    bgScroll = M68KMath.negWord(baseBg1Xpx + ripple);
+                    composer.writePackedScrollWord(screenLine++, fgScroll, bgScroll);
+                }
+            }
+
+            // Move to next block - reset to full 16 lines
+            currentBlockIdx++;
+            remainingInBlock = LINES_PER_BLOCK;
+        }
+
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        int x1 = bg1X_16_16, x2 = bg2X_16_16, y = bgY_16_16, phase = ripplePhase;
+        var ripple = Sonic2ProjectionOutput.captureRipple(tables);
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            var output = new ScrollEffectComposer(view.height());
+            compose(output, view.cameraX(), x1 + (dx << 13), x2 + (dx << 15), y + (dy << 14), phase, ripple);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+    };
     }
 }

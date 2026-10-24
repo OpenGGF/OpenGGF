@@ -6,7 +6,6 @@ import com.openggf.game.CharacterConstructionScope;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.GroundMode;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
 import com.openggf.game.rewind.snapshot.CollisionSystemSnapshot;
 import com.openggf.game.rewind.snapshot.GameStateSnapshot;
@@ -19,8 +18,6 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
-import com.openggf.physics.GroundSensor;
-import com.openggf.physics.SensorResult;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -30,7 +27,7 @@ import com.openggf.timer.TimerManager;
 import java.util.Objects;
 
 /**
- * One isolated playable driven through the normal native input/physics/animation tick.
+ * One isolated route probe driven through the normal native input/physics/animation tick.
  * Static terrain belongs to the set; movement rules and animation belong to the actor.
  * This world has no live objects, zone events, water, game session, or audio output.
  * No active services are replaced, even temporarily while stepping or restoring.
@@ -45,7 +42,8 @@ public final class PlayablePuppet implements AutoCloseable {
         this.actor = actor;
     }
 
-    public static PlayablePuppet create(Level terrain, GameModule setModule, int zone, int act,
+    /** Isolated route proposal probe with the same entry/attachment policy as the native Stageplay world. */
+    public static PlayablePuppet createNativeWorldProbe(Level terrain, GameModule setModule, int zone, int act,
             GameModule actorModule, String character, SpriteArtSet art,
             int centreX, int centreY, int collisionPath, boolean snapToFloor, boolean flipX) {
         Objects.requireNonNull(terrain, "terrain");
@@ -100,7 +98,9 @@ public final class PlayablePuppet implements AutoCloseable {
             // Boundary death belongs to a live gameplay visit; this world has no respawn/session owner.
             camera.setLevelStarted(false);
             var result = new PlayablePuppet(context, actor);
-            if (snapToFloor) result.snapInitialFloor();
+            // Native attachment adjusts position/angle without fabricating a grounded
+            // status or a controller edge before the first ordinary physics tick.
+            if (snapToFloor) context.collision.resolveGroundAttachment(actor, 14, () -> false);
             return result;
         } catch (RuntimeException | Error failure) {
             try { audio.getBackend().destroy(); }
@@ -109,8 +109,16 @@ public final class PlayablePuppet implements AutoCloseable {
         }
     }
 
-    /** Buttons are held for this one native 60 Hz tick; jump release remains native input state. */
+    public boolean supports(com.openggf.game.CharacterDefinition.MovementAbility ability) {
+        var module = context.module;
+        return module.getPlayableCharacterRegistry().movementAbilities(actor.characterKey(), module).contains(ability);
+    }
+
     public void tick(boolean left, boolean right, boolean jump, int frame) {
+        tick(left, right, false, jump, frame);
+    }
+
+    public void tick(boolean left, boolean right, boolean down, boolean jump, int frame) {
         requireOpen();
         if (frame < 0) throw new IllegalArgumentException("Negative puppet frame");
         context.sprites.setFrameCounter(frame);
@@ -118,10 +126,10 @@ public final class PlayablePuppet implements AutoCloseable {
         // Poll_Controller publishes held and pressed bytes before the playable
         // control routine. A held boolean alone cannot initiate a native jump.
         actor.setJumpInputPressed(jump);
-        actor.setDirectionalInputPressed(false, false, left, right);
-        actor.setLogicalInputState(false, false, left, right, jump);
+        actor.setDirectionalInputPressed(false, down, left, right);
+        actor.setLogicalInputState(false, down, left, right, jump);
         context.timers.update();
-        SpriteManager.tickPlayablePhysics(actor, false, false, left, right, jump,
+        SpriteManager.tickPlayablePhysics(actor, false, down, left, right, jump,
                 false, false, false, context.level, frame);
         var tails = actor.getTailsTailsController();
         if (tails != null) tails.update();
@@ -131,12 +139,17 @@ public final class PlayablePuppet implements AutoCloseable {
     public record Observation(double x, double y, int xSpeed, int ySpeed, int groundSpeed,
             int angle, int animation, int mappingFrame, boolean flipX, boolean flipY,
             boolean airborne, boolean onGround, int maxSpeed, int xRadius, int yRadius,
-            Tail tail, int runAccel, int runDecel, int friction) { }
+            Tail tail, int runAccel, int runDecel, int friction, boolean skidding, boolean spindash, int slopeImpulse, boolean crouching) { }
 
     public record Tail(int mappingFrame, boolean flipX, boolean flipY) { }
 
     public Observation sample() {
         requireOpen();
+        return observe(actor);
+    }
+
+    /** Same native view for isolated search and production LIVE route controls. */
+    public static Observation observe(AbstractPlayableSprite actor) {
         var controller = actor.getTailsTailsController();
         var tail = controller == null ? null : controller.presentation();
         return new Observation(actor.getCentreX() + actor.getXSubpixelRaw() / 65536.0,
@@ -145,7 +158,11 @@ public final class PlayablePuppet implements AutoCloseable {
                 actor.getAnimationId(), actor.getMappingFrame(), actor.getRenderHFlip(), actor.getRenderVFlip(),
                 actor.getAir(), !actor.getAir(), actor.getMax(), actor.getXRadius(), actor.getYRadius(),
                 tail == null ? null : new Tail(tail.mappingFrame(), tail.flipX(), tail.flipY()),
-                actor.getRunAccel(), actor.getRunDecel(), actor.getFriction());
+                actor.getRunAccel(), actor.getRolling() ? actor.getRollDecel() : actor.getRunDecel(),
+                // Sonic_RollSpeed (s2.asm:37009-37013): natural roll drag is live acceleration / 2.
+                actor.getRolling() ? actor.getRunAccel() / 2 : actor.getFriction(),
+                actor.getSkidding(), actor.getSpindash(),
+                (actor.getSlopeRunning() * com.openggf.physics.TrigLookupTable.sinHex(actor.getAngle() & 0xFF)) >> 8, actor.getCrouching());
     }
 
     /** An opaque checkpoint, accepted only by the same puppet instance. */
@@ -158,6 +175,7 @@ public final class PlayablePuppet implements AutoCloseable {
         private final TimerManagerSnapshot timers;
         private final long rng;
         private final int frame;
+        private final com.openggf.audio.rewind.AudioLogicalSnapshot audio;
         private Snapshot(PlayablePuppet owner) {
             this.owner = owner;
             this.actor = owner.actor.captureRewindState();
@@ -167,6 +185,7 @@ public final class PlayablePuppet implements AutoCloseable {
             this.timers = owner.context.timers.capture();
             this.rng = owner.context.rng.getSeed();
             this.frame = owner.context.sprites.getFrameCounter();
+            this.audio = owner.context.audio.captureLogicalSnapshot();
         }
     }
 
@@ -183,45 +202,13 @@ public final class PlayablePuppet implements AutoCloseable {
         context.rng.setSeed(snapshot.rng);
         context.sprites.setFrameCounter(snapshot.frame);
         actor.restoreRewindState(snapshot.actor);
+        context.audio.restoreLogicalSnapshot(snapshot.audio);
     }
 
-    private void snapInitialFloor() {
-        // Search near the authored feet, not from the top of the map. Native paired
-        // sensors resolve tile slopes, flips and the actor's selected solidity bits.
-        int anchor = actor.getCentreY();
-        actor.setGroundMode(GroundMode.GROUND);
-        GroundSensor left = new GroundSensor(actor, Direction.DOWN,
-                (byte) -actor.getXRadius(), (byte) actor.getYRadius(), true);
-        GroundSensor right = new GroundSensor(actor, Direction.DOWN,
-                (byte) actor.getXRadius(), (byte) actor.getYRadius(), true);
-        for (int offset = 0; offset <= 128; offset += 16) {
-            SensorResult a = left.scan((short) 0, (short) offset);
-            SensorResult b = right.scan((short) 0, (short) offset);
-            SensorResult floor = validFloor(a) ? a : null;
-            if (validFloor(b) && (floor == null || b.distance() < floor.distance())) floor = b;
-            if (floor == null) continue;
-            int correction = offset + floor.distance();
-            if (correction < -16 || correction > 128) continue;
-            NativePositionOps.writeYPosResetSubpixel(actor, anchor + correction);
-            GroundSensor ceiling = new GroundSensor(actor, Direction.UP,
-                    (byte) 0, (byte) -actor.getYRadius(), true);
-            SensorResult head = ceiling.scan();
-            if (head != null && head.tileId() != 0 && head.distance() < 0) {
-                NativePositionOps.writeYPosResetSubpixel(actor, anchor);
-                continue;
-            }
-            actor.setAngle((byte) ((floor.angle() & 1) != 0 ? 0 : floor.angle()));
-            actor.setAir(false);
-            return;
-        }
-        throw new IllegalArgumentException("No walkable floor near puppet feet at "
-                + actor.getCentreX() + "," + (anchor + actor.getYRadius()));
-    }
-
-    private static boolean validFloor(SensorResult result) {
-        if (result == null || result.tileId() == 0 || result.distance() < -16 || result.distance() > 16) return false;
-        int angle = result.angle() & 0xFF;
-        return (angle & 1) != 0 || ((angle + 0x20) & 0xC0) == 0;
+    /** Internal probe diagnostics; silent simulation still has rewindable producer state. */
+    public com.openggf.audio.rewind.AudioLogicalSnapshot audioLogicalSnapshot() {
+        requireOpen();
+        return context.audio.captureLogicalSnapshot();
     }
 
     private void requireOpen() { if (closed) throw new IllegalStateException("Puppet is closed"); }

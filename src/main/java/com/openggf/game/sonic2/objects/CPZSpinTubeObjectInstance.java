@@ -236,6 +236,22 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : characterStates.entrySet()) {
+            var player = entry.getKey();
+            if (activeTubeOwners.get(player) == this) {
+                if (entry.getValue().state != 0) {
+                    player.releaseFromObjectControl(currentVIntRunCount);
+                    player.setControlLocked(false);
+                    player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+                }
+                activeTubeOwners.remove(player);
+            }
+            resetTubeState(entry.getValue());
+        }
+    }
+
+    @Override
     public CPZSpinTubeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new CPZSpinTubeObjectInstance(ctx.spawn(), getName());
     }

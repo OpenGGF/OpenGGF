@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -32,7 +33,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +47,19 @@ import java.util.List;
  */
 public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseListener {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setObjectMappingFrameControl(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
     private static final int COLLISION_FLAGS = 0xCA;
     private static final int COLLISION_SIZE_INDEX = 0x0A;
@@ -352,7 +365,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     private void grabPlayer(AbstractPlayableSprite player) {
         carryingPlayer = true;
         carriedPlayer = player;
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAnimationId(5);
         player.setDirection(Direction.RIGHT);
         player.setRenderFlips(false, player.getRenderVFlip());

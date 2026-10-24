@@ -300,14 +300,16 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 153 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 154 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
 `debug -> data`, `sprites -> ghost`, `stageplay -> configuration`,
 `timer -> camera`, `tools -> ghost`, `tools -> net`, and `util -> tools`.
 These were pruned from 159 to 152; editor art import adds the narrowly owned
-`editor -> tools` pair, giving the merged tree 153 permissions. The three matching obsolete
+`editor -> tools` pair (also used by Stageplay screenplay import/export, owned by
+`editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
+adds `stageplay -> util`, giving the merged tree 154 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.

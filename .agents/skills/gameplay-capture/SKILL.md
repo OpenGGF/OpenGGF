@@ -143,7 +143,7 @@ exit/relaunch. Never label a black end frame as observed hub recovery.
   Sweep several positions before concluding either way, and confirm the plane is on screen
   at the one you film.
 
-Stageplay LIVE shots use the Stageplay offline world host and native priority
+Stageplay shots use the Stageplay offline world host and native priority
 renderer. Use its simulate world events to corroborate contact, rings, hurt and
 abilities; a detached Puppet capture does not demonstrate placed-world interaction.
 See [stageplay-authoring](../stageplay-authoring/SKILL.md).

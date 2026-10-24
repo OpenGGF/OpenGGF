@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TestObjectManagerLifecycle {
 
@@ -31,6 +32,21 @@ public class TestObjectManagerLifecycle {
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
+    }
+
+    @Test
+    public void untypedWorldDoesNotPreventObjectManagerConstruction() {
+        var module = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        var world = org.mockito.Mockito.mock(com.openggf.game.session.WorldSession.class);
+        org.mockito.Mockito.when(world.getGameModule()).thenReturn(module);
+        var services = new TestObjectServices().withWorldSession(world);
+
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null,
+                null, null, services);
+
+        assertTrue(manager.getActiveObjects().isEmpty());
+        assertThrows(IllegalStateException.class, () -> manager.stageplayPlacementIdentity(
+                new ObjectSpawn(100, 80, 1, 0, 0, false, 80, 0)));
     }
 
     @Test

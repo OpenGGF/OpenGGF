@@ -187,6 +187,11 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
     // ===== Update =====
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (broken) return;
 

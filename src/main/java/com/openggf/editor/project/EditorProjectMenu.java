@@ -20,11 +20,19 @@ public final class EditorProjectMenu {
     public record Action(String label, Runnable callback) {
         public Action { Objects.requireNonNull(label); Objects.requireNonNull(callback); }
     }
-    public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
+    public record Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength, List<String> choices) {
+        public Field(String key, String label, String value, MenuTextEditor.Mode mode, int maxLength) {
+            this(key,label,value,mode,maxLength,List.of());
+        }
+        public Field(String key, String label, String value, List<String> choices) {
+            this(key,label,value,MenuTextEditor.Mode.TEXT,256,choices);
+        }
         public Field(String key, String label, String value, MenuTextEditor.Mode mode) {
             this(key, label, value, mode, mode == MenuTextEditor.Mode.PATH ? 4096 : 256);
         }
         public Field {
+            choices = List.copyOf(choices);
+            if (!choices.isEmpty() && !choices.contains(value)) throw new IllegalArgumentException("Choice default is unavailable");
             Objects.requireNonNull(key); Objects.requireNonNull(label);
             Objects.requireNonNull(value); Objects.requireNonNull(mode);
             if (maxLength < 1 || maxLength > 8192) throw new IllegalArgumentException("Field length must be 1..8192");
@@ -37,6 +45,7 @@ public final class EditorProjectMenu {
     private List<Field> fields = List.of();
     private final LinkedHashMap<String, String> values = new LinkedHashMap<>();
     private Consumer<Map<String, String>> submit;
+    private java.util.function.BiConsumer<String, String> valueChanged;
     private String submitLabel;
     private MenuTextEditor textEditor;
     private String editingKey;
@@ -68,7 +77,7 @@ public final class EditorProjectMenu {
     private void reset(String title) {
         this.title = Objects.requireNonNull(title);
         subtitle = ""; actions = List.of(); fields = List.of(); values.clear();
-        submit = null; submitLabel = null; textEditor = null; editingKey = null;
+        submit = null; valueChanged = null; submitLabel = null; textEditor = null; editingKey = null;
         details = null; error = null; selected = 0; open = true;
     }
 
@@ -81,7 +90,9 @@ public final class EditorProjectMenu {
     public void setValue(String key, String value) {
         if (!values.containsKey(key)) throw new IllegalArgumentException("Unknown project field: " + key);
         values.put(key, Objects.requireNonNull(value));
+        if (valueChanged != null) valueChanged.accept(key, value);
     }
+    public void onValueChanged(java.util.function.BiConsumer<String, String> listener) { valueChanged = listener; }
     public void close() { open = false; textEditor = null; details = null; }
 
     /** Returns true whenever this frame is owned by the modal, including its closing frame. */
@@ -96,7 +107,7 @@ public final class EditorProjectMenu {
         if (textEditor != null) {
             textEditor.update(input);
             switch (textEditor.consumeResult()) {
-                case ACCEPTED -> { values.put(editingKey, textEditor.value()); textEditor = null; error = null; }
+                case ACCEPTED -> { setValue(editingKey, textEditor.value()); textEditor = null; error = null; }
                 case CANCELLED -> textEditor = null;
                 case NONE -> { }
             }
@@ -132,6 +143,12 @@ public final class EditorProjectMenu {
     private void activate() {
         if (submit != null && selected < fields.size()) {
             Field field = fields.get(selected);
+            if (!field.choices().isEmpty()) {
+                int next = (field.choices().indexOf(values.get(field.key()))+1)%field.choices().size();
+                setValue(field.key(),field.choices().get(next));
+                MenuFeedback.emit(MenuFeedback.Cue.CONFIRM);
+                return;
+            }
             editingKey = field.key();
             textEditor = new MenuTextEditor(field.label(), values.get(field.key()),
                     field.maxLength(), null, field.mode());
@@ -149,6 +166,7 @@ public final class EditorProjectMenu {
         if (submit == null) throw new IllegalStateException("No project form is active");
         var callback = submit;
         var submitted = values();
+        error = null;
         close();
         try { callback.accept(submitted); MenuFeedback.emit(MenuFeedback.Cue.CONFIRM); }
         catch (RuntimeException failure) { open = true; report(failure); }

@@ -155,7 +155,7 @@ class TestStageplayLiveWorldRom {
         var actors = List.of(new Actor("lead", "Sonic", "s3k", "sonic", List.of(key(0x1534, 0x790))),
                 new Actor("partner", "Tails", "s3k", "tails", List.of(key(0x154C, 0x790))));
         return new StageplayDocument(StageplayDocument.VERSION, "Shared platform", 240, 320, 224,
-                new SetSource("s3k", 11, 1, "", "", WorldPolicy.LIVE), actors,
+                new SetSource("s3k", 11, 1, "", ""), actors,
                 List.of(new CameraKey(0, 0x14A0, 0x760, 1, Interpolation.HOLD)), List.of(), List.of(), List.of(), List.of(),
                 List.of(), List.of(), List.of(), List.of(new PuppetTrack("lead", false, 0, List.of()),
                 new PuppetTrack("partner", false, 0, List.of())));

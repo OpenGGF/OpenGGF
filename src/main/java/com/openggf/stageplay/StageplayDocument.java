@@ -17,26 +17,14 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions,
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
         List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
-        List<PuppetTrack> puppets) {
-    public static final int VERSION = 5;
+        List<PuppetTrack> puppets, List<ObjectActor> objectActors, List<WorldCommand> worldCommands) {
+    public static final int VERSION = 7;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
     private static final double MAX_COORDINATE = 1_048_576;
 
     public StageplayDocument {
-        // Existing compiled candidate callers may have inlined VERSION=4 at this unchanged constructor.
-        if (version == 4) {
-            require(set != null && set.worldPolicy() == WorldPolicy.TERRAIN_ONLY, "Version four cannot opt into LIVE worlds");
-            require(sceneChanges != null && sceneChanges.stream().allMatch(c -> c.set().worldPolicy() == WorldPolicy.TERRAIN_ONLY),
-                    "Version four cannot opt into LIVE worlds");
-            require(camera != null && camera.stream().allMatch(c -> c.follow().actors().isEmpty()), "Version four cannot follow actors");
-            require(puppets != null && puppets.stream().flatMap(p -> p.commands().stream()).allMatch(c ->
-                    (c.kind() == PuppetCommandKind.MOVE_TO || c.kind() == PuppetCommandKind.STOP || c.kind() == PuppetCommandKind.JUMP)
-                            && c.target().layoutIndex() == -1 && c.condition() == WaitCondition.NONE && c.timeoutFrames() == 0),
-                    "Version four cannot contain live directing intents");
-            version = VERSION;
-        }
         require(version == VERSION, "Unsupported Stageplay version: " + version);
         name = label(name, "name");
         range(durationFrames, 1, MAX_DURATION_FRAMES, "durationFrames");
@@ -53,9 +41,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         dialogueSkins = boundedCopy(dialogueSkins, 64, "dialogueSkins");
         dialogue = boundedCopy(dialogue, 1024, "dialogue");
         puppets = boundedCopy(puppets, 32, "puppets");
-        boolean liveDocument = set.worldPolicy() == WorldPolicy.LIVE || sceneChanges.stream().anyMatch(c -> c.set().worldPolicy() == WorldPolicy.LIVE);
-        require(!liveDocument || height == 224 && width >= 320,
-                "LIVE worlds use native height 224 and width at least 320; scale the export for a larger output");
+        objectActors = boundedCopy(objectActors, 1024, "objectActors");
+        worldCommands = boundedCopy(worldCommands, 4096, "worldCommands");
         require(!camera.isEmpty(), "camera must start at frame zero");
         Set<String> ids = new HashSet<>();
         int totalKeys = camera.size();
@@ -64,13 +51,20 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             totalKeys += actor.keys().size();
             require(actor.keys().getLast().frame() < durationFrames, "Actor key exceeds scene duration");
         }
+        Set<String> placements = new HashSet<>();
+        for (ObjectActor actor : objectActors) {
+            require(ids.add(actor.id()), "Duplicate id: " + actor.id());
+            totalKeys += actor.keys().size();
+            for (ObjectKey key : actor.keys()) totalKeys += key.parts().size();
+            require(actor.keys().getLast().frame() < durationFrames, "Object key exceeds scene duration");
+            if (actor.layoutIndex() >= 0)
+                require(placements.add(actor.gameId() + ":" + actor.zone() + ":" + actor.act() + ":"
+                                + actor.layoutIndex() + ":" + actor.objectId() + ":" + actor.subtype()),
+                        "Duplicate placed object identity: " + actor.id());
+        }
         require(totalKeys <= MAX_KEYS, "Scene has too many keys");
         int previousFrame = -1;
         for (CameraKey key : camera) {
-            SetSource cameraSet = set;
-            for (SceneChange change : sceneChanges) if (change.frame() <= key.frame()) cameraSet = change.set();
-            require(cameraSet.worldPolicy() != WorldPolicy.LIVE || key.zoom() == 1, "LIVE cameras require fixed zoom 1");
-            require(key.follow().actors().isEmpty() || cameraSet.worldPolicy() == WorldPolicy.LIVE, "Actor following requires a LIVE world");
             for (String actor : key.follow().actors()) {
                 require(actors.stream().anyMatch(a -> a.id().equals(actor)), "Unknown camera actor: " + actor);
                 require(puppets.stream().anyMatch(p -> p.actorId().equals(actor)), "Following requires a Puppet actor: " + actor);
@@ -111,6 +105,9 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                 require(actor.keys().stream().anyMatch(key -> key.frame() == change.frame()),
                         "Scene change requires an actor key at its frame: " + actor.id());
             }
+            for (ObjectActor actor : objectActors)
+                require(actor.keys().stream().anyMatch(key -> key.frame() == change.frame()),
+                        "Scene change requires an object key at its frame: " + actor.id());
             previousChange = change.frame();
             previousTransitionEnd = end;
         }
@@ -123,13 +120,6 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             require(puppetActors.add(puppet.actorId()), "Duplicate puppet track: " + puppet.actorId());
             Actor actor = actors.stream().filter(value -> value.id().equals(puppet.actorId())).findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Unknown puppet actor: " + puppet.actorId()));
-            for (int boundary : boundaries) {
-                SetSource shotSet = set;
-                for (SceneChange change : sceneChanges) if (change.frame() <= boundary) shotSet = change.set();
-                boolean present = actor.keys().stream().anyMatch(k -> k.frame() == boundary && k.visible());
-                if (present && shotSet.worldPolicy() == WorldPolicy.LIVE)
-                    require(actor.gameId().equals(shotSet.gameId()), "Live actors require the world's native donor: " + actor.id());
-            }
             ActorKey anchor = actor.keys().getFirst();
             for (ActorKey key : actor.keys()) {
                 require(key.interpolation() == Interpolation.HOLD && key.animation() == 0 && key.pose() == -1
@@ -140,13 +130,6 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                         "Physics puppet position/facing keys are only allowed at shot boundaries: " + actor.id());
             }
             for (PuppetCommand command : puppet.commands()) {
-                SetSource commandSet = set;
-                for (SceneChange change : sceneChanges) if (change.frame() <= command.frame()) commandSet = change.set();
-                boolean live = commandSet.worldPolicy() == WorldPolicy.LIVE;
-                require(live || command.kind() == PuppetCommandKind.MOVE_TO || command.kind() == PuppetCommandKind.STOP
-                        || command.kind() == PuppetCommandKind.JUMP, "This intent requires a LIVE world: " + command.id());
-                require(live || command.target().layoutIndex() == -1, "Object target requires a LIVE world");
-                if (live) require(actor.gameId().equals(commandSet.gameId()), "Live actors require the world's native donor");
                 if (command.kind() == PuppetCommandKind.FLY_TO || command.kind() == PuppetCommandKind.HOVER)
                     require(actor.gameId().equals("s3k") && actor.character().equals("tails"), "Native flight requires S3K Tails");
                 if (command.kind() == PuppetCommandKind.GLIDE_TO)
@@ -164,7 +147,44 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             }
             commandCount += puppet.commands().size();
         }
-        require(commandCount <= 4096, "Scene has too many puppet commands");
+        for (ObjectActor actor : objectActors) {
+            ObjectKey anchor = actor.keys().getFirst();
+            for (ObjectKey key : actor.keys()) {
+                if (boundaries.contains(key.frame())) anchor = key;
+                SetSource objectSet = set;
+                for (SceneChange change : sceneChanges) if (change.frame() <= key.frame()) objectSet = change.set();
+                if (key.visible()) {
+                    if (actor.layoutIndex() >= 0)
+                        require(actor.gameId().equals(objectSet.gameId()) && actor.zone() == objectSet.zone()
+                                        && actor.act() == objectSet.act(),
+                                "Placed object belongs to another set: " + actor.id());
+                }
+                if (key.mode() == ObjectMode.FREE)
+                    require(key.x() == anchor.x() && key.y() == anchor.y() && key.flipX() == anchor.flipX(),
+                            "Free object keys must retain the shot's native anchor: " + actor.id());
+            }
+            for (ObjectCommand command : actor.commands()) {
+                require(ids.add(command.id()), "Duplicate id: " + command.id());
+                require(command.frame() < durationFrames, "Object command exceeds scene duration");
+                ObjectKey pose = actor.keys().getFirst();
+                for (ObjectKey key : actor.keys()) if (key.frame() <= command.frame()) pose = key;
+                require(pose.visible() && pose.mode() == ObjectMode.PUPPET,
+                        "Object commands require a visible Puppet object: " + command.id());
+            }
+            commandCount += actor.commands().size();
+        }
+        int previousWorldCommand = -1;
+        for (WorldCommand command : worldCommands) {
+            require(ids.add(command.id()), "Duplicate id: " + command.id());
+            require(command.frame() >= previousWorldCommand, "World commands must be ordered by frame");
+            require(command.frame() < durationFrames, "World command exceeds scene duration");
+            previousWorldCommand = command.frame();
+            if (!command.actorId().isEmpty())
+                require(objectActors.stream().anyMatch(actor -> actor.id().equals(command.actorId())),
+                        "Unknown object actor: " + command.actorId());
+        }
+        commandCount += worldCommands.size();
+        require(commandCount <= 4096, "Scene has too many directing commands");
         Set<String> typerIds = new HashSet<>(), skinIds = new HashSet<>();
         for (DialogueTyper typer : dialogueTypers)
             require(typerIds.add(typer.id()), "Duplicate dialogue typer: " + typer.id());
@@ -187,33 +207,38 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
-    /** Source-compatible version-one constructor. New authored documents use the current version. */
+    /** Convenience constructor without object tracks. */
+    public StageplayDocument(int version, String name, int durationFrames, int width, int height,
+            SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
+            List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
+            List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
+            List<PuppetTrack> puppets) {
+        this(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects,
+                sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, List.of(), List.of());
+    }
+
+    /** Convenience constructor for a scene without optional tracks. */
     public StageplayDocument(int version, String name, int durationFrames, int width, int height,
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio) {
-        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+        this(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
                 List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
-    /** Source-compatible version-two constructor, retaining its camera and scene-change tracks. */
+    /** Convenience constructor with camera effects and scene changes. */
     public StageplayDocument(int version, String name, int durationFrames, int width, int height,
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
             List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges) {
-        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+        this(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
                 cameraEffects, sceneChanges, List.of(), List.of(), List.of(), List.of());
     }
 
-    /** Source-compatible version-three constructor: existing choreography remains manual. */
+    /** Convenience constructor with dialogue and manual choreography. */
     public StageplayDocument(int version, String name, int durationFrames, int width, int height,
             SetSource set, List<Actor> actors, List<CameraKey> camera, List<Caption> captions, List<AudioCue> audio,
             List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
             List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue) {
-        this(migratedVersion(version), name, durationFrames, width, height, set, actors, camera, captions, audio,
+        this(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
                 cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, List.of());
-    }
-
-    private static int migratedVersion(int version) {
-        require(version >= 1 && version <= VERSION, "Unsupported Stageplay version: " + version);
-        return VERSION;
     }
 
     /** A ten-second scene with an empty cast and a stationary camera. */
@@ -225,77 +250,82 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     public StageplayDocument withName(String value) {
-        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, value, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     /** Shortening a scene rejects remaining keys/cues beyond its new end. */
     public StageplayDocument withDurationFrames(int value) {
-        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, value, width, height, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withSize(int newWidth, int newHeight) {
-        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, newWidth, newHeight, set, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withSet(SetSource value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, value, actors, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withActors(List<Actor> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, value, camera, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withCamera(List<CameraKey> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, value, captions, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withCaptions(List<Caption> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, value, audio, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withAudio(List<AudioCue> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, value, cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withCameraEffects(List<CameraEffect> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, value, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     /** Changes and their required actor/camera anchors must be published as one valid document. */
     public StageplayDocument withSceneChanges(List<SceneChange> value) {
-        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue, puppets);
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio, cameraEffects, value, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withDialogueTypers(List<DialogueTyper> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, value, dialogueSkins, dialogue, puppets);
+                cameraEffects, sceneChanges, value, dialogueSkins, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withDialogueSkins(List<DialogueSkin> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, value, dialogue, puppets);
+                cameraEffects, sceneChanges, dialogueTypers, value, dialogue, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withDialogue(List<DialogueCue> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value, puppets);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, value, puppets, objectActors, worldCommands);
     }
 
     public StageplayDocument withPuppets(List<PuppetTrack> value) {
         return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
-                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, value);
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, value, objectActors, worldCommands);
+    }
+
+    public StageplayDocument withObjectActors(List<ObjectActor> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, value, worldCommands);
+    }
+
+    public StageplayDocument withWorldCommands(List<WorldCommand> value) {
+        return new StageplayDocument(version, name, durationFrames, width, height, set, actors, camera, captions, audio,
+                cameraEffects, sceneChanges, dialogueTypers, dialogueSkins, dialogue, puppets, objectActors, value);
     }
 
     /** Stock set reference and optional identity/authored-level reference. */
     @ModApi
-    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject, WorldPolicy worldPolicy) {
-        public SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
-            this(gameId, zone, act, romSha1, levelProject, WorldPolicy.TERRAIN_ONLY);
-        }
+    public record SetSource(String gameId, int zone, int act, String romSha1, String levelProject) {
         public SetSource {
             gameId = game(gameId);
-            require(worldPolicy != null, "worldPolicy is required");
-            require(levelProject != null && (worldPolicy != WorldPolicy.LIVE || levelProject.isEmpty()), "Live worlds require stock ROM level data");
             range(zone, 0, 255, "zone");
             range(act, 0, 255, "act");
             require(romSha1 != null && (romSha1.isEmpty() || romSha1.matches("[0-9a-f]{40}")),
@@ -344,6 +374,104 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
+    /** A ROM object role; layoutIndex -1 casts a new instance, otherwise identity addresses a loaded placement. */
+    @ModApi
+    public record ObjectActor(String id, String name, String gameId, int zone, int act, int objectId,
+                              int subtype, int layoutIndex, List<ObjectKey> keys, List<ObjectCommand> commands,
+                              ObjectSourceKind sourceKind) {
+        public ObjectActor(String id, String name, String gameId, int zone, int act, int objectId,
+                           int subtype, int layoutIndex, List<ObjectKey> keys, List<ObjectCommand> commands) {
+            this(id, name, gameId, zone, act, objectId, subtype, layoutIndex, keys, commands, ObjectSourceKind.LAYOUT_OBJECT);
+        }
+        public ObjectActor {
+            id = identifier(id); name = label(name, "object actor name"); gameId = game(gameId);
+            range(zone, 0, 255, "object source zone"); range(act, 0, 255, "object source act");
+            range(objectId, 0, 255, "objectId"); range(subtype, 0, 255, "object subtype");
+            range(layoutIndex, -1, 65535, "object layoutIndex");
+            require(sourceKind != null, "Object sourceKind is required");
+            if (sourceKind == ObjectSourceKind.RELEASED_ANIMAL)
+                require(objectId == 0 && subtype == 0 && layoutIndex == -1,
+                        "Released animals use the native provider, zero objectId/subtype and no layout identity");
+            keys = boundedCopy(keys, MAX_KEYS, "object keys");
+            commands = boundedCopy(commands, 4096, "object commands");
+            require(!keys.isEmpty() && keys.getFirst().frame() == 0, "Object keys must start at frame zero");
+            int previous = -1;
+            for (ObjectKey key : keys) {
+                require(key.frame() > previous, "Object keys must be strictly ascending");
+                previous = key.frame();
+            }
+            previous = -1;
+            for (ObjectCommand command : commands) {
+                require(command.frame() > previous, "Object commands must be strictly ascending");
+                previous = command.frame();
+            }
+        }
+    }
+
+    /** Discrete mode/animation changes apply at the key; only directed visual modes interpolate position. */
+    @ModApi
+    public record ObjectKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+                            boolean visible, Interpolation interpolation, ObjectMode mode, List<ObjectPartPose> parts) {
+        public ObjectKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+                         boolean visible, Interpolation interpolation, ObjectMode mode) {
+            this(frame, x, y, animation, pose, flipX, visible, interpolation, mode, List.of());
+        }
+        public ObjectKey {
+            range(frame, 0, MAX_DURATION_FRAMES - 1, "object frame");
+            coordinate(x, "object x"); coordinate(y, "object y");
+            range(animation, 0, 65535, "object animation"); range(pose, -1, 65535, "object pose");
+            require(interpolation != null && mode != null, "Object interpolation and mode are required");
+            parts = boundedCopy(parts, 256, "object parts");
+            Set<String> partIds = new HashSet<>();
+            for (ObjectPartPose part : parts) require(partIds.add(part.partId()), "Duplicate object part: " + part.partId());
+            if (mode == ObjectMode.FREE)
+                require(interpolation == Interpolation.HOLD && animation == 0 && pose == -1 && parts.isEmpty(),
+                        "Free objects use native animation, held anchors and no part overrides");
+        }
+    }
+
+    /** Portable graph path formed from parent paths and stable native creation order, never runtime slots. */
+    @ModApi
+    public record ObjectPartPose(String partId, int animation, int pose) {
+        public ObjectPartPose {
+            require(partId != null && partId.length() <= 256
+                            && partId.matches("[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}(/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}){0,31}"),
+                    "Invalid portable object part path");
+            range(animation, 0, 65535, "object part animation"); range(pose, -1, 65535, "object part pose");
+        }
+    }
+
+    /** Visual displacement in stage pixels per presentation frame; it never submits native object AI input. */
+    @ModApi
+    public record ObjectCommand(String id, int frame, ObjectCommandKind kind, double x, double y, double speed) {
+        public ObjectCommand {
+            id = identifier(id); range(frame, 0, MAX_DURATION_FRAMES - 1, "object command frame");
+            require(kind != null, "Object command kind is required");
+            coordinate(x, "object destination x"); coordinate(y, "object destination y");
+            if (kind == ObjectCommandKind.MOVE_TO) finiteRange(speed, Double.MIN_VALUE, 4096, "object speed");
+            else require(x == 0 && y == 0 && speed == 0, "STOP has no destination or speed");
+        }
+    }
+
+    /** Clears apply to native world roots; remove addresses exactly one cast role or portable loaded placement. */
+    @ModApi
+    public record WorldCommand(String id, int frame, WorldCommandKind kind, String actorId, ObjectTarget target) {
+        public WorldCommand {
+            id = identifier(id); range(frame, 0, MAX_DURATION_FRAMES - 1, "world command frame");
+            require(kind != null && target != null, "World command fields are required");
+            actorId = optionalIdentifier(actorId);
+            require(target.offsetX() == 0 && target.offsetY() == 0, "World commands use exact placement identities without offsets");
+            if (kind == WorldCommandKind.REMOVE_OBJECT)
+                require(!actorId.isEmpty() ^ target.layoutIndex() >= 0, "REMOVE_OBJECT requires exactly one actor or placement identity");
+            else require(actorId.isEmpty() && target.layoutIndex() == -1, "Clear commands do not have a target");
+        }
+    }
+
+    @ModApi public enum ObjectMode { FREE, PUPPET, POSE }
+    @ModApi public enum ObjectSourceKind { LAYOUT_OBJECT, RELEASED_ANIMAL }
+    @ModApi public enum ObjectCommandKind { MOVE_TO, STOP }
+    @ModApi public enum WorldCommandKind { CLEAR_BADNIKS, CLEAR_OBJECTS, REMOVE_OBJECT }
+
     /** Presence opts an actor into native physics; absent actors retain manual choreography. */
     @ModApi
     public record PuppetTrack(String actorId, boolean snapToFloor, int collisionPath, List<PuppetCommand> commands) {
@@ -368,24 +496,52 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     /** Native input intent. WAIT gates subsequent due commands until success or a bounded timeout. */
+    /** Per-route directing policy; all motion is produced by native controller inputs. */
+    @ModApi public record RouteMotion(StartAction startingAction, TravelSpeed travelSpeed,
+                                     EndingAction endingAction, EndingFacing endingFacing) {
+        public static final RouteMotion DEFAULT = new RouteMotion(StartAction.WALK, TravelSpeed.WALK,
+                EndingAction.GENTLE_STOP, EndingFacing.INHERIT);
+        /** Ordinary hand-authored intents retain their native-speed countersteering semantics. */
+        public static final RouteMotion NATIVE = new RouteMotion(StartAction.WALK, TravelSpeed.RUN,
+                EndingAction.HARD_STOP, EndingFacing.INHERIT);
+        public RouteMotion {
+            require(startingAction != null && travelSpeed != null && endingAction != null && endingFacing != null,
+                    "Route motion settings are required");
+            require(startingAction != StartAction.SPINDASH || travelSpeed == TravelSpeed.RUN,
+                    "Spindash requires Run travel speed; its native launch exceeds the Walk stroll cap");
+        }
+    }
+    @ModApi public enum StartAction { WALK, JUMP, SPINDASH }
+    @ModApi public enum TravelSpeed { WALK, RUN }
+    @ModApi public enum EndingAction { GENTLE_STOP, HARD_STOP, OVERSHOOT }
+    @ModApi public enum EndingFacing { INHERIT, LEFT, RIGHT }
+
     @ModApi
     public record PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                                 double urgency, int holdFrames, ObjectTarget target,
-                                WaitCondition condition, int timeoutFrames) {
+                                WaitCondition condition, int timeoutFrames, RouteMotion motion) {
+        /** Fixed authored charge window; native physics owns charge and release speed. */
+        public static final int SPINDASH_CHARGE_FRAMES = 24;
         public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
                              double urgency, int holdFrames) {
-            this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0);
+            this(id, frame, kind, x, y, urgency, holdFrames, ObjectTarget.none(), WaitCondition.NONE, 0, RouteMotion.NATIVE);
+        }
+        public PuppetCommand(String id, int frame, PuppetCommandKind kind, double x, double y,
+                             double urgency, int holdFrames, ObjectTarget target,
+                             WaitCondition condition, int timeoutFrames) {
+            this(id, frame, kind, x, y, urgency, holdFrames, target, condition, timeoutFrames, RouteMotion.NATIVE);
         }
         public PuppetCommand {
             id = identifier(id);
             range(frame, 0, MAX_DURATION_FRAMES - 1, "puppet command frame");
-            require(kind != null && target != null && condition != null, "Puppet intent fields are required");
+            require(kind != null && target != null && condition != null && motion != null, "Puppet intent fields are required");
             coordinate(x, "puppet destination x"); coordinate(y, "puppet destination y");
             finiteRange(urgency, 0, 1, "puppet urgency");
             range(timeoutFrames, 0, MAX_DURATION_FRAMES, "timeoutFrames");
             boolean movement = kind == PuppetCommandKind.MOVE_TO || kind == PuppetCommandKind.FLY_TO
                     || kind == PuppetCommandKind.GLIDE_TO;
-            if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
+            if (kind == PuppetCommandKind.SPINDASH) require(urgency > 0 && holdFrames == SPINDASH_CHARGE_FRAMES, "Spindash uses the fixed 24-tick charge");
+            else if (movement) require(urgency > 0 && holdFrames == 0, "Movement requires urgency and no hold");
             else {
                 require(x == 0 && y == 0 && urgency == 0, "Only movement has a destination and urgency");
                 if (kind == PuppetCommandKind.JUMP) range(holdFrames, 1, 60, "jump hold frames");
@@ -414,11 +570,10 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
         public static ObjectTarget none() { return new ObjectTarget(-1, 0, 0, 0, 0); }
     }
-    @ModApi public enum WorldPolicy { TERRAIN_ONLY, LIVE }
     @ModApi public enum WaitCondition { NONE, ARRIVED, ON_OBJECT, GROUNDED, AIRBORNE, HURT, RECOVERED, RING_COLLECTED, TARGET_AVAILABLE }
-    @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL }
+    @ModApi public enum PuppetCommandKind { MOVE_TO, STOP, JUMP, WAIT, FLY_TO, HOVER, GLIDE_TO, RELEASE, CROUCH, LOOK_UP, ROLL, SPINDASH, FACE_LEFT, FACE_RIGHT }
 
-    /** Following uses real actor positions at fixed scale; camera keys remain authored offsets. */
+    /** Following uses real actor positions; camera keys add authored framing-centre offsets. */
     @ModApi
     public record CameraFollow(List<String> actors, double deadZoneX, double deadZoneY,
                                double lookAhead, double smoothing, double offsetX, double offsetY) {
@@ -434,8 +589,8 @@ public record StageplayDocument(int version, String name, int durationFrames, in
     }
 
     /**
-     * Camera position is the top-left stage coordinate; interpolation applies only to x/y.
-     * Zoom is held until the next key to preserve nearest-neighbour pixel stability; one is native scale.
+     * Camera position is the top-left stage coordinate; one is native scale.
+     * All worlds interpolate framing centres and zoom with the chosen easing.
      */
     @ModApi
     public record CameraKey(int frame, double x, double y, double zoom, Interpolation interpolation, CameraFollow follow) {
@@ -444,7 +599,6 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
         public CameraKey {
             require(follow != null, "Camera follow is required");
-            require(follow.actors().isEmpty() || zoom == 1, "Following requires fixed zoom 1");
             range(frame, 0, MAX_DURATION_FRAMES - 1, "camera frame");
             coordinate(x, "camera x");
             coordinate(y, "camera y");
@@ -584,6 +738,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             }
             if (kind == AudioKind.ROM_MUSIC || kind == AudioKind.ROM_SFX) {
                 require(soundId >= 0, "ROM audio cues require a soundId");
+                require(gain == 1, "ROM cue gain must be 1; gain is available for voice clips");
             }
         }
     }

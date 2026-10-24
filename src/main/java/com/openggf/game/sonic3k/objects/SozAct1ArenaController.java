@@ -42,7 +42,11 @@ public final class SozAct1ArenaController extends AbstractObjectInstance impleme
         @Override public int getPriorityBucket(){return 4;}
         @Override public void update(int vIntRunCount,PlayableEntity player){if(services().currentAct()!=0)ObjectLifetimeOps.deleteNoRespawn(this);else x=services().camera().getX()&65535;}
         @Override public void appendRenderCommands(List<GLCommand> commands){
-            var graphics=services().graphicsManager();if(isDestroyed() || !graphics.isSpriteSatCollectionActive())return;
+            if (isDestroyed()) return;
+            com.openggf.graphics.SpriteCaptureControl.control(
+                    "SAT sprite-mask controls require native display-list replay "
+                            + "Map_SOZ1EndDoor (docs/skdisasm/sonic3k.asm:114263)");
+            var graphics=services().graphicsManager();if(!graphics.isSpriteSatCollectionActive())return;
             graphics.requestSpriteMask();var rom=reader(services());
             // Map_SOZ1EndDoor frame0, $56122: read even the control-marker tile words from ROM.
             for(int i=0;i<rom.readU16BE(0x56122);i++){

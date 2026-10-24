@@ -3,7 +3,6 @@ package com.openggf.level.objects;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 
-import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -257,28 +256,12 @@ final class ObjectCallbackRouter {
     }
 
     PerObjectRewindSnapshot captureRewind(AbstractObjectInstance object, RewindCaptureContext context) {
-        return hasLegacyRewindOverride(object.getClass(), "captureRewindState")
-                ? call(object, object::captureRewindState)
-                : call(object, () -> object.captureRewindState(context));
+        return call(object, () -> ObjectRewindTypeSafety.capture(object, context));
     }
 
     void restoreRewind(AbstractObjectInstance object, PerObjectRewindSnapshot snapshot,
             RewindCaptureContext context) {
-        if (hasLegacyRewindOverride(object.getClass(), "restoreRewindState",
-                PerObjectRewindSnapshot.class)) run(object, () -> object.restoreRewindState(snapshot));
-        else run(object, () -> object.restoreRewindState(snapshot, context));
-    }
-
-    private static boolean hasLegacyRewindOverride(Class<?> type, String name, Class<?>... parameters) {
-        for (Class<?> current = type; current != null && current != AbstractObjectInstance.class;
-                current = current.getSuperclass()) {
-            if (current == AbstractBadnikInstance.class) continue;
-            try {
-                var method = current.getDeclaredMethod(name, parameters);
-                if (!Modifier.isAbstract(method.getModifiers()) && !method.isSynthetic() && !method.isBridge()) return true;
-            } catch (NoSuchMethodException ignored) { }
-        }
-        return false;
+        run(object, () -> ObjectRewindTypeSafety.restore(object, snapshot, context));
     }
 
 }

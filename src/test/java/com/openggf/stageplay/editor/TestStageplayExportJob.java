@@ -1,8 +1,13 @@
 package com.openggf.stageplay.editor;
 
 import com.openggf.data.RomManager;
+import com.openggf.data.RomIdentity;
+import com.openggf.data.PhysicalImage;
+import com.openggf.data.RomImageCatalogue;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
+import com.openggf.stageplay.runtime.StageplayRomTransport;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,17 +30,29 @@ class TestStageplayExportJob {
     private final StageplayDocument scene=StageplayDocument.empty("s2",0,0,0,0,320,224);
     private final RomManager roms=mock(RomManager.class);
 
+    @BeforeEach void suppliedLogicalRomUsesACompositeOfOriginalWindows() throws Exception {
+        var image=PhysicalImage.probe(Files.write(directory.resolve("supplied.gen"),new byte[]{9,1,2,3,4,8}));
+        when(roms.resolveLogicalRom(RomIdentity.S2)).thenReturn(java.util.Optional.of(
+                new RomImageCatalogue.Resolution(RomIdentity.S2,List.of(
+                        new RomImageCatalogue.Part(RomIdentity.S2,image,1,2),
+                        new RomImageCatalogue.Part(RomIdentity.S2,image,3,2)),RomImageCatalogue.Source.COMPOSITE)));
+    }
+
     @Test void cancellationTerminatesRealChildAndRemovesOnlyItsSnapshotAndPartialMedia() throws Exception {
         Path source=source(), output=directory.resolve("film.mkv"), keep=Files.writeString(directory.resolve("keep.txt"),"user data");
         var launched=new AtomicReference<Process>();var command=new AtomicReference<List<String>>();
         try(var job=new StageplayExportJob(args->{command.set(args);var child=launch(args,"wait");launched.set(child);return child;})) {
             job.start(scene,source,output,roms);
             Path snapshot=argument(command.get(),"--scene"), staging=argument(command.get(),"--staging-dir");
+            Path descriptor=argument(command.get(),"--rom-descriptor");
+            assertEquals(0x01020304,StageplayRomTransport.open(Files.readString(descriptor)).get("s2").readU32BE(0));
+            assertFalse(command.get().contains("--s2-rom"),"An exact view must not become a whole-file override");
             await(()->Files.exists(staging.resolve("ready")));
             assertTrue(launched.get().isAlive());assertEquals(scene,StageplayStore.read(snapshot));
             assertTrue(Files.exists(staging.resolve("partial.mkv")));assertNull(job.poll());
             job.close();
             assertFalse(launched.get().isAlive());assertFalse(Files.exists(snapshot));assertFalse(Files.exists(staging));
+            assertFalse(Files.exists(descriptor));
             assertFalse(Files.exists(output));assertEquals(scene,StageplayStore.read(source));assertEquals("user data",Files.readString(keep));
             assertNull(job.poll());
         } finally { terminate(launched.get()); }
@@ -47,6 +64,7 @@ class TestStageplayExportJob {
             assertSame(expected,assertThrows(IOException.class,()->job.start(scene,source(),directory.resolve("failed.mkv"),roms)));
             assertFalse(Files.exists(argument(command.get(),"--scene")));
             assertFalse(Files.exists(argument(command.get(),"--staging-dir")));
+            assertFalse(Files.exists(argument(command.get(),"--rom-descriptor")));
             assertNull(job.poll());
         }
     }
@@ -72,6 +90,7 @@ class TestStageplayExportJob {
     private static Path argument(List<String> command,String key) {return Path.of(command.get(command.indexOf(key)+1));}
     private static void assertOwnedFilesRemoved(List<String> command) {
         assertFalse(Files.exists(argument(command,"--scene")));assertFalse(Files.exists(argument(command,"--staging-dir")));
+        assertFalse(Files.exists(argument(command,"--rom-descriptor")));
     }
     private static Process launch(List<String> command,String mode) throws IOException {
         return new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-Xmx32m","-cp",

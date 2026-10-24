@@ -460,6 +460,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
         return boot(view, description, zone, act, initialRngSeed, admissionPolicy);
     }
 
+    /**
+     * Boots an exact logical view supplied by an offline host. This boot owns its
+     * new ROM wrapper; the caller's immutable reader and other wrappers are borrowed.
+     * No catalogue resolution or replacement ROM file is involved.
+     */
+    public GameLoop boot(com.openggf.data.RomByteReader reader, String description, int zone, int act) throws IOException {
+        return boot(Rom.fromReader(reader, description), description, zone, act, null,
+                HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
     private GameLoop boot(Rom openedRom, String description, int zone, int act, Long initialRngSeed,
             HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via

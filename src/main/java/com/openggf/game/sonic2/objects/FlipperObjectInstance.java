@@ -129,6 +129,11 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : List.copyOf(lockedPlayerPrevSuppressed.keySet())) releaseLockedPlayer(player);
+    }
+
+    @Override
     public FlipperObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new FlipperObjectInstance(ctx.spawn(), "Flipper");
     }

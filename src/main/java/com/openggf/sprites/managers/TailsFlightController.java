@@ -141,7 +141,7 @@ public final class TailsFlightController {
         GameSound sound = (sprite.getDoubleJumpProperty() & 0xFF) == 0
                 ? GameSound.TAILS_FLY_TIRED
                 : GameSound.TAILS_FLYING;
-        sprite.currentAudioManager().playSfx(sound);
+        com.openggf.sprites.playable.PlayerAbilityAudio.play(sprite,sound);
     }
 
     private boolean isOnScreen() {

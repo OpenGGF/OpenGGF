@@ -17,6 +17,18 @@ import java.util.List;
 /** Native SOZ2 shell, linked limbs and laser SSTs ($77AB4-$78032). */
 public final class SozEndBossChild extends AbstractObjectInstance
         implements SpawnRewindRecreatable, SolidObjectProvider, TouchResponseProvider {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        visualControlOwners.clear();
+    }
+
     static final int UPPER=0, LOWER=1, REAR=2, OVERLAY=3, FRONT=4, PILOT=5;
     static final int SHOULDER=6, ELBOW=7, HAND=8, BACK_SHOULDER=9, BACK_ELBOW=10, BACK_HAND=11;
     static final int CHARGE=12, PARTICLE=13, PROJECTILE=14, MASK=15, FLAME=16;
@@ -238,7 +250,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
         for(var other:services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED))
             if(other!=main && other instanceof AbstractPlayableSprite sprite){
-            if(phase==0){sprite.setHighPriority(false);ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+            if(phase==0){sprite.setHighPriority(false);ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
                 sprite.setAnimationId(0x1A);sprite.setControlLocked(false);}
             NativePositionOps.writeXPosPreserveSubpixel(sprite,main.getCentreX());
             NativePositionOps.writeYPosPreserveSubpixel(sprite,main.getCentreY()-32);

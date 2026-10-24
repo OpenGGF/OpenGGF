@@ -260,6 +260,18 @@ delivered here.
 
 ## Validation and continuation
 
+Before integration, the required fast-forward pull advanced main from the
+pinned base to `0ffa7f3c7`, bringing a substantial independently developed
+Stageplay campaign. The coordinator merged it without textual conflicts. The
+OOZ launcher's new player-release hook is independent of the fragment recipe;
+both survive. Incoming identity codecs and five player-field policies are
+retained, along with the new 154th package permission and current API pins.
+The earlier 749/71 results describe the pre-upstream source. New composed
+verification covers fragment/fixture behavior, affected native-release controls,
+API/S3K stability and fresh guards; upstream Stageplay's full feature validation
+is outside this cleanup's claim. Existing worker jobs keep their original base
+and requests; subsequent composition will reconcile them here.
+
 Workers own focused checks; the coordinator owns composed validation and
 delivery. Future Maven invocations use the main-checkout wrapper by absolute
 path, retaining their worktree cwd, target and required flags. Existing requests

@@ -43,6 +43,11 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
      * (docs/skdisasm/sonic3k.asm:26856-26883).
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var rider : riders) if (rider.active) releaseRider(rider, 0, false);
+    }
+
+    @Override
     public int romObjectCodePointerHighWord() {
         return 0x0003;
     }

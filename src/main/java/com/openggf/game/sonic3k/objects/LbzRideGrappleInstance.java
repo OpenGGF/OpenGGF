@@ -524,6 +524,12 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        // The native cleanup path releases owned riders without a launch impulse.
+        onUnload();
+    }
+
+    @Override
     public void onUnload() {
         for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
             if (entry.getValue().grabbed) {

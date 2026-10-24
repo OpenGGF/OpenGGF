@@ -17,7 +17,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * <p>Ports ICZ1_IntroDeform / ICZ1_Deform from sonic3k.asm and
  * ICZ2_OutDeform / ICZ2_InDeform from Lockon S3/Screen Events.asm.
  */
-public class SwScrlIcz extends AbstractZoneScrollHandler {
+public class SwScrlIcz extends AbstractZoneScrollHandler implements com.openggf.level.scroll.ScrollProjectionSource {
     private static final int ICZ1_INDOOR_X_THRESHOLD = 0x3940;
     private static final int ICZ1_INTRO_BG_PLANE_X = 0x1880;
     private static final int ICZ1_BG_X_OFFSET = 0x1D80;
@@ -158,7 +158,11 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
         // foreground and sprites during the snowboard crash.
         int bgY = asrWord(introBgCameraYSource, 7) + resolveShakeOffsetY();
         composer.setVscrollFactorBG((short) bgY);
-        buildIcz1IntroTable(cameraX, frameCounter);
+        if (!introAutoBaseFrameSet) {
+            introAutoBaseFrame = frameCounter;
+            introAutoBaseFrameSet = true;
+        }
+        buildIcz1IntroTable(icz1IntroTable, cameraX, (frameCounter - introAutoBaseFrame) * 0x800);
         DeformationPlan.applyTableBands(
                 composer,
                 bgY,
@@ -180,7 +184,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
 
     private void updateAct2Outdoor(int cameraX, int frameCounter, short fgScroll) {
         composer.setVscrollFactorBG((short) 0);
-        buildIcz2OutdoorTable(cameraX, frameCounter);
+        buildIcz2OutdoorTable(icz2OutTable, cameraX, frameCounter);
         DeformationPlan.applyFlaggedTableBands(
                 composer,
                 0,
@@ -195,7 +199,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
     private void updateAct2Indoor(int cameraX, int cameraY, short fgScroll) {
         int bgY = asrWord(cameraY - 0x700, 2) + 0x118;
         composer.setVscrollFactorBG((short) bgY);
-        int bgX = buildIcz2IndoorTable(cameraX);
+        int bgX = buildIcz2IndoorTable(icz2InTable, cameraX);
         DeformationPlan.applyTableBands(
                 composer,
                 bgY,
@@ -234,7 +238,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
      * ROM: ICZ1_IntroDeform, including the persistent auto-scroll longword
      * stored just after the 14 visible deformation entries in HScroll_table.
      */
-    private void buildIcz1IntroTable(int cameraX, int frameCounter) {
+    private static void buildIcz1IntroTable(ScrollValueTable icz1IntroTable, int cameraX, int autoPhase) {
         icz1IntroTable.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 5;
@@ -251,11 +255,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
 
         d0 += d1;
         d1 += d1 >> 1;
-        if (!introAutoBaseFrameSet) {
-            introAutoBaseFrame = frameCounter;
-            introAutoBaseFrameSet = true;
-        }
-        d3 = (frameCounter - introAutoBaseFrame) * 0x800;
+        d3 = autoPhase;
 
         for (int i = 0; i < 9; i++) {
             icz1IntroTable.set(index++, (short) (d0 >> 16));
@@ -268,7 +268,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
     /**
      * ROM: ICZ2_OutDeform (Lockon S3/Screen Events.asm:1257-1307).
      */
-    private void buildIcz2OutdoorTable(int cameraX, int frameCounter) {
+    private static void buildIcz2OutdoorTable(ScrollValueTable icz2OutTable, int cameraX, int frameCounter) {
         icz2OutTable.clear();
 
         int d0 = (short) (cameraX + asrWord(frameCounter, 1));
@@ -312,7 +312,7 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
      *
      * @return Camera_X_pos_BG_copy, the center visual band.
      */
-    private int buildIcz2IndoorTable(int cameraX) {
+    private static int buildIcz2IndoorTable(ScrollValueTable icz2InTable, int cameraX) {
         icz2InTable.clear();
         int d0 = ((short) cameraX) << 16;
         d0 >>= 1;
@@ -367,4 +367,57 @@ public class SwScrlIcz extends AbstractZoneScrollHandler {
         }
         return !(x < 0x1000 || x >= 0x3600 || y < 0x720);
     }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        int act = context.act();
+        boolean indoor = act == 0 ? (context.cameraX() & 0xFFFF) >= ICZ1_INDOOR_X_THRESHOLD : act2Indoor;
+        int sourceY = introBgCameraYSource;
+        int autoPhase = (context.frameCounter() - introAutoBaseFrame) * 0x800;
+        int shake = context.nativeOutput().shakeY();
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorFG((short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()));
+            short foreground = negWord(view.cameraX());
+            int backgroundX;
+            if (act == 0 && indoor) {
+                int bgY = asrWord(view.cameraY(), 1);
+                backgroundX = asrWord(view.cameraX(), 1) - ICZ1_BG_X_OFFSET;
+                output.setVscrollFactorBG((short) bgY);
+                output.fillPackedScrollWords(0, view.height(), foreground, negWord(backgroundX));
+            } else if (act == 0) {
+                // Adjust_BGDuringLoop rebase preserves the captured unwrapped
+                // intro source; it does not advance its native owner.
+                int delta = (short) (view.cameraY() - context.cameraY());
+                if (delta < 0) {
+                    int magnitude = (short) -delta;
+                    if ((magnitude & 0xFFFF) >= 0x400) magnitude = (short) (magnitude - 0x800);
+                    delta = -magnitude;
+                } else if ((delta & 0xFFFF) >= 0x400) delta = (short) (delta - 0x800);
+                int bgY = asrWord((short) (sourceY + delta), 7) + shake;
+                var table = ScrollValueTable.ofLength(14);
+                buildIcz1IntroTable(table, view.cameraX(), autoPhase);
+                output.setVscrollFactorBG((short) bgY);
+                DeformationPlan.applyTableBands(output, bgY, foreground, table, ICZ1_INTRO_BG_DEFORM, 0, NEGATE_WORD);
+                backgroundX = ICZ1_INTRO_BG_PLANE_X;
+            } else if (indoor) {
+                int bgY = asrWord(view.cameraY() - 0x700, 2) + 0x118;
+                var table = ScrollValueTable.ofLength(9);
+                backgroundX = buildIcz2IndoorTable(table, view.cameraX());
+                output.setVscrollFactorBG((short) bgY);
+                DeformationPlan.applyTableBands(output, bgY, foreground, table, ICZ2_IN_BG_DEFORM, 0, NEGATE_WORD);
+            } else {
+                var table = ScrollValueTable.ofLength(52);
+                buildIcz2OutdoorTable(table, view.cameraX(), context.frameCounter());
+                DeformationPlan.applyFlaggedTableBands(output, 0, foreground, table, ICZ2_OUT_BG_DEFORM, 0, NEGATE_WORD);
+                backgroundX = Integer.MIN_VALUE;
+            }
+            return new com.openggf.level.scroll.ScrollProjection(output.packedScrollWords(), null, null, null,
+                    output.getVscrollFactorFG(), output.getVscrollFactorBG(), backgroundX,
+                    context.nativeOutput().backgroundPeriod(), context.nativeOutput().shakeX(), shake,
+                    context.nativeOutput().tilemapMode());
+        };
+    }
+
 }

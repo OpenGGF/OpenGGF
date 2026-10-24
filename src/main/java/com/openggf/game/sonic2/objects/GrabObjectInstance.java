@@ -92,6 +92,16 @@ public class GrabObjectInstance extends AbstractObjectInstance implements Rewind
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var participants = interactionParticipants(null);
+        boolean mainHeld = player1Grabbed, otherHeld = player2Grabbed;
+        for (int i = 0; i < participants.size(); i++) {
+            if ((i == 0 ? mainHeld : otherHeld) && participants.get(i) instanceof AbstractPlayableSprite player)
+                releasePlayer(player, i != 0);
+        }
+    }
+
+    @Override
     public GrabObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new GrabObjectInstance(ctx.spawn(), "Grab");
     }
@@ -188,6 +198,10 @@ public class GrabObjectInstance extends AbstractObjectInstance implements Rewind
             return;  // No action button pressed - stay grabbed
         }
 
+        releasePlayer(player, isPlayer2);
+    }
+
+    private void releasePlayer(AbstractPlayableSprite player, boolean isPlayer2) {
         // Release the player
         // ROM: clr.b obj_control(a1)
         ObjectControlState.none().applyTo(player);

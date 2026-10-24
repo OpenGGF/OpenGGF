@@ -1,6 +1,9 @@
 package com.openggf.game.sonic1.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
 
@@ -24,7 +27,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * not delta-accumulated. Vertical scroll uses delta-accumulated Bg_Scroll_Y
  * at scrshifty * 48/256 (~18.75%).
  */
-public class SwScrlSyz extends AbstractZoneScrollHandler {
+public class SwScrlSyz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private static final int BUFFER_SIZE = 33;
     private static final int LINES_PER_ENTRY = 16;
@@ -69,10 +72,10 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
         composer.setVscrollFactorBG((short) bgY);
 
         // Build scroll buffer (position-based, computed from screenposx each frame)
-        buildScrollBuffer(cameraX);
+        buildScrollBuffer(scrollBuffer, cameraX);
 
         // Apply buffer to h-scroll table via Bg_Scroll_X pattern
-        applyScrollBuffer(horizScrollBuf, cameraX, bgY);
+        applyScrollBuffer(composer, scrollBuffer, cameraX, bgY);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -85,7 +88,7 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
      * All horizontal scroll values are computed from the current screenposx
      * using position-based formulas (not delta-accumulated).
      */
-    private void buildScrollBuffer(int cameraX) {
+    private static void buildScrollBuffer(short[] scrollBuffer, int cameraX) {
         // d2 = neg.w screenposx
         short d2 = negWord(cameraX);
         int bufIdx = 0;
@@ -104,7 +107,7 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
             d0 <<= 12;                        // asl.l #4 + asl.l #8
 
             short startVal = (short) (d2 >> 1);  // asr.w #1
-            bufIdx = interpolateEntries(bufIdx, 8, startVal, d0);
+            bufIdx = interpolateEntries(scrollBuffer, bufIdx, 8, startVal, d0);
         }
 
         // === Mountain section: 5 entries flat at 12.5% ===
@@ -136,7 +139,7 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
             d0 = (int) (short) d0;               // ext.l
             d0 <<= 12;                           // asl.l #4 + asl.l #8
 
-            bufIdx = interpolateEntries(bufIdx, 14, d2half, d0);
+            bufIdx = interpolateEntries(scrollBuffer, bufIdx, 14, d2half, d0);
         }
     }
 
@@ -152,7 +155,7 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
      *     dbf d1,.loop
      * </pre>
      */
-    private int interpolateEntries(int bufIdx, int count, short startVal, int increment) {
+    private static int interpolateEntries(short[] scrollBuffer, int bufIdx, int count, short startVal, int increment) {
         // d3 = 0x0000 | (startVal & 0xFFFF) — high word is 0 (fraction), low word is value
         int d3 = startVal & 0xFFFF;
 
@@ -179,14 +182,14 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
      * writing 16 scanlines per entry. The first entry is partially written
      * based on the sub-16px vertical offset.
      */
-    private void applyScrollBuffer(int[] horizScrollBuf, int cameraX, int bgY) {
+    private static void applyScrollBuffer(ScrollEffectComposer composer, short[] scrollBuffer, int cameraX, int bgY) {
         short fgScroll = negWord(cameraX);
 
         int entryIdx = (bgY & 0x1F0) >> 4;
         int subPixelOffset = bgY & 0xF;
 
         int lineIdx = 0;
-        for (int block = 0; block < 15 && lineIdx < VISIBLE_LINES; block++) {
+        for (int block = 0; lineIdx < composer.visibleLineCount(); block++) {
             short bgScroll = scrollBuffer[entryIdx % BUFFER_SIZE];
             entryIdx++;
 
@@ -194,10 +197,26 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
             if (block == 0) {
                 linesToWrite -= subPixelOffset;
             }
-            int writeCount = Math.min(linesToWrite, VISIBLE_LINES - lineIdx);
+            int writeCount = Math.min(linesToWrite, composer.visibleLineCount() - lineIdx);
             composer.fillPackedScrollWords(lineIdx, writeCount, fgScroll, bgScroll);
             lineIdx += writeCount;
         }
+    }
+
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long capturedY = bgYPos;
+        return view -> {
+            int bgY = (int) ((capturedY + (long) (view.cameraY() - context.cameraY()) * 48 * 256) >> 16);
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            short[] bands = new short[BUFFER_SIZE];
+            buildScrollBuffer(bands, view.cameraX());
+            applyScrollBuffer(output, bands, view.cameraX(), bgY);
+            return Sonic1ProjectionOutput.finish(context, view, output, context.nativeOutput().backgroundX(),
+                    context.nativeOutput().backgroundPeriod());
+        };
     }
 
 }

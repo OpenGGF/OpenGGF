@@ -3,14 +3,14 @@ package com.openggf.game.sonic3k.scroll;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
-import com.openggf.level.objects.ObjectServices;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /** Ending_BackgroundEvent: sub_5B092/loc_58D44 and sub_5B0A8. */
-public final class SwScrlEnding extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
+public final class SwScrlEnding extends AbstractZoneScrollHandler implements ScrollOutputRebuilder, com.openggf.level.scroll.ScrollProjectionSource {
     private final Rom rom;
     private BandTables bands;
     private record BandTables(int[] island, int[] clouds) {}
@@ -50,7 +50,8 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
     }
     private void fillScroll(int[] output,int cameraX,int cameraY,int frame,int act,boolean rebuild){
         if(!(GameServices.zoneRuntimeRegistry().current() instanceof EndingZoneRuntimeState ending))return;
-        var tables = bands(); // Fail before native RAM/output changes, including pure post-restore rebuild.
+        var tables = bands(); // Fail before native RAM/output changes, including pure post-restore
+                         // rebuild.
         // ScreenEvents ends with V_scroll_value=Camera_Y_pos_copy, the copy taken before the
         // event handlers (sonic3k.asm:102279-102299); credits loc_5B204 advances Camera_Y_pos
         // afterwards, so its new position is first published by the following frame's copy.
@@ -92,6 +93,7 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
         put(ram,0xC,word(ram,0x1C));put(ram,0x12,word(ram,0x24));
         put(ram,6,word(ram,0x2C));put(ram,0xA,word(ram,0x34));put(ram,0xE,word(ram,0x3C));
     }
+
     /** AIZ1_Deform consumes the inherited HScroll+$3C long before adding $2000.
      * Its 32-bit overflow and swapped-word stores are native RAM, not an elapsed-frame wave.
      */
@@ -163,13 +165,84 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
         }
         if((bands[band]&0x8000)!=0)source+=skip;
         int remaining=(bands[band]&0x7FFF)-skip;
-        for(int line=0;line<224;line++){
+        for(int line=0;line< output.length;line++){
             if(source<0||source>=words.length)throw new IllegalStateException("Ending HScroll_table overrun");
             output[line]=((-cameraX&0xFFFF)<<16)|(-words[source]&0xFFFF);
             if((bands[band]&0x8000)!=0)source++;
             if(--remaining==0){if((bands[band]&0x8000)==0)source++;remaining=bands[++band]&0x7FFF;}
         }
     }
-    @Override public short getVscrollFactorFG(){return (short)foregroundY;}
+    @Override public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        if (!(GameServices.zoneRuntimeRegistry().current()
+                instanceof EndingZoneRuntimeState ending)) {
+            return com.openggf.level.scroll.ScrollProjectionPhases.held(context);
+        }
+        var ram = ending.screen();
+        boolean aiz = ram.backgroundRoutine >= 8 && ram.backgroundRoutine <= 16;
+        int routine = ram.backgroundRoutine;
+        int[] activeBands =
+                (aiz ? aizBands() : routine != 0 ? bands().clouds() : bands().island()).clone();
+        short[] words = ram.hScrollWords.clone();
+        int bgY = ram.backgroundCameraY;
+        int fgY = foregroundY;
+        int fgX = ram.foregroundRoutine >= 56 ? context.cameraX() : ram.foregroundX;
+        int aizScroll = ram.aizBackgroundScrollFixed;
+        // AIZ1_Deform consumes the old +$3C longword and then adds $2000.
+        // Camera-only recomposition keeps that consumed phase, never the next native phase.
+        int consumedWave = (((words[0x3C / 2] & 65535) << 16) | (words[0x3E / 2] & 65535)) - 0x2000;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX();
+            int dy = view.cameraY() - context.cameraY();
+            short[] sampledWords = words.clone();
+            int sampledY = bgY;
+            if (aiz) {
+                var nativeCamera = new EndingZoneRuntimeState.ScreenRam();
+                var directedCamera = new EndingZoneRuntimeState.ScreenRam();
+                nativeCamera.backgroundRoutine = directedCamera.backgroundRoutine = routine;
+                nativeCamera.aizBackgroundScrollFixed =
+                        directedCamera.aizBackgroundScrollFixed = aizScroll;
+                put(nativeCamera, 0x3C, consumedWave >>> 16);
+                put(nativeCamera, 0x3E, consumedWave);
+                put(directedCamera, 0x3C, consumedWave >>> 16);
+                put(directedCamera, 0x3E, consumedWave);
+                aizParameters(nativeCamera, context.cameraX(), context.cameraY());
+                aizParameters(directedCamera, view.cameraX(), view.cameraY());
+                // Preserve staged Draw_BG overrides and inherited words: replace only
+                // the camera contribution of the owning pure parameter routine.
+                for (int i = 0; i < sampledWords.length; i++)
+                    sampledWords[i] =
+                            (short)
+                                    (sampledWords[i]
+                                            + directedCamera.hScrollWords[i]
+                                            - nativeCamera.hScrollWords[i]);
+                sampledY += directedCamera.backgroundCameraY - nativeCamera.backgroundCameraY;
+            }
+            int[] horizontal = new int[view.height()];
+            composeFrom(
+                    horizontal,
+                    aiz ? view.cameraX() : fgX + dx,
+                    sampledY,
+                    sampledWords,
+                    activeBands,
+                    aiz ? 4 : 2);
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    null,
+                    null,
+                    null,
+                    (short) (fgY + dy),
+                    (short) sampledY,
+                    aiz ? -(short) horizontal[0] : output.backgroundX(),
+                    output.backgroundPeriod(),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
+    }
+
+    @Override
+    public short getVscrollFactorFG(){return (short)foregroundY;}
     @Override public int getBgCameraX(){return backgroundX;}
 }

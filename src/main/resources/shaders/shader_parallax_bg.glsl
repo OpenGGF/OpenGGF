@@ -16,6 +16,7 @@ uniform sampler2D BackgroundTexture;
 // 1D texture containing per-scanline scroll values (224 entries)
 uniform sampler1D HScrollTexture;
 uniform sampler1D VScrollTexture;
+uniform float ColumnPhaseX; // Cinematic raster tile left edge modulo one VSRAM column
 uniform sampler1D VScrollColumnTexture;
 uniform sampler1D ColumnRemapX;
 uniform sampler1D ColumnRemapY;
@@ -97,8 +98,8 @@ void main()
         vScrollThis = texture(VScrollTexture, scanlineTexCoord).r * 32767.0;
     }
     if (UsePerColumnVScroll != 0) {
-        float vScrollColumnCount = max(1.0, ceil(activeDisplayWidth / 16.0));
-        float column = clamp(floor(gameX / 16.0), 0.0, vScrollColumnCount - 1.0);
+        float vScrollColumnCount = max(1.0, ceil((activeDisplayWidth + ColumnPhaseX) / 16.0));
+        float column = clamp(floor((gameX + ColumnPhaseX) / 16.0), 0.0, vScrollColumnCount - 1.0);
         float columnTexCoord = (column + 0.5) / vScrollColumnCount;
         vScrollThis += texture(VScrollColumnTexture, columnTexCoord).r * 32767.0;
     }

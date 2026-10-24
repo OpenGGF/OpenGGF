@@ -488,6 +488,18 @@ public final class ObjectTerrainUtils {
         return checkNativeUpwardCeilingDistAtPoint(levelManager, x, y - yRadius, false);
     }
 
+    // Internal authoring probes use explicit owners/path selection. Native callers
+    // retain the existing entry points and their shipped arithmetic unchanged.
+    static TerrainCheckResult routeCeilingDist(LevelManager lm, int x, int y, boolean secondary) {
+        TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, true, secondary);
+        if (current != null) return current;
+        TerrainCheckResult extension = scanCeilingTile(lm, x, y, y - FULL_TILE, true, true, secondary);
+        return extension != null ? extension : TerrainCheckResult.noCollision();
+    }
+    static TerrainCheckResult routeWallDist(LevelManager lm, int x, int y, boolean secondary) {
+        return checkWallDistAtPoint(lm, (byte) 0, x, y, false, true, secondary);
+    }
+
     private static TerrainCheckResult checkNativeUpwardCeilingDistAtPoint(
             LevelManager lm, int x, int y, boolean flipAwareAngle) {
         TerrainCheckResult current = scanCeilingTile(lm, x, y, y, false, flipAwareAngle);
@@ -507,8 +519,14 @@ public final class ObjectTerrainUtils {
     private static TerrainCheckResult scanCeilingTile(
             LevelManager lm, int x, int originalY, int checkY,
             boolean extension, boolean flipAwareAngle) {
+        return scanCeilingTile(lm, x, originalY, checkY, extension, flipAwareAngle, legacySecondaryCollisionPath());
+    }
+
+    private static TerrainCheckResult scanCeilingTile(
+            LevelManager lm, int x, int originalY, int checkY,
+            boolean extension, boolean flipAwareAngle, boolean secondaryCollisionPath) {
         ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, checkY);
-        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL);
+        SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL, secondaryCollisionPath);
         if (tile == null) {
             return null;
         }
@@ -535,7 +553,7 @@ public final class ObjectTerrainUtils {
 
             int regressY = checkY + FULL_TILE;
             TerrainCheckResult regress = scanCeilingTile(
-                    lm, x, originalY, regressY, true, flipAwareAngle);
+                    lm, x, originalY, regressY, true, flipAwareAngle, secondaryCollisionPath);
             if (regress != null) {
                 return regress;
             }
@@ -545,7 +563,7 @@ public final class ObjectTerrainUtils {
         if (metric == FULL_TILE && !extension) {
             int regressY = checkY + FULL_TILE;
             TerrainCheckResult regress = scanCeilingTile(
-                    lm, x, originalY, regressY, true, flipAwareAngle);
+                    lm, x, originalY, regressY, true, flipAwareAngle, secondaryCollisionPath);
             if (regress != null) {
                 return regress;
             }

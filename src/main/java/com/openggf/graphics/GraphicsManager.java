@@ -155,6 +155,8 @@ public class GraphicsManager {
 	private boolean spriteSatCollectionActive = false;
 	private boolean spriteMaskRequested = false;
 	private final List<SpriteSatEntry> spriteSatEntries = new ArrayList<>();
+	private final java.util.IdentityHashMap<SpriteSatEntry, Integer> objectVisualSatMasks =
+			new java.util.IdentityHashMap<>();
 	// Reusable buffers/scratch for endSpriteSatCollectionAndReplay() — avoids per-frame
 	// ArrayList and PatternDesc allocations on the SAT replay hot path.
 	private final ArrayList<PatternRenderCommand> reusableReplayCommands = new ArrayList<>();
@@ -396,6 +398,21 @@ public class GraphicsManager {
                 || !previous.appendPresentation(command)) registerCommand(command);
 	}
 
+	private final ObjectVisualPatternBanks objectVisualPatterns = new ObjectVisualPatternBanks();
+
+	ObjectVisualPatternBanks.Bank objectVisualPatternBank(Object owner, int count) {
+		return objectVisualPatterns.acquire(
+				owner, count, presentationTrailBanks.values(), PRESENTATION_TRAIL_BANK_SIZE);
+	}
+
+	boolean objectVisualPatternBankValid(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		return objectVisualPatterns.valid(owner, bank);
+	}
+
+	void releaseObjectVisualPatternBank(Object owner, ObjectVisualPatternBanks.Bank bank) {
+		objectVisualPatterns.release(owner, bank);
+	}
+
 	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
 	private final java.util.IdentityHashMap<Object,Long> presentationTrailGenerations=new java.util.IdentityHashMap<>();
 	private long nextPresentationTrailGeneration;
@@ -409,6 +426,7 @@ public class GraphicsManager {
 			// Owners use identity, but reserved numeric addresses must use value equality.
 			boolean occupied=false;
 			for(int assigned:presentationTrailBanks.values())if(assigned==base){occupied=true;break;}
+			if (objectVisualPatterns.overlaps(base, PRESENTATION_TRAIL_BANK_SIZE)) occupied = true;
 			if(!occupied) {
 				presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
 			}
@@ -477,6 +495,8 @@ public class GraphicsManager {
 	 * Use this for testing game logic without rendering.
 	 */
 	public void initHeadless() {
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
 		this.headlessMode = true;
 		this.glInitialized = false;
 		if (this.patternAtlas == null) {
@@ -1664,6 +1684,24 @@ public class GraphicsManager {
 		this.cachedConfigScreenHeightPx = -1;
 	}
 
+	/** Internal bounded offscreen viewport; restores the host's projection source/override exactly. */
+	void withPresentationViewport(int width, int height, Runnable draw) {
+		int oldX = viewportX, oldY = viewportY, oldWidth = viewportWidth, oldHeight = viewportHeight;
+		int oldProjectionWidth = projectionWidth, oldLogicalHeight = cachedConfigScreenHeightPx;
+		float[] oldProjection = projectionMatrixBuffer;
+		try {
+			setViewport(0, 0, width, height);
+			projectionWidth = width;
+			cachedConfigScreenHeightPx = height;
+			projectionMatrixBuffer = new org.joml.Matrix4f().ortho2D(0, width, 0, height).get(new float[16]);
+			draw.run();
+		} finally {
+			viewportX = oldX; viewportY = oldY; viewportWidth = oldWidth; viewportHeight = oldHeight;
+			projectionWidth = oldProjectionWidth; cachedConfigScreenHeightPx = oldLogicalHeight;
+			projectionMatrixBuffer = oldProjection;
+		}
+	}
+
 	/**
 	 * Returns the configured logical screen height (SCREEN_HEIGHT_PIXELS), cached
 	 * to avoid a config-service lookup per rendered pattern. The cache is
@@ -2178,6 +2216,8 @@ public class GraphicsManager {
 	 * data and palette state so subsequent rendering starts from a clean GPU.
 	 */
 	public void resetPatternAndPaletteState() {
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
 		if (headlessMode || !glInitialized) {
 			return;
 		}
@@ -2197,6 +2237,8 @@ public class GraphicsManager {
 	 */
 	public void cleanup() {
         presentationTrailBanks.clear();
+		objectVisualPatterns.clear();
+		objectVisualSatMasks.clear();
         presentationTrailGenerations.clear();
         if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
@@ -2313,6 +2355,7 @@ public class GraphicsManager {
 		spriteMaskRequested = false;
 		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		spritePresentationSubject = SpritePresentation.Subject.WORLD;
         objectHeadFragmentBanks.reset();
@@ -2356,6 +2399,14 @@ public class GraphicsManager {
 	/** Priority choice is frozen at picture submission; native water/default intent still resolves at execution. */
 	ShaderProgram presentationShader(boolean priority) {
 		return priority&&spritePriorityShaderProgram!=null?spritePriorityShaderProgram:currentShaderProgram;
+	}
+
+	PaletteView objectVisualPalette(int line) {
+		PaletteView palette =
+				line >= 0 && line < lastCachedPaletteLines.length
+						? lastCachedPaletteLines[line]
+						: null;
+		return palette != null ? palette : getRenderContextPaletteForEffectiveLine(line);
 	}
 
 	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */
@@ -2476,6 +2527,7 @@ public class GraphicsManager {
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
@@ -2484,6 +2536,7 @@ public class GraphicsManager {
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
 		spriteSatEntries.clear();
+		objectVisualSatMasks.clear();
 		currentSpriteSatDebugSource = null;
 		currentSpriteSatBucket = RenderPriority.MIN;
 	}
@@ -2493,6 +2546,8 @@ public class GraphicsManager {
 	}
 
 	public void requestSpriteMask() {
+		SpriteCaptureControl.control(
+				"SAT sprite-mask controls require native display-list replay");
 		if (spriteSatCollectionActive) {
 			spriteMaskRequested = true;
 		}
@@ -2501,6 +2556,8 @@ public class GraphicsManager {
 	/** Submits one non-drawable SAT control entry while collection is active. */
 	public void submitSpriteSatControlEntry(int x, int y, int widthTiles, int heightTiles,
 			int rawTileWordLow11) {
+		SpriteCaptureControl.control(
+				"SAT control entries require native display-list replay");
 		if (!spriteSatCollectionActive) return;
 		spriteSatEntries.add(new SpriteSatEntry(currentSpriteSatBucket, new SpritePiece(x, y,
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
@@ -2543,6 +2600,33 @@ public class GraphicsManager {
 		spriteSatEntries.add(entry);
 	}
 
+	void attachObjectVisualSatMask(int mask) {
+		if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
+			throw new IllegalStateException("Visual palette mask has no submitted native SAT tile");
+		}
+		objectVisualSatMasks.put(spriteSatEntries.getLast(), mask & 15);
+	}
+
+	void clipObjectVisualSatTile(int rowStart, int rowEnd) {
+		if (!spriteSatCollectionActive || spriteSatEntries.isEmpty()) {
+			throw new IllegalStateException("Visual row clip has no submitted native SAT tile");
+		}
+		if (rowStart < 0 || rowEnd > 8 || rowStart > rowEnd) {
+			throw new IllegalArgumentException("Visual row clip must stay within one native tile");
+		}
+		if (rowStart == 0 && rowEnd == 8) {
+			return;
+		}
+		int index = spriteSatEntries.size() - 1;
+		SpriteSatEntry tile = spriteSatEntries.get(index);
+		SpriteSatEntry clipped = tile.withVisibleScanlines(tile.piece().y() + rowStart, tile.piece().y() + rowEnd);
+		spriteSatEntries.set(index, clipped);
+		Integer mask = objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks.remove(tile);
+		if (mask != null) {
+			objectVisualSatMasks.put(clipped, mask);
+		}
+	}
+
 	public void endSpriteSatCollectionAndReplay() {
 		if (!spriteSatCollectionActive) {
 			return;
@@ -2556,7 +2640,8 @@ public class GraphicsManager {
 		// the processed list synchronously, so the live buffer is cleared in the
 		// finally block only after the replay finished with it.
 		// Lower SAT indices win overlap: mask in native order, replay in reverse painter order.
-		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
+		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask,
+				objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks);
 
 		spriteSatCollectionActive = false;
 		spriteMaskRequested = false;
@@ -2613,6 +2698,7 @@ public class GraphicsManager {
 			reusableReplayCommands.clear();
 		} finally {
 			spriteSatEntries.clear();
+			objectVisualSatMasks.clear();
 		}
 	}
 
@@ -2665,7 +2751,24 @@ public class GraphicsManager {
 	}
 
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
-		withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId));
+		withSatEntryVisualMask(entry,
+				() -> withSatEntryGhost(entry, () -> appendBatchedReplayTiles(entry, paletteTextureId)));
+	}
+
+	/** Replays {@code entry} under the directed-visual palette mask Stageplay assigned to it, if any. */
+	private void withSatEntryVisualMask(SpriteSatEntry entry, Runnable replay) {
+		Integer visualMask = objectVisualSatMasks.isEmpty() ? null : objectVisualSatMasks.get(entry);
+		if (visualMask == null) {
+			replay.run();
+			return;
+		}
+		int previousMask = getCurrentSpriteTileOcclusionPaletteMask();
+		setCurrentSpriteTileOcclusionPaletteMask(visualMask);
+		try {
+			replay.run();
+		} finally {
+			setCurrentSpriteTileOcclusionPaletteMask(previousMask);
+		}
 	}
 
 	/**
@@ -2825,7 +2928,8 @@ public class GraphicsManager {
 		if (entry == null || replayCommands == null) {
 			return;
 		}
-		withSatEntryGhost(entry, () -> appendDirectReplayTiles(entry, paletteTextureId, replayCommands));
+		withSatEntryVisualMask(entry,
+				() -> withSatEntryGhost(entry, () -> appendDirectReplayTiles(entry, paletteTextureId, replayCommands)));
 	}
 
 	private void appendDirectReplayTiles(SpriteSatEntry entry, int paletteTextureId,

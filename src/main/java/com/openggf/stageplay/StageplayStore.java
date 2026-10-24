@@ -107,52 +107,12 @@ public final class StageplayStore {
             if (version == null || !version.isIntegralNumber() || !version.canConvertToInt())
                 throw new IOException("Stageplay version must be an integer");
             int sourceVersion = version.intValue();
-            if (sourceVersion < 1 || sourceVersion > StageplayDocument.VERSION)
+            if (sourceVersion != StageplayDocument.VERSION)
                 throw new IOException("Unsupported Stageplay version: " + sourceVersion);
-            if (sourceVersion == 1) {
-                // Exact legacy shapes remain authoritative: later fields cannot masquerade as old data.
-                if (object.has("cameraEffects") || object.has("sceneChanges"))
-                    throw new IOException("Version one cannot contain version two tracks");
-                object.putArray("cameraEffects");
-                object.putArray("sceneChanges");
-            }
-            if (sourceVersion <= 2) {
-                if (object.has("dialogueTypers") || object.has("dialogueSkins") || object.has("dialogue"))
-                    throw new IOException("Version " + sourceVersion + " cannot contain dialogue tracks");
-                object.putArray("dialogueTypers");
-                object.putArray("dialogueSkins");
-                object.putArray("dialogue");
-            }
-            if (sourceVersion <= 3) {
-                if (object.has("puppets")) throw new IOException("Legacy scenes cannot contain puppet tracks");
-                object.putArray("puppets");
-                object.put("version", StageplayDocument.VERSION);
-            }
-            if (sourceVersion <= 4) {
-                migrateSet((ObjectNode) object.get("set"));
-                for (var change : object.withArray("sceneChanges")) migrateSet((ObjectNode) change.get("set"));
-                for (var key : object.withArray("camera")) {
-                    if (key.has("follow")) throw new IOException("Legacy scenes cannot contain camera following");
-                    ((ObjectNode) key).set("follow", JSON.valueToTree(StageplayDocument.CameraFollow.none()));
-                }
-                for (var track : object.withArray("puppets")) for (var command : track.withArray("commands")) {
-                    var cue = (ObjectNode) command;
-                    if (cue.has("target") || cue.has("condition") || cue.has("timeoutFrames"))
-                        throw new IOException("Legacy scenes cannot contain live intents");
-                    cue.set("target", JSON.valueToTree(StageplayDocument.ObjectTarget.none()));
-                    cue.put("condition", "NONE").put("timeoutFrames", 0);
-                }
-                object.put("version", StageplayDocument.VERSION);
-            }
             return JSON.treeToValue(object, StageplayDocument.class);
         } catch (IllegalArgumentException error) {
             throw new IOException("Invalid Stageplay document", error);
         }
-    }
-
-    private static void migrateSet(ObjectNode set) throws IOException {
-        if (set.has("worldPolicy")) throw new IOException("Legacy scenes cannot contain worldPolicy");
-        set.put("worldPolicy", "TERRAIN_ONLY");
     }
 
     private static ObjectMapper createMapper() {

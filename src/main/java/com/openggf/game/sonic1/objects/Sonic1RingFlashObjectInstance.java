@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -15,7 +16,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -36,6 +36,19 @@ import java.util.logging.Logger;
  * Art: Nem_BigFlash at ArtTile_Giant_Ring_Flash ($462), palette line 1.
  */
 public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setNativeSlotPresent(true);
+        }
+        visualControlOwners.clear();
+    }
+
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1RingFlashObjectInstance.class.getName());
 
@@ -176,7 +189,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         // slot by suppressing movement and touch processing from this point.
         if (player != null) {
             player.setNativeSlotPresent(false);
-            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         }
 
         // v_endcard is a fixed singleton slot in the ROM. A glitched/fast route

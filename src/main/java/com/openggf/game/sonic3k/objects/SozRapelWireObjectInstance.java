@@ -158,6 +158,17 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
             xFixed=spawn.x()<<16;yFixed=(spawn.y()+(index-1)*16)<<16;
             previousX=spawn.x();previousY=spawn.y(); frame=index==17?0x21:0;
         }
+        @Override
+        public void releasePlayersForVisualDirection() {
+            for (var entity : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (entity instanceof AbstractPlayableSprite player) {
+                    int slot = players.slot(player);
+                    if (players.flag(slot, 0)) release(player, slot);
+                }
+            }
+        }
+
         @Override public void update(int vIntRunCount,PlayableEntity leader) {
             if(owner==null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             int oldX=getX(),oldY=getY();

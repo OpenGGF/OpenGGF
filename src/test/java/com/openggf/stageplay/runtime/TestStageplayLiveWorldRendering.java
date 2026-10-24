@@ -65,14 +65,19 @@ class TestStageplayLiveWorldRendering {
                 for(var actor:frame.actors()) {
                     if(!actor.visible()) continue;
                     int changed=0;
-                    int x=(int)Math.round(actor.x()-frame.camera().x()),y=(int)Math.round(actor.y()-frame.camera().y());
+                    // Probe the composed film, whose camera scales world offsets.
+                    // The air-traffic fixture includes an animated fractional pull-out.
+                    double zoom=frame.camera().zoom();
+                    int x=(int)Math.round((actor.x()-frame.camera().x())*zoom),
+                            y=(int)Math.round((actor.y()-frame.camera().y())*zoom);
                     assertTrue(x>=20 && x<300 && y>=20 && y<204,
                             "Followed actor must be in picture: "+actor.actorId()+" at "+x+","+y);
                     for(int yy=Math.max(0,y-24);yy<Math.min(224,y+24);yy++) for(int xx=Math.max(0,x-24);xx<Math.min(320,x+24);xx++) {
                         int at=((223-yy)*320+xx)*4;
                         if(shown[at]!=hidden[at] || shown[at+1]!=hidden[at+1] || shown[at+2]!=hidden[at+2]) changed++;
                     }
-                    assertTrue(changed>40,"Native body pixels at "+actor.actorId()+"; changed="+changed);
+                    assertTrue(changed>40,"Native body pixels at "+actor.actorId()+"; changed="+changed
+                            +"; film centre="+x+","+y+"; zoom="+zoom);
                 }
                 assertSame(frame,world.resolve(document,StageplayTimeline.sample(document,atFrame)),"Drawing cannot tick the world");
             }

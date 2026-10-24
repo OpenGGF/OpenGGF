@@ -112,6 +112,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : playerStates.entrySet()) if (entry.getValue().state != STATE_EMPTY)
+            releasePlayer(entry.getKey(), entry.getValue());
+    }
+
+    @Override
     public LauncherSpringObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new LauncherSpringObjectInstance(ctx.spawn(), "LauncherSpring");
     }

@@ -93,6 +93,9 @@ public class SwScrlHpz extends SwScrlS3kDefault {
      */
     private short foregroundVscroll;
 
+    private boolean presentationFarFraming;
+    private int presentationShake;
+
     private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
     private static final int MAX_BG_PERIOD_WIDTH = 8192;
     private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
@@ -115,17 +118,19 @@ public class SwScrlHpz extends SwScrlS3kDefault {
 
         short fgScroll = negWord(cameraX);
         boolean farFraming = isFarFraming();
+        presentationFarFraming = farFraming;
         int xOffset = farFraming ? FAR_X_OFFSET : NEAR_X_OFFSET;
         int yOffset = farFraming ? FAR_Y_OFFSET : NEAR_Y_OFFSET;
 
         // HPZS_ScreenEvent: Camera_Y_pos_copy = Camera_Y_pos + Screen_shake_offset.
         int screenShakeOffset = screenShakeOffset();
+        presentationShake = screenShakeOffset;
         int cameraYCopy = (short) (cameraY + screenShakeOffset);
         foregroundVscroll = (short) cameraYCopy;
 
         short bgY = backgroundY(cameraYCopy, screenShakeOffset, yOffset);
         composer.setVscrollFactorBG(bgY);
-        buildHScrollTable(cameraX, xOffset);
+        buildHScrollTable(hScrollTable, cameraX, xOffset);
 
         DeformationPlan.applyTableBands(
                 composer,
@@ -221,7 +226,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
      * ({@code add.w d4,d0}), so the background shakes 1:1 with the foreground
      * instead of at 3/16 amplitude.
      */
-    private short backgroundY(int cameraYCopy, int screenShakeOffset, int yOffset) {
+    private static short backgroundY(int cameraYCopy, int screenShakeOffset, int yOffset) {
         int scaled = (((short) (cameraYCopy - screenShakeOffset + yOffset)) << 16) >> 4;
         return (short) (((scaled * 3) >> 16) + screenShakeOffset);
     }
@@ -232,7 +237,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
      * descending 3/4-to-1/4 gradient in words 13 down to 5 with word 2 mirroring
      * word 13.
      */
-    private void buildHScrollTable(int cameraX, int xOffset) {
+    private static void buildHScrollTable(ScrollValueTable hScrollTable, int cameraX, int xOffset) {
         hScrollTable.clear();
 
         // ROM: move.w (Camera_X_pos_copy).w,d0 / sub.w d2,d0 / swap d0 / clr.w d0
@@ -256,4 +261,27 @@ public class SwScrlHpz extends SwScrlS3kDefault {
         // ROM: move.w (HScroll_table+$01A).w,(HScroll_table+$004).w
         hScrollTable.set(GRADIENT_MIRROR_INDEX, hScrollTable.get(GRADIENT_TOP_INDEX));
     }
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        if (context.act() == 0) return super.captureProjection(context);
+        int xOffset = presentationFarFraming ? FAR_X_OFFSET : NEAR_X_OFFSET;
+        int yOffset = presentationFarFraming ? FAR_Y_OFFSET : NEAR_Y_OFFSET;
+        int shake = presentationShake;
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            var table = ScrollValueTable.ofLength(GRADIENT_TOP_INDEX + 1);
+            short bgY = backgroundY((short) (view.cameraY() + shake), shake, yOffset);
+            output.setVscrollFactorBG(bgY);
+            buildHScrollTable(table, view.cameraX(), xOffset);
+            DeformationPlan.applyTableBands(output, bgY, negWord(view.cameraX()), table,
+                    HPZ_BG_DEFORM, DEFORM_TABLE_START_INDEX, NEGATE_WORD);
+            int[] words = output.packedScrollWords();
+            return new com.openggf.level.scroll.ScrollProjection(words, null, null, null,
+                    (short) (context.nativeOutput().foregroundY() + view.cameraY() - context.cameraY()),
+                    bgY, context.nativeOutput().backgroundX(), requiredBgPeriodWidth(words, view.width()),
+                    context.nativeOutput().shakeX(), context.nativeOutput().shakeY(), context.nativeOutput().tilemapMode());
+        };
+    }
+
 }

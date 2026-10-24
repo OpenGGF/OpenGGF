@@ -3637,3 +3637,16 @@ Never test signed-negativity of S3's packed tier; companion bytes can legitimate
 set its sign. Native ending bindings also need a constructor-RAM baseline for
 fresh re-entry from an inactive snapshot, rather than a cached future scene.
 See the dated S3K completion record's matching-controller qualification.
+
+## Verify repeated animation frames against the ROM (2026-10-22)
+
+Zero is a valid mapping frame, so one extra repeated zero changes native timing
+even when a hardcoded table looks visually equivalent. The Stageplay complete-cast
+audit of `bb9e30002` found three such differences in EHZ's existing tables:
+`Ani_obj56_a` animations 1/2 (docs/s2disasm/s2.asm:64164-64177) and
+`Ani_obj56_c` animation 4 (docs/s2disasm/s2.asm:64212-64227). Compare parsed delay, every frame,
+terminator and parameter against ROM bytes. Do not silently replace native Free
+timing while adding a visual-only consumer; record the discrepancy and keep its
+correction separately scoped. See the
+[Stageplay plan](../../../docs/architecture/plans/2026-10-21-stageplay-live-world-plan.md)
+and the [bug ledger](../../../docs/status/known-bugs.md#s2-ehz-boss-animation-tables-contain-three-extra-frames).

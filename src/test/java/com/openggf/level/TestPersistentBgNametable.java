@@ -68,6 +68,91 @@ class TestPersistentBgNametable {
     }
 
     @Test
+    void cinematicForegroundRingUsesPrivateHistoryAndFrozenPolicyForEnteringColumns() throws Exception {
+        var wrapping = org.mockito.Mockito.mock(ZoneFeatureProvider.class);
+        org.mockito.Mockito.when(wrapping.foregroundWrapsHorizontally()).thenReturn(true);
+        var nativeTiles = newManager();
+        nativeTiles.setForegroundRingCamera(128, 320);
+        nativeTiles.ensureForegroundTilemapData(blockLookup, wrapping, 0, null, false);
+        byte[] before = nativeTiles.getForegroundTilemapData().clone();
+        var left = LevelTilemapManager.class.getDeclaredField("foregroundRingLastLeftCol");
+        left.setAccessible(true);
+        int nativeLeft = left.getInt(nativeTiles);
+        var privateTiles = nativeTiles.cinematicBackgroundCopy();
+        privateTiles.setCinematicBackgroundParameters(new BackgroundBuildParameters(
+                false, true, false, false, false, false, -1, false,
+                new com.openggf.game.internal.BackgroundBuildProjection(0, null, ignored -> 0)));
+        var hostile = org.mockito.Mockito.mock(ZoneFeatureProvider.class, invocation -> {
+            throw new AssertionError("Directed foreground consulted native provider: " + invocation.getMethod().getName());
+        });
+        privateTiles.setForegroundRingCamera(448, 350);
+        privateTiles.ensureForegroundTilemapData(blockLookup, hostile, 0, null, false);
+        assertNotSame(nativeTiles.getForegroundTilemapData(), privateTiles.getForegroundTilemapData());
+        assertEquals(448, left.getInt(privateTiles));
+        assertEquals(nativeLeft, left.getInt(nativeTiles));
+        assertArrayEquals(before, nativeTiles.getForegroundTilemapData());
+        org.mockito.Mockito.verifyNoInteractions(hostile);
+    }
+
+    @Test
+    void cinematicRingRetainsNativeEventCellsAndFillsPrivateEnteringStrips() {
+        LevelTilemapManager nativeTiles = newManager();
+        ensurePersistent(nativeTiles, 0, 0);
+        // Model an event-authored descriptor at world tile (10,10), inside both windows.
+        byte[] nativeCells = nativeTiles.getBackgroundTilemapData();
+        int retainedCell = (10 * RING_WIDTH_TILES + 10) * 4;
+        nativeCells[retainedCell] = (byte) 0xab;
+        nativeCells[retainedCell + 1] = (byte) 0xe1;
+        byte[] before = nativeCells.clone();
+        var privateTiles = nativeTiles.cinematicBackgroundCopy();
+        assertNotSame(nativeCells, privateTiles.getBackgroundTilemapData());
+        assertEquals(nativeTiles.getPersistentBgOriginXTiles(), privateTiles.getPersistentBgOriginXTiles());
+        assertEquals(nativeTiles.getPersistentBgOriginYTiles(), privateTiles.getPersistentBgOriginYTiles());
+        ensurePersistent(privateTiles, 16, 16);
+        assertEquals((byte) 0xab, privateTiles.getPersistentBgRingCopy()[retainedCell]);
+        assertEquals((byte) 0xe1, privateTiles.getPersistentBgRingCopy()[retainedCell + 1]);
+        assertDescriptorAtLogical(privateTiles, 63, 31, 16 + 63 * 8, 31 * 8);
+        assertArrayEquals(before, nativeTiles.getPersistentBgRingCopy());
+        assertEquals(0, nativeTiles.getPersistentBgAlignedX());
+        assertEquals(0, nativeTiles.getPersistentBgAlignedY());
+        // A larger directed jump still retains native ownership and uses normal layout strips.
+        ensurePersistent(privateTiles, 640, 272);
+        assertRingMatchesSourceWindow(privateTiles, 640, 256);
+        assertArrayEquals(before, nativeTiles.getPersistentBgRingCopy());
+        assertEquals(1, nativeTiles.persistentBgFullPublicationCount);
+        assertEquals(0, nativeTiles.persistentBgIncrementalPublicationCount);
+    }
+
+    @Test
+    void privateEnteringStripsUseFrozenBuildPolicyWithoutCallingTheLiveProvider() {
+        var nativeTiles = newManager();
+        ensurePersistent(nativeTiles, 0, 0);
+        var privateTiles = nativeTiles.cinematicBackgroundCopy();
+        privateTiles.setCinematicBackgroundParameters(new BackgroundBuildParameters(
+                true, false, false, false, false, false, -1, false,
+                new com.openggf.game.internal.BackgroundBuildProjection(0, null, ignored -> 0)));
+        var liveProvider = org.mockito.Mockito.mock(ZoneFeatureProvider.class, invocation -> {
+            throw new AssertionError("Live provider called during directed residency: " + invocation.getMethod().getName());
+        });
+        privateTiles.ensureBackgroundTilemapData(blockLookup, liveProvider, 0, null,
+                BgTilemapUpdateMode.PERSISTENT_NAMETABLE_64X32, 16, 16, false);
+        org.mockito.Mockito.verifyNoInteractions(liveProvider);
+        assertRingMatchesSourceWindow(privateTiles, 16, 0);
+    }
+
+    @Test
+    void cinematicCopyKeepsRetainedPhysicalDescriptorImageWithoutSharingWritableStorage() {
+        LevelTilemapManager nativeTiles = newManager();
+        byte[] eventImage = new byte[64 * 32 * 4];
+        for (int index = 0; index < eventImage.length; index++) eventImage[index] = (byte) (index * 13);
+        nativeTiles.restoreRetainedBackgroundTilemapData(eventImage);
+        var privateTiles = nativeTiles.cinematicBackgroundCopy();
+        assertArrayEquals(eventImage, privateTiles.getBackgroundTilemapData());
+        privateTiles.getBackgroundTilemapData()[0] ^= 0x7f;
+        assertArrayEquals(eventImage, nativeTiles.getBackgroundTilemapData());
+    }
+
+    @Test
     void defaultHandlerAndMissingHandlerUseStaticWindowMode() {
         assertEquals(BgTilemapUpdateMode.STATIC_WINDOW, new TestScrollHandler(false).getBgTilemapUpdateMode());
         assertEquals(BgTilemapUpdateMode.STATIC_WINDOW, new ParallaxManager().getBgTilemapUpdateMode());

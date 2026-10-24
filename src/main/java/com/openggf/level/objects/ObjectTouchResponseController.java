@@ -140,6 +140,7 @@ final class ObjectTouchResponseController {
         }
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : objectManager.initialCollisionResponseList().playerReadView()) {
+            if (ObjectDirectionAccess.suspended(objectManager, instance)) continue;
             if (policies != null && !policies.permitsContact(instance, player)) continue;
             if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)) {
                 continue;
@@ -314,6 +315,7 @@ final class ObjectTouchResponseController {
         // multiple slots to resolve.
         Map<Integer, ObjectInstance> bySlot = new java.util.HashMap<>();
         for (ObjectInstance inst : objectManager.getActiveObjects()) {
+            if (ObjectDirectionAccess.suspended(objectManager, inst)) continue;
             if (inst instanceof AbstractObjectInstance aoi
                     && objectCallbacks.call(inst, aoi::getSlotIndex) >= 0) {
                 bySlot.put(objectCallbacks.call(inst, aoi::getSlotIndex), inst);
@@ -519,6 +521,7 @@ final class ObjectTouchResponseController {
 
         var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : touchObjects) {
+            if (ObjectDirectionAccess.suspended(objectManager, instance)) continue;
             if (policies != null && !policies.permitsContact(instance, player)) continue;
             TouchResponseProvider provider = (TouchResponseProvider) instance;
             if (objectCallbacks.call(instance, instance::isSkipTouchThisFrame)) {

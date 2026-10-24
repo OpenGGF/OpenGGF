@@ -1,6 +1,9 @@
 package com.openggf.game.sonic1.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
 
@@ -23,7 +26,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  *   <li>The 32-entry scroll buffer is sampled by BG Y in 16-line blocks</li>
  * </ul>
  */
-public class SwScrlMz extends AbstractZoneScrollHandler {
+public class SwScrlMz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private static final int LINES_PER_GROUP = 16;
     private static final int CLOUD_ENTRY_COUNT = 5;
@@ -93,8 +96,8 @@ public class SwScrlMz extends AbstractZoneScrollHandler {
         }
         composer.setVscrollFactorBG((short) bgY);
 
-        buildScrollBuffer(cameraX, bg3X, bg2X, bg1X);
-        writeHScrollBuffer(horizScrollBuf, cameraX, bgY - 0x200);
+        buildScrollBuffer(scrollBuffer, cameraX, bg3X, bg2X, bg1X);
+        writeHScrollBuffer(composer, scrollBuffer, cameraX, bgY - 0x200);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -102,7 +105,7 @@ public class SwScrlMz extends AbstractZoneScrollHandler {
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    private void buildScrollBuffer(int cameraX, int bg3X, int bg2X, int bg1X) {
+    private static void buildScrollBuffer(short[] scrollBuffer, int cameraX, int bg3X, int bg2X, int bg1X) {
         int d2 = negWord(cameraX);
         int idx = 0;
 
@@ -135,7 +138,7 @@ public class SwScrlMz extends AbstractZoneScrollHandler {
         }
     }
 
-    private void writeHScrollBuffer(int[] horizScrollBuf, int cameraX, int bgYRelativeToBase) {
+    private static void writeHScrollBuffer(ScrollEffectComposer composer, short[] scrollBuffer, int cameraX, int bgYRelativeToBase) {
         short fgScroll = negWord(cameraX);
 
         int startWordOffset = bgYRelativeToBase;
@@ -149,28 +152,50 @@ public class SwScrlMz extends AbstractZoneScrollHandler {
         int lineIndex = 0;
 
         if (subAlign != 0 && scrollBufferIndex < SCROLL_BUFFER_SIZE) {
-            lineIndex = fillLines(lineIndex, LINES_PER_GROUP - subAlign, fgScroll,
+            lineIndex = fillLines(composer, lineIndex, LINES_PER_GROUP - subAlign, fgScroll,
                     scrollBuffer[scrollBufferIndex++]);
         }
 
-        while (lineIndex < VISIBLE_LINES && scrollBufferIndex < SCROLL_BUFFER_SIZE) {
-            lineIndex = fillLines(lineIndex, LINES_PER_GROUP, fgScroll,
+        while (lineIndex < composer.visibleLineCount() && scrollBufferIndex < SCROLL_BUFFER_SIZE) {
+            lineIndex = fillLines(composer, lineIndex, LINES_PER_GROUP, fgScroll,
                     scrollBuffer[scrollBufferIndex++]);
         }
 
         short fallback = scrollBuffer[SCROLL_BUFFER_SIZE - 1];
-        while (lineIndex < VISIBLE_LINES) {
-            lineIndex = fillLines(lineIndex, LINES_PER_GROUP, fgScroll, fallback);
+        while (lineIndex < composer.visibleLineCount()) {
+            lineIndex = fillLines(composer, lineIndex, LINES_PER_GROUP, fgScroll, fallback);
         }
     }
 
-    private int fillLines(int lineStart, int lineCount, short fgScroll, short bgScroll) {
-        int writeCount = Math.min(lineCount, VISIBLE_LINES - lineStart);
+    private static int fillLines(ScrollEffectComposer composer, int lineStart, int lineCount, short fgScroll, short bgScroll) {
+        int writeCount = Math.min(lineCount, composer.visibleLineCount() - lineStart);
         if (writeCount <= 0) {
             return lineStart;
         }
         composer.fillPackedScrollWords(lineStart, writeCount, fgScroll, bgScroll);
         return lineStart + writeCount;
+    }
+
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long x1 = bg1XPos, x2 = bg2XPos, x3 = bg3XPos;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX();
+            int bg1 = (int) ((x1 + (long) dx * 49152) >> 16);
+            int bg2 = (int) ((x2 + (long) dx * 32768) >> 16);
+            int bg3 = (int) ((x3 + (long) dx * 16384) >> 16);
+            int bgY = 0x200;
+            int offset = view.cameraY() - 0x1C8;
+            if (offset >= 0) bgY += (offset * 3) >> 2;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            short[] bands = new short[SCROLL_BUFFER_SIZE];
+            buildScrollBuffer(bands, view.cameraX(), bg3, bg2, bg1);
+            writeHScrollBuffer(output, bands, view.cameraX(), bgY - 0x200);
+            return Sonic1ProjectionOutput.finish(context, view, output, context.nativeOutput().backgroundX(),
+                    context.nativeOutput().backgroundPeriod());
+        };
     }
 
 }

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -38,7 +39,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.physics.Direction;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -55,6 +55,18 @@ import java.util.Map;
 public final class IczEndBossInstance extends AbstractBossInstance
         implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
         MultiBucketRenderable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_DESCEND = 0x02;
     private static final int ROUTINE_SWING = 0x04;
@@ -1060,7 +1072,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
             services().objectManager().addRewindableAuxiliaryDynamicObject(block);
         }
 
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(player));
         player.setAir(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);

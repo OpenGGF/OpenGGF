@@ -928,6 +928,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
          * after {@code Player_AnglePos} returned him grounded. See
          * docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md.
          */
+        @Override
+        public void releasePlayersForVisualDirection() {
+            if (releaseTargetPlayer != null) {
+                releaseTargetPlayer.setAir(true);
+                ObjectControlState.none().applyTo(releaseTargetPlayer);
+                capturedPlayer = null;
+                releaseTargetPlayer = null;
+            }
+        }
+
         private void checkDeleteAndReleaseCapturedPlayer() {
             int cameraX = cameraLeft();
             int cameraY = cameraTop();
@@ -938,12 +948,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            if (releaseTargetPlayer != null) {
-                releaseTargetPlayer.setAir(true);
-                ObjectControlState.none().applyTo(releaseTargetPlayer);
-                capturedPlayer = null;
-                releaseTargetPlayer = null;
-            }
+            releasePlayersForVisualDirection();
             setDestroyedByOffscreen();
         }
 

@@ -104,6 +104,11 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
      * the freed-slot despawn at CNZ1 trace F2262.
      */
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entry : riders.entrySet()) if (entry.getValue().latched) release(entry.getKey(), entry.getValue(), 30);
+    }
+
+    @Override
     public void onUnload() {
         ObjectLifetimeOps.destroyLatched(this);
     }

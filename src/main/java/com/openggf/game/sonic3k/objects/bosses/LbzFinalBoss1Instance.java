@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindTransient;
@@ -52,7 +53,6 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +69,23 @@ import java.util.logging.Logger;
  */
 public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.clearLogicalInputState();
+            player.setObjectMappingFrameControl(false);
+            if (player.getCpuController() != null) player.getCpuController().setController2SignedLocked(false);
+        }
+        visualControlOwners.clear();
+    }
+
     private static final Logger LOG = Logger.getLogger(LbzFinalBoss1Instance.class.getName());
 
     private static final String PALETTE_OWNER = "s3k.lbz.finalBoss1";
@@ -699,7 +716,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 continue;
             }
             if (candidate instanceof AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 if (sprite.getCpuController() != null) {
                     sprite.getCpuController().setController2SignedLocked(true);
                 }
@@ -717,7 +734,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 if (restorePlayerControl) {
                     restorePlayableForLaunch(sprite);
                 }
-                sprite.setControlLocked(true);
+                visualControlOwners.acquire(sprite).setControlLocked(true);
                 if (sprite.getCpuController() != null) {
                     // Restore_PlayerControl2 clears the preceding $FF lock.
                     // loc_863C0 then installs a positive lock, so Tails CPU
@@ -757,8 +774,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void applyEndingPose(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
-            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
-            sprite.setControlLocked(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
+            visualControlOwners.acquire(sprite).setControlLocked(true);
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);
             sprite.setGSpeed((short) 0);
@@ -821,12 +838,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         if (sprite.getAir()) {
             return;
         }
-        ObjectControlState.none().applyTo(sprite);
-        sprite.setControlLocked(true);
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
+        visualControlOwners.acquire(sprite).setControlLocked(true);
         int targetX = cameraX() + 0xA0;
         int dx = targetX - (sprite.getCentreX() & 0xFFFF);
         if (Math.abs(dx) >= 4) {
-            sprite.setForcedInputMask(dx > 0
+            visualControlOwners.acquire(sprite).setForcedInputMask(dx > 0
                     ? AbstractPlayableSprite.INPUT_RIGHT
                     : AbstractPlayableSprite.INPUT_LEFT);
             return;
@@ -837,7 +854,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setDirection(Direction.RIGHT);
-        sprite.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+        visualControlOwners.acquire(sprite).setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
         spawnEngineFlamesOnce();
         finalePhase = FinalePhase.WAIT_LAUNCH_MILESTONE_A;
     }
@@ -875,13 +892,13 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private void restorePlayerForLaunch(PlayableEntity player) {
         if (player instanceof AbstractPlayableSprite sprite) {
             restorePlayableForLaunch(sprite);
-            sprite.setControlLocked(true);
+            visualControlOwners.acquire(sprite).setControlLocked(true);
             sprite.setForcedInputMask(0);
         }
     }
 
-    private static void restorePlayableForLaunch(AbstractPlayableSprite sprite) {
-        ObjectControlState.none().applyTo(sprite);
+    private void restorePlayableForLaunch(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
         sprite.setAir(false);
         sprite.setForcedAnimationId(-1);
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
@@ -967,8 +984,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         if (sprite == null) {
             return;
         }
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
-        sprite.setControlLocked(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(visualControlOwners.acquire(sprite));
+        visualControlOwners.acquire(sprite).setControlLocked(true);
         // loc_72C68/sub_72C8E only write control and animation counters.
         // FixBugs=0 clears the boss anim byte, not P2's; P2 is cleared by
         // loc_72C9E on the next dispatch. The fixed branch clears P2 here.

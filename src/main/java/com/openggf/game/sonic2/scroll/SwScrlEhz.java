@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 import static com.openggf.level.scroll.M68KMath.*;
@@ -34,7 +37,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * The fixBugs=1 branch appends the four `move.w` writes that Knuckles in Sonic 2 added
  * to fill lines 222 and 223. See the partial arraycopy at the end of update().
  */
-public class SwScrlEhz extends AbstractZoneScrollHandler {
+public class SwScrlEhz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     private final ParallaxTables tables;
     private final boolean writesFinalTwoLines;
@@ -59,6 +62,22 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
+        int lineIndex = compose(composer, cameraX, frameCounter, writesFinalTwoLines, tables::getRippleSigned);
+
+        // ==================== Bug Reproduction ====================
+        // Original EHZ only writes 222 lines, leaving last 2 uninitialized.
+        // To preserve byte-identical behavior with the prior loop (lines 222/223
+        // retain whatever was in horizScrollBuf coming in), copy only the
+        // composed entries that correspond to lines actually written.
+        int[] composed = composer.packedScrollWordsView();
+        System.arraycopy(composed, 0, horizScrollBuf, 0, lineIndex);
+        vscrollFactorBG = composer.getVscrollFactorBG();
+        minScrollOffset = composer.getMinScrollOffset();
+        maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    private static int compose(ScrollEffectComposer composer, int cameraX, int frameCounter,
+                               boolean writesFinalTwoLines, java.util.function.IntUnaryOperator ripple) {
         // d2 = -Camera_X_pos (FG scroll, constant for all lines)
         short d2 = negWord(cameraX);
 
@@ -72,18 +91,18 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
 
         // ==================== Band 1: Sky (22 lines) ====================
         composer.fillPackedScrollWords(lineIndex, 22, fgScroll, (short) 0);
-        lineIndex = Math.min(VISIBLE_LINES, lineIndex + 22);
+        lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 22);
 
         // ==================== Band 2: Far Clouds (58 lines) ====================
         composer.fillPackedScrollWords(lineIndex, 58, fgScroll, asrWord(d2, 6));
-        lineIndex = Math.min(VISIBLE_LINES, lineIndex + 58);
+        lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 58);
 
         // ==================== Band 3: Water Surface (21 lines) ====================
         // Water surface with ripple effect using SwScrl_RippleData
         // Reference: s2.asm lines 15285-15302
         {
             short baseBgScroll = asrWord(d2, 6);
-            int limit = Math.min(VISIBLE_LINES, lineIndex + 21);
+            int limit = Math.min(composer.visibleLineCount(), lineIndex + 21);
 
             // Ripple counter decrements every 8 frames (matches subq.w #1,(TempArray_LayerDef)).
             // Derived from the frame counter (= -floor(frameCounter/8)) rather than a
@@ -93,7 +112,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             int rippleIndex = ripplePhase & 0x1F;
 
             for (; lineIndex < limit; lineIndex++) {
-                int wobble = tables.getRippleSigned(rippleIndex & 0x1F);
+                int wobble = ripple.applyAsInt(rippleIndex & 0x1F);
                 short bgScroll = (short) (baseBgScroll + wobble);
                 composer.writePackedScrollWord(lineIndex, fgScroll, bgScroll);
                 rippleIndex++;
@@ -102,11 +121,11 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
 
         // ==================== Band 4: Gap (11 lines) ====================
         composer.fillPackedScrollWords(lineIndex, 11, fgScroll, (short) 0);
-        lineIndex = Math.min(VISIBLE_LINES, lineIndex + 11);
+        lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 11);
 
         // ==================== Band 5: Near Hills (16 lines) ====================
         composer.fillPackedScrollWords(lineIndex, 16, fgScroll, asrWord(d2, 4));
-        lineIndex = Math.min(VISIBLE_LINES, lineIndex + 16);
+        lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 16);
 
         // ==================== Band 6: Nearer Hills (16 lines) ====================
         // BG = (d2 >> 4) * 1.5, FG = d2
@@ -115,7 +134,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             short d3 = asrWord(d0, 1);
             short bgScroll = (short) (d0 + d3);
             composer.fillPackedScrollWords(lineIndex, 16, fgScroll, bgScroll);
-            lineIndex = Math.min(VISIBLE_LINES, lineIndex + 16);
+            lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 16);
         }
 
         // ==================== Bottom Gradient Region ====================
@@ -152,7 +171,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
 
             // ===== 15-line band: 1 line per iteration (s2.asm lines 15347-15353) =====
             {
-                int limit = Math.min(VISIBLE_LINES, lineIndex + 15);
+                int limit = Math.min(composer.visibleLineCount(), lineIndex + 15);
                 for (; lineIndex < limit; lineIndex++) {
                     short bgScroll = (short) (d3 >> 16); // integer part from high word
                     composer.writePackedScrollWord(lineIndex, fgScroll, bgScroll);
@@ -163,7 +182,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             // ===== 18-line band: 2 lines per iteration (s2.asm lines 15356-15365) =====
             // Pairs of lines share the same BG value (stairstep effect)
             {
-                int limit = Math.min(VISIBLE_LINES, lineIndex + 18);
+                int limit = Math.min(composer.visibleLineCount(), lineIndex + 18);
                 for (int pair = 0; pair < 9 && lineIndex < limit; pair++) {
                     short bgScroll = (short) (d3 >> 16);
                     composer.writePackedScrollWord(lineIndex++, fgScroll, bgScroll);
@@ -178,7 +197,7 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             // ===== 45-line band: 3 lines per iteration (s2.asm lines 15368-15380) =====
             // Triplets of lines share the same BG value
             {
-                int limit = Math.min(VISIBLE_LINES, lineIndex + 45);
+                int limit = Math.min(composer.visibleLineCount(), lineIndex + 45);
                 for (int trip = 0; trip < 15 && lineIndex < limit; trip++) {
                     short bgScroll = (short) (d3 >> 16);
                     composer.writePackedScrollWord(lineIndex++, fgScroll, bgScroll);
@@ -197,20 +216,31 @@ public class SwScrlEhz extends AbstractZoneScrollHandler {
             // the final three increments, rather than repeating the last triplet.
             if (writesFinalTwoLines) {
                 composer.fillPackedScrollWords(lineIndex, 2, fgScroll, (short) (d3 >> 16));
-                lineIndex = Math.min(VISIBLE_LINES, lineIndex + 2);
+                lineIndex = Math.min(composer.visibleLineCount(), lineIndex + 2);
             }
         }
 
-        // ==================== Bug Reproduction ====================
-        // Original EHZ only writes 222 lines, leaving last 2 uninitialized.
-        // To preserve byte-identical behavior with the prior loop (lines 222/223
-        // retain whatever was in horizScrollBuf coming in), copy only the
-        // composed entries that correspond to lines actually written.
-        int[] composed = composer.packedScrollWordsView();
-        System.arraycopy(composed, 0, horizScrollBuf, 0, lineIndex);
-        vscrollFactorBG = composer.getVscrollFactorBG();
-        minScrollOffset = composer.getMinScrollOffset();
-        maxScrollOffset = composer.getMaxScrollOffset();
+        return lineIndex;
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        var ripple = Sonic2ProjectionOutput.captureRipple(tables);
+        boolean finalLines = writesFinalTwoLines;
+        return view -> {
+            var output = new ScrollEffectComposer(view.height());
+            int written = compose(output, view.cameraX(), context.frameCounter(), finalLines, ripple);
+            // ROM only defines the native 222/224 scanlines; retain that exact native
+            // unwritten tail and continue the final defined band in additional raster rows.
+            int[] nativeWords = context.nativeOutput().horizontal();
+            for (int line = written; line < Math.min(224, view.height()); line++) {
+                int packed = nativeWords[line];
+                output.writePackedScrollWord(line, (short) ((packed >>> 16) - view.cameraX() + context.cameraX()), (short) packed);
+            }
+            int tail = output.packedScrollWordAt(Math.min(Math.max(written - 1, 0), view.height() - 1));
+            for (int line = Math.max(224, written); line < view.height(); line++) output.writePackedScrollWord(line, tail);
+            return Sonic2ProjectionOutput.finish(context, view, output);
+    };
     }
 
 }

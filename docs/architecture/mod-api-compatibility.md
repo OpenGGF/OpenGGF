@@ -5,16 +5,14 @@ carried by `develop` and `next` after the 0.6 release rollover. No Mod API basel
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
 
-Stageplay keeps the mutable candidate at 0.7.0. Portable document version five
-adds opt-in LIVE worlds, stable ROM-placement targets, bounded waits, native
-ability intents, fixed-scale camera following and sampled native state/events.
-Screenplay version three compiles that contract. Versions one through four retain
-their terrain-only migration; prior record constructors remain available, including
-version-four canonical callers. Puppet/Poser, dialogue/reveal sampling, camera effects
-and accessory poses remain supported. LIVE editor previews use an isolated native
-worker; these ownership/process details are outside the creator API. The normalized
-candidate pin changes with the typed document/timeline surface; published baselines,
-API version and release topology do not.
+Stageplay uses the engine's unpublished 0.7.0 candidate. Canonical documents
+(version seven) and screenplays (version six) accept only their current shape;
+there is no published Stageplay format to migrate. Every set uses the same native
+world, camera, donor cast, activation and hand-back behavior. A terrain-only shot
+uses an ordinary `CLEAR_OBJECTS` command; rings retain their separate native owner.
+`WorldPolicy` contains only `LIVE`. The mutable candidate signature pin reflects
+the current format directly. Preview/export processes and ROM transport remain
+engine internals; publication state and branch topology are unchanged.
 
 Creator dynamic objects implement `ModRewindRecreatable` and receive
 `ObjectReconstructionContext`: captured spawn and typed payload, restore-time
@@ -342,9 +340,12 @@ java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
 The pre-commit and CI policy hooks require the candidate pin to be staged whenever a
 `@ModApi` source changes its declaration text: comments are ignored; interfaces,
 records, enums and annotation types compare every remaining line; classes compare
-annotations, type declarations and `public`/`protected` declarations. A body-only
-edit to an annotated class therefore commits without a pin change, and
-`TestModApiSignatureSurface` remains the exact check.
+annotations, type declarations and `public`/`protected` declarations. Nested types
+follow member visibility: a package-private or private nested class is
+implementation, while `public`/`protected` nested types and types implicitly public
+inside interfaces, records and enums still couple. A body-only edit to an annotated
+class, or moving a package-private nested helper out of it, therefore commits
+without a pin change, and `TestModApiSignatureSurface` remains the exact check.
 
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine
@@ -927,3 +928,35 @@ act and leader. The normalized mutable `0.7` pin and runtime candidate descripti
 are updated together. The release descriptor was reviewed and remains byte-identical
 at unpublished candidate `0.7.0`: ordinary signature regeneration must not edit
 its publication or branch policy. No published baseline changes.
+
+
+### Stageplay unified worlds (2026-10-22)
+
+The unpublished engine-aligned 0.7.0 candidate has one `LIVE` world policy.
+Populated and explicitly cleared sets share the native-world owner and all
+presentation, donor, activation and hand-back capabilities. Unsupported old
+schemas fail instead of selecting compatibility execution. The mutable `0.7`
+signature pin is regenerated in place. ROM transport, donor ownership and
+compositing helpers remain engine internals. No publication/version bump occurs.
+
+### Stageplay object directing (2026-10-22)
+
+The unpublished 0.7.0 candidate appends immutable `ObjectActor` and `WorldCommand`
+tracks to the Stageplay document. Object source kinds, Free/Puppet/Pose keys,
+visual move/stop commands and portable child-part frame selections are typed
+creator data. The prior root constructor and earlier overloads remain available;
+all current document copy helpers retain the appended tracks. Current screenplay
+v6 compiles canonical v7 directly; unsupported prior schemas are rejected.
+The mutable `0.7` pin is regenerated in place. Registry enumeration, visual graph
+capture, load suppression, palettes and object-manager direction ports stay outside
+annotated types. Descriptor and runtime API version remain candidate `0.7.0`.
+
+
+The unpublished 0.7 candidate now includes `StageplayDocument.RouteMotion` on
+Puppet commands and `CharacterDefinition.MovementAbility` declarations. Old Java
+convenience constructors retain ordinary native intent defaults and declare no
+new movement abilities. Canonical Stageplay v7 requires the new motion field;
+current screenplay v6 actions supply an explicit policy or their normal defaults.
+There is no serialized-format migration. The mutable 0.7 signature pin and runtime
+candidate description change together; API version/status and the release policy
+descriptor remain unchanged, as required for ordinary candidate regeneration.

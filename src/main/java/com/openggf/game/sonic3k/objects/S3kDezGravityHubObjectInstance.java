@@ -92,6 +92,13 @@ public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        var query = services().playerQuery();
+        if (query.mainPlayerOrNull() instanceof AbstractPlayableSprite player) releaseDirectedPlayer(player, playerOneState);
+        if (query.nativeP2OrNull() instanceof AbstractPlayableSprite player) releaseDirectedPlayer(player, playerTwoState);
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectServices objectServices = tryServices();
         AbstractPlayableSprite playerOne = asSprite(objectServices == null
@@ -209,8 +216,18 @@ public final class S3kDezGravityHubObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) EXIT_VELOCITIES[index][1]);
         // move.b #0,object_control(a1) (:95715): the player has control back while the hub
         // still owns the pose, which is why the mapping-frame hold stays until the reset.
-        ObjectControlState.none().applyTo(player);
+        releaseControl(player);
         state.state = STATE_LAUNCHED;
+    }
+
+    private void releaseControl(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+    }
+
+    private void releaseDirectedPlayer(AbstractPlayableSprite player, HubState state) {
+        if (state.state == 0) return;
+        releaseControl(player);
+        release(player, state);
     }
 
     /** {@code move.w #0,(a2)} (:95734): both bytes, state and pose counter. */

@@ -75,6 +75,11 @@ public final class LbzLoweringGrappleObjectInstance extends AbstractObjectInstan
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;

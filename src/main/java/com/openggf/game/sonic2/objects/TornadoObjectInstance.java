@@ -311,6 +311,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public TornadoObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         ObjectSpawn rewindSpawn = ctx.spawn();
         int rewindSubtype = rewindSpawn.subtype() & 0xFF;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -17,7 +18,6 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-
 import java.util.List;
 
 /**
@@ -48,6 +48,18 @@ import java.util.List;
  */
 public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    // Player-only native control tail; directing must not advance this controller's
+    // routine, timers, world flags, camera or level transition.
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            restoreControl(player);
+        }
+        visualControlOwners.clear();
+    }
+
 
     /** {@code move.w #(2*60)-1,$2E(a0)}. */
     public static final int HANDOVER_WAIT = (2 * 60) - 1;
@@ -143,8 +155,8 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
                         services().configuration()), services().currentAct())));
     }
 
-    private static void setEndingPose(AbstractPlayableSprite sprite) {
-        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+    private void setEndingPose(AbstractPlayableSprite sprite) {
+        ObjectControlState.nativeBit7FullControl().applyTo(visualControlOwners.acquire(sprite));
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
         sprite.setSpindash(false);
         sprite.setXSpeed((short) 0);
@@ -154,8 +166,8 @@ public final class SszMechaSonicActEndObjectInstance extends AbstractObjectInsta
         // FixBugs=0: status bits 5/6 are cleared on this object, not the player.
     }
 
-    private static void restoreControl(AbstractPlayableSprite sprite) {
-        ObjectControlState.none().applyTo(sprite);
+    private void restoreControl(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(visualControlOwners.relinquish(sprite));
         sprite.setAir(false);
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
         sprite.setAnimationFrameIndex(0);

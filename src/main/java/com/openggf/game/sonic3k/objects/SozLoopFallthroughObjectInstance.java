@@ -38,9 +38,7 @@ public final class SozLoopFallthroughObjectInstance extends AbstractObjectInstan
             NativePositionOps.writeYPosPreserveSubpixel(player, nativeY >> 16);
             player.setSubpixelRaw(player.getXSubpixelRaw(), nativeY & 0xFFFF);
             if ((short) (player.getCentreY() - ((spawn.subtype() & 0x7F) << 4)) >= (short) spawn.y()) {
-                participants.flag(slot, 0, false);
-                player.setOnObject(false);
-                ObjectControlState.none().applyTo(player);
+                releasePlayer(player, slot);
             }
         } else if (((player.getCentreX() - spawn.x() + 0x10) & 0xFFFF) < 0x20
                 && ((player.getCentreY() - spawn.y() + 0x10) & 0xFFFF) < 0x20
@@ -62,6 +60,22 @@ public final class SozLoopFallthroughObjectInstance extends AbstractObjectInstan
         if (participants.flag(slot, 0) && player.isOnObject()) {
             var manager = services().objectManager();
             if (manager != null) manager.markObjectSupportThisFrame(player);
+        }
+    }
+
+    // loc_40508: release the participant without advancing its flight or this routine.
+    private void releasePlayer(AbstractPlayableSprite player, int slot) {
+        participants.flag(slot, 0, false);
+        player.setOnObject(false);
+        ObjectControlState.none().applyTo(player);
+    }
+
+    @Override public void releasePlayersForVisualDirection() {
+        for (var entity : services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = participants.slot(player);
+                if (participants.flag(slot, 0)) releasePlayer(player, slot);
+            }
         }
     }
 

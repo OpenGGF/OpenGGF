@@ -1,6 +1,9 @@
 package com.openggf.game.sonic1.scroll;
 
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import static com.openggf.level.scroll.M68KMath.*;
 
@@ -9,7 +12,7 @@ import static com.openggf.level.scroll.M68KMath.*;
  * Final Zone uses Deform_SBZ2 and the REV01 BgScroll_SBZ initialization.
  * Each route owns a separate instance, including fractional camera state.
  */
-public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler {
+public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler implements ScrollProjectionSource {
 
     // Persistent BG camera (16.16 fixed point)
     private long bgXPos;
@@ -82,4 +85,19 @@ public final class UniformQuarterSpeedScroll extends AbstractZoneScrollHandler {
     public int getBgCameraX() {
         return (int) (bgXPos >> 16);
     }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long capturedX = bgXPos, capturedY = bgYPos;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            int bgX = (int) ((capturedX + (long) dx * 16384) >> 16);
+            int bgY = (int) ((capturedY + (long) dy * 8192) >> 16);
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) bgY);
+            output.fillPackedScrollWords(0, view.height(), negWord(view.cameraX()), negWord(bgX));
+            return Sonic1ProjectionOutput.finish(context, view, output, bgX, context.nativeOutput().backgroundPeriod());
+        };
+    }
+
 }

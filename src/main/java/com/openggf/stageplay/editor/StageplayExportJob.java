@@ -4,6 +4,7 @@ import com.openggf.data.RomIdentity;
 import com.openggf.data.RomManager;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
+import com.openggf.stageplay.runtime.StageplayRomTransport;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +18,7 @@ final class StageplayExportJob implements AutoCloseable {
     private Process process;
     private Thread reader;
     private Path snapshot;
+    private Path romDescriptor;
     private Path output;
     private Path staging;
     private final ArrayDeque<String> tail = new ArrayDeque<>();
@@ -52,12 +54,16 @@ final class StageplayExportJob implements AutoCloseable {
             command.add("--out"); command.add(destination.toString());
             command.add("--staging-dir"); command.add(staging.toString());
             command.add("--game"); command.add(document.set().gameId());
-            for (var game : new String[]{"s1","s2","s3k"}) {
+            var resolutions = new java.util.LinkedHashMap<String,com.openggf.data.RomImageCatalogue.Resolution>();
+            for (var game : StageplayRomTransport.requiredGames(document)) {
                 var identity = switch(game) { case "s1" -> RomIdentity.S1; case "s2" -> RomIdentity.S2; default -> RomIdentity.S3K; };
-                roms.resolveLogicalRom(identity).flatMap(value -> value.wholeImagePath()).ifPresent(path -> {
-                    command.add("--"+game+"-rom"); command.add(path.toString());
-                });
+                resolutions.put(game,roms.resolveLogicalRom(identity)
+                        .orElseThrow(() -> new IOException("Film export needs the configured logical " + game + " ROM")));
             }
+            String descriptor = StageplayRomTransport.encode(resolutions);
+            romDescriptor = Files.createTempFile(source.toAbsolutePath().getParent(),".stageplay-roms-",".json");
+            Files.writeString(romDescriptor,descriptor,StandardCharsets.UTF_8);
+            command.add("--rom-descriptor"); command.add(romDescriptor.toString());
             process = launcher.start(java.util.List.copyOf(command)); output = destination;
             Process owned = process;
             reader = Thread.ofVirtual().name("stageplay-export-output").start(() -> {
@@ -88,6 +94,12 @@ final class StageplayExportJob implements AutoCloseable {
         if (snapshot != null) {
             try { Files.deleteIfExists(snapshot); snapshot = null; }
             catch (IOException error) { failure = error; }
+        }
+        if (romDescriptor != null) {
+            try { Files.deleteIfExists(romDescriptor); romDescriptor = null; }
+            catch (IOException error) {
+                if (failure == null) failure = error; else failure.addSuppressed(error);
+            }
         }
         if (staging != null) {
             try {

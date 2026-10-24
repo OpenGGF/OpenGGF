@@ -1,7 +1,7 @@
 # Author Stageplay from a terminal
 
 `tools/stageplay/stageplay.py` exposes the directing framework without opening editor
-menus. It compiles a shot-local screenplay into the same `.stageplay` document used
+menus. It compiles a shot-local screenplay into, and decompiles from, the same `.stageplay` document used
 by the in-engine editor, OpenGGF Editor and mod registration. Java 25 is required;
 movie capture additionally needs FFmpeg and the platform's headless GL prerequisites.
 
@@ -13,6 +13,7 @@ python3 tools/stageplay/stageplay.py --build help
 python3 tools/stageplay/stageplay.py init --out /your/production/first.script.json
 python3 tools/stageplay/stageplay.py catalog --game s2 --rom /your/existing-s2.gen --character tails --zone 0 --act 0
 python3 tools/stageplay/stageplay.py compile --script /your/production/first.script.json --out /your/production/first.stageplay
+python3 tools/stageplay/stageplay.py decompile --scene /your/production/first.stageplay --out /your/production/refined.script.json
 python3 tools/stageplay/stageplay.py inspect --scene /your/production/first.stageplay --frame 120
 python3 tools/stageplay/stageplay.py simulate --scene /your/production/first.stageplay --out /your/production/state.jsonl --s2-rom /your/existing-s2.gen
 python3 tools/stageplay/stageplay.py render --scene /your/production/first.stageplay --out /your/production/first.mkv --s2-rom /your/existing-s2.gen
@@ -32,14 +33,14 @@ seconds, active set, poses, camera, transition and cues. `--every N` chooses a
 coarser inspection interval; it does not change the movie cadence. This is authored
 directing state: physical actors are explicitly `UNRESOLVED` here. Use `simulate`
 with explicit `--s1-rom`, `--s2-rom` and/or `--s3k-rom` paths to evaluate native
-behavior without a window or audio playback. Under `TERRAIN_ONLY`, this is native
-actor physics against detached static terrain, without placed-object AI, rings or
-zone events. Under `LIVE`, it is one shared native world with actors, placed objects,
-rings and events in `sample.world`. Both simulations report actual positions,
-velocity, grounded state and movement status, advancing every native tick even
-with `--every N`. LIVE shot spawns and cuts remain authored; these observations
-do not alone prove a continuous cold route or ROM parity. Keep bulk timelines
-beside the movie, labelled by world policy rather than as normal gameplay CSV.
+behavior without a window or audio playback. Every scene uses one `LIVE` native
+world, including actors, objects, rings and events in `sample.world`. To stage a
+terrain-only picture, author a `CLEAR_OBJECTS` world command at shot frame zero;
+it clears object roots and their graphs, while rings remain separately owned.
+Simulation reports actual positions, velocity, grounded state and movement status,
+advancing every native tick even with `--every N`. Shot spawns and cuts remain
+authored; these observations do not alone prove a continuous cold route or ROM
+parity. Keep bulk timelines beside the movie, distinct from normal gameplay CSV.
 `catalog` verifies the requested ROM identity and reports native registry metadata,
 character animation IDs, delays and mapping frames. Add both `--zone` and `--act`
 to decode one detached set and report bounds. A registry entry alone does not certify
@@ -52,6 +53,31 @@ new owned staging directory). It produces lossless FFV1/FLAC MKV at the document
 nearest-neighbour scaling (the default is 1).
 Linux uses surfaceless EGL with desktop display variables removed. Other platforms
 use the capture host's hidden native context; macOS uses Java's first thread.
+
+## Return editor changes to a screenplay
+
+`decompile --scene PATH --out PATH` reads the current version-seven canonical scene,
+then writes deterministic version-six shot-local JSON. Recompile it to recover the
+same complete document, including unused profiles, object parts,
+cue ordering and exact IDs. Decompilation changes the source layout and formatting;
+it does not reconstruct comments or the original shot names. It does not need ROMs.
+Both editors expose the same import/export commands. Import starts an unsaved
+canonical scene; export does not mark the current scene saved or clear undo history.
+
+Screenplays accept optional literal `id` fields to actions/cues and `transition.id`.
+Omitting them retains generated IDs. The optional root `order` object has only
+`puppets` (actor IDs), `captions`, `audio`, `cameraEffects` and `dialogue`: each
+provided list must be an exact permutation of that track's IDs. This preserves
+canonical list order when shot grouping would otherwise reorder it. Unknown keys,
+duplicate IDs, missing IDs and foreign IDs fail explicitly. Decompilation emits
+neutral `shot0`, `shot1`, … names independently of transition IDs.
+
+A caption, effect or dialogue interval belongs to the shot containing its start.
+Its local `endFrame` may extend into a later shot, bounded by the complete scene;
+the interval is retained whole so reveal, animation phase and effect seeds survive.
+Commands at the same frame retain their authored order. Decompile scenes with
+relative assets beside their canonical file; compile beside the screenplay. Neither
+command overwrites existing outputs. No hidden canonical payload is embedded.
 
 ## Learn with a complete small scene
 
@@ -66,16 +92,18 @@ continuous performance and compares a single changed setting.
 
 ## Screenplay format
 
-The current screenplay format is `version:3`; the generated scene uses Stageplay
-version 5. Version-one screenplays retain manual movement; version two retains
-terrain-only native Puppets. The compatible version-two example below introduces
-the common tracks; see [Live ROM worlds](#live-rom-worlds-screenplay-3-document-5)
-for version-three additions. JSON numbers retain their types: numeric strings, duplicate fields,
-unknown fields and trailing input are rejected. Maximum input size is 8 MiB.
+Only screenplay `version:6` and canonical document `version:7` are accepted.
+These formats and the candidate API are unpublished; examples are authored directly
+in the current shape, with no migration or compatibility modes. The API version
+follows the engine release version. Every shot uses the same native `LIVE` world.
+Use timed `CLEAR_OBJECTS` commands for an empty object cast; rings remain separate.
+JSON numbers retain their types: numeric strings, duplicate fields, unknown fields
+and trailing input are rejected. Screenplays permit up to 32 MiB to accommodate
+lossless shot-local expansion of an 8-MiB canonical document.
 
 ```json
 {
-  "version": 2,
+  "version": 6,
   "name": "A change of scenery",
   "width": 400,
   "height": 224,
@@ -133,23 +161,25 @@ nonnegative values hold a mapping frame. Positions use sprite origins. Captions 
 screen-space pixels. Audio kinds are `ROM_MUSIC`, `ROM_SFX`, `VOICE`, `MUSIC_STOP`;
 voices reference bounded WAV/Ogg files beside/below the scene. Relative resource scenes
 must compile beside the screenplay to preserve their root.
+ROM music and SFX cues require `gain:1`; gain is available only for voice clips.
+Compilation, canonical validation and editor loading reject other ROM gains with
+`ROM cue gain must be 1; gain is available for voice clips`.
 
 An absent transition means `CUT` with duration zero. Non-cut transitions last 2..600
 frames and straddle the incoming shot's start: the set changes at the fully covered
 midpoint. The first shot cannot have an incoming transition. Leave sufficient room
-on both sides; transitions cannot overlap. Events use half-open local intervals and
-must stay within their shot. Shake is deterministic sine motion in stage pixels at
+on both sides; transitions cannot overlap. Events use half-open intervals and may
+extend beyond their starting shot within the scene. Shake is deterministic sine motion in stage pixels at
 1/60-second steps; `frequency` is Hz, greater than zero and at most 30.
 
 The compiler flattens offsets, adds all boundary anchors and prevents interpolation
-across them. Both editors can subsequently edit the canonical scene. Exporting it
-back to a shot-local screenplay is not currently supported; keep the screenplay as
-the source when you want to revise it programmatically.
+across them. Both editors can edit the canonical scene and export a lossless
+shot-local screenplay for subsequent programmatic revision.
 
 
 ## Puppet and Poser modes
 
-Version-two and version-three cast members default to `puppet:true`, `snapToFloor:true` and
+Cast members default to `puppet:true`, `snapToFloor:true` and
 `collisionPath:0` (**Puppet** mode). Add `puppet:false` for **Poser** mode, with
 manual position, animation and frame selection. A physical
 actor's frame-zero key is a spawn centre; it keeps `animation:0`, `pose:-1`,
@@ -166,7 +196,7 @@ The shot's `actions` object maps actor IDs to ordered command arrays:
 | `STOP` | `frame,kind` |
 | `JUMP` | `frame,kind`; `holdFrames:12`, from 1 to 60 |
 
-An optional short `id` is namespaced by shot and actor. A movement command and a
+An optional `id` is preserved literally; omitted IDs are generated from the shot and actor. A movement command and a
 jump may share a frame; two movement commands may not. Jump holds require a released tick between presses and cannot cross a shot boundary. The engine receives directional and jump button inputs:
 urgency requests a fraction of that character's native running speed, rather than
 setting velocity. Acceleration, slopes, jump impulse, variable jump height, gravity,
@@ -178,19 +208,19 @@ surface; snapping is not a search through the entire level. Once moving, normal
 native collision maintains floor contact or lets the actor fall from an edge.
 `collisionPath` selects terrain path 0 or 1. A destination's Y is part of the
 arrival check, not a vertical movement command: use `JUMP` explicitly when needed.
-There is no automatic route finding or obstacle jump. `TERRAIN_ONLY` omits moving
-platforms and other placed-object simulation; `LIVE` uses native objects and
-collision with explicit routes/targets and bounded waits.
+A MOVE_TO command does not automatically find a route or jump obstacles. The
+optional [route helper](#route-helper) emits explicit attempts. The native world uses
+objects and collision with explicit routes/targets and bounded waits. A timed
+`CLEAR_OBJECTS` command clears object roots while retaining native simulation.
 
-`TERRAIN_ONLY` simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
+Simulation reports `IDLE`, `MOVING`, `STOPPING`, `ARRIVED` or `BLOCKED` plus the
 active movement-command ID. Blocking describes lack of progress and does not
 silently cancel the attempt. Roles hidden for the entire shot report `INACTIVE` and
 do not need a floor spawn in that shot. Inspect actual positions and status before rendering;
 a pure `timeline` sample deliberately reports `UNRESOLVED` for physical actors.
 Scrubbing and repeated drawing resolve the same frame without adding ticks or
-playing historical sounds. `TERRAIN_ONLY` movement effects are silent; place
-explicit ROM cues in the film. LIVE preview/export also includes forward-only
-native SFX; distinguish those observed events from authored audio cues.
+playing historical sounds. Native preview/export includes forward-only native SFX;
+distinguish those observed events from authored audio cues.
 
 ## Dialogue profiles and decorations
 
@@ -246,20 +276,26 @@ The same definitions work in both editors and offline rendering without mod code
 
 ## Pixel stability and performance
 
-Camera positions interpolate. `TERRAIN_ONLY` camera zoom holds its value until
-the next key; `LIVE` cameras use fixed zoom 1, with pans or actor/group follow.
-The renderer does not animate zoom. Use held integer scales for terrain-only
-framing, cuts and pans; a future smooth world-compositing pass would be needed for animated
-fractional zoom. A larger export `--scale` cannot repair aliasing already present
+Camera keys interpolate the framing centre and zoom using their `interpolation`
+easing, so two keys with the same centre keep that centre fixed through a push-in.
+Fractional camera positions survive world composition and resampling; slow pans do
+not snap to whole source pixels. Fractional zoom filters only the completed opaque
+world picture; captions and dialogue remain sharp. The private world framebuffer
+is reused and grows only when needed, with the active source extent cropped for
+each view. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
 
-## Live ROM worlds (screenplay 3, document 5)
+## Native ROM worlds (screenplay 6, document 7)
 
-Existing scenes keep `TERRAIN_ONLY`. A shot opts into a living native level with
-`"set":{"gameId":"s3k","zone":11,"act":1,"worldPolicy":"LIVE"}`.
-All physical cast in that shot use the set's native donor. LIVE views use native
-height 224 and widths 320–1920; use export scale for a larger output. Films omit
+Every scene uses a native world. A shot selects a populated native level with
+`"set":{"gameId":"s3k","zone":11,"act":1}`.
+Saved authored terrain, mixed supplied-game performers, zoom, output dimensions,
+team size, activation windows and native binding use the same rules with populated
+or cleared objects. Output dimensions are 160–1920 by 112–1080; the source view
+(width/zoom by height/zoom) is bounded to 4096 per side and 8 MiPixels. Extreme
+framing fails resource preflight explicitly. Native physics still uses its
+original viewport and 224-line scroll owners. Films omit
 gameplay HUD/debug overlays, while native ring telemetry remains available. The
 cinematic draw reveals fresh terrain immediately instead of showing the native
 load palette fade; native fade timers and actor/world clocks remain unchanged.
@@ -267,8 +303,10 @@ Authored shot transitions still control the film reveal. Live spawn
 snapping attaches feet near the floor; disable it for an authored fall. Live worlds run in an
 owned offline process; preview never replaces the editor's active world. The
 in-engine workspace uses a persistent offscreen worker for native pixels and the
-same sampled state used by simulate/capture. Whole-image ROM paths must be configured
-for that worker; composite-image worker transport is not implemented. Linux workers
+same sampled state used by simulate/capture. The worker receives exact logical
+ROM descriptors, including original image paths, window bounds and fingerprints,
+and reconstructs composite readers without writing joined ROMs. Authored sets
+use the confined editor asset root or bounded original registration snapshots. Linux workers
 remove desktop display variables and require surfaceless EGL. Failure is visible.
 
 Discover original placements and rings before choosing a route:
@@ -314,18 +352,26 @@ Camera keys optionally include a `follow` object:
  "lookAhead":8,"smoothing":0.15,"offsetX":0,"offsetY":-16}
 ```
 
-One actor follows that performer; several frame their centre bounds at fixed zoom
-one. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
+One actor follows that performer; several frame their centre bounds at authored
+zoom. Empty actors preserve authored camera keys. Handoffs occur at camera keys.
 The director uses simulated positions and deterministic tick-based smoothing,
-clamps to level bounds, then composes the existing shake. Native camera/focus
-continues to own activation; cinematic camera offsets are temporary render state.
+validates the finite composition bounds, then composes the existing shake. Native camera/focus
+continues to own gameplay camera state; directed rendering samples immutable native
+scroll phases without advancing them. Background camera ratios, deformation and
+stationary regions come from the owning game handler, with private background
+residency for the complete bounded view. Tall views repeat the bottom native
+pattern band beyond the 224-line backdrop instead of wrapping another sky or
+stretching one scanline. Gameplay camera locks remain native.
 The shared camera controls start from the resolved LIVE follow view. Capture key
 and Record camera store authored framing, clearing following at the captured keys.
 The camera form preserves follow targets: editing its displayed position adjusts
 follow offsets while preserving the authored smoothing seed. An unchanged form
 submission does not bake the current follow result into that seed.
-Keep the ensemble within the native activation window; wide separated routes are
-not independently activated by a cinematic group camera.
+Current scenes activate separate native-sized windows around players and explicit
+object roles, including vertically separated performers. The gap between windows
+is not activated. All windows share native object slots and removal/remember
+state; exhaustion reports which placement needs space and suggests clearing
+objects or splitting the shot. Native damage/destruction still applies.
 
 `simulate` emits `sample.world`: native clocks, ring population/collection state,
 placed-object positions, actor ring deltas, hurt, support placement, ability state,
@@ -335,12 +381,280 @@ Repeated frame sampling does not tick. Seeking restores the whole native rewind
 registry and director/control state, then silently replays controller inputs.
 Shot boundaries start a clean world; never interpret spawn placement as movement.
 
-LIVE registered cutscenes use the same isolated world and forward-only native SFX
-packets as editor preview. They cannot borrow/overwrite an interactive player
-through the optional native binding; that existing binding remains terrain-only.
+Current native-world registered cutscenes use the same isolated world and forward-only native SFX
+packets as editor preview. The optional native binding uses the same world model,
+with a matching interactive set and character, using visit-bound ownership and explicit
+KEEP_FINAL_POSITION / RESTORE_ENTRY handover; see the Stageplay guide.
 
 Direct music explicitly with a `ROM_MUSIC` cue at each shot's local frame zero,
-using the matching `catalog` music ID. The isolated preview worker stops its
-automatic level music because the parent owns authored music; offline exports
-consume those same cues alongside native SFX. Do not rely on capture-only level
-music as the film's directed soundtrack.
+using the matching `catalog` music ID. A scene containing `ROM_MUSIC` or
+`MUSIC_STOP` owns automatic level-playlist admission during playback, including deferred
+level-entry and title-card playlist requests. Validation/preparation alone does
+not claim music ownership.
+A frame-zero `MUSIC_STOP` keeps later level music silent; an authored music cue
+keeps its track. Seeking and shot changes retain that ownership; Stop/close
+releases it. Scenes with neither music kind retain native playlist behavior.
+This applies to live playback and offline export; native SFX and direct native
+event/boss music requests retain their existing routes. The isolated preview
+worker transports native SFX while the parent plays authored cues.
+
+## Object cast (screenplay 6, document 7)
+
+Object roles are separate from player controller tracks. Declare their native
+source context in `objectCast`, then use shot-local object keys and actions:
+
+```json
+{
+  "objectCast": [
+    {"id":"prop","name":"ROM prop","gameId":"s2","zone":0,"act":0,
+     "objectId":86,"subtype":0,"layoutIndex":-1,"sourceKind":"LAYOUT_OBJECT"}
+  ],
+  "shots": [{
+    "id":"object-shot","durationFrames":180,
+    "set":{"gameId":"s2","zone":0,"act":0},
+    "camera":[{"frame":0,"x":0,"y":500}],
+    "objects":{"prop":[
+      {"frame":0,"x":128,"y":600,"mode":"FREE"},
+      {"frame":60,"x":128,"y":600,"mode":"PUPPET"},
+      {"frame":120,"x":200,"y":600,"mode":"POSE","pose":0,
+       "parts":[{"partId":"root/0","animation":0,"pose":0}]}
+    ]},
+    "objectActions":{"prop":[
+      {"frame":60,"kind":"MOVE_TO","x":200,"y":600,"speed":2},
+      {"frame":110,"kind":"STOP"}
+    ]},
+    "worldCommands":[{"frame":150,"kind":"REMOVE_OBJECT","actorId":"prop"}]
+  }]
+}
+```
+
+This fragment belongs inside a version-six screenplay with its normal name,
+size and player cast fields. Mapping/part IDs are object-specific: inspect the
+captured graph and coverage before selecting a frame; the sample numbers are
+syntax, not a guarantee of that boss's mapping layout.
+
+`layoutIndex:-1` creates a new role; a nonnegative layout index selects the loaded
+`(layoutIndex, objectId, subtype)` tuple in the matching native game/zone/act.
+The native level population is already present in populated worlds; claiming it
+adds directing controls without a second native object. Runtime slots are never
+portable identities. `sourceKind:RELEASED_ANIMAL` addresses the existing released
+animal factory, with `objectId:0` and `layoutIndex:-1`; the source set supplies the
+ROM species/art. S1 layout animals remain ordinary native object IDs.
+
+Keys expose `frame,x,y,mode,animation,pose,flipX,visible,interpolation,parts`.
+`parts` contains stable parent/creation paths with independent animation/frame
+selection. `pose:-1` selects pure animation where available, otherwise the captured
+held frame. Native timer-owned bird flap cycles also run in Puppet/Pose. Walking
+animal frames selected by native vertical velocity keep a documented held fallback;
+direction does not invent hop physics. Explicit mapping frames win over animation.
+State-machine-only appearances stay held/authored with the owning routine citation.
+Uninitialized or unavailable art fails explicitly, with the native source context
+and the preparation needed; it is never replaced by unrelated art.
+
+Free is the native routine, including contacts, child spawning and world effects.
+Some bosses reset themselves to their native arena coordinates. Their catalog and
+both editors display **Free: native arena position, anchor ignored**, with the
+initialization routine citation. Free requires the scene to match the cast entry's
+authored source game/zone/act. Registry context restrictions still apply. If a
+registry exposes an arena routine in another zone/act, it runs at its native
+coordinates there, with its real world effects; the tool does not infer another
+arena restriction from the boss category. Use its original arena or a directed
+visual mode for predictable placement. There are no object-specific spatial adapters. Switching an existing graph to Puppet/Pose
+suspends all parent/child routines and contacts before the next native tick.
+Cast activation windows remain active outside the visible native viewport,
+including its wider loading overscan. Released animals include those windows in
+their retained native on-screen flag, so a living Free graph outside the main
+player's view can switch to either directed mode without losing its ROM appearance.
+Native destruction remains authoritative; direction does not resurrect a removed graph.
+Directing or removing a holder releases its acquired players through the native
+player-only cleanup. Native routine phases, timers and transport progress remain
+frozen; only acquired-player references/latches and the native release cooldowns
+are cleared or advanced. Returning to Free resumes that native state with players
+released. Helper handoffs and queued ending poses retain ownership
+through rewind; interruption does not complete a cutscene or change the world.
+Visual parts retain their native relative transforms. In directed modes, `flipX`
+mirrors the captured graph around its visual anchor; it is an additional visual
+transform, rather than a controller-facing input. In Free mode the initial flag
+is passed to the native spawn. Puppet `MOVE_TO` drives its
+visual anchor at the requested pixels per frame; `STOP` ends that displacement.
+It is not controller input or a relocated native arena. Pose keys directly author
+position/mapping frames. Returning an existing graph to Free resumes its frozen
+native state/position, rather than moving its native arena to the last picture.
+
+`CLEAR_BADNIKS` and `CLEAR_OBJECTS` have no target. `REMOVE_OBJECT` takes exactly
+one `actorId` or `target:{layoutIndex,objectId,subtype}`. Clears/removals suppress
+native placement reloads for the shot. Players, their attached effects and rings
+have separate ownership and are preserved by these commands. Shot boundaries
+start fresh worlds. Both editors expose these same operations through **ROM object
+cast / clear**, including editing and deleting cues and child-part overrides.
+
+Generate the complete ID/context inventory with
+`object-coverage --out coverage.json --format json` (or `markdown`). Read its
+readiness and reason fields: a registered factory is distinct from actual loaded
+ROM art and a complete captured visual graph. Dynamic/parent-created routines are
+reported separately from layout IDs. Optional `--observations reviewed.json` appends
+exact-context capture, exclusion and failure samples without promoting the registry
+rows. The strict version-one observation file records source/ROM/scene hashes,
+mode, frame, evidence paths and limitations; it validates provenance fields, not
+whether the footage was reviewed. Full continuously driven private native
+boss graphs are deferred; directed pictures never keep native effects running
+behind them.
+
+An active native SAT mask/control is an explicit directed-appearance exclusion;
+it cannot be dropped while keeping only the parent body. The catalog and the
+**Available parts / appearance exclusions** menu identify known restrictions with
+the owning routine. SKL's DEZ miniboss mask is one such conditional exclusion.
+Initialize and direct a different supported appearance, or keep the graph Free.
+
+## Route helper
+
+```bash
+python3 tools/stageplay/stageplay.py route --scene /your/production/first.stageplay --actor tails --frame 0 --x 320 --y 648 --out /your/production/routed.stageplay --s2-rom /your/existing-s2.gen
+python3 tools/stageplay/stageplay.py decompile --scene /your/production/routed.stageplay --out /your/production/routed.script.json
+```
+
+Use the actor's native centre as the destination. Compile a screenplay first;
+route the canonical scene, then decompile it back into editable screenplay.
+Both editors expose the same **Route helper**. Output publication never overwrites
+a file and failures do not publish a partial scene. Relative assets keep their
+source directory. Existing commands and actors outside the requested patch remain
+unchanged. The helper never inserts position keys or changes an actor's mode.
+
+In both editors, select a cast member and use **Plan collision route**. The transient
+viewport overlay draws the result's observed `path`, never command-to-goal lines:
+cyan grounded segments, gold airborne segments/takeoff chevrons, a start square,
+and a destination diamond. Failed attempts retain their sampled prefix with a red
+terminal cross. Route state, the colour/marker key and a wrapped, plain-language
+explanation live in the side panel (the HUD workbench or desktop Direction inspector),
+with a short status line. No route text is drawn over the game picture. Missing samples break the line; a failure
+before observations has no invented start or stop. Search-budget exhaustion is not
+reported as a proven wall or gap. Close the route menu to review before Apply.
+
+The same engine-owned overlay model projects through the evaluated camera
+(including shake, follow, zoom and pan) into each frontend's fitted film rectangle.
+Markers remain screen-sized and clipped to that rectangle. Apply retains the plan
+for the selected actor throughout its shot; player playback adds a white actual-centre
+cross. Other scene edits or asset-root changes hide it. The overlay is separate from
+the canonical document, screenplay, renderer and export/registered playback. It
+neither advances simulation nor persists when a file is reopened. External changes
+to ROM/asset bytes still require replanning; the retained applied line is a reference
+for the accepted attempt, not a fresh certification of modified resources.
+
+Player planning starts at a shot entry in the native world.
+It searches a bounded graph of native
+physics attempts over the actual ROM/authored collision terrain, using the same
+steering as LIVE `MOVE_TO` and native jump button holds. A proposal is accepted
+only after fresh linear cold LIVE replay reaches the requested centre grounded
+and stable, without hurt, death, wait timeout or an unexpected scene change.
+`VERIFIED` certifies that replay of this exact input; it does not certify arbitrary
+future edits or every route through moving objects, water and zone events.
+
+Object routes start at shot entry or an existing visible Puppet key in the same
+shot. This permits an explicit Free initialization lead-in for constructor-gated
+visuals; the worker replays that prefix before suspending the graph. Other
+interior frames, Free, Pose and hidden keys reject. No key is inserted for routing.
+Object Puppets require `--half-width N --height N --foot-offset N`;
+`--collision-path 0|1` selects the queried path and `--speed N` is visual pixels
+per tick. The footprint is an authored clearance envelope: half-width, height
+above the feet, and feet offset below the object's anchor. It is not a native
+collision-radius adapter. `VISUAL_TERRAIN` means checked floor/headroom waypoints
+for the suspended picture, emitted as ordinary object `MOVE_TO`/`STOP` commands.
+No object routine, child AI, contact, jump or native world effect is enabled.
+The object graph uses fixed foreground collision on the selected path; active
+background-plane collision rejects explicitly. Moving object/platform solids are
+not graph nodes and visual Puppets have no native contact response. Fresh linear
+replay checks the actual visual positions against each tick's foreground terrain,
+so changed terrain or insufficient clearance fails rather than certifying the
+entry snapshot for the whole shot. Floor following handles slopes and steps up to
+8 pixels using explicit lift/cross/lower waypoints. Brief step clearance above the
+floor is visual direction, not a native grounded controller. Gaps, walls, larger
+steps, insufficient headroom and dynamic collision report failure; the helper
+does not search detours or jump.
+
+Optional budgets are `--frames` (default up to 300 remaining shot frames,
+maximum 3600), `--nodes` (default 1024, maximum 4096), `--ticks` (default 120000,
+maximum 500000), and `--millis` (default 60000, maximum 120000). `--urgency` is
+0..1 exclusive of zero; object speed is 0..16 exclusive of zero. Search resolution
+and budgets are authoring policies, not ROM physics constants. Player search is
+limited to destinations within 1536 horizontal and 768 vertical pixels of entry
+and at most 256 retained frontier checkpoints; these are basic-tool limits. `UNSUPPORTED`,
+`SEARCH_EXHAUSTED`, `BUDGET_EXCEEDED`, `CANCELLED`, `VERIFICATION_FAILED` and
+`STALE_INPUT` explain bounded failures; none means that every possible route is
+impossible. CLI failures exit 2. Inspect the returned diagnostics and simulate
+the routed scene before rendering.
+
+Editor planning owns an independent logic worker. Its input binds the canonical
+document, request, supplied logical ROM windows and content snapshots of relative
+project/assets. Freshness is checked again before one undoable Apply; changed
+inputs or late cancelled work cannot overwrite newer authoring edits. The content
+fingerprint is retained because a terrain project or ROM can change while the
+scene document remains equal; document equality cannot certify the tested route.
+Planning does not borrow the active gameplay session, preview worker or audio ownership.
+
+Evaluated cameras, including authored keys, follow offsets, shake and paused director
+drafts, clamp to the loaded level camera envelope at the current viewport and zoom.
+Keys retain their authored values. Both editors display the resolved framing.
+
+
+### Route motion settings
+
+A planned playable route stores its `motion` on its MOVE_TO command in canonical
+v7 documents and screenplay v6 actions. The object mover is unchanged. The four
+fields are `startingAction` (WALK/JUMP/SPINDASH), `travelSpeed` (WALK/RUN),
+`endingAction` (GENTLE_STOP/HARD_STOP/OVERSHOOT) and `endingFacing`
+(INHERIT/LEFT/RIGHT). Planned defaults are WALK/WALK/GENTLE_STOP/INHERIT.
+Ordinary action defaults retain native-speed, hard-stop steering. Actor-declared
+movement abilities are intersected with donor support; unsupported spindash must
+be rejected rather than simulated by a pose or velocity write. These unpublished
+formats change directly, without a migration path.
+
+
+CLI route options are `--start WALK|JUMP|SPINDASH`, `--travel WALK|RUN`,
+`--ending GENTLE_STOP|HARD_STOP|OVERSHOOT` and `--facing INHERIT|LEFT|RIGHT`.
+For example, add `--travel RUN --ending HARD_STOP --facing LEFT` to `route`.
+The four-field canonical/screenplay object is:
+
+```json
+"motion":{"startingAction":"WALK","travelSpeed":"WALK",
+          "endingAction":"GENTLE_STOP","endingFacing":"INHERIT"}
+```
+
+Walk's `$180` (1.5 px/tick) cap is an authoring choice: one quarter of normal
+native top speed. Simply staying below `$600` would still look fast, since
+`SAnim_WalkRun` (s2.asm:38449-38487) changes to the run cycle only at `$600`,
+also initialized as normal `Sonic_top_speed` (s2.asm:36187). Native acceleration,
+friction, slope response and live top speed stay authoritative. Gentle steering
+predicts coasting distance from current friction and releases without an opposite
+button at speed; Hard Stop uses live native deceleration. Overshoot targets a
+24-pixel pass before returning. SPINDASH uses a fixed 24-tick preparation/charge window after a facing
+tap. It coasts the tap to zero inertia (braking uphill if slope pull defeats
+friction), holds down until native Duck is observed,
+then gives a fresh jump press and releases down; native charge decay
+and launch tables own the resulting speed (`Sonic_CheckSpindash` /
+`Sonic_UpdateSpindash`, s2.asm:37555-37688). No constant replaces native launch
+velocity, and shipped `fixBugs=0` behavior stays active. A Spindash launch can exceed
+the stroll cap, so selecting Spindash selects Run in both editors. Spindash + Walk
+is rejected by the shared document/screenplay contract before search. A saved
+unavailable start stays visible in the form until the author replaces it.
+All Walk endings reserve native ground/air acceleration headroom. Facing taps accept a
+subpixel nudge. Direct steering is tried first; only failure enables penalised
+64/128-pixel back-up/run-up goals. Consecutive identical goals are merged.
+A failed Walk search reports terrain near the observed stall X as needing Run
+only when a matched native-terrain Run probe reaches and settles. Generic budget
+or wall failures receive no speculative speed advice; Spindash is never guessed.
+This terrain-only diagnostic is not cold verification through live objects/events. Only a cold successful replay receives VERIFIED.
+
+Search and cold qualification must both observe native charge and release.
+`Sonic_CheckSpindash` reads Duck before movement, while `Sonic_SlopeResist` skips
+zero inertia (s2.asm:37709-37732); waiting a fixed number of ticks alone is unsafe
+on downhill starts. If settling/Duck/charge fails in the window, planning reports
+that failure honestly. The default charge uses one fresh jump press after native
+crouch, retaining down for the remaining fixed interval. This selects the native minimum charge, rather than a
+maximal launch that cannot brake within a short acting route. A non-Overshoot
+ending that physically passes the point beyond tolerance fails cold qualification
+with advice to use a Walk start or a farther destination.
+
+Coasting from a roll follows native roll drag, which differs from standing
+friction (`Sonic_RollSpeed`, s2.asm:37009-37013: live acceleration / 2).
+Allow a longer route/window for a Spindash start with Gentle Stop; the director
+cannot remove native momentum to force an arrival.

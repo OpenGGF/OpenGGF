@@ -1,13 +1,77 @@
 package com.openggf.stageplay.runtime;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.AudioTimelineEntry;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.StageplayDocument;
+import com.openggf.stageplay.StageplayTimeline;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import com.openggf.tools.HeadlessGameBoot;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+import static com.openggf.stageplay.StageplayDocument.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestStageplayAudioLifecycle {
+    @RequiresRom(SonicGame.SONIC_2)
+    @ParameterizedTest @ValueSource(strings = {"NONE", "MUSIC_STOP", "ROM_MUSIC", "PREPARED"})
+    void authoredMusicOwnsTheLateNativeLevelEntry(String control) throws Exception {
+        EngineServices.current().graphics().initHeadless();
+        try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
+            var scene = StageplayDocument.empty("s2", 0, 0, 0, 500, 320, 224).withDurationFrames(100);
+            scene = scene.withCamera(List.of(scene.camera().getFirst(), new CameraKey(50, 0, 500, 1, Interpolation.HOLD)))
+                    .withSceneChanges(List.of(new SceneChange("cut", 50, scene.set(), Transition.CUT, 0)));
+            var kind = control.equals("PREPARED") ? AudioKind.MUSIC_STOP : control.equals("NONE") ? null : AudioKind.valueOf(control);
+            if (kind != null) scene = scene.withAudio(List.of(
+                    new AudioCue("first", 0, kind, "s2", control.equals("ROM_MUSIC") ? 130 : -1, "", 1),
+                    new AudioCue("second", 50, kind, "s2", control.equals("ROM_MUSIC") ? 130 : -1, "", 1)));
+            var manager = EngineServices.current().audio();
+            try (var audio = new StageplayAudio(manager, library, asset -> { throw new AssertionError(); })) {
+                audio.prepare(scene);
+                world.resolve(scene, StageplayTimeline.sample(scene, 0));
+                int before = manager.commandTimeline().entryCount();
+                for (int frame = 0; frame < 100; frame++) {
+                    world.resolve(scene, StageplayTimeline.sample(scene, frame));
+                    if (frame == 50) audio.refreshAfterNativeBoundary(frame);
+                    if (frame == 24) audio.seek(frame - 1);
+                    if (!control.equals("PREPARED")) audio.playFrame(scene, frame);
+                    HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                }
+                var music = manager.commandTimeline().entries().stream().skip(before - manager.commandTimeline().firstRetainedEntryIndex())
+                        .map(AudioTimelineEntry::command).filter(command -> command instanceof AudioCommand.PlayMusic)
+                        .map(command -> ((AudioCommand.PlayMusic) command).musicId()).toList();
+                assertEquals(control.equals("NONE") || control.equals("PREPARED") ? List.of(129, 129)
+                                : control.equals("ROM_MUSIC") ? List.of(130, 130) : List.of(), music,
+                        "Automatic level music must respect authored control through seek and shot replacement");
+                audio.stop();
+                SessionManager.getCurrentGameplayMode().getLevelManager().playCurrentLevelMusic();
+                HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                assertEquals(129, manager.captureLogicalSnapshot().presentation().activeMusic().musicId(),
+                        "Stopping the director must release automatic playlist admission");
+                audio.playFrame(scene, 0);
+                audio.restoreEntry(null);
+                SessionManager.getCurrentGameplayMode().getLevelManager().playCurrentLevelMusic();
+                HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+                assertEquals(129, manager.captureLogicalSnapshot().presentation().activeMusic().musicId(),
+                        "Restoring the pre-playback state must also release playlist admission");
+            }
+        }
+    }
+
     @Test void closingCurrentSceneRestoresSoundtrackButAbandoningOldVisitDoesNot() throws Exception {
         var document=StageplayDocument.empty("s2",0,0,0,0,320,224);
         for(boolean abandon:new boolean[]{false,true}) {

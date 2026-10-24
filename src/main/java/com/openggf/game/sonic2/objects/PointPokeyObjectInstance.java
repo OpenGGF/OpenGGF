@@ -130,6 +130,14 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (!playerOccupied) return;
+        var main = services().playerQuery().mainPlayerOrNull();
+        var player = capturedPlayerFor(main instanceof AbstractPlayableSprite sprite ? sprite : null);
+        if (player != null) ejectPlayer(player);
+    }
+
+    @Override
     public PointPokeyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new PointPokeyObjectInstance(ctx.spawn(), "PointPokey");
     }

@@ -34,7 +34,9 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 ## Tools
 
 - [Stageplay capture](../../src/main/java/com/openggf/tools/StageplayCaptureTool.java): render a saved `.stageplay` scene with supplied ROMs to synchronized lossless MKV; see the [guide](../guide/creating/stageplay.md). [Stageplay HUD pictures](../../src/test/java/com/openggf/editor/project/TestStageplayHudPictures.java) use explicit `-Dopenggf.stageplay.hudPictures=true`, surfaceless EGL and an absolute S2 REV01 ROM path, writing `target/stageplay-hud/` for visual review; desktop has its equivalent `TestStageplayChromePictures` in OpenGGF Editor. Origin: 2026-10-21 Stageplay delivery.
-- [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
+- [Stageplay authoring CLI](../../tools/stageplay/stageplay.py): compiles and losslessly decompiles shot-local screenplays, discovers supplied-ROM resources, samples/validates scenes and renders offline. [Command reference](../guide/creating/stageplay-authoring.md); skill `stageplay-authoring`. Origin: 2026-10-21 directing extension.
+- [Stageplay route helper](../../src/main/java/com/openggf/tools/StageplayRouteTool.java): bounded shot-entry native-input search with cold LIVE qualification, or visual object floor/headroom paths; same cancellable logic worker and content-bound result in both editors. Inputs are canonical scenes and supplied ROMs; see [route limits](../guide/creating/stageplay-authoring.md#route-helper). Origin: 2026-10-22 complete-cast task.
+
 
 - [Seven-Chaos gateway diagnostic](../../src/main/java/com/openggf/tools/S3kSevenChaosGatewayCaptureTool.java): repeats the declared Tails/LRZ2 ring→sanctuary→sphere-stage→results→return scenario with verified ROM identity, fixed Limited/RAW_RGB, event/state CSVs and original PNGs; `--rom` and `--out-dir` require absolute paths, Linux uses surfaceless EGL with no display. This preserves the 2026-10-17 native RGB investigation; it is not a cold-route certificate.
 
@@ -391,7 +393,8 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - `TimeAttackLobbyVideoTool` (`racing-server capture-lobby OUTPUT ROOT s1|s2|s3k`): display-free first boot into a hosted LAN room's lobby level with three loopback peers (international names/looks, lobby presence replaying the player's own poses at an offset); records the menu over the level, ready, hidden-menu play, menu return and the round hand-over as stills, `lobby.mp4` and `state.csv` with received lobby ghost positions (2026-10-22 lobby-level lane).
 
 Stageplay's `level`, `catalog`, `simulate` and live offscreen preview/capture owners
-support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#live-rom-worlds-screenplay-3-document-5)
+support reproducible native ensemble routes; see the [authoring guide](../guide/creating/stageplay-authoring.md#native-rom-worlds-screenplay-6-document-7)
 and [live-world plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
 
+- [Stageplay object coverage](../../src/main/java/com/openggf/tools/StageplayObjectCoverageTool.java): generate every native byte ID per registered source context, with factory, art and visual-mode reasons; constructor-free inventory, originating in the 2026-10-22 complete-cast task.
 - `com.openggf.tools.editor.ObjectPropertyCoverageTool`: print the per-game editor subtype schema/raw-fallback inventory (no ROM required).

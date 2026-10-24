@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
+import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
+import static com.openggf.level.scroll.M68KMath.negWord;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -8,64 +11,57 @@ import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
 
-import static com.openggf.level.scroll.M68KMath.VISIBLE_LINES;
-import static com.openggf.level.scroll.M68KMath.negWord;
-
 /**
- * Sky Sanctuary background scroll. Act 1: {@code SSZ1_BackgroundInit},
- * {@code SSZ1_BackgroundEvent} and the two parameter subroutines {@code sub_579F0}
- * (plain sky) and {@code sub_57A60} (cloud band), sonic3k.asm:116431-116754.
+ * Sky Sanctuary background scroll. Act 1: {@code SSZ1_BackgroundInit}, {@code SSZ1_BackgroundEvent}
+ * and the two parameter subroutines {@code sub_579F0} (plain sky) and {@code sub_57A60} (cloud
+ * band), sonic3k.asm:116431-116754.
  *
- * <p><b>Two background modes, selected by the wrapped camera Y.</b> Both
- * {@code SSZ1_BackgroundInit} and the event's routine 0 and 8 test
- * {@code Camera_Y_pos &amp; Screen_Y_wrap_value} ({@code $FFF}, {@code LevelSetup}
- * sonic3k.asm:102251) against {@code $800} and {@code $F00}:
+ * <p><b>Two background modes, selected by the wrapped camera Y.</b> Both {@code
+ * SSZ1_BackgroundInit} and the event's routine 0 and 8 test {@code Camera_Y_pos &amp;
+ * Screen_Y_wrap_value} ({@code $FFF}, {@code LevelSetup} sonic3k.asm:102251) against {@code $800}
+ * and {@code $F00}:
+ *
  * <ul>
- *   <li>inside {@code [$800,$F00)} the sanctuary sits in the cloud band and
- *       {@code sub_57A60} writes thirty per-band scroll words plus a halved,
- *       wrapped background Y;</li>
- *   <li>outside it the sky is plain and {@code sub_579F0} moves the background 1:1
- *       with the camera at a fixed offset.</li>
+ *   <li>inside {@code [$800,$F00)} the sanctuary sits in the cloud band and {@code sub_57A60}
+ *       writes thirty per-band scroll words plus a halved, wrapped background Y;
+ *   <li>outside it the sky is plain and {@code sub_579F0} moves the background 1:1 with the camera
+ *       at a fixed offset.
  * </ul>
  *
- * <p><b>The four-state machine is the plane redraw, not the scroll.</b>
- * {@code Events_routine_bg} 0 and 8 are the two steady modes; 4 and {@code $C} stage
- * {@code Draw_PlaneVertBottomUp} / {@code Draw_PlaneVertSingleBottomUp} while the
- * nametable is refilled. Routine 0 saves the outgoing {@code Camera_X/Y_pos_BG_copy}
- * into {@code Events_bg+$0C}/{@code +$0E} and routine 4 keeps rendering from them until
- * the redraw finishes, so the visible switch to the cloud bands lags the mode test.
- * The engine draws the background from the whole layout instead of a 512-pixel
- * nametable, so each staged redraw completes in one frame here; the recorded
- * consequence is that the cloud bands appear one frame after the ROM would start
- * filling them, and the return to plain sky is likewise two frames rather than the
- * ROM's redraw length.
+ * <p><b>The four-state machine is the plane redraw, not the scroll.</b> {@code Events_routine_bg} 0
+ * and 8 are the two steady modes; 4 and {@code $C} stage {@code Draw_PlaneVertBottomUp} / {@code
+ * Draw_PlaneVertSingleBottomUp} while the nametable is refilled. Routine 0 saves the outgoing
+ * {@code Camera_X/Y_pos_BG_copy} into {@code Events_bg+$0C}/{@code +$0E} and routine 4 keeps
+ * rendering from them until the redraw finishes, so the visible switch to the cloud bands lags the
+ * mode test. The engine draws the background from the whole layout instead of a 512-pixel
+ * nametable, so each staged redraw completes in one frame here; the recorded consequence is that
+ * the cloud bands appear one frame after the ROM would start filling them, and the return to plain
+ * sky is likewise two frames rather than the ROM's redraw length.
  *
- * <p><b>The {@code $1800} toggle is not a mode.</b> {@code sub_579F0} keeps
- * {@code Events_bg+$10} as a latch: below {@code Camera_X_pos $1800} the background is
- * ({@code Camera_X+$28}, {@code Camera_Y+$160+_unkEE9C}); at or above it is
- * ({@code Camera_X}, {@code Camera_Y+$180}). Crossing the latch re-runs the subroutine
- * and re-rounds {@code Camera_X_pos_BG_rounded}; it starts no plane redraw.
+ * <p><b>The {@code $1800} toggle is not a mode.</b> {@code sub_579F0} keeps {@code Events_bg+$10}
+ * as a latch: below {@code Camera_X_pos $1800} the background is ({@code Camera_X+$28}, {@code
+ * Camera_Y+$160+_unkEE9C}); at or above it is ({@code Camera_X}, {@code Camera_Y+$180}). Crossing
+ * the latch re-runs the subroutine and re-rounds {@code Camera_X_pos_BG_rounded}; it starts no
+ * plane redraw.
  *
- * <p><b>{@code Apply_FGVScroll} is inert during ordinary play.</b> Routine 0's plain
- * path ends in {@code Apply_FGVScroll} with {@code word_577B2} and
- * {@code HScroll_table+$0BE}, which fills {@code Vscroll_buffer}. That buffer only
- * reaches VSRAM through {@code SpecialVInt_VScrollCopy}, and {@code Special_V_int_routine}
- * is non-zero in Sky Sanctuary only during the Death Egg launch
- * ({@code SSZ1_ScreenEvent}, sonic3k.asm:116007 and 116060). Ordinary act-1 frames
- * therefore keep the plain full-screen vertical scroll, and the per-column path belongs
- * to the launch slice.
+ * <p><b>{@code Apply_FGVScroll} is inert during ordinary play.</b> Routine 0's plain path ends in
+ * {@code Apply_FGVScroll} with {@code word_577B2} and {@code HScroll_table+$0BE}, which fills
+ * {@code Vscroll_buffer}. That buffer only reaches VSRAM through {@code SpecialVInt_VScrollCopy},
+ * and {@code Special_V_int_routine} is non-zero in Sky Sanctuary only during the Death Egg launch
+ * ({@code SSZ1_ScreenEvent}, sonic3k.asm:116007 and 116060). Ordinary act-1 frames therefore keep
+ * the plain full-screen vertical scroll, and the per-column path belongs to the launch slice.
  *
- * <p><b>Camera words.</b> The ROM reads {@code Camera_X_pos} for the {@code $1800} latch and
- * {@code Camera_X_pos_copy}/{@code Camera_Y_pos_copy} for the arithmetic; {@code ParallaxManager}
- * hands this handler {@code Camera_X_pos}/{@code Camera_Y_pos}. The two differ only by the screen
- * shake {@code SSZ1_ScreenEvent} adds to the Y copy, which Sky Sanctuary raises during the Death
- * Egg launch, so the launch slice owns closing that gap.
+ * <p><b>Camera words.</b> The ROM reads {@code Camera_X_pos} for the {@code $1800} latch and {@code
+ * Camera_X_pos_copy}/{@code Camera_Y_pos_copy} for the arithmetic; {@code ParallaxManager} hands
+ * this handler {@code Camera_X_pos}/{@code Camera_Y_pos}. The two differ only by the screen shake
+ * {@code SSZ1_ScreenEvent} adds to the Y copy, which Sky Sanctuary raises during the Death Egg
+ * launch, so the launch slice owns closing that gap.
  *
- * <p>Act 2's encounter path uses {@code sub_58D3E}/{@code sub_58FBC}: ROM-backed
- * foreground bands, background horizontal waves and gated background VSRAM columns.
- * Its intermediate table and render clock live in the rewindable runtime state.
- * The ending redraws (foreground routine {@code $C} onward) use the plain and island
- * deformations, and background routine 4 uses {@code loc_58D44}'s fan.
+ * <p>Act 2's encounter path uses {@code sub_58D3E}/{@code sub_58FBC}: ROM-backed foreground bands,
+ * background horizontal waves and gated background VSRAM columns. Its intermediate table and render
+ * clock live in the rewindable runtime state. The ending redraws (foreground routine {@code $C}
+ * onward) use the plain and island deformations, and background routine 4 uses {@code loc_58D44}'s
+ * fan.
  */
 public class SwScrlSsz extends SwScrlS3kDefault
         implements com.openggf.game.internal.ExplicitForegroundVerticalScroll {
@@ -112,7 +108,16 @@ public class SwScrlSsz extends SwScrlS3kDefault
 
     private static final DeformationPlan.ScrollValueTransform NEGATE_WORD = value -> negWord(value);
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlSsz() {
+        this(224);
+    }
+
+    private SwScrlSsz(int height) {
+        composer = new ScrollEffectComposer(height);
+    }
+
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(SCROLL_WORD_COUNT);
 
     private int currentBgPeriodWidth = 512;
@@ -195,7 +200,9 @@ public class SwScrlSsz extends SwScrlS3kDefault
         return super.getVscrollFactorFG();
     }
 
-    /** A copy of 0 is still V_scroll_value, e.g. when loc_5B204 has already moved Camera_Y_pos to 1. */
+    /**
+     * A copy of 0 is still V_scroll_value, e.g. when loc_5B204 has already moved Camera_Y_pos to 1.
+     */
     @Override public boolean foregroundVerticalScrollExplicit() {
         return act2PlaneAFollowsCopy();
     }
@@ -273,6 +280,131 @@ public class SwScrlSsz extends SwScrlS3kDefault
         currentBgPeriodWidth = SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
         if (advance && state.foregroundRoutine() >= 8)
             com.openggf.game.sonic3k.events.SszLaunchBackground.update(GameServices.level(), state);
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        var nativeState = state();
+        if (nativeState == null || !nativeState.screenInitApplied())
+            return super.captureProjection(context);
+        int act = context.act(), foregroundRoutine = nativeState.foregroundRoutine();
+        int backgroundRoutine = nativeState.backgroundRoutine();
+        int bgX = nativeState.backgroundCameraX(), bgY = nativeState.backgroundCameraY();
+        int oscillator = nativeState.cloudOscillator(), drift = nativeState.cloudDrift();
+        int specialVInt = nativeState.specialVIntRoutine();
+        int swing = nativeState.eventsBgWord(0);
+        int shake = nativeState.appliedScreenShakeOffset();
+        boolean clouds = nativeState.backgroundUsesCloudBands();
+        short[] words = new short[0x198 / 2];
+        for (int i = 0; i < words.length; i++) words[i] = (short) nativeState.act2ScrollWord(i * 2);
+        int[] foregroundBands = act2ForegroundBands == null ? null : act2ForegroundBands.clone();
+        int[] islandBands = act2IslandBands == null ? null : act2IslandBands.clone();
+        int[] endingBands =
+                act2EndingBackgroundBands == null ? null : act2EndingBackgroundBands.clone();
+        int[] launchScroll = new int[10];
+        for (int i = 0; i < launchScroll.length; i++)
+            launchScroll[i] = nativeState.launch().scroll(i);
+        int launchY = nativeState.launch().foregroundY();
+        int copyDX = GameServices.camera().getXCopy() - context.cameraX();
+        return view -> {
+            var scratch = new SwScrlSsz(view.height());
+            var local = new SszZoneRuntimeState(act, com.openggf.game.PlayerCharacter.SONIC_ALONE);
+            local.setForegroundRoutine(foregroundRoutine);
+            local.setBackgroundRoutine(backgroundRoutine);
+            local.setBackgroundCameraX(bgX);
+            local.setBackgroundCameraY(bgY);
+            local.setCloudOscillator(oscillator);
+            local.setSpecialVIntRoutine(specialVInt);
+            local.setEventsBgWord(0, swing);
+            for (int i = 0; i < words.length; i++) local.setAct2ScrollWord(i * 2, words[i]);
+            int[] horizontal = new int[view.height()];
+            short[] bgColumns = null, fgColumns = null;
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            if (act == 0) {
+                short sampledBgY;
+                if (clouds) {
+                    // sub_57A60 adds $500 AFTER consuming its old cloud-drift longword.
+                    // The held published table therefore belongs to this preceding value.
+                    local.setCloudDrift(drift - CLOUD_DRIFT_PER_FRAME);
+                    scratch.cloudParameters(local, view.cameraX(), view.cameraY());
+                    sampledBgY = (short) local.backgroundCameraY();
+                    scratch.composer.setVscrollFactorBG(sampledBgY);
+                    DeformationPlan.applyTableBands(
+                            scratch.composer,
+                            sampledBgY,
+                            negWord(view.cameraX()),
+                            scratch.hScrollTable,
+                            SSZ1_BG_DEFORM,
+                            DEFORM_TABLE_START_INDEX,
+                            NEGATE_WORD);
+                } else {
+                    // The entering redraw retains its outgoing plane. Other plain modes
+                    // preserve their resolved near/far framing without firing the latch.
+                    int sampledBgX = backgroundRoutine == BG_ENTERING_CLOUDS ? bgX : bgX + dx;
+                    local.setBackgroundCameraX(sampledBgX);
+                    sampledBgY = (short) (backgroundRoutine == BG_ENTERING_CLOUDS ? bgY : bgY + dy);
+                    scratch.composer.setVscrollFactorBG(sampledBgY);
+                    scratch.composer.fillPackedScrollWords(
+                            0, view.height(), negWord(view.cameraX()), negWord(sampledBgX));
+                }
+                horizontal = scratch.composer.packedScrollWords();
+                local.setBackgroundCameraY(sampledBgY);
+                if (foregroundRoutine != 0) {
+                    fgColumns = new short[(view.width() + 15) / 16];
+                    for (int i = 0; i < fgColumns.length; i++) {
+                        int channel = Math.clamp((view.cameraX() + i * 16 - 0x19A0) >> 5, 0, 9);
+                        fgColumns[i] =
+                                (short)
+                                        ((foregroundRoutine == 4 ? launchScroll[channel] : launchY)
+                                                - view.cameraY());
+                    }
+                }
+            } else if (backgroundRoutine != 0) {
+                SszAct2Deformation.composeEndingBackground(
+                        local, horizontal, view.cameraX() + copyDX, endingBands);
+            } else if (foregroundRoutine >= 0x18) {
+                SszAct2Deformation.composeIsland(
+                        local, horizontal, (short) (view.cameraY() + shake), islandBands);
+                // Island Plane A has its own deformation; camera-X reframing is a
+                // presentation translation, not a new island drift dispatch.
+                for (int i = 0; i < horizontal.length; i++)
+                    horizontal[i] =
+                            ((short) ((short) (horizontal[i] >>> 16) - dx) << 16)
+                                    | horizontal[i] & 65535;
+            } else if (foregroundRoutine >= 0xC) {
+                java.util.Arrays.fill(
+                        horizontal, ((-view.cameraX() - copyDX & 65535) << 16) | -bgX & 65535);
+            } else {
+                // sub_58D3E consumes drift, then adds $1000. Rebuild only the numeric
+                // parameter kernel in private RAM, with no event or frame dispatch.
+                local.setCloudDrift(drift - 0x1000);
+                SszAct2Deformation.parameters(
+                        local, view.cameraX(), (short) (view.cameraY() + shake));
+                SszAct2Deformation.compose(
+                        local, horizontal, (short) (view.cameraY() + shake), foregroundBands);
+                bgColumns = SszAct2Deformation.columns(local, view.width());
+            }
+            var output = context.nativeOutput();
+            return new com.openggf.level.scroll.ScrollProjection(
+                    horizontal,
+                    null,
+                    bgColumns,
+                    fgColumns,
+                    (short) (output.foregroundY() + dy),
+                    (short) local.backgroundCameraY(),
+                    act == 0
+                            ? clouds ? CLOUD_WINDOW_LAYOUT_X : local.backgroundCameraX() & 0xFFFF
+                            : output.backgroundX(),
+                    // SSZ1 draws a fixed 512-pixel nametable in both native modes.
+                    // The act-2 fan alone requires a camera-derived residency period.
+                    act == 0
+                            ? VDP_PLANE_WIDTH_PX
+                            : SwScrlHpz.requiredBgPeriodWidth(horizontal, view.width()),
+                    output.shakeX(),
+                    output.shakeY(),
+                    output.tilemapMode());
+        };
     }
 
     // shader_tilemap adds column values to WorldOffsetY. Convert the native absolute

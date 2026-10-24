@@ -647,6 +647,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Publishes a request the active game profile has released. */
     public void publishPreparedLevelMusic(int musicId) {
+        if (!com.openggf.audio.LevelMusicAccess.allowsAutomatic(audioManager)) return;
         var module = activeGameModule();
         var profile = module.getLevelInitProfile();
         if (profile.isLevelMusicPublicationPending()) return;
@@ -2192,54 +2193,45 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @return true when MGZ state 8 should use the full-width per-line BG tilemap path
      */
     boolean applyBackgroundTilemapWindowSelection(int bgCameraX) {
-        if (tilemapManager == null) {
-            return false;
-        }
-        BgTilemapUpdateMode updateMode = parallaxManager != null
-                ? parallaxManager.getBgTilemapUpdateMode()
-                : BgTilemapUpdateMode.STATIC_WINDOW;
-        boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
-                && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
-                currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
-        int newBgPeriodWidth = parallaxManager != null
-                ? parallaxManager.getBgPeriodWidth()
-                : LevelTilemapManager.VDP_BG_PLANE_WIDTH_PX;
-        if (fullWidthPerLineTilemap) {
-            if (tilemapManager.getBgTilemapBaseX() != 0) {
-                tilemapManager.setBgTilemapBaseX(0);
-                tilemapManager.setBackgroundTilemapDirty(true);
+        if (tilemapManager == null) return false;
+        return applyBackgroundTilemapWindowSelection(tilemapManager, bgCameraX,
+                parallaxManager != null ? parallaxManager.getBgTilemapUpdateMode() : BgTilemapUpdateMode.STATIC_WINDOW,
+                zoneFeatureProvider != null && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
+                        currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx),
+                usesPersistentBackgroundVdpPlane(), zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally(),
+                parallaxManager != null ? parallaxManager.getBgPeriodWidth() : LevelTilemapManager.VDP_BG_PLANE_WIDTH_PX,
+                cachedBgContiguousWidthPx,
+                zoneFeatureProvider != null ? zoneFeatureProvider.backgroundLoopBandBaseY(currentZone, currentAct) : -1);
+    }
+
+    /** One window policy for both live native providers and their immutable directed captures. */
+    static boolean applyBackgroundTilemapWindowSelection(LevelTilemapManager tiles, int bgCameraX,
+            BgTilemapUpdateMode updateMode, boolean fullWidth, boolean persistentPlane, boolean wraps,
+            int periodWidth, int contiguousWidth, int loopBandBaseY) {
+        if (fullWidth) {
+            if (tiles.getBgTilemapBaseX() != 0) {
+                tiles.setBgTilemapBaseX(0);
+                tiles.setBackgroundTilemapDirty(true);
             }
-            newBgPeriodWidth = cachedBgContiguousWidthPx;
-        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
-                && !usesPersistentBackgroundVdpPlane()
-                && bgCameraX != Integer.MIN_VALUE
-                && zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally()) {
+            periodWidth = contiguousWidth;
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW && !persistentPlane
+                && bgCameraX != Integer.MIN_VALUE && wraps) {
             int newBase = Math.floorDiv(bgCameraX, 16) * 16;
-            if (newBase != tilemapManager.getBgTilemapBaseX()) {
-                // Window-only change: eligible for the incremental one-column shift.
-                tilemapManager.requestBgWindowBaseX(newBase);
-            }
-        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW
-                && tilemapManager.getBgTilemapBaseX() != 0) {
-            tilemapManager.setBgTilemapBaseX(0);
-            tilemapManager.setBackgroundTilemapDirty(true);
+            if (newBase != tiles.getBgTilemapBaseX()) tiles.requestBgWindowBaseX(newBase);
+        } else if (updateMode == BgTilemapUpdateMode.STATIC_WINDOW && tiles.getBgTilemapBaseX() != 0) {
+            tiles.setBgTilemapBaseX(0);
+            tiles.setBackgroundTilemapDirty(true);
         }
-
-        if (newBgPeriodWidth != tilemapManager.getCurrentBgPeriodWidth()) {
-            tilemapManager.setCurrentBgPeriodWidth(newBgPeriodWidth);
-            tilemapManager.setBackgroundTilemapDirty(true);
+        if (periodWidth != tiles.getCurrentBgPeriodWidth()) {
+            tiles.setCurrentBgPeriodWidth(periodWidth);
+            tiles.setBackgroundTilemapDirty(true);
         }
-
-        // S3K CNZ miniboss loops a fixed BG band (CNZ1BGE_Boss); anchor/clamp the BG
-        // tilemap to that band so the looping scroll excludes the room floor below it.
-        int loopBandBaseY = zoneFeatureProvider != null
-                ? zoneFeatureProvider.backgroundLoopBandBaseY(currentZone, currentAct)
-                : -1;
-        if (loopBandBaseY != tilemapManager.getBgLoopBandBaseY()) {
-            tilemapManager.setBgLoopBandBaseY(loopBandBaseY);
-            tilemapManager.setBackgroundTilemapDirty(true);
+        // CNZ1BGE_Boss loops its retained band without exposing the room floor.
+        if (loopBandBaseY != tiles.getBgLoopBandBaseY()) {
+            tiles.setBgLoopBandBaseY(loopBandBaseY);
+            tiles.setBackgroundTilemapDirty(true);
         }
-        return fullWidthPerLineTilemap;
+        return fullWidth;
     }
 
     private static boolean usesPersistentBackgroundVdpPlane() {

@@ -18,6 +18,17 @@ public final class SozLightSwitchObjectInstance extends AbstractObjectInstance i
     private final FbzParticipantStateTable players=new FbzParticipantStateTable(2);
     private int extension;
     public SozLightSwitchObjectInstance(ObjectSpawn spawn){super(spawn,"SOZLightSwitch");}
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var entity : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (entity instanceof AbstractPlayableSprite player) {
+                int slot = players.slot(player);
+                if (players.flag(slot, 0)) release(player, slot, 60);
+            }
+        }
+    }
+
     @Override public void update(int vIntRunCount,PlayableEntity leader) {
         // $30 is a WORD containing the two capture bytes: either native rider pulls.
         boolean held=false;for(int i=0;i<players.size();i++)held|=players.flag(i,0);

@@ -116,6 +116,14 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        if (player1Grabbed && player1Owner instanceof AbstractPlayableSprite player) releasePlayer(player, false);
+        if (player2Grabbed && player2Owner instanceof AbstractPlayableSprite player) releasePlayer(player, true);
+        for (var entry : extensionStates.entrySet()) releaseOwnedPlayer(entry.getKey(), entry.getValue());
+        extensionStates.clear();
+    }
+
+    @Override
     public VineSwitchObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new VineSwitchObjectInstance(ctx.spawn(), getName(), pinsHeldPlayer);
     }

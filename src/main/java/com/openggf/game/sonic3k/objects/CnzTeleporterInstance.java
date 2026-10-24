@@ -12,11 +12,11 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -80,6 +80,21 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
     public CnzTeleporterInstance(ObjectSpawn spawn) {
         super(spawn, "CNZTeleporter");
         this.centreY = spawn.y();
+    }
+
+    private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
+
+    /** Stageplay interruption only: the unfinished native route has no completion/release routine yet. */
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : visualControlOwners.players()) {
+            if (playerCaptured) ObjectControlState.none().applyTo(player);
+            player.setControlLocked(false);
+            if (playerHidden) player.setHidden(false);
+        }
+        visualControlOwners.clear();
+        playerCaptured = playerHidden = false;
+        // Camera locks, published route state, palette and queued art remain native-owned.
     }
 
     @Override
@@ -167,7 +182,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
 
         player.setXSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setControlLocked(true);
+        visualControlOwners.acquire(player).setControlLocked(true);
 
         /**
          * The engine does not expose the raw logical-input buffer, so Task 8
@@ -241,7 +256,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance implemen
         if (!playerCaptured && beamCounter == CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER) {
             playerCaptured = true;
             ObjectControlState.nativeBit7FullControl().applyTo(player);
-            player.setControlLocked(true);
+            visualControlOwners.acquire(player).setControlLocked(true);
             player.setRolling(true);
             player.setCentreX((short) TELEPORT_X);
             player.setXSpeed((short) 0);

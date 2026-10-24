@@ -21,6 +21,7 @@ import com.openggf.stageplay.runtime.StageplayRenderer;
 import com.openggf.stageplay.runtime.StageplayResources;
 import com.openggf.stageplay.editor.StageplayEditorSession;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tools.HeadlessGameBoot;
 import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
@@ -45,6 +46,147 @@ import static org.lwjgl.opengl.GL11.*;
  */
 @Isolated
 class TestStageplayHudPictures {
+    @Test
+    void captureCollisionRouteAndVisualFootprintForms() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        // Match the production host's GL setup, rather than a bare component
+        // context, for the long scrolling authoring form's review pictures.
+        try (var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);
+            boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try (var renderer=new EditorProjectMenuRenderer()) {
+                var scene=routeFormScene();var workspace=new StageplayWorkspace(() -> scene);workspace.activate();workspace.selectActor("hero");
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("x","240");workspace.menu().setValue("y","648");
+                renderObjectMenu(renderer,workspace);capture("route-player-form",1280,720);
+                workspace.menu().close();workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("actor","prop");
+                workspace.menu().setValue("halfWidth","12");workspace.menu().setValue("height","24");workspace.menu().setValue("footOffset","12");
+                var input=new InputHandler();for(int i=0;i<12;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+                renderObjectMenu(renderer,workspace);capture("route-object-footprint-form",1280,720);
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        } finally {
+            SessionManager.clear();RomManager.getInstance().setRom(null);Engine.clearGlobalInstance();
+            TestEnvironment.resetAll();SonicConfigurationService.getInstance().resetToDefaults();GameModuleRegistry.reset();
+        }
+    }
+    private static StageplayDocument routeFormScene() {
+        return StageplayDocument.empty("s2",0,0,0,500,320,224).withActors(List.of(
+                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)))))
+                .withPuppets(List.of(new StageplayDocument.PuppetTrack("hero",true,0,List.of())))
+                .withObjectActors(List.of(new StageplayDocument.ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,
+                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1,false,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
+    }
+
+    @Test
+    void captureScreenplayImportRefineAndExportForms() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280, 720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            Path output = Path.of("target", "stageplay-hud").toAbsolutePath(); Files.createDirectories(output);
+            Path source = output.resolve("screenplay-source.json");
+            Files.writeString(source, """
+                    {"version":6,"name":"Two-way take","width":320,"height":224,
+                     "cast":[{"id":"hero","name":"Sonic","gameId":"s2","character":"sonic","puppet":false}],
+                     "shots":[{"id":"opening","durationFrames":120,
+                     "set":{"gameId":"s2","zone":0,"act":0},
+                     "camera":[{"frame":0,"x":0,"y":500}],"actors":{"hero":[
+                     {"frame":0,"x":128,"y":648,"animation":5},{"frame":30,"x":128,"y":648,"animation":5},
+                     {"frame":90,"x":256,"y":648,"animation":5},{"frame":119,"x":256,"y":648,"animation":5}]},
+                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":129}]}]}
+                    """);
+            var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,0,0,500,320,224));
+            workspace.activate(); workspace.invoke(StageplayWorkspace.Action.IMPORT_SCREENPLAY);
+            workspace.menu().setValue("path", "target/stageplay-hud/screenplay-source.json");
+            renderObjectMenu(renderer,workspace); capture("screenplay-import-form",1280,720);
+            workspace.menu().setValue("path",source.toString()); workspace.menu().submit();
+            assertNull(workspace.menu().error()); assertNull(workspace.path()); assertTrue(workspace.controller().dirty());
+            workspace.selectActor("hero"); workspace.seek(90); workspace.invoke(StageplayWorkspace.Action.SET_KEY);
+            workspace.menu().setValue("x","240"); workspace.menu().submit(); assertNull(workspace.menu().error());
+            workspace.seek(119); workspace.invoke(StageplayWorkspace.Action.SET_KEY);
+            workspace.menu().setValue("x","240"); workspace.menu().submit(); assertNull(workspace.menu().error());
+            var refined = workspace.controller().document();
+            assertEquals(240, refined.actors().getFirst().keys().stream().filter(k -> k.frame()==90).findFirst().orElseThrow().x());
+            Path exported = output.resolve("ui-refined.screenplay.json"); Files.deleteIfExists(exported);
+            workspace.invoke(StageplayWorkspace.Action.EXPORT_SCREENPLAY);
+            workspace.menu().setValue("path","target/stageplay-hud/ui-refined.screenplay.json");
+            renderObjectMenu(renderer,workspace); capture("screenplay-export-form",1280,720);
+            workspace.menu().setValue("path",exported.toString()); workspace.menu().submit(); assertNull(workspace.menu().error());
+            assertEquals(refined,com.openggf.tools.StageplayScriptCompiler.compile(Files.readAllBytes(exported)));
+            assertTrue(workspace.controller().dirty()); assertTrue(workspace.controller().canUndo());
+            workspace.saveTo(output.resolve("ui-refined.stageplay"));
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    @Test
+    void captureAnimatedCameraFormForNativeWorld() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280,720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            var scene = StageplayDocument.empty("s2",0,0,0,500,320,224)
+                    .withSet(new StageplayDocument.SetSource("s2",0,0,"",""));
+            var workspace = new StageplayWorkspace(() -> scene);
+            workspace.activate(); workspace.invoke(StageplayWorkspace.Action.CAMERA_KEY);
+            objectMenuChoose(workspace,0);
+            workspace.menu().setValue("zoom","1.5");
+            workspace.menu().setValue("interpolation","SMOOTH");
+            renderObjectMenu(renderer,workspace);
+            capture("camera-animated-native-world",1280,720);
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    @Test
+    void captureObjectCastArenaRestrictionAndModeForm() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
+        assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
+        TestEnvironment.resetAll();
+        try (var fixture = TestEditorProjectLifecycle.Fixture.open(GameId.S2);
+             var context = PresentationOffscreenTestContext.open(1280,720);
+             var renderer = new EditorProjectMenuRenderer()) {
+            var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,1,0,0,320,224));
+            workspace.activate(); workspace.invoke(StageplayWorkspace.Action.OBJECTS);
+            renderObjectMenu(renderer,workspace); capture("object-cast-commands",1280,720);
+            objectMenuChoose(workspace,0);
+            workspace.menu().setValue("name","EHZ boss"); workspace.menu().setValue("object","86");
+            workspace.menu().submit(); assertNull(workspace.menu().error());
+            renderObjectMenu(renderer,workspace); capture("object-arena-restriction",1280,720);
+            objectMenuChoose(workspace,1); objectMenuChoose(workspace,0);
+            renderObjectMenu(renderer,workspace); capture("object-mode-key",1280,720);
+        } finally {
+            SessionManager.clear(); RomManager.getInstance().setRom(null); Engine.clearGlobalInstance();
+            TestEnvironment.resetAll(); SonicConfigurationService.getInstance().resetToDefaults(); GameModuleRegistry.reset();
+        }
+    }
+
+    private static void renderObjectMenu(EditorProjectMenuRenderer renderer,StageplayWorkspace workspace) {
+        glViewport(0,0,1280,720); glDisable(GL_SCISSOR_TEST); glClearColor(0,0,0,1); glClear(GL_COLOR_BUFFER_BIT);
+        glViewport(160,24,960,672); renderer.render(workspace.menu(),SceneSurface.projection(320,224),320);
+        assertEquals(GL_NO_ERROR,glGetError());
+    }
+
+    private static void objectMenuChoose(StageplayWorkspace workspace,int row) {
+        var input = new InputHandler();
+        for (int i=0;i<row;i++) objectMenuPress(workspace,input,GLFW_KEY_DOWN);
+        objectMenuPress(workspace,input,GLFW_KEY_ENTER);
+    }
+
+    private static void objectMenuPress(StageplayWorkspace workspace,InputHandler input,int key) {
+        input.handleKeyEvent(key,GLFW_PRESS); input.refreshLogicalSnapshot(); workspace.menu().update(input); input.update();
+        input.handleKeyEvent(key,GLFW_RELEASE); input.update();
+    }
+
     @Test
     void captureStageplayCastTimelineAndCommands() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
@@ -78,7 +220,15 @@ class TestStageplayHudPictures {
             var line = StageplayTimeline.sample(scene,60).dialogue().getFirst();
             assertEquals("Sonic",line.speakerName());
             assertFalse(line.visibleText().isEmpty());
-            var workspace = new StageplayWorkspace(() -> scene);
+            var workspace = new StageplayWorkspace(new StageplayWorkspace.Host() {
+                public StageplayDocument initialDocument() { return scene; }
+                public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, int frame) {
+                    return resources.resolveFrame(document, StageplayTimeline.sample(document, frame));
+                }
+                public StageplayTimeline.Frame resolvePreview(StageplayDocument document, Path root, StageplayTimeline.Frame frame) {
+                    return resources.resolveFrame(document, frame);
+                }
+            });
             workspace.activate();
             workspace.selectActor("hero");
             workspace.seek(60);
@@ -95,7 +245,7 @@ class TestStageplayHudPictures {
                 assertTrue(java.util.Arrays.stream(sprite.image().pixels()).anyMatch(pixel -> (pixel >>> 24) != 0),
                         "The pictured cast must resolve visible ROM artwork: " + actor.actorId() + " at frame " + frame);
             }
-            surface.record(scene.width(), scene.height(), canvas -> renderer.draw(scene, StageplayTimeline.sample(scene, 60), canvas));
+            surface.record(scene.width(), scene.height(), canvas -> renderer.draw(scene, workspace.previewFrame(), canvas));
             assertTrue(surface.recordedFrame().size() > 10, "The picture must contain the ROM set and cast");
             assertTrue(chrome.setActive(true));
             var input = new InputHandler();
@@ -117,7 +267,9 @@ class TestStageplayHudPictures {
             input.update(); input.handleKeyEvent(GLFW_KEY_F1,GLFW_RELEASE); input.update();
             input.handleKeyEvent(GLFW_KEY_F1,GLFW_PRESS); input.refreshLogicalSnapshot(); chrome.update(input); input.update();
             workspace.invoke(StageplayWorkspace.Action.CAMERA_MODE);
-            workspace.moveCamera(8,0,2);
+            workspace.moveCamera(8,100000,2);
+            assertTrue(workspace.directorCamera().y() < 100000, "HUD must display native-bounded draft framing");
+            assertEquals(scene.camera(), workspace.controller().document().camera(), "Draft clamp cannot rewrite keys");
             surface.record(scene.width(),scene.height(),canvas -> renderer.draw(workspace.previewDocument(),workspace.previewFrame(),canvas));
             render(chrome,surface,scene,1280,720); capture("camera-720p",1280,720);
             render(chrome,surface,scene,1024,576); capture("camera-small",1024,576);

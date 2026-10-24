@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.camera.Camera;
 import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.PlayableEntity;
@@ -29,7 +30,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
-
 import java.util.List;
 
 /**
@@ -41,6 +41,10 @@ import java.util.List;
  */
 public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+
+    private final PlayerControlOwners directedControlPlayers =
+            new PlayerControlOwners();
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_CAMERA_LOCK = 0x02;
     private static final int ROUTINE_WAIT_GROUNDED = 0x04;
@@ -328,6 +332,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
         boolean alternate = (frameCounter & 0x02) != 0;
         for (AbstractPlayableSprite player : participants) {
+            directedControlPlayers.add(player);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             // sub_65E72 bsets render_flags bit 1 alongside the raw $B4/$A7
             // mapping selection, turning these into the floor-grab poses.
@@ -397,6 +402,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
                 if (i == 0 || playerTwoRenderFlagsOnScreenForLift(player)) {
                     Mhz2KnucklesLiftChild child = spawnFreeChild(
                             () -> new Mhz2KnucklesLiftChild(player));
+                    if (child != null) directedControlPlayers.remove(player);
                     if (child != null) child.initializeLaunch(services().camera());
                 }
             }
@@ -415,6 +421,13 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         updateLeafSpawnTimer();
     }
 
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (AbstractPlayableSprite player : directedControlPlayers.players())
+            Mhz2KnucklesLiftChild.releasePlayerControl(player);
+        directedControlPlayers.clear();
+    }
+
     private void lockPlayers() {
         for (AbstractPlayableSprite player : players()) {
             lockPlayer(player);
@@ -423,6 +436,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     private void lockPlayer(PlayableEntity entity) {
         if (entity instanceof AbstractPlayableSprite player) {
+            directedControlPlayers.add(player);
             player.setControlLocked(true);
             if (player.getCpuController() != null) {
                 // loc_63182 writes Ctrl_2_locked=$FF and clears
@@ -456,6 +470,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     private void enterNativePlayerPressControl() {
         for (AbstractPlayableSprite player : players()) {
+            directedControlPlayers.add(player);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAnimationId(PRESS_START_ANIMATION);
             player.setXSpeed((short) 0);
@@ -651,6 +666,12 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
+        public void releasePlayersForVisualDirection() {
+            if (player != null) releasePlayerControl(player);
+            player = null;
+        }
+
+        @Override
         public int getX() {
             return player != null ? player.getCentreX() & 0xFFFF : getSpawn().x();
         }
@@ -689,6 +710,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             // The player's own y_vel remains the zero established by press control.
             if ((short) carrierYVelocity >= 0) {
                 releasePlayerAfterLift(player);
+                player = null;
                 setDestroyed(true); // native Delete_Current_Sprite on the release pass
                 return;
             }
@@ -698,7 +720,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             }
         }
 
-        private void releasePlayerAfterLift(AbstractPlayableSprite player) {
+        private static void releasePlayerControl(AbstractPlayableSprite player) {
             ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
             // loc_633D6 clears art_tile bit 15 when the carrier releases P1/P2.
@@ -712,6 +734,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             }
             player.clearLogicalInputState();
             player.clearForcedInputMask();
+        }
+
+        private void releasePlayerAfterLift(AbstractPlayableSprite player) {
+            releasePlayerControl(player);
             player.setAnimationId(0);
             player.setGSpeed((short) 0x10);
             if (services().zoneRuntimeState() instanceof MhzZoneRuntimeState state) {

@@ -417,6 +417,11 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        onUnload();
+    }
+
+    @Override
     public void onUnload() {
         releaseOwnedPlayer(p1Owner, p1State);
         releaseOwnedPlayer(p2Owner, p2State);

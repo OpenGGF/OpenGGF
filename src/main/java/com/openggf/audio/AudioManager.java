@@ -78,6 +78,8 @@ public class AudioManager implements MusicRestoreSink {
             new BaseAudioSource(null, null, null, null, null, 0);
     private Map<GameSound, Integer> soundMap;
     private boolean ringLeft = true;
+    // Director-owned playlist admission survives producer/shot replacement until its scope closes.
+    int levelMusicControls;
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
     // Internal world ownership never replaces the single external diagnostic observer.
     AudioMutatorAccess.Binding mutatorBinding;

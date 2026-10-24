@@ -3,6 +3,9 @@ package com.openggf.game.sonic1.scroll;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.ScrollProjectionContext;
+import com.openggf.level.scroll.ScrollProjectionPhase;
+import com.openggf.level.scroll.ScrollProjectionSource;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
 import java.util.Arrays;
@@ -10,7 +13,7 @@ import java.util.Arrays;
 import static com.openggf.level.scroll.M68KMath.*;
 
 /** REV01 Deform_SBZ: four cloud words and three independently moving building bands. */
-public final class SwScrlSbz extends AbstractZoneScrollHandler {
+public final class SwScrlSbz extends AbstractZoneScrollHandler implements ScrollProjectionSource {
     // v_bgscroll_buffer is $200 bytes. Deform_SBZ writes its first 32 words.
     private final short[] scrollBuffer = new short[0x100];
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
@@ -64,19 +67,8 @@ public final class SwScrlSbz extends AbstractZoneScrollHandler {
             bg1X += (long) dx * 128 * 256;
             bg2X += (long) dx * 96 * 256;
             bg3X += (long) dx * 64 * 256;
-            buildBands(cameraX);
-            int y = (short) (bgY >> 16);
-            int word = (y & 0x1F0) >> 4;
-            int line = 0;
-            int count = 16 - (y & 15);
-            // BGScroll_X reads sequential words, with a shortened first group.
-            // Only the visible 224 entries of the native HScroll tail are used.
-            while (line < VISIBLE_LINES) {
-                count = Math.min(count, VISIBLE_LINES - line);
-                composer.fillPackedScrollWords(line, count, foreground, scrollBuffer[word++]);
-                line += count;
-                count = 16;
-            }
+            buildBands(scrollBuffer, cameraX, bg1X, bg2X, bg3X);
+            writeBands(composer, scrollBuffer, cameraX, bgY);
         }
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -84,7 +76,7 @@ public final class SwScrlSbz extends AbstractZoneScrollHandler {
         maxScrollOffset = composer.getMaxScrollOffset();
     }
 
-    private void buildBands(int cameraX) {
+    private static void buildBands(short[] scrollBuffer, int cameraX, long bg1X, long bg2X, long bg3X) {
         short quarter = asrWord(negWord(cameraX), 2);
         short difference = (short) (asrWord(quarter, 1) - quarter);
         // DIVS consumes a signed long dividend and returns its word quotient.
@@ -158,4 +150,44 @@ public final class SwScrlSbz extends AbstractZoneScrollHandler {
     private record State(long bg1X, long bg2X, long bg3X, long bgY,
                          int cameraX, int cameraY, int act, boolean initialized,
                          short vscroll, int minOffset, int maxOffset) { }
+    private static void writeBands(ScrollEffectComposer composer, short[] scrollBuffer, int cameraX, long bgY) {
+        short foreground = negWord(cameraX);
+        int y = (short) (bgY >> 16);
+        int word = (y & 0x1F0) >> 4;
+        int line = 0;
+        int count = 16 - (y & 15);
+        // BGScroll_X reads sequential words, with a shortened first group.
+        // Only the visible 224 entries of the native HScroll tail are used.
+        while (line < composer.visibleLineCount()) {
+            count = Math.min(count, composer.visibleLineCount() - line);
+            composer.fillPackedScrollWords(line, count, foreground, scrollBuffer[Math.min(word++, scrollBuffer.length - 1)]);
+            line += count;
+            count = 16;
+        }
+    }
+
+    @Override
+    public ScrollProjectionPhase captureProjection(ScrollProjectionContext context) {
+        long captured1 = bg1X, captured2 = bg2X, captured3 = bg3X, capturedY = bgY;
+        int act = activeAct;
+        return view -> {
+            int dx = view.cameraX() - context.cameraX(), dy = view.cameraY() - context.cameraY();
+            long y = capturedY + (long) dy * 32 * 256;
+            var output = new ScrollEffectComposer(view.height());
+            output.setVscrollFactorBG((short) (y >> 16));
+            if (act != 0) {
+                int x = (int) ((captured1 + (long) dx * 64 * 256) >> 16);
+                output.fillPackedScrollWords(0, view.height(), negWord(view.cameraX()), negWord(x));
+            } else {
+                short[] bands = new short[0x100];
+                buildBands(bands, view.cameraX(), captured1 + (long) dx * 128 * 256,
+                        captured2 + (long) dx * 96 * 256, captured3 + (long) dx * 64 * 256);
+                writeBands(output, bands, view.cameraX(), y);
+            }
+            int sourceX = view.cameraX() - output.getMaxScrollOffset();
+            return Sonic1ProjectionOutput.finish(context, view, output, sourceX,
+                    requiredBgPeriodWidth(sourceX, output.getMaxScrollOffset() - output.getMinScrollOffset(), view.width()));
+        };
+    }
+
 }

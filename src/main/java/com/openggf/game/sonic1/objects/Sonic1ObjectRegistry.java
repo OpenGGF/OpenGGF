@@ -152,27 +152,27 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new Sonic1BreakableWallObjectInstance(spawn));
         factories.put(Sonic1ObjectIds.EDGE_WALLS,
                 (spawn, registry) -> new Sonic1EdgeWallObjectInstance(spawn));
-        factories.put(Sonic1ObjectIds.CHOPPER,
+        registerBadnikFactory(Sonic1ObjectIds.CHOPPER,
                 (spawn, registry) -> new Sonic1ChopperBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.JAWS,
+        registerBadnikFactory(Sonic1ObjectIds.JAWS,
                 (spawn, registry) -> new Sonic1JawsBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.BURROBOT,
+        registerBadnikFactory(Sonic1ObjectIds.BURROBOT,
                 (spawn, registry) -> new Sonic1BurrobotBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.BUZZ_BOMBER,
+        registerBadnikFactory(Sonic1ObjectIds.BUZZ_BOMBER,
                 (spawn, registry) -> new Sonic1BuzzBomberBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.CRABMEAT,
+        registerBadnikFactory(Sonic1ObjectIds.CRABMEAT,
                 (spawn, registry) -> new Sonic1CrabmeatBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.MOTOBUG,
+        registerBadnikFactory(Sonic1ObjectIds.MOTOBUG,
                 (spawn, registry) -> new Sonic1MotobugBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.NEWTRON,
+        registerBadnikFactory(Sonic1ObjectIds.NEWTRON,
                 (spawn, registry) -> new Sonic1NewtronBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.CATERKILLER,
+        registerBadnikFactory(Sonic1ObjectIds.CATERKILLER,
                 (spawn, registry) -> new Sonic1CaterkillerBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.BATBRAIN,
+        registerBadnikFactory(Sonic1ObjectIds.BATBRAIN,
                 (spawn, registry) -> new Sonic1BatbrainBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.YADRIN,
+        registerBadnikFactory(Sonic1ObjectIds.YADRIN,
                 (spawn, registry) -> new Sonic1YadrinBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.ROLLER,
+        registerBadnikFactory(Sonic1ObjectIds.ROLLER,
                 (spawn, registry) -> new Sonic1RollerBadnikInstance(spawn));
         factories.put(Sonic1ObjectIds.BUMPER,
                 (spawn, registry) -> new Sonic1BumperObjectInstance(spawn));
@@ -258,9 +258,9 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new Sonic1FanObjectInstance(spawn));
         factories.put(Sonic1ObjectIds.SEESAW,
                 (spawn, registry) -> new Sonic1SeesawObjectInstance(spawn));
-        factories.put(Sonic1ObjectIds.BOMB,
+        registerBadnikFactory(Sonic1ObjectIds.BOMB,
                 (spawn, registry) -> new Sonic1BombBadnikInstance(spawn));
-        factories.put(Sonic1ObjectIds.ORBINAUT,
+        registerBadnikFactory(Sonic1ObjectIds.ORBINAUT,
                 (spawn, registry) -> new Sonic1OrbinautBadnikInstance(spawn));
         factories.put(Sonic1ObjectIds.FLAMETHROWER,
                 (spawn, registry) -> new Sonic1FlamethrowerObjectInstance(spawn));
@@ -272,7 +272,7 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.
                 (spawn, registry) -> new Sonic1SawObjectInstance(spawn));
         factories.put(Sonic1ObjectIds.GIRDER,
                 (spawn, registry) -> new Sonic1GirderBlockObjectInstance(spawn));
-        factories.put(Sonic1ObjectIds.BALL_HOG,
+        registerBadnikFactory(Sonic1ObjectIds.BALL_HOG,
                 (spawn, registry) -> new Sonic1BallHogBadnikInstance(spawn));
         factories.put(Sonic1ObjectIds.SBZ_STOMPER_DOOR,
                 (spawn, registry) -> new Sonic1StomperDoorObjectInstance(spawn,
@@ -450,6 +450,11 @@ public class Sonic1ObjectRegistry extends AbstractObjectRegistry implements com.
             case 9 -> com.openggf.game.mutators.MonitorContent.BROKEN_SHELL;
             default -> com.openggf.game.mutators.MonitorContent.STATIC;
         };
+    }
+
+    @Override
+    public boolean isRingInstance(ObjectInstance object) {
+        return object instanceof Sonic1RingInstance;
     }
 
     @Override

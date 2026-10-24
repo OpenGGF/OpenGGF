@@ -1,6 +1,6 @@
 package com.openggf.game.sonic3k.scroll;
 
-import com.openggf.camera.Camera;
+import static com.openggf.level.scroll.M68KMath.*;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
@@ -17,17 +17,15 @@ import com.openggf.level.scroll.compose.ScrollValueTable;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-import static com.openggf.level.scroll.M68KMath.*;
-
 /**
  * Angel Island Zone (AIZ) scroll handler.
  *
- * Intro mode implements AIZ1_IntroDeform + ApplyDeformation semantics:
- * - Builds HScroll_table+$28 values from Events_fg_1 / Camera_X_pos_copy
- * - Applies ROM segment heights from AIZ1_IntroDeformArray
- * - Writes negated BG values into the per-scanline hscroll buffer
+ * <p>Intro mode implements AIZ1_IntroDeform + ApplyDeformation semantics: - Builds
+ * HScroll_table+$28 values from Events_fg_1 / Camera_X_pos_copy - Applies ROM segment heights from
+ * AIZ1_IntroDeformArray - Writes negated BG values into the per-scanline hscroll buffer
  */
-public class SwScrlAiz extends AbstractZoneScrollHandler {
+public class SwScrlAiz extends AbstractZoneScrollHandler
+        implements com.openggf.level.scroll.ScrollProjectionSource {
     private boolean detachedPresentation;
 
     /** Fresh steady-state presentation; never consults or consumes live zone event state. */
@@ -128,7 +126,16 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
              1,  1,  1,  1,  1,  0, -1, -2, -2, -1,  0,  2,  2,  2,  2,  0
     };
 
-    private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private final ScrollEffectComposer composer;
+
+    public SwScrlAiz() {
+        this(224);
+    }
+
+    private SwScrlAiz(int lines) {
+        composer = new ScrollEffectComposer(lines);
+    }
+
     private final ScrollValueTable introBandValues = ScrollValueTable.ofLength(INTRO_DEFORM_BANDS);
     private final ScrollValueTable deformValues = ScrollValueTable.ofLength(FLAT_VALUE_COUNT);
     private final short[] aiz2SpeedValues = new short[AIZ2_SPEED_LEVELS];
@@ -256,11 +263,12 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
      * <p>ROM reference: s3.asm AIZ1_Deform (line ~70272) + ApplyDeformation.
      *
      * <p>Builds a flat 25-word value array mirroring HScroll_table+$008...$038:
+     *
      * <ul>
-     *   <li>Bands 0-5 (6 words): tree canopy with wave motion</li>
-     *   <li>Band 6 (1 word): transition at base speed</li>
-     *   <li>Band 7 (13 words): per-line gradient from base*9/8 to base*21/8</li>
-     *   <li>Bands 8-12 (5 words): mountain/sky at base*14, 16, 18, 20, 18</li>
+     *   <li>Bands 0-5 (6 words): tree canopy with wave motion
+     *   <li>Band 6 (1 word): transition at base speed
+     *   <li>Band 7 (13 words): per-line gradient from base*9/8 to base*21/8
+     *   <li>Bands 8-12 (5 words): mountain/sky at base*14, 16, 18, 20, 18
      * </ul>
      */
     private void computeAiz1Deform(short fgScroll, int cameraX, int frameCounter) {
@@ -395,7 +403,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     }
 
     private void writePlainDeformation(short fgScroll, short bgScroll) {
-        composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
+        composer.fillPackedScrollWords(0, composer.visibleLineCount(), fgScroll, bgScroll);
     }
 
     private void writeIntroScroll(short fgScroll, int cameraY) {
@@ -448,23 +456,25 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
      * <p>ROM reference: AIZ2_ApplyDeform (Lockon S3/Screen Events.asm line 789).
      *
      * <p><b>FG deformation</b> (MakeFGDeformArray):
+     *
      * <ul>
-     *   <li>Above water: {@code AIZ2_SOZ1_LRZ3_FGDeformDelta} — subtle 0/1px heat shimmer,
-     *       32-word cycle, phase = {@code (frameCounter + cameraY*2) & 0x3E}.</li>
-     *   <li>Below water: {@code AIZ1_WaterFGDeformDelta} — smooth +/-1px sinusoidal ripple,
-     *       64-word cycle, phase = {@code (frameCounter + waterLevel*2) & 0x7E}.</li>
+     *   <li>Above water: {@code AIZ2_SOZ1_LRZ3_FGDeformDelta} — subtle 0/1px heat shimmer, 32-word
+     *       cycle, phase = {@code (frameCounter + cameraY*2) & 0x3E}.
+     *   <li>Below water: {@code AIZ1_WaterFGDeformDelta} — smooth +/-1px sinusoidal ripple, 64-word
+     *       cycle, phase = {@code (frameCounter + waterLevel*2) & 0x7E}.
      * </ul>
      *
      * <p><b>BG deformation</b> (ApplyFGandBGDeformation):
+     *
      * <ul>
-     *   <li>Above water: {@code AIZ2_ALZ_BGDeformDelta} — noisy +/-2px shimmer,
-     *       32-word cycle, phase = {@code ((frameCounter>>1) + bgY*2) & 0x3E}.</li>
-     *   <li>Below water: {@code AIZ1_WaterBGDeformDelta} — smooth sinusoidal ripple,
-     *       64-word cycle, phase = {@code ((frameCounter>>1) + waterBgY*2) & 0x7E}.</li>
+     *   <li>Above water: {@code AIZ2_ALZ_BGDeformDelta} — noisy +/-2px shimmer, 32-word cycle,
+     *       phase = {@code ((frameCounter>>1) + bgY*2) & 0x3E}.
+     *   <li>Below water: {@code AIZ1_WaterBGDeformDelta} — smooth sinusoidal ripple, 64-word cycle,
+     *       phase = {@code ((frameCounter>>1) + waterBgY*2) & 0x7E}.
      * </ul>
      *
      * @param waterScreenY screen-relative water Y (0..223 = split, &ge;224 = no water visible,
-     *                     &le;0 = entirely underwater)
+     *     &le;0 = entirely underwater)
      */
     private void applyFgDeformation(int cameraX, int cameraY, int frameCounter, int waterScreenY) {
         short baseFg = negWord(cameraX);
@@ -485,7 +495,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         int bgWaterPhase = (((frameCounter >> 1) + (waterBgY << 1)) & 0x7E) >> 1;
 
         // Determine split boundaries
-        int hazeEnd = Math.min(Math.max(waterScreenY, 0), VISIBLE_LINES);
+        int hazeEnd = Math.min(Math.max(waterScreenY, 0), composer.visibleLineCount());
 
         // Above water: heat haze deformation (FG + BG)
         for (int line = 0; line < hazeEnd; line++) {
@@ -496,7 +506,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         }
 
         // Below water: water ripple deformation (FG + BG)
-        for (int line = hazeEnd; line < VISIBLE_LINES; line++) {
+        for (int line = hazeEnd; line < composer.visibleLineCount(); line++) {
             int packed = composer.packedScrollWordAt(line);
             short bg = (short) (unpackBG(packed) + AIZ_WATER_BG_DEFORM[(bgWaterPhase + line) & 0x3F]);
             short fg = (short) (baseFg + AIZ_WATER_FG_DEFORM[(fgWaterPhase + line) & 0x3F]);
@@ -547,5 +557,110 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     @Override
     public short getVscrollFactorFG() {
         return composer.getVscrollFactorFG();
+    }
+
+    @Override
+    public com.openggf.level.scroll.ScrollProjectionPhase captureProjection(
+            com.openggf.level.scroll.ScrollProjectionContext context) {
+        AizZoneRuntimeState state = resolveAizState();
+        boolean intro = false;
+        int introOffset = 0;
+        if (!detachedPresentation && context.act() == 0 && GameServices.hasRuntime()) {
+            intro =
+                    !GameServices.camera().isLevelStarted()
+                            && !AizPlaneIntroInstance.isMainLevelPhaseActive();
+            if (intro) introOffset = AizPlaneIntroInstance.getIntroScrollOffset();
+        }
+        boolean fire = state != null && state.isFireTransitionScrollActive();
+        boolean haze =
+                !fire
+                        && ((state != null && state.isPostFireHazeActive())
+                                || (state == null && context.act() > 0)
+                                || context.cameraX() >= 0x2E00);
+        Integer waterY = null;
+        if (!detachedPresentation && GameServices.hasRuntime()) {
+            WaterSystem water = GameServices.water();
+            if (water != null && water.hasWater(Sonic3kZoneIds.ZONE_AIZ, context.act())) {
+                waterY = water.getWaterLevelY(Sonic3kZoneIds.ZONE_AIZ, context.act());
+            }
+        }
+        return new AizPhase(
+                context,
+                waveBaseFrameSet ? waveBaseFrame : context.frameCounter(),
+                intro,
+                introOffset,
+                fire,
+                state == null ? 0 : state.getFireTransitionBgX(),
+                state == null ? 0 : state.getFireTransitionBgY(),
+                haze,
+                state != null && state.isBattleshipAutoScrollActive(),
+                state == null ? 0 : state.getBattleshipSmoothScrollX(),
+                state == null ? 0 : state.getBattleshipBgYOffset(),
+                waterY);
+    }
+
+    private record AizPhase(
+            com.openggf.level.scroll.ScrollProjectionContext context,
+            int waveOrigin,
+            boolean intro,
+            int introOffset,
+            boolean fire,
+            int fireX,
+            int fireY,
+            boolean haze,
+            boolean ship,
+            int shipX,
+            int shipYOffset,
+            Integer waterY)
+            implements com.openggf.level.scroll.ScrollProjectionPhase {
+        @Override
+        public com.openggf.level.scroll.ScrollProjection sample(
+                com.openggf.level.scroll.ScrollView view) {
+            SwScrlAiz scratch = new SwScrlAiz(view.height());
+            scratch.waveBaseFrame = waveOrigin;
+            scratch.waveBaseFrameSet = true;
+            return scratch.composeProjection(this, view);
+        }
+    }
+
+    private com.openggf.level.scroll.ScrollProjection composeProjection(
+            AizPhase phase, com.openggf.level.scroll.ScrollView view) {
+        var nativeOutput = phase.context().nativeOutput();
+        int x = view.cameraX(), y = view.cameraY(), frame = phase.context().frameCounter();
+        composer.setVscrollFactorFG((short) (y + nativeOutput.shakeY()));
+        composer.setShakeOffsetX(nativeOutput.shakeX());
+        composer.setShakeOffsetY(nativeOutput.shakeY());
+        short foreground = negWord(x);
+        if (phase.intro()) {
+            buildIntroBandValues(phase.introOffset() < 0 ? phase.introOffset() : x);
+            composer.setVscrollFactorBG(wordOf(y));
+            writeIntroScroll(foreground, y);
+        } else if (phase.fire()) {
+            composer.setVscrollFactorBG(wordOf(phase.fireY()));
+            writePlainDeformation(foreground, negWord(phase.fireX()));
+        } else if (phase.context().act() > 0) {
+            composer.setVscrollFactorBG(
+                    (short) (asrWord(y, 1) + nativeOutput.shakeY() + phase.shipYOffset()));
+            int sourceX = phase.ship() ? phase.shipX() + x - phase.context().cameraX() : x;
+            computeAiz2Deform(foreground, sourceX);
+        } else {
+            composer.setVscrollFactorBG(asrWord(y, 1));
+            computeAiz1Deform(foreground, x, frame);
+        }
+        if (phase.haze()) {
+            applyFgDeformation(
+                    x, y, frame, phase.waterY() == null ? view.height() : phase.waterY() - y);
+        }
+        short[] columns = nativeOutput.backgroundColumns();
+        if (columns != null) {
+            short[] expanded = composer.writablePerColumnVScrollBG((view.width() + 15) / 16);
+            for (int i = 0; i < expanded.length; i++)
+                expanded[i] = columns[Math.min(i, columns.length - 1)];
+        }
+        return com.openggf.level.scroll.ScrollProjection.fromComposer(
+                composer,
+                nativeOutput.backgroundX(),
+                nativeOutput.backgroundPeriod(),
+                nativeOutput.tilemapMode());
     }
 }
