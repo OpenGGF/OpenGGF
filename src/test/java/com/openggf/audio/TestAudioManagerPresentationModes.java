@@ -18,6 +18,7 @@ import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsAssetKey;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -26,10 +27,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,8 +41,303 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.*;
 
 class TestAudioManagerPresentationModes {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"backend", "launch", "profile", "rom", "destroy"})
+    void rebuildRetainsHeldTargetProvenanceAndInjectionButInvalidatesAcknowledgment(
+            String path) throws Exception {
+        AudioManager audio = AudioManager.createSilent();
+        try {
+            audio.beginReverseAudioPresentation();
+            assertTrue(audio.preparePostBoundaryReverseRelease());
+            AudioLogicalSnapshot selected = audio.deferredReverseLogicalSnapshotForTesting();
+            AudioPresentationProducer previous = shadowProducer(audio);
+            assertNotEquals(0L, previous.transactionFingerprint()
+                    .preparedSelectedRestoreIdentity().token());
+            AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+
+            replaceForBaseline(audio, path);
+
+            assertTrue(previous.isClosed());
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertTrue(audio.isReverseAudioPresentationActive());
+            assertTrue(AudioManagerTestDiagnostics.postBoundaryReverseTarget(audio));
+            assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+            assertTrue(AudioManagerTestDiagnostics.reverseReleaseFailureArmed(audio));
+        } finally {
+            audio.resetState();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"backend", "launch", "profile", "rom", "destroy"})
+    void lifecycleInvalidatesAcknowledgmentBeforeFallibleProducerClose(String path)
+            throws Exception {
+        AudioManager audio = AudioManager.createSilent();
+        AudioPresentationSink sink = mock(AudioPresentationSink.class);
+        when(sink.sampleRate()).thenReturn(48_000);
+        audio.setBackend(new InspectingBackend(sink));
+        audio.beginReverseAudioPresentation();
+        assertTrue(audio.preparePostBoundaryReverseRelease());
+        AudioLogicalSnapshot selected = audio.deferredReverseLogicalSnapshotForTesting();
+        AudioPresentationProducer previous = shadowProducer(audio);
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+        var failure = new IllegalStateException("baseline sink teardown");
+        doThrow(failure).when(sink).close();
+        try {
+            assertSame(failure, assertThrows(IllegalStateException.class,
+                    () -> replaceForBaseline(audio, path)));
+            assertTrue(previous.isClosed());
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertTrue(audio.isReverseAudioPresentationActive());
+            assertTrue(AudioManagerTestDiagnostics.postBoundaryReverseTarget(audio));
+            assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+            assertTrue(AudioManagerTestDiagnostics.reverseReleaseFailureArmed(audio));
+        } finally {
+            doNothing().when(sink).close();
+            audio.resetState();
+        }
+    }
+
+    @Test
+    void failedPreResetStopRetainsHeldLedgerUntilFullResetReachesItsClear() throws Exception {
+        AudioManager audio = AudioManager.createSilent();
+        NullAudioBackend backend = spy(NullAudioBackend.class);
+        audio.setBackend(backend);
+        audio.beginReverseAudioPresentation();
+        assertTrue(audio.preparePostBoundaryReverseRelease());
+        AudioLogicalSnapshot selected = audio.deferredReverseLogicalSnapshotForTesting();
+        AudioPresentationProducer producer = shadowProducer(audio);
+        var before = producer.transactionFingerprint();
+        AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+        var failure = new IllegalStateException("baseline pre-reset stop");
+        doThrow(failure).when(backend).stopPlayback();
+        try {
+            assertSame(failure, assertThrows(IllegalStateException.class, audio::resetState));
+            assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertTrue(audio.isReverseAudioPresentationActive());
+            assertTrue(AudioManagerTestDiagnostics.postBoundaryReverseTarget(audio));
+            assertTrue(AudioManagerTestDiagnostics.reverseReleaseFailureArmed(audio));
+            assertFalse(producer.isClosed());
+            assertEquals(before, producer.transactionFingerprint());
+        } finally {
+            doNothing().when(backend).stopPlayback();
+            audio.resetState();
+        }
+        assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+        assertFalse(audio.isReverseAudioPresentationActive());
+        assertFalse(AudioManagerTestDiagnostics.postBoundaryReverseTarget(audio));
+        assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+        assertFalse(AudioManagerTestDiagnostics.reverseReleaseFailureArmed(audio));
+        assertEquals(0, audio.logicalRestorePublicationsForTesting());
+        assertEquals(0, audio.commandTimeline().entryCount());
+        assertTrue(producer.isClosed());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false", "true,false", "false,true", "true,true"})
+    void sinkReleaseFailureConsumesProducerCursorBeforeManagerPublication(
+            boolean preparedEarlier, boolean suppressedDiagnostic) throws Exception {
+        AudioManager audio = AudioManager.createSilent();
+        AudioPresentationSink sink = mock(AudioPresentationSink.class);
+        when(sink.sampleRate()).thenReturn(48_000);
+        audio.setBackend(new InspectingBackend(sink));
+        try {
+            audio.toggleMute(ChannelType.FM, 0);
+            audio.presentFrame(PresentationMode.SILENT);
+            AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+            audio.toggleMute(ChannelType.FM, 1);
+            audio.presentFrame(PresentationMode.SILENT);
+            assertEquals(3, audio.captureLogicalSnapshot().presentation().fmMuteMask());
+            audio.beginReverseAudioPresentation();
+            audio.restoreLogicalSnapshot(selected);
+            if (preparedEarlier) assertTrue(audio.commitDeferredReverseLogicalRestore());
+            var before = audio.releaseStateForTesting().producer();
+            assertTrue(before.reverseActive());
+            assertTrue(before.reverseCursor() != null);
+            int publications = audio.logicalRestorePublicationsForTesting();
+            var ordinary = new IllegalStateException("baseline release sink");
+            var diagnostic = new AudioDiagnosticObserverException(
+                    new IllegalStateException("suppressed baseline diagnostic"));
+            if (suppressedDiagnostic) ordinary.addSuppressed(diagnostic);
+            // Begin has already crossed the sink boundary successfully.
+            doThrow(ordinary).doNothing().when(sink).onReverseBoundary();
+
+            if (suppressedDiagnostic) {
+                assertSame(diagnostic, assertThrows(AudioDiagnosticObserverException.class,
+                        audio::endReverseAudioPresentation));
+                assertSame(diagnostic, ordinary.getSuppressed()[0]);
+            } else {
+                assertFalse(audio.endReverseAudioPresentation());
+            }
+            var partial = audio.releaseStateForTesting().producer();
+            assertFalse(partial.reverseActive());
+            assertNull(partial.reverseCursor());
+            assertEquals(0L, partial.preparedSelectedRestoreIdentity().token());
+            assertEquals(1, audio.captureLogicalSnapshot().presentation().fmMuteMask());
+            assertEquals(publications, audio.logicalRestorePublicationsForTesting());
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertTrue(audio.isReverseAudioPresentationActive());
+            assertEquals(preparedEarlier,
+                    AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+
+            assertTrue(audio.endReverseAudioPresentation());
+            assertEquals(publications + 1, audio.logicalRestorePublicationsForTesting());
+            assertFalse(audio.isReverseAudioPresentationActive());
+            assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+            var retried = audio.releaseStateForTesting().producer();
+            assertEquals(preparedEarlier, retried.preparedSelectedRestoreIdentity().token() == 0,
+                    "only retrying an attempt-owned preparation leaves a token on the inactive producer");
+            assertEquals(partial.history(), retried.history());
+            assertEquals(partial.clock(), retried.clock());
+            verify(sink, times(2)).onReverseBoundary();
+        } finally {
+            audio.resetState();
+        }
+    }
+
+    @Test
+    void virtualBoundaryCaptureIsSingleAndRetryProtectsFreshSourcesAfterQueuedCommand() throws Exception {
+        AudioManager audio = spy(AudioManager.class);
+        try {
+            audio.beginReverseAudioPresentation();
+            audio.submitShadowRawPcmForTesting(new byte[8_000], 48_000);
+            AudioPresentationProducer producer = shadowProducer(audio);
+            AtomicInteger captures = new AtomicInteger();
+            doAnswer(call -> {
+                assertFalse(Thread.holdsLock(audio));
+                captures.incrementAndGet();
+                return call.callRealMethod();
+            }).when(audio).captureLogicalSnapshot();
+            assertTrue(audio.preparePostBoundaryReverseRelease());
+            AudioLogicalSnapshot selected = audio.deferredReverseLogicalSnapshotForTesting();
+            assertTrue(selected.presentation().rawPcmVoiceId() != null);
+            var token = producer.transactionFingerprint().preparedSelectedRestoreIdentity();
+            // This command is queued after capture and must not select a new target.
+            audio.setSpeedMultiplier(7);
+            AudioManagerTestDiagnostics.failNextReverseRelease(audio);
+            assertFalse(audio.endReverseAudioPresentation());
+            assertTrue(audio.preparePostBoundaryReverseRelease());
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertEquals(token, producer.transactionFingerprint().preparedSelectedRestoreIdentity());
+            assertEquals(1, captures.get());
+            assertTrue(audio.afterRewindRestore(0, AudioPresentationPolicy.STOP_ALL_PRESENTATION));
+            verify(audio, times(2)).commitDeferredReverseLogicalRestore();
+            verify(audio, times(2)).endReverseAudioPresentation();
+            AudioLogicalSnapshot published = audio.captureLogicalSnapshot();
+            assertEquals(selected.presentation().rawPcmVoiceId(), published.presentation().rawPcmVoiceId());
+            assertFalse(published.presentation().voices().isEmpty());
+            assertEquals(7, published.presentation().speedMultiplier());
+            assertFalse(audio.isReverseAudioPresentationActive());
+        } finally {
+            audio.resetState();
+        }
+    }
+
+    @Test
+    void virtualReleasePreparationRereadsCallbackReplacedProducer() throws Exception {
+        AudioManager audio = spy(AudioManager.class);
+        try {
+            audio.beginReverseAudioPresentation();
+            AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+            audio.restoreLogicalSnapshot(selected);
+            AudioPresentationProducer original = shadowProducer(audio);
+            AtomicReference<AudioPresentationProducer> replacement = new AtomicReference<>();
+            doAnswer(call -> {
+                assertFalse(Thread.holdsLock(audio));
+                boolean prepared = (boolean) call.callRealMethod();
+                audio.setBackend(new NullAudioBackend());
+                replacement.set(shadowProducer(audio));
+                return prepared;
+            }).when(audio).commitDeferredReverseLogicalRestore();
+            doAnswer(call -> {
+                assertFalse(Thread.holdsLock(audio));
+                return call.callRealMethod();
+            }).when(audio).endReverseAudioPresentation();
+
+            assertTrue(audio.afterRewindRestore(0, AudioPresentationPolicy.STOP_TRANSIENT_SFX));
+            verify(audio).endReverseAudioPresentation();
+            verify(audio).commitDeferredReverseLogicalRestore();
+            assertTrue(original.isClosed());
+            assertFalse(replacement.get().isClosed());
+            assertFalse(replacement.get().transactionFingerprint().reverseActive());
+            assertFalse(audio.isReverseAudioPresentationActive());
+            assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+            assertEquals(1, audio.logicalRestorePublicationsForTesting());
+        } finally {
+            audio.resetState();
+        }
+    }
+
+    @Test
+    void offThreadNoOpPathsPrecedeProducerChecksAndActiveBeginRejectsBeforeLedgerMutation()
+            throws Exception {
+        AudioManager audio = AudioManager.createSilent();
+        audio.captureLogicalSnapshot();
+        AtomicReference<Throwable> unexpected = new AtomicReference<>();
+        AtomicReference<Throwable> rejected = new AtomicReference<>();
+        Thread thread = new Thread(() -> {
+            try {
+                audio.restoreLogicalSnapshot(null);
+                assertTrue(audio.afterRewindRestore(0, null));
+                assertTrue(audio.preparePostBoundaryReverseRelease());
+                assertFalse(audio.commitDeferredReverseLogicalRestore());
+                assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+                try { audio.beginReverseAudioPresentation(); }
+                catch (Throwable failure) { rejected.set(failure); }
+            } catch (Throwable failure) { unexpected.set(failure); }
+        });
+        thread.start();
+        thread.join(5_000);
+        assertFalse(thread.isAlive());
+        try {
+            assertNull(unexpected.get());
+            assertTrue(rejected.get() instanceof IllegalStateException);
+            assertFalse(audio.isReverseAudioPresentationActive());
+            assertNull(audio.deferredReverseLogicalSnapshotForTesting());
+            assertFalse(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+            audio.beginReverseAudioPresentation();
+            AudioLogicalSnapshot selected = audio.captureLogicalSnapshot();
+            audio.restoreLogicalSnapshot(selected);
+            assertTrue(audio.commitDeferredReverseLogicalRestore());
+            var before = audio.releaseStateForTesting().producer();
+            AtomicReference<Throwable> activeFailure = new AtomicReference<>();
+            Thread active = new Thread(() -> {
+                try {
+                    // Manager selection and acknowledged no-op admission have no thread check.
+                    audio.restoreLogicalSnapshot(selected);
+                    assertTrue(audio.commitDeferredReverseLogicalRestore());
+                    // The producer rejects release; the manager catches this ordinary failure.
+                    assertFalse(audio.endReverseAudioPresentation());
+                } catch (Throwable failure) { activeFailure.set(failure); }
+            });
+            active.start();
+            active.join(5_000);
+            assertFalse(active.isAlive());
+            assertNull(activeFailure.get());
+            assertSame(selected, audio.deferredReverseLogicalSnapshotForTesting());
+            assertTrue(audio.isReverseAudioPresentationActive());
+            assertTrue(AudioManagerTestDiagnostics.reversePreparationAcknowledged(audio));
+            assertEquals(before, audio.releaseStateForTesting().producer());
+        } finally { audio.resetState(); }
+    }
+
+    private static void replaceForBaseline(AudioManager audio, String path) {
+        switch (path) {
+            case "backend" -> audio.setBackend(new NullAudioBackend());
+            case "launch" -> audio.setBackendForLaunch(new NullAudioBackend());
+            case "profile" -> audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
+                    new AudioTestFixtures.StubSmpsLoader()));
+            case "rom" -> audio.setRom(new com.openggf.data.Rom());
+            case "destroy" -> audio.destroy();
+            default -> throw new AssertionError(path);
+        }
+    }
 
     @Test
     void recordedReverseOwnsOuterPresentationWithoutTakingLogicalRewindOwnership() {
@@ -771,9 +1070,9 @@ class TestAudioManagerPresentationModes {
     }
 
     private static final class InspectingBackend extends NullAudioBackend {
-        private final InspectingSink sink;
+        private final AudioPresentationSink sink;
 
-        private InspectingBackend(InspectingSink sink) {
+        private InspectingBackend(AudioPresentationSink sink) {
             this.sink = sink;
         }
 

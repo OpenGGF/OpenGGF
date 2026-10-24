@@ -5,6 +5,7 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.DacData;
 
@@ -45,6 +46,23 @@ public final class AudioManagerTestDiagnostics {
 
     public static void resetLogicalRestorePublications(AudioManager audio) {
         audio.resetLogicalRestorePublicationsForTesting();
+    }
+
+    public static AudioLogicalSnapshot selectedReverseSnapshot(AudioManager audio) {
+        return audio.deferredReverseLogicalSnapshotForTesting();
+    }
+
+    // Layout-only reads remain test-side; no production accessor is added.
+    public static boolean reversePreparationAcknowledged(AudioManager audio) {
+        return heldReverseField(audio, "deferredReverseLogicalPrepared", Boolean.class);
+    }
+
+    public static boolean postBoundaryReverseTarget(AudioManager audio) {
+        return heldReverseField(audio, "postBoundaryReverseTarget", Boolean.class);
+    }
+
+    public static boolean reverseReleaseFailureArmed(AudioManager audio) {
+        return heldReverseField(audio, "failNextReverseRelease", Object.class) != null;
     }
 
     /**
@@ -176,6 +194,17 @@ public final class AudioManagerTestDiagnostics {
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException(
                     "cannot open a scoped session SMPS epoch", failure);
+        }
+    }
+
+    private static <T> T heldReverseField(AudioManager audio, String name, Class<T> type) {
+        Object owner = field(audio, "heldReverseRestore", Object.class);
+        try {
+            Field field = owner.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return type.cast(field.get(owner));
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("cannot read held reverse restore." + name, failure);
         }
     }
 

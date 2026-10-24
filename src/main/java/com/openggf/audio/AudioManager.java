@@ -181,15 +181,11 @@ public class AudioManager implements MusicRestoreSink {
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     /** Capture lifetime spans presentation producer generations for this manager. */
     private final CaptureLeases captureLeases = new CaptureLeases();
+    /** Held logical target policy survives presentation producer generations. */
+    private final HeldReverseRestore heldReverseRestore = new HeldReverseRestore();
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
-    private boolean reverseAudioPresentationActive;
     private Runnable streamedMusicSessionInvalidator = () -> { };
-    /** Single selected restore, committed only at reverse release. */
-    private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
-    private boolean deferredReverseLogicalPrepared;
-    /** True once a boundary has replaced the stale rewind target with fresh live state. */
-    private boolean postBoundaryReverseTarget;
     /**
      * Count of logical audio restores actually published to the presentation
      * producer. Held rewind defers per-frame restores and publishes exactly one
@@ -198,23 +194,9 @@ public class AudioManager implements MusicRestoreSink {
      */
     private int logicalRestorePublications;
     /**
-     * Single-shot release-failure injection for tests. The producer is now the
-     * only restore owner, so there is no second (backend) publication step a
-     * test double could fail; this hook keeps the "a failed release is retained
-     * and retried" contract testable from production hosts.
-     *
-     * <p>Null means "inject nothing". The point selects which side of the one
-     * irreversible step in {@link #endReverseAudioPresentation()} the failure
-     * lands on — the two sides carry different contracts, so a single boolean
-     * could only ever exercise one of them.
-     */
-    private ReverseReleaseFailurePoint failNextReverseRelease;
-
-    /**
      * Where an injected reverse-release failure is raised, relative to
-     * {@code shadowProducer.endReverse(...)} — the single irreversible step of
-     * the release (it consumes the reverse PCM cursor and commits the prepared
-     * registry restore).
+     * successful return from {@code shadowProducer.endReverse(...)}. Exceptions
+     * inside that call can follow partial restoration or cursor consumption.
      */
     enum ReverseReleaseFailurePoint {
         /**
@@ -553,7 +535,7 @@ public class AudioManager implements MusicRestoreSink {
             if (!Float.isFinite(gain) || gain < 0 || gain > 1) throw new IllegalArgumentException("Scene gain must be 0..1");
             var pcm = samples.get(key);
             if (pcm == null) throw new IllegalArgumentException("Scene sample was not prepared: " + key);
-            if (suppressingRewindReplay() || reverseAudioPresentationActive) return;
+            if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return;
             voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
             if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
             voices.add(com.openggf.audio.presentation.SampleBackedVoice.oneShot(++nextVoice, 0, pcm,
@@ -568,7 +550,7 @@ public class AudioManager implements MusicRestoreSink {
                     || pcm.samples().length / pcm.channels() > pcm.sampleRate() / 2
                     || !Float.isFinite(pcm.gain()) || pcm.gain() < 0 || pcm.gain() > 1)
                 throw new IllegalArgumentException("Transient scene PCM needs at most 0.5 seconds of mono/stereo audio and gain 0..1");
-            if (suppressingRewindReplay() || reverseAudioPresentationActive) return;
+            if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return;
             voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
             if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
             var decoded = new com.openggf.audio.presentation.DecodedPcm("transient", pcm.channels(), pcm.sampleRate(), pcm.samples());
@@ -753,7 +735,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public synchronized void setBackend(AudioBackend backend) {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
+        heldReverseRestore.invalidatePreparation();
         // A backend swap replaces the output device; it is not a reason to end
         // a recording of what the engine is playing.
         captureLeases.detachLiveCaptureAudioHandleForRebuild();
@@ -783,7 +765,7 @@ public class AudioManager implements MusicRestoreSink {
     /** Launch path variant that reports initialization failure instead of silently continuing. */
     public void setBackendForLaunch(AudioBackend backend) {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
+        heldReverseRestore.invalidatePreparation();
         captureLeases.detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
@@ -1005,7 +987,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void beginCommandTimelineFrame(long frame) {
         commandTimeline.beginFrame(frame);
-        refreshDeferredReverseLogicalSnapshot();
+        heldReverseRestore.refreshDeferredReverseLogicalSnapshot();
         audioFrameOwnedExternally = true;
         audioFrameAdvanced = false;
     }
@@ -1091,15 +1073,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
-        if (snapshot == null) {
-            return;
-        }
-        ensureShadowPresentation();
-        if (reverseAudioPresentationActive) {
-            deferredReverseLogicalSnapshot = snapshot;
-            return;
-        }
-        restoreLogicalSnapshotNow(snapshot, false);
+        heldReverseRestore.restoreLogicalSnapshot(snapshot);
     }
 
     private boolean restoreLogicalSnapshotNow(
@@ -1397,186 +1371,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void replayTimelineCommandLogically(AudioCommand command) {
-        if (command == null) {
-            return;
-        }
-        stageDeferredPresentationCommand(command);
-        refreshDeferredReverseLogicalSnapshot();
-    }
-
-    /**
-     * Replays one logical command into detached presentation metadata and a
-     * transactionally borrowed view of the one persistent SMPS session. The
-     * session is rolled back byte-for-byte after the staged snapshot is
-     * captured, so the live shadow and its rewind/history cursor remain
-     * untouched until the manager-owned dual restore commits at release.
-     */
-    private void stageDeferredPresentationCommand(AudioCommand command) {
-        if (command == null) {
-            return;
-        }
-        ensureShadowPresentation();
-        if (deferredReverseLogicalSnapshot == null) {
-            shadowResolver.submit(command);
-            shadowProducer.applyPendingCommandsAtOwnerBoundary();
-            ringLeft = managerRingAfter(ringLeft, command);
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        SmpsCoordFlagRuntimeState.Snapshot liveCoord =
-                presentationCoordFlagHandlers.state().snapshot();
-        AudioPresentationCommandQueue stagedCommands =
-                new AudioPresentationCommandQueue();
-        AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
-                shadowFactory, shadowFactory, presentationCoordFlagHandlers,
-                warning -> LOGGER.warning(
-                        "Presentation rewind staging: " + warning),
-                shadowSmpsSession);
-        AudioPresentationDependencyResolver.DiagnosticTransaction
-                stagingDiagnostics =
-                shadowFactory.beginDiagnosticTransaction();
-        SmpsDriverSession.LiveMutationToken sessionMutation = null;
-        RuntimeException primaryFailure = null;
-        try {
-            stagedRegistry.restore(selected.presentation(), shadowFactory);
-            String[] resolutionFailure = new String[1];
-            AudioPresentationCommandResolver stagedResolver =
-                    new AudioPresentationCommandResolver(
-                            stagedCommands, shadowFactory,
-                            new ShadowSources(
-                                    (Math.max(1, backend != null
-                                            ? backend.outputSampleRate()
-                                            : 48_000)
-                                            + configuredFrameRate() - 1)
-                                            / configuredFrameRate()),
-                            warning -> resolutionFailure[0] = warning,
-                            () -> true,
-                            () -> {
-                                throw new IllegalStateException(
-                                        "detached staging queue exceeded capacity");
-                            });
-            long nextVoice = selected.presentation().voices().stream()
-                    .mapToLong(voice -> switch (voice) {
-                        case PresentationVoiceSnapshot.Sample sample ->
-                                sample.voiceId();
-                        case PresentationVoiceSnapshot.Streamed streamed ->
-                                streamed.voiceId();
-                    })
-                    .max().orElse(0L) + 1L;
-            nextVoice = Math.max(
-                    nextVoice, selected.presentation().nextVoiceId());
-            stagedResolver.reserveVoiceIdsThrough(nextVoice);
-            stagedResolver.submit(command);
-            boolean optionalFallbackSfx =
-                    command instanceof AudioCommand.PlaySfx sfx
-                            && (sfx.route()
-                            == AudioCommand.SfxRoute.RING_RESOLVED
-                            || sfx.route()
-                            == AudioCommand.SfxRoute.FALLBACK_NAME);
-            if (resolutionFailure[0] != null && !optionalFallbackSfx) {
-                throw new IllegalStateException(
-                        "Presentation rewind command resolution failed: "
-                                + resolutionFailure[0]);
-            }
-            if (selected.presentation().smpsSession() == null
-                    || selected.presentation().smpsLogical() == null) {
-                throw new IllegalArgumentException(
-                        "held-rewind staging requires one SMPS session/logical "
-                                + "snapshot pair");
-            }
-            SmpsDriverSession.PreparedRestore preparedSession =
-                    shadowSmpsSession.prepareRestore(
-                            selected.presentation().smpsSession(),
-                            selected.presentation().smpsLogical(),
-                            shadowFactory::resolveDac);
-            sessionMutation = shadowSmpsSession.captureLiveMutation();
-            shadowSmpsSession.commitRestore(preparedSession);
-            stagedCommands.applyPendingAtomically(commandToApply ->
-                    AudioPresentationSessionCommandApplier.apply(
-                            shadowSmpsSession, stagedRegistry,
-                            commandToApply));
-            AudioPresentationSnapshot staged = stagedRegistry.snapshot();
-            boolean stagedManagerRingLeft =
-                    managerRingAfter(selected.ringLeft(), command);
-            deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
-                    stagedManagerRingLeft,
-                    selected.commandTimelineFrame(),
-                    selected.commandTimelineNextOrder(),
-                    selected.commandEntryCount(),
-                    staged,
-                    selected.donorGameIds(),
-                    selected.donorBindings(),
-                    selected.forwardServiceSnapshot());
-        } catch (RuntimeException failure) {
-            primaryFailure = failure;
-            throw failure;
-        } finally {
-            try {
-                if (sessionMutation != null) {
-                    shadowSmpsSession.rollbackLiveMutation(
-                            sessionMutation);
-                }
-            } catch (RuntimeException rollbackFailure) {
-                if (primaryFailure != null) {
-                    primaryFailure.addSuppressed(rollbackFailure);
-                } else {
-                    throw rollbackFailure;
-                }
-            } finally {
-                try {
-                    stagedRegistry.clear();
-                } finally {
-                    try {
-                        stagingDiagnostics.endPreparation();
-                    } finally {
-                        try {
-                            stagingDiagnostics.discard();
-                        } finally {
-                            presentationCoordFlagHandlers.state()
-                                    .restore(liveCoord);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean managerRingAfter(
-            boolean current, AudioCommand command) {
-        if (command instanceof AudioCommand.ResetRingAlternation reset) {
-            return reset.ringLeft();
-        }
-        if (command instanceof AudioCommand.RetainGlobalStop
-                || command instanceof AudioCommand
-                .StopSegaPcmAndRetainGlobalStop) {
-            return true;
-        }
-        if (command instanceof AudioCommand.PlaySfx sfx
-                && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
-            if (GameSound.RING_LEFT.name().equals(sfx.sfxName())) {
-                return false;
-            }
-            if (GameSound.RING_RIGHT.name().equals(sfx.sfxName())) {
-                return true;
-            }
-        }
-        return current;
-    }
-
-    private void refreshDeferredReverseLogicalSnapshot() {
-        if (deferredReverseLogicalSnapshot == null) {
-            return;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
-                selected.ringLeft(),
-                commandTimeline.currentFrame(),
-                commandTimeline.nextOrder(),
-                selected.commandEntryCount(),
-                selected.presentation(),
-                selected.donorGameIds(),
-                selected.donorBindings(),
-                selected.forwardServiceSnapshot());
+        heldReverseRestore.replayTimelineCommandLogically(command);
     }
 
     private void replayMusic(AudioCommand.PlayMusic command) {
@@ -1666,67 +1461,21 @@ public class AudioManager implements MusicRestoreSink {
 
     public boolean afterRewindRestore(
             int frame, AudioPresentationPolicy policy) {
-        if (policy == null) {
-            return true;
-        }
-        ensureShadowPresentation();
-        boolean preservePostBoundarySources =
-                postBoundaryReverseTarget;
-        if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
-            if (!endReverseAudioPresentation()) {
-                return false;
-            }
-            shadowProducer.applyPendingCommandsAtOwnerBoundary();
-        }
-        if (preservePostBoundarySources) {
-            return true;
-        }
-        switch (policy) {
-            case SUPPRESSED_INTERNAL_RESTORE -> {
-            }
-            case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
-                shadowCommands.submit(
-                        new AudioPresentationCommand.RestoreMusicOverride(),
-                        () -> true,
-                        this::drainShadowCommandsAtOwnerBoundary);
-                shadowProducer
-                        .stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary();
-            }
-            case STOP_TRANSIENT_SFX ->
-                    shadowProducer.stopTransientVoicesAtOwnerBoundary();
-            case STOP_ALL_PRESENTATION -> {
-                shadowCommands.submit(
-                        new AudioPresentationCommand.HardReset(),
-                        () -> true,
-                        this::drainShadowCommandsAtOwnerBoundary);
-                shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                shadowProducer.clearHistory();
-                shadowParity.historyBoundary();
-            }
-        }
-        return true;
+        return heldReverseRestore.afterRewindRestore(frame, policy);
     }
 
     public void beginReverseAudioPresentation() {
-        ensureShadowPresentation();
-        // Check presentation ownership before replacing the logical rewind
-        // ledger: a scoped recorded replay may already own audible reverse.
-        shadowProducer.beginReverse(1.0);
-        deferredReverseLogicalSnapshot = null;
-        deferredReverseLogicalPrepared = false;
-        postBoundaryReverseTarget = false;
-        reverseAudioPresentationActive = true;
+        heldReverseRestore.beginReverseAudioPresentation();
     }
 
     public boolean isReverseAudioPresentationActive() {
-        return reverseAudioPresentationActive;
+        return heldReverseRestore.isReverseAudioPresentationActive();
     }
 
     /** Audible reverse ownership, including a scoped captured presentation.
      * Logical rewind restore decisions must keep using {@link #isReverseAudioPresentationActive()}. */
     public boolean isReverseAudioOutputActive() {
-        return reverseAudioPresentationActive
-                || shadowProducer != null && shadowProducer.isReplayReverseActive();
+        return heldReverseRestore.isReverseAudioOutputActive();
     }
 
     /** Records actual final forward PCM without changing developer rewind history.
@@ -1740,111 +1489,33 @@ public class AudioManager implements MusicRestoreSink {
      * Ends the held reverse presentation and publishes the selected logical
      * target.
      *
-     * <p>The release is split around exactly one irreversible step,
-     * {@code shadowProducer.endReverse(...)}: it consumes the reverse PCM
-     * cursor and commits the prepared registry restore, and no retry can
-     * recreate the session it destroyed. Every fallible step — preparing the
-     * restore selection and materializing the donor-binding replacement —
-     * therefore runs strictly <em>before</em> it, so a failure up to that point
-     * leaves the release exactly retryable. Everything after it is
-     * unconditional local publication that must not be skipped: if it somehow
-     * throws, the release still completes from the values prepared before the
-     * commit, because reporting a retryable failure there would make the retry
-     * re-prepare a restore selection that {@code endReverse} can no longer
-     * commit (the reverse session is already gone), leaking every voice that
-     * preparation recreated.
+     * <p>Successful producer return separates attempt-owned preparation cleanup
+     * from manager publication. Exceptions inside the producer may follow partial
+     * restoration or cursor consumption; ledger publication can also fail after
+     * its counter/ring writes. These existing partial effects are preserved.
      */
     public boolean endReverseAudioPresentation() {
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        boolean preparedDuringAttempt = false;
-        boolean producerCommitted = false;
-        // Consumed once per entry, whichever exit this attempt takes, so an
-        // armed injection can never leak into a later unrelated release.
-        ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
-        failNextReverseRelease = null;
-        Map<GameSound, DonorSfxBinding> publishedBindings = null;
-        try {
-            if (selected != null && !deferredReverseLogicalPrepared) {
-                if (!commitDeferredReverseLogicalRestore()) {
-                    return false;
-                }
-                preparedDuringAttempt = true;
-            }
-            if (selected != null) {
-                // Built before the irreversible commit so a malformed or
-                // unmappable binding fails while the release is still exactly
-                // retryable, rather than half-published afterwards.
-                publishedBindings = new EnumMap<>(GameSound.class);
-                for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
-                        : selected.donorBindings()) {
-                    publishedBindings.put(binding.sound(),
-                            new DonorSfxBinding(binding.donorGameId(),
-                                    binding.sfxId()));
-                }
-            }
-            if (injectFailure
-                    == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
-                throw new IllegalStateException(
-                        "injected reverse release publication failure");
-            }
-            if (shadowProducer != null) {
-                shadowProducer.endReverse(
-                        !postBoundaryReverseTarget);
-            }
-            producerCommitted = true;
-            if (injectFailure
-                    == ReverseReleaseFailurePoint.AFTER_PRODUCER_COMMIT) {
-                throw new IllegalStateException(
-                        "injected reverse release publication failure");
-            }
-        } catch (RuntimeException failure) {
-            if (producerCommitted) {
-                publishReverseReleaseLedger(selected, publishedBindings);
-                AudioDiagnosticObserverException.rethrowIfPresent(failure);
-                LOGGER.log(Level.WARNING,
-                        "Audio reverse release publication failed after the "
-                                + "producer commit; completed the release from "
-                                + "the pre-commit ledger", failure);
-                return true;
-            }
-            if (preparedDuringAttempt) {
-                try {
-                    shadowProducer.discardPreparedRestoreSelection();
-                } catch (RuntimeException discardFailure) {
-                    failure.addSuppressed(discardFailure);
-                }
-                deferredReverseLogicalPrepared = false;
-            }
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio reverse release failed; retained prior live state",
-                    failure);
-            return false;
-        }
-        publishReverseReleaseLedger(selected, publishedBindings);
-        return true;
+        return heldReverseRestore.endReverseAudioPresentation();
+    }
+
+    private void resetLogicalRestorePublicationCount() {
+        logicalRestorePublications = 0;
     }
 
     /**
-     * Unconditional post-commit publication. Every value it writes was
-     * computed before the producer commit, so it cannot fail.
+     * Root ledger effect, in its original order. A rejected timeline order can
+     * leave the counter and ring published before timeline/donor publication.
      */
-    private void publishReverseReleaseLedger(
+    private void publishHeldRestoreLedger(
             AudioLogicalSnapshot selected,
             Map<GameSound, DonorSfxBinding> publishedBindings) {
-        if (selected != null) {
-            logicalRestorePublications++;
-            ringLeft = selected.ringLeft();
-            commandTimeline.restoreCursor(
-                    selected.commandTimelineFrame(),
-                    selected.commandTimelineNextOrder());
-            donorSoundBindings.clear();
-            donorSoundBindings.putAll(publishedBindings);
-        }
-        deferredReverseLogicalSnapshot = null;
-        deferredReverseLogicalPrepared = false;
-        reverseAudioPresentationActive = false;
-        postBoundaryReverseTarget = false;
+        logicalRestorePublications++;
+        ringLeft = selected.ringLeft();
+        commandTimeline.restoreCursor(
+                selected.commandTimelineFrame(),
+                selected.commandTimelineNextOrder());
+        donorSoundBindings.clear();
+        donorSoundBindings.putAll(publishedBindings);
     }
 
     /**
@@ -1856,38 +1527,7 @@ public class AudioManager implements MusicRestoreSink {
      * publication instead of recapturing or rebuilding it.
      */
     public boolean preparePostBoundaryReverseRelease() {
-        if (!reverseAudioPresentationActive) {
-            return true;
-        }
-        ensureShadowPresentation();
-        if (!postBoundaryReverseTarget) {
-            AudioLogicalSnapshot fresh;
-            try {
-                // A level/seamless transition may initialize presentation
-                // sources after the final frame packet. Publish that ledger at
-                // this owner boundary without advancing PCM cadence/history,
-                // then capture the complete fresh producer state.
-                shadowProducer.applyPendingCommandsAtOwnerBoundary();
-                fresh = captureLogicalSnapshot();
-            } catch (RuntimeException failure) {
-                // Successfully applied predecessors have already left the
-                // ledger; the failing command and successors remain queued.
-                // The stale selected/prepared target is retained until a
-                // complete drain and fresh capture can replace it.
-                AudioDiagnosticObserverException.rethrowIfPresent(failure);
-                LOGGER.log(Level.WARNING,
-                        "Audio post-boundary command publication failed; "
-                                + "retained coherent live state for retry",
-                        failure);
-                return false;
-            }
-            clearPreparedReverseRestore();
-            shadowProducer.discardPreparedRestoreSelection();
-            deferredReverseLogicalSnapshot = fresh;
-            deferredReverseLogicalPrepared = false;
-            postBoundaryReverseTarget = true;
-        }
-        return commitDeferredReverseLogicalRestore();
+        return heldReverseRestore.preparePostBoundaryReverseRelease();
     }
 
     /**
@@ -1895,35 +1535,7 @@ public class AudioManager implements MusicRestoreSink {
      * boundary without consuming the reverse PCM cursor.
      */
     public boolean commitDeferredReverseLogicalRestore() {
-        if (!reverseAudioPresentationActive
-                || deferredReverseLogicalSnapshot == null
-                || deferredReverseLogicalPrepared) {
-            return deferredReverseLogicalPrepared;
-        }
-        AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
-        try {
-            shadowProducer.prepareRestoreSelection(
-                    selected.presentation(), shadowFactory);
-            deferredReverseLogicalPrepared = true;
-            return true;
-        } catch (RuntimeException failure) {
-            deferredReverseLogicalPrepared = false;
-            AudioDiagnosticObserverException.rethrowIfPresent(failure);
-            LOGGER.log(Level.WARNING,
-                    "Audio reverse target preparation failed; retained live "
-                            + "state for retry",
-                    failure);
-            return false;
-        }
-    }
-
-    /**
-     * Marks any manager-side prepared reverse target as unpublished. The
-     * producer owns the prepared registry restore itself and releases it
-     * through {@code discardPreparedRestoreSelection()} or {@code close()}.
-     */
-    private void clearPreparedReverseRestore() {
-        deferredReverseLogicalPrepared = false;
+        return heldReverseRestore.commitDeferredReverseLogicalRestore();
     }
 
     public void setReversePlaybackRate(double rate) {
@@ -2005,7 +1617,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     AudioLogicalSnapshot deferredReverseLogicalSnapshotForTesting() {
-        return deferredReverseLogicalSnapshot;
+        return heldReverseRestore.selectedSnapshot();
     }
 
     int logicalRestorePublicationsForTesting() {
@@ -2017,8 +1629,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     void failNextReverseReleaseForTesting(ReverseReleaseFailurePoint point) {
-        failNextReverseRelease =
-                java.util.Objects.requireNonNull(point, "point");
+        heldReverseRestore.armReleaseFailure(point);
     }
 
     AudioPresentationTuning shadowTuningForTesting() {
@@ -2299,7 +1910,7 @@ public class AudioManager implements MusicRestoreSink {
      */
     public boolean playNamespacedSfx(StreamedMusicPort.SfxRef sfx) {
         java.util.Objects.requireNonNull(sfx, "sfx");
-        if (suppressingRewindReplay() || reverseAudioPresentationActive) return false;
+        if (suppressingRewindReplay() || heldReverseRestore.blocksSfxAdmission()) return false;
         // Preflight only: the presentation layer materializes the one-shot
         // from the recorded command as an ordinary sample voice.
         if (!streamedMusicPort.hasSfx(sfx)) {
@@ -2444,9 +2055,7 @@ public class AudioManager implements MusicRestoreSink {
         if (sound == GameSound.RING) {
             // Suppression precedes the driver's ring-speaker selection.
             // The registry still rejects all other SFX at admission.
-            if (deferredReverseLogicalSnapshot != null
-                    ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
-                    : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
+            if (heldReverseRestore.blocksRingAdmission()) {
                 observeBlockedRingAdmission(rawSoundId);
                 return;
             }
@@ -3652,7 +3261,7 @@ public class AudioManager implements MusicRestoreSink {
         invalidateAndReleaseStreamedMusicSession();
         beginSourceMutation();
         try {
-            clearPreparedReverseRestore();
+            heldReverseRestore.invalidatePreparation();
             if (backend != null) {
                 backend.stopPlayback();
             }
@@ -3673,12 +3282,7 @@ public class AudioManager implements MusicRestoreSink {
             this.rewindReplaySuppressionDepth = 0;
             this.audioFrameOwnedExternally = false;
             this.audioFrameAdvanced = false;
-            this.reverseAudioPresentationActive = false;
-            this.deferredReverseLogicalSnapshot = null;
-            this.deferredReverseLogicalPrepared = false;
-            this.postBoundaryReverseTarget = false;
-            this.logicalRestorePublications = 0;
-            this.failNextReverseRelease = null;
+            heldReverseRestore.reset();
             this.commandTimeline.clear();
             // A mode transition rebuilds the presentation; it does not end a
             // recording of the window. Entering a game from the master title screen
@@ -3868,7 +3472,7 @@ public class AudioManager implements MusicRestoreSink {
     private void replaceShadowPresentationForBaseMutation() {
         int musicTempoPercent = shadowSmpsSession == null ? 100
                 : shadowSmpsSession.captureSnapshot().musicTempoPercent();
-        clearPreparedReverseRestore();
+        heldReverseRestore.invalidatePreparation();
         captureLeases.detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         ensurePresentationSink();
@@ -4086,6 +3690,454 @@ public class AudioManager implements MusicRestoreSink {
 
         @Override public int maxStereoFrames() {
             return maxFrames;
+        }
+    }
+
+    /**
+     * Manager-lifetime ownership of the held logical target and its release protocol.
+     * Collaborators are read from AudioManager at their original execution points;
+     * construction stores no producer, session, factory or presentation resources.
+     */
+    private final class HeldReverseRestore {
+        private boolean reverseAudioPresentationActive;
+        /** The selected metadata can differ from the producer's acknowledged preparation. */
+        private AudioLogicalSnapshot deferredReverseLogicalSnapshot;
+        private boolean deferredReverseLogicalPrepared;
+        /** Fresh boundary targets survive retries and bypass later transient cleanup. */
+        private boolean postBoundaryReverseTarget;
+        /** One-shot test control, consumed at release entry even if that attempt fails. */
+        private ReverseReleaseFailurePoint failNextReverseRelease;
+
+        private void restoreLogicalSnapshot(AudioLogicalSnapshot snapshot) {
+            if (snapshot == null) {
+                return;
+            }
+            ensureShadowPresentation();
+            if (reverseAudioPresentationActive) {
+                deferredReverseLogicalSnapshot = snapshot;
+                return;
+            }
+            restoreLogicalSnapshotNow(snapshot, false);
+        }
+
+        private void replayTimelineCommandLogically(AudioCommand command) {
+            if (command == null) {
+                return;
+            }
+            stageDeferredPresentationCommand(command);
+            refreshDeferredReverseLogicalSnapshot();
+        }
+
+        /**
+         * Replays one logical command into detached presentation metadata and a
+         * transactionally borrowed view of the one persistent SMPS session. The
+         * session is rolled back byte-for-byte after the staged snapshot is
+         * captured, so the live shadow and its rewind/history cursor remain
+         * untouched until held release invokes the producer restore.
+         */
+        private void stageDeferredPresentationCommand(AudioCommand command) {
+            if (command == null) {
+                return;
+            }
+            ensureShadowPresentation();
+            if (deferredReverseLogicalSnapshot == null) {
+                shadowResolver.submit(command);
+                shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                ringLeft = managerRingAfter(ringLeft, command);
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            SmpsCoordFlagRuntimeState.Snapshot liveCoord =
+                    presentationCoordFlagHandlers.state().snapshot();
+            AudioPresentationCommandQueue stagedCommands =
+                    new AudioPresentationCommandQueue();
+            AudioVoiceRegistry stagedRegistry = new AudioVoiceRegistry(
+                    shadowFactory, shadowFactory, presentationCoordFlagHandlers,
+                    warning -> LOGGER.warning(
+                            "Presentation rewind staging: " + warning),
+                    shadowSmpsSession);
+            AudioPresentationDependencyResolver.DiagnosticTransaction
+                    stagingDiagnostics =
+                    shadowFactory.beginDiagnosticTransaction();
+            SmpsDriverSession.LiveMutationToken sessionMutation = null;
+            RuntimeException primaryFailure = null;
+            try {
+                stagedRegistry.restore(selected.presentation(), shadowFactory);
+                String[] resolutionFailure = new String[1];
+                AudioPresentationCommandResolver stagedResolver =
+                        new AudioPresentationCommandResolver(
+                                stagedCommands, shadowFactory,
+                                new ShadowSources(
+                                        (Math.max(1, backend != null
+                                                ? backend.outputSampleRate()
+                                                : 48_000)
+                                                + configuredFrameRate() - 1)
+                                                / configuredFrameRate()),
+                                warning -> resolutionFailure[0] = warning,
+                                () -> true,
+                                () -> {
+                                    throw new IllegalStateException(
+                                            "detached staging queue exceeded capacity");
+                                });
+                long nextVoice = selected.presentation().voices().stream()
+                        .mapToLong(voice -> switch (voice) {
+                            case PresentationVoiceSnapshot.Sample sample ->
+                                    sample.voiceId();
+                            case PresentationVoiceSnapshot.Streamed streamed ->
+                                    streamed.voiceId();
+                        })
+                        .max().orElse(0L) + 1L;
+                nextVoice = Math.max(
+                        nextVoice, selected.presentation().nextVoiceId());
+                stagedResolver.reserveVoiceIdsThrough(nextVoice);
+                stagedResolver.submit(command);
+                boolean optionalFallbackSfx =
+                        command instanceof AudioCommand.PlaySfx sfx
+                                && (sfx.route()
+                                == AudioCommand.SfxRoute.RING_RESOLVED
+                                || sfx.route()
+                                == AudioCommand.SfxRoute.FALLBACK_NAME);
+                if (resolutionFailure[0] != null && !optionalFallbackSfx) {
+                    throw new IllegalStateException(
+                            "Presentation rewind command resolution failed: "
+                                    + resolutionFailure[0]);
+                }
+                if (selected.presentation().smpsSession() == null
+                        || selected.presentation().smpsLogical() == null) {
+                    throw new IllegalArgumentException(
+                            "held-rewind staging requires one SMPS session/logical "
+                                    + "snapshot pair");
+                }
+                SmpsDriverSession.PreparedRestore preparedSession =
+                        shadowSmpsSession.prepareRestore(
+                                selected.presentation().smpsSession(),
+                                selected.presentation().smpsLogical(),
+                                shadowFactory::resolveDac);
+                sessionMutation = shadowSmpsSession.captureLiveMutation();
+                shadowSmpsSession.commitRestore(preparedSession);
+                stagedCommands.applyPendingAtomically(commandToApply ->
+                        AudioPresentationSessionCommandApplier.apply(
+                                shadowSmpsSession, stagedRegistry,
+                                commandToApply));
+                AudioPresentationSnapshot staged = stagedRegistry.snapshot();
+                boolean stagedManagerRingLeft =
+                        managerRingAfter(selected.ringLeft(), command);
+                deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
+                        stagedManagerRingLeft,
+                        selected.commandTimelineFrame(),
+                        selected.commandTimelineNextOrder(),
+                        selected.commandEntryCount(),
+                        staged,
+                        selected.donorGameIds(),
+                        selected.donorBindings(),
+                        selected.forwardServiceSnapshot());
+            } catch (RuntimeException failure) {
+                primaryFailure = failure;
+                throw failure;
+            } finally {
+                try {
+                    if (sessionMutation != null) {
+                        shadowSmpsSession.rollbackLiveMutation(
+                                sessionMutation);
+                    }
+                } catch (RuntimeException rollbackFailure) {
+                    if (primaryFailure != null) {
+                        primaryFailure.addSuppressed(rollbackFailure);
+                    } else {
+                        throw rollbackFailure;
+                    }
+                } finally {
+                    try {
+                        stagedRegistry.clear();
+                    } finally {
+                        try {
+                            stagingDiagnostics.endPreparation();
+                        } finally {
+                            try {
+                                stagingDiagnostics.discard();
+                            } finally {
+                                presentationCoordFlagHandlers.state()
+                                        .restore(liveCoord);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private boolean managerRingAfter(
+                boolean current, AudioCommand command) {
+            if (command instanceof AudioCommand.ResetRingAlternation reset) {
+                return reset.ringLeft();
+            }
+            if (command instanceof AudioCommand.RetainGlobalStop
+                    || command instanceof AudioCommand
+                    .StopSegaPcmAndRetainGlobalStop) {
+                return true;
+            }
+            if (command instanceof AudioCommand.PlaySfx sfx
+                    && sfx.route() == AudioCommand.SfxRoute.RING_RESOLVED) {
+                if (GameSound.RING_LEFT.name().equals(sfx.sfxName())) {
+                    return false;
+                }
+                if (GameSound.RING_RIGHT.name().equals(sfx.sfxName())) {
+                    return true;
+                }
+            }
+            return current;
+        }
+
+        private void refreshDeferredReverseLogicalSnapshot() {
+            if (deferredReverseLogicalSnapshot == null) {
+                return;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            deferredReverseLogicalSnapshot = new AudioLogicalSnapshot(
+                    selected.ringLeft(),
+                    commandTimeline.currentFrame(),
+                    commandTimeline.nextOrder(),
+                    selected.commandEntryCount(),
+                    selected.presentation(),
+                    selected.donorGameIds(),
+                    selected.donorBindings(),
+                    selected.forwardServiceSnapshot());
+        }
+
+        private boolean afterRewindRestore(
+                int frame, AudioPresentationPolicy policy) {
+            if (policy == null) {
+                return true;
+            }
+            ensureShadowPresentation();
+            boolean preservePostBoundarySources =
+                    postBoundaryReverseTarget;
+            if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
+                if (!AudioManager.this.endReverseAudioPresentation()) {
+                    return false;
+                }
+                shadowProducer.applyPendingCommandsAtOwnerBoundary();
+            }
+            if (preservePostBoundarySources) {
+                return true;
+            }
+            switch (policy) {
+                case SUPPRESSED_INTERNAL_RESTORE -> {
+                }
+                case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
+                    shadowCommands.submit(
+                            new AudioPresentationCommand.RestoreMusicOverride(),
+                            () -> true,
+                            AudioManager.this::drainShadowCommandsAtOwnerBoundary);
+                    shadowProducer
+                            .stopTransientVoicesThenApplyPendingCommandsAtOwnerBoundary();
+                }
+                case STOP_TRANSIENT_SFX ->
+                        shadowProducer.stopTransientVoicesAtOwnerBoundary();
+                case STOP_ALL_PRESENTATION -> {
+                    shadowCommands.submit(
+                            new AudioPresentationCommand.HardReset(),
+                            () -> true,
+                            AudioManager.this::drainShadowCommandsAtOwnerBoundary);
+                    shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    shadowProducer.clearHistory();
+                    shadowParity.historyBoundary();
+                }
+            }
+            return true;
+        }
+
+        private void beginReverseAudioPresentation() {
+            ensureShadowPresentation();
+            // Check presentation ownership before replacing the logical rewind
+            // ledger: a scoped recorded replay may already own audible reverse.
+            shadowProducer.beginReverse(1.0);
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            postBoundaryReverseTarget = false;
+            reverseAudioPresentationActive = true;
+        }
+
+        private boolean isReverseAudioPresentationActive() {
+            return reverseAudioPresentationActive;
+        }
+
+        private boolean isReverseAudioOutputActive() {
+            return reverseAudioPresentationActive
+                    || shadowProducer != null && shadowProducer.isReplayReverseActive();
+        }
+
+        /** Successful producer return is the publication boundary, not universal atomicity. */
+        private boolean endReverseAudioPresentation() {
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            boolean preparedDuringAttempt = false;
+            boolean producerReturned = false;
+            // Consumed once per entry, whichever exit this attempt takes, so an
+            // armed injection can never leak into a later unrelated release.
+            ReverseReleaseFailurePoint injectFailure = failNextReverseRelease;
+            failNextReverseRelease = null;
+            Map<GameSound, DonorSfxBinding> publishedBindings = null;
+            try {
+                if (selected != null && !deferredReverseLogicalPrepared) {
+                    if (!AudioManager.this.commitDeferredReverseLogicalRestore()) {
+                        return false;
+                    }
+                    preparedDuringAttempt = true;
+                }
+                if (selected != null) {
+                    // Materialize bindings before calling the producer; later
+                    // failures may still leave the characterized partial effects.
+                    publishedBindings = new EnumMap<>(GameSound.class);
+                    for (AudioLogicalSnapshot.DonorSfxBindingSnapshot binding
+                            : selected.donorBindings()) {
+                        publishedBindings.put(binding.sound(),
+                                new DonorSfxBinding(binding.donorGameId(),
+                                        binding.sfxId()));
+                    }
+                }
+                if (injectFailure
+                        == ReverseReleaseFailurePoint.BEFORE_PRODUCER_COMMIT) {
+                    throw new IllegalStateException(
+                            "injected reverse release publication failure");
+                }
+                if (shadowProducer != null) {
+                    shadowProducer.endReverse(
+                            !postBoundaryReverseTarget);
+                }
+                producerReturned = true;
+                if (injectFailure
+                        == ReverseReleaseFailurePoint.AFTER_PRODUCER_COMMIT) {
+                    throw new IllegalStateException(
+                            "injected reverse release publication failure");
+                }
+            } catch (RuntimeException failure) {
+                if (producerReturned) {
+                    publishReverseReleaseLedger(selected, publishedBindings);
+                    AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                    LOGGER.log(Level.WARNING,
+                            "Audio reverse release publication failed after the "
+                                    + "producer commit; completed the release from "
+                                    + "the pre-commit ledger", failure);
+                    return true;
+                }
+                if (preparedDuringAttempt) {
+                    try {
+                        shadowProducer.discardPreparedRestoreSelection();
+                    } catch (RuntimeException discardFailure) {
+                        failure.addSuppressed(discardFailure);
+                    }
+                    deferredReverseLogicalPrepared = false;
+                }
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio reverse release failed; retained prior live state",
+                        failure);
+                return false;
+            }
+            publishReverseReleaseLedger(selected, publishedBindings);
+            return true;
+        }
+
+        private boolean preparePostBoundaryReverseRelease() {
+            if (!reverseAudioPresentationActive) {
+                return true;
+            }
+            ensureShadowPresentation();
+            if (!postBoundaryReverseTarget) {
+                AudioLogicalSnapshot fresh;
+                try {
+                    // A level/seamless transition may initialize presentation
+                    // sources after the final frame packet. Publish that ledger at
+                    // this owner boundary without advancing PCM cadence/history,
+                    // then capture the complete fresh producer state.
+                    shadowProducer.applyPendingCommandsAtOwnerBoundary();
+                    fresh = AudioManager.this.captureLogicalSnapshot();
+                } catch (RuntimeException failure) {
+                    // Successfully applied predecessors have already left the
+                    // ledger; the failing command and successors remain queued.
+                    // The stale selected/prepared target is retained until a
+                    // complete drain and fresh capture can replace it.
+                    AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                    LOGGER.log(Level.WARNING,
+                            "Audio post-boundary command publication failed; "
+                                    + "retained coherent live state for retry",
+                            failure);
+                    return false;
+                }
+                invalidatePreparation();
+                shadowProducer.discardPreparedRestoreSelection();
+                deferredReverseLogicalSnapshot = fresh;
+                deferredReverseLogicalPrepared = false;
+                postBoundaryReverseTarget = true;
+            }
+            return AudioManager.this.commitDeferredReverseLogicalRestore();
+        }
+
+        private boolean commitDeferredReverseLogicalRestore() {
+            if (!reverseAudioPresentationActive
+                    || deferredReverseLogicalSnapshot == null
+                    || deferredReverseLogicalPrepared) {
+                return deferredReverseLogicalPrepared;
+            }
+            AudioLogicalSnapshot selected = deferredReverseLogicalSnapshot;
+            try {
+                shadowProducer.prepareRestoreSelection(
+                        selected.presentation(), shadowFactory);
+                deferredReverseLogicalPrepared = true;
+                return true;
+            } catch (RuntimeException failure) {
+                deferredReverseLogicalPrepared = false;
+                AudioDiagnosticObserverException.rethrowIfPresent(failure);
+                LOGGER.log(Level.WARNING,
+                        "Audio reverse target preparation failed; retained live "
+                                + "state for retry",
+                        failure);
+                return false;
+            }
+        }
+
+        private void publishReverseReleaseLedger(
+                AudioLogicalSnapshot selected,
+                Map<GameSound, DonorSfxBinding> publishedBindings) {
+            if (selected != null) {
+                publishHeldRestoreLedger(selected, publishedBindings);
+            }
+            // Only retire after every root ledger write returns successfully.
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            reverseAudioPresentationActive = false;
+            postBoundaryReverseTarget = false;
+        }
+
+        private boolean blocksSfxAdmission() {
+            return reverseAudioPresentationActive;
+        }
+
+        private boolean blocksRingAdmission() {
+            return deferredReverseLogicalSnapshot != null
+                    ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
+                    : shadowProducer != null && shadowProducer.areSfxRequestsBlocked();
+        }
+
+        private AudioLogicalSnapshot selectedSnapshot() {
+            return deferredReverseLogicalSnapshot;
+        }
+
+        private void armReleaseFailure(ReverseReleaseFailurePoint point) {
+            failNextReverseRelease = java.util.Objects.requireNonNull(point, "point");
+        }
+
+        /** Producer close/discard owns its resources; this invalidates only our acknowledgment. */
+        private void invalidatePreparation() {
+            deferredReverseLogicalPrepared = false;
+        }
+
+        private void reset() {
+            reverseAudioPresentationActive = false;
+            deferredReverseLogicalSnapshot = null;
+            deferredReverseLogicalPrepared = false;
+            postBoundaryReverseTarget = false;
+            resetLogicalRestorePublicationCount();
+            failNextReverseRelease = null;
         }
     }
 
@@ -4361,7 +4413,7 @@ public class AudioManager implements MusicRestoreSink {
 
     public void destroy() {
         invalidateAndReleaseStreamedMusicSession();
-        clearPreparedReverseRestore();
+        heldReverseRestore.invalidatePreparation();
         closeShadowPresentation();
         if (backend != null) {
             backend.destroy();

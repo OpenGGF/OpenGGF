@@ -524,8 +524,7 @@ class TestLiveRewindManagerAudioCleanup {
                 audio.captureLogicalSnapshot(), freshMusic, freshSfx);
         assertRawPcmSource(audio.captureLogicalSnapshot());
         AudioLogicalSnapshot selectedFresh =
-                (AudioLogicalSnapshot) getField(
-                        audio, "deferredReverseLogicalSnapshot");
+                AudioManagerTestDiagnostics.selectedReverseSnapshot(audio);
         assertSourcePair(selectedFresh, freshMusic, freshSfx);
         assertRawPcmSource(selectedFresh);
         AudioPresentationProducer.TransactionFingerprint
@@ -584,8 +583,7 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(controller.stepBackward());
         controller.commitDeferredAudioRestore();
         AudioLogicalSnapshot selectedRoot =
-                (AudioLogicalSnapshot) getField(
-                        audio, "deferredReverseLogicalSnapshot");
+                AudioManagerTestDiagnostics.selectedReverseSnapshot(audio);
         assertSourcePair(selectedRoot, freshMusic, freshSfx);
         assertRawPcmSource(selectedRoot);
         audio.endReverseAudioPresentation();
