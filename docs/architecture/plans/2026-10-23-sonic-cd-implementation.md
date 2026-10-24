@@ -3210,3 +3210,32 @@ same-frame death camera boundary are the next owners.
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestCdPlayerTouchResponse,TestCdPlayerMovement,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestModApiSignatureSurface' "-Dsonic2.rom.path=$S2_REV01" "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
 env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestSonicCdOpeningWorldEgl#actualEglWalkingHitSpillHurtLandingAndFullCourseReplay' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
 ```
+
+
+### Diving contact and retained-native observations, 24 October 2026
+
+The actual EGL hurt test now shares one route owner for two real contacts:
+grounded Mosqui8/two rings and diving Mosqui6/three rings. Native's firstRight
+takes effect at level198; the earlier engine walk started at3 and met another
+patrol phase. A neutral controller lead-in (`197 -;108 R;252 -;153 R`) aligns only
+the input origin; no native gameplay value, clock seed or source gate changes.
+The diving route hits600, lands643 and resumes119on644, matching the retained
+native event numbers. These are comparison observations, never frame fences.
+
+Root2436 at3f3d13a06 plus ONLY the changed testcase passed bothaffected methods,
+2/0/0/0 at16:16:14BST (37squeue,35.040sexecution), freshXMLJava25/media/EGL
+confirmed. New full/course checkpoints82 each replay562rendered rows and
+finalpixels. Existing grounded605row route passes after helper extraction too.
+No production delta. Original Ring/defeat methods do not use the changed helper
+and were not repeated. New5actualPNGs/input/CSV/outcome remain external.
+
+Read-only in-memory join to all overlapping accepted native forward polls uses
+actual globals.levelFrames, no fitted ordinal shift or skipped row. At54unique
+levels591..644, all23shared fields other than absoluteVInt match exactly:
+fullXY, signedXY/Gvel, routine/flags/animation, hurt/rings/lostRingcount, three
+spill values, cameraXYwords, heldinput/action and firstMosqui id/routine/XY/
+spriteflags. That is1242exact scalar comparisons. The24th field, absoluteVInt,
+differs onall54rows by61(native higher):54mismatches out of1296comparisons,
+explicitly reported and not applied to gameplay. This verifies only these short
+observed fields, not all actor state, device timing, native pixels/audio, later
+bounces, whole-game or regional parity. DEVseed0 remains declared policy.

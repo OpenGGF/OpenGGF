@@ -352,6 +352,22 @@ class TestSonicCdOpeningWorldEgl {
     }
 
     @Test void actualEglWalkingHitSpillHurtLandingAndFullCourseReplay() throws Exception {
+        var route = runWalkingHurtRoute(System.getProperty("soniccd.hurt.script", "2 -;108 R;500 -;100 R"),
+                "soniccd.hurt.output", 8, 2);
+        assertEquals(new HurtRouteOutcome(644, 686, 2), route);
+    }
+
+    @Test void actualEglNativeAlignedDivingHurtSpillLandingAndReplay() throws Exception {
+        // Retained native controls first move at level frame198. The neutral lead-in changes
+        // only controller timing, never actor/pool/clock state or production behavior.
+        var route = runWalkingHurtRoute("197 -;108 R;252 -;153 R", "soniccd.hurt.diving.output", 6, 3);
+        assertEquals(new HurtRouteOutcome(600, 643, 3), route);
+    }
+
+    private record HurtRouteOutcome(int hitCall, int landingCall, int spilled) { }
+
+    private HurtRouteOutcome runWalkingHurtRoute(String script, String outputProperty,
+                                               int expectedEnemyRoutine, int expectedRings) throws Exception {
         Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
         assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
         assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
@@ -361,13 +377,11 @@ class TestSonicCdOpeningWorldEgl {
             var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
             assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
         }
-        // R1 continuous Right passed the Mosqui and reached the unowned FloatBlock.
-        // R3 observations show Sonic passing before the dive reaches the ground.
-        // R4 waits for the returning patrol, then approaches with a short walk.
-        // This supplies no actor, object, clock or collision state to gameplay.
-        String log = InputScriptCompiler.compileToInputLog(System.getProperty("soniccd.hurt.script", "2 -;108 R;500 -;100 R"));
+        // Both scripts use normal held controllers, including any initial neutral input.
+        // No actor, object, clock or collision observation supplies gameplay state.
+        String log = InputScriptCompiler.compileToInputLog(script);
         var movie = new Bk2MovieLoader().parseInputLogText(Path.of("hurt-world-input-log"), log.lines().toList());
-        Path output = openCaptureOutput(log, "soniccd.hurt.output");
+        Path output = openCaptureOutput(log, outputProperty);
         if (output != null) Files.writeString(output.resolve("hurt-state.csv"),
                 "call,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,hurt,rings,lost_rings,spill_timer,spill_accumulator,spill_frame,vint,camera_x,camera_y,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,mosqui_sprite_flags,input_mask,action_mask\n",
                 StandardOpenOption.CREATE_NEW);
@@ -408,6 +422,9 @@ class TestSonicCdOpeningWorldEgl {
                         hitCall = index + 1; spilled = Math.min(previousRings, 32);
                         assertEquals(2, previousState.motion().routine());
                         assertTrue(previousRings > 0, "Natural pickup must precede the walking hit");
+                        assertEquals(expectedRings, previousRings);
+                        var enemy = runtime.placement().pool().state(34);
+                        assertEquals(0x3D, enemy.id()); assertEquals(expectedEnemyRoutine, enemy.routine());
                         assertEquals(0, runtime.ringGlobals().rings()); assertEquals(spilled, lostRings);
                         assertEquals(0x1A, motion.animation()); assertEquals(120, state.timers().hurt());
                         assertEquals(0x200, Math.abs(motion.xVelocity())); assertEquals(-0x400, motion.yVelocity());
@@ -455,6 +472,7 @@ class TestSonicCdOpeningWorldEgl {
                         + "; continuation rows: " + rows.size() + "\n"
                         + "Actual OpenGGF USA R11A DEV: silent audio, preloaded object art, declared V-int seed 0; no native timing/pixel/full-game parity claim.\n",
                         StandardOpenOption.CREATE_NEW);
+                return new HurtRouteOutcome(hitCall, landingCall, spilled);
             } finally {
                 try { SessionManager.closeGameplaySession(); }
                 finally { GraphicsManager.destroyForReinit(); }
