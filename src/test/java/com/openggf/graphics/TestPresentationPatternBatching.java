@@ -25,7 +25,7 @@ class TestPresentationPatternBatching {
         patternId = PatternAtlasRange.OBJECTS.base();
         atlas.cachePatternHeadless(new Pattern(), patternId);
         field("patternAtlas").set(graphics, atlas);
-        field("combinedPaletteTextureId").set(graphics, 1);
+        PaletteTextureTestAccess.set(graphics, "combinedPaletteTextureId", 1);
         var instanced = new InstancedPatternRenderer(graphics, com.openggf.game.GameServices.configuration());
         var supported = InstancedPatternRenderer.class.getDeclaredField("supported");
         supported.setAccessible(true); supported.set(instanced, true);

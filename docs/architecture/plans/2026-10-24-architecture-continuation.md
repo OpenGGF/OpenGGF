@@ -4600,3 +4600,164 @@ owned-worktree cleanup are reported in the final task handoff, not assumed here.
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
 ```
+
+### Bounded palette texture/publication owner (2026-10-24)
+
+Implementation checkout `${TASK_CHECKOUT}`, local
+branch `bugfix/ai-palette-publication-owner-20261024`, starts at verified
+`97eb86f186b432722024ca419a00b901b38f5ec2`. This is a responsibility transfer,
+not a runtime repair or an allowance-count reduction. No delegation, integration,
+push, branch switch in main, or other checkout's build output is involved.
+
+`GraphicsManager` now holds one package-private concrete `PaletteTextureOwner`.
+It owns normal/water texture handles and physical capacity; native staging;
+aliased cached/pending sources and publication gates; requested/displayed fade
+state and rewind hold; raw published-water snapshots, content/derived-row caches;
+scoped leases, world binding and generations; and the appearance residency
+registry. Display conversion settings live with the upload state they control.
+The owner performs the uploads, recomposition, publication, invalidation and
+resource disposal. `AppearancePalettes.Rows` addresses it directly. Existing
+publication, scoped-handle, visual-source and command-residency bridges reach it
+through package-local access. Nothing is mirrored back into `GraphicsManager`.
+
+The host keeps rendering orchestration and underwater shader selection. Its
+supported public methods keep their signatures and virtual dispatch. In
+particular, pending water replay crosses the host's typed adapter and invokes
+its public virtual `cacheUnderwaterPaletteTexture`; the two casts/source reads
+remain ordered separately. Nonvirtual package-local host reads preserve original
+backing-field sampling rather than invoking overridable mode/profile/fade getters.
+Resource reset still clears the tracking map before renderer cleanup and then
+calls the host's virtual `clearPaletteTextures`. Construction allocates no GPU
+resources or native buffers. There are no per-frame/per-row injection adapters,
+new interfaces, callback frameworks, gameplay/session lookups, CPU-bank changes,
+or RGB rewind protocol changes.
+
+Rejected cuts: moving methods while retaining palette state on the manager would
+leave lifetime authority split; moving only texture IDs would split publication,
+fade and residency dependencies; a facade/interface would add indirection without
+an owner. The alternative CPU-bank/token migration would change rewind identity
+and require frozen-edge review, so it is outside this selected cut. No frozen
+records are replaced, erased or refrozen. All seven root shader capacity fixes,
+shared row allocation, SAT/PreparedPiece/background ownership, NativeGroundScan
+and upstream Stageplay changes remain intact.
+
+Before production edits, five adversarial controls characterized public upload
+and cleanup overrides, private getter bypass, reentrant replay/latch restoration,
+exception consumption with later normal publication, selective disposal,
+headless null rows, and row selection before ordered RGB reads. The first run
+was 4 pass / 1 failure because the new test incorrectly expected LIMITED expansion
+to change RAW_RGB black; the corrected baseline was 5 pass, zero errors/skips.
+The first candidate invocation stopped at compilation on a missing
+`GL_CLAMP_TO_EDGE` import; no candidate tests ran in that invocation. The import
+was corrected. A source-body comparison found all 58 transferred method bodies
+unchanged after mapping the explicit host mode/reset/replay reads. Renderer test
+fixtures now inject their dummy handles into the actual owner rather than the
+removed manager fields.
+
+The final production/test source delta SHA-256 is
+`17f850bf4ab1dc4eb1d97287dde6cb4386f3090fe2d5ef3d7cfdb659d94877f6`,
+computed from `git diff 97eb86f186b432722024ca419a00b901b38f5ec2 -- src/main src/test`
+after staging all new files. The 70-case run used
+`2d91603bcc4a407b6d33718c9ee50096d2e09c3d56d140574a1940f82e657a63`;
+the subsequent test change added the independent same-live-bank, two-adapter
+regression in `TestPaletteColorStateAdapter`. The 91/135-case requests compiled
+and tested delta `d956819843ca1c126ec48fd528c6d39a248c0854e59efaec4aa3245b94d04a9c`.
+The commit hook then correctly rejected machine-local home paths in this appendix;
+they were replaced with checkout variables. Its conservative declaration projection
+also caught the wrapper's parameter spelling `profile` in place of the original
+`displayColorProfile`, although the compiled signature pin was unchanged. Restoring
+the original name made the hook's public declaration projection identical. This
+last source edit changes only that parameter/local reference spelling, no method
+body behavior or frozen identity. A fresh narrow final run passed all 20 cases
+(TestPalettePublicationDispatch 5, TestModApiSignatureSurface 11,
+TestModApiPinPolicy 4), zero failures/errors/skips, on the final fingerprint.
+
+Observed candidate results, with every report's failures/errors/skips and Java25 /
+surfaceless-EGL properties inspected:
+
+| Selection | Cases | Failures/errors/skips |
+| --- | ---: | --- |
+| TestPalettePublicationDispatch | 5 | 0/0/0 |
+| TestPaletteUploadLatch | 6 | 0/0/0 |
+| TestAppearancePalettes | 5 | 0/0/0 |
+| TestScopedPaletteGraphicsAccess | 3 | 0/0/0 |
+| TestUnderwaterPaletteUpload | 22 | 0/0/0 |
+| TestGraphicsManagerHeadless | 24 | 0/0/0 |
+| TestPaletteFadePresentation | 5 | 0/0/0 |
+| TestPaletteTextureCapacity | 11 | 0/0/0 |
+| TestNativeWhitePaletteFade | 14 | 0/0/0 |
+| TestDonorPaletteRewind | 1 | 0/0/0 |
+| TestScopedPalettePresentationRewind | 3 | 0/0/0 |
+| TestDonatedTeamPalettes | 7 | 0/0/0 |
+| TestPaletteColorStateAdapter | 13 | 0/0/0 |
+| TestPresentationPatternBatching | 8 | 0/0/0 |
+| TestPatternRendererIngress | 13 | 0/0/0 |
+| TestGraphicsManagerPatternAtlasPageOrdering | 12 | 0/0/0 |
+| TestSatReplayBatching | 5 | 0/0/0 |
+| TestRenderProjection | 4 | 0/0/0 |
+| TestModApiSignatureSurface | 11 | 0/0/0 |
+| TestModApiPinPolicy | 4 | 0/0/0 |
+| TestArchUnitRules | 34 | 0/0/0 |
+| TestArchitecturalReviewGuard | 9 | 0/0/0 |
+| TestArchitecturalSourceGuard | 77 | 0/0/0 |
+
+The first three candidate invocations passed 70, 91 and 135 cases (296 total);
+the justified final header-spelling control added 20 passing executions.
+All 4,345 production and 4,454 test-source files compiled. Real pixels use the
+existing production offscreen/session owners, with DISPLAY and WAYLAND_DISPLAY
+unset. Coverage includes ten capacity/render paths, independently retained hosts,
+reclamation/disposal/reinitialization, native white fades and transparent zero,
+donor super mutation with immediate redraw/backward restore/forward replay,
+normal/native-water team selection, deferred scoped relocation/release/reacquisition,
+wrong-host/stale-generation/exact-world isolation, appearance recomposition,
+pending aliases versus detached water publication, fade hold and reveal failure
+restoration, and public virtual dispatch. The two-adapter control preserves the
+existing independent adapter lifetime authority on the same still-live bank.
+
+Exact invocations are expressed below with their shared shell prefix factored
+out; `MAIN_CHECKOUT` denotes the existing project main checkout and
+`TASK_CHECKOUT` the T3-owned implementation checkout. Every command ran in the
+implementation checkout. No broad smoke, whole-S3K
+group, release full suite, native parity sweep or performance certification was
+requested or implied. The first candidate compile failure was followed by the
+required focused rerun. Queue waiting was pending work; admission/elapsed delivery
+time was not measured here. Maven execution totals were 1:27, 32.144s and 41.919s
+for the first three successful candidate requests; the final narrow request
+reported 1:28. These are not total delivery time.
+
+```bash
+palette_maven=(env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py"
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl)
+# Pre-extraction baseline, after correcting the RAW_RGB assertion: 5/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch test -B
+# Stable focused owner controls: 70/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch,TestPaletteUploadLatch,TestAppearancePalettes,TestScopedPaletteGraphicsAccess,TestUnderwaterPaletteUpload,TestGraphicsManagerHeadless,TestPaletteFadePresentation test -B
+# Pixels, real ROMs, identity and affected renderer fixtures: 91/0/0/0.
+"${palette_maven[@]}" "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtest=TestPaletteTextureCapacity,TestNativeWhitePaletteFade,TestDonorPaletteRewind,TestScopedPalettePresentationRewind,TestDonatedTeamPalettes,TestPaletteColorStateAdapter,TestPresentationPatternBatching,TestPatternRendererIngress,TestGraphicsManagerPatternAtlasPageOrdering,TestSatReplayBatching,TestRenderProjection test -B
+# One fresh API/pin/strict frozen/source-guard request: 135/0/0/0.
+"${palette_maven[@]}" -Pguards -Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchUnitRules,TestArchitecturalReviewGuard,TestArchitecturalSourceGuard test -B
+# Original public parameter spelling restored for conservative hook admission: 20/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch,TestModApiSignatureSurface,TestModApiPinPolicy test -B
+```
+
+Before the ROM-backed invocation, root `.gen` discovery and SHA-1/CRC32 checks
+verified the exact paths above: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROMs were copied or linked.
+
+The strict `low_level_layers_do_not_depend_on_runtime_layers` identity passed.
+Every frozen file compares byte-for-byte with the base; the low-level store still
+has 121 records and SHA-256
+`59a620bd64e55dd9bf8113259bb48997af7e07656e9ccbf8cac8fd12f4c112de`.
+Frozen delta is zero, with no replacement identities. API pins, descriptor,
+terminals, all root shaders, RenderContext allocation/colours and palette RGB
+rewind production code also compare unchanged. Reports and temporary diagnostics
+were inspected and consumed; no pass receipts or log archives were retained.
+
+No public behavior, configuration or discrepancy changed, so no release-note,
+guide or policy update is required. The parent owns independent review,
+composition, joint validation, main delivery and checkout/branch cleanup.
+This slice stops after the complete first owner transfer; no live test jobs remain.
