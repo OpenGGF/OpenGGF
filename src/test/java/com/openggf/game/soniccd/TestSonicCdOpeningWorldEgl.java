@@ -1012,7 +1012,7 @@ class TestSonicCdOpeningWorldEgl {
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());
         assertEquals(expected.objects().displayedFrame(), actual.objects().displayedFrame());
-        assertEquals(expected.camera(), actual.camera()); assertEquals(expected.scroll(), actual.scroll());
+        assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrames(), actual.levelFrames());
         assertEquals(expected.publication(), actual.publication());
         var a = expected.bank().tiles(); var b = actual.bank().tiles();
@@ -1020,4 +1020,21 @@ class TestSonicCdOpeningWorldEgl {
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));
     }
+    private static void assertScroll(Object expected, Object actual) {
+        var a = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, expected);
+        var b = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, actual);
+        assertSame(a.owner(), b.owner());
+        assertEquals(a.state(), b.state());
+        var x = a.background(); var y = b.background();
+        assertEquals(x.cameraBgX(), y.cameraBgX()); assertEquals(x.cameraBgY(), y.cameraBgY());
+        assertEquals(x.cameraBg2X(), y.cameraBg2X()); assertEquals(x.cameraBg2Y(), y.cameraBg2Y());
+        assertEquals(x.cameraBg3X(), y.cameraBg3X()); assertEquals(x.cameraBg3Y(), y.cameraBg3Y());
+        assertEquals(x.scrollFlagsBg(), y.scrollFlagsBg()); assertEquals(x.scrollFlagsBg2(), y.scrollFlagsBg2());
+        assertEquals(x.scrollFlagsBg3(), y.scrollFlagsBg3()); assertEquals(x.vscroll(), y.vscroll());
+        assertArrayEquals(x.crossingRam().copy(), y.crossingRam().copy());
+        assertArrayEquals(x.cloudRam().copy(), y.cloudRam().copy());
+        assertArrayEquals(x.deformationRam().copy(), y.deformationRam().copy());
+        assertArrayEquals(x.hscrollRam().copy(), y.hscrollRam().copy());
+    }
+
 }

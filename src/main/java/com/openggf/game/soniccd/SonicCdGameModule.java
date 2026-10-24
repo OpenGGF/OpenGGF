@@ -30,6 +30,7 @@ import com.openggf.game.soniccd.player.CdPlayerEngineRules;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
 import com.openggf.level.Level;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -80,14 +81,32 @@ public final class SonicCdGameModule implements GameModule {
         public RestartBoundary boundary() { return boundary; }
     }
 
+    /**
+     * Explicit immutable buffer ingress, not another runtime scroll owner. Deformation has no
+     * LevelStart clear; HScroll is cleared by ClearScreen (Functions (General).asm:220-226,
+     * called at Main:225). Capture reads both complete buffers, then restartCarry applies that native clear.
+     * Fresh zero deformation is explicit DEV ingress, not inferred native-cold RAM.
+     */
+    record BackgroundBuffers(CdAssetBytes deformationRam, CdAssetBytes hscrollRam) {
+        BackgroundBuffers {
+            Objects.requireNonNull(deformationRam, "complete deformation RAM");
+            Objects.requireNonNull(hscrollRam, "complete HScroll RAM");
+            if (deformationRam.length() != CdR11aBackgroundScroll.DEFORMATION_RAM_BYTES
+                    || hscrollRam.length() != CdR11aBackgroundScroll.HSCROLL_RAM_BYTES) {
+                throw new IllegalArgumentException("Background ingress requires all 512 deformation and 1024 HScroll bytes");
+            }
+        }
+    }
+
     /** Immutable handoff between visits; never part of a captured Frame or a second global store. */
     record RestartCarry(CdRingGlobals ring, CdPlayerBody.ContactGlobals contact,
                         CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
-                        CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt) {
+                        CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt,
+                        BackgroundBuffers background) {
         RestartCarry {
             Objects.requireNonNull(ring); Objects.requireNonNull(contact); Objects.requireNonNull(score);
             Objects.requireNonNull(level); Objects.requireNonNull(savedObjectFlags);
-            Objects.requireNonNull(player); Objects.requireNonNull(powerupArt);
+            Objects.requireNonNull(player); Objects.requireNonNull(powerupArt); Objects.requireNonNull(background);
             if (savedObjectFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
                 throw new IllegalArgumentException("Complete native saved-object bank required");
             }
@@ -103,10 +122,12 @@ public final class SonicCdGameModule implements GameModule {
     static RestartCarry restartCarry(CdRingGlobals ring, CdLevelGlobals level, CdPlayerBody.ContactGlobals contact,
                                      CdOpeningObjectRuntime.ScoreGlobals score, CdAssetBytes savedFlags,
                                      CdPlayerBody.Environment environment, CdPlayerBody.State actor,
-                                     CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt) {
+                                     CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt,
+                                     BackgroundBuffers background) {
         Objects.requireNonNull(ring); Objects.requireNonNull(level); Objects.requireNonNull(contact);
         Objects.requireNonNull(score); Objects.requireNonNull(savedFlags); Objects.requireNonNull(environment);
         Objects.requireNonNull(actor); Objects.requireNonNull(art); Objects.requireNonNull(powerupArt);
+        Objects.requireNonNull(background, "explicit carried background buffers");
         if (savedFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
             throw new IllegalArgumentException("Complete native saved-object bank required");
         }
@@ -126,7 +147,12 @@ public final class SonicCdGameModule implements GameModule {
                 new CdPlayerBody.ContactGlobals(0, 0, contact.combineRing()),
                 new CdOpeningObjectRuntime.ScoreGlobals(score.score(), score.nextLifeScore(), 0),
                 new CdLevelGlobals(0, 0, 0, 0, level.plcLoadFlags() | 3, 0, 2, 0, 0), savedFlags, player,
-                new CdPowerupArtRuntime.State(CdAssetBytes.copyOf(new byte[0x480]), powerupArt.residentBank()));
+                new CdPowerupArtRuntime.State(CdAssetBytes.copyOf(new byte[0x480]), powerupArt.residentBank()),
+                // LevelStart:225 -> ClearScreen.ClearHScroll:220-226. The extra DBF long lands in
+                // the player header. The collapsed cold builder keeps cleared flags/tile, then represents
+                // LoadPlayer (Main:438-443) with slotId1; neither load-scroll owner reads that ID.
+                new BackgroundBuffers(background.deformationRam(),
+                        CdAssetBytes.copyOf(new byte[CdR11aBackgroundScroll.HSCROLL_RAM_BYTES])));
     }
 
     boolean restartStaged() { return stagedRestart != null; }
@@ -153,7 +179,7 @@ public final class SonicCdGameModule implements GameModule {
             }
             var carry = restartCarry(objects.ringGlobals(), objects.levelGlobals(), objects.contactGlobals(),
                     objects.scoreGlobals(), objects.placement().savedFlags(), shared.environment(), actor.state(),
-                    shared.artState(), objects.powerupArtState());
+                    shared.artState(), objects.powerupArtState(), playerPresentation.captureBackgroundBuffers());
             var manager = playerMode.getLevelManager();
             stagedRestart = carry;
             stagedRestartContext = SonicCdPlayerInitProfile.openingObjectsRestartContext();
@@ -186,7 +212,7 @@ public final class SonicCdGameModule implements GameModule {
     };
 
     // One shared opening payload. Body/history/display remain in actor Extra;
-    // Foreground accumulator/camera remain in their existing adapters. The two
+    // FG/BG accumulator/camera remain together in their existing scroll adapter. The two
     // immutable render-scroll cuts belong here, once, beside the CPU/display SAT.
     private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
                                       CdOpeningObjectRuntime.Snapshot objects,
@@ -264,7 +290,7 @@ public final class SonicCdGameModule implements GameModule {
         }
         source = candidate;
         zones.bind(candidate);
-        if (playerAdmission) playerPresentation.bind(candidate.assets());
+        if (playerAdmission) playerPresentation.bind(candidate.assets(), backgroundLoadBuffers());
         else presentation.bind(candidate.assets());
         return new SonicCd(candidate);
     }
@@ -356,6 +382,9 @@ public final class SonicCdGameModule implements GameModule {
                     ? (carry == null ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0)
                             : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0, carry.player()))
                     : CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
+            // LevelSizeLoad + the single load-time LevelScroll (Main:245-246) precede
+            // LoadPlayer/ObjSonic_Init. This runs pure scroll only, against the fresh native slot.
+            playerPresentation.completeLoadScroll(playerFrame);
             if (openingObjectsAdmission) {
                 var banks = playerPresentation.reserveOpeningPictureBank();
                 var camera = mode.getCamera();
@@ -522,7 +551,15 @@ public final class SonicCdGameModule implements GameModule {
         }
     }
 
-    void rebindTerrainPresentation() { playerPresentation.bind(requireRuntimeSource().assets()); }
+    void rebindTerrainPresentation() { playerPresentation.bind(requireRuntimeSource().assets(), backgroundLoadBuffers()); }
+
+    private BackgroundBuffers backgroundLoadBuffers() {
+        if (stagedRestart != null) {
+            if (!openingObjectsAdmission) throw new IllegalStateException("Only the source opening module stages restart buffers");
+            return stagedRestart.background();
+        }
+        return SonicCdPlayerPresentation.developmentZeroBackgroundResidue();
+    }
 
     CdGameDataSource requireRuntimeSource() {
         CdGameDataSource candidate = SonicCd.requireSource(GameServices.level().getWorldSession().getDataSource());

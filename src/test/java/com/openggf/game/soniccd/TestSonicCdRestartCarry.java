@@ -50,7 +50,7 @@ class TestSonicCdRestartCarry {
         var ring = new CdRingGlobals(0, 0, 0, 0, 1, 0, 0, 0);
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(ring, f.level(), f.contact(), f.score(), f.saved(),
-                        f.environment(), f.actor(), f.art(), f.powerup()));
+                        f.environment(), f.actor(), f.art(), f.powerup(), f.background()));
         assertEquals(SonicCdGameModule.RestartBoundary.GAME_OVER_EXIT, failure.boundary());
     }
 
@@ -74,7 +74,7 @@ class TestSonicCdRestartCarry {
                 gates, m.globals()), e.controls(), globals, e.dynamicSlots());
         var failure = assertThrows(SonicCdGameModule.UnsupportedRestart.class, () ->
                 SonicCdGameModule.restartCarry(f.ring(), level, f.contact(), f.score(), f.saved(),
-                        environment, f.actor(), f.art(), f.powerup()));
+                        environment, f.actor(), f.art(), f.powerup(), f.background()));
         assertEquals(SonicCdGameModule.RestartBoundary.RESTART_PATH, failure.boundary());
     }
 
@@ -84,7 +84,7 @@ class TestSonicCdRestartCarry {
                 CdObjectPlacementRuntime.SAVED_BANK_BYTES + 1}) {
             assertThrows(IllegalArgumentException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
                     f.contact(), f.score(), CdAssetBytes.copyOf(new byte[size]), f.environment(),
-                    f.actor(), f.art(), f.powerup()));
+                    f.actor(), f.art(), f.powerup(), f.background()));
         }
     }
 
@@ -95,13 +95,44 @@ class TestSonicCdRestartCarry {
         assertThrows(UnsupportedOperationException.class, () -> module.getLevelInitProfile().levelLoadSteps(context));
     }
 
+    // Native ClearScreen (Functions (General).asm:220-226) clears all HScroll; deformation has no LevelStart clear.
+    @Test void restartCarriesDeformationButClearsEveryHscrollByteWithoutASecondStateOwner() {
+        var f = fixture(); var next = carry(f);
+        assertArrayEquals(f.background().deformationRam().copy(), next.background().deformationRam().copy());
+        assertArrayEquals(new byte[1024], next.background().hscrollRam().copy());
+        assertEquals(0xA7, next.background().deformationRam().unsignedByte(0));
+        assertEquals(0, next.background().hscrollRam().unsignedByte(1023));
+        assertEquals(0xCC, f.background().hscrollRam().unsignedByte(1023), "old visit remains unchanged");
+        byte[] callerCopy = next.background().hscrollRam().copy(); callerCopy[1023] = (byte) 0xFF;
+        assertEquals(0, next.background().hscrollRam().unsignedByte(1023));
+    }
+
+    @Test void restartRequiresExplicitCompleteBackgroundBuffersAndNeverDefaultsMissingIngress() {
+        var f = fixture();
+        for (int length : new int[] {0, 511, 513}) {
+            assertThrows(IllegalArgumentException.class, () -> new SonicCdGameModule.BackgroundBuffers(
+                    bytes(length, 1), f.background().hscrollRam()));
+        }
+        for (int length : new int[] {0, 1023, 1025}) {
+            assertThrows(IllegalArgumentException.class, () -> new SonicCdGameModule.BackgroundBuffers(
+                    f.background().deformationRam(), bytes(length, 1)));
+        }
+        assertThrows(NullPointerException.class, () -> SonicCdGameModule.restartCarry(f.ring(), f.level(),
+                f.contact(), f.score(), f.saved(), f.environment(), f.actor(), f.art(), f.powerup(), null));
+        assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
+                null, f.background().hscrollRam()));
+        assertThrows(NullPointerException.class, () -> new SonicCdGameModule.BackgroundBuffers(
+                f.background().deformationRam(), null));
+    }
+
     private record Fixture(CdRingGlobals ring, CdLevelGlobals level, CdPlayerBody.ContactGlobals contact,
                            CdOpeningObjectRuntime.ScoreGlobals score, CdAssetBytes saved,
                            CdPlayerBody.Environment environment, CdPlayerBody.State actor,
-                           CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerup) { }
+                           CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerup,
+                           SonicCdGameModule.BackgroundBuffers background) { }
     private static SonicCdGameModule.RestartCarry carry(Fixture f) {
         return SonicCdGameModule.restartCarry(f.ring(), f.level(), f.contact(), f.score(), f.saved(),
-                f.environment(), f.actor(), f.art(), f.powerup());
+                f.environment(), f.actor(), f.art(), f.powerup(), f.background());
     }
     private static Fixture fixture() {
         var motion = new CdPlayerMotionState(0x12345678, 0x76543210, 11, 22, 33, 8, 4, 2, 4,
@@ -121,7 +152,8 @@ class TestSonicCdRestartCarry {
                 new CdOpeningObjectRuntime.ScoreGlobals(0xFFFFFFE1, 0x80000000, 0x80),
                 bytes(CdObjectPlacementRuntime.SAVED_BANK_BYTES, 11), environment, actor,
                 new CdPlayerArtRuntime.State(bytes(0x300, 0x5A), bytes(0x300, 0x33), 57, true),
-                new CdPowerupArtRuntime.State(bytes(0x480, 0x77), bytes(0x480, 0x22)));
+                new CdPowerupArtRuntime.State(bytes(0x480, 0x77), bytes(0x480, 0x22)),
+                new SonicCdGameModule.BackgroundBuffers(bytes(512, 0xA7), bytes(1024, 0xD3)));
     }
     private static CdAssetBytes bytes(int size, int seed) {
         byte[] data = new byte[size]; for (int i = 0; i < size; i++) data[i] = (byte) (seed + i * 7);

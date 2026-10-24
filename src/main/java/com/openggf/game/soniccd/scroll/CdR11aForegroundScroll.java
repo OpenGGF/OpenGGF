@@ -12,8 +12,9 @@ import java.util.Objects;
  * Citations to "PP Scroll" mean Level/Palmtree Panic/Scroll (Act 1 Present).asm;
  * "Events" means Level/_Events.asm, under docs/scddisasm/src/.
  *
- * This is an explicitly terrain-only development owner with STATIC BACKGROUND.
- * It does not execute PP Scroll's background/deformation/section-art/draw owners,
+ * The context-free step retains its explicitly STATIC BACKGROUND development contract.
+ * The named stepForBackground cut admits ramp control for a caller that executes the real BG owner
+ * immediately afterward. Neither entry executes background/deformation/section-art/draw owners,
  * publish an engine camera, service a frame, or claim complete native LevelScroll.
  * Caller runs this after objects through its normal camera-driven seam, then
  * commits Result.state and shared bounds/Y-centre feedback once after success.
@@ -76,7 +77,10 @@ public final class CdR11aForegroundScroll {
         }
     }
 
-    public enum Boundary { SCROLL_LOCKED, FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT, DEAD_CAMERA_FREEZE }
+    public enum Boundary {
+        SCROLL_LOCKED, FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT,
+        FOREGROUND_COMPLETE_FOR_BACKGROUND, DEAD_CAMERA_FREEZE
+    }
 
     /** Feed bounds/Y centre back to their existing shared owner; do not retain another shadow. */
     public record Result(State state, CdPlayerMovement.Bounds bounds, int cameraYCentre, Boundary boundary) {
@@ -138,6 +142,20 @@ public final class CdR11aForegroundScroll {
 
     /** One admitted foreground step. All writes remain detached until the complete Result exists. */
     public static Result step(State state, Input input) {
+        return step(state, input, false);
+    }
+
+    /**
+     * Pure foreground-only cut for the World composition's immediate real BG continuation.
+     * Admits the native ramp bit without changing old consumers, clocks, wraps or boundaries.
+     * The caller must execute CdR11aBackgroundScroll with this completed Result and actual oXVel;
+     * this method alone is not a complete LevelScroll and publishes nothing.
+     */
+    public static Result stepForBackground(State state, Input input) {
+        return step(state, input, true);
+    }
+
+    private static Result step(State state, Input input, boolean forBackground) {
         Objects.requireNonNull(state, "state"); Objects.requireNonNull(input, "input");
         requireViewport(input.viewportWidth(), input.viewportHeight());
         // LevelScroll:177-186 returns before flag clears, events, X/Y or BG when the HIGH byte is set.
@@ -146,14 +164,15 @@ public final class CdR11aForegroundScroll {
         }
         // PP Scroll:203-238 consumes the actual ramp-control bit for unowned BG velocity.
         // Reject the matching native control state, never an actor/camera coordinate range.
-        if ((input.actor().playerControl() & 2) != 0) reject(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND);
+        if (!forBackground && (input.actor().playerControl() & 2) != 0) reject(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND);
         var c = new Cursor(state, input);
         // LevelScroll:188-196: events see old XY in USA, completed new XY in JP/EU.
         if (input.region() == CdReleaseVariant.USA) events(c);
         horizontal(c);
         vertical(c);
         if (input.region() != CdReleaseVariant.USA) events(c);
-        return c.finish();
+        return c.finish(forBackground ? Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND
+                : Boundary.FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT);
     }
 
     /** LevEvents_PPZ1:86-117 then RunLevelEvents:14-52, in that order. */
@@ -291,13 +310,13 @@ public final class CdR11aForegroundScroll {
             left = input.bounds().left(); bottom = input.bounds().bottom(); yCentre = input.cameraYCentre();
         }
         int yWord() { return y >>> 16; }
-        Result finish() {
+        Result finish(Boundary boundary) {
             var oldBounds = in.bounds();
             var bounds = left == oldBounds.left() && bottom == oldBounds.bottom() ? oldBounds
                     : new CdPlayerMovement.Bounds(left, oldBounds.right(), bottom, oldBounds.bossFight());
             return new Result(new State(x, y, hCross, vCross, dx, dy, flags,
                     destBottom, destLeft, shift, lock), bounds, yCentre,
-                    Boundary.FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT);
+                    boundary);
         }
     }
 

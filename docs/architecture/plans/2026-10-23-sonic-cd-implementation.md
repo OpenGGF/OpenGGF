@@ -3916,3 +3916,46 @@ fixture P2 and its exact R2 correction, with no productionP1/P2. Lazy-cache
 oracle limits remain disclosed. No Spring launch/collision/runtime bank,
 diagonal art, natural route, live PLC residency or native pixel/game parity
 is claimed. Fixed-ac4 broad smoke is independent and still pending.
+
+### One source-ordered background World state — 24 October 2026
+
+The CD presentation now owns one immutable background arithmetic State per
+visit alongside foreground state. Explicit complete deformation/HScroll ingress
+and native cleared camera/crossing/cloud/flag domains feed InitLevelScroll,
+then exactly one FG+BG load step before ObjSonic_Init. The camera begins at
+$70B; incoming register upper halves are zero. Completed ordinary object passes
+feed actual signed player oXVel and authoritative high-byte scrollLock to FG
+then BG. Sprite culling retains pre-scroll FG; SAT construction receives the
+completed FG/BG1/BG3 words. Capture/restore, draw and projection never tick clouds.
+Pause/lag/death/restart cuts hold BG. Published HScroll and sprite tables retain
+the same completed-loop cut; all requested packed words/fractions survive.
+
+Root corrected its original false HScroll-carry premise. LevelStart calls
+ClearScreen (Main:225; Functions General:220-226), whose FixBugs0 DBF clears257
+longs:1024HScroll bytes plus one player header long. Restart carries all512
+deformation bytes, clears HScroll/clouds and runs one load tick. Fresh zero
+deformation remains explicit DEV residue policy. Cleared flags/tile and later
+LoadPlayer's ID1 are represented by the collapsed cold builder; neither load
+scroll owner reads that ID. Native ClearFlowers covers every cloud byte.
+Cold load writes229HScroll longs, leaving27 source-cleared tail longs.
+
+Independent review found no productionP1/P2 and one test-integrationP2: two
+existing replay helpers compared new immutable RAM wrappers by identity. RootR3
+compares owner, foreground, all background scalar fields and every RAM byte in
+both helpers; the published projection assertion now requires224 entries. It
+changes no R2 runtime behavior. Original R1/R2 external freezes remain preserved.
+BG-Y/opposing-cull SAT oracle and overwritten-deformation transport limits remain
+recorded; pure carry independently checks all512 bytes.
+
+Queued Root33510 passed290/0/0/0 on this eight-Java-file composition at base
+b550e4ac8: WorldLoad29, RestartCarry21, Foreground63, Background54, TerrainPlayerLoad24,
+TerrainPlayerBoot8, PlayerPresentation10, OpeningWorldEgl8, OpeningObjectRuntime62
+and ModApiSignatureSurface11. Java25, actual CD media and S2 donor, explicit EGL
+opt-in/surfaceless mode; normal7GiB/8core admission. Exit0 at22:39:52BST,65squeue/
+128sMaven. All ten completed XML identities and zero skips were inspected.
+The full named selection used maven_queue.py --normal -Dmse=off with media,
+soniccd.opening.egl=true, openggf.headless.gl=surfaceless-egl and the donor path.
+No image artifact was retained by this run. Native PlaneB name-table streaming,
+copied-camera/VInt service, PLC residency, natural controller ramp traversal and
+pixel/act/game parity remain separate owners. Fixed-ac4 broad smoke is still
+pending and has a GLFW-startup failure awaiting matched baseline attribution.

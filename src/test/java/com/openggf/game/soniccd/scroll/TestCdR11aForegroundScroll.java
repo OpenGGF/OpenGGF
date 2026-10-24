@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.scroll;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.level.CdR11aLoadPlan;
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aProfile;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
@@ -420,6 +421,63 @@ class TestCdR11aForegroundScroll {
         assertEquals(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND, failure.boundary());
         assertEquals(state(0x200, 0x01000000), before);
         assertDoesNotThrow(() -> step(before, input(0x1C16, 0x160)));
+    }
+
+    // Catches removing the old guard globally, or admitting the ramp without the real BG continuation.
+    @Test void backgroundCutAdmitsRampAndFeedsCompletedForegroundToTheRealArithmeticOwner() {
+        var before = state(0x200, 0x01001234);
+        var in = withActor(input(0x2A6, 0x160), new Actor(0x2A6, 0x160, 0, 0x123, 0, 2));
+        assertEquals(UnsupportedBoundary.ACTIVE_3D_RAMP_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> step(before, in)).boundary());
+        var fg = stepForBackground(before, in);
+        assertEquals(0x206, fg.state().cameraX());
+        assertEquals(0x600, fg.state().scrollXDiff());
+        assertEquals(0x01001234, fg.state().cameraY16_16());
+        assertEquals(Boundary.FOREGROUND_COMPLETE_FOR_BACKGROUND, fg.boundary());
+        var bg = CdR11aBackgroundScroll.fromTables(
+                CdAssetBytes.copyOf(new byte[] {1,3,5,7,7,7,3,5,5,3}),
+                CdAssetBytes.copyOf(new byte[] {1,3,5,7,15,3,9,3,1}),
+                CdAssetBytes.copyOf(new byte[] {2,(byte)0x80,0,(byte)0xE0,7,(byte)0x80,0,(byte)0x80,0x7F,(byte)0xFF,3,0x60}));
+        var initial = new CdR11aBackgroundScroll.State(0x00101234, 0x01005678,
+                0x00205678, 0x01009ABC, 0x00309ABC, 0x0100DEF0,
+                CdAssetBytes.copyOf(new byte[8]), 0, 0, 0, CdAssetBytes.copyOf(new byte[512]),
+                CdAssetBytes.copyOf(new byte[512]), CdAssetBytes.copyOf(new byte[1024]), 0);
+        // PP Scroll:203-238: actual signed X velocity $600, deliberately different from inertia $123.
+        var next = bg.step(initial, new CdR11aBackgroundScroll.Input(fg.state().cameraX(),
+                fg.state().cameraYWord(), (short) fg.state().scrollXDiff(), 0x600,
+                in.actor().centreX(), in.actor().playerControl(), fg.state().scrollLock() >>> 8));
+        assertEquals(0x60000, next.rampOffset());
+        assertEquals(0x90000, next.bgDelta()); assertEquals(0xD2000, next.bg2Delta());
+        assertEquals(0x6C000, next.bg3Delta());
+        assertEquals(0x00191234, next.state().cameraBgX());
+        assertEquals(0x002D7678, next.state().cameraBg2X());
+        assertEquals(0x00375ABC, next.state().cameraBg3X());
+        assertEquals(0x01005678, next.state().cameraBgY());
+        assertEquals(0x01009ABC, next.state().cameraBg2Y());
+        assertEquals(0x0100DEF0, next.state().cameraBg3Y());
+        assertEquals(0x01000100, next.state().vscroll());
+        assertEquals(0x10000, next.state().cloudRam().unsignedLong(0));
+        assertEquals(0x01001234, before.cameraY16_16());
+    }
+
+    @Test void backgroundCutRetainsHighByteLockViewportAndBothActualWrapBoundaries() {
+        var in = withActor(input(0x2A0, 0x160), new Actor(0x2A0, 0x160, 0, 0, 0, 2));
+        var locked = new State(0x200, 0x01001234, 0x43, 0x54, 0x1234, 0xABCD,
+                0xF5A5, 0x710, 0, 0x017A, 0x0101);
+        assertSame(locked, stepForBackground(locked, in).state());
+        var top = withRegion(withActor(input(0x2A0, 0xFF60),
+                new Actor(0x2A0, 0xFF60, 0, 0, 0, 2)), CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.TOP_WRAP_ACTOR_AND_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> stepForBackground(state(0x200, 0xFF060000), top)).boundary());
+        var bottom = withRegion(withBounds(withActor(input(0x2A0, 0x900),
+                new Actor(0x2A0, 0x900, 0, 0, 0, 2)), bounds(0, 0x2897, 0x700)), CdReleaseVariant.JAPAN);
+        assertEquals(UnsupportedBoundary.BOTTOM_WRAP_ACTOR_AND_BACKGROUND,
+                assertThrows(UnsupportedScroll.class, () -> stepForBackground(state(0x200, 0x07FA1234), bottom)).boundary());
+        var wide = new Input(in.actor(), in.bounds(), 0, 0xA0, 0x60, in.region(), 0, 424, 224);
+        assertThrows(IllegalArgumentException.class, () -> stepForBackground(locked, wide));
+        var ordinary = input(0x2A6, 0x163);
+        assertEquals(step(state(0x200, 0x01001234), ordinary).state(),
+                stepForBackground(state(0x200, 0x01001234), ordinary).state());
     }
 
     @Test

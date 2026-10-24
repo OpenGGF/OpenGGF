@@ -22,6 +22,10 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.SonicCdLevel;
+import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.scroll.CdR11aBackgroundScroll;
+import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
+import com.openggf.level.LevelSpritePresentation;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdObjectState;
@@ -47,6 +51,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
@@ -92,7 +98,10 @@ class TestSonicCdOpeningWorldLoad {
         var terrain = load(SonicCdGameModule.terrainOnlyDevelopmentPlayer(), source, true);
         assertNull(terrain.module().getGameService(NativeDynamicObjectPass.class));
         assertSame(terrain.module().requirePlayerFrame(), terrain.module().getGameService(PlcLifecycleService.class));
+        assertEquals(0, terrain.module().requirePlayerFrame().state().motion().routine());
+        assertEquals(0x10000, scroll(terrain).background().cloudRam().unsignedLong(0), "one load-time call before player Init");
         step(terrain, LogicalInputSnapshot.neutral());
+        assertEquals(0x20000, scroll(terrain).background().cloudRam().unsignedLong(0), "first gameplay call is separate");
         assertEquals(2, terrain.module().requirePlayerActor().nativeState().motion().routine());
         assertEquals(1, terrain.mode().getSpriteManager().getAllSprites().size());
     }
@@ -129,7 +138,12 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(0, objects.cpuSat().spriteCount());
         assertTrue(objects.displayedFrame().tiles().isEmpty());
         assertEquals(com.openggf.game.soniccd.player.CdPlayerBody.DynamicSlots.UNIMPLEMENTED, frame.environment().dynamicSlots());
+        assertEquals(0, frame.state().motion().routine());
+        assertEquals(0x070B0000, scroll(h).state().cameraY16_16());
+        assertEquals(0x070B0000, scroll(h).background().cameraBgY(), "d0 upper bits are zero, not cameraY16_16");
+        assertEquals(0x10000, scroll(h).background().cloudRam().unsignedLong(0));
         step(h, LogicalInputSnapshot.neutral());
+        assertEquals(0x20000, scroll(h).background().cloudRam().unsignedLong(0));
         assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, objects.phase());
         assertEquals(1, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
         assertEquals(1, h.mode().getLevelManager().getFrameCounter());
@@ -177,9 +191,11 @@ class TestSonicCdOpeningWorldLoad {
                 .moveWord(CdObjectState.WordField.Y, routine == 2 ? 0x759 : y));
         int cameraX = h.mode().getCamera().getX(), cameraY = h.mode().getCamera().getY();
         var rings = runtime.ringGlobals();
+        var background = scroll(h).background();
         var before = h.mode().getRewindRegistry().capture();
 
         step(h, LogicalInputSnapshot.neutral());
+        assertBackground(background, scroll(h).background());
         assertEquals(6, frame.state().motion().routine());
         assertEquals(0, frame.state().header().priority());
         assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
@@ -211,9 +227,12 @@ class TestSonicCdOpeningWorldLoad {
         boolean movedHorizontally = false;
         for (int i = 0; i < 91; i++) {
             var prior = presentation.captureScrollPublication().prepared();
+            var priorBackground = scroll(h).background();
             step(h, input(8, i >= 60 && i < 84 ? 2 : 0, false));
             var next = presentation.captureScrollPublication();
             assertSame(prior, next.published(), "V-int latches the exact prior completed scroll with CPU SAT");
+            assertScrollFrame(h, next.published(), priorBackground);
+            assertScrollFrame(h, next.prepared(), scroll(h).background());
             assertEquals(h.mode().getCamera().getX(), next.prepared().cameraX());
             assertEquals(h.mode().getCamera().getY(), next.prepared().cameraY());
             movedHorizontally |= next.published().cameraX() != next.prepared().cameraX();
@@ -282,9 +301,11 @@ class TestSonicCdOpeningWorldLoad {
         var beforeActor = h.module().requirePlayerFrame().captureActor();
         var presentation = (SonicCdPlayerPresentation) h.module().getScrollHandlerProvider();
         var priorScroll = presentation.captureScrollPublication();
+        var priorBackground = scroll(h).background();
         int levelFrame = h.mode().getLevelManager().getFrameCounter();
         step(h, input(0, 0, true));
         assertTrue(h.module().requirePlayerFrame().paused());
+        assertBackground(priorBackground, scroll(h).background());
         assertSame(priorScroll.prepared(), presentation.captureScrollPublication().prepared());
         assertSame(priorScroll.prepared(), presentation.captureScrollPublication().published());
         assertEquals(levelFrame, h.mode().getLevelManager().getFrameCounter());
@@ -299,6 +320,7 @@ class TestSonicCdOpeningWorldLoad {
         h.mode().plcFrameLifecycle().runLogicalIteration(frame -> { }, h.mode().getFadeManager()::update,
                 frame -> { LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(h.mode()), frame, PlcLifecyclePhase.LAG); return null; });
         assertSame(picture, objects.displayedFrame());
+        assertBackground(priorBackground, scroll(h).background());
         assertEquals(pausedScroll, presentation.captureScrollPublication(), "PP lag retains both scroll partitions");
         assertEquals(prior.lastSoundRequests(), objects.lastSoundRequests(), "Lag does not clear or replay sounds");
         assertEquals(prior.ringGlobals(), objects.ringGlobals());
@@ -312,6 +334,8 @@ class TestSonicCdOpeningWorldLoad {
         var h = opening();
         for (int i = 0; i < 4; i++) step(h, LogicalInputSnapshot.neutral());
         var before = state(h);
+        var bg = scroll(h).background();
+        assertEquals(0x50000, bg.cloudRam().unsignedLong(0), "load plus four ordinary calls");
         h.module().gameplayFrameController().drawOverlay();
         h.module().gameplayFrameController().drawOverlay();
         assertState(before, h);
@@ -352,9 +376,12 @@ class TestSonicCdOpeningWorldLoad {
         var full = a.mode().getRewindRegistry().capture();
         var course = a.mode().getRewindRegistry().captureCourse();
         var retired = objects(a);
+        var foreignScroll = scroll(a);
         var b = opening();
         var before = state(b);
         assertTrue(retired.closed());
+        assertThrows(IllegalArgumentException.class, () -> b.module().getScrollHandlerProvider().getHandler(0)
+                .restoreRewindState(foreignScroll)); // Direct rejection covers both FG and BG before writes.
         assertThrows(IllegalArgumentException.class, () -> b.mode().getRewindRegistry().restore(full));
         assertThrows(IllegalArgumentException.class, () -> b.mode().getRewindRegistry().restoreCourse(course));
         assertState(before, b);
@@ -471,7 +498,7 @@ class TestSonicCdOpeningWorldLoad {
         assertArrayEquals(previous.cpu().bytes(), cut.cpu().bytes());
         assertEquals(previous.cpu().spriteCount(), cut.cpu().spriteCount());
         assertEquals(previous.cpu().provenance(), cut.cpu().provenance());
-        assertEquals(previous.camera(), cut.camera()); assertEquals(previous.scroll(), cut.scroll());
+        assertEquals(previous.camera(), cut.camera()); assertScroll(previous.scroll(), cut.scroll());
         assertEquals(previous.publication().prepared(), cut.publication().prepared());
         assertEquals(beforeRings, old.ringGlobals()); assertEquals(beforeSpill, old.spillGlobals());
         assertTrue(boundaries.isEmpty()); assertEquals(generation, level.getCompletedProductionLoadGeneration());
@@ -583,6 +610,201 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(3, objects(h).ringGlobals().lives()); assertFalse(objects(h).closed());
     }
 
+    // Catches ticking clouds from renderer resolution, publication, diagnostics or restore.
+    @Test void loadScrollRunsBeforeInitAndEveryProjectionKeepsTheSingleCompletedBackgroundState() throws Exception {
+        var h = opening(); var f = h.module().requirePlayerFrame(); var m = f.state().motion();
+        assertEquals(0, m.routine()); assertEquals(0, m.flags()); assertEquals(0, m.groundVelocity());
+        assertEquals(0, m.xVelocity()); assertEquals(0, m.yVelocity());
+        assertEquals(0, m.playerControl()); assertEquals(0, m.animation());
+        var load = scroll(h); var bg = load.background();
+        assertEquals(0x070B0000, load.state().cameraY16_16());
+        assertEquals(0x070B0000, bg.cameraBgY()); assertEquals(0x070B070B, bg.vscroll());
+        assertEquals(0x10000, bg.cloudRam().unsignedLong(0));
+        assertEquals(0xE000, bg.cloudRam().unsignedLong(4));
+        assertArrayEquals(new byte[436], bg.cloudRam().slice(76, 436).copy());
+        assertArrayEquals(new byte[] {0x10,0x10,0x10,0,0x10,0,0,0}, bg.crossingRam().copy());
+        assertEquals(0xAA00, bg.scrollFlagsBg());
+        assertEquals(0xFFFF, bg.deformationRam().unsignedWord(0));
+        assertEquals(0, bg.cameraBgY() & 0xFFFF, "Init consumes d0=$0000070B");
+        var registry = h.mode().getRewindRegistry(); var cold = registry.capture();
+        var handler = h.module().getScrollHandlerProvider().getHandler(0);
+        handler.update(new int[256], 0x7FFF, -123, 999, 0);
+        h.module().gameplayFrameController().drawOverlay();
+        LevelSpritePresentation.captureScroll(h.mode().getLevelManager());
+        registry.restore(cold);
+        assertBackground(bg, scroll(h).background());
+        assertEquals(0, f.state().motion().routine());
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(2, f.state().motion().routine());
+        assertEquals(0x20000, scroll(h).background().cloudRam().unsignedLong(0));
+        var first = scroll(h).background();
+        h.module().gameplayFrameController().drawOverlay();
+        handler.update(new int[224], -1, -1, -1, 0);
+        assertBackground(first, scroll(h).background());
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(0x30000, scroll(h).background().cloudRam().unsignedLong(0));
+    }
+
+    // Full RAM projection, including native unwritten tails and signed packed-word offset semantics.
+    @Test void projectionUsesEveryStoredPackedWordAndPreservesCameraFractionsAndCallerAliases() throws Exception {
+        var h = opening(); var old = scroll(h); var b = old.background();
+        byte[] ram = new byte[1024]; var bytes = ByteBuffer.wrap(ram);
+        int[] pattern = {0x80007FFF, 0x7FFF8000, 0xFFFF0001, 0x0001FFFF};
+        for (int i = 0; i < 256; i++) bytes.putInt(pattern[i & 3]);
+        var image = CdAssetBytes.copyOf(ram);
+        var bg = new CdR11aBackgroundScroll.State(0xFEDC1234, 0x070B5678,
+                0x00109ABC, 0x070BDEF0, 0x00207654, 0x070B3210, b.crossingRam(),
+                0xABCD, 0x1234, 0xFEDC, b.cloudRam(), b.deformationRam(), image, 0x070B9ABC);
+        replaceBackground(h, bg); Arrays.fill(ram, (byte) 0);
+        var handler = h.module().getScrollHandlerProvider().getHandler(0);
+        for (int length : new int[] {0, 1, 224, 240, 256}) {
+            int[] output = new int[length]; Arrays.fill(output, 0xDEADBEEF);
+            handler.update(output, 0x7777, 0x6666, 0x5555, 0);
+            for (int i = 0; i < length; i++) assertEquals(pattern[i & 3], output[i]);
+            assertEquals(length == 0 ? Integer.MAX_VALUE : length == 1 ? 65535 : -65535,
+                    handler.getMinScrollOffset());
+            assertEquals(length == 0 ? Integer.MIN_VALUE : 65535, handler.getMaxScrollOffset());
+            assertEquals((short) 0x9ABC, handler.getVscrollFactorBG());
+            assertEquals((short) 0xFEDC, handler.getBgCameraX());
+            assertEquals(((SonicCdLevel) h.mode().getLevelManager().getCurrentLevel()).assets().terrain().layout()
+                    .columns(com.openggf.game.soniccd.level.CdR11aTerrain.Plane.BACKGROUND) * 256, handler.getBgPeriodWidth());
+            assertBackground(bg, scroll(h).background());
+        }
+        int[] oversized = new int[257]; Arrays.fill(oversized, 0xDEADBEEF);
+        assertThrows(IllegalArgumentException.class, () -> handler.update(oversized, 0, 0, 0, 0));
+        assertTrue(Arrays.stream(oversized).allMatch(word -> word == 0xDEADBEEF));
+        assertBackground(bg, scroll(h).background());
+        handler.restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), bg));
+        assertBackground(bg, scroll(h).background());
+    }
+
+    // Bounded dirty-slot Init cut, not a controller ramp route: Init leaves these velocity/control words alone.
+    @Test void worldComposesCompletedForegroundWithActualXVelocityRatherThanGroundInertia() throws Exception {
+        var h = opening(); var frame = h.module().requirePlayerFrame(); var a = frame.captureActor(); var s = a.state();
+        var m = s.motion();
+        var motion = new CdPlayerMotionState(0x02A60000, 0x01600000, 0x600, 0, 0x123,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0);
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(motion,
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+        var prior = scroll(h); var b = prior.background();
+        var fg = new CdR11aForegroundScroll.State(0x200, 0x01001234, 0x10, 0x10,
+                0, 0, 0, 0x710, 0, 0, 0);
+        var bg = new CdR11aBackgroundScroll.State(0x00101234, 0x01005678,
+                0x00205678, 0x01009ABC, 0x00309ABC, 0x0100DEF0, b.crossingRam(),
+                0, 0, 0, b.cloudRam(), b.deformationRam(), b.hscrollRam(), 0x01000100);
+        h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(
+                new SonicCdPlayerPresentation.ScrollCapture(prior.owner(), fg, bg));
+        ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).afterRestore();
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(0x600, frame.state().motion().xVelocity()); assertEquals(0x123, frame.state().motion().groundVelocity());
+        var next = scroll(h);
+        assertEquals(0x206, next.state().cameraX()); assertEquals(0x600, next.state().scrollXDiff());
+        assertEquals(0x00191234, next.background().cameraBgX());
+        assertEquals(0x002D7678, next.background().cameraBg2X());
+        assertEquals(0x00375ABC, next.background().cameraBg3X());
+        assertEquals(0x01005678, next.background().cameraBgY());
+        assertEquals(0x20000, next.background().cloudRam().unsignedLong(0));
+    }
+
+    // DrawObject culls against pre-scroll FG even for BG-relative flags; DrawObjects selects completed BG1/BG3.
+    @Test void actualRuntimeSatUsesCompletedBackgroundCamerasAndRetainsNativeForegroundCulling() throws Exception {
+        var h = opening(); step(h, LogicalInputSnapshot.neutral());
+        var registry = h.mode().getRewindRegistry(); var before = registry.capture();
+        step(h, LogicalInputSnapshot.neutral());
+        var foreground = objects(h).cpuSat(); int first = pieceFor(foreground, 35);
+        int foregroundX = satX(foreground, first);
+        for (int mode : new int[] {8, 12}) {
+            registry.restore(before);
+            var p = objects(h).placement().pool(); var ring = p.state(35);
+            p.write(ring.moveByte(CdObjectState.ByteField.SPRITE_FLAGS,
+                    (ring.unsignedByte(CdObjectState.ByteField.SPRITE_FLAGS) & ~12) | mode));
+            var b = scroll(h).background();
+            replaceBackground(h, new CdR11aBackgroundScroll.State(0x01001234, b.cameraBgY(),
+                    b.cameraBg2X(), b.cameraBg2Y(), 0x0040ABCD, b.cameraBg3Y(), b.crossingRam(),
+                    b.scrollFlagsBg(), b.scrollFlagsBg2(), b.scrollFlagsBg3(), b.cloudRam(),
+                    b.deformationRam(), b.hscrollRam(), b.vscroll()));
+            step(h, LogicalInputSnapshot.neutral());
+            var cpu = objects(h).cpuSat(); int at = pieceFor(cpu, 35);
+            int expectedX = (foregroundX - (mode == 8 ? 0x100 : 0x40)) & 0x1FF;
+            assertEquals(expectedX == 0 ? 1 : expectedX, satX(cpu, at));
+            assertEquals(foreground.provenance().get(first).mappingPieceOrdinal(), cpu.provenance().get(at).mappingPieceOrdinal());
+            assertEquals(0x01001234, scroll(h).background().cameraBgX());
+            assertEquals(0x0040ABCD, scroll(h).background().cameraBg3X());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"257,65536", "1,131072"})
+    void worldScrollLockReadsOnlyItsAuthoritativeHighByte(int lock, long expectedCloud) throws Exception {
+        var h = opening(); var old = scroll(h); var f = old.state();
+        h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
+                old.owner(), new CdR11aForegroundScroll.State(f.cameraX(), f.cameraY16_16(), f.horizontalCrossed(),
+                f.verticalCrossed(), f.scrollXDiff(), f.scrollYDiff(), f.scrollFlags(), f.destBottomBound(),
+                f.destLeftBound(), f.bottomBoundShift(), lock), old.background()));
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(expectedCloud, scroll(h).background().cloudRam().unsignedLong(0));
+        if ((lock >>> 8) != 0) assertBackground(old.background(), scroll(h).background());
+        assertFalse(objects(h).closed()); assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, objects(h).phase());
+    }
+
+    @Test void restartClearsHscrollAndCloudsThenRunsExactlyOneLoadScroll() throws Exception {
+        var h = opening(); step(h, LogicalInputSnapshot.neutral());
+        var oldCapture = scroll(h); var b = oldCapture.background();
+        byte[] cloud = new byte[512], deform = new byte[512], horizontal = new byte[1024];
+        Arrays.fill(cloud, (byte) 0x77); Arrays.fill(deform, (byte) 0x5A); Arrays.fill(horizontal, (byte) 0x6B);
+        replaceBackground(h, new CdR11aBackgroundScroll.State(0x12345678, 0x070B9ABC,
+                0x3456789A, 0x070BBCDE, 0x56789ABC, 0x070BDEF0, CdAssetBytes.copyOf(new byte[] {1,2,3,4,5,6,7,8}),
+                0x1234, 0x5678, 0x9ABC, CdAssetBytes.copyOf(cloud), CdAssetBytes.copyOf(deform),
+                CdAssetBytes.copyOf(horizontal), b.vscroll()));
+        constructedRestartCut(h); // The zero-call restart branch performs no scroll.
+        assertArrayEquals(horizontal, scroll(h).background().hscrollRam().copy());
+        h.module().restartOpeningWorld(); // Inspect the load cut before its first gameplay Init.
+        var next = scroll(h); var bg = next.background();
+        assertEquals(0, h.module().requirePlayerFrame().state().motion().routine());
+        assertEquals(0, bg.cameraBgX()); assertEquals(0, bg.cameraBg2X()); assertEquals(0, bg.cameraBg3X());
+        assertEquals(0x070B0000, bg.cameraBgY()); assertEquals(0x070B0000, bg.cameraBg2Y());
+        assertEquals(0x070B0000, bg.cameraBg3Y()); assertEquals(0xAA00, bg.scrollFlagsBg());
+        assertEquals(0, bg.scrollFlagsBg2()); assertEquals(0, bg.scrollFlagsBg3());
+        assertArrayEquals(new byte[] {0x10,0x10,0x10,0,0x10,0,0,0}, bg.crossingRam().copy());
+        assertEquals(0x10000, bg.cloudRam().unsignedLong(0));
+        assertArrayEquals(new byte[436], bg.cloudRam().slice(76, 436).copy());
+        assertEquals(0xFFFF, bg.deformationRam().unsignedWord(0));
+        // PP Scroll ApplyBGHScroll: at $70B, 117 regular + 112 water = 229 longs; 27 remain untouched.
+        assertArrayEquals(new byte[229 * 4], bg.hscrollRam().slice(0, 229 * 4).copy());
+        assertArrayEquals(new byte[27 * 4], bg.hscrollRam().slice(229 * 4, 27 * 4).copy(),
+                "native ClearScreen clears the old tail before the load-time scroll");
+        var handler = h.module().getScrollHandlerProvider().getHandler(0);
+        assertThrows(IllegalArgumentException.class, () -> handler.restoreRewindState(oldCapture));
+        assertBackground(bg, scroll(h).background());
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(0x20000, scroll(h).background().cloudRam().unsignedLong(0));
+    }
+
+    @Test void actualBackgroundBoundaryFailureClosesTheExistingSourceSiblingsWithoutRetry() throws Exception {
+        var h = opening(); var frame = h.module().requirePlayerFrame(); var runtime = objects(h);
+        var a = frame.captureActor(); var s = a.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(64 << 16, 0x858 << 16, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), new CdPlayerBody.State(motion,
+                s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
+        var old = scroll(h);
+        h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(new SonicCdPlayerPresentation.ScrollCapture(
+                old.owner(), new CdR11aForegroundScroll.State(0, 0x07F80000, 0x10, 0x10,
+                0, 0, 0, 0x710, 0, 0, 0), old.background()));
+        ((SonicCdPlayerPresentation) h.module().getScrollHandlerProvider()).afterRestore();
+        var failure = assertThrows(CdR11aBackgroundScroll.InvalidScroll.class, () -> step(h, LogicalInputSnapshot.neutral()));
+        assertEquals(CdR11aBackgroundScroll.Failure.DEFORMATION_READ, failure.failure());
+        assertEquals(512, failure.offset()); assertTrue(frame.closed()); assertTrue(runtime.closed());
+        assertThrows(IllegalStateException.class, () -> step(h, LogicalInputSnapshot.neutral()));
+    }
+
+    @Test void ordinaryRampApproachStillStopsAtTheActualUnownedSpringDispatcher() throws Exception {
+        var h = opening();
+        var failure = assertThrows(UnsupportedOperationException.class, () -> {
+            for (int call = 0; call < 400; call++) step(h, input(8, 0, false));
+        });
+        assertTrue(failure.getMessage().startsWith("Unowned CD object ID $a at live physical slot "), failure.getMessage());
+    }
+
     /** Explicit component ingress for failure paths; the separate natural test supplies only controllers. */
     private static void constructedRestartCut(Harness h) {
         var frame = h.module().requirePlayerFrame(); var captured = frame.captureActor();
@@ -659,13 +881,59 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.cpu().spriteCount(), actual.cpu().spriteCount());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());
         assertEquals(expected.picture(), actual.picture());
-        assertEquals(expected.camera(), actual.camera()); assertEquals(expected.scroll(), actual.scroll());
+        assertEquals(expected.camera(), actual.camera()); assertScroll(expected.scroll(), actual.scroll());
         assertEquals(expected.levelFrame(), actual.levelFrame());
         assertEquals(expected.publication(), actual.publication());
         var a = expected.resident().tiles(); var b = actual.resident().tiles();
         assertEquals(24, b.length);
         for (int i = 0; i < 24; i++) for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) assertEquals(a[i].getPixel(x, y), b[i].getPixel(x, y));
     }
+    private static SonicCdPlayerPresentation.ScrollCapture scroll(Harness h) {
+        return assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class,
+                h.module().getScrollHandlerProvider().getHandler(0).captureRewindState());
+    }
+    private static void replaceBackground(Harness h, CdR11aBackgroundScroll.State background) {
+        var old = scroll(h);
+        h.module().getScrollHandlerProvider().getHandler(0).restoreRewindState(
+                new SonicCdPlayerPresentation.ScrollCapture(old.owner(), old.state(), background));
+    }
+    private static void assertScroll(Object expected, Object actual) {
+        var a = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, expected);
+        var b = assertInstanceOf(SonicCdPlayerPresentation.ScrollCapture.class, actual);
+        assertSame(a.owner(), b.owner()); assertEquals(a.state(), b.state()); assertBackground(a.background(), b.background());
+    }
+    private static void assertBackground(CdR11aBackgroundScroll.State a, CdR11aBackgroundScroll.State b) {
+        assertEquals(a.cameraBgX(), b.cameraBgX()); assertEquals(a.cameraBgY(), b.cameraBgY());
+        assertEquals(a.cameraBg2X(), b.cameraBg2X()); assertEquals(a.cameraBg2Y(), b.cameraBg2Y());
+        assertEquals(a.cameraBg3X(), b.cameraBg3X()); assertEquals(a.cameraBg3Y(), b.cameraBg3Y());
+        assertEquals(a.scrollFlagsBg(), b.scrollFlagsBg()); assertEquals(a.scrollFlagsBg2(), b.scrollFlagsBg2());
+        assertEquals(a.scrollFlagsBg3(), b.scrollFlagsBg3()); assertEquals(a.vscroll(), b.vscroll());
+        assertArrayEquals(a.crossingRam().copy(), b.crossingRam().copy());
+        assertArrayEquals(a.cloudRam().copy(), b.cloudRam().copy());
+        assertArrayEquals(a.deformationRam().copy(), b.deformationRam().copy());
+        assertArrayEquals(a.hscrollRam().copy(), b.hscrollRam().copy());
+    }
+    private static void assertScrollFrame(Harness h, LevelSpritePresentation.ScrollFrame frame,
+                                          CdR11aBackgroundScroll.State expected) {
+        LevelSpritePresentation.withScroll(h.mode().getLevelManager(), frame, () -> {
+            var actual = LevelSpritePresentation.backgroundScrollForDraw(h.mode().getLevelManager());
+            assertNotNull(actual); assertEquals((float) (short) expected.vscroll(), actual.y());
+            var horizontal = actual.horizontal(); assertEquals(224, horizontal.length);
+            for (int i = 0; i < horizontal.length; i++) {
+                assertEquals((int) expected.hscrollRam().unsignedLong(i * 4), horizontal[i]);
+            }
+        });
+    }
+    private static int pieceFor(CdObjectDrawQueue.CpuSat cpu, int slot) {
+        for (int i = 0; i < cpu.provenance().size(); i++) {
+            if (cpu.provenance().get(i).slotRef().wholeIndex() == slot) return i;
+        }
+        fail("Expected a real queued piece for physical slot " + slot); return -1;
+    }
+    private static int satX(CdObjectDrawQueue.CpuSat cpu, int piece) {
+        return ByteBuffer.wrap(cpu.bytes()).getShort(piece * 8 + 6) & 0xFFFF;
+    }
+
     private static void assertObjectRangeExactlyOnce() {
         assertEquals(1, GameServices.graphics().getPatternAtlas().registeredRangesForTesting().stream()
                 .filter(r -> r.base() == PatternAtlasRange.OBJECTS.base() && r.size() == PatternAtlasRange.OBJECTS.size()).count());
