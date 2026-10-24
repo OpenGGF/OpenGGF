@@ -244,7 +244,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var motion = new CdPlayerMotionState(centre.centreX() << 16, centre.centreY() << 16,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(0, 0, 0),
-                new CdPlayerBody.Header(1, 0, 0, 0, 0), new CdPlayerBody.Timers(0, 0, 0),
+                new CdPlayerBody.Header(1, 0, 0, 0, 0), new CdPlayerBody.Timers(0, 0, 0, 0), // ClearObjects zeroes $3A too.
                 new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0); // Cold ClearObjects owns byte39.
         var movement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0, 0, 0),
                 new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), bounds.bottom(), 0),

@@ -451,7 +451,7 @@ class TestCdPlayerBody {
         assertBoundary(f, a, CdPlayerBody.UnsupportedBoundary.MAPPING_BINDING);
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Header(1, 0, 0x10000, 2, 24));
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.AnimationCursor(0, -1, 0));
-        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Timers(65536, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Timers(65536, 0, 0, 0));
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[252]), 0));
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Controls(256, 0, 0, 0, 0));
     }
@@ -942,7 +942,7 @@ class TestCdPlayerBody {
         assertEquals(List.of(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, 62 << 16),
                 new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG, 196 << 16),
                 new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, -0x3D0)), actorWrites(r));
-        assertEquals(new CdPlayerBody.Timers(120, 5, 5), r.state().timers(), "no Display: hurt, invincibility and shoes hold");
+        assertEquals(new CdPlayerBody.Timers(120, 5, 5, 0), r.state().timers(), "no Display: hurt, invincibility and shoes hold");
         assertEquals(env.globals(), r.environment().globals(), "no ExtCamera, expiry or other Main global write");
         assertEquals(env.controls(), r.environment().controls(), "no raw-to-logical copy");
         var g = r.environment().movement().globals();
@@ -1084,7 +1084,7 @@ class TestCdPlayerBody {
         // MOVE.W oY,oPlayerStick (:289) writes byte 38 and byte 39 at each executed call.
         assertEquals(finalY >>> 8, m.stick()); assertEquals(finalY & 0xFF, r.state().rotationDistance());
         assertEquals(new CdPlayerBody.Header(1, f.mapAddress(), 0x8780, 0, 24), r.state().header());
-        assertEquals(new CdPlayerBody.Timers(120, 5, 5), r.state().timers());
+        assertEquals(new CdPlayerBody.Timers(120, 5, 5, 0), r.state().timers());
         assertEquals(0, r.environment().globals().invincible());
         assertEquals(0, r.environment().movement().globals().scoreChain());
         assertEquals(new CdPlayerBody.DisplayEligibility(true, 62, finalY, mini == 0 ? 19 : 10, 4, 24, 0), onlyCut(r));
@@ -1236,6 +1236,44 @@ class TestCdPlayerBody {
         assertThrows(NullPointerException.class, () -> new CdPlayerBody.AirCollisionEffect(null));
     }
 
+    // U5-B0 oPlayerReset ($3A word, Level/_Definitions.inc:86) as the fourth Timers word. Written before production.
+    // Source pin 1ecc5f3a: only ObjSonic_DeadChkGone writes it (Sonic/Main.asm:2439,2444) and only
+    // ObjSonic_Restart reads and counts it (:2454-2457). Routines 0, 2 and 4 never address it.
+
+    @Test void timersRequireFourUnsignedWordsAndTheResetWordIsPartOfTheValue() {
+        assertEquals(0xFFFF, new CdPlayerBody.Timers(0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF).reset());
+        assertNotEquals(new CdPlayerBody.Timers(120, 5, 5, 0), new CdPlayerBody.Timers(120, 5, 5, 0x003C));
+        for (int invalid : new int[]{-1, 0x10000, Integer.MIN_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Timers(0, 0, 0, invalid));
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"0,1", "0,65535", "2,60", "2,480", "4,60", "4,65535"})
+    void nonzeroResetWordIsIngressThatInitMainAndAirborneHurtNeverWrite(int routine, int reset) {
+        Fixture f = new Fixture(); Actor a = routine == 4 ? hurtActor() : new Actor();
+        a.routine = routine; a.reset = reset;
+        if (routine == 2) { a.hurt = 5; a.invinc = 2; f.invincible = 1; } // Display counts the other words down.
+        if (routine == 4) a.y = 200 << 16; // Airborne Hurt: no landing and no kill.
+        var state = a.state(); var env = f.environment();
+        var r = f.owner().step(state, env);
+        assertEquals(reset, r.state().timers().reset());
+        if (routine == 2) assertEquals(new CdPlayerBody.Timers(4, 1, 0, reset), r.state().timers());
+        assertTrue(actorWrites(r).stream().noneMatch(w -> w.field() == CdPlayerBody.ActorField.RESET_TIMER));
+        assertEquals(reset, state.timers().reset(), "ingress is immutable");
+        assertEquals(r, f.owner().step(state, env), "the same four-word ingress replays equal");
+    }
+
+    @Test void hurtPitKillPlayerWordWriteAtByte38LeavesTheAdjacentResetWord() {
+        // MOVE.W oY,oPlayerStick (PP Player Object Collision.asm:289) writes bytes $38-$39 at both calls; $3A-$3B stay.
+        Fixture f = new Fixture(); f.invincible = 1;
+        Actor a = hurtActor(); a.y = 2040 << 16; a.xv = -0x200; a.yv = -0x400; a.reset = 0x01E0;
+        var r = f.owner().step(a.state(), f.environment());
+        assertEquals(2, kills(r).size()); assertEquals(6, r.state().motion().routine());
+        assertEquals(0x07, r.state().motion().stick()); assertEquals(0xF4, r.state().rotationDistance());
+        assertEquals(new CdPlayerBody.Timers(0x78, 0, 0, 0x01E0), r.state().timers());
+        assertTrue(actorWrites(r).stream().noneMatch(w -> w.field() == CdPlayerBody.ActorField.RESET_TIMER));
+    }
+
     /** Post-HurtPlayer actor shape (PP Player Object Collision.asm:246-266): air bit, oAnim $1A, hurt $78. */
     private static Actor hurtActor() {
         Actor a = new Actor(); a.routine = 4; a.flags = 2; a.anim = a.prev = 0x1A; a.hurt = 0x78;
@@ -1353,14 +1391,14 @@ class TestCdPlayerBody {
 
     static final class Actor {
         int x = 64 << 16, y = 76 << 16, xv, yv, gv, routine = 2, angle, flags, spr = 4;
-        int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes, rotationDistance;
+        int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes, reset, rotationDistance;
         CdPlayerBody.Header header = new CdPlayerBody.Header(1, 0x21F200, 0x780, 2, 24);
         CdPlayerBody.AnimationCursor cursor = new CdPlayerBody.AnimationCursor(0, 0, 0);
         CdPlayerBody.History history = new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[256]), 0);
         CdPlayerBody.State state() {
             return new CdPlayerBody.State(new CdPlayerMotionState(x, y, xv, yv, gv, routine, angle, flags, spr, xr, yr,
                     anim, prev, jump, charge, lock, stick, ctrl, pri, sec), cursor, header,
-                    new CdPlayerBody.Timers(hurt, invinc, shoes), history, rotationDistance);
+                    new CdPlayerBody.Timers(hurt, invinc, shoes, reset), history, rotationDistance);
         }
     }
 

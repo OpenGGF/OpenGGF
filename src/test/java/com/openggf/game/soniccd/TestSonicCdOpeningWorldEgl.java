@@ -566,6 +566,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
+        assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());

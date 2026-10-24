@@ -3279,3 +3279,28 @@ bounded invalidselectors, retainedtail/fullupload, immutablebytes and replay
 are covered with constructed format input. No media identity, native timing,
 GPUupload or GameOver world support is inferred. Runtime/atlas/snapshot wiring
 and the349-pattern C2picture remain next integration work.
+
+
+### Explicit death/reset state ownership, 24 October 2026
+
+The player Timers record now requires the actual reset word3A in addition to
+hurt/invincibility/shoes. There is no default three-word overload. Every
+constructor is migrated: cold0 is sourceClearObjects, existing state preserves
+its word, and Body cursor/capture/projection retain it. KillPlayer's adjacent
+word38 does not overwrite3A. RESET_TIMER is reserved for its native writers.
+The new nine-field CdLevelGlobals has one Runtime store and private-owned
+capture/validation/restore. DEVmodule supplies every field explicitly; HUD-time0
+is the existing omission, not the native1. The flowerCount24-bit value stores
+three independent per-time-zone wrapping bytes; no writer may carry across
+zones. Clear-long also spans the adjacent fade byte. No state writer or runtime
+6/8 context is admitted by this shape-only unit.
+
+Root56302 at746c3e192 plus14exactpendingB0/MODE files passed576/0/0/0 at17:11:28BST
+(760squeue,2m14execution). All13freshXMLJava25.0.5.0.2/actualmedia/EGL/existingS2
+ROM confirmed:11LevelGlobals,128Body,103Frame,15Actor,4sharedActor,99TouchResponse,
+115Movement,39Runtime,15WorldLoad,4EGL,24TerrainLoad,8TerrainBoot,11API. The24new
+B0cases include nonzero timer retention through Init/Main/Hurt/contact/Kill,
+Frame ports/replay, native widths and explicit Runtime ingress. Changed-value
+global restore still awaits a real writer; no setter was invented. Independent
+Opus review found noP1/P2 or wrong assertion in all12frozenfiles. Its packing
+clarification was added as comment only after execution; frozeninputs unchanged.

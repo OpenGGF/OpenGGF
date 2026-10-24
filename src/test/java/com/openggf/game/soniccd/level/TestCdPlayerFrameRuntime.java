@@ -43,7 +43,7 @@ class TestCdPlayerFrameRuntime {
                 0, 0, 0, 0, 0, 0, 0, 0, 0), s.motion());
         assertEquals(new CdPlayerBody.Header(1, 0, 0, 0, 0), s.header());
         assertEquals(new CdPlayerBody.AnimationCursor(0, 0, 0), s.animation());
-        assertEquals(new CdPlayerBody.Timers(0, 0, 0), s.timers());
+        assertEquals(new CdPlayerBody.Timers(0, 0, 0, 0), s.timers(), "Explicit cold ClearObjects words, including oPlayerReset");
         assertEquals(0, s.rotationDistance(), "Explicit cold ClearObjects byte39");
         assertArrayEquals(new byte[256], s.history().bytes().copy()); assertEquals(0, s.history().index());
         assertEquals(new CdPlayerMovement.Physics(0, 0, 0), e.movement().physics(), "Init writes physics, not ingress");
@@ -96,6 +96,42 @@ class TestCdPlayerFrameRuntime {
         var s = new Fixture().runtime().state();
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.State(s.motion(), s.animation(),
                 s.header(), s.timers(), s.history(), invalid));
+    }
+
+    // U5-B0, written before production. oPlayerReset ($3A, Level/_Definitions.inc:86) is actor state:
+    // only routines 6 and 8 address it (Sonic/Main.asm:2439-2457), so every owned call and port keeps it.
+    @ParameterizedTest @ValueSource(ints = {1, 0x003C, 0x01E0, 0xFFFF})
+    void resetWordSurvivesInitHurtMainVIntProjectionObjectWritesAndActorReplay(int reset) throws IOException {
+        var f = new Fixture().runtime();
+        var seeded = new Actor(f); seeded.reset = reset; seeded.install(f);
+        service(f, 0); f.runBody(1);
+        assertEquals(reset, f.state().timers().reset(), "Init does not write oPlayerReset");
+        // The existing Hurt landing fixture: its HurtChkLand rewrites the adjacent hurt word only.
+        var hurt = new Actor(f); hurt.routine = 4; hurt.flags = 6; hurt.y = 1886 << 16; hurt.install(f);
+        service(f, 0); var landing = f.runBody(2);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, landing.result().boundary());
+        assertEquals(120, f.state().timers().hurt()); assertEquals(reset, f.state().timers().reset());
+        service(f, 0); var main = f.runBody(3);
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, main.result().boundary());
+        assertEquals(119, f.state().timers().hurt(), "Display counts the hurt word");
+        assertEquals(reset, f.state().timers().reset(), "Display/MODE/Animate preserve the reset word");
+        var saved = f.captureActor(); var savedShared = f.captureShared();
+        f.publishDrawObjectOnScreen(true);
+        f.applyObjectYVelocity(-0xC00);
+        f.applyObjectPrimaryAngle(0x40);
+        assertEquals(reset, f.state().timers().reset(), "Projection and object writes keep the actor word");
+        var changed = new Actor(f); changed.reset = reset ^ 0xFFFF; changed.install(f);
+        assertEquals(reset ^ 0xFFFF, f.state().timers().reset());
+        f.restoreActor(saved);
+        assertEquals(reset, f.state().timers().reset());
+        assertEquals(saved, f.captureActor());
+        f.restoreShared(savedShared);
+        service(f, 0); f.runBody(4);
+        var replay = f.captureActor();
+        assertEquals(reset, replay.state().timers().reset());
+        f.restoreActor(saved); f.restoreShared(savedShared);
+        service(f, 0); f.runBody(4);
+        assertEquals(replay, f.captureActor(), "The word belongs to actor replay, not shared state");
     }
 
     @Test void serviceZeroInitOnlyServiceZeroThenMainPublishesForLaterArtService() throws IOException {
@@ -884,9 +920,10 @@ class TestCdPlayerFrameRuntime {
     /** Test edit of an explicit same-owner immutable capture, not another load/factory ingress. */
     private static final class Actor {
         final CdPlayerBody.State base;
-        int slot, charge, gv, invincibility, flags, y, routine, spriteFlags, rotationDistance;
+        int slot, charge, gv, invincibility, reset, flags, y, routine, spriteFlags, rotationDistance;
         Actor(CdPlayerFrameRuntime f) { base = f.state(); slot = base.header().slotId(); charge = base.motion().charge();
-            gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); flags = base.motion().flags();
+            gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); reset = base.timers().reset();
+            flags = base.motion().flags();
             y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); }
         void install(CdPlayerFrameRuntime f) {
             var a = f.captureActor(); var m = base.motion(); var h = base.header();
@@ -895,7 +932,7 @@ class TestCdPlayerFrameRuntime {
                     m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
                     m.previousPrimaryAngle(), m.previousSecondaryAngle());
             var state = new CdPlayerBody.State(motion, base.animation(), new CdPlayerBody.Header(slot, h.mappingAddress(), h.tile(), h.priority(), h.width()),
-                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes()), base.history(), rotationDistance);
+                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes(), reset), base.history(), rotationDistance);
             var display = a.display().map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(), p.priority(),
                     p.width(), p.mapFrame(), spriteFlags, p.centreX16_16(), p.centreY16_16()));
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), state, display));

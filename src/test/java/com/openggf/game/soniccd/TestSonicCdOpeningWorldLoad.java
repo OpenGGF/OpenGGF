@@ -22,6 +22,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.SonicCdLevel;
+import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
@@ -119,6 +120,8 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(1, h.mode().getSpriteManager().getAllSprites().size());
         assertTrue(h.mode().getSpriteManager().getRegisteredSidekicks().isEmpty());
         assertEquals(new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0), objects.ringGlobals());
+        // Declared DEV post-LevelStart values; updateHUDTime 0 is the DEV HUD omission (native Level/Main.asm:304 writes 1).
+        assertEquals(new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0), objects.levelGlobals());
         assertEquals(0, objects.cpuSat().spriteCount());
         assertTrue(objects.displayedFrame().tiles().isEmpty());
         assertEquals(com.openggf.game.soniccd.player.CdPlayerBody.DynamicSlots.UNIMPLEMENTED, frame.environment().dynamicSlots());
@@ -136,6 +139,7 @@ class TestSonicCdOpeningWorldLoad {
         step(h, LogicalInputSnapshot.neutral());
         assertFalse(objects.displayedFrame().tiles().isEmpty());
         assertEquals(0x26E, pool.state(34).centreX(), "Offscreen native patrol runs again");
+        assertEquals(new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0), objects.levelGlobals(), "no admitted writer yet");
         h.module().requirePlayerActor().requireCompletedNativeFrame();
         assertTrue(objects.displayedFrame().patternVersions().keySet().stream().allMatch(PatternAtlasRange.OBJECTS::contains));
         assertObjectRangeExactlyOnce();
@@ -336,6 +340,7 @@ class TestSonicCdOpeningWorldLoad {
         assertTrue(oldFrame.closed());
         assertNotSame(old, objects(h));
         assertEquals(new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0), objects(h).ringGlobals());
+        assertEquals(new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0), objects(h).levelGlobals());
         assertEquals(0, objects(h).placement().pool().state(32).id());
         assertEquals(0, objects(h).cpuSat().spriteCount());
         assertTrue(objects(h).displayedFrame().tiles().isEmpty());
@@ -425,6 +430,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
+        assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().spriteCount(), actual.cpu().spriteCount());

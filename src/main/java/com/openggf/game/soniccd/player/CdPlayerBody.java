@@ -45,8 +45,13 @@ public final class CdPlayerBody {
     public record Header(int slotId, int mappingAddress, int tile, int priority, int width) {
         public Header { byteValue(slotId); wordValue(tile); byteValue(priority); byteValue(width); }
     }
-    public record Timers(int hurt, int invincibility, int speedShoes) {
-        public Timers { wordValue(hurt); wordValue(invincibility); wordValue(speedShoes); }
+    /**
+     * Actor words oPlayerHurt/Invinc/Shoes/Reset ($30/$32/$34/$3A, Level/_Definitions.inc:83-86). reset is only
+     * written by ObjSonic_DeadChkGone (Sonic/Main.asm:2439,2444) and counted by ObjSonic_Restart (:2454-2457);
+     * Init, Main and Hurt carry it unchanged. No default overload: ingress or capture supplies all four words.
+     */
+    public record Timers(int hurt, int invincibility, int speedShoes, int reset) {
+        public Timers { wordValue(hurt); wordValue(invincibility); wordValue(speedShoes); wordValue(reset); }
     }
 
     /**
@@ -170,7 +175,7 @@ public final class CdPlayerBody {
     /** CENTRE_*_LONG values are ObjMove's complete 16.16 longs; velocity values are signed words. */
     public enum ActorField {
         ROUTINE, X_RADIUS, Y_RADIUS, MAPPING_ADDRESS, TILE, PRIORITY, WIDTH, SPRITE_FLAGS,
-        HURT_TIMER, INVINCIBILITY_TIMER, SHOES_TIMER, PRIMARY_ANGLE_COPY, SECONDARY_ANGLE_COPY, ANIMATION,
+        HURT_TIMER, INVINCIBILITY_TIMER, SHOES_TIMER, RESET_TIMER, PRIMARY_ANGLE_COPY, SECONDARY_ANGLE_COPY, ANIMATION,
         CENTRE_X_LONG, CENTRE_Y_LONG, X_VELOCITY, Y_VELOCITY, GROUND_VELOCITY
     }
     public enum GlobalField {
@@ -684,7 +689,7 @@ public final class CdPlayerBody {
         Environment env;
         Controls controls;
         final int levelFrames, timeAttack, debugMode, debugCheat, timeWarpTimer, bossMusic;
-        int camX, invincible, hurt, invincibilityTimer, shoesTimer, rotationDistance;
+        int camX, invincible, hurt, invincibilityTimer, shoesTimer, resetTimer, rotationDistance;
         boolean displayEligible;
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
@@ -696,6 +701,7 @@ public final class CdPlayerBody {
             debugMode = g.debugMode(); debugCheat = g.debugCheat(); timeWarpTimer = g.timeWarpTimer();
             invincible = g.invincible(); bossMusic = g.bossMusic();
             hurt = state.timers().hurt(); invincibilityTimer = state.timers().invincibility(); shoesTimer = state.timers().speedShoes();
+            resetTimer = state.timers().reset();
         }
         int x() { return motion.centreX16_16() >>> 16; }
         int y() { return motion.centreY16_16() >>> 16; }
@@ -806,7 +812,8 @@ public final class CdPlayerBody {
             hurt = actor.hurt(); rotationDistance = actor.rotationDistance();
         }
         Result finish(Boundary boundary) {
-            var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer), history, rotationDistance);
+            var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer, resetTimer),
+                    history, rotationDistance);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN

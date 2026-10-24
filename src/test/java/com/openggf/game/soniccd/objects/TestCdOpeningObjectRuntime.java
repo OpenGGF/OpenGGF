@@ -45,6 +45,8 @@ class TestCdOpeningObjectRuntime {
     private static final CdPlayerBody.ContactGlobals CONTACT = new CdPlayerBody.ContactGlobals(0, 0, 0);
     private static final CdOpeningObjectRuntime.ScoreGlobals SCORE = new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0);
     private static final CdRingGlobals INITIAL = new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0);
+    /** The module's declared DEV post-LevelStart level globals, supplied explicitly as ingress. */
+    private static final CdLevelGlobals LEVEL = new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0);
     private static CdR11aAssets mediaAssets;
 
     // Catches snapshot-of-active-list dispatch, omitted offscreen Mosqui, premature tail,
@@ -604,20 +606,20 @@ class TestCdOpeningObjectRuntime {
         var otherAssets = loadFresh();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    otherAssets, frame, INITIAL, CONTACT, SCORE, new byte[640], BANKS, PRE, value -> { }));
+                    otherAssets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], BANKS, PRE, value -> { }));
         }
         try (var terrain = CdPlayerFrameRuntime.terrainOnlyDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, terrain, INITIAL, CONTACT, SCORE, new byte[640], BANKS, PRE, value -> { }));
+                    assets, terrain, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], BANKS, PRE, value -> { }));
         }
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, new byte[639], BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[639], BANKS, PRE, value -> { }));
             byte[] nonempty = new byte[640]; nonempty[0] = 1;
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, nonempty, BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, nonempty, BANKS, PRE, value -> { }));
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
         }
     }
 
@@ -815,7 +817,7 @@ class TestCdOpeningObjectRuntime {
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             // Plant base inside the Mosqui span: the frontier pixel policy rejects at construction.
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
                     PRE, value -> { }));
         }
         try (var f = new Fixture()) {
@@ -922,7 +924,7 @@ class TestCdOpeningObjectRuntime {
         var assets = load();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640],
+                    assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640],
                     new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 298, 369, 374), PRE, value -> { }));
             assertFalse(frame.closed());
             assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
@@ -1157,6 +1159,45 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // U5-B0, written before production. Catches an implicit level-globals default, a second store, or a
+    // capture that drops or re-derives the value. No runtime writer is admitted yet (DeadChkGone, Restart
+    // and the $3B owner are later units), so a restore that replaces a CHANGED value cannot be observed here.
+    @Test void levelGlobalsIngressIsExplicitAndOnlyTheRuntimeSnapshotOwnsIt() throws Exception {
+        var assets = load();
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            assertThrows(NullPointerException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                    assets, frame, INITIAL, CONTACT, SCORE, null, new byte[640], BANKS, PRE, value -> { }));
+            assertFalse(frame.closed());
+            assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
+        }
+        // Every field differs from the module's declaration, so neither a default nor the DEV value passes.
+        var declared = new CdLevelGlobals(1, 1, 2, 1, 0x01, 0x010203, 1, 8, 1);
+        try (var f = new Fixture(declared)) {
+            assertEquals(declared, f.runtime.levelGlobals());
+            var cut = f.runtime.captureClosedCut();
+            assertEquals(declared, cut.levelGlobals());
+            f.runtime.validateRestore(cut);
+            f.runtime.restore(cut);
+            assertEquals(declared, f.runtime.levelGlobals());
+        }
+        try (var f = new Fixture()) {
+            var cold = f.runtime.captureClosedCut();
+            assertEquals(LEVEL, cold.levelGlobals());
+            f.firstCycle();
+            f.service(0);
+            f.runtime.spawnBeforeReservedSlots();
+            f.body(2);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST);
+            f.runtime.finishOrdinaryTail();
+            // Init, Main, the dynamic owners and the tail hold no port to these nine globals.
+            assertEquals(LEVEL, f.runtime.levelGlobals());
+            assertEquals(LEVEL, f.runtime.captureClosedCut().levelGlobals());
+            f.runtime.restore(cold);
+            assertEquals(cold.levelGlobals(), f.runtime.levelGlobals());
+        }
+    }
+
     /** Constructed ingress for transaction tests, not evidence of a normal-input route to this cut. */
     private static void seedContactPlayer(Fixture f) {
         var cut = f.frame.captureActor(); var s = cut.state();
@@ -1186,12 +1227,17 @@ class TestCdOpeningObjectRuntime {
         }
         Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact,
                 CdOpeningObjectRuntime.ScoreGlobals score, OptionalLong seed) throws Exception {
+            this(initial, contact, score, LEVEL, seed);
+        }
+        Fixture(CdLevelGlobals level) throws Exception { this(INITIAL, CONTACT, SCORE, level, OptionalLong.of(0)); }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score,
+                CdLevelGlobals level, OptionalLong seed) throws Exception {
             assets = load();
             frame = seed.isPresent() ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, seed.getAsLong())
                     : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
-                    new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
+                    level, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         void service(int held) { service(held, PRE); }
         /** Constructed pre-scroll camera words test the device contract; they are not natural route evidence. */

@@ -17,6 +17,7 @@ import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -258,6 +259,12 @@ public final class SonicCdGameModule implements GameModule {
                             candidate.assets(), playerFrame, new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0),
                             new CdPlayerBody.ContactGlobals(0, 0, 0),
                             new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0),
+                            // Declared post-LevelStart level globals (Level/Main.asm): levelRestart 0 (:299);
+                            // updateHUDTime 0 is the DEV HUD omission, native :304 writes 1; checkpoint 0 (:41 on
+                            // a first entry, no Checkpoint owner); spawnMode 0 (:301); plcLoadFlags $03 (BSET #0
+                            // :37, BSET #1 :271); flowerCount 0 (:168); fadeEnableDisplay 2 (:314 writes 1, the
+                            // next VInt_PalFade :897-899 adds 1); powerup 0 (:167); timeOver 0 (:293).
+                            new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0),
                             new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
                             new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF),
                             playerFrame::applyObjectPrimaryAngle);
