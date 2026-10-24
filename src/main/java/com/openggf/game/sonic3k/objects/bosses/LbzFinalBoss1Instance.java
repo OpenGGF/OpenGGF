@@ -54,7 +54,6 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -198,30 +197,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private int sidekickExternalFrameIndex;
     private FinalePhase finalePhase = FinalePhase.NONE;
     private int finaleTimer = -1;
-    private final List<SpawnRecord> spawned = new ArrayList<>();
-
-    public enum ChildKind {
-        ROBOTNIK_HEAD,
-        TOP_ATTACHMENT,
-        TURRET_SEGMENT,
-        LASER_HEAD,
-        MUZZLE_LASER,
-        LASER_TRAIL,
-        ORBITING_POD,
-        GUN_POD,
-        HIT_SPARK,
-        DEBRIS,
-        BOSS_EXPLOSION,
-        RESULTS_SCREEN,
-        P2_ENDING_POSE_WATCHER,
-        TAILS_CPU_RELEASE,
-        ENGINE_FLAME,
-        EXPLOSION_SEQUENCER,
-        DEATH_EGG_MINIATURE,
-        DEATH_EGG_SMOKE,
-        MUSIC_FADE,
-        FINAL_BOSS_2_HANDOFF
-    }
 
     public enum FinalePhase {
         NONE,
@@ -451,10 +426,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 // ROM loc_729DE calls AllocateObject before CreateChild1_Normal.  This is
                 // FindFreeObj semantics, so the fade must take the lowest available SST
                 // slot rather than being appended after the boss.
-                SongFadeTransitionInstance fade = spawnFreeChild(
+                spawnFreeChild(
                         () -> new SongFadeTransitionInstance(
                                 90, Sonic3kMusic.BOSS.id, false, deferChildrenSameFrame));
-                recordChild(ChildKind.MUSIC_FADE, fade);
                 bossMusicStarted = true;
             }
         }
@@ -488,25 +462,19 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private void spawnInitialChildren() {
-        recordChild(ChildKind.ROBOTNIK_HEAD, spawnChild(() -> new RobotnikHeadChild(this)));
-        recordChild(ChildKind.TOP_ATTACHMENT, spawnChild(() -> new TopAttachmentChild(this)));
-        recordChild(ChildKind.TURRET_SEGMENT, spawnChild(() -> new TurretSegmentChild(this, 0, 0, 8)));
-        recordChild(ChildKind.TURRET_SEGMENT, spawnChild(() -> new TurretSegmentChild(this, 1, 0, 0x30)));
-        recordChild(ChildKind.TURRET_SEGMENT, spawnChild(() -> new TurretSegmentChild(this, 2, 0, 0x5C)));
-        recordChild(ChildKind.ORBITING_POD, spawnChild(() -> new OrbitingPodChild(this, 0)));
-        // Isolated object tests do not have an ObjectManager to deliver the
-        // first segment routine pass. Managed objects retain the ROM's deferred
-        // nested-child allocation order; unmanaged owners need the graph ready
-        // immediately for direct child updates.
+        spawnChild(() -> new RobotnikHeadChild(this));
+        spawnChild(() -> new TopAttachmentChild(this));
+        TurretSegmentChild top = spawnChild(() -> new TurretSegmentChild(this, 0, 0, 8));
+        TurretSegmentChild middle = spawnChild(() -> new TurretSegmentChild(this, 1, 0, 0x30));
+        TurretSegmentChild bottom = spawnChild(() -> new TurretSegmentChild(this, 2, 0, 0x5C));
+        spawnChild(() -> new OrbitingPodChild(this, 0));
+        // Unmanaged owners have no object sweep to deliver the first segment pass.
+        // Bootstrap these nested tables after all direct children exist, in segment
+        // order. Managed owners retain the ROM's deferred segment dispatch.
         if (services().objectManager() == null) {
-            List<TurretSegmentChild> segments = spawned.stream()
-                    .map(SpawnRecord::child)
-                    .filter(TurretSegmentChild.class::isInstance)
-                    .map(TurretSegmentChild.class::cast)
-                    .toList();
-            for (TurretSegmentChild segment : segments) {
-                segment.ensureNestedChildrenInitialized();
-            }
+            top.ensureNestedChildrenInitialized();
+            middle.ensureNestedChildrenInitialized();
+            bottom.ensureNestedChildrenInitialized();
         }
     }
 
@@ -630,8 +598,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private void spawnHitSparkPair() {
-        recordChild(ChildKind.HIT_SPARK, spawnChild(() -> new HitSparkChild(this, -0x10, 0, false)));
-        recordChild(ChildKind.HIT_SPARK, spawnChild(() -> new HitSparkChild(this, 0x10, 0, true)));
+        spawnChild(() -> new HitSparkChild(this, -0x10, 0, false));
+        spawnChild(() -> new HitSparkChild(this, 0x10, 0, true));
     }
 
     /** ROM loc_735B6. */
@@ -646,8 +614,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         invulnerabilityTimer = 0;
         // The remaining (bottom) segment detaches.
         flags |= 1 << detachCount;
-        recordChild(ChildKind.BOSS_EXPLOSION,
-                spawnChild(() -> new ExplosionShowerChild(this, getCentreX(), getCentreY(), 4)));
+        spawnChild(() -> new ExplosionShowerChild(this, getCentreX(), getCentreY(), 4));
         if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
             finalePhase = FinalePhase.KNUCKLES_HANDOFF;
         } else {
@@ -689,9 +656,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         setCentreY(targetY);
         flags |= FLAG_FINAL_BOSS_2_HANDOFF;
-        LbzFinalBoss2Instance finalBoss2 = spawnFreeChild(() -> new LbzFinalBoss2Instance(
+        spawnFreeChild(() -> new LbzFinalBoss2Instance(
                 new ObjectSpawn(0, 0, Sonic3kObjectIds.LBZ_FINAL_BOSS_2, 0, 0, false, 0)));
-        recordChild(ChildKind.FINAL_BOSS_2_HANDOFF, finalBoss2);
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
@@ -761,7 +727,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             services().gameState().setEndOfLevelFlag(false);
         }
         spawnResultsScreen();
-        recordChild(ChildKind.P2_ENDING_POSE_WATCHER, spawnFreeChild(() -> new P2EndingPoseWatcherChild(this)));
+        spawnFreeChild(() -> new P2EndingPoseWatcherChild(this));
         finalePhase = FinalePhase.WAIT_RESULTS_COMPLETE;
     }
 
@@ -794,8 +760,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private void spawnResultsScreen() {
         PlayerCharacter character = currentPlayerCharacter();
-        recordChild(ChildKind.RESULTS_SCREEN,
-                spawnFreeChild(() -> new LbzFinalBossResultsScreenObjectInstance(character)));
+        spawnFreeChild(() -> new LbzFinalBossResultsScreenObjectInstance(character));
     }
 
     /** ROM loc_72B96: waits End_of_level_flag (set when the tally finishes). */
@@ -822,7 +787,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
         statusBits |= STATUS_HIT_SHIFT;
         restorePlayerForLaunch(player);
-        recordChild(ChildKind.TAILS_CPU_RELEASE, spawnFreeChild(() -> new TailsCpuReleaseChild(this)));
+        spawnFreeChild(() -> new TailsCpuReleaseChild(this));
         queueDeathEggSmallArt();
         registerCutsceneAnchor();
         finalePhase = FinalePhase.AUTOWALK;
@@ -1084,8 +1049,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         engineFlamesSpawned = true;
         // ROM loc_72C3C uses CreateChild6_Simple, so both flame objects are
         // allocated with FindNextFreeObj semantics after this boss slot.
-        recordChild(ChildKind.ENGINE_FLAME, spawnChild(() -> new EngineFlameChild(this, 0)));
-        recordChild(ChildKind.ENGINE_FLAME, spawnChild(() -> new EngineFlameChild(this, 2)));
+        spawnChild(() -> new EngineFlameChild(this, 0));
+        spawnChild(() -> new EngineFlameChild(this, 2));
     }
 
     private void signalPadCollapseStart() {
@@ -1107,8 +1072,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         int baseY = sequencer.getY();
         for (int i = 0; i < 7; i++) {
             int index = i;
-            recordChild(ChildKind.DEATH_EGG_MINIATURE,
-                    sequencer.spawnCurrentChild(() -> new DeathEggMiniatureChild(this, baseX, baseY, index)));
+            sequencer.spawnCurrentChild(() -> new DeathEggMiniatureChild(this, baseX, baseY, index));
         }
     }
 
@@ -1189,14 +1153,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     private static int unsignedCompare(int a, int b) {
         return Integer.compare(a & 0xFFFF, b & 0xFFFF);
-    }
-
-    private void recordChild(ChildKind kind, Object child) {
-        spawned.add(new SpawnRecord(kind, child));
-    }
-
-    void registerChildForTest(ChildKind kind, Object child) {
-        recordChild(kind, child);
     }
 
     @Override
@@ -1291,19 +1247,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         return cutsceneAnchorRegistered;
     }
 
-    public List<Object> childrenOfKindForTest(ChildKind kind) {
-        return spawned.stream()
-                .filter(record -> record.kind == kind)
-                .map(SpawnRecord::child)
-                .toList();
-    }
-
-    public List<String> spawnedClassNamesForTest() {
-        return spawned.stream()
-                .map(record -> record.child.getClass().getSimpleName())
-                .toList();
-    }
-
     public void activateForTest() {
         ensureInitialized();
         activate();
@@ -1356,9 +1299,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     public void forceSonicFinalePhaseForTest(FinalePhase phase) {
         this.finalePhase = phase;
-    }
-
-    private record SpawnRecord(ChildKind kind, Object child) {
     }
 
     private record ExternalPlayerFrame(int delay, int mappingFrame, Direction direction) {
@@ -1620,15 +1560,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             }
             nestedChildrenInitialized = true;
             if (tag <= 1) {
-                boss.recordChild(ChildKind.LASER_HEAD,
-                        spawnCurrentChild(() -> new LaserHeadChild(boss, this, 0)));
-                boss.recordChild(ChildKind.LASER_HEAD,
-                        spawnCurrentChild(() -> new LaserHeadChild(boss, this, 2)));
+                spawnCurrentChild(() -> new LaserHeadChild(boss, this, 0));
+                spawnCurrentChild(() -> new LaserHeadChild(boss, this, 2));
             } else if (tag == 2) {
-                boss.recordChild(ChildKind.GUN_POD,
-                        spawnCurrentChild(() -> new GunPodChild(boss, this, -0x14, 0x30)));
-                boss.recordChild(ChildKind.GUN_POD,
-                        spawnCurrentChild(() -> new GunPodChild(boss, this, 0x14, 0x30)));
+                spawnCurrentChild(() -> new GunPodChild(boss, this, -0x14, 0x30));
+                spawnCurrentChild(() -> new GunPodChild(boss, this, 0x14, 0x30));
             }
         }
 
@@ -1644,11 +1580,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 int debrisY = (y + offsets[i][1]) & 0xFFFF;
                 int debrisXVel = SPRAY_VELOCITIES[i][0];
                 int debrisYVel = SPRAY_VELOCITIES[i][1];
-                boss.recordChild(ChildKind.DEBRIS, spawnCurrentChild(
-                        () -> new DebrisChild(boss, debrisX, debrisY, debrisXVel, debrisYVel, frame)));
+                spawnCurrentChild(
+                        () -> new DebrisChild(boss, debrisX, debrisY, debrisXVel, debrisYVel, frame));
             }
-            boss.recordChild(ChildKind.BOSS_EXPLOSION,
-                    spawnCurrentChild(() -> new ExplosionShowerChild(boss, x, y, 0)));
+            spawnCurrentChild(() -> new ExplosionShowerChild(boss, x, y, 0));
         }
 
         public int getDyForTest() {
@@ -1742,9 +1677,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 if (hFlip == boss.renderXFlip) {
                     boolean muzzleFlip = hFlip;
                     int muzzleDx = muzzleFlip ? 8 : -8;
-                    MuzzleLaserChild muzzle = spawnCurrentChild(
+                    spawnCurrentChild(
                             () -> new MuzzleLaserChild(boss, this, muzzleDx, 0, muzzleFlip));
-                    boss.recordChild(ChildKind.MUZZLE_LASER, muzzle);
                 }
             }
         }
@@ -1876,7 +1810,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             boolean variantB = (vIntRunCount & 1) != 0;
             LaserTrailChild trail = spawnCurrentChild(
                     () -> new LaserTrailChild(boss, x, y, variantB));
-            boss.recordChild(ChildKind.LASER_TRAIL, trail);
             if (trail.isDestroyed()) {
                 return;
             }
@@ -2394,7 +2327,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 // sub_83E84 allocates before consuming Random_Number.
                 S3kBossExplosionChild explosion = spawnCurrentChild(
                         () -> new S3kBossExplosionChild(x, y));
-                boss.recordChild(ChildKind.BOSS_EXPLOSION, explosion);
                 if (!explosion.isDestroyed()) {
                     int random = boss.services().rng().nextRaw();
                     int ox = (random & 0x1F) - 0x10;
@@ -2418,12 +2350,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             // ROM loc_72D92: shared boss-explosion subtype $C + the sequencer.
             // ROM loc_72D92 creates this controller with CreateChild1_Normal
             // from the flame that just finished its stream.
-            ExplosionShowerChild controller = spawnCurrentChild(
+            spawnCurrentChild(
                     () -> new ExplosionShowerChild(boss, EXPLOSION_X, EXPLOSION_Y, 0x0C));
-            boss.recordChild(ChildKind.BOSS_EXPLOSION, controller);
             if (subtype == 0) {
-                boss.recordChild(ChildKind.EXPLOSION_SEQUENCER,
-                        boss.spawnFreeChild(() -> new ExplosionSequencerChild(boss)));
+                boss.spawnFreeChild(() -> new ExplosionSequencerChild(boss));
             }
             ObjectLifetimeOps.expireDynamic(this);
         }
@@ -2471,8 +2401,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
         /** ROM loc_72E54: a Map_LBZDeathEggSmall debris sprite, not a boss explosion. */
         private void spawnRandomExplosionDebris() {
-            boss.recordChild(ChildKind.BOSS_EXPLOSION,
-                    boss.spawnFreeChild(() -> new DeathEggExplosionDebrisChild(boss)));
+            boss.spawnFreeChild(() -> new DeathEggExplosionDebrisChild(boss));
         }
     }
 
@@ -2573,8 +2502,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             int smokeDy = ((random >>> 16) & 0x1F) - 0x10;
             int smokeX = (getX() + smokeDx) & 0xFFFF;
             int smokeY = (getY() + smokeDy) & 0xFFFF;
-            boss.recordChild(ChildKind.DEATH_EGG_SMOKE,
-                    spawnCurrentChild(() -> new DeathEggSmokeChild(boss, smokeX, smokeY)));
+            spawnCurrentChild(() -> new DeathEggSmokeChild(boss, smokeX, smokeY));
         }
 
         private static int unsignedCompare16(int a, int b) {
@@ -2600,8 +2528,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 puffSpawned = true;
                 int puffX = getX();
                 int puffY = getY();
-                boss.recordChild(ChildKind.DEATH_EGG_SMOKE,
-                        spawnCurrentChild(() -> new DeathEggSmokePuffChild(boss, puffX, puffY)));
+                spawnCurrentChild(() -> new DeathEggSmokePuffChild(boss, puffX, puffY));
             }
             // ROM loc_72F7A: rotate the two low render-flag bits every 4 frames.
             if ((vIntRunCount & 3) == 0) {
