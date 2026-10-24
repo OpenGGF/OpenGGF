@@ -18,7 +18,8 @@ import java.util.Objects;
  * This owner selects oAnim only. MODE_RETURN/JUMP_MODE_RETURN are exact returns to
  * Main, never post-frame claims. KILL_PLAYER stops BEFORE that external owner and
  * names the exact instruction continuation after its eventual return; its tail
- * has not executed. Unsupported owners/probe failures throw without publication.
+ * has not executed. After the caller's one KillPlayer call, resumeAfterLevelBound
+ * runs that unfinished tail once. Unsupported owners/probe failures throw without publication.
  * No services, source/JSON/trace reader, default table or secondary loop exists.
  */
 public final class CdPlayerMovement {
@@ -74,7 +75,13 @@ public final class CdPlayerMovement {
     public record ChargeEffect(CdPlayerCharge.Effect effect) implements Effect {
         public ChargeEffect { Objects.requireNonNull(effect); }
     }
+    /** LevelBound's BNE.W KillPlayer (1703-1705): always the last effect of a KILL_PLAYER stop. */
     public record KillRequest() implements Effect { }
+    /**
+     * effects are this call's ordered helper effects only: step() from dispatch to its boundary, or a
+     * resumed tail from KillPlayer's return. A caller publishes stop effects, its KillPlayer call at the
+     * KillRequest, then resumed effects; nothing is repeated.
+     */
     public record Result(CdPlayerMotionState state, Environment environment, List<Effect> effects,
                          Boundary boundary, Continuation continuation) {
         public Result {
@@ -185,20 +192,88 @@ public final class CdPlayerMovement {
             slope(c, mode == ROLL);
             if (mode == ROLL) moveRoll(c); else moveGround(c);
             if (mode == 0) checkRoll(c);
-            if (levelBound(c)) return kill(c, mode);
-            if (mode != ROLL || c.charge == 0) integrate(c, false);
-            ground(c);
-            falloff(c);
         } else {
             jumpHeight(c);
             moveAir(c);
-            if (levelBound(c)) return kill(c, mode);
-            integrate(c, true);
-            if ((c.flags & 0x40) != 0) c.yv = sw(c.yv - 0x28);
-            jumpAngle(c);
-            airCollision(c);
+        }
+        // Every MODE prefix ends at BSR.W ObjSonic_LevelBound (701/727/748/767), selected by the DISPATCH mode.
+        Continuation tail = continuation(mode);
+        if (levelBound(c)) return kill(c, tail);
+        return afterLevelBound(c, tail);
+    }
+
+    /**
+     * KillPlayer's RTS into the stopped MODE routine. LevelBound .Bottom branches with BNE.W
+     * (Main.asm:1703-1705), so PP Player Object Collision.asm:279-298 returns to the instruction after
+     * BSR.W ObjSonic_LevelBound. This runs ONLY that unfinished tail, chosen by stopped.continuation(),
+     * never re-dispatched from post-kill flags or routine 6: no admission, input, ramp, jump, slope,
+     * movement, charge or LevelBound work repeats. The tail reads no input.
+     *
+     * <p>returnedState/returnedEnvironment are the caller's values after its ONE shared KillPlayer call
+     * (written or debug no-write); KillPlayer's scoreChain word is in the Environment. The caller keeps
+     * oTile, oPriority, hurt, byte39 and invincible. The result is MODE_RETURN/NONE with the tail's
+     * effects only.
+     *
+     * <p>The checks are value consistency and admission preservation ONLY: a stop must end at its single
+     * KillRequest, and fields that KillPlayer and its Player_ResetOnFloor (2295-2330) never write must
+     * match the stop, keeping step()'s object-support, control, ramp and miniature facts true for the
+     * reduced tail. They are not source or runtime ownership and not proof that a call occurred: Result
+     * is publicly constructible, and the caller validates its one actual call and result.
+     */
+    public Result resumeAfterLevelBound(Result stopped, CdPlayerMotionState returnedState, Environment returnedEnvironment) {
+        Objects.requireNonNull(stopped); Objects.requireNonNull(returnedState); Objects.requireNonNull(returnedEnvironment);
+        if (stopped.boundary() != Boundary.KILL_PLAYER) {
+            throw new IllegalArgumentException("Only a KILL_PLAYER stop has an unfinished MODE tail");
+        }
+        int marker = stopped.effects().indexOf(new KillRequest());
+        if (marker < 0 || marker != stopped.effects().size() - 1) {
+            throw new IllegalArgumentException("A KILL_PLAYER stop ends at its single KillRequest");
+        }
+        requireKillPlayerUnwritten(stopped, returnedState, returnedEnvironment);
+        return afterLevelBound(new Cursor(returnedState, new Input(0, 0), returnedEnvironment), stopped.continuation());
+    }
+
+    /**
+     * The instructions after BSR.W ObjSonic_LevelBound, shared by an ordinary step and a KillPlayer return.
+     * A resumed cursor holds the returned actor, so the roll test reads the post-call oPlayerCharge.
+     */
+    private Result afterLevelBound(Cursor c, Continuation tail) {
+        switch (tail) {
+            case MD_GROUND_AFTER_LEVEL_BOUND -> { integrate(c, false); ground(c); falloff(c); } // 702-707
+            case MD_ROLL_AFTER_LEVEL_BOUND -> { // 749-756: TST.B oPlayerCharge, then ObjMove only when zero.
+                if (c.charge == 0) integrate(c, false);
+                ground(c); falloff(c);
+            }
+            case MD_AIR_AFTER_LEVEL_BOUND, MD_JUMP_AFTER_LEVEL_BOUND -> { // 728-736 / 768-776
+                integrate(c, true);
+                if ((c.flags & 0x40) != 0) c.yv = sw(c.yv - 0x28);
+                jumpAngle(c);
+                airCollision(c);
+            }
+            case NONE -> throw new IllegalStateException("No unfinished MODE tail");
         }
         return c.finish(Boundary.MODE_RETURN, Continuation.NONE);
+    }
+
+    /**
+     * KillPlayer (PP Player Object Collision.asm:279-298) and Player_ResetOnFloor never write oX/oXSub,
+     * oYSub, oAngle, oFlags bits 0/3/6/7, oSprFlags, oPrevAnim, oPlayerCharge, oPlayerMoveLock,
+     * oPlayerCtrl, either previous actor angle byte, or any Environment value except scoreChain.
+     */
+    private static void requireKillPlayerUnwritten(Result stopped, CdPlayerMotionState returned, Environment environment) {
+        var s = stopped.state(); var e = stopped.environment(); var g = e.globals();
+        var expected = new Environment(e.physics(), e.bounds(), e.gates(), new Globals(g.lookMode(), g.cameraYCentre(),
+                g.primaryAngle(), g.secondaryAngle(), g.boredTimer(), environment.globals().scoreChain(), g.debugAngle(),
+                g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance()));
+        if (s.centreX16_16() != returned.centreX16_16() || uw(s.centreY16_16()) != uw(returned.centreY16_16())
+                || s.angle() != returned.angle() || (s.flags() & 0xC9) != (returned.flags() & 0xC9)
+                || s.spriteFlags() != returned.spriteFlags() || s.previousAnimation() != returned.previousAnimation()
+                || s.charge() != returned.charge() || s.moveLock() != returned.moveLock()
+                || s.playerControl() != returned.playerControl()
+                || s.previousPrimaryAngle() != returned.previousPrimaryAngle()
+                || s.previousSecondaryAngle() != returned.previousSecondaryAngle() || !expected.equals(environment)) {
+            throw new IllegalArgumentException("Returned value differs in a field KillPlayer never writes");
+        }
     }
 
     /** ChkBoredom (11-47): ordinary timer writes only; threshold/giving-up has its own actor/service owner. */
@@ -413,15 +488,18 @@ public final class CdPlayerMovement {
         if (hit) { c.xpos = edge << 16; c.xv = 0; c.gv = 0; }
         return sw(c.env.bounds().bottom() + 224) < (short) c.y();
     }
-    private static Result kill(Cursor c, int mode) {
+    private static Result kill(Cursor c, Continuation tail) {
         c.effects.add(new KillRequest());
-        Continuation continuation = switch (mode) {
+        return c.finish(Boundary.KILL_PLAYER, tail);
+    }
+    /** ObjSonic_ModeIndex (355-359) entry selected by oFlags & 6 at dispatch. */
+    private static Continuation continuation(int mode) {
+        return switch (mode) {
             case 0 -> Continuation.MD_GROUND_AFTER_LEVEL_BOUND;
             case ROLL -> Continuation.MD_ROLL_AFTER_LEVEL_BOUND;
             case AIR -> Continuation.MD_AIR_AFTER_LEVEL_BOUND;
             default -> Continuation.MD_JUMP_AFTER_LEVEL_BOUND;
         };
-        return c.finish(Boundary.KILL_PLAYER, continuation);
     }
 
     /** ObjMove/ObjMoveGrv (Object Functions.asm:42-82,91-130), old signed Y integrates before gravity result. */

@@ -3304,3 +3304,21 @@ Frame ports/replay, native widths and explicit Runtime ingress. Changed-value
 global restore still awaits a real writer; no setter was invented. Independent
 Opus review found noP1/P2 or wrong assertion in all12frozenfiles. Its packing
 clarification was added as comment only after execution; frozeninputs unchanged.
+
+
+### Native MODE return after KillPlayer — 24 October 2026
+
+The four source-owned MODE tails now share one implementation between the
+ordinary path and `resumeAfterLevelBound`. The resume consumes the stopped
+LevelBound result and caller-returned state, validates fields the shared
+KillPlayer/ResetOnFloor routines cannot write, and returns tail-only effects.
+It neither re-dispatches from routine 6 nor repeats the MODE prefix. Body
+composition is still pending; the pure helper does not itself admit pit deaths.
+
+The same completed Root 56302 selection recorded above executed all 115
+Movement invocations, including 19 new continuation cases, with no failure,
+error or skip. The independent source review found no P1/P2. Constructed
+terrain coverage is not a World/native timing or pixel-parity claim.
+The frozen handoff's air-resume prose should read Y $07EA.8000; its tests
+already preserve that fraction. Some selected global angle buffers remain
+unchanged, as the assertions record.

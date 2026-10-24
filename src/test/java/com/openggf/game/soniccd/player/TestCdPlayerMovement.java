@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -707,6 +708,367 @@ class TestCdPlayerMovement {
         assertThrows(NullPointerException.class, () -> owner.collideInAir(a.state(), null));
         assertThrows(NullPointerException.class, () -> CdPlayerMovement.applyLevelBounds(null, f.environment()));
         assertThrows(NullPointerException.class, () -> CdPlayerMovement.applyLevelBounds(a.state(), null));
+    }
+
+    // KillPlayer's RTS into the stopped MODE: LevelBound .Bottom BNE.W KillPlayer (Sonic/Main.asm:1703-1705)
+    // runs PP Player Object Collision.asm:279-298, whose RTS lands after BSR.W ObjSonic_LevelBound.
+    // These tests play Body: ONE shared CdPlayerTouchResponse.killPlayer at the stop, then the resume.
+    // Written before resumeAfterLevelBound; UNRUN by the external author.
+
+    @Test void airKillReturnRunsObjMoveGrvOnTheKilledWordsThenJumpAngleAndUpwardAirCollisionOnly() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        // MdAir resets oAnim (713-720); signed $0710+224 = $07F0 < $07F1 branches to KillPlayer.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x07F18000, 0x123, 0x300, 0, 2, 0xFF, 2, 4, 9, 19,
+                0, 0, 0, 0, 0, 0, 0, 0x26, 0x64), stopped.state());
+        assertEquals(CdPlayerMovement.Continuation.MD_AIR_AFTER_LEVEL_BOUND, stopped.continuation());
+        assertEquals(List.of(new CdPlayerMovement.KillRequest()), stopped.effects());
+        var kill = killAt(stopped, 0);
+        // 282-298: routine 6, ResetOnFloor without bit 2, bit 1, -$700/0/0, oY word $07F1 split into $38/$39.
+        var killed = new CdPlayerMotionState(0x00400000, 0x07F18000, 0, -0x700, 0, 6, 0xFF, 2, 4, 9, 19,
+                0x18, 0, 0, 0, 0, 0x07, 0, 0x26, 0x64);
+        assertEquals(new CdPlayerTouchResponse.KillResult(new CdPlayerTouchResponse.Actor(killed, 0x8780, 0, 0x33, 0xF1),
+                0, 0, List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)),
+                CdPlayerTouchResponse.Exit.KILL_PLAYER), kill);
+        var r = resume(owner, stopped, kill);
+        // 728 ObjMoveGrv: Y adds the OLD -$700 ($07F1.8000 -> $07EA.8000), stores $F938, BMI skips the cap.
+        // 734 ADDQ.B #2 carries $FF to zero. 735 CalcAngle(0,-$6C8) = $C0: shift $A0, quadrant $80; blank probes.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x07EA8000, 0, -0x6C8, 0, 6, 0, 2, 4, 9, 19,
+                0x18, 0, 0, 0, 0, 0x07, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 0, 0, 0, 0, 0xC0, 0xA0, 0x80, 0), r.environment().globals());
+        assertEquals(stopped.environment().physics(), r.environment().physics());
+        assertEquals(stopped.environment().bounds(), r.environment().bounds());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, r.boundary());
+        assertEquals(CdPlayerMovement.Continuation.NONE, r.continuation());
+        assertTrue(r.effects().isEmpty(), "tail only: neither KillRequest nor KillPlayer's calls repeat");
+    }
+
+    @Test void airDebugNoWriteReturnContinuesThePreKillWordsThroughGravityAndDownwardCollision() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        // ObjSonic tests only debugMode's high byte (56-73); KillPlayer's TST.W sees the whole word $0001 (280-281).
+        var kill = killAt(stopped, 1);
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, kill.exit());
+        assertEquals(stopped.state(), kill.actor().motion());
+        assertTrue(kill.calls().isEmpty()); assertEquals(9, kill.scoreChain()); assertEquals(1, kill.invincible());
+        var r = resume(owner, stopped, kill);
+        // ObjMoveGrv: X +$123<<8, Y +$300<<8 (OLD word), stores $338. CalcAngle($123,$338): $12300/$338 = 90,
+        // fixture atan[90] = 11, $40-11 = $35; shift $15, quadrant 0. Blank floor sensors at Y $0807 return 24.
+        assertEquals(new CdPlayerMotionState(0x00412300, 0x07F48000, 0x123, 0x338, 0, 2, 0, 2, 4, 9, 19,
+                0, 0, 0, 0, 0, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 0, 0, 0, 9, 0x35, 0x15, 0, 0x18), r.environment().globals());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, r.boundary()); assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void groundKillReturnIntegratesKilledWordsAndTheKillPlayerStickByteAlignsGroundColAndSkipsFalloffLock() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(groundPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        // Locked MoveGround settles $100 by 12 and projects; CalcRoomInFront leaves $C0 in both angle buffers.
+        assertEquals(new CdPlayerMotionState(0x00401234, 0x07F1ABCD, 244, 0, 244, 2, 0, 0, 4, 9, 19,
+                0, 0, 0, 0, 5, 0, 0, 0x26, 0x64), stopped.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 0xC0, 0xC0, 0, 9, 0, 0, 0, 0), stopped.environment().globals());
+        assertEquals(CdPlayerMovement.Continuation.MD_GROUND_AFTER_LEVEL_BOUND, stopped.continuation());
+        assertEquals(List.of(new CdPlayerMovement.KillRequest()), stopped.effects());
+        var kill = killAt(stopped, 0);
+        assertEquals(new CdPlayerMotionState(0x00401234, 0x07F1ABCD, 0, -0x700, 0, 6, 0, 2, 4, 9, 19,
+                0x18, 0, 0, 0, 5, 0x07, 0, 0x26, 0x64), kill.actor().motion());
+        assertEquals(0xF1, kill.actor().rotationDistance());
+        var r = resume(owner, stopped, kill);
+        // 702 ObjMove: X unchanged, Y -7. 703 GroundCol ignores the new air bit; blank sensors at Y $07FD return 18.
+        // Above 14, .CheckStick (Collision Floor.asm:134-136) reads oPlayerStick $07, the high byte of KillPlayer's
+        // MOVE.W oY, and aligns +18. 704 CheckFallOff (1976-1977) returns on it before the move-lock decrement.
+        assertEquals(new CdPlayerMotionState(0x00401234, 0x07FCABCD, 0, -0x700, 0, 6, 0, 2, 4, 9, 19,
+                0x18, 0, 0, 0, 5, 0x07, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 3, 3, 0, 0, 0, 0, 0, 0), r.environment().globals());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, r.boundary()); assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void groundDebugNoWriteReturnIntegratesTheOldSpeedAndAZeroStickLedgeFallsOffAndDecrementsTheLock() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(groundPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        var kill = killAt(stopped, 1);
+        assertEquals(stopped.state(), kill.actor().motion());
+        var r = resume(owner, stopped, kill);
+        // ObjMove adds 244<<8. Blank sensors at Y $0804 return 27; stick 0 takes the fall-off writes (138-140).
+        assertEquals(new CdPlayerMotionState(0x00410634, 0x07F1ABCD, 244, 0, 244, 2, 0, 2, 4, 9, 19,
+                0, 1, 0, 0, 4, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 3, 3, 0, 9, 0, 0, 0, 0), r.environment().globals());
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void rollKillReturnTestsThePostKillChargeByteSoAHeldSpindashSkipsObjMoveButRunsGroundColAndFalloff() {
+        Fixture f = new Fixture(false); f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0, 0); var owner = f.owner();
+        var stopped = owner.step(heldSpinPit().state(), new CdPlayerMovement.Input(2, 0), f.environment());
+        // Held DOWN: the charge helper's two ADD.W/cap writes (+75), then MOVE_ROLL_RETURN before Settle/CalcXY.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00F08000, 0x100, 0, 1875, 2, 0, 4, 4, 7, 14,
+                2, 0, 0, 20, 3, 0, 0, 0x26, 0x64), stopped.state());
+        var write = new CdPlayerMovement.ChargeEffect(
+                new CdPlayerCharge.ActorWrite(CdPlayerCharge.ActorField.GROUND_VELOCITY, 1875));
+        assertEquals(List.of(write, write, new CdPlayerMovement.KillRequest()), stopped.effects());
+        assertEquals(CdPlayerMovement.Continuation.MD_ROLL_AFTER_LEVEL_BOUND, stopped.continuation());
+        var kill = killAt(stopped, 0);
+        // ResetOnFloor clears bit 2 (Y -5 = $00EB, radii $13/9, FM_CHARGESTOP); oPlayerCharge is not written.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00EB8000, 0, -0x700, 0, 6, 0, 2, 4, 9, 0x13,
+                0x18, 0, 0, 20, 3, 0, 0, 0x26, 0x64), kill.actor().motion());
+        assertEquals(List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)), kill.calls());
+        var r = resume(owner, stopped, kill);
+        // 749-750 TST.B oPlayerCharge = 20: no ObjMove despite -$700 and the post-kill air flags.
+        // 754 GroundCol: blank sensors at Y $00FE return 17; stick 0 falls off (oPrevAnim 1). 755: lock 3 -> 2.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00EB8000, 0, -0x700, 0, 6, 0, 2, 4, 9, 0x13,
+                0x18, 1, 0, 20, 2, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 3, 3, 0, 0, 0, 0, 0, 0), r.environment().globals());
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void rollKillAfterThePrefixUnrolledStillReturnsIntoTheRollTailAndIntegratesWithZeroCharge() {
+        Fixture f = new Fixture(false); f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0, 0); var owner = f.owner();
+        Actor a = rolled(); a.y = 0x00F51234; a.gv = 5; a.pri = 0x26; a.sec = 0x64;
+        var stopped = owner.step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        // .Settle 5 by 6 borrows to zero: FM_CHARGESTOP and .StopRolling to Y $00F0 (1443-1486), then LevelBound.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00F01234, 0, 0, 0, 2, 0, 0, 4, 9, 19,
+                5, 0, 0, 0, 0, 0, 0, 0x26, 0x64), stopped.state());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP),
+                new CdPlayerMovement.KillRequest()), stopped.effects());
+        assertEquals(CdPlayerMovement.Continuation.MD_ROLL_AFTER_LEVEL_BOUND, stopped.continuation());
+        var kill = killAt(stopped, 0);
+        assertEquals(List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)), kill.calls());
+        var r = resume(owner, stopped, kill);
+        // 751 ObjMove with zero charge: Y -7 = $00E9. Sensors at Y $00FC return 19; stick 0 falls off.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00E91234, 0, -0x700, 0, 6, 0, 2, 4, 9, 19,
+                0x18, 1, 0, 0, 0, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 3, 3, 0, 0, 0, 0, 0, 0), r.environment().globals());
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void rollDebugNoWriteReturnKeepsRollingRadiiAndTheHeldChargeStillSkipsObjMove() {
+        Fixture f = new Fixture(false); f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0, 0); var owner = f.owner();
+        var stopped = owner.step(heldSpinPit().state(), new CdPlayerMovement.Input(2, 0), f.environment());
+        var kill = killAt(stopped, 1);
+        assertEquals(stopped.state(), kill.actor().motion());
+        var r = resume(owner, stopped, kill);
+        // Charge 20 skips ObjMove (X keeps despite oXVel $100); radii 7/14 put sensors at Y $00FE: 17, fall off.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00F08000, 0x100, 0, 1875, 2, 0, 6, 4, 7, 14,
+                2, 1, 0, 20, 2, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 3, 3, 0, 9, 0, 0, 0, 0), r.environment().globals());
+        assertTrue(r.effects().isEmpty(), "the prefix's charge writes stay in the stopped result");
+    }
+
+    @Test void jumpKillReturnUnderwaterAppliesGravityThenWaterResistanceAndAPositiveJumpAngleStep() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        Actor a = airborne(); a.flags = 0x46; a.y = 0x07F1BEEF; a.yv = 0x200; a.jump = 1; a.angle = 0x41;
+        a.pri = 0x26; a.sec = 0x64;
+        var stopped = owner.step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        assertEquals(a.state(), stopped.state()); // MdJump: no oAnim reset; JumpHeight/MoveAir leave this actor.
+        assertEquals(CdPlayerMovement.Continuation.MD_JUMP_AFTER_LEVEL_BOUND, stopped.continuation());
+        var kill = killAt(stopped, 0);
+        // ResetOnFloor: $46 -> $44 -> $40, Y -5 = $07EC, radii $13/9; KillPlayer BSET 1 gives $42. Bit 6 survives.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x07ECBEEF, 0, -0x700, 0, 6, 0x41, 0x42, 4, 9, 0x13,
+                0x18, 0, 0, 0, 0, 0x07, 0, 0x26, 0x64), kill.actor().motion());
+        assertEquals(0xEC, kill.actor().rotationDistance());
+        var r = resume(owner, stopped, kill);
+        // 768 ObjMoveGrv: Y -7 = $07E5, yv $F938; 769-771 bit 6 SUBI.W #$28: $F910; 774 SUBQ.B #2: $41 -> $3F.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x07E5BEEF, 0, -0x6F0, 0, 6, 0x3F, 0x42, 4, 9, 0x13,
+                0x18, 0, 0, 0, 0, 0x07, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 0, 0, 0, 0, 0xC0, 0xA0, 0x80, 0), r.environment().globals());
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void jumpDebugNoWriteReturnLandsThroughTheSharedFloorResetAndPublishesOnlyThatTailChargeStop() {
+        Fixture f = new Fixture(); f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0);
+        f.globals = globals(0, 0x60, 0x12, 0x34, 0, 9); var owner = f.owner();
+        Actor a = airborne(); a.y = 82 << 16; a.yv = 0x100; a.jump = 1; a.pri = 0x26; a.sec = 0x64;
+        var stopped = owner.step(a.state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        // $FF20+224 wraps to the signed word 0, so BLT kills at Y 82, above the actual floor.
+        assertEquals(CdPlayerMovement.Continuation.MD_JUMP_AFTER_LEVEL_BOUND, stopped.continuation());
+        assertEquals(a.state(), stopped.state());
+        assertEquals(List.of(new CdPlayerMovement.KillRequest()), stopped.effects());
+        var r = resume(owner, stopped, killAt(stopped, 1));
+        // The ordinary $0138 landing: both real sensors -2, high-memory-byte threshold -9, then ResetOnFloor.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x004C0000, 0, 0, 0, 2, 0, 0, 4, 9, 19,
+                0, 0, 0, 0, 0, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(new CdPlayerMovement.Globals(0, 0x60, 0, 0, 0, 0, 0x40, 0x20, 0, 0xFE), r.environment().globals());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), r.effects());
+    }
+
+    @ParameterizedTest @CsvSource({"0,MD_GROUND_AFTER_LEVEL_BOUND", "4,MD_ROLL_AFTER_LEVEL_BOUND",
+            "2,MD_AIR_AFTER_LEVEL_BOUND", "6,MD_JUMP_AFTER_LEVEL_BOUND"})
+    void debugNoWriteReturnRunsTheOrdinaryModeTailOnceWithoutReplayingItsPrefix(
+            int mode, CdPlayerMovement.Continuation expected) {
+        Fixture f = new Fixture(); var owner = f.owner();
+        Actor a = (mode & 4) != 0 ? rolled() : new Actor(); a.flags = mode; a.gv = 0x200; a.xv = 0x123; a.yv = 0x100;
+        if (mode == 6) a.y = 82 << 16;
+        var input = new CdPlayerMovement.Input(8, 0); // RIGHT: a replayed prefix would accelerate twice.
+        var ordinary = owner.step(a.state(), input, f.environment()); // Bottom $0710: LevelBound returns.
+        f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0); // Same sides; only the bottom branch differs.
+        var stopped = owner.step(a.state(), input, f.environment());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, ordinary.boundary());
+        assertEquals(expected, stopped.continuation());
+        var r = resume(owner, stopped, killAt(stopped, 1));
+        assertEquals(ordinary.state(), r.state());
+        assertEquals(ordinary.environment().globals(), r.environment().globals());
+        var sourceOrder = new ArrayList<>(stopped.effects().subList(0, stopped.effects().size() - 1));
+        sourceOrder.addAll(r.effects());
+        assertEquals(ordinary.effects(), sourceOrder);
+    }
+
+    @Test void onlyAStoppedKillPlayerResumesSoNoModeTailRunsTwice() {
+        Fixture f = new Fixture(); var owner = f.owner(); var env = f.environment();
+        var completed = owner.step(new Actor().state(), new CdPlayerMovement.Input(0, 0), env);
+        var jumped = owner.step(new Actor().state(), new CdPlayerMovement.Input(0x10, 0x10), env);
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, completed.boundary());
+        assertEquals(CdPlayerMovement.Boundary.JUMP_MODE_RETURN, jumped.boundary());
+        for (var done : List.of(completed, jumped)) {
+            assertEquals(CdPlayerMovement.Continuation.NONE, done.continuation());
+            assertThrows(IllegalArgumentException.class,
+                    () -> owner.resumeAfterLevelBound(done, done.state(), done.environment()));
+        }
+        Fixture pit = new Fixture(false); var pitOwner = pit.owner();
+        var stopped = pitOwner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), pit.environment());
+        var resumed = resume(pitOwner, stopped, killAt(stopped, 0));
+        assertThrows(IllegalArgumentException.class,
+                () -> pitOwner.resumeAfterLevelBound(resumed, resumed.state(), resumed.environment()));
+        // A stop never carries NONE: the existing Result invariant already rejects that shape.
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.Result(stopped.state(),
+                stopped.environment(), stopped.effects(), CdPlayerMovement.Boundary.KILL_PLAYER,
+                CdPlayerMovement.Continuation.NONE));
+    }
+
+    @Test void aStopMustEndAtItsSingleKillRequestAndItsPrefixEffectsAreNeverReplayed() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        var kill = killAt(stopped, 0); var killed = kill.actor().motion();
+        var env = withScoreChain(stopped.environment(), kill.scoreChain());
+        var chargeStop = new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP);
+        var killRequest = new CdPlayerMovement.KillRequest();
+        for (List<CdPlayerMovement.Effect> effects : List.of(List.<CdPlayerMovement.Effect>of(),
+                List.<CdPlayerMovement.Effect>of(chargeStop), List.<CdPlayerMovement.Effect>of(killRequest, killRequest),
+                List.<CdPlayerMovement.Effect>of(killRequest, chargeStop))) {
+            var malformed = new CdPlayerMovement.Result(stopped.state(), stopped.environment(), effects,
+                    CdPlayerMovement.Boundary.KILL_PLAYER, stopped.continuation());
+            assertThrows(IllegalArgumentException.class, () -> owner.resumeAfterLevelBound(malformed, killed, env));
+        }
+        var prefixed = new CdPlayerMovement.Result(stopped.state(), stopped.environment(),
+                List.of(chargeStop, killRequest), CdPlayerMovement.Boundary.KILL_PLAYER, stopped.continuation());
+        var r = owner.resumeAfterLevelBound(prefixed, killed, env);
+        assertEquals(resume(owner, stopped, kill), r);
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void returnedStateGuardCoversOnlyFieldsKillPlayerAndResetOnFloorNeverWrite() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        var killed = killAt(stopped, 0).actor().motion(); var env = withScoreChain(stopped.environment(), 0);
+        // CdPlayerMotionState components: X long, Y fraction, angle, oFlags bits 0/3/6/7, oSprFlags, oPrevAnim,
+        // charge, move lock, oPlayerCtrl and both previous actor angle bytes are outside that write set.
+        int[][] foreign = {{0, 0x00400001}, {1, 0x07F18001}, {6, 0xFE}, {7, 3}, {7, 0x0A}, {7, 0x42}, {7, 0x82},
+                {8, 0x44}, {12, 1}, {14, 1}, {15, 1}, {17, 2}, {18, 0x27}, {19, 0x65}};
+        for (int[] change : foreign) {
+            var value = with(killed, change[0], change[1]);
+            assertThrows(IllegalArgumentException.class, () -> owner.resumeAfterLevelBound(stopped, value, env),
+                    "component " + change[0]);
+        }
+        // Written components are not policed: value consistency only, never proof that a KillPlayer call ran.
+        int[][] written = {{1, 0x07F08000}, {2, 5}, {3, 0x123}, {4, -7}, {5, 8}, {7, 0x34}, {9, 7}, {10, 14},
+                {11, 1}, {13, 1}, {16, 0x55}};
+        for (int[] change : written) {
+            var value = with(killed, change[0], change[1]);
+            assertDoesNotThrow(() -> owner.resumeAfterLevelBound(stopped, value, env), "component " + change[0]);
+        }
+    }
+
+    @Test void returnedEnvironmentMayDifferOnlyInTheScoreChainWordResetOnFloorWrites() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        var killed = killAt(stopped, 0).actor().motion(); var e = stopped.environment(); var g = e.globals();
+        var foreign = List.of(
+                new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 13, 0x80), e.bounds(), e.gates(), g),
+                new CdPlayerMovement.Environment(e.physics(), new CdPlayerMovement.Bounds(0, 0x2000, 0x711, 0), e.gates(), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), new CdPlayerMovement.Gates(0, 1, 1, 0, 0, 0, 0), g),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), e.gates(), new CdPlayerMovement.Globals(
+                        g.lookMode(), g.cameraYCentre(), 3, g.secondaryAngle(), g.boredTimer(), 0, g.debugAngle(),
+                        g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())),
+                new CdPlayerMovement.Environment(e.physics(), e.bounds(), e.gates(), new CdPlayerMovement.Globals(
+                        g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), g.boredTimer(), 0, 0x40,
+                        g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())));
+        for (var environment : foreign) {
+            assertThrows(IllegalArgumentException.class, () -> owner.resumeAfterLevelBound(stopped, killed, environment));
+        }
+        // The tail reads the RETURNED environment; this air tail writes no chain value of its own.
+        var r = owner.resumeAfterLevelBound(stopped, killed, withScoreChain(e, 0x1234));
+        assertEquals(0x1234, r.environment().globals().scoreChain());
+    }
+
+    @Test void resumeRejectsNullInputs() {
+        Fixture f = new Fixture(false); var owner = f.owner();
+        var stopped = owner.step(airPit().state(), new CdPlayerMovement.Input(0, 0), f.environment());
+        var killed = killAt(stopped, 0).actor().motion(); var env = withScoreChain(stopped.environment(), 0);
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterLevelBound(null, killed, env));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterLevelBound(stopped, null, env));
+        assertThrows(NullPointerException.class, () -> owner.resumeAfterLevelBound(stopped, killed, null));
+    }
+
+    @Test void resumeIsAValueReplayWithoutIdentityTokensOrRetainedCallState() {
+        Fixture f = new Fixture(); f.bounds = new CdPlayerMovement.Bounds(0, 0x2000, 0xFF20, 0); var owner = f.owner();
+        Actor a = airborne(); a.y = 82 << 16; a.yv = 0x100; a.jump = 1;
+        var initial = a.state(); var env = f.environment();
+        var stopped = owner.step(initial, new CdPlayerMovement.Input(0, 0), env);
+        var kill = killAt(stopped, 1);
+        var first = resume(owner, stopped, kill);
+        var rebuilt = new CdPlayerMovement.Result(stopped.state(), stopped.environment(), stopped.effects(),
+                stopped.boundary(), stopped.continuation());
+        owner.step(new Actor().state(), new CdPlayerMovement.Input(8, 0), env); // An interleaved owner call.
+        assertEquals(first, owner.resumeAfterLevelBound(rebuilt, kill.actor().motion(), stopped.environment()));
+        assertEquals(first, resume(f.owner(), stopped, kill)); // A fresh owner over the same immutable terrain.
+        assertEquals(initial, stopped.state()); assertEquals(env, stopped.environment());
+        assertThrows(UnsupportedOperationException.class, () -> first.effects().clear());
+    }
+
+    /** Caller-held oTile/oPriority/hurt/byte39/invincible bytes MODE never reads; the shared owner's ONE call. */
+    private static CdPlayerTouchResponse.KillResult killAt(CdPlayerMovement.Result stopped, int debugMode) {
+        var e = stopped.environment();
+        return CdPlayerTouchResponse.killPlayer(new CdPlayerTouchResponse.Actor(stopped.state(), 0x0780, 2, 0x33, 0x5A),
+                1, debugMode, e.globals().scoreChain(), e.gates().miniSonic());
+    }
+    /** Body's adoption: killed motion, and the Movement environment with KillResult's scoreChain word only. */
+    private static CdPlayerMovement.Result resume(CdPlayerMovement owner, CdPlayerMovement.Result stopped,
+                                                  CdPlayerTouchResponse.KillResult kill) {
+        return owner.resumeAfterLevelBound(stopped, kill.actor().motion(),
+                withScoreChain(stopped.environment(), kill.scoreChain()));
+    }
+    private static CdPlayerMovement.Environment withScoreChain(CdPlayerMovement.Environment e, int scoreChain) {
+        var g = e.globals();
+        return new CdPlayerMovement.Environment(e.physics(), e.bounds(), e.gates(), new CdPlayerMovement.Globals(
+                g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), g.boredTimer(), scoreChain,
+                g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance()));
+    }
+    /** One record component replaced, in CdPlayerMotionState declaration order. */
+    private static CdPlayerMotionState with(CdPlayerMotionState s, int component, int value) {
+        int[] v = {s.centreX16_16(), s.centreY16_16(), s.xVelocity(), s.yVelocity(), s.groundVelocity(), s.routine(),
+                s.angle(), s.flags(), s.spriteFlags(), s.xRadius(), s.yRadius(), s.animation(), s.previousAnimation(),
+                s.playerJump(), s.charge(), s.moveLock(), s.stick(), s.playerControl(), s.previousPrimaryAngle(),
+                s.previousSecondaryAngle()};
+        v[component] = value;
+        return new CdPlayerMotionState(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11],
+                v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]);
+    }
+    /** MdAir over a blank pit: bottom $0710's signed limit $07F0 is one pixel above Y. */
+    private static Actor airPit() {
+        Actor a = new Actor(); a.flags = 2; a.anim = 7; a.y = 0x07F18000; a.xv = 0x123; a.yv = 0x300;
+        a.angle = 0xFF; a.pri = 0x26; a.sec = 0x64; return a;
+    }
+    /** Locked, moving MdGround at the same pit edge; the high Y byte $07 later becomes oPlayerStick. */
+    private static Actor groundPit() {
+        Actor a = new Actor(); a.x = 0x00401234; a.y = 0x07F1ABCD; a.gv = 0x100; a.lock = 5;
+        a.pri = 0x26; a.sec = 0x64; return a;
+    }
+    /** Held spindash at Y $00F0 under bottom 0 (limit 224); Y below 256 leaves the stick byte zero. */
+    private static Actor heldSpinPit() {
+        Actor a = rolled(); a.y = 0x00F08000; a.charge = 20; a.gv = 1800; a.xv = 0x100; a.lock = 3;
+        a.pri = 0x26; a.sec = 0x64; return a;
     }
 
     private static Actor airborne() { Actor a = rolled(); a.flags = 6; return a; }
