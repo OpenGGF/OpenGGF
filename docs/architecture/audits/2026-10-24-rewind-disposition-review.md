@@ -1079,6 +1079,91 @@ This is bounded intro/ownership evidence, not a complete AIZ→HCZ route, GPU pi
 verification, broad smoke selection, all-guards run or public-release suite.
 The parent owns combined validation and the four mandatory S3K stability checks.
 
+### Public context compatibility and rejected collector admission correction
+
+Independent review of `493aeddd7` against `2020d2e57` identified two boundaries
+that the managed native tests above did not exercise. This corrective follow-up
+starts at parent composition `e849ed5a40c9313844f0bfb9451d1c92890001f9`, reached by
+fast-forwarding the same clean AIZ worktree/branch. It changes neither inventory
+closure nor aggregate disposition accounting.
+
+The inherited public `captureRewindState()` / `restoreRewindState(snapshot)` and
+the forms explicitly given `RewindCaptureContext.none()` are usable without an
+identity table. Both newly captured AIZ collector fields broke those existing
+forms: nonnull references threw, and a snapshot taken with a null collector
+cleared a later-bound current collector. For the intro, a before-init round trip
+is only a non-discriminating null-link control, and player ownership already
+required player identities before `493aeddd7`. The discriminating legal phase is
+after native routine `$16` has created live Knuckles and
+`releasePlayersForVisualDirection()` has cleared `ownedPlayer`. Both public
+capture forms regressed there.
+
+New tests ran on unchanged `e849ed5a4` runtime **before** the production edit:
+26 cases, 11 failures, zero errors and zero skips. Four direct-codec failures
+established bound no-context capture and initially-null/current-divergent restore
+regressions for both fields. Six public-form failures covered bound and initially
+null emeralds and the released intro with live Knuckles. The seventh public-test
+failure used the real native ObjectManager with all dynamic slots reserved. The
+existing allocation attempt marked its candidate destroyed before registration,
+but the intro retained it; capture before any child dispatch failed with
+`RewindIdentityTable has no registered id for object reference`. The same test's
+one-free-slot positive control captured an admitted, registered routine-0 child.
+The before-init and during-player-ownership controls passed and are not counted
+as evidence of the regression. Managed nonnull capture-ID validation, missing
+restore-target/context rejection, exact replacement binding and captured-null
+clearing also passed on that red runtime.
+
+The existing private `ObjectReferenceCodec` now has three private modes. The
+default strict encoding/validation remains unchanged. The three S2 optional-native
+fields retain their existing wire markers and missing-target behavior. Exactly
+the two AIZ collector fields select the context-compatible, managed-strict mode:
+without a capture table, one uncaptured marker is written and restore leaves the
+**current** field untouched, even if a later restore supplies a table. With a
+capture table, the existing strict identity codec records the value; unregistered
+nonnull capture and unresolved/mistyped nonnull restore targets still throw.
+Authoritative table-captured null clears a divergent current link. The AIZ keys
+are reused in the exact `CAPTURED` metadata; the closed selection test checks both
+fields reach the real compact schema and neither belongs to the S2 optional set.
+There is no public enum, new public mode, manual object snapshot override,
+annotation, new framework, API pin or expanded allowance.
+
+The intro owner handles the demonstrated allocation failure immediately **after**
+the existing spawn attempt, clearing its collector link if that attempt destroyed
+the candidate. The native attempt order, routine advance, flags and successful
+retention remain unchanged. No optional-target codec hides the rejected object.
+The real full-slot test captures before child dispatch; the paired success case
+checks identity registration, the unexecuted child routine and slot occupancy.
+Arbitrary early retirement of an otherwise admitted collector remains a separate,
+unproven lifecycle obligation. This change neither certifies that lifecycle nor
+masks it: a managed nonnull reference missing from the table is still an error.
+
+Both requests use the Java 25 / Lua 5.4 environment above, with DISPLAY,
+WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS unset and the required
+surfaceless-EGL property. The existing absolute locked-on ROM was reverified at
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+`MAIN_CHECKOUT` supplies the current queue wrapper; `ROM_ROOT` is the discovered
+existing main-checkout ROM directory. Commands are run from the AIZ worktree:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestAizCollectorObjectReferenceCodecs,TestAizCollectorPublicRewind' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestAizCollectorObjectReferenceCodecs,TestAizCollectorPublicRewind,TestOptionalObjectReferenceCodecs,TestRewindObjectReferenceCodecs,TestS3kAizIntroInventoryRewind,TestS3kAizIntroGraphRewind,TestAizPlaneIntroInstance,TestAizEmeraldScatterInstance,TestAizIntroPlaneChild,TestAizIntroArtLoader,TestRewindFieldDispositionGuard,TestCapturedPolicyCompactReachabilityGuard#contextCompatibleCollectorsHaveClosedExactCapturedMetadata+optionalNativeLinksHaveClosedExactCapturedMetadata+capturedPoliciesNeedingCompactPathAreReachable,TestRewindArchitectureGuard' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The red request had zero reported queue wait; Maven reported 1 minute 27 seconds
+including compilation. Its 26 XML cases were inspected and consumed reports
+removed. The corrective focused selection passed 106 cases across 13 selectors,
+with zero failures, errors or skips. It also had zero reported queue wait; Maven
+reported 1 minute 28 seconds including compilation. XML inspection confirmed all
+26 new regression/control cases, all 42 original AIZ checks (including the 27
+intro graph/native/Stageplay cases), 27 S2 optional-codec cases including unchanged
+wire vectors, four strict object-codec cases, three selected metadata/reachability
+cases and four rewind architecture checks. The disposition report matches the
+unchanged parent baseline. Consumed reports are removed; no pass cache or raw
+archive is retained. `git diff --check` passes. The parent owns the
+composed API check, required S3K stability checks and a complete fresh guard run;
+none of those has been submitted by this worker. These focused checks do not
+replace the parent's delivery-wide validation or certify a full AIZ→HCZ route.
+
 ## LBZ Knuckles wall explosions follow-up
 
 This bounded change starts at develop `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`
