@@ -127,7 +127,8 @@ void main()
 
     // Palette lookup: X = color index (0-15), Y = palette line
     float paletteX = (colorIndex + 0.5) / 16.0;
-    float paletteY = (PaletteLine + 0.5) / TotalPaletteLines;
+    // The supplied texture owns its physical row capacity, independently of the registry.
+    float paletteY = (PaletteLine + 0.5) / float(textureSize(Palette, 0).y);
     vec4 color = texture(Palette, vec2(paletteX, paletteY));
 
     FragColor = color;

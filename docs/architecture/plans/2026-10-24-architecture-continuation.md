@@ -1166,3 +1166,176 @@ Main fetch/fast-forward pull found no intervening upstream changes at this
 checkpoint. All parent jobs have completed. Documentation/policy checks, final
 integration, push and accounted-for cleanup remain delivery obligations. Later
 boss-inventory and donated-team work is outside these completed runs.
+
+## Ordinary sidekick palette texture capacity
+
+This bounded worker starts at `591c679b39c61f162a839cde6baaedd387135bc4` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5`, branch
+`bugfix/ai-palette-texture-capacity-owner-20261024`. It does not compose the
+separate donated-team `53ff4fa89` or donor-color rewind `ce52bf334` changes.
+The public static RenderContext registry owns shared row addresses and logical
+reclamation; this investigation does not migrate it. Frozen-count reduction is
+expected to be zero. Parent-owned API/S3K/combined guards and delivery remain
+separate from this worker's focused rendering evidence.
+
+The source-derived concern is now reproduced. The first version of
+`TestPaletteTextureCapacity` ran two ROM-free methods against unchanged production
+source. A production sprite-priority draw checked literal normal and underwater
+colors on eight rows. Six ordinary sidekicks grew the texture to 28 rows;
+clearing them and rebuilding one reduced the logical count to eight. All colors
+matched before reclamation. Afterwards normal row zero expected `EE2222` but
+rendered `22EE22`; the underwater assertions still passed. A second method kept
+two independent GraphicsManager hosts in one EGL context: the first retained
+an eight-row normal texture while the second grew the registry/texture to 28.
+The first host's normal row one expected `22EE22` but rendered `EE2222`;
+underwater assertions passed after its published-basis refresh. These are actual
+framebuffer pixels, not shader-coordinate calculations or screenshot hashes.
+
+Commands below use the plan's existing `MAIN_CHECKOUT` convention for the
+already-resolved absolute main-checkout path requested by the coordinator.
+The resource-policy hook rejects user-home prefixes in committed prose; the
+executions used the current absolute wrapper, with selectors/flags unchanged.
+
+Exact first red command (Java 25; Lua 5.4; no ROM needed):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestPaletteTextureCapacity' test -B
+```
+
+Session `81980` completed with two failures, zero errors/skips. Exact identities:
+`reclaimedSidekickBanksKeepNormalAndUnderwaterRowsAtTheirLiteralColors` and
+`independentHostsKeepTheirOwnRowsWhenTheSharedRegistryGrowsAndShrinks`, both in
+`com.openggf.graphics.TestPaletteTextureCapacity`. Admission took eight seconds;
+Maven execution reported 1:19. XML identities/assertions were inspected and the
+consumed reports deleted. The fixture uses the existing display-free EGL owner,
+is Linux-gated, and fails on EGL initialization failure without desktop fallback.
+
+Two caller-complete owner shapes were compared:
+
+- **Physical capacity belongs to the sampled texture.** Built-in GLSL can obtain
+  each bound sampler's height with `textureSize`, independently for normal and
+  underwater rows. This naturally covers distinct hosts, standalone textures,
+  deferred commands and a shared registry that changes without an upload to
+  every host. No CPU query, texture resize, new global or palette representation
+  is needed; the existing normalized sampling/filter/clamp semantics remain.
+- **Synchronize physical size with the logical count.** Resizing the normal
+  texture on both growth and shrink at upload time would fix the single-host
+  upload case but fails the independently retained host case. A complete version
+  needs reconciliation at every draw boundary and for both textures, copying
+  displayed bytes rather than admitting pending palette/fade writers. It adds
+  texture mutation/readback, cache invalidation and GL-state obligations to all
+  consumers. The independent-host pixel failure rejects upload-only resizing;
+  draw-time synchronized resizing is unnecessarily invasive for this defect.
+
+The selected shape is per-sampler physical capacity. The shared logical count
+and sidekick reclamation semantics remain unchanged, with no process high-water.
+Normal and underwater textures may keep different physical heights; each lookup
+must use its own denominator. The complete built-in consumer family comprises
+hedgehog, water, scalar/instanced priority, tilemap and both slot shaders. Palette
+composition, fade/profile conversion, publication and cache/lifetime owners
+remain responsible for the same bytes and upload timing.
+
+The expanded red selection used the same command, base production source and
+class, adding ten parameter identities in this order: `DIRECT`, `BATCHED`,
+`INSTANCED`, `WATER`, `INSTANCED_WATER`, `PRIORITY`, `INSTANCED_PRIORITY`,
+`TILEMAP`, `CNZ_SLOTS`, `S3K_SLOTS`. Session `81291` ran 11 cases with 11
+failures, zero errors/skips, after 59 seconds admission and 27.681 seconds Maven
+execution. Two were fixture errors before reclamation: the legacy batcher reads
+the background-water binding flag at execution, and a packed tile descriptor
+with alpha zero is intentionally discarded. Executing each binding separately
+and marking the descriptor valid corrected only the fixture. Session `49116`
+then ran the identical selection against unchanged production: all ten paths
+matched their normal/underwater literal colors before reclamation and failed
+afterwards with normal row zero `EE2222` → `22EE22`. The independent-host method
+failed at its original registry-growth assertion. All 11 cases failed, zero
+errors/skips; admission was 17 seconds and Maven execution 26.842 seconds.
+The XML parameter identities `[1]` through `[10]`, complete failure messages and
+zero skips were inspected; both expanded-run report sets were consumed/deleted.
+
+Implementation changes only the seven GLSL palette samplers. `textureSize` is
+available in their existing GLSL 4.10 contract. Java upload, cache, reset, palette
+bank and GL-state code is unchanged. The public ShaderProgram count setter and
+host writes remain available for supplied/custom shader programs; built-in
+lookups no longer use that logical count as physical storage size. Both normal
+and underwater slots can receive a standalone texture. All row addressing keeps
+the existing normalized filtering/clamping, transparency, water split and color
+processing. This is owner correctness with zero allowance removals, not a type
+or API migration.
+
+`python3 tools/testing/run_categories.py --base 591c679b39c61f162a839cde6baaedd387135bc4`
+was inspected after the shader edit. The unclassified GLSL resource paths select
+all 3,741 smoke classes and guards. This worker instead uses the bounded focused
+selection below: every changed built-in shader is drawn with literal expected
+pixels, and its surrounding publication/composition/reset consumers are checked.
+No Java, build, selector, physics, API pin or runtime color-composition policy
+changes. Parent-owned combined API/S3K/guards and integration remain outstanding;
+neither broad smoke nor release-only full-suite coverage is claimed here.
+
+Exact focused green-candidate command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestPaletteTextureCapacity,TestUnderwaterPaletteUpload,TestPaletteUploadLatch,TestAppearancePalettes,TestScopedPaletteGraphicsAccess,TestRenderContext,TestSpritePresentation,TestPaletteFadePresentation,TestScopedPalettePresentationRewind' \
+  '-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  test -B
+```
+
+These are existing root ROMs, read in place: S1 CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383`,
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553`,
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Hashes were verified for this run.
+No ROM copy, rename or new link was used. Rendering is Linux EGL evidence;
+macOS/Windows drivers, arbitrary custom shader behavior, native slot face art
+and full gameplay routes are outside these checks.
+
+The focused command completed green in session `82376`: 98 distinct cases,
+zero failures/errors/skips across nine XML reports. Admission took 161 seconds;
+Maven execution took 26.361 seconds. Tested source is base `591c679b3` plus this
+seven-shader correction and the final test fixture; subsequent edits are prose
+only. All XML case identities were inspected for duplicates and skipped/error
+nodes before consuming the reports.
+
+| Executed class | Cases |
+| --- | ---: |
+| TestAppearancePalettes | 5 |
+| TestPaletteFadePresentation | 5 |
+| TestPaletteTextureCapacity | 11 |
+| TestPaletteUploadLatch | 6 |
+| TestRenderContext | 29 |
+| TestScopedPaletteGraphicsAccess | 3 |
+| TestSpritePresentation | 14 |
+| TestUnderwaterPaletteUpload | 22 |
+| TestScopedPalettePresentationRewind | 3 |
+
+The exact eleven formerly red capacity identities now pass, including all ten
+ordered parameters above and the independent-host method. They check the same
+literal normal/underwater colors before reclamation, after fewer banks are
+rebuilt, and after palette texture deletion/recreation. Slots additionally check
+blend/depth, active texture and program restoration. The independent-host case
+now reaches both hosts' post-reclamation assertions. No height high-water or
+changed logical count was used to make those pixels pass.
+
+Additional executed pixel identities include
+`underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder` parameters
+`[1]`–`[6]` in TestUnderwaterPaletteUpload (literal colors for raw/analog,
+full/limited and black/white fades), and all three
+TestScopedPalettePresentationRewind methods:
+`capturedNativeRowsSurviveTablesRestoreAndBankChangesAfterDeferredSubmission`,
+`priorityWaterKeepsScopedRomRowsAndPublishedHostRowsAcrossDeferredRelocation`,
+`lateScopedReallocationKeepsPriorityWaterBindingsForLaterDrySprites`. The
+remaining executed classes cover logical row reuse/growth, publication latches,
+appearance composition, upload cache invalidation and resource resets. This is
+bounded component/consumer evidence, not a full-suite, route or all-platform pass.
+No queued/running worker request remains. All consumed Surefire diagnostics are
+deleted; no pass cache, archive or receipt is retained. Frozen baseline and API
+pins are unchanged. Hooks and final staged whitespace/policy checks are part of
+the local commit; integration, push and checkout cleanup remain parent-owned.
