@@ -906,6 +906,14 @@ without first removing that alias.
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
 
+**Direct object steps do not publish camera bounds.** `ObjectManager` updates
+`AbstractObjectInstance`'s cached bounds before the object pass; constructing a
+Camera stub and calling an object's `update()` directly bypasses that publication.
+Use the manager path for lifecycle comparisons. A deliberately direct unit test
+must seed those bounds and reset them between fixtures before asserting offscreen
+retirement. The [S2 fragment follow-up](audits/2026-10-24-rewind-disposition-review.md#s2-fragment-art-follow-up)
+records a false retirement failure caused by an origin viewport left in that cache.
+
 **Underwater route liveness.** `getDead() == false` does not exclude the drowning
 pre-death phase. `applyDrownDeath()` locks controls and zeroes velocity before the
 delayed dead flag; no-death route assertions must also reject `isDrowningDeath()`.

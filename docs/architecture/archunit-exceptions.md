@@ -116,7 +116,7 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 3311 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+and 3307 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
 share these identities, and ambiguous dispatcher names fail. Exchanging one
 large method for another no longer
@@ -124,7 +124,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 
 | Rule | Enforced budget | Target | Trigger |
 |------|----------|--------|---------|
-| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 2, `GameLoop.java`: 8 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 2, `GameLoop.java`: 4 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
 | Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
@@ -146,11 +146,20 @@ source permissions pin eleven actual caller/operation identities; the previous
 ten fragment entries covered two distinct registry callers with one entry.
 Missing or malformed scan inputs, changed counts and stale permissions fail.
 Shared event composition owners retain their explicit whole-file exclusions.
+Invocation-shaped singleton/fallback patterns also recognize method references
+as distinct operations, so an approved direct call cannot authorize one.
+
+The ambient singleton-setup inventory now contains 98 methods across 97 files,
+down from 102/100 after direct manager construction and named module fixtures
+replaced four methods in three test classes. These count setup obligations,
+not demonstrated leaks. Four unused GameLoop imports are gone; the reduced
+four-reference budget still covers real bonus bootstrap/debug coupling and does
+not claim that ownership migration is complete.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
-records six proven reconstruction policies, leaving 17 exact obligations after
-the false-floor partial-collapse correction. Its surviving children dispatch by
+records six proven reconstruction policies and two captured fragment-art recipes,
+leaving 15 exact obligations. False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14

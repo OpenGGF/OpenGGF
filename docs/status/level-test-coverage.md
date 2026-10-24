@@ -1,5 +1,15 @@
 # Level test coverage backlog
 
+S2 fragment-art rewind follow-up (2026-10-24): the
+[field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#s2-fragment-art-follow-up)
+records destructive restoration of Breakable Block pieces and both OOZ launcher
+orientations, before and after movement. Explicit art keys and immutable piece
+values preserve nonempty submissions while renderers resolve from current
+services. Checks cover frame fallback, constructor contracts, native piece-zero
+and allocation order, and retirement flags. They do not establish GPU pixels,
+automatic managed-slot release or complete CPZ/HTZ/OOZ routes; viewport/donor/team
+and whole-act coverage remain inherited obligations.
+
 S1 SBZ2 false-floor rewind follow-up (2026-10-24): the
 [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md#false-floor-partial-collapse-follow-up)
 records destructive restore after 1, 4 or 7 blocks retire, with timer offsets

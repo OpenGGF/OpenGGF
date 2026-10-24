@@ -586,7 +586,9 @@ Unreleased. The earlier development themes remain in
   audio callers supply their selected profile to the reusable presentation host;
   desktop sound-test composition lives with the developer tools. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
-  and cleanup. Remaining
+  and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
+  current renderers after rewind. Object-service guards also recognize forbidden
+  method references. Remaining
   migrations and exact allowance accounting live in the
   [exception guide](docs/architecture/archunit-exceptions.md).
 
