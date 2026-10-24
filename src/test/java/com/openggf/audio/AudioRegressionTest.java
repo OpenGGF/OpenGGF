@@ -285,6 +285,7 @@ public class AudioRegressionTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Tag("performance-measurement")
     public void benchmarkMemoryProbeReportsNonNegativeDeltasForAudioRenderWorkload() {
         assumeTrue(loader != null, "ROM not available, skipping memory probe test");
 
@@ -336,6 +337,7 @@ public class AudioRegressionTest {
      * Performance benchmark test - measures time to render audio.
      */
     @Test
+    @org.junit.jupiter.api.Tag("performance-measurement")
     public void benchmarkAudioRendering() {
         assumeTrue(loader != null, "ROM not available, skipping benchmark");
         AbstractSmpsData musicData = loader.loadMusic(MUSIC_EHZ);
@@ -400,6 +402,7 @@ public class AudioRegressionTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Tag("performance-measurement")
     public void benchmarkResultsTallyStressRendering() {
         assumeTrue(loader != null, "ROM not available, skipping tally stress benchmark");
 

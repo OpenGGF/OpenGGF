@@ -4141,3 +4141,72 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
 ```
 
 Final joint contract/domain/API/guard checks and delivery remain pending.
+
+
+### Broad timeout and final bounded qualification
+
+The original request `20261024T061914Z-01fb5ad5` completed68/75 ordinary batches
+on `3e0811d711` plus its recorded count-prose edits, then timed out during69.
+Its retained partial totals are36,812 tests, one failure, zero errors and93
+skips across3415 reports. Preparation172.54s plus ordinary execution5227.58s
+reached the90-minute invocation budget; queue time is excluded. Guards were not
+launched by that request. This is incomplete broad validation, not a pass. The
+sole failure remains the matched-baseline HCZ GLFW initialization assertion;
+93 skips were inspected as display/isolated-audio prerequisites, opt-in captures/
+measurements, external mod JARs or scenario assumptions. None is a newly claimed
+required-ROM pass. Remaining346 candidates start with gameplay-capture tooling
+and end in time-attack/network UI; no complete coverage of those is claimed.
+
+The later current-source plan selects3747 smoke classes and preflight passed
+Java25/Lua5.4/PowerShell. A second broad replay would repeat the completed native
+matrices and unrelated network/trace families. Later changes are reviewed intact
+contract relocations, a private retained-reference transfer with ROM-independent
+initializers, and fixture reset ownership with unchanged consumers. Their exact
+compiled API delta, source/body comparisons, packaged creator closure and
+affected runtime/domain checks provide proportionate qualification under the
+repository's focused-validation policy. The earlier rendering changes retain
+their real-EGL component/parent controls and extensive partial smoke evidence.
+Final fresh guards and affected creator/fixture checks remain required; no fully
+green smoke or exhaustive/native-route claim follows from this decision.
+
+On the current joint state `a8c45ef09`, the40-selector runtime/loader group
+passed669 cases in40 reports, zero failures/errors/skips, including13 new
+renderer-ingress cases and the required S3K60. Exact testcase identities and
+Java25/EGL/all four ROM properties were inspected;80 XML/text files consumed.
+Maven execution2:43; exact queue wait not retained. The nested-only DAC container
+did not execute in that mixed selector; its three native profile factories
+will be selected explicitly, not included in the669 claim.
+
+### Keep audio measurements out of ordinary smoke
+
+Source investigation of the class-scoped audio fixture found three existing
+timing/memory probes without `performance-measurement` tags. They can therefore
+run accidentally under ordinary smoke despite its exclusion policy. Add only
+that existing tag to the three benchmark methods; their bodies/assertions are
+unchanged. No benchmark is requested and no performance result from the earlier
+smoke run is used. Verify ordinary class selection now executes exactly the
+four behavior controls and no waveform-reference or measurement methods.
+This classification correction removes an active validation risk; it changes
+no production behavior, helper, POM, resource budget or guard allowance.
+
+The ordinary class selection passed15 cases with zero failures/errors/skips:
+four AudioRegression behavior controls, three native DAC nested cases (S1/S2/
+S3K), and eight lifecycle guards. Java25, surfaceless EGL and absolute ROM
+properties were inspected. No benchmark or external WAV method ran. Admission
+wait0s; Maven execution28.942s. All six XML/txt report pairs were consumed.
+The wildcard DAC selector corrects the prior nested-container omission; it does
+not expand the669-case claim. The incomplete broad diagnostics were acknowledged
+and their run directory deleted after summary/failure/skip inspection.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  '-Dtest=AudioRegressionTest,TestCrossGameSegaDac*,TestSingletonLifecycleGuard' test -B
+```
