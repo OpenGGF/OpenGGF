@@ -2161,3 +2161,173 @@ empty. These checks require neither ROMs nor GL and establish only the existing
 object/manager cases and exact guard, not native Buzz Bomber flight, full-route
 coverage, API/S3K checks or the combined guards run. Combined validation,
 integration and push remain parent-owned; this slice stops at a local commit.
+
+### Renderer scalar ingress (bounded ninth-cut implementation, 2026-10-24)
+
+Worker branch `bugfix/ai-renderer-scalar-ingress-20261024` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b0bf14b1` fast-forward merged the requested
+accepted eighth code `3e0811d71113a7c03a3a3b75a15acd848d1bb242` from its automatic
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7` checkout before work. The main workspace,
+submodules and unrelated links were not changed. This worker owns a local commit
+only; guide/changelog composition, integration, push and worktree cleanup belong
+to the parent.
+
+Both GPU renderers are outside the recursive creator API. The five existing
+public typed GraphicsManager declarations and their pins remain unchanged.
+Descriptor interpretation now belongs to five private GraphicsManager adapters.
+Each adapter retains the original renderer receiver for that attempt, admits
+first, reads cached flags, then appends once. Palette sampling remains at all ten
+original call sites: ordinary three, strip four, shadow two and full SAT one.
+Renderers consume the atlas entry and primitives, with no new per-tile allocation,
+descriptor duplication, erasure, callback wrapper or public facade.
+
+Instanced admission preserves inactive/capacity/page checks followed by the
+priority-shader, water-shader, underwater, ghost-active, colour and alpha getter
+sequence and its short circuits. Append does not repeat admission; its conditional
+mask getter remains after cached flags, and priority true still writes zero.
+Batched admission preserves entry-null precedence after active/capacity rejection;
+its manager state remains captured at endBatch. Shadow reads neither palette nor
+priority. Whole, strip, shadow and dedicated SAT flush/retry/fallback/cancel tails
+stay independent, including retained batched-strip palettes and resampled
+instanced retry palettes. Integer/float geometry order, strip pixel centres and
+unclamped indices, and cached display heights are retained.
+
+The unused no-argument constructors and Batched singleton field/accessors are
+removed together. Explicit constructor bodies are byte-for-byte unchanged:
+manager-null before config-null, height before arrays, and instanced debug after
+arrays. No ambient lookup was moved to another helper. There was no stale exact
+singleton allowance to remove; the graphics source-scan inventory remains intact.
+
+Exact frozen delta in `40afa018-d450-4b84-8cb9-d539d75d8062`:
+
+- Remove Batched `addPattern(Entry,int,PatternDesc,int,int)`,
+  `addStripPattern(Entry,int,PatternDesc,int,int,int)` and
+  `addShadowPattern(Entry,PatternDesc,int,int)`: each descriptor parameter plus
+  getHFlip/getVFlip, nine records.
+- Remove Instanced `addPattern(Entry,int,PatternDesc,int,int)` and
+  `addStripPattern(Entry,int,PatternDesc,int,int,int)`: each descriptor parameter
+  plus getHFlip/getVFlip/getPriority, eight records.
+- Remove both no-argument constructors' GameServices.graphics/configuration calls,
+  four records.
+- Add GraphicsManager `tryAddBatchedPattern`, `tryAddBatchedStrip` and
+  `tryAddBatchedShadow` with the corresponding former Batched signatures: each
+  descriptor parameter plus getHFlip/getVFlip, nine replacement records. Add
+  `tryAddInstancedPattern` and `tryAddInstancedStrip` with the corresponding former
+  Instanced signatures: each descriptor parameter plus
+  getHFlip/getVFlip/getPriority, eight replacement records. `Entry` above denotes
+  `com.openggf.graphics.PatternAtlas$Entry`, and `PatternDesc` denotes
+  `com.openggf.level.PatternDesc`.
+
+Thus 143 - 21 + 17 = 139. The other 122 records retain exact bytes and order,
+SHA-256 `534e90402270023d23adf6e2e86d887f9677fa9d71e1d1aaa3042bcaf6677864`.
+Historical rule keys and read-only freeze settings are unchanged. Rows method
+bodies, staged PatternRenderCommand, replay descriptor decoder and its four
+identities, PreparedPiece, background, RenderContext, shader capacity, API version,
+signature pins and terminal policy are unchanged. Only obsolete method links in
+renderer/SAT comments were repaired around those closed bodies.
+
+Before production edits, 12 new CPU characterization cases and all three EGL
+pixel cases passed: 15 tests, zero failures/errors/skips. Two initial test oracles
+were corrected before this pass: atlas coordinates include the existing
+0.01-pixel inset, and SAT entry resets the global mask to 0xF. No production
+behavior was changed to satisfy those assertions. Pixel checks clear and read the
+owned target, assert actual legacy/instanced/shadow command types, and use literal
+quadrant, two-row strip and half-intensity shadow expectations. CPU checks cover
+cached/raw disagreement, palette seven and unrestricted palette arguments,
+conditional/throwing getters, rejected admission, untouched arrays/counts/queues,
+4096/4097 capacity, old/new palette sampling, fresh rejection, shadow throw,
+physical page order (existing 0 -> 1 -> 0 fixtures), SAT scratch mutation and
+interrupted replay.
+
+An initial scalar candidate passed 111 cases across eleven focused classes.
+Deliberate negative controls then made whole-tile flag reads eager and strip
+append revalidate admission: three selected tests produced exactly two failures
+(mask sequence changed and admission duplicated) and one null-descriptor error,
+with no skips. The mutations were restored. Self-review found that re-reading the
+manager's renderer field after a callback could change the receiver. A thirteenth
+CPU test reproduced that scalar-candidate bug as a null append receiver; retaining
+one receiver per attempt fixes the Java dispatch boundary without retaining it
+across retries. The initial 111-case pass does not certify that final adjustment.
+
+Final source passed **112 distinct cases in eleven XML reports**, zero failures,
+errors or skips, including all thirteen CPU ingress cases and all three actual EGL
+cases. Maven reported 76 seconds including compilation, separately from queue
+waiting. This final run supersedes the earlier 111-case candidate. The fresh
+strict API/ArchUnit/accounting run completed as described below. No broad smoke or full suite is submitted by
+this worker. The change-based plan selected 2,932 smoke classes; bounded focused
+coverage is used under the explicit task instruction. Actual-environment category
+preflight passed Java/Lua/PowerShell prerequisites without executing tests.
+
+All Maven invocations use the current absolute queue wrapper from the intended
+worktree, with Java 25, Lua 5.4 and no DISPLAY, WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS
+or JDK_JAVA_OPTIONS. EGL remains explicitly selected; these synthetic component
+checks need no ROM paths. The parent's eighth smoke covers its earlier source and
+does not cover this cut. The worker's inherited architecture allowance prose is
+147; the parent's separate accounting edits are 143. Parent-owned prose must be
+composed to 139 before claiming a green combined documentation/accounting gate.
+
+
+Reproduction commands (from this worktree):
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 3e0811d71113a7c03a3a3b75a15acd848d1bb242 --preflight
+
+FOCUSED='TestPatternRendererIngress,TestGraphicsManagerPatternAtlasPageOrdering,TestPooledRenderCommandDiscard,TestPresentationPatternBatching,TestRenderProjection,TestSatReplayBatching,TestShadowBatchAtlasPages,TestGraphicsManagerReinit,TestGraphicsManagerSpriteSatReplay,TestSpritePreparationSnapshots,TestSpriteSatReplayPixels'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" test -B
+
+GUARDS='TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestArchUnitRules,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestProductionSingletonClosureGuard,TestSingletonLifecycleGuard'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$GUARDS" test -B
+```
+
+The pre-production characterization selector was
+`TestPatternRendererIngress,TestSpriteSatReplayPixels`. The deliberate negative
+selector was `TestPatternRendererIngress#admissionCallbacksPrecedeCachedReadsAndAppendDoesNotRevalidate+everyInstancedRejectionShortCircuitsNullDescriptorAndLaterGetters+lowPriorityAloneSamplesTheAlreadyMappedGlobalMaskAfterAdmission`.
+The additional receiver red control selected
+`TestPatternRendererIngress#admissionKeepsTheOriginalReceiverWhenManagerCallbackReplacesItsField`.
+All use the same queued environment above, without broad profiles.
+
+The final Java/source diff SHA-256 (`git diff --binary` from the pinned base,
+restricted to `src/main` and `src/test/java`) is
+`49c755a02747c5efd75a8cdefe62fd8f990fb4b01e916fadc5bda4691ec7ef64`.
+The sorted 139-record identity-set SHA-256 (source locations removed) is
+`5329f1c982fe20f7345514ee1b5ac68c912936fd1ac46ee278c4a3bdcc939e30`.
+No source changed between final focused submission and completion. Documentation
+accounting composition remains parent-owned; these hashes identify this worker's
+code and reviewed store, not the parent's running smoke.
+
+
+The fresh `-Pguards` selection completed **199 distinct cases in eight XML
+reports: 198 passed, one failure, zero errors/skips**. Maven reported 41 seconds
+including preparation, separately from queue waiting. Passing reports were API
+signature 11, API pin policy 4, API release policy 15, all ArchUnit rules 33,
+architectural source guard 77, production singleton closure 42, and singleton
+lifecycle 8. Eight of nine architectural review cases passed, including the
+read-only freeze and grouped-record accounting controls. The sole failure is
+`TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore`:
+actual source store 139 versus inherited documentation 147. Other documented
+rule counts match. The base already carried store 143 beside prose 147; that is
+static baseline evidence, not a separately executed baseline guard result.
+The parent's independent prose is at 143 and must be composed to 139. This worker
+leaves that parent-owned artifact unchanged and does not claim a green combined
+accounting gate; parent composition and a mirror recheck are required before
+integration. No new API permission, signature pin, terminal or frozen-rule setting
+was needed.
+
+The final source fingerprint stayed unchanged through focused and guard execution.
+All XML class/method identities, failures and skips were inspected. Consumed test
+reports, temporary mutation snapshots and task-owned diagnostic logs were removed;
+no category run or live worker Maven handle remains. Hooks are installed. The
+worker stops at its local commit, without push, integration, branch deletion or
+worktree removal. Coverage is bounded component/renderer behavior on Linux EGL;
+no broad smoke, full suite, cross-platform GL, native gameplay/trace parity,
+performance or exhaustive arithmetic claim is made.

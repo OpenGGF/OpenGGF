@@ -29,6 +29,8 @@ class TestRenderProjection {
     @Test void creatorSurfaceKeepsRenderingAndCourseControlWithoutSessionOrchestration() {
         var types=com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes().stream()
                 .map(Class::getName).collect(java.util.stream.Collectors.toSet());
+        assertFalse(types.contains(BatchedPatternRenderer.class.getName()));
+        assertFalse(types.contains(InstancedPatternRenderer.class.getName()));
         assertFalse(types.contains(PatternRenderCommand.class.getName()), "implementations of a pinned interface are not automatically supported API");
         assertFalse(types.contains("com.openggf.Engine"));
         assertFalse(types.contains("com.openggf.GameLoop"));

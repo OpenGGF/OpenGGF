@@ -2,7 +2,6 @@ package com.openggf.graphics;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.level.PatternDesc;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -261,24 +260,21 @@ class TestPooledRenderCommandDiscard {
     private static GLCommandable batchCommand(BatchedPatternRenderer renderer, boolean shadow) {
         if (shadow) {
             renderer.beginShadowBatch(ENTRY.atlasIndex());
-            renderer.addShadowPattern(ENTRY, descriptor(), 0, 0);
+            assertTrue(renderer.admitShadowPattern(ENTRY));
+            renderer.appendAdmittedShadowPattern(ENTRY, false, false, 0, 0);
             return renderer.endShadowBatch();
         }
         renderer.beginBatch();
-        renderer.addPattern(ENTRY, 0, descriptor(), 0, 0);
+        assertTrue(renderer.admitPattern(ENTRY));
+        renderer.appendAdmittedPattern(ENTRY, 0, false, false, 0, 0);
         return renderer.endBatch();
     }
 
     private static GLCommandable instancedCommand(InstancedPatternRenderer renderer) {
         renderer.beginBatch(ENTRY.atlasIndex());
-        renderer.addPattern(ENTRY, 0, descriptor(), 0, 0);
+        assertTrue(renderer.admitPattern(ENTRY));
+        renderer.appendAdmittedPattern(ENTRY, 0, false, false, false, 0, 0);
         return renderer.endBatch();
-    }
-
-    private static PatternDesc descriptor() {
-        PatternDesc desc = new PatternDesc();
-        desc.set(0);
-        return desc;
     }
 
     private static Object[] batchBackings(Object command, boolean shadow) throws Exception {
