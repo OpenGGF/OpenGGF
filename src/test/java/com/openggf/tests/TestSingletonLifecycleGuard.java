@@ -33,9 +33,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/TestZoneLayoutMutationPipeline.java#setUp
             src/test/java/com/openggf/game/rewind/TestLiveRewindManagerAudioCleanup.java#setUp
             src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
-            src/test/java/com/openggf/game/session/TestGameplayModeContextPlaybackController.java#configureServices
-            src/test/java/com/openggf/game/session/TestGameplayModeContextRewindRegistry.java#configureServices
-            src/test/java/com/openggf/game/session/TestSessionManager.java#configureServices
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic1/dataselect/TestS1DataSelectProfile.java#configureEngineServices

@@ -3,7 +3,10 @@ package com.openggf.game.session;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.session.EngineContext;
+import com.openggf.game.InitStep;
+import com.openggf.game.LevelInitProfile;
+import com.openggf.game.StaticFixup;
+import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -19,21 +22,87 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSessionManager {
 
     @BeforeEach
     void configureServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
     void tearDown() {
         SessionManager.clear();
         GameModuleRegistry.reset();
+    }
+
+    @Test
+    void engineOnlyResetDisposesGameplayWithoutOpeningReplacement() {
+        TestEnvironment.resetAll();
+        GameplayModeContext gameplay = SessionManager.getCurrentGameplayMode();
+        GraphicsManager graphics = EngineServices.current().graphics();
+        FadeManager runtimeFade = gameplay.getFadeManager();
+        graphics.bindRuntimeManagedReferences(gameplay.getCamera(), runtimeFade);
+        assertSame(runtimeFade, graphics.getFadeManager());
+        AtomicInteger closeCalls = new AtomicInteger();
+        gameplay.setHardwareTimingReplayCloseHook(closeCalls::incrementAndGet);
+        SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.RECORDED);
+
+        TestEnvironment.resetEngineOnly();
+
+        assertNull(SessionManager.getCurrentWorldSession());
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNull(SessionManager.getCurrentEditorMode());
+        assertNull(gameplay.getCamera());
+        assertNull(gameplay.getRewindRegistry());
+        assertFalse(gameplay.dynamicArtLifecycle().isRunActive());
+        assertNotSame(runtimeFade, EngineServices.current().graphics().getFadeManager());
+        assertEquals(1, closeCalls.get());
+
+        TestEnvironment.resetEngineOnly();
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertEquals(1, closeCalls.get(), "repeated reset must not close retired resources twice");
+        GameplayModeContext fresh = TestEnvironment.activeGameplayMode();
+        assertNotSame(gameplay, fresh);
+        assertNotNull(fresh.getCamera());
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE, fresh.hardwareTiming().admissionPolicy());
+    }
+
+    @Test
+    void engineOnlyResetKeepsPreviousModuleTeardownAndFixupOrder() {
+        List<String> events = new ArrayList<>();
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        when(profile.levelTeardownSteps()).thenReturn(List.of(new InitStep(
+                "PreviousModuleTeardown", "test fixture", () -> {
+                    assertNull(SessionManager.getCurrentWorldSession());
+                    assertNull(SessionManager.getCurrentEditorMode());
+                    assertInstanceOf(Sonic2GameModule.class, GameModuleRegistry.getCurrent());
+                    events.add("teardown");
+                })));
+        when(profile.postTeardownFixups()).thenReturn(List.of(new StaticFixup(
+                "PreviousModuleFixup", "test fixture", () -> events.add("fixup"))));
+        GameModule module = new DelegatingGameModule(new Sonic1GameModule(), "test:engine-only-reset") {
+            @Override
+            public LevelInitProfile getLevelInitProfile() {
+                return profile;
+            }
+        };
+        SessionManager.openGameplaySession(module);
+        SessionManager.enterEditorMode(new EditorCursorState(1, 2));
+
+        TestEnvironment.resetEngineOnly();
+
+        assertEquals(List.of("teardown", "fixup"), events);
+        assertNull(SessionManager.getCurrentWorldSession());
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNull(SessionManager.getCurrentEditorMode());
     }
 
     @Test
