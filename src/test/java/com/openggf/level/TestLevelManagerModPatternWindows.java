@@ -45,8 +45,10 @@ class TestLevelManagerModPatternWindows {
     void everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching() throws Exception {
         List<String> events = new ArrayList<>();
         RecordingPatternAtlas atlas = new RecordingPatternAtlas(events);
-        GraphicsManager graphics = mock(GraphicsManager.class);
-        when(graphics.getPatternAtlas()).thenReturn(atlas);
+        // Editor preparation uses constructor-owned palette state; this atlas stays CPU-only.
+        GraphicsManager graphics = new GraphicsManager() {
+            @Override public PatternAtlas getPatternAtlas() { return atlas; }
+        };
         EngineContext engine = engineContext(graphics);
         ObjectArtProvider provider = mock(ObjectArtProvider.class);
         when(provider.getRegularPatternCount()).thenReturn(1);
