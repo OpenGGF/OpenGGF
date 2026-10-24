@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.GameId;
+import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
@@ -25,6 +26,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @Isolated
@@ -104,10 +106,18 @@ class TestGameLoopTitleCardLifecycle {
         Runnable prelude = () -> service.observePlayerDplc(GameId.S1, "sonic", 1,
                 new SpriteDplcFrame(List.of(new TileLoadRequest(0, 3))));
 
-        assertTrue(GameLoopTitleCardLifecycle.update(false, title,
+        var host = mock(GameLoopTitleCardLifecycle.Host.class);
+        when(host.currentMode()).thenReturn(GameMode.TITLE_CARD);
+        when(host.level()).thenReturn(level); when(host.sprites()).thenReturn(sprites);
+        when(host.module()).thenReturn(module);
+        when(sprites.getAllSprites()).thenReturn(List.of());
+        doAnswer(c -> { prelude.run(); return null; }).when(sprites).update(null);
+        var lifecycle = new GameLoopTitleCardLifecycle(host);
+        assertTrue(lifecycle.update(false, title,
                 mock(PlcLifecycleFrame.class), gameplay, level, sprites, null, null,
-                prelude, PostTitleCardDestination.LEVEL, () -> {}, result -> {},
+                PostTitleCardDestination.LEVEL,
                 () -> {}, () -> {}, phase -> {}, (name, step) -> step.run()));
+        assertEquals(LevelFrameResult.SETUP_ONLY, lifecycle.releaseResult());
         return service;
     }
 }

@@ -60,7 +60,7 @@ class TestGameLoopSpecialStageLifecycle {
         levels = mock(LevelManager.class); sprites = mock(SpriteManager.class); fade = mock(FadeManager.class);
         camera = mock(Camera.class); title = mock(TitleCardProvider.class);
         write(loop, "levelManager", levels); write(loop, "spriteManager", sprites); write(loop, "camera", camera);
-        write(loop, "fadeManager", fade); write(loop, "titleCardProvider", title);
+        write(loop, "fadeManager", fade); com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         provider = mock(SpecialStageProvider.class); when(provider.hasSpecialStages()).thenReturn(true);
         when(module.getSpecialStageProvider()).thenReturn(provider);
         when(sprites.getAllSprites()).thenReturn(List.of());
@@ -329,13 +329,13 @@ class TestGameLoopSpecialStageLifecycle {
     @Test void titleReleaseSpecialBranchSkipsOrdinaryZoneCallbackAndBonusWinsFirst() throws Exception {
         var events = mock(LevelEventProvider.class); when(module.getLevelEventProvider()).thenReturn(events);
         mode(GameMode.TITLE_CARD); write(loop, "returningFromSpecialStage", true);
-        invoke(loop, "exitTitleCard", new Class<?>[0]); assertFalse((boolean)read(loop, "returningFromSpecialStage"));
+        TitleCardLifecycleTestAccess.release(loop); assertFalse((boolean)read(loop, "returningFromSpecialStage"));
         verify(events, never()).applyZonePlayerStateAfterTitleCard();
         mode(GameMode.TITLE_CARD); write(loop, "returningFromSpecialStage", true);
-        write(loop, "postTitleCardDestination", PostTitleCardDestination.BONUS_STAGE);
-        invoke(loop, "exitTitleCard", new Class<?>[0]); assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
+        TitleCardLifecycleTestAccess.destination(loop, PostTitleCardDestination.BONUS_STAGE);
+        TitleCardLifecycleTestAccess.release(loop); assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
         assertTrue((boolean)read(loop, "returningFromSpecialStage"));
         mode(GameMode.TITLE_CARD); write(loop, "returningFromSpecialStage", false);
-        invoke(loop, "exitTitleCard", new Class<?>[0]); verify(events).applyZonePlayerStateAfterTitleCard();
+        TitleCardLifecycleTestAccess.release(loop); verify(events).applyZonePlayerStateAfterTitleCard();
     }
 }

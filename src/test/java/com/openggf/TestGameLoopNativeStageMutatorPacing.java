@@ -238,7 +238,7 @@ class TestGameLoopNativeStageMutatorPacing {
     private static SonicConfigurationService config() { return SonicConfigurationService.getInstance(); }
     private static void install(PumpLoop loop, GameplayModeContext context, AudioManager audio) throws Exception {
         set(loop, "gameplayMode", context); set(loop, "audioManager", audio); set(loop, "fadeManager", mock(FadeManager.class));
-        set(loop, "outerFramePresentation", new OuterFramePresentation(audio)); set(loop, "titleCardProvider", null);
+        set(loop, "outerFramePresentation", new OuterFramePresentation(audio)); com.openggf.TitleCardLifecycleTestAccess.provider(loop, null);
     }
     private static Object get(GameLoop loop, String name) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); return f.get(loop); }
     private static void set(GameLoop loop, String name, Object value) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); f.set(loop, value); }

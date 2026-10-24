@@ -118,15 +118,24 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 2443 (`GameLoop`, reduced from the accepted bonus owner's 2811 by the complete
-special-stage/results lifecycle transfer).
+and 2367 (`GameLoop`, reduced from the completed special-stage base of 2443 by
+the complete title presentation/release transfer, including its live adapter).
+The title lifecycle is capped at 253 effective lines: exactly three mutable
+values (lazy provider, destination and persistent release result), with immutable
+Host/logger dependencies. It owns acquisition, cold observation, cache-only reset,
+entry, locks, neutral prelude, locked update and shared release. Its 21-operation
+Host exposes live typed slots, genuine virtual compatibility seams, session
+participation and narrow Root-owned effects. Update acquisition precedes argument
+snapshots; shared release reads live bindings. It adds no loading, frame-driving,
+disposal or rewind owner. Title method spans are update 131, entry 47, release 65
+and neutral prelude 19 physical lines.
 The loop-owned bonus session is capped at 357 effective lines, including its
 typed live host and six meaningful visit fields. It retains the coordinator,
 provider/deferred identity and pending obligations while shared frame, PLC,
 audio, playback and rewind execution stay in the root. The special-stage/results lifecycle is capped at 571 effective lines, including
 its fifteen state fields, captured-frame algorithm and typed live Host. Its
-constructor only retains collaborators; boundary admission, pacing input and
-shared title release stay in the root. Its results-title span falls from 62 to
+constructor only retains collaborators; boundary admission and pacing input stay
+in Root, while shared title release belongs to the title lifecycle. Its results-title span falls from 62 to
 60 physical lines because listener notification is a narrow Host effect.
 The complete ending
 session is capped at 320 effective lines, including its typed live host, provider/pending ownership, phase selection
@@ -141,7 +150,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 | Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoopBonusStageSession.doExitBonusStage`: 111, `GameLoopSpecialStageLifecycle.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoopSpecialStageLifecycle.enterTitleCardFromResults`: 60, `GameLoopBonusStageSession.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoopTitleCardLifecycle.update`: 131, `GameLoopTitleCardLifecycle.enterTitleCard`: 47, `GameLoopTitleCardLifecycle.exitTitleCard`: 65, `GameLoopTitleCardLifecycle.runInputNeutralTitleCardPlayerPrelude`: 19, `GameLoopBonusStageSession.doExitBonusStage`: 111, `GameLoopSpecialStageLifecycle.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoopSpecialStageLifecycle.enterTitleCardFromResults`: 60, `GameLoopBonusStageSession.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
 `TestObjectPhysicsStandardizationGuard` now compares parsed lifecycle calls with

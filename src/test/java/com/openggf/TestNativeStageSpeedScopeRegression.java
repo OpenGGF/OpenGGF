@@ -75,7 +75,7 @@ class TestNativeStageSpeedScopeRegression {
         when(context.isGameplayRuntimeReady()).thenReturn(true);
         var loop = new PumpLoop(new InputHandler()); set(loop, "gameplayMode", context);
         set(loop, "audioManager", mock(AudioManager.class)); set(loop, "fadeManager", mock(FadeManager.class));
-        set(loop, "titleCardProvider", null); return loop;
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, null); return loop;
     }
     private static Object get(GameLoop loop, String name) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); return f.get(loop); }
     private static void set(GameLoop loop, String name, Object value) throws Exception { Field f = GameLoop.class.getDeclaredField(name); f.setAccessible(true); f.set(loop, value); }
