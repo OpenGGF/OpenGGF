@@ -272,6 +272,24 @@ API/S3K stability and fresh guards; upstream Stageplay's full feature validation
 is outside this cleanup's claim. Existing worker jobs keep their original base
 and requests; subsequent composition will reconcile them here.
 
+At composed commit `622833925eb827955cd37d731d533b232b51d088`, the affected
+behavior/API/S3K selection passed 171 distinct cases across 15 reports with zero
+failures/errors/skips. It selected the four S2 fragment/object classes, direct
+GameStateManager and both monitor fixtures, TestStageplayNativeStateRelease,
+TestStageplayObjectDirection, and the same five API/S3K selectors above. Admission
+took 22 seconds and Maven 92 seconds, including recompilation. The fresh complete
+guards then passed 753 distinct cases across 91 reports, zero failures/errors/skips,
+after 73 seconds of admission and 320 seconds of execution. The increased guard
+selection comes from upstream; all 33 ArchUnit checks passed. Actual XML case
+identities and skips were inspected, and the 30 behavior plus 182 guard XML/text
+reports removed. No new runtime changes followed these results.
+
+The CI push-range policy check from `0ffa7f3c7` passed, auditing 14,571 entries.
+This delivery preserves the independently merged Stageplay behavior and the
+main workspace's unrelated dirty submodules and untracked user files. The goal
+continues with underwater policy and remaining field dispositions; completing
+this loop does not establish that architectural work is exhausted.
+
 Workers own focused checks; the coordinator owns composed validation and
 delivery. Future Maven invocations use the main-checkout wrapper by absolute
 path, retaining their worktree cwd, target and required flags. Existing requests
