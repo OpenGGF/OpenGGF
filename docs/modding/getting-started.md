@@ -5,6 +5,51 @@ artifacts built at the same engine commit; a candidate API range does not promis
 binary compatibility between commits. Rebuild code mods when changing candidates.
 No Maven repository publication or stable creator baseline is implied.
 
+## Game contract import migration
+
+Replace `import com.openggf.data.Game;` with
+`import com.openggf.game.Game;` in custom loaders, factory overrides and callers.
+The complete abstract class now belongs beside `GameModule` and `ModGame`; its
+methods, exceptions and default behavior are unchanged. There is no forwarding
+class at the old name.
+
+Rebuild every compiled mod, donor implementation and caller against the same
+updated SDK and engine candidate. `ModGame`'s superclass and factory/getter JVM
+return descriptors changed, including for callers whose source uses inferred
+types or `StandaloneGameSpec` without naming `Game`. The same `>=0.7.0 <0.8.0`
+manifest cannot distinguish these unpublished binary contracts, and the loader
+does not automatically reject every old binary. The descriptor remains candidate
+`0.7.0` with no published baseline. See the
+[compatibility decision](../architecture/mod-api-compatibility.md#game-contract-candidate-migration)
+and [standalone guidance](standalone-games.md).
+
+## Player-art provider import migration
+
+The current unpublished candidate intentionally breaks both previous art-provider
+imports. Replace:
+
+```java
+import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.data.SpindashDustArtProvider;
+```
+
+with:
+
+```java
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.SpindashDustArtProvider;
+```
+
+Rebuild every compiled mod, donor implementation and caller against the matching
+updated engine artifacts. Compiled interface names and donor-factory return
+descriptors changed, so an old binary is not compatible even if its manifest's
+`engineApiRange` still includes `0.7.0`. The manifest range cannot distinguish
+these two unpublished binary contracts. Old candidate binaries are retired;
+there are no forwarding interfaces. Provider methods, default palette behavior
+and the canonical `Palette`/`SpriteArtSet` models are unchanged. The API remains
+an unpublished `0.7.0` candidate with no published baseline; see the
+[compatibility decision](../architecture/mod-api-compatibility.md#player-art-provider-candidate-migration).
+
 ## Tools and artifacts
 
 Install a Java **25 JDK** and Maven **3.8 or newer**. Check `java -version`,

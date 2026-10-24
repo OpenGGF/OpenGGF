@@ -48,7 +48,7 @@ public final class TestEnvironment {
      * Replaces the former {@code GameContext.forTesting()} method.
      */
     public static void resetAll() {
-        resetToBootstrapBaseline();
+        resetEngineOnly();
 
         // Reset the static AbstractObjectInstance.cameraBounds so on-screen
         // visibility checks in newly constructed objects start from a known
@@ -97,7 +97,14 @@ public final class TestEnvironment {
         recreateGameplayMode();
     }
 
-    private static void resetToBootstrapBaseline() {
+    /**
+     * Resets the engine/bootstrap baseline and disposes the current session
+     * without opening a gameplay mode or attaching gameplay managers.
+     * Retains the previous module's teardown profile across the module reset,
+     * so engine-only tests retain full resource cleanup and can exercise
+     * missing-session or unattached-context preconditions.
+     */
+    public static void resetEngineOnly() {
         GroundSensor.setLevelManager(null);
         SonicConfigurationService.getInstance().resetToDefaults();
         // OscillationManager is a process-wide static table advanced by every level

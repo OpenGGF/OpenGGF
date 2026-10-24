@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameOverFlowProvider;
@@ -699,7 +699,7 @@ public class Sonic3kGameModule implements GameModule {
         }
 
         @Override
-        public com.openggf.data.PlayerSpriteArtProvider getPlayerArtProvider(
+        public com.openggf.sprites.art.PlayerSpriteArtProvider getPlayerArtProvider(
                 com.openggf.data.RomByteReader reader) {
             var art = new Sonic3kPlayerArt(reader);
             return art::loadForCharacter;
@@ -730,12 +730,12 @@ public class Sonic3kGameModule implements GameModule {
         }
 
         @Override
-        public com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
+        public com.openggf.sprites.art.PlayerSpriteArtProvider createPlayerArtProvider(RomByteReader reader) {
             return Sonic3kDonorCapabilities.INSTANCE.getPlayerArtProvider(reader);
         }
 
         @Override
-        public com.openggf.data.SpindashDustArtProvider createSpindashDustArtProvider(RomByteReader reader) {
+        public com.openggf.sprites.art.SpindashDustArtProvider createSpindashDustArtProvider(RomByteReader reader) {
             Sonic3kDustArt dustArt = new Sonic3kDustArt(reader);
             return dustArt::loadForCharacter;
         }

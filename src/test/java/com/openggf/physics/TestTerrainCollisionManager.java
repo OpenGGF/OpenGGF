@@ -5,15 +5,16 @@ import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.openggf.game.GameServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class TestTerrainCollisionManager {
+    private TerrainCollisionManager manager;
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetEngineOnly();
+        manager = new TerrainCollisionManager();
     }
 
     @AfterEach
@@ -45,7 +46,7 @@ public class TestTerrainCollisionManager {
                 new TestSensor(sprite, second)
         };
 
-        SensorResult[] results = GameServices.terrainCollision().getSensorResult(sensors);
+        SensorResult[] results = manager.getSensorResult(sensors);
         assertSame(first, results[0]);
         assertSame(second, results[1]);
     }

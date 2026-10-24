@@ -1,16 +1,14 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
@@ -60,10 +58,7 @@ class TestSonic3kMgz2BgRiseEvents {
     @BeforeEach
     void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
-        SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach

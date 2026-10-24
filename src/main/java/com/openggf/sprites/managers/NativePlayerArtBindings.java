@@ -1,6 +1,6 @@
 package com.openggf.sprites.managers;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.resources.DynamicArtDecisionOwner;

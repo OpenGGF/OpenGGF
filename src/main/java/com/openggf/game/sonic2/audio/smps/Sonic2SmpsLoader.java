@@ -20,6 +20,9 @@ import java.util.logging.Logger;
 
 public class Sonic2SmpsLoader extends AbstractSmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SmpsLoader.class.getName());
+
+    private final Rom rom;
+
     /** Retail fixBugs=0 zWriteToDAC cost per byte/two decoded samples. */
     private static final int DPCM_BASE_CYCLES = 295;
     private final SaxmanDecompressor decompressor = new SaxmanDecompressor();
@@ -29,7 +32,7 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
     private final Map<Integer, String> sfxNames = new HashMap<>();
 
     public Sonic2SmpsLoader(Rom rom) {
-        super(rom);
+        this.rom = rom;
         populateSfxNames();
         cacheAllSfx();
         // Known Sonic 2 final music offsets (ROM addresses, Saxman compressed)

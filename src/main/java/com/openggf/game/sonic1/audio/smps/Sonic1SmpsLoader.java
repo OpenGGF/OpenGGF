@@ -38,6 +38,8 @@ import java.util.logging.Logger;
 public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic1SmpsLoader.class.getName());
 
+    private final Rom rom;
+
     /** Maximum reasonable size for a single SMPS song/SFX blob. */
     private static final int MAX_BLOB_SIZE = 0x4000; // 16 KB safety limit
 
@@ -45,7 +47,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     private byte[] zeroAddressVoiceBank;
 
     public Sonic1SmpsLoader(Rom rom) {
-        super(rom);
+        this.rom = rom;
         try {
             zeroAddressVoiceBank = rom.readBytes(0, 0x100);
         } catch (IOException error) {

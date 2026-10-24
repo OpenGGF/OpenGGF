@@ -1,9 +1,9 @@
 package com.openggf.game;
 
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.RomByteReader;
-import com.openggf.data.SpindashDustArtProvider;
+import com.openggf.sprites.art.SpindashDustArtProvider;
 import com.openggf.level.Palette;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;

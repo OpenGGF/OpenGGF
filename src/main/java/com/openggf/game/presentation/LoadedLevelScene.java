@@ -1,7 +1,7 @@
 package com.openggf.game.presentation;
 
-import com.openggf.data.PlayerSpriteArtProvider;
-import com.openggf.data.SpindashDustArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.SpindashDustArtProvider;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.LevelManager;

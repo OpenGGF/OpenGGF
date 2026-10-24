@@ -41,7 +41,6 @@ import static org.mockito.Mockito.when;
 class TestSonic1LivesHudDonation {
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService.getInstance().resetToDefaults();
     }
 

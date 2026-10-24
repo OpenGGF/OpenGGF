@@ -1,9 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -26,9 +24,9 @@ class TestSidekickCpuControllerRewindCapture {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        // Preserve the live world's module before fixture teardown.
+        TestEnvironment.configureGameModuleFixture(GameModuleRegistry.getCurrent());
     }
 
     @AfterEach

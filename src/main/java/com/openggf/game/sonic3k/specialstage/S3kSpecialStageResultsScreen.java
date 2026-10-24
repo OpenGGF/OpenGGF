@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.data.RomByteReader;
-import com.openggf.data.PaletteLoader;
+import com.openggf.level.PaletteLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;

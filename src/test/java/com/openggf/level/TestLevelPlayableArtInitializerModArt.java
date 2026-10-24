@@ -154,10 +154,10 @@ class TestLevelPlayableArtInitializerModArt {
         AbstractPlayableSprite nativeSide = sprite(CharacterKey.SONIC, "sonic_p2");
         Fixture fixture = fixture(registry, CharacterKey.SONIC, prepared
                 ? List.of(nativeSide, sprite(extraKey, extraKey.persisted())) : List.of(nativeSide));
-        com.openggf.data.Game host = mock(com.openggf.data.Game.class,
-                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        com.openggf.game.Game host = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.PlayerSpriteArtProvider.class));
         fixture.level().game = host;
-        var hostArt = (com.openggf.data.PlayerSpriteArtProvider) host;
+        var hostArt = (com.openggf.sprites.art.PlayerSpriteArtProvider) host;
         Palette normal = new Palette();
         Palette nativeWater = new Palette();
         nativeWater.colors[2].r = (byte) 146;
@@ -275,16 +275,16 @@ class TestLevelPlayableArtInitializerModArt {
     @Test
     void builtinRegistryMissFallsThroughToGameProviderWithoutChangingArt() throws Exception {
         Fixture fixture = fixture(PlayableCharacterRegistry.empty(), CharacterKey.SONIC, List.of());
-        com.openggf.data.Game game = mock(com.openggf.data.Game.class,
-                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.PlayerSpriteArtProvider.class));
         fixture.level().game = game;
         SpriteArtSet stock = art(8);
-        when(((com.openggf.data.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("sonic"))
+        when(((com.openggf.sprites.art.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("sonic"))
                 .thenReturn(stock);
 
         fixture.initializer().initialize();
 
-        verify((com.openggf.data.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("sonic");
+        verify((com.openggf.sprites.art.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("sonic");
         assertEquals(stock, rendererArt(capturedRenderer(fixture.main())));
     }
 
@@ -297,11 +297,11 @@ class TestLevelPlayableArtInitializerModArt {
         when(module.getTailsTailVramBase()).thenReturn(0x3456);
         level.gameModule = module;
 
-        com.openggf.data.Game game = mock(com.openggf.data.Game.class,
-                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.PlayerSpriteArtProvider.class));
         level.game = game;
         SpriteArtSet stock = art(8, 0, 0x1234);
-        when(((com.openggf.data.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("tails"))
+        when(((com.openggf.sprites.art.PlayerSpriteArtProvider) game).loadPlayerSpriteArt("tails"))
                 .thenReturn(stock);
 
         SpriteManager sprites = mock(SpriteManager.class);
@@ -391,10 +391,10 @@ class TestLevelPlayableArtInitializerModArt {
                 .register(sideKey, definition(sideKey, code -> art(capacity - 1)));
         AbstractPlayableSprite sidekick = sprite(sideKey, sideKey.persisted());
         Fixture fixture = fixture(registry, mainKey, List.of(sidekick));
-        com.openggf.data.Game game = mock(com.openggf.data.Game.class,
-                withSettings().extraInterfaces(com.openggf.data.SpindashDustArtProvider.class));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.SpindashDustArtProvider.class));
         fixture.level().game = game;
-        when(((com.openggf.data.SpindashDustArtProvider) game).loadSpindashDustArt(anyString()))
+        when(((com.openggf.sprites.art.SpindashDustArtProvider) game).loadSpindashDustArt(anyString()))
                 .thenReturn(art(1));
 
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
@@ -506,10 +506,10 @@ class TestLevelPlayableArtInitializerModArt {
         when(module.getGameId()).thenReturn(GameId.S2);
         when(rules.dynamicArtDmaService()).thenReturn(com.openggf.game.rules.DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
         fixture.level().gameModule = module;
-        com.openggf.data.Game game = mock(com.openggf.data.Game.class,
-                withSettings().extraInterfaces(com.openggf.data.PlayerSpriteArtProvider.class));
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class,
+                withSettings().extraInterfaces(com.openggf.sprites.art.PlayerSpriteArtProvider.class));
         fixture.level().game = game;
-        when(((com.openggf.data.PlayerSpriteArtProvider) game).loadPlayerSpriteArt(anyString()))
+        when(((com.openggf.sprites.art.PlayerSpriteArtProvider) game).loadPlayerSpriteArt(anyString()))
                 .thenReturn(art(8));
         var animation = mock(com.openggf.sprites.managers.PlayableSpriteAnimation.class);
         when(tails.getAnimationManager()).thenReturn(animation);

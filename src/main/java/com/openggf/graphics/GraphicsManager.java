@@ -372,9 +372,18 @@ public class GraphicsManager {
 			flushPatternBatch();
 		}
 
-		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, width, height, this);
+		PatternRenderCommand command = obtainPatternCommand(entry, paletteTextureId, desc, x, y, width, height);
 		registerCommand(command);
 		restartPatternBatch(restartInstanced, restartBatched, 0);
+	}
+
+	private PatternRenderCommand obtainPatternCommand(PatternAtlas.Entry entry, int paletteTextureId,
+			PatternDesc desc, float x, float y, float width, float height) {
+		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, this);
+		// Preserve the acquired prefix, then palette/replay/underwater sampling before later attributes.
+		command.capturePalette(desc.getPaletteIndex());
+		command.finish(desc.getHFlip(), desc.getVFlip(), desc.getPriority(), x, y, width, height);
+		return command;
 	}
 
 	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
@@ -1265,15 +1274,15 @@ public class GraphicsManager {
 		boolean restartBatchedAfterFallback = false;
 		int paletteIndex = desc.getPaletteIndex();
 		if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && instancedBatchActive && instancedPatternRenderer != null) {
-			usedBatch = instancedPatternRenderer.addPattern(entry, paletteIndex, desc, x, y);
+			usedBatch = tryAddInstancedPattern(entry, paletteIndex, desc, x, y);
 			if (!usedBatch) {
 				flushPatternBatch();
 				restartPatternBatch(true, false, entry.atlasIndex());
-				usedBatch = instancedPatternRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
+				usedBatch = tryAddInstancedPattern(entry, desc.getPaletteIndex(), desc, x, y);
 			}
 		} else if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && batchedRenderer != null && batchedRenderer.isBatchActive()) {
 			if (entry.atlasIndex() == 0) {
-				usedBatch = batchedRenderer.addPattern(entry, paletteIndex, desc, x, y);
+				usedBatch = tryAddBatchedPattern(entry, paletteIndex, desc, x, y);
 			}
 			if (!usedBatch) {
 				// A direct fallback must be ordered after already staged page-0 geometry.
@@ -1284,12 +1293,50 @@ public class GraphicsManager {
 
 		if (!usedBatch) {
 			// Fallback to individual commands (use pooled allocation)
-			PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId, desc, x, y, this);
+			PatternRenderCommand command = obtainPatternCommand(entry, paletteTextureId, desc, x, y, 8f, 8f);
 			registerCommand(command);
 			if (restartBatchedAfterFallback) {
 				restartPatternBatch(false, true, 0);
 			}
 		}
+	}
+
+	// Keep descriptor reads after admission: virtual manager getters can mutate the
+	// descriptor, replace the renderer, reject, or throw. Keep each attempt's receiver;
+	// palette arguments are sampled at the call sites.
+	private boolean tryAddBatchedPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
+		BatchedPatternRenderer renderer = batchedRenderer;
+		if (!renderer.admitPattern(entry)) return false;
+		renderer.appendAdmittedPattern(entry, paletteIndex, desc.getHFlip(), desc.getVFlip(), x, y);
+		return true;
+	}
+
+	private boolean tryAddBatchedStrip(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y, int stripIndex) {
+		BatchedPatternRenderer renderer = batchedRenderer;
+		if (!renderer.admitPattern(entry)) return false;
+		renderer.appendAdmittedStripPattern(entry, paletteIndex, desc.getHFlip(), desc.getVFlip(), x, y, stripIndex);
+		return true;
+	}
+
+	private boolean tryAddBatchedShadow(PatternAtlas.Entry entry, PatternDesc desc, int x, int y) {
+		BatchedPatternRenderer renderer = batchedRenderer;
+		if (!renderer.admitShadowPattern(entry)) return false;
+		renderer.appendAdmittedShadowPattern(entry, desc.getHFlip(), desc.getVFlip(), x, y);
+		return true;
+	}
+
+	private boolean tryAddInstancedPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
+		InstancedPatternRenderer renderer = instancedPatternRenderer;
+		if (!renderer.admitPattern(entry)) return false;
+		renderer.appendAdmittedPattern(entry, paletteIndex, desc.getHFlip(), desc.getVFlip(), desc.getPriority(), x, y);
+		return true;
+	}
+
+	private boolean tryAddInstancedStrip(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y, int stripIndex) {
+		InstancedPatternRenderer renderer = instancedPatternRenderer;
+		if (!renderer.admitPattern(entry)) return false;
+		renderer.appendAdmittedStripPattern(entry, paletteIndex, desc.getHFlip(), desc.getVFlip(), desc.getPriority(), x, y, stripIndex);
+		return true;
 	}
 
 	private int adjustVerticalWrapY(int y) {
@@ -1424,11 +1471,11 @@ public class GraphicsManager {
 		boolean restartInstancedAfterDirect = false;
 		boolean restartBatchedAfterDirect = false;
 		if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && instancedBatchActive && instancedPatternRenderer != null) {
-			boolean added = instancedPatternRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+			boolean added = tryAddInstancedStrip(entry, paletteIndex, desc, x, y, stripIndex);
 			if (!added) {
 				flushPatternBatch();
 				restartPatternBatch(true, false, entry.atlasIndex());
-				added = instancedPatternRenderer.addStripPattern(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
+				added = tryAddInstancedStrip(entry, desc.getPaletteIndex(), desc, x, y, stripIndex);
 			}
 			if (!added) {
 				flushPatternBatch();
@@ -1438,22 +1485,21 @@ public class GraphicsManager {
 			}
 		} else if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && batchedRenderer != null && batchedRenderer.isBatchActive()) {
 			boolean added = entry.atlasIndex() == 0
-					&& batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
+					&& tryAddBatchedStrip(entry, paletteIndex, desc, x, y, stripIndex);
 			if (added) {
 				return;
 			}
 			flushPatternBatch();
 			if (entry.atlasIndex() == 0) {
 				restartPatternBatch(false, true, 0);
-				if (batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex)) {
+				if (tryAddBatchedStrip(entry, paletteIndex, desc, x, y, stripIndex)) {
 					return;
 				}
 				flushPatternBatch();
 			}
 			restartBatchedAfterDirect = true;
 		}
-		PatternRenderCommand command = PatternRenderCommand.obtain(entry, paletteTextureId,
-				desc, x, y, 8f, 2f, this);
+		PatternRenderCommand command = obtainPatternCommand(entry, paletteTextureId, desc, x, y, 8f, 2f);
 		command.resolveStripTextureCoordinates(entry, stripIndex);
 		registerCommand(command);
 		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
@@ -1550,10 +1596,10 @@ public class GraphicsManager {
 			return;
 		}
 		if (batchedRenderer != null && batchedRenderer.isShadowBatchActive()) {
-			if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+			if (!tryAddBatchedShadow(entry, desc, x, y)) {
 				flushShadowBatch();
 				batchedRenderer.beginShadowBatch(entry.atlasIndex());
-				if (!batchedRenderer.addShadowPattern(entry, desc, x, y)) {
+				if (!tryAddBatchedShadow(entry, desc, x, y)) {
 					throw new IllegalStateException("Unable to add shadow pattern to a fresh batch");
 				}
 			}
@@ -2852,7 +2898,7 @@ public class GraphicsManager {
 	private boolean addSatReplayTile(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
 			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
 		if (rowStart == 0 && rowEnd == 8) {
-			return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+			return tryAddInstancedPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
 		}
 		return instancedPatternRenderer.addPatternRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
 				satEntry.piece().effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
@@ -2861,7 +2907,7 @@ public class GraphicsManager {
 	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry,PatternAtlas.Entry atlasEntry,
             int paletteTextureId,int paletteIndex,boolean pieceHFlip,boolean pieceVFlip,int drawX,int drawY,int rowStart,int rowEnd) {
         PatternRenderCommand command=rowStart==0 && rowEnd==8
-                ?PatternRenderCommand.obtain(atlasEntry,paletteTextureId,reusableReplayDesc,drawX,drawY,this)
+                ?obtainPatternCommand(atlasEntry,paletteTextureId,reusableReplayDesc,drawX,drawY,8f,8f)
                 :PatternRenderCommand.obtainRows(atlasEntry,paletteTextureId,paletteIndex,pieceHFlip,pieceVFlip,
                         satEntry.piece().effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
         command.paletteReplay(satEntry.presentationSubject().paletteReplay());
@@ -2950,7 +2996,7 @@ public class GraphicsManager {
 	/**
 	 * Loads the shared replay PatternDesc with the tile word for one replayed SAT
 	 * tile. Reuses a single PatternDesc across the entire SAT replay: both
-	 * PatternRenderCommand.init() and InstancedPatternRenderer.addPattern() copy
+	 * obtainPatternCommand() and tryAddInstancedPattern() copy
 	 * all needed fields out of the desc and do not retain a reference, so mutating
 	 * it before the next tile is safe. PatternDesc.set() resets every derived
 	 * field via updateFields().

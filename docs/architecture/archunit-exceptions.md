@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 until the projected 143-record cut is verified | Move pooled GPU commands to scalars; retain supported typed ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -151,11 +151,16 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 95 methods across 94 files,
-down from 102/100 after direct manager construction and named module fixtures
-replaced seven methods in six test classes. The four FadeManager unit cases
+The ambient singleton-setup inventory now contains 6 methods across 5 files,
+down from the original102/100 inventory. Relative to the pre-delivery `e9d8087ac`
+95/94 inventory, this continuation removes89 setup methods across89 files with
+zero additions, through direct construction and existing named fixture owners. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
-inject their render service and graphics owner; Geyser checks name the S1 fixture.
+inject their render service and graphics owner; S1/S2 object and MGZ2 event checks name their module fixtures. Engine/session and frontend checks use the engine-only boundary when no gameplay world is required.
+GameLoop keeps its initial raw bootstrap configuration and the preference/display/module order,
+then uses the existing per-test fixture owner. This adds incoming-profile transient
+cleanup and a second engine-context construction while preserving base preferences,
+world/manager identity and loaded data; dedicated controls invoke its actual setup.
 These count setup obligations, not demonstrated leaks. Removing four unused GameLoop imports first tightened
 stale accounting. The later registry metadata and bonus-stage capability migration
 removes the remaining root coupling; both concrete-reference caps are now zero.
@@ -271,7 +276,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 147
+- `low_level_layers_do_not_depend_on_runtime_layers`: 121
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -334,7 +339,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 154 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 151 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -343,7 +348,9 @@ set. The live dependency census on 2026-10-23 found seven unused permissions:
 These were pruned from 159 to 152; editor art import adds the narrowly owned
 `editor -> tools` pair (also used by Stageplay screenplay import/export, owned by
 `editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
-adds `stageplay -> util`, giving the merged tree 154 permissions. The three matching obsolete
+adds `stageplay -> util`, giving that historical merged tree154 permissions. Art-provider relocation removes
+`data -> sprites`; Game relocation removes `data -> audio`; the composed Game and
+PaletteLoader moves remove `data -> level`. The current set has151 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
@@ -601,13 +608,127 @@ sharing also respects native versus derived water policy. The existing gameplay
 palette owner captures donor RGB values and bank lifetime tokens, restores current
 cells without replacing aliases, and uploads restored colors immediately. These
 close demonstrated palette defects without moving the registry or reducing its
-typed allowances. Separate shader-capacity work has component evidence and review
-but awaits composition; this delivery does not claim it fixed.
+typed allowances. The sampler-height correction is composed locally alongside the
+scalar GPU boundary; combined focused checks and fresh guards passed. The
+original broad smoke request remains incomplete.
 
-The next bounded allowance cut gives PatternRenderCommand a scalar GPU boundary
-while keeping GraphicsManager's typed ingress and the SAT decoder adapter.
-Its reviewed projection is nine removals plus five explicit adapter identities,
-147 → 143. That component now has focused results and source-review acceptance;
-this delivery still contains 147 records and does not claim its composed gates. The
+At the earlier verified136-record checkpoint, the pooled command
+boundary removes nine identities and adds five (147 → 143), both GPU backend
+boundaries remove twenty-one and add seventeen (143 → 139), and the complete
+art-provider contracts remove three (139 → 136). GraphicsManager retains its typed
+creator ingress and the SAT callback adapter. Moving the two art-provider names
+to `sprites.art` intentionally changes the unpublished 0.7 candidate; compiled
+mods must rebuild as documented in the compatibility guide. The release descriptor
+remains unchanged. Independent review is complete. The composed candidate passed
+846 focused behavior/API/tooling cases and 769 fresh structural checks with zero
+failures/errors/skips. The broader smoke request later timed out; integration and push remain pending. The
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
+
+The two legacy `SmpsSequencer` restore-owner lookup constructors remain qualified
+exceptions. They sample the configured audio root at construction; replacing this
+with a retained backend owner would change lifetime semantics across104 callers.
+Existing explicit `MusicRestoreSink` overloads serve newly owned callers. No
+demonstrated restore defect justifies the broad migration here; allowance delta0.
+The continuation plan records the alternative and evidence needed to reopen it.
+
+The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
+canonical-palette decoding dependencies (136 → 126), with no replacement frozen
+records or supported API change. ROM reads and all decoding bodies remain
+unchanged. At that component base, `data -> level` stayed allowed because the
+separately reviewed `Game` contract still used that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
+combined parent delivery remains separate.
+
+The earlier decoder/fixture composition had 126 low-level records. Decoder component
+qualification completed there; joint composition checks were still pending at
+that checkpoint. The earlier 846 focused / 769 guard results above stay attributed to
+the preceding 136-record executable state.
+
+An intermediate fixture checkpoint removed twenty additional setup identities:
+ten module/world keys, eight direct or engine-only keys, and two event/sensor
+keys. Its inventory was42 methods across41 files. At that stage GameLoop was retained
+for preference-sensitive setup, and oil suffocation/S1 monitor landing awaited
+world-consumer qualification. Those later closures appear below.
+
+Four additional engine-only setups now use the existing reset owner: the editor
+rendering/controller controls and injected ICZ freezer/MGZ pulley-mantis tests.
+Their explicit world-creation helpers, camera bounds and consumer bodies remain
+unchanged. That checkpoint had38 methods across37 files; all110 focused/guard cases passed
+with zero failures/errors/skips. No production or shared fixture helper changed.
+
+Five formerly held fixture keys were then qualified with their existing
+lifecycle owners: trace-launch setup retains a gameplay world before installing
+its recording backend; live-rewind audio keeps engine reset before its backend;
+provider tests keep no world; graphics binding/SAT tests retain their explicit
+bootstrap/reconstruction operations in consumer bodies. No helper was added.
+That historical checkpoint had33 methods across32 files. All47 focused/guard cases
+passed with zero failures/errors/skips, including both nested real-ROM controls.
+
+The reviewed world-consumer slice closes twelve further keys, including oil and
+S1 monitor tests whose earlier direct isolation was rejected. Their full-world
+fixtures preserve session camera/game-state consumers and authoritative module
+sampling. That historical checkpoint had21 methods across20 files; these component
+checks passed110 cases plus8 guards, with joint validation still pending.
+
+The preceding Game composition contains123 low-level records: complete `Game`
+relocation removes three more from126, with no frozen replacements. It owns
+source-backed level/music/scroll/editing/runtime-art assembly beside `GameModule`,
+`ModGame` and `StandaloneGameSpec`. This intentional unpublished-candidate break
+requires matching-artifact rebuilds, including inferred factory callers; the
+manifest range and release descriptor are unchanged. All26 Game-bearing pin rows
+are renamed, with the accepted art-provider14 replacements retained.
+
+Game alone removes `data -> audio`; composing the independently qualified
+`PaletteLoader` move also eliminates the final `data -> level` consumer. Both
+permissions and matching cycle ignores are removed, leaving151 directed pairs.
+`audio -> data`, `data -> game` and `data -> configuration` remain required.
+The parent will verify the actual compiled graph and exact published counts;
+component results are not a claim of completed joint delivery.
+
+The current source composition has121 low-level records. Native SMPS readers
+retain their own identical caller-supplied ROM reference; the generic cache/hex
+dispatch base is ROM-free. Its two obsolete records disappear without replacement
+or permission removal. All three public native `(Rom)` constructors and supported
+pins are unchanged. Unsupported external base subclasses must adapt to the
+protected no-argument constructor, retain their own ROM and rebuild. The two
+legacy sequencer restore-owner constructors remain qualified and byte-unchanged.
+The component's90 behavior and58 strict/API checks passed; final joint evaluation
+remains pending.
+
+Thirteen further ROM/world setup identities close through existing fixture
+owners, with205 behavior cases and8 guard controls passing without skips.
+The mixed ROM-free/method-level ROM PLC-art setup remains retained, as do the
+preference-sensitive and legacy visual boundaries. That historical checkpoint had8
+methods across7 files; joint final verification was still pending there.
+
+The audio regression class now resolves its configured S2 ROM before using the
+engine-only reset, then keeps one private ROM/loader/DAC initialization in
+`BeforeAll`. Only its setup key is removed; the three exact PCM identities and workload
+control executed without skips, alongside all8 singleton guard controls. External WAV comparisons and
+measurement methods were excluded from that exact selection. That checkpoint
+had7 methods/6 files. The three previously untagged measurement probes now carry
+the existing `performance-measurement` tag; ordinary class selection executed
+exactly four behavior controls with no measurement or external-WAV cases.
+
+
+## Current continuation status
+
+The composed candidate has121 low-level records,151 unique permitted package
+pairs, and6 ambient setup methods across5 files. GameLoop's existing per-test
+owner closes the last qualified ordinary setup after preservation controls for
+base preferences and incoming world/data identities. The six remaining methods
+are the mixed ROM/ROM-free PLC-art setup, preference-preserving trace bootstrap,
+and four legacy visual setups (two in InstaShield). The visual obligations need
+compatible owned-context and pixel evidence; setting the EGL property alone
+does not satisfy their fixed-function GLFW lifecycle.
+
+The parent observed669 runtime/loader/renderer cases,15 audio/DAC/lifecycle
+cases,458 fixture cases and119 creator/API/tooling cases with zero failures,
+errors or skips in their recorded selections. Engine/SDK packaging succeeded;
+canonical packaged Javadoc contains the new supported Game/art-provider pages
+and excludes their old identities. Fresh final guards passed769 cases with zero failures/errors/skips on the
+composed source; integration and push remain pending. The broad request completed68/75 batches then timed out with36,812
+tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
+green or complete smoke result. Exact commands, source states and limits are
+in the continuation plan. Remaining allowances have qualified retention reasons,
+not an assertion that every native lifecycle or external caller is certified.

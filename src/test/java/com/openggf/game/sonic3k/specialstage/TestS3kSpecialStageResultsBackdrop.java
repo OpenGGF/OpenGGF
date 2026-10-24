@@ -42,7 +42,7 @@ class TestS3kSpecialStageResultsBackdrop {
         assertNotNull(colour, "results screen names no backdrop");
         byte[] word = rom.readBytes(0x2E318, 2); // Pal_Results colour 0 (sonic3k.asm:63319)
         assertEquals(0x0CCC, ((word[0] & 0xFF) << 8) | (word[1] & 0xFF));
-        var expected = com.openggf.data.PaletteLoader.fromBytes(rom.readBytes(0x2E318, 128))[0].getColor(0);
+        var expected = com.openggf.level.PaletteLoader.fromBytes(rom.readBytes(0x2E318, 128))[0].getColor(0);
         assertEquals(expected.r, colour.r);
         assertEquals(expected.g, colour.g);
         assertEquals(expected.b, colour.b);

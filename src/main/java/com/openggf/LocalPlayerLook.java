@@ -1,6 +1,6 @@
 package com.openggf;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.AppearancePalettes;
 import com.openggf.graphics.GraphicsManager;
