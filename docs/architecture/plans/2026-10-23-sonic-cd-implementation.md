@@ -2821,3 +2821,31 @@ inputs, not an implication of runtime dispatch or a full-suite certificate.
 ```bash
 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdOpeningObjectRuntime,TestCdExplosion,TestCdPoints,TestCdFlower,TestCdObjectPool,TestCdPlayerObjectTouch,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
 ```
+
+
+### Pure contact aftermath bodies, 24 October 2026
+
+Explosion18, Points1C and Flower1F execute over the existing live pool with
+actual authenticated mapping/animation tables. Explosion preserves first-free
+allocation and dirty bytes; a later Points child can execute this pass. The
+low-byte points-frame shift, call21 animation finish, call22 Flower conversion,
+Points23 rises/call24 delete-then-DrawObject, and Flower floor/growth/no-despawn
+semantics match the pinned source. Deleted Points is still queued, then its zero
+ID is skipped at DrawObjects. Points priority remains its allocated slot byte.
+Three native aliases1C/3E/2A are added without changing secondary25/29.
+
+The exact seven-file Opus unit passed all56actual cases (24/18/14), including
+three opt-in retail methods, in the298-case byte39/U3 check above. Independent
+Opus review found no P1/P2 and reconstructed the actual floor fixture through
+the production helpers: distance31 above both blocks,15..1 while falling, then
+-1 and angle22, landing on call9 at77F. The earlier fitted Python model is
+secondary evidence, not the test oracle. All reviewed source hashes stayed exact.
+
+Unsupported HUD/saved-flags routines remain boundaries. Saved-flags landing
+commits the pool adjustment but loses its staged scratch-angle effect on throw;
+that path is unreachable from admitted subtype1 badnik flowers. Dependency
+exceptions can leave local per-dispatch writes unapplied. This unit therefore
+does not promise complete native-prefix state on arbitrary failure. The runtime
+must close instead of retrying it. World dispatch, art banking and the real
+KillEnemy producer are separate integration units, not certified by these tests.
+Fable's earlier handoff supplied reads/derivations only; Opus authored the code.

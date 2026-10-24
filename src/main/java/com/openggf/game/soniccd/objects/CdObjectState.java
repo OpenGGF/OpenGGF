@@ -31,7 +31,9 @@ public final class CdObjectState {
         // ObjRing_Init:.InitSubObj / ObjRing_Collect: one-based member at oVar34.
         RING_MEMBER(0x34),
         // Obj3DRamp_Main (3D Ramp/Main.asm:230,294,326): launch timer byte at oVar2E. Storage only.
-        RAMP_TIMER(0x2E);
+        RAMP_TIMER(0x2E),
+        // ObjPoints (HUD and Points/Main.asm:11,40,47): oPntsTimer EQU oVar2A, a byte lifetime. Storage only.
+        POINTS_TIMER(0x2A);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -44,7 +46,12 @@ public final class CdObjectState {
         MOSQUI_ANCHOR_X(0x2A), RING_ANCHOR_X(0x32),
         // Obj3DPlant_Init / Obj3DRamp_Init (3D Ramp/Main.asm:51,59,74,220): the family's shared original X at
         // oVar2A, the plant's own base X at oVar2C and the booster's anchor at oVar2A. Overlapping storage only.
-        PLANT_ANCHOR_X(0x2A), PLANT_BASE_X(0x2C), RAMP_ANCHOR_X(0x2A);
+        PLANT_ANCHOR_X(0x2A), PLANT_BASE_X(0x2C), RAMP_ANCHOR_X(0x2A),
+        // MOVE.W #imm,oAnim(a0) (Explosion/Main.asm:80,83; Flower/Main.asm:55) writes oAnim and oPrevAnim together.
+        ANIMATION_WORD(0x1C),
+        // oExplodePoints EQU oVar3E (Explosion/Main.asm:8,19); Player_TouchEnemy .KillEnemy writes it
+        // (Player Object Collision.asm:165,170). Its low byte selects the points frame. Storage only.
+        EXPLOSION_POINTS_FRAME(0x3E);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
