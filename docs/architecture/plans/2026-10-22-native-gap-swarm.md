@@ -5799,3 +5799,135 @@ limitation and all prior test epochs remain unchanged evidence. No remote push,
 body/draft change, Main/develop mutation, manualCI, native/passive observation,
 route profile or new source phase follows. Consumed owned diagnostics are removed
 after readback; useful source, classes and the local worktree/branch remain retained.
+
+
+### Isolated Emerald and real-valley catalogue prerequisites — 2026-10-24
+
+This fixture-setup-only leaf starts at
+`fa7f88deca20ce9ea8b9a1f5107772113734366d`. It changes only the two already-tested
+fixtures and this factual append. The complete fa7 Plan prefix is preserved.
+The earlier LivePlayback1, background/draw38 and registration/donor7 results
+remain separate epochs, included once through ancestry rather than rerun here.
+
+`com.openggf.mods.code.TestEmeraldRemix` gains four intermediate
+`RomCatalogueFixture` try-with-resources bindings for the original discovered S2
+file and the actual configuration/ROM manager. Each original owned-ROM resource
+is followed by the catalogue resource and then the existing Fixture resource,
+so runtime/fixture cleanup precedes catalogue restoration, which precedes owned
+ROM close. The fifth method,
+`cloverValleyRoundTripsThroughEditorImportProjectExportAndPlaytest`, is byte-exact.
+All original ROM assumptions, recipe/editor/export checks, route inputs,
+coordinates, timing and native-source oracles remain unchanged.
+
+`com.openggf.mods.code.TestStarpostRealValley` conditionally binds the original
+supplied S1 file immediately after its S3K `SharedLevel.load`, before the original
+logical-S1 availability assumption. A null discovery does not create an empty
+binding or replace that assumption. Catalogue close runs last in a narrow outer
+finally around the original kit-close then bootstrap-dispose sequence. The
+Tails/Knuckles method retains its manual close and fresh launch/binding. There
+is no reapply, global harness change, alias, cache clearing, manager close or
+borrowed annotation-ROM close. Every matrix, assumption, floor/pixel/loop/rewind
+assertion and controller input remains intact. Whole-file inverses of only these
+fixture/import hunks reproduce fa7 exactly.
+
+Frozen tested Java SHA-256 values are:
+
+- Emerald: `f84f546b5814a5abd984bc86387703dd13e14b0898314ea88e12bc2adc9dfcaf`
+  (blob `a98be57469ea5e39e263558d6122ad2edb09c26d`, +17/-4).
+- RealValley: `2d5a5165b0e38f49cc859e6475df417924bd2a06e5e97d5ef8f7985821f2fd9f`
+  (blob `04d9894b9e905e94bc972114ab0668abe4bdfc31`, +19/-5).
+
+The tested tree before this prose is
+`a9666f39bda7b728919924077ec81587016c261f`. This worktree's path/mode/mtime/content
+input frame is
+`64209009696ae93c0a9b96e29efdf66b923c9a7f90f20eafa3ca219c4a66010d`,
+13,178 paths / 856,434,238 bytes. This is checkout-specific timestamp attribution,
+not a portable cross-worktree claim. Both Java pins, all 20 protected/helper/prior
+leaf pins, tree and complete input frame remained exact through full readback.
+Production, shared helpers, assets, configuration files, codecs, API signatures,
+guards, baselines and native budgets did not change.
+
+Exactly one original normal queued request, session58048, ran from
+`<PR_WORKTREE>`:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.mods.code.TestEmeraldRemix,com.openggf.mods.code.TestStarpostRealValley' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+`OPENGGF_QUEUE_WRAPPER` denotes the absolute current
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py`, SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`;
+all ten reviewed wrapper/import pins matched before submission. Selector SHA-256
+is `5b969f35bf2fea2cea553bab360a271321a707581d5df25b3aaf6553b6e04a4a`.
+The original three stock files were freshly CRC32/SHA-1 verified before launch.
+The reviewed Java25/Lua5.4/null-audio/EGL environment and unset ambient
+launcher/display variables were retained. Exact own-worktree dedup was empty;
+the same request stayed alive through admission. There was one parent author,
+no child/reviewer/watcher, no version probe, preflight, standalone build, helper
+unit/API/guard/policy check, retry, extra selector or destination-property addition.
+
+Actual JUnit result: **18 distinct identities / 18 passes / 0 failures /
+0 errors / 0 skips**, Emerald5 and RealValley13. This is fixture admission/setup
+qualification with **four explicit OPEN positive-run guard warnings**, not
+fault-free qualification. Exactly these two methods each emit one music refusal
+and one PLC warning:
+
+- `com.openggf.mods.code.TestEmeraldRemix#sonicCompletesTheRemixedActAndCloverValley`
+- `com.openggf.mods.code.TestEmeraldRemix#cloverValleySlopesTurnSonicThroughEasedAngles`
+
+The exact messages are `Refusing to arm S2 Level_PlayBgm: Sonic 2 zone id out of
+range: 135` and `Zone index -1 out of range for LEVEL_DATA_DIR (max 16)`.
+`Sonic2PreBgmTimingModel.resolve` returns `Unresolved` for the invalid zone; the
+identified `Sonic2LevelInitProfile.scheduleLevelMusic` guard cancels scheduling
+and logs that reason. The message is not evidence of an exception caught by its
+separate catch branch. `Sonic2PlcLoader.getZonePlcIds` logs its bounds refusal and
+returns `{0,0}`. Diagnostics do not identify the exact runtime PLC caller; the
+triggering runtime chain, effects on playback/art/PLC coverage and frequency or
+newness remain UNKNOWN. Neither method declares these guard refusals as negative
+controls. No suppression, waiver, fitted expectation, catch change or runtime
+repair follows from the 18 JUnit passes. Native music/PLC/art closure is not claimed.
+
+RealValley retained its observed 2,129,920 exact art pixels, 3,407,872 exact
+collision pixels and 3,072 production floor probes. The three farmer loop cases
+and all six character/aspect gate cases execute, alongside rewind and the
+original Tails/Knuckles controls. These are existing bounded oracles, not complete
+native/art coverage or a matched historical baseline.
+
+Queue wait was **127 seconds**, separately from Maven **39.125 seconds**;
+command wall time was 166.456 seconds. Suite times were Emerald3.876s and
+RealValley4.421s; these are not an elapsed-delivery sum. All 18 identities, two
+XMLs with identical 69-property sets, 79 nonempty owned/dependency classpath
+entries, 27 recursive streams / 8,535 UTF-8 bytes, two text reports and the entire
+208-line / 21,549-byte console were read. Java25.0.5.0.2, exact selector, owned
+cwd/target, EGL and all three absolute ROM properties match. Five packages report
+validation0findings. FAST/NONE warnings (42 XML / 44 console) and 18 compiler
+deprecation warnings are separate from the four OPEN guards. No fresh dump or
+infrastructure/source-drift failure was observed.
+
+The one-test-request scope fe76 closed after reporting the positive-warning
+boundary, without a Plan write, commit, runtime correction or automatic retry.
+After bounded disposition accepted the fixture-owned prerequisite changes with
+those warnings still OPEN, a fresh delivery-only slice authorized this factual
+append and one normal-hook local leaf, sole parent fa7. No new executable edit,
+test or separate policy command occurs in that delivery slice. All five fully
+read owned XML/text/console files, 81,498 bytes, were consumed; no raw archive or
+validation receipt was created. Useful source, compiled outputs and the worktree
+remain. There are no owned live jobs or children.
+
+Root reports fa7 received once with its separately qualified FBO leaf into
+composition `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`; this isolated successor
+must remain held until that composition's new complete-category continuation
+reaches terminal/full readback. No Root source, targets or jobs were read here.
+The abnormally terminated original 3da run retains only its available evidence;
+this leaf does not complete or retroactively qualify that run. Original f340
+189 failed identities/108 skips, 41 disputed route causes, inherited mapping
+limitation, warm secondary-cache identity limitation and all other epochs remain
+unchanged evidence. No all-family, all-native or aggregate PR-green claim, remote
+push, PR-body/draft change, Main/develop mutation, CI, native/passive observation,
+route profile or FBO/runtime work is included.

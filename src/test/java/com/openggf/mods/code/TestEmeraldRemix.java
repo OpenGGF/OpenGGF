@@ -3,6 +3,7 @@ package com.openggf.mods.code;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
+import com.openggf.data.RomGame;
 import com.openggf.data.RomManager;
 import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.editor.project.EditorProjectDocument;
@@ -169,7 +170,10 @@ class TestEmeraldRemix {
     @Test void recipeRebuildsActOneFromStockStripsAndCloverValleyFollowsActTwo() throws Exception {
         var romFile = RomTestUtils.ensureSonic2RomAvailable();
         assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
-        try (Rom rom = open(romFile); Fixture fixture = load(compilePackage())) {
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
             var registry = fixture.resolved.getZoneRegistry();
             int clover = registry.resolveZoneKey(CLOVER_KEY).orElseThrow();
             assertEquals(new ZoneProgressionPlan.Successor(clover, 0), registry.progressionPlan().next(registry.progressionTopology(), 0, 1),
@@ -217,7 +221,10 @@ class TestEmeraldRemix {
     @Test void sonicCompletesTheRemixedActAndCloverValley() throws Exception {
         var romFile = RomTestUtils.ensureSonic2RomAvailable();
         assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
-        try (Rom rom = open(romFile); Fixture fixture = load(compilePackage())) {
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
             var play = play(rom, fixture);
             enter(play, 0, 0);
             play.runner.stepIdleFrames(30);
@@ -294,7 +301,10 @@ class TestEmeraldRemix {
     @Test void remixedActIsAdoptedByTheEditorAndExportsAsAPlayableLevel() throws Exception {
         var romFile = RomTestUtils.ensureSonic2RomAvailable();
         assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
-        try (Rom rom = open(romFile); Fixture fixture = load(compilePackage())) {
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
             var play = play(rom, fixture);
             enter(play, 0, 0);
             play.runner.stepIdleFrames(60);
@@ -325,7 +335,10 @@ class TestEmeraldRemix {
     @Test void cloverValleySlopesTurnSonicThroughEasedAngles() throws Exception {
         var romFile = RomTestUtils.ensureSonic2RomAvailable();
         assumeTrue(romFile != null, "Requires configured S2 World REV01 ROM");
-        try (Rom rom = open(romFile); Fixture fixture = load(compilePackage())) {
+        try (Rom rom = open(romFile);
+             var catalogue = RomCatalogueFixture.bind(GameServices.configuration(), RomManager.getInstance(),
+                     Map.of(RomGame.S2, romFile.toPath()));
+             Fixture fixture = load(compilePackage())) {
             var play = play(rom, fixture);
             enter(play, fixture.resolved.getZoneRegistry().resolveZoneKey(CLOVER_KEY).orElseThrow(), 0);
             var angles = new LinkedHashSet<Integer>();
