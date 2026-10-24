@@ -218,6 +218,19 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         return List.copyOf(spawnedChildren);
     }
 
+    @Override
+    protected void afterRewindRestoreSettled() {
+        // A missing child is legitimate when its recreation could not resolve a live parent.
+        spawnedChildren.removeIf(java.util.Objects::isNull);
+        for (AbstractObjectInstance child : spawnedChildren) {
+            if (child instanceof GradualCameraMaxXChild cameraChild) {
+                cameraChild.parent = this;
+            } else if (child instanceof ExhaustFlameChild flame) {
+                flame.parent = this;
+            }
+        }
+    }
+
     private void updateWait(AbstractPlayableSprite player, int vIntRunCount) {
         int touchValue = collisionProperty;
         collisionProperty = 0;
@@ -382,10 +395,14 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             exhaustSpawned = true;
             GradualCameraMaxXChild cameraChild = spawnChild(() -> new GradualCameraMaxXChild(this));
             cameraChild.setServices(services());
-            spawnedChildren.add(cameraChild);
+            if (!cameraChild.isDestroyed()) {
+                spawnedChildren.add(cameraChild);
+            }
             ExhaustFlameChild flame = spawnChild(() -> new ExhaustFlameChild(this));
             flame.setServices(services());
-            spawnedChildren.add(flame);
+            if (!flame.isDestroyed()) {
+                spawnedChildren.add(flame);
+            }
         }
     }
 
@@ -536,7 +553,9 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         if (services().objectManager() != null) {
             boss.initializeOnAllocationBeforeParentRelease();
         }
-        spawnedChildren.add(boss);
+        if (!boss.isDestroyed()) {
+            spawnedChildren.add(boss);
+        }
     }
 
     /**
@@ -554,7 +573,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             AbstractObjectInstance child = spawnedChildren.get(index);
             if (child instanceof ExhaustFlameChild && !child.isDestroyed()) {
                 manager.removeDynamicObject(child);
-                spawnedChildren.remove(index);
+                spawnedChildren.remove(child);
                 return;
             }
         }
@@ -572,7 +591,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     static final class GradualCameraMaxXChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int TARGET_MAX_X = 0x6000;
 
-        private final Lbz2RobotnikShipInstance parent;
+        private Lbz2RobotnikShipInstance parent;
         private int accumulator;
 
         private GradualCameraMaxXChild(Lbz2RobotnikShipInstance parent) {
@@ -587,6 +606,11 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             Lbz2RobotnikShipInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
                     ctx, Lbz2RobotnikShipInstance.class);
             return liveParent != null ? new GradualCameraMaxXChild(liveParent) : null;
+        }
+
+        @Override
+        public void onUnload() {
+            parent.spawnedChildren.remove(this);
         }
 
         @Override
@@ -623,7 +647,7 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         private static final int PRIORITY_BUCKET = 5;
 
         @RewindTransient(reason = "Structural parent link; flame position derives from the live ship.")
-        private final Lbz2RobotnikShipInstance parent;
+        private Lbz2RobotnikShipInstance parent;
         private boolean visibleThisFrame;
 
         private ExhaustFlameChild(Lbz2RobotnikShipInstance parent) {
@@ -639,6 +663,11 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             Lbz2RobotnikShipInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
                     ctx, Lbz2RobotnikShipInstance.class);
             return liveParent != null ? new ExhaustFlameChild(liveParent) : null;
+        }
+
+        @Override
+        public void onUnload() {
+            parent.spawnedChildren.remove(this);
         }
 
         @Override

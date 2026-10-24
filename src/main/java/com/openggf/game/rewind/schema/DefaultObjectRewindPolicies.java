@@ -704,6 +704,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "attachedKnuckles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "carriedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Keep only registered children; their unload hooks remove retired identities.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "spawnedChildren"), RewindFieldPolicy.CAPTURED),
             // OpenGGF extension: launch progress belongs to player identity so roster changes
             // cannot transfer or discard another sidekick's native launcher sequence.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance", "countersByPlayer"), RewindFieldPolicy.CAPTURED),

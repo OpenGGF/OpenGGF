@@ -41,7 +41,7 @@ obligation is not a passing test claim.
 | 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization records four children. SwingChild recreation selects a nearest live cameo, without reattaching to its parent's inventory. | `TestLbz2RideCameoInstances` is named by the isolated sweep but does not perform registry capture/restore. Required evidence includes four exact child identities, parent inventory restoration, and shake/freefall replay. Do not equate that sweep label with executed graph proof. |
 | 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Retained. `spawnDebris` records managed IceDebris; FrozenPlayerBlock recreation starts an empty inventory. Current reads are the testing accessor, but the deletion and auxiliary-sidekick paths have distinct lifetimes. | [`TestS3kIczFreezerGraphRewind.iczFreezerGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) checks cloud/block/player graph links. It does not certify this nonempty debris inventory after the block breaks. Exercise the native and auxiliary-sidekick debris boundaries, including retirement and forward replay. |
 | 16 | [`sonic3k.objects.IczMinibossInstance#childComponents`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczMinibossInstance.java) | Retained. This field is inherited from AbstractBossInstance, whose central policy requests identity capture. The class's actual fallback path still drops it. Its shard/orb helper arrays have their own state model, so an unconditional transient policy would hide a capture-path problem. | `TestS3kIczMinibossObject` tests encounter behavior, not complete destructive registry restoration. Required evidence includes the actual capture route, managed child identities, shard/orb state, pending defeat work, and a forward encounter replay. An empty inherited list in a default probe is insufficient. |
-| 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Retained gameplay debt. It records camera/flame/boss children. `releaseExhaustFlameForBossSpawn` consumes the list to remove the flame before boss allocation, so this inventory is not merely diagnostic. Recreation does not rebuild it. | `TestLbz2RideCameoInstances` covers the allocation choreography without a rewind split. Capture with the flame live, destructively restore, then advance through release and boss allocation; compare exact slots and child retirement. Do not replace deletion semantics to make this pass. |
+| 17 | [`sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/Lbz2RobotnikShipInstance.java) | Closed in the bounded ship follow-up below with central `CAPTURED`. The existing identity collection codec restores the registered child inventory in order. Admission excludes failed allocations; camera/flame unload hooks remove retired identities, and settled restore reconnects those children to the exact captured ship. | [`TestLbz2RobotnikShipRewind`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestLbz2RobotnikShipRewind.java) reproduces allocation before flame removal on the original runtime. Five managed graph cases cover destructive restore and release replay, exact slots/identities, camera retirement before capture, capture after flame retirement, overlapping owners, and tolerant missing-parent recreation. The existing 13 cameo checks remain green. |
 | 18 | [`sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossBoxKnuxInstance.java) | Retained gameplay debt. The list owns mutable S3kBossExplosionController instances; `tickWallExplosions` advances them and DONE waits for completion. Recreating an empty list changes completion and emitted effects. | [`TestS3kLbzMinibossGraphRewind.knucklesMinibossesRestoreFreshWithRestoredBoxParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kLbzMinibossGraphRewind.java) does not populate and restore these controllers. Capture nonempty controllers with pending explosions, verify RNG/effect consumption, and replay DONE before closing this key. Managed-child identity codecs alone cannot capture these helpers. |
 | 19 | [`sonic3k.objects.LbzMinibossInstance#panels`](../../../src/main/java/com/openggf/game/sonic3k/objects/LbzMinibossInstance.java) | Retained gameplay debt. PanelState is a mutable inner helper with motion, callback, timer, detach, and deletion fields. The list is rebuilt during initialization, but its progressed state is not reconstructed from scalar parent fields. | The LBZ miniboss graph check covers the Knuckles box-parent path, not the Sonic/Tails panel ring. Capture a progressed nonempty ring, alter its timers and detach state, recreate, and compare drawing, collision, and forward dispatch. A new helper-state contract needs separate design evidence. |
 | 20 | [`sonic3k.objects.LightningSparkObjectInstance#sparkTiles`](../../../src/main/java/com/openggf/game/sonic3k/objects/LightningSparkObjectInstance.java) | Retained rendering obligation. `forRewindRecreate` fetches the shield art set from the current Sonic3kObjectArtProvider. A final Pattern array is mutable render data, not proof that the exact resident patterns were recovered. | Verify nonzero pattern content and matching animation mapping under a real art provider before removal, immediately after reconstruction, and during forward drawing. Null-art isolated passes do not establish that result. No runtime assets are loaded from disassembly files. |
@@ -332,3 +332,156 @@ piece checks distinguish offsets, dimensions, tile, palette, flips and priority.
 This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
 HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
 S3K check, API check or release-only full suite ran in this follow-up.
+
+
+## LBZ2 ride-ship child inventory follow-up
+
+This bounded follow-up starts at `624e95b4892533d23ae898d8127f277038777f70`
+on `bugfix/ai-lbz-ship-rewind-flame-20261024`. Main advanced to `0ffa7f3c7`
+during verification. This checkout and its submitted jobs stayed on the original
+base. The parent owns reconciliation, composed guards/API checks, four S3K
+stability classes, release prose, integration, push and worktree cleanup.
+
+The existing release path consumes `spawnedChildren` to remove the flame before
+allocating the final boss. Fresh child recreation left that list empty.
+`liveFlameRestoreReplaysRetirementBeforeBossAllocation` passes its uninterrupted
+half on unchanged runtime, then fails after destructive restore. The first
+recorded lifecycle call is `add`, while the required first call is `remove` for
+the exact flame instance. The completed baseline request ran one test with one
+failure, zero errors and zero skips. An earlier request stopped at test compilation
+because the new fixture incorrectly called `Camera.rewindAdapter()`; registering
+the camera itself repaired that fixture before the behavioral reproduction.
+
+Two owner shapes were compared. A dedicated captured flame reference would fix
+the gameplay lookup, but would still need removal or reconstruction of the public
+diagnostic inventory. The selected shape captures the existing registered-child
+list through the existing identity collection codec. It preserves its order and
+the boss entry at the allocation boundary, with no new reference field or generic
+framework. Historical retired camera/flame entries are removed by their existing
+unload callback boundary before another capture. The managed testing accessor
+therefore describes registered children rather than retired history. Unmanaged
+choreography and the public constructor/accessor signatures are preserved.
+
+The settled restore callback rebinds camera/flame parent pointers from that exact
+inventory after all identities resolve. Those two private parent fields become
+mutable for this relink. Constructor-time nearest-parent lookup remains a tolerant
+placeholder, and still returns null when no ship can be found. Null child links
+are removed from the restored inventory. `remove(index)` becomes `remove(child)`
+because the unload callback can already have removed the same entry. The real
+manager still receives the same single flame removal before boss allocation.
+Native timing, allocation, destruction and respawn flags are unchanged.
+
+The live-flame regression leaves a lower free slot and retains the ship/camera
+slots. The final boss takes the lower slot; its music fade takes the released
+flame slot; its head takes the following free slot. The test compares exact child
+identities and slots, ordered lifecycle calls, and camera retirement against
+uninterrupted execution. A retired-camera case proves capture excludes an
+unregistered historical child and replays the alternate free-slot boundary.
+The post-flame capture restores the destroyed ship's remaining boss identity and
+replays without another flame removal or allocation. The missing-parent case
+keeps both child recreation paths tolerant. Overlapping ships at identical
+coordinates prove inventories and forward child behavior follow exact captured
+owners rather than nearest-parent ties.
+
+All commands below ran from this checkout with
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and `LUA_BIN=/usr/bin/lua5.4`.
+The commands resolve `MAIN_CHECKOUT` to the existing main checkout and `ROM_ROOT`
+to its existing ROM directory. They supply an absolute S3K ROM property, although
+these focused tests exercise managed graphs and injected services without loading
+a level.
+The baseline used the first selector shown. After the runtime fix, the two-class
+selection passed 17 tests with zero failures, errors or skips. After adding only
+the overlapping-owner case, the final graph selection passed all five cases with
+zero failures, errors or skips. The two passing invocations cover 18 distinct
+focused cases. They provide bounded validation of the affected contracts.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestLbz2RobotnikShipRewind' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestLbz2RobotnikShipRewind,TestLbz2RideCameoInstances' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+The behavioral baseline waited 159 seconds for admission; Maven reported 23.216
+seconds including compilation. The successful two-class selection waited 115
+seconds and reported about 82 seconds including compilation. The final five-case
+selection waited 51 seconds and reported 25.931 seconds. These are separate
+completed invocations. Queue waiting is not execution time. No request was
+cancelled, duplicated or restarted for admission. The completed summaries report
+zero skips. Final XML inspection confirmed the exact five graph methods and 13 cameo cases,
+all executed with zero skips. Their consumed XML/text reports were then removed;
+no category run or extra validation receipt was created.
+
+Only the exact `Lbz2RobotnikShipInstance#spawnedChildren` key is removed from the
+field-disposition baseline and assigned `CAPTURED` centrally. Other audit rows
+and the final boss's own inventory obligation remain open. These tests do not
+certify complete LBZ traversal, art/timing parity, viewport/donor/team breadth,
+or the unrelated cameo inventories. The parent retains those coverage limits
+and the delivery-wide gates.
+
+
+## LBZ2 allocation-exhaustion correction
+
+Fresh review of `098ed56337feb6f797ca4eacdeb83cbfdd8fbf89` against
+`624e95b4892533d23ae898d8127f277038777f70` found P2 in the initial inventory
+closure. The reviewed diff identifier was
+`4e0bc2838a33e9c8ad77cddabc29e11292288c08eaa7225c1c2a9aef8ecb7eaa`.
+`ObjectManager.addDynamicObjectInternal` marks failed-slot allocations destroyed
+and returns before registering their identities. Such rejected allocations never
+receive the unload callback that prunes registered children. The ship appended
+these rejected camera/flame objects unconditionally. Its boss append had the same
+problem. This invalidates the initial closure's unqualified live-inventory claim
+under slot exhaustion; the earlier five graph cases did not exercise capacity.
+
+Three new constrained-capacity cases use the real managed allocator and registry.
+With zero remaining slots, capture on unchanged `098ed5633` fails for the rejected
+`GradualCameraMaxXChild` identity. With one remaining slot above the ship, the
+camera registers but capture fails for the rejected `ExhaustFlameChild` identity.
+The boss-only zero-slot case likewise fails for `LbzFinalBoss1Instance`. Each
+failure identifies `Lbz2RobotnikShipInstance#spawnedChildren` in the compact
+capture error. The first request completed three cases with three failures, zero
+errors and zero skips. Its two ride cases reached the identity defect; its boss
+case first exposed an incomplete lifecycle recorder. That recorder was extended
+to observe the manager's after-current and deferred after-current calls. The
+boss-only retry on unchanged runtime then reached the missing-boss-identity
+exception, with one failure, zero errors and zero skips.
+
+The selected fix checks `!child.isDestroyed()` at the three inventory append
+sites. These fresh constructors are not destroyed before allocation, and the
+managed allocation contract marks rejection destroyed. Unmanaged constructors
+remain undestroyed and keep their intentional test inventory. Filtering snapshots
+instead was rejected because it would leave a false live inventory in the owner
+and introduce a second rule for capture. The identity codec remains strict.
+There is no catch/drop of arbitrary missing references, manager change, global
+state or new policy allowance. The existing exact `CAPTURED` policy and its
+baseline closure are unchanged by this follow-up.
+
+Every original allocation attempt stays in place and in order. The failed boss
+still runs its existing allocation-boundary initialization. The boss regression
+records the exact eight attempted objects, the boss, music fade, head, top
+attachment, three turret segments and orbiting pod. All are destroyed,
+unregistered and unslotted at zero capacity. This correction does not change
+native timing, destruction, respawn flags, initialization or retry semantics.
+After successful capture, the new cases destructively restore the exact admitted
+inventory and replay without another allocation attempt. The two ride cases
+retain their zero/one registered-child counts; the failed boss inventory is empty.
+
+All requests use the existing Java 25/Lua 5.4 environment and the same absolute
+S3K ROM property described above. `MAIN_CHECKOUT` and `ROM_ROOT` retain the same
+meanings. The first two selectors reproduce the defects before the runtime edit;
+the final selection verifies the fix and all original 18 cases.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestLbz2RobotnikShipRewind#exhaustedRideSlotsKeepRejectedChildrenOutsideSnapshot+exhaustedBossSlotKeepsRejectedBossOutsideSnapshot' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestLbz2RobotnikShipRewind#exhaustedBossSlotKeepsRejectedBossOutsideSnapshot' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestLbz2RobotnikShipRewind,TestLbz2RideCameoInstances' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+The final request passed all 21 tests, eight graph cases and 13 cameo cases,
+with zero failures, errors or skips. Exact XML case inspection confirms both
+capacity parameters and the boss case executed. Queue waiting was 76 seconds
+for the first reproduction, 98 seconds for the boss-only reproduction and 16
+seconds for the successful selection. Maven reported 25.439, 26.420 and about
+80 seconds respectively, including compilation. Requests stayed alive and each
+checkout remained stable during its run. Consumed XML/text reports were inspected
+and deleted without archiving. No live jobs remain. These are focused checks;
+the parent still owns complete guards/API/S3K checks, reconciliation from the
+unchanged base, release prose, integration, push and worktree cleanup.
