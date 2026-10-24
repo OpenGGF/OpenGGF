@@ -4,6 +4,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.tests.OwnedMocks;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +29,8 @@ class TestOptionalObjectReferenceCodecs {
     static Stream<Field> optionalLinks() throws ReflectiveOperationException {
         return Stream.of(RexonHeadObjectInstance.class.getDeclaredField("parent"),
                 RexonHeadObjectInstance.class.getDeclaredField("linkedHead"),
-                SolFireballObjectInstance.class.getDeclaredField("parent"));
+                SolFireballObjectInstance.class.getDeclaredField("parent"),
+                CutsceneKnucklesLbz2Instance.SwingChild.class.getDeclaredField("parent"));
     }
 
     @ParameterizedTest

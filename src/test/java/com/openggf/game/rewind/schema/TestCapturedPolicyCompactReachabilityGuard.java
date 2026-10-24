@@ -42,7 +42,8 @@ class TestCapturedPolicyCompactReachabilityGuard {
         var expected = java.util.Set.of(
                 new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent"),
                 new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead"),
-                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"));
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"),
+                new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent"));
         var actual = new java.util.HashSet<FieldKey>();
         for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
             for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {

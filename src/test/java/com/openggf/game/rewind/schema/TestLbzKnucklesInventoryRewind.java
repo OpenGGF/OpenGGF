@@ -2,6 +2,8 @@ package com.openggf.game.rewind.schema;
 
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance;
 import com.openggf.game.sonic3k.objects.LbzKnuxPillarInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
@@ -9,6 +11,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -16,6 +19,8 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -24,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -33,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /** Destructive manager restoration, rather than scalar-only cameo snapshots. */
 class TestLbzKnucklesInventoryRewind {
@@ -190,6 +197,138 @@ class TestLbzKnucklesInventoryRewind {
                 "ROM $3A is saved at creation, not derived from the moved owner");
     }
 
+    @Test
+    void publicConstructionHasEmptyUnmanagedObservations() {
+        var owner = new CutsceneKnucklesLbz2Instance(
+                new ObjectSpawn(0x3E28, 0x608, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x18, 0, false, 0x608));
+        assertAll(
+                () -> assertEquals(List.of(), owner.swingChildrenForTest()),
+                () -> assertEquals(List.of(), owner.supportPillarsForTest()));
+    }
+
+    @Test
+    void removingServicesMakesBothLiveObservationsEmpty() {
+        Fixture f = new Fixture();
+        var owner = f.cameo(0x3E28, 0x608);
+        assertEquals(4, owner.swingChildrenForTest().size());
+        assertEquals(1, owner.supportPillarsForTest().size());
+        owner.setServices(null);
+        assertAll(
+                () -> assertEquals(List.of(), owner.swingChildrenForTest()),
+                () -> assertEquals(List.of(), owner.supportPillarsForTest()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void publicChildSnapshotsWithoutIdentityTablePreserveCurrentLinks(boolean explicitNoTable) {
+        Fixture f = new Fixture();
+        var owner = f.cameo(0x3E28, 0x608);
+        var child = owner.swingChildrenForTest().getFirst();
+        var otherOwner = f.cameo(0x4000, 0x700);
+        var otherChild = otherOwner.swingChildrenForTest().getFirst();
+        var snapshot = explicitNoTable ? child.captureRewindState(RewindCaptureContext.none())
+                : child.captureRewindState();
+        int capturedX = child.getCentreX();
+        f.state.setScreenShakeActive(true);
+        child.update(0, null);
+        child.update(1, null);
+        child.update(2, null);
+        assertNotEquals(capturedX, child.getCentreX());
+        child.restoreRewindState(snapshot);
+        assertEquals(capturedX, child.getCentreX());
+        assertSame(owner, read(child, "parent"));
+        // Absence of a capture table carries no link authority, even when the
+        // restore has a table or targets another already-constructed child.
+        otherChild.restoreRewindState(snapshot);
+        assertSame(otherOwner, read(otherChild, "parent"));
+        otherChild.restoreRewindState(snapshot, RewindCaptureContext.withIdentityTable(new RewindIdentityTable()));
+        assertSame(otherOwner, read(otherChild, "parent"));
+    }
+
+    @Test
+    void tableBackedUnregisteredOwnerIsAuthoritativeNullWithoutRestoreTable() {
+        Fixture f = new Fixture();
+        var owner = f.cameo(0x3E28, 0x608);
+        var child = owner.swingChildrenForTest().getFirst();
+        var snapshot = child.captureRewindState(
+                RewindCaptureContext.withIdentityTable(new RewindIdentityTable()));
+        assertSame(owner, read(child, "parent"));
+        child.restoreRewindState(snapshot);
+        assertNull(read(child, "parent"), "a captured missing identity is authoritative, even without a restore table");
+        child.update(0, null);
+        assertTrue(child.isDestroyed(), "the captured orphan follows the native deletion tail");
+    }
+
+    @Test
+    void constrainedNativeAdmissionCapturesRejectedOwnersChildrenBeforeDispatch() {
+        var objects = new Sonic3kObjectRegistry() {
+            @Override public ObjectSlotLayout objectSlotLayout() {
+                var nativeSlots = ObjectSlotLayout.SONIC_3K;
+                return new ObjectSlotLayout(nativeSlots.firstDynamicSlot(), 4, nativeSlots.processSlotCount(),
+                        nativeSlots.twoAxisCursorPlacement(), nativeSlots.preallocatesLostRingOwnerSlot(),
+                        nativeSlots.lostRingRemainderAllocatesAfterOwnerSlot());
+            }
+        };
+        Fixture f = new Fixture(objects);
+        f.services.withAudioManager(mock(com.openggf.audio.AudioManager.class));
+        f.services.camera().setX((short) 0x3D00);
+        f.services.camera().setY((short) 0x500);
+        var constructed = new CutsceneKnucklesLbz2Instance[1];
+        var admitted = f.manager.createDynamicObject(() -> {
+            constructed[0] = assertInstanceOf(CutsceneKnucklesLbz2Instance.class, objects.create(
+                    new ObjectSpawn(0x3E28, 0x608, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x18, 0, false, 0x608)));
+            return constructed[0];
+        });
+        assertNull(admitted, "children exhaust the native slots before owner admission");
+        var rejected = constructed[0];
+        assertTrue(rejected.isDestroyed());
+        assertEquals(-1, rejected.getSlotIndex());
+        assertTrue(f.services.objectQuery().identityOf(rejected).isEmpty());
+        var population = f.manager.getActiveObjects().stream()
+                .sorted(Comparator.comparingInt(o -> ((AbstractObjectInstance) o).getSlotIndex())).toList();
+        assertEquals(List.of(SongFadeTransitionInstance.class, LbzKnuxPillarInstance.class,
+                CutsceneKnucklesLbz2Instance.SwingChild.class, CutsceneKnucklesLbz2Instance.SwingChild.class),
+                population.stream().map(Object::getClass).toList());
+        assertEquals(List.of(4, 5, 6, 7), population.stream()
+                .map(o -> ((AbstractObjectInstance) o).getSlotIndex()).toList());
+        var children = f.manager.activeObjectsOfType(CutsceneKnucklesLbz2Instance.SwingChild.class);
+        assertEquals(List.of(0, 2), children.stream().map(c -> c.getSpawn().subtype()).toList());
+        for (var child : children) {
+            assertSame(rejected, read(child, "parent"), "failed admission never receives a removal callback");
+            assertFalse(child.isDestroyed());
+        }
+        var ids = population.stream().map(f::id).toList();
+        var childIds = children.stream().map(f::id).toList();
+        CompositeSnapshot snapshot = f.registry.capture();
+        f.manager.update(0x3D00, f.services.camera().getFocusedSprite(), List.of(), 0, false);
+        var after = f.graph();
+        assertTrue(f.manager.activeObjectsOfType(CutsceneKnucklesLbz2Instance.SwingChild.class).isEmpty());
+        var replacement = f.pillar(0x3E80, 0x61C);
+        assertEquals(6, replacement.getSlotIndex(), "uninterrupted orphan deletion frees the first child slot");
+        var secondReplacement = f.pillar(0x3EA0, 0x61C);
+        assertEquals(7, secondReplacement.getSlotIndex());
+        var replacementIds = List.of(f.id(replacement), f.id(secondReplacement));
+        f.clear();
+        f.registry.restore(snapshot);
+        assertTrue(f.manager.activeObjectsOfType(CutsceneKnucklesLbz2Instance.class).isEmpty());
+        for (int i = 0; i < ids.size(); i++) {
+            var restored = f.resolve(ids.get(i));
+            assertNotNull(restored, "restore " + population.get(i).getClass().getSimpleName() + " " + ids.get(i));
+            assertNotSame(population.get(i), restored);
+            assertEquals(4 + i, ((AbstractObjectInstance) restored).getSlotIndex());
+        }
+        for (var id : childIds) assertNull(read(f.resolve(id), "parent"));
+        f.manager.update(0x3D00, f.services.camera().getFocusedSprite(), List.of(), 0, false);
+        assertGraph(after, f.graph());
+        for (var id : childIds) assertNull(f.resolve(id), "restored orphan deletion matches uninterrupted dispatch");
+        var replayReplacement = f.pillar(0x3E80, 0x61C);
+        assertEquals(6, replayReplacement.getSlotIndex(), "replayed orphan deletion frees the same child slot");
+        var secondReplayReplacement = f.pillar(0x3EA0, 0x61C);
+        assertEquals(7, secondReplayReplacement.getSlotIndex());
+        assertEquals(replacementIds, List.of(f.id(replayReplacement), f.id(secondReplayReplacement)),
+                "post-restore allocations retain both next dynamic identities");
+    }
+
     private static void assertGraph(Map<ObjectRefId, List<Object>> expected, Map<ObjectRefId, List<Object>> actual) {
         assertEquals(expected.keySet(), actual.keySet(), "exact managed graph membership");
         expected.forEach((id, state) -> assertEquals(state, actual.get(id), "slot, link and state for " + id));
@@ -212,13 +351,15 @@ class TestLbzKnucklesInventoryRewind {
         final ObjectManager manager;
         final RewindRegistry registry = new RewindRegistry();
 
-        Fixture() {
+        Fixture() { this(null); }
+
+        Fixture(ObjectRegistry objects) {
             Camera camera = new Camera();
             camera.setFocusedSprite(new TestablePlayableSprite("sonic", (short) 0x3E00, (short) 0x600));
             var zones = new ZoneRuntimeRegistry();
             zones.install(runtime);
             services.withCamera(camera).withGameState(state).withZoneRuntimeRegistry(zones);
-            manager = new ObjectManager(List.of(), null, 0, null, null,
+            manager = new ObjectManager(List.of(), objects, 0, null, null,
                     GraphicsManager.getInstance(), camera, services);
             services.withDirectObjectManager(manager);
             manager.setRewindInPlaceRestoreEnabledForTest(false);

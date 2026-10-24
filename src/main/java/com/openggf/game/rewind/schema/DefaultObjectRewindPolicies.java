@@ -14,10 +14,12 @@ final class DefaultObjectRewindPolicies {
             "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead");
     private static final FieldKey SOL_PARENT = new FieldKey(
             "com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent");
-    // These native links may outlive a retired SST target. Reuse the exact-policy
+    private static final FieldKey LBZ_SWING_PARENT = new FieldKey(
+            "com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent");
+    // These native links may outlive a retired or rejected SST target. Reuse the exact-policy
     // keys so the existing field audit also rejects stale optional metadata.
     private static final Set<FieldKey> OPTIONAL_OBJECT_REFERENCES = Set.of(
-            REXON_PARENT, REXON_NEXT_HEAD, SOL_PARENT);
+            REXON_PARENT, REXON_NEXT_HEAD, SOL_PARENT, LBZ_SWING_PARENT);
 
     private static final Set<String> STRUCTURAL_OBJECT_FIELD_NAMES = Set.of(
             "anchor",
@@ -510,7 +512,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artHandle"), RewindFieldPolicy.TRANSIENT),
             // LBZ2 swing children can be captured before their owner. Bind native parent3
             // by identity after graph reconstruction, never by the nearest cameo.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(LBZ_SWING_PARENT, RewindFieldPolicy.CAPTURED),
             // The ship child rebinds to the nearest recreated live ship; its accumulator remains captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild", "parent"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),

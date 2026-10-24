@@ -209,17 +209,22 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
     }
 
     public List<SwingChild> swingChildrenForTest() {
-        return services().objectQuery().activeObjectsOfType(SwingChild.class).stream()
+        ObjectServices available = tryServices();
+        if (available == null) {
+            return List.of();
+        }
+        return available.objectQuery().activeObjectsOfType(SwingChild.class).stream()
                 .filter(child -> !child.isDestroyed() && child.parent == this)
                 .sorted(Comparator.comparingInt(child -> child.subtype))
                 .toList();
     }
 
     public List<LbzKnuxPillarInstance> supportPillarsForTest() {
-        if (supportPillarId == null) {
+        ObjectServices available = tryServices();
+        if (available == null || supportPillarId == null) {
             return List.of();
         }
-        var object = services().objectQuery().resolve(supportPillarId).orElse(null);
+        var object = available.objectQuery().resolve(supportPillarId).orElse(null);
         return object instanceof LbzKnuxPillarInstance pillar && !pillar.isDestroyed()
                 ? List.of(pillar) : List.of();
     }
@@ -498,6 +503,12 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
                     parent.spawn.objectId(), subtype, 0, false, parent.getCentreY()), parent);
         }
 
+        // Generic rewind must construct a probe before calling recreateForRewind.
+        // Rejected/retired owners need not exist in the captured graph at all.
+        private SwingChild(ObjectSpawn spawn) {
+            this(spawn, null);
+        }
+
         private SwingChild(ObjectSpawn spawn, CutsceneKnucklesLbz2Instance parent) {
             super(spawn, "CutsceneKnucklesLBZ2Swing");
             this.parent = parent;
@@ -515,7 +526,7 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
             // Pure shell: captured children may precede their owner in SST order.
-            return new SwingChild(ctx.spawn(), null);
+            return new SwingChild(ctx.spawn());
         }
 
         @Override
