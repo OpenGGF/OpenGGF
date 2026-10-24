@@ -1,15 +1,13 @@
 package com.openggf.game.sonic3k.scroll;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.data.Rom;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,10 +29,7 @@ public class SwScrlMgzTest {
     @BeforeEach
     void setUpRuntime() {
         previousModule = GameModuleRegistry.getCurrent();
-        SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
     }
 
     @AfterEach
