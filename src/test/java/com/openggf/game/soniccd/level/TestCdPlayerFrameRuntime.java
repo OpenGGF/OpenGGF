@@ -9,6 +9,7 @@ import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpring;
+import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -46,6 +47,273 @@ import static org.junit.jupiter.api.Assertions.*;
  * Constructed bytes are not an authenticated retail MMD/native execution.
  */
 class TestCdPlayerFrameRuntime {
+    // BEGIN Spin tunnel tag Frame port: constructed cuts, never execution/physical-visit authority.
+    @Test void spinTunnelActualFirstRollPreservesDirtyActorDisplayAndSharedStateAndReplays() throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture);
+        var before = f.captureActor(); var shared = f.captureShared(); var s = before.state();
+        assertTrue(before.display().isPresent()); assertTrue(before.display().orElseThrow().queued());
+        assertEquals(new CdPlayerBody.AnimationCursor(5, 7, 0x23), s.animation());
+        assertNotEquals(0, s.history().bytes().unsignedByte(0)); assertEquals(0xBC, s.history().index());
+        assertEquals(new CdPlayerBody.Timers(0x1357, 0x2468, 0x369A, 0x48BC), s.timers());
+        assertEquals(new CdPlayerBody.ObjectLinks(0x7B, 0x9D), s.objectLinks());
+        var pool = new CdObjectPool(); var object = spinTunnelObject(pool, s.motion(), 0);
+        // Explicit constructed mapping pointer, not an authenticated Powerup operand/media claim.
+        var tag = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000));
+        var result = tag.step(object, s.motion(), new CdSpinTunnelTag.Gates(0, 0, 0, 0)).player();
+        var expected = new CdPlayerMotionState(0xFFFC1234, 0x0002BEEF, 0xA00, -0x234, -0xA00,
+                4, 0x60, 0xED, 0xD5, 7, 14, 2, 0x35, 0x76, 0x11, -0x1234, 0x85, 0xA5, 0x44, 0x88);
+        assertEquals(expected, result.finalMotion(), "Literal subtype0/angle60 and wrapped integer-Y+5");
+        assertEquals(Set.of(CdSpinTunnelTag.PlayerField.CENTRE_Y_WORD, CdSpinTunnelTag.PlayerField.X_VELOCITY,
+                CdSpinTunnelTag.PlayerField.GROUND_VELOCITY, CdSpinTunnelTag.PlayerField.FLAGS,
+                CdSpinTunnelTag.PlayerField.Y_RADIUS, CdSpinTunnelTag.PlayerField.X_RADIUS,
+                CdSpinTunnelTag.PlayerField.ANIMATION), result.executedWrites());
+        int uploads = fixture.dmas.size();
+        f.bindArtPublication((request, state) -> fail("The tag port must never service or publish art"));
+        f.validateObjectSpinTunnelResult(result);
+        assertSame(s, f.state()); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSpinTunnelResult(result);
+        assertEquals(new CdPlayerBody.State(expected, s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks()), f.state());
+        assertSame(result.finalMotion(), f.state().motion());
+        assertSame(s.animation(), f.state().animation()); assertSame(s.header(), f.state().header());
+        assertSame(s.timers(), f.state().timers()); assertSame(s.history(), f.state().history());
+        assertSame(s.objectLinks(), f.state().objectLinks()); assertEquals(0xAB, f.state().rotationDistance());
+        assertSame(before.display(), f.display()); assertSame(shared.environment(), f.environment());
+        assertSame(shared.artState(), f.artState()); assertSame(shared.vIntClock(), f.vIntClock());
+        assertEquals(shared, f.captureShared()); assertEquals(uploads, fixture.dmas.size()); assertFalse(f.closed());
+        assertEquals(object, pool.state(32), "Frame cannot publish a staged object image");
+        var after = f.captureActor();
+        spinTunnelAssertRejected(f, result); // The first apply consumed these old values, without a second +5.
+        assertEquals(after, f.captureActor());
+        f.restoreActor(before); f.restoreShared(shared); f.applyObjectSpinTunnelResult(result);
+        assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertEquals(uploads, fixture.dmas.size());
+    }
+
+    @ParameterizedTest @EnumSource(CdSpinTunnelTag.PlayerField.class)
+    void spinTunnelAcceptsOnlyOneDeclaredFieldAndItsSameValueStore(CdSpinTunnelTag.PlayerField field) throws IOException {
+        var fixture = new Fixture(); var f = spinTunnelDirtyFrame(fixture);
+        var before = f.captureActor(); var shared = f.captureShared(); var m = before.state().motion();
+        var after = spinTunnelChanged(m, field.name());
+        // Honest constructed port result: this is an authority/preservation check, not a native step claim.
+        var result = new CdSpinTunnelTag.PlayerResult(m, after, Set.of(field));
+        f.validateObjectSpinTunnelResult(result); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSpinTunnelResult(result);
+        var s = before.state();
+        assertEquals(new CdPlayerBody.State(after, s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks()), f.state());
+        assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
+        var applied = f.captureActor(); var same = new CdSpinTunnelTag.PlayerResult(after, after, Set.of(field));
+        f.validateObjectSpinTunnelResult(same); f.applyObjectSpinTunnelResult(same);
+        assertEquals(applied, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertTrue(fixture.dmas.isEmpty());
+    }
+
+    @ParameterizedTest @EnumSource(CdSpinTunnelTag.PlayerField.class)
+    void spinTunnelRejectsEveryUndeclaredChangedFieldBeforeMutation(CdSpinTunnelTag.PlayerField field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var m = f.state().motion();
+        spinTunnelAssertRejected(f, new CdSpinTunnelTag.PlayerResult(m, spinTunnelChanged(m, field.name()), Set.of()));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {
+            "CENTRE_X_WORD", "X_FRACTION", "CENTRE_Y_WORD", "Y_FRACTION", "X_VELOCITY", "Y_VELOCITY",
+            "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION",
+            "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL",
+            "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE"})
+    void spinTunnelRejectsStaleEntireExpectedMotionIncludingUnownedFields(String field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var stale = spinTunnelChanged(f.state().motion(), field);
+        spinTunnelAssertRejected(f, new CdSpinTunnelTag.PlayerResult(stale, stale, Set.of()));
+    }
+
+    @ParameterizedTest @ValueSource(strings = {
+            "CENTRE_X_WORD", "X_FRACTION", "Y_FRACTION", "ROUTINE", "ANGLE", "SPRITE_FLAGS", "PREVIOUS_ANIMATION",
+            "PLAYER_JUMP", "CHARGE", "MOVE_LOCK", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE",
+            "PREVIOUS_SECONDARY_ANGLE", "FLAGS_BIT_0", "FLAGS_BIT_3", "FLAGS_BIT_4", "FLAGS_BIT_5", "FLAGS_BIT_6", "FLAGS_BIT_7"})
+    void spinTunnelAllDeclarationsCannotAuthorizeAnUnownedWordFractionOrFlagBit(String field) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var m = f.state().motion();
+        // Include an otherwise legal speed change so a rejecting apply cannot publish even a prefix.
+        var changed = spinTunnelChanged(spinTunnelChanged(m, "X_VELOCITY"), field);
+        spinTunnelAssertRejected(f, new CdSpinTunnelTag.PlayerResult(m, changed,
+                java.util.EnumSet.allOf(CdSpinTunnelTag.PlayerField.class)));
+    }
+
+    @ParameterizedTest @ValueSource(ints = {2, 4, 6})
+    void spinTunnelDeclaredFlagsPermitOnlyTheNativeAirAndRollBits(int mask) throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var before = f.captureActor(); var shared = f.captureShared();
+        var m = f.state().motion();
+        var changed = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(),
+                m.routine(), m.angle(), m.flags() ^ mask, m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(),
+                m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.applyObjectSpinTunnelResult(new CdSpinTunnelTag.PlayerResult(m, changed, Set.of(CdSpinTunnelTag.PlayerField.FLAGS)));
+        var s = before.state();
+        assertEquals(new CdPlayerBody.State(changed, s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks()), f.state());
+        assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void spinTunnelPureSkipAndAllSameValueDeclarationsKeepEveryPartition() throws IOException {
+        var f = spinTunnelDirtyFrame(new Fixture()); var actor = f.captureActor(); var shared = f.captureShared();
+        var pool = new CdObjectPool(); var object = spinTunnelObject(pool, actor.state().motion(), 1);
+        var skip = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000)).step(object, actor.state().motion(),
+                new CdSpinTunnelTag.Gates(0, 0x0100, 0, 0)).player();
+        assertTrue(skip.executedWrites().isEmpty()); assertEquals(skip.expectedMotion(), skip.finalMotion());
+        f.validateObjectSpinTunnelResult(skip); f.applyObjectSpinTunnelResult(skip);
+        var same = new CdSpinTunnelTag.PlayerResult(f.state().motion(), f.state().motion(),
+                java.util.EnumSet.allOf(CdSpinTunnelTag.PlayerField.class));
+        f.validateObjectSpinTunnelResult(same); f.applyObjectSpinTunnelResult(same);
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @ParameterizedTest @CsvSource({"1, 0, -1, 0, 0, -3328, -3328, 6", "2, 0, -1, 12, 3328, -1, 3328, 4",
+            "3, 0, 0, 4, -3328, 0, -3328, 6", "4, 0, 123, 1, 0, -2560, -2560, 6"})
+    void spinTunnelAcceptsActualVerticalAndDirectionalPureTagResults(int subtype, int xv, int yv, int raw,
+            int expectedXv, int expectedYv, int expectedGv, int bits) throws IOException {
+        var f = new Fixture().runtime(); var actor = f.captureActor(); var s = actor.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16() | 0x1357, m.centreY16_16() | 0xBEEF, xv, yv, 0x111,
+                4, 0, 0xE9, 0xD5, 9, 19, 0x1A, 0x35, 1, 2, -3, 4, 0x85, 0x16, 0x27);
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
+                s.header(), s.timers(), s.history(), s.rotationDistance(), s.objectLinks()), actor.display()));
+        var before = f.captureActor(); var shared = f.captureShared(); var pool = new CdObjectPool();
+        var result = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000)).step(spinTunnelObject(pool, motion, subtype),
+                motion, new CdSpinTunnelTag.Gates(0, 0, 0, raw)).player();
+        var expected = new CdPlayerMotionState(motion.centreX16_16(), ((1899 + 5) << 16) | 0xBEEF,
+                expectedXv, expectedYv, expectedGv, 4, 0, 0xE9 | bits, 0xD5, 7, 14, 2, 0x35, 1, 2, -3, 4, 0x85, 0x16, 0x27);
+        assertEquals(expected, result.finalMotion());
+        f.validateObjectSpinTunnelResult(result); assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSpinTunnelResult(result);
+        assertEquals(new CdPlayerBody.State(expected, s.animation(), s.header(), s.timers(), s.history(),
+                s.rotationDistance(), s.objectLinks()), f.state());
+        assertEquals(before.display(), f.display()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void spinTunnelNullPendingEntitlementAndClosedGuardsLeaveTheOwnerUntouched() throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime(); var actor = f.captureActor(); var shared = f.captureShared();
+        var m = f.state().motion(); var same = new CdSpinTunnelTag.PlayerResult(m, m, Set.of());
+        assertThrows(NullPointerException.class, () -> f.validateObjectSpinTunnelResult(null));
+        assertThrows(NullPointerException.class, () -> f.applyObjectSpinTunnelResult(null));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        var selection = f.prepareInput(8);
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSpinTunnelResult(same));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSpinTunnelResult(same));
+        assertSame(actor.state(), f.state()); assertSame(shared.environment(), f.environment());
+        assertSame(shared.artState(), f.artState()); assertEquals(shared.vIntClock(), f.vIntClock());
+        f.serviceVBlank(selection.phase()); // Rejection did not consume the pending sample.
+        var servicedState = f.state(); var servicedEnvironment = f.environment(); var servicedArt = f.artState(); var clock = f.vIntClock();
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSpinTunnelResult(same));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSpinTunnelResult(same));
+        assertSame(servicedState, f.state()); assertSame(servicedEnvironment, f.environment());
+        assertSame(servicedArt, f.artState()); assertSame(clock, f.vIntClock());
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary(), "Entitlement survived rejection");
+        var now = f.state().motion(); var closedCall = new CdSpinTunnelTag.PlayerResult(now, now, Set.of());
+        var beforeClose = f.state(); var env = f.environment(); var art = f.artState(); var display = f.display();
+        f.close();
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSpinTunnelResult(closedCall));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSpinTunnelResult(closedCall));
+        assertSame(beforeClose, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+        assertSame(display, f.display()); assertTrue(fixture.dmas.isEmpty());
+    }
+
+    @Test void spinTunnelReentryDuringServiceIsRejectedWithoutConsumingTheServiceOrBody() throws IOException {
+        var f = new Fixture().runtime(); var m = f.state().motion();
+        var same = new CdSpinTunnelTag.PlayerResult(m, m, Set.of()); int[] calls = {0};
+        var selection = f.prepareInput(8);
+        f.serviceVBlank(selection.phase(), () -> {
+            calls[0]++; var state = f.state(); var env = f.environment(); var art = f.artState();
+            var display = f.display(); var clock = f.vIntClock();
+            assertThrows(IllegalStateException.class, () -> f.validateObjectSpinTunnelResult(same));
+            assertThrows(IllegalStateException.class, () -> f.applyObjectSpinTunnelResult(same));
+            assertSame(state, f.state()); assertSame(env, f.environment()); assertSame(art, f.artState());
+            assertSame(display, f.display()); assertSame(clock, f.vIntClock()); assertFalse(f.closed());
+        });
+        assertEquals(1, calls[0]); assertEquals(8, f.environment().controls().rawHeld());
+        assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+    }
+
+    @Test void spinTunnelClosedCutReplaysTheNextRealServicedBodyAndArt() throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime();
+        service(f, 0); f.runBody(1); service(f, 0); f.runBody(2);
+        var actor = f.captureActor(); var shared = f.captureShared(); var pool = new CdObjectPool();
+        var result = new CdSpinTunnelTag(new CdSpinTunnelTag.Assets(0x200000)).step(spinTunnelObject(pool, f.state().motion(), 0),
+                f.state().motion(), new CdSpinTunnelTag.Gates(0, 0, 0, 0)).player();
+        f.applyObjectSpinTunnelResult(result); var closedCut = f.captureActor(); int uploads = fixture.dmas.size();
+        service(f, 8); var publication = f.runBody(3); var after = f.captureActor(); var afterShared = f.captureShared();
+        var requests = List.copyOf(fixture.dmas.subList(uploads, fixture.dmas.size()));
+        f.restoreActor(actor); f.restoreShared(shared); f.applyObjectSpinTunnelResult(result);
+        assertEquals(closedCut, f.captureActor());
+        int replayStart = fixture.dmas.size(); service(f, 8); var replay = f.runBody(3);
+        assertEquals(publication, replay); assertEquals(after, f.captureActor());
+        assertSharedValues(afterShared, f.captureShared());
+        var replayRequests = fixture.dmas.subList(replayStart, fixture.dmas.size());
+        assertEquals(1, requests.size(), "The queued frame1 cue makes one real art transfer");
+        assertEquals(requests.size(), replayRequests.size());
+        for (int i = 0; i < requests.size(); i++) {
+            assertEquals(requests.get(i).vramByteAddress(), replayRequests.get(i).vramByteAddress());
+            assertArrayEquals(requests.get(i).bytes().copy(), replayRequests.get(i).bytes().copy());
+        }
+    }
+
+    private static CdPlayerFrameRuntime spinTunnelDirtyFrame(Fixture fixture) throws IOException {
+        var f = fixture.runtime(); service(f, 0); f.runBody(1); service(f, 0); f.runBody(2);
+        f.publishDrawObjectOnScreen(true);
+        var actor = f.captureActor(); var h = actor.state().header(); byte[] history = new byte[0x100];
+        for (int i = 0; i < history.length; i++) history[i] = (byte) (0x33 + 17 * i);
+        var motion = new CdPlayerMotionState(0xFFFC1234, 0xFFFDBEEF, 0x100, -0x234, 0x345,
+                4, 0x60, 0xE9, 0xD5, 9, 19, 0x1A, 0x35, 0x76, 0x11, -0x1234, 0x85, 0xA5, 0x44, 0x88);
+        var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(5, 7, 0x23),
+                new CdPlayerBody.Header(h.slotId(), h.mappingAddress(), 0x6780, 5, 0x27),
+                new CdPlayerBody.Timers(0x1357, 0x2468, 0x369A, 0x48BC),
+                new CdPlayerBody.History(CdAssetBytes.copyOf(history), 0xBC), 0xAB, new CdPlayerBody.ObjectLinks(0x7B, 0x9D));
+        // Earlier actual DrawObject publication is deliberately retained while the closed-cut values are dirtied.
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, actor.display()));
+        var shared = f.captureShared(); var movement = shared.environment().movement();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(movement.physics(), movement.bounds(),
+                movement.gates(), new CdPlayerMovement.Globals(0xA5, 0x3456, 0x43, 0x87, 0x2345, 0x7654, 0x91, 0x92, 0x93, 0x94)),
+                new CdPlayerBody.Controls(0x2C, 0x24, 0x08, 0x10, 0x81),
+                new CdPlayerBody.Globals(0x3456, 0x4567, 1, 0x0001, 0x0123, 0x5678, 1, 1), shared.environment().dynamicSlots());
+        f.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment,
+                new CdPlayerArtRuntime.State(fill(0x300, 0x31), fill(0x300, 0x73), 0x23, true), false,
+                new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0xFEDCBA98L), 0x1234)));
+        return f;
+    }
+
+    private static CdObjectState spinTunnelObject(CdObjectPool pool, CdPlayerMotionState motion, int subtype) {
+        var object = pool.state(32).moveByte(CdObjectState.ByteField.ID, 0x34)
+                .moveByte(CdObjectState.ByteField.SUBTYPE, subtype)
+                .moveWord(CdObjectState.WordField.X, motion.centreX16_16() >>> 16)
+                .moveWord(CdObjectState.WordField.Y, motion.centreY16_16() >>> 16);
+        pool.write(object); return object;
+    }
+
+    private static void spinTunnelAssertRejected(CdPlayerFrameRuntime f, CdSpinTunnelTag.PlayerResult result) {
+        var actor = f.captureActor(); var shared = f.captureShared();
+        assertThrows(IllegalArgumentException.class, () -> f.validateObjectSpinTunnelResult(result));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpinTunnelResult(result));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        assertSame(actor.state(), f.state()); assertSame(actor.display(), f.display());
+        assertSame(shared.environment(), f.environment()); assertSame(shared.artState(), f.artState());
+        assertSame(shared.vIntClock(), f.vIntClock()); assertFalse(f.closed());
+    }
+
+    private static CdPlayerMotionState spinTunnelChanged(CdPlayerMotionState m, String field) {
+        int[] v = {m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(),
+                m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle()};
+        String[] keys = {"CENTRE_X_WORD", "CENTRE_Y_WORD", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS",
+                "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK",
+                "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY_ANGLE", "PREVIOUS_SECONDARY_ANGLE"};
+        boolean found = false;
+        for (int i = 0; i < keys.length; i++) if (keys[i].equals(field)) { v[i] ^= i < 2 ? 0x10000 : i == 7 ? 2 : 1; found = true; }
+        if (field.equals("X_FRACTION")) { v[0] ^= 1; found = true; }
+        if (field.equals("Y_FRACTION")) { v[1] ^= 1; found = true; }
+        if (field.startsWith("FLAGS_BIT_")) { v[7] ^= 1 << Integer.parseInt(field.substring("FLAGS_BIT_".length())); found = true; }
+        if (!found) throw new IllegalArgumentException("Unknown spin-tunnel test field " + field);
+        return new CdPlayerMotionState(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9],
+                v[10], v[11], v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]);
+    }
+    // END Spin tunnel tag Frame port additions.
+
     @Test void namedDevelopmentIngressKeepsClearedActorUntilActualInitAndUnknownAbsoluteClock() throws IOException {
         Fixture fixture = new Fixture(); var f = fixture.runtime(); var s = f.state(); var e = f.environment();
         assertEquals(64 << 16, s.motion().centreX16_16()); assertEquals(1899 << 16, s.motion().centreY16_16());

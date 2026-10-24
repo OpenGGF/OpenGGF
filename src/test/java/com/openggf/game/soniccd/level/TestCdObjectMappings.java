@@ -806,4 +806,94 @@ class TestCdObjectMappings {
     private static String sha256(byte[] bytes) throws Exception {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
+
+    /** Pinned Powerup mapping directives, independently transcribed; constructed format input only. */
+    private static final byte[] POWERUP_SOURCE = bytes(
+                0x00, 0x25, 0x00, 0x1A, 0x00, 0x2F, 0x00, 0x44, 0x00, 0x59, 0x00, 0x6E,
+                0x00, 0x83, 0x00, 0x98, 0x00, 0xAE, 0x00, 0xC4, 0x00, 0xDA, 0x00, 0xF0, 0x01, 0x06,
+                0x04, 0xE8, 0x0A, 0x00, 0x00, 0xE8, 0xE8, 0x0A, 0x00, 0x09, 0x00, 0x00, 0x0A, 0x10, 0x00, 0xE8, 0x00, 0x0A, 0x10, 0x09, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x12, 0xE8, 0xE8, 0x0A, 0x00, 0x1B, 0x00, 0x00, 0x0A, 0x10, 0x12, 0xE8, 0x00, 0x0A, 0x10, 0x1B, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x09, 0xE8, 0xE8, 0x0A, 0x08, 0x00, 0x00, 0x00, 0x0A, 0x18, 0x09, 0xE8, 0x00, 0x0A, 0x18, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x00, 0xE8, 0xE8, 0x0A, 0x00, 0x09, 0x00, 0x00, 0x0A, 0x18, 0x09, 0xE8, 0x00, 0x0A, 0x18, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x09, 0xE8, 0xE8, 0x0A, 0x08, 0x00, 0x00, 0x00, 0x0A, 0x10, 0x00, 0xE8, 0x00, 0x0A, 0x10, 0x09, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x12, 0xE8, 0xE8, 0x0A, 0x00, 0x1B, 0x00, 0x00, 0x0A, 0x18, 0x1B, 0xE8, 0x00, 0x0A, 0x18, 0x12, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x1B, 0xE8, 0xE8, 0x0A, 0x08, 0x12, 0x00, 0x00, 0x0A, 0x10, 0x12, 0xE8, 0x00, 0x0A, 0x10, 0x1B, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x00, 0xF0, 0xF0, 0x05, 0x08, 0x00, 0x00, 0x00, 0x05, 0x10, 0x00, 0xF0, 0x00, 0x05, 0x18, 0x00, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x04, 0xF0, 0xF0, 0x05, 0x08, 0x04, 0x00, 0x00, 0x05, 0x10, 0x04, 0xF0, 0x00, 0x05, 0x18, 0x04, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x08, 0xE8, 0xE8, 0x0A, 0x08, 0x08, 0x00, 0x00, 0x0A, 0x10, 0x08, 0xE8, 0x00, 0x0A, 0x18, 0x08, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x11, 0xF0, 0xF0, 0x05, 0x00, 0x15, 0x00, 0x00, 0x05, 0x18, 0x15, 0xF0, 0x00, 0x05, 0x18, 0x11, 0x00, 0x00,
+                0x02, 0xF4, 0x06, 0x00, 0x19, 0xF0, 0xF4, 0x06, 0x08, 0x19, 0x00, 0x00);
+    private static final int[][][] POWERUP_FRAMES = {
+            {},
+            {{-24,10,0x0000,-24},{-24,10,0x0009,0},{0,10,0x1000,-24},{0,10,0x1009,0}},
+            {{-24,10,0x0012,-24},{-24,10,0x001B,0},{0,10,0x1012,-24},{0,10,0x101B,0}},
+            {{-24,10,0x0809,-24},{-24,10,0x0800,0},{0,10,0x1809,-24},{0,10,0x1800,0}},
+            {{-24,10,0x0000,-24},{-24,10,0x0009,0},{0,10,0x1809,-24},{0,10,0x1800,0}},
+            {{-24,10,0x0809,-24},{-24,10,0x0800,0},{0,10,0x1000,-24},{0,10,0x1009,0}},
+            {{-24,10,0x0012,-24},{-24,10,0x001B,0},{0,10,0x181B,-24},{0,10,0x1812,0}},
+            {{-24,10,0x081B,-24},{-24,10,0x0812,0},{0,10,0x1012,-24},{0,10,0x101B,0}},
+            {{-16,5,0x0000,-16},{-16,5,0x0800,0},{0,5,0x1000,-16},{0,5,0x1800,0}},
+            {{-16,5,0x0004,-16},{-16,5,0x0804,0},{0,5,0x1004,-16},{0,5,0x1804,0}},
+            {{-24,10,0x0008,-24},{-24,10,0x0808,0},{0,10,0x1008,-24},{0,10,0x1808,0}},
+            {{-16,5,0x0011,-16},{-16,5,0x0015,0},{0,5,0x1815,-16},{0,5,0x1811,0}},
+            {{-12,6,0x0019,-16},{-12,6,0x0819,0}}};
+
+    @Test void powerupCountedSourceKeepsEveryRawPieceAndItsInteriorEmptyTarget() {
+        var resolver = declared(0x23EE9C, POWERUP_SOURCE, 0, 13);
+        assertPowerupFrames(resolver);
+        assertEquals(new CdObjectDrawQueue.FrameMapping(0, List.of()), resolver.resolve(0x23EE9C, false, 0));
+        assertEquals(4, resolver.resolve(0x23EE9C, false, 1).pieces().size(),
+                "frame 0's target at 37 must not truncate frame 1's body at 26..46");
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(POWERUP_SOURCE, 13, 36));
+        var truncated = declared(0x23EE9C, Arrays.copyOf(POWERUP_SOURCE, 272), 0, 13);
+        assertThrows(IllegalArgumentException.class, () -> truncated.resolve(0x23EE9C, false, 12));
+        assertEquals(List.of(), truncated.resolve(0x23EE9C, false, 0).pieces(), "bounds apply to the selected frame");
+        byte[] escaping = POWERUP_SOURCE.clone(); putWord(escaping, 0, 274);
+        var badRoot = declared(0x23EE9C, escaping, 0, 13);
+        assertThrows(IllegalArgumentException.class, () -> badRoot.resolve(0x23EE9C, false, 0));
+    }
+
+    @Test void actualUsaPowerupRootJoinsRetainedBytesWithoutChangingPriorMappingsOrArtBanks() throws Exception {
+        var usa = usaMedia(); // Source is closed before this owner's first Powerup view request.
+        var objects = usa.objects();
+        var initial = objects.initialArtBank(); var rings = objects.rings();
+        var view = objects.view(CdR11aObjectAssets.Table.POWERUP_MAPPINGS);
+        assertEquals(0x23EE9C, view.range().nativeAddress());
+        assertArrayEquals(POWERUP_SOURCE, view.bytes().copy());
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        assertPowerupFrames(resolver);
+        assertSame(initial, objects.initialArtBank()); assertSame(rings, objects.rings());
+        assertEquals(List.of(CdR11aAsset.ART_RINGS, CdR11aAsset.ART_MOSQUI), initial.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertThrows(UnsupportedOperationException.class, () -> initial.tile(0x544));
+        assertGameOverRoots(resolver);
+        assertEquals(FLOAT_BLOCK_FRAMES.get(5), resolver.resolve(FLOAT_BLOCK_MAP, false, 5).pieces());
+        assertEquals(3, resolver.resolve(0x209BA0, false, 2).pieces().size());
+        assertEquals(3, resolver.resolve(0x209BA6, false, 2).pieces().size());
+        assertEquals(9, objects.rings().mappingFrames().size());
+        assertEquals(5, objects.normalMosqui().mappingFrames().size());
+        assertEquals(5, objects.damagedMosqui().mappingFrames().size());
+    }
+
+    private static void assertPowerupFrames(CdObjectMappings resolver) {
+        for (int frame = 0; frame < 13; frame++) {
+            var expected = Arrays.stream(POWERUP_FRAMES[frame]).map(p ->
+                    new CdObjectDrawQueue.RawPiece(p[0], p[1], p[2], p[3])).toList();
+            assertEquals(new CdObjectDrawQueue.FrameMapping(expected.size(), expected),
+                    resolver.resolve(0x23EE9C, false, frame), "literal native Powerup frame " + frame);
+            for (var p : expected) {
+                int firstTile = (0x0544 + p.rawTileWord()) & 0x7FF;
+                int tiles = (((p.sizeByte() >>> 2) & 3) + 1) * ((p.sizeByte() & 3) + 1);
+                assertTrue(firstTile >= 0x544 && firstTile + tiles <= 0x568,
+                        "defined frames fit the existing 36-tile Powerup window");
+            }
+        }
+        for (int frame : new int[]{13, 255}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(0x23EE9C, false, frame));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(0x23EE9C, true, 0));
+        for (int pointer : new int[]{0x23EE9D, 0x23EEB6, 0x23EEC1, 0xFF23EE9C, 0x8023EE9C}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+        }
+    }
 }

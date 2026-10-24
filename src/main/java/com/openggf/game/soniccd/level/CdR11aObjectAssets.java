@@ -57,7 +57,10 @@ public final class CdR11aObjectAssets {
         SPRING_ANIMATIONS("Ani_Spring", 0x9B92, 14),
         SPRING_MAPPINGS("MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3", 0x9BA0, 200),
         // ObjSpring_Init ANDI.W #2 / MOVE.W ObjSpring_Speeds(pc,d0.w) (Spring/Main.asm:237-244).
-        SPRING_SPEEDS("ObjSpring_Speeds", 0x98E8, 4);
+        SPRING_SPEEDS("ObjSpring_Speeds", 0x98E8, 4),
+        // ObjSpinTunnel_Init (Spin Tunnel/Main (Tag).asm:30): actual USA immediate $23EE9C.
+        // Keep the full raw include: frame 0 is an empty target inside frame 1's counted body.
+        POWERUP_MAPPINGS("MapSpr_Powerup", 0x3EE9C, 274);
 
         private final String nativeLabel;
         private final int offset;

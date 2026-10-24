@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.objects.CdSolidObject;
 import com.openggf.game.soniccd.objects.CdSpring;
+import com.openggf.game.soniccd.objects.CdSpinTunnelTag;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
 import java.util.ArrayList;
@@ -604,6 +605,62 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             case FLAGS -> m.flags();
             case ANGLE -> m.angle();
             case MOVE_LOCK -> m.moveLock();
+        };
+    }
+
+    /**
+     * Pure expected-motion preflight for ObjSpinTunnel_Main's eight native stores (Spin Tunnel/Main
+     * (Tag).asm:47-161, source pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff). CENTRE_Y_WORD is
+     * only the integer word; both fractions, the entire X long and flag bits outside $06 are fixed.
+     * Same-value executed stores are legal. Motion/PlayerResult constructors enforce native widths
+     * and the immutable exact field set. No global, slot or service authority is carried by this value.
+     * Root owns physical phase/identity, pool CAS and synchronous publication; values do not prove
+     * execution. No Body, animation, collision, service, callback or capture/restore is invoked here.
+     */
+    public void validateObjectSpinTunnelResult(CdSpinTunnelTag.PlayerResult result) {
+        requireOpenIdle(); requireClosedFrame(); Objects.requireNonNull(result, "Spin tunnel player result");
+        var m = result.expectedMotion(); var n = result.finalMotion();
+        if (!m.equals(state.motion())) {
+            throw new IllegalArgumentException("Stale Spin tunnel player motion cut");
+        }
+        if (m.centreX16_16() != n.centreX16_16()
+                || (m.centreY16_16() & 0xFFFF) != (n.centreY16_16() & 0xFFFF)
+                || m.routine() != n.routine() || m.angle() != n.angle() || m.spriteFlags() != n.spriteFlags()
+                || m.previousAnimation() != n.previousAnimation() || m.playerJump() != n.playerJump()
+                || m.charge() != n.charge() || m.moveLock() != n.moveLock() || m.stick() != n.stick()
+                || m.playerControl() != n.playerControl() || m.previousPrimaryAngle() != n.previousPrimaryAngle()
+                || m.previousSecondaryAngle() != n.previousSecondaryAngle()
+                || ((m.flags() ^ n.flags()) & ~0x06) != 0) {
+            throw new IllegalArgumentException("Spin tunnel result changes an unowned player field or flag bit");
+        }
+        for (var field : CdSpinTunnelTag.PlayerField.values()) {
+            if (!result.executedWrites().contains(field) && spinTunnelValue(m, field) != spinTunnelValue(n, field)) {
+                throw new IllegalArgumentException("Undeclared Spin tunnel player store: " + field);
+            }
+        }
+    }
+
+    /**
+     * Adopt only the checked motion once at the existing closed object cut. Reuse the cursor, header,
+     * all four timers, history, rotation byte39 and links20/3D. The earlier display and the entire
+     * Environment/art/input/clock/service state remain owned by their existing source cuts.
+     */
+    public void applyObjectSpinTunnelResult(CdSpinTunnelTag.PlayerResult result) {
+        validateObjectSpinTunnelResult(result);
+        state = new CdPlayerBody.State(result.finalMotion(), state.animation(), state.header(), state.timers(),
+                state.history(), state.rotationDistance(), state.objectLinks());
+    }
+
+    private static int spinTunnelValue(CdPlayerMotionState motion, CdSpinTunnelTag.PlayerField field) {
+        return switch (field) {
+            case CENTRE_Y_WORD -> motion.centreY16_16() >>> 16;
+            case X_VELOCITY -> motion.xVelocity();
+            case Y_VELOCITY -> motion.yVelocity();
+            case GROUND_VELOCITY -> motion.groundVelocity();
+            case FLAGS -> motion.flags();
+            case Y_RADIUS -> motion.yRadius();
+            case X_RADIUS -> motion.xRadius();
+            case ANIMATION -> motion.animation();
         };
     }
 

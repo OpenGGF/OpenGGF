@@ -90,6 +90,7 @@ class TestCdR11aObjectRetailAssets {
                 verifyGameOverNativeReferences(original, objects);
                 verifyFloatBlockNativeReferences(original, terrainOwner);
                 verifySpringNativeReferences(original, terrainOwner);
+                verifyPowerupNativeReferences(original, terrainOwner);
                 for (int offset : List.of(0x9C96, 0xA0F2, 0xA0FA, 0xB6CA, 0xB6D8, 0xB6E6, 0xB722,
                         0xCF48, 0x70C6, 0x35626, 0x3702A, 0x30000,
                         0xD1AE, 0xD1F0, 0xD22C, 0xD240, 0xD264, 0xE020, 0xDDC8, 0x1FDBC, 0xE046,
@@ -99,7 +100,8 @@ class TestCdR11aObjectRetailAssets {
                         0xEF94, 0xF03E, 0xF075,
                         0xA3DC, 0xA3E5, 0xA3FA, 0xA445, 0xCF78, 0x365D0, 0x366B5, 0x366B6,
                         0x9844, 0x98D6, 0x9B92, 0x9B9F, 0x9BA0, 0x9BA6, 0x9BF0, 0x9C67,
-                        0x34918, 0x34B39, 0x34B3A)) {
+                        0x34918, 0x34B39, 0x34B3A,
+                        0x3F00, 0x65D2, 0x65E2, 0x660A, 0x673C, 0x3EE9C, 0x3EEC1, 0x3EFAD)) {
                     byte[] altered = original.readFile(0, original.fileBytes());
                     altered[offset] ^= 1;
                     // A plausible/correct caller record cannot authenticate even an unrelated changed byte.
@@ -143,6 +145,7 @@ class TestCdR11aObjectRetailAssets {
         if (variant != CdReleaseVariant.USA) { return; }
         assertNotNull(objects);
         assertNotNull(untouchedFrontier);
+        verifyPowerupRetained(untouchedFrontier);
         var postCloseBank = untouchedFrontier.frontierArtBank();
         assertSame(postCloseBank, untouchedFrontier.frontierArtBank());
         assertEquals("a3a40dce6206cd71835f043eadee914a860724ec4361d1275a9535c7b2a1b164",
@@ -194,6 +197,7 @@ class TestCdR11aObjectRetailAssets {
                 FLOAT_BLOCK_MAPPINGS, FLOAT_BLOCK_MAPPINGS_SHA256));
         hashes.putAll(Map.of(SPRING_ANIMATIONS, SPRING_ANIMATIONS_SHA256, SPRING_MAPPINGS, SPRING_MAPPINGS_SHA256));
         hashes.put(SPRING_SPEEDS, "5eda02f69ae1d12606f936787ccebdac8133522694513985847a115cc00f2621"); // Native Spring/Main.asm:243-244: F000/F600.
+        hashes.put(POWERUP_MAPPINGS, "d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc");
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -1138,5 +1142,92 @@ class TestCdR11aObjectRetailAssets {
         byte[] out = new byte[values.length];
         for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
         return out;
+    }
+
+    /** Pinned Powerup/Data/Mappings.asm:1-262 hand-literal directives; independent of actual media and production. */
+    private static final byte[] POWERUP_SOURCE_BYTES = sourceBytes(
+                0x00, 0x25, 0x00, 0x1A, 0x00, 0x2F, 0x00, 0x44, 0x00, 0x59, 0x00, 0x6E,
+                0x00, 0x83, 0x00, 0x98, 0x00, 0xAE, 0x00, 0xC4, 0x00, 0xDA, 0x00, 0xF0, 0x01, 0x06,
+                0x04, 0xE8, 0x0A, 0x00, 0x00, 0xE8, 0xE8, 0x0A, 0x00, 0x09, 0x00, 0x00, 0x0A, 0x10, 0x00, 0xE8, 0x00, 0x0A, 0x10, 0x09, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x12, 0xE8, 0xE8, 0x0A, 0x00, 0x1B, 0x00, 0x00, 0x0A, 0x10, 0x12, 0xE8, 0x00, 0x0A, 0x10, 0x1B, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x09, 0xE8, 0xE8, 0x0A, 0x08, 0x00, 0x00, 0x00, 0x0A, 0x18, 0x09, 0xE8, 0x00, 0x0A, 0x18, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x00, 0xE8, 0xE8, 0x0A, 0x00, 0x09, 0x00, 0x00, 0x0A, 0x18, 0x09, 0xE8, 0x00, 0x0A, 0x18, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x09, 0xE8, 0xE8, 0x0A, 0x08, 0x00, 0x00, 0x00, 0x0A, 0x10, 0x00, 0xE8, 0x00, 0x0A, 0x10, 0x09, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x12, 0xE8, 0xE8, 0x0A, 0x00, 0x1B, 0x00, 0x00, 0x0A, 0x18, 0x1B, 0xE8, 0x00, 0x0A, 0x18, 0x12, 0x00,
+                0x04, 0xE8, 0x0A, 0x08, 0x1B, 0xE8, 0xE8, 0x0A, 0x08, 0x12, 0x00, 0x00, 0x0A, 0x10, 0x12, 0xE8, 0x00, 0x0A, 0x10, 0x1B, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x00, 0xF0, 0xF0, 0x05, 0x08, 0x00, 0x00, 0x00, 0x05, 0x10, 0x00, 0xF0, 0x00, 0x05, 0x18, 0x00, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x04, 0xF0, 0xF0, 0x05, 0x08, 0x04, 0x00, 0x00, 0x05, 0x10, 0x04, 0xF0, 0x00, 0x05, 0x18, 0x04, 0x00, 0x00,
+                0x04, 0xE8, 0x0A, 0x00, 0x08, 0xE8, 0xE8, 0x0A, 0x08, 0x08, 0x00, 0x00, 0x0A, 0x10, 0x08, 0xE8, 0x00, 0x0A, 0x18, 0x08, 0x00, 0x00,
+                0x04, 0xF0, 0x05, 0x00, 0x11, 0xF0, 0xF0, 0x05, 0x00, 0x15, 0x00, 0x00, 0x05, 0x18, 0x15, 0xF0, 0x00, 0x05, 0x18, 0x11, 0x00, 0x00,
+                0x02, 0xF4, 0x06, 0x00, 0x19, 0xF0, 0xF4, 0x06, 0x08, 0x19, 0x00, 0x00);
+
+    private static void verifyPowerupNativeReferences(CdMmdImage image, CdR11aAssets owner) {
+        assertEquals("7aa54c36ab94dbe14068a18613c574b883ce446337bfaa9c571ec3523aff14e2",
+                CdR11aProfile.sha256(image.readFile(0, image.fileBytes())));
+        // ObjectIndex ID $34 -> actual ObjSpinTunnel; the two PC-indexed instructions share index $2065F4.
+        var index = owner.view(CdR11aAsset.OBJECT_INDEX).bytes();
+        assertEquals(0x2065D2, ByteBuffer.wrap(index.copy()).getInt((0x34 - 1) * 4));
+        assertArrayEquals(hexBytes("700010280024303B001A4EBB0016"), image.readFile(0x65D2, 14));
+        var routines = ByteBuffer.wrap(image.readFile(0x65F4, 4));
+        assertEquals(0x65F8, 0x65F4 + routines.getShort());
+        assertEquals(0x661A, 0x65F4 + routines.getShort());
+        // Exact Init: routine/sprite flags, tile $0544, raw oMap immediate, subtype copy and byte +1.
+        assertArrayEquals(hexBytes("54280024002800040001317C05440002217C0023EE9C000411680028001A5228001A"),
+                image.readFile(0x65F8, 34));
+        var operand = ByteBuffer.wrap(image.readFile(0x6608, 8));
+        assertEquals((short) 0x217C, operand.getShort());
+        assertEquals(POWERUP_MAPPINGS.range().nativeAddress(), operand.getInt());
+        assertEquals(4, operand.getShort());
+        // These are TST.B at the actual WORD BASES, not the low-byte addresses +1 (68000 big endian).
+        assertArrayEquals(hexBytes("4A3900FF1588"), image.readFile(0x65E0, 6));
+        assertArrayEquals(hexBytes("61000106"), image.readFile(0x6632, 4));
+        assertEquals(0x673A, 0x6634 + 0x106);
+        assertArrayEquals(hexBytes("4A3900FF1906"), image.readFile(0x673A, 6));
+        byte[] actual = image.readFile(0, image.fileBytes());
+        int matches = 0;
+        for (int at = 0; at <= actual.length - POWERUP_SOURCE_BYTES.length; at++) {
+            if (Arrays.equals(actual, at, at + POWERUP_SOURCE_BYTES.length,
+                    POWERUP_SOURCE_BYTES, 0, POWERUP_SOURCE_BYTES.length)) {
+                matches++;
+                assertEquals(0x3EE9C, at);
+            }
+        }
+        assertEquals(1, matches, "the complete independently authored include has one actual USA match");
+    }
+
+    /** First raw request is after closing media; no extra visual decoder or art source is requested. */
+    private static void verifyPowerupRetained(CdR11aObjectAssets objects) {
+        var initial = objects.initialArtBank();
+        var openingTables = List.of(RING_DELTAS, RING_ANIMATIONS, RING_MAPPINGS, MOSQUI_NORMAL_ANIMATIONS,
+                MOSQUI_DAMAGED_ANIMATIONS, MOSQUI_NORMAL_MAPPINGS, MOSQUI_DAMAGED_MAPPINGS,
+                OBJECT_TILE_IDS, TOUCH_DIMENSIONS);
+        var opening = openingTables.stream().map(objects::view).toList();
+        var view = objects.view(POWERUP_MAPPINGS);
+        assertSame(view, objects.view(POWERUP_MAPPINGS));
+        assertEquals(POWERUP_MAPPINGS, view.table());
+        assertEquals(POWERUP_MAPPINGS.range(), view.range());
+        assertEquals(0x23EE9C, view.range().nativeAddress());
+        assertEquals(274, view.bytes().length());
+        assertArrayEquals(POWERUP_SOURCE_BYTES, view.bytes().copy());
+        assertEquals("d79b2da45d7a63478f2f38d9288704bea375982e1d35d8aa97863cfdffb5f3fc",
+                CdR11aProfile.sha256(view.bytes().copy()));
+        int[] offsets = {37, 26, 47, 68, 89, 110, 131, 152, 174, 196, 218, 240, 262};
+        int[] counts = {0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2};
+        int[] ends = {38, 47, 68, 89, 110, 131, 152, 173, 195, 217, 239, 261, 273};
+        for (int frame = 0; frame < 13; frame++) {
+            assertEquals(offsets[frame], (short) view.bytes().unsignedWord(frame * 2));
+            assertEquals(counts[frame], view.bytes().unsignedByte(offsets[frame]));
+            assertEquals(ends[frame], offsets[frame] + 1 + counts[frame] * 5);
+        }
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(view.bytes().copy(), 13, 36));
+        assertThrows(ReadOnlyBufferException.class, () -> view.bytes().buffer().put((byte) 1));
+        assertThrows(IndexOutOfBoundsException.class, () -> view.bytes().unsignedByte(274));
+        byte[] changed = view.bytes().copy(); changed[1] = 0;
+        assertEquals(37, view.bytes().unsignedWord(0));
+        assertSame(initial, objects.initialArtBank());
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertThrows(UnsupportedOperationException.class, () -> initial.tile(0x544));
+        for (int i = 0; i < 9; i++) { assertSame(opening.get(i), objects.view(openingTables.get(i))); }
     }
 }

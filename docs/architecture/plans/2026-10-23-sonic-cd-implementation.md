@@ -4241,3 +4241,40 @@ belong to its client. Oracle limits retained from review include early-clone
 mutation coverage, resolver-emitted command coverage, and actual ordinary
 LevelManager/GPU cache integration. No repeat review or unrelated graphics
 change was used to turn the run green. Work is private/local, not delivered.
+
+
+## Spin Tunnel tag assets, pure response and Frame field port — 25 October 2026
+
+Private component checkpoint at b6d17e897 plus nine Java changes. The USA
+POWERUP_MAPPINGS view binds exactly274 retained bytes at file3EE9C/native23EE9C;
+its thirteen raw counted frames deliberately use the existing raw mapper,
+including the valid empty frame inside another body. Strict visual decoding,
+eager startup views, prior art banks and the400-pattern policy are unchanged.
+The pure ID34 owner ports native Tag Init/Main and post-draw despawn metadata;
+it retains no pool, snapshot, Frame or callbacks. Native unadjusted TST.B at
+both debug word bases observes the HIGH byte. No new gameplay sound is added.
+The Frame port validates the complete expected motion and preserves every
+field outside the exact eight-field executed-write contract, then applies
+once at the existing completed cut. Fractions, state partitions, art, input,
+clock and service ownership remain unchanged. Live Runtime dispatch is next.
+
+Tests were authored before production. Independent static review found one
+malformed newly appended mapper assertion and one replay comparison using
+CdAssetBytes identity through record equality. Root repaired those tests only:
+restored the existing FloatBlock frame5 assertion, and compared the real next
+service's art/DMA byte contents and scalars. Frozen originals remain external.
+Actual-media mapper negative Root62691 failed exactly one expected missing
+23EE9C pointer error on the old mapper (387s queue/1m30s Maven). Frame tests-only
+Root70543 test-compile failed only on the two proposed absent Frame APIs;
+that is compilationRED, not a Jupiter run.
+
+After exact production imports, Root5579 ran queued --lean -Dmse=off test with
+-Dtest=TestCdSpinTunnelTag,TestCdPlayerFrameRuntime,TestCdObjectMappings,TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdObjectVisualAssets,TestCdObjectPool,TestModApiSignatureSurface,
+supplied soniccd.media.root and explicit surfaceless-egl, DISPLAY/WAYLAND unset.
+Observed481 tests/0failures/0errors/0skips; immediate admission/1m39s Maven.
+Exact completed XML identities, Java25 and media/backend properties inspected.
+Counts: Tag156, Frame235, mapper15, assets23, retail3, visual26, pool12, API11.
+The three regional invocations executed; USA-only object admission is unchanged.
+This is bounded component/media/API evidence, not World contact, native timing,
+section PLC residency, rendered debug pixels, an act/game or regional parity.
+Independent source reviews found no remaining productionP1/P2 in these units.
