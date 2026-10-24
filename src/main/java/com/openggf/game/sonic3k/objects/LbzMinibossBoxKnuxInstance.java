@@ -327,10 +327,14 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         @Override
         public void restoreRewindStateValue(Snapshot state) {
             entries.clear();
+            var controllers = state.controllers();
+            if (controllers.length == 0) {
+                return;
+            }
             // The registry restores the session RNG separately. Every controller must
             // share its current instance, in captured order, rather than clone its cursor.
             var sharedRng = services().rng();
-            for (S3kBossExplosionController.Snapshot controller : state.controllers()) {
+            for (S3kBossExplosionController.Snapshot controller : controllers) {
                 entries.add(S3kBossExplosionController.fromSnapshot(controller, sharedRng));
             }
         }

@@ -419,3 +419,50 @@ rig visibility, GPU pixels or complete LBZ routes. Existing encounter/graph
 checks provide bounded surrounding coverage. Parent-owned composed guards,
 API checks, four required S3K stability checks, coverage reconciliation,
 integration, push and worktree cleanup remain pending.
+
+### Empty public-object restore compatibility correction
+
+The parent-supplied read-only review (reference
+`0c01e8fc595cf7f1c75abf36c20597714464631d120310e9c5a9784f36a5fa05`)
+identified a compatibility edge in `6cf7d4bbe8870cd998316df8bdd14e664e1cefbc`:
+an empty public box can capture without services or an identity table, but its
+new holder unconditionally looked up services during restore. Both inherited
+public restore overloads therefore failed even when there was nothing to rebuild.
+
+Before changing runtime, the ROM-free `TestLbzWallExplosionsEmptyRewind` ran
+three tests with three failures, zero errors and zero skips. Same-instance
+restore through the overload without a context argument and fresh-object restore with
+`RewindCaptureContext.none()` both threw `services not available`. The third
+control restored an empty snapshot over a divergent populated list and trapped
+the unwanted RNG lookup with `empty restore must not look up the service RNG`.
+
+The correction still clears existing entries first, reads the defensive
+`state.controllers()` array once, and returns if it is empty. Populated snapshots
+still require current injected services so their controllers can share the
+session RNG; this change does not make populated unbound restore supported.
+Controller order, timers, pending emissions, default owner/base capture and the
+single-key baseline delta are unchanged.
+
+Both invocations used the same Java/Lua/display/JVM environment and absolute
+root ROM properties as the earlier follow-up. The baseline selector was only
+`TestLbzWallExplosionsEmptyRewind`; the corrective selection was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLbzWallExplosionsEmptyRewind,TestLbzWallExplosionsRewind,TestS3kLbzMinibossGraphRewind,TestRewindFieldDispositionAudit#wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath' \
+  "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" "-Dsonic2.rom.path=$ROM_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/s3k.gen" test -B
+```
+
+The corrective selection passed all 12 tests across four classes with zero
+failures, errors or skips, including all three empty-state controls, all five
+populated managed replay cases, the three existing miniboss graph checks and
+the exact default-capture audit method. Baseline and corrective admission each
+waited zero seconds; Maven reported 27.101 seconds and 1:22 respectively,
+including compilation. Per-class XML identities and outcomes were inspected,
+then consumed XML/text reports were removed. The earlier 48-test behavioral
+selection and parent guard profiles were not repeated. Parent-owned broad gates,
+integration, push and worktree cleanup remain pending.
