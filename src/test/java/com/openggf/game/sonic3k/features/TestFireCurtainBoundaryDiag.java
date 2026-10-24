@@ -21,7 +21,7 @@ public class TestFireCurtainBoundaryDiag {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

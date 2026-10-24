@@ -3917,3 +3917,170 @@ push or broad/full suite was performed. No PCM references are regenerated; no pe
 exhaustive trace or whole-route certification is claimed. Null/closed failure
 behavior is grounded by unchanged read/exception bodies and initializer inspection,
 not a new exhaustive invalid-ROM matrix.
+
+
+
+### Remaining world/ROM fixture continuation
+
+This separate slice starts from accepted world-consumer commit
+`95b0435edc934d71bd5faa933b03db7f2faf3515` (tree
+`3c9ba4896682625fa53fa689764304813b7e6961`) on new local branch
+`bugfix/ai-remaining-world-rom-fixtures-20261024` in the same isolated worktree.
+Initial state was clean with no owned Maven jobs; all earlier branch tips remain
+preserved. Scope is the fourteen requested setups, exact proven allowance lines
+and this appendix. Production, shared helpers, scanner behavior, assertions and
+consumer bodies remain unchanged. The parent's separate sensor/event and four
+engine-only keys, earlier S1 closures, qualified retentions and TestGameLoop are
+not touched or composed here.
+
+ROM ownership was traced through `RequiresRomCondition`: its beforeAll and
+beforeEach callbacks use cached `RomCache` handles and call the existing
+`configureRomFixture(rom)`, selecting the native module and installing the ROM
+before user setup. The cache retains an open handle per game and reopens a closed
+one; none of this slice's edits changes that lifetime. Lives HUD, S1 pattern
+animator, S3K pattern animator and AIZ2 end-sequence setups therefore drop only
+the duplicate engine bootstrap call. Lives' configuration reset remains after
+the extension, as does its original teardown reconfiguration. S1 oscillation
+reset and S3K `initHeadless()` retain their exact cadence. AIZ2's explicit S3K
+bootstrap write is retained even though the extension already owns the active
+S3K world; no module object authority or construction-service scope is replaced.
+Body-level S1 save/team sessions, native ROM reads, loaded art, synthetic levels,
+scoped object construction and all teardown paths are unchanged. Running a fresh
+full reset after these callbacks was rejected because it would discard the ROM's
+native world and substitute unrelated setup ownership.
+
+Retained byte-identically:
+`src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp`.
+Its outer setup covers both ROM-free provider/snapshot tests and method-level
+`@RequiresRom(S3K)` methods, including the nested `RomBackedComposite` case.
+ROM-backed bodies load real native levels/art through `HeadlessTestFixture`;
+plain outer cases exercise independent empty/pending provider state without
+installing a world themselves. An unconditional engine-only reset would destroy
+the method callback's installed ROM world. An unconditional full/per-test reset
+would create unrelated world ownership for the plain cases; removing the setup
+would leave those cases without an owning test fixture. Conditional annotation/
+ambient-state routing or a new helper is outside this bounded migration. This is
+a qualified retention for the mixed setup, not a claim of permanent necessity.
+The entire class and its allowance are unchanged and remain in focused coverage.
+
+Four playable setup families (base rewind, logical-input latch, subclass rewind,
+sidekick CPU rewind) originally wrote S2 bootstrap without clearing a live world.
+They retain those writes and sample `GameModuleRegistry.getCurrent()` directly
+as the module-fixture argument before teardown, preserving live-world precedence
+rather than forcing S2 from a class name. The latch's existing module field and
+assignment remain intact. Respawn strategies and HTZ lava explicitly cleared and
+selected S2, so use the S2 enum fixture; HTZ's subsequent camera/game-state resets
+and module event-provider binding stay in order. Fire-curtain diagnostics, Ring
+Manager and the local S3K zone-feature subject use the ordinary default S2
+`resetAll()` boundary. Their negative no-level composition paths and body-level
+S3K rule/fixture changes remain unchanged. No standalone capture, measurement or
+new optional opt-in is enabled.
+
+Exactly thirteen keys are removed:
+
+```text
+src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
+src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
+src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
+src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
+src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
+src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
+src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
+src/test/java/com/openggf/sprites/playable/TestPlayableSubclassRewind.java#setUp
+src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
+src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
+src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
+src/test/java/com/openggf/tests/TestRingManager.java#setUp
+src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
+```
+
+Mechanical full-class comparison after setup/import normalization preserves all
+205 source test methods, helpers, body-level world changes, assertions and
+teardown paths, with normalized SHA-256
+`1bfd6a1ed74a018af83517077499e8d2cc5ba0a4afc3a5d396e88bf13d5f605b`.
+The submitted source fingerprint, SHA-256 of
+`git diff --binary 95b0435e -- src/main src/test pom.xml`, is
+`017dbb698eda9b26fa3daa53db10c9c001a4f9130aec1f9d3b27251f5afad011`.
+Baseline method/count comparison is source-based; no separate baseline runtime
+or composed-parent inventory count is inferred.
+
+All four existing main-workspace ROM files were verified before submission:
+
+| File | CRC32 | SHA-1 |
+| --- | --- | --- |
+| `s1.gen` | `AFE05EEE` | `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` |
+| `s2.gen` | `7B905383` | `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
+| `s3k.gen` | `63522553` | `cfbf98c36c776677290a872547ac47c53d2761d6` |
+| `kis2.gen` | `2AC1E7C6` | `6cd0537a3aee0e012bb86d5837ddff9342595004` |
+
+Their verified absolute main-workspace paths are passed to all four properties;
+no file is renamed, copied or linked by this slice. Normal admission is used for
+the ROM-bearing focused run. Surfaceless EGL is explicit, while DISPLAY,
+WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS are unset.
+`initHeadless()`/simulation assertions are not pixel validation; selecting EGL
+does not turn logic-only fixtures into rendering tests.
+
+
+Fixed commands from this isolated worktree, with
+`OPENGGF_MAIN_WORKSPACE` denoting the verified main checkout's absolute path:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN_WORKSPACE}/s1.gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN_WORKSPACE}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN_WORKSPACE}/s3k.gen" \
+  "-Dkis2.rom.path=${OPENGGF_MAIN_WORKSPACE}/kis2.gen" \
+  '-Dtest=com.openggf.game.sonic1.TestSonic1LivesHudDonation,com.openggf.game.sonic1.TestSonic1PatternAnimatorRewindSnapshot,com.openggf.game.sonic3k.TestSonic3kPatternAnimatorRewindSnapshot,com.openggf.game.sonic3k.TestSonic3kPlcArtRewindSnapshot,com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects,com.openggf.game.sonic3k.features.TestFireCurtainBoundaryDiag,com.openggf.sprites.playable.TestAbstractPlayableSpriteRewindCapture,com.openggf.sprites.playable.TestLogicalInputControlLockLatch,com.openggf.sprites.playable.TestPlayableSubclassRewind,com.openggf.sprites.playable.TestRespawnStrategies,com.openggf.sprites.playable.TestSidekickCpuControllerRewindCapture,com.openggf.tests.TestHTZRisingLavaDisassemblyParity,com.openggf.tests.TestRingManager,com.openggf.tests.TestSonic3kZoneFeatureProvider' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_MAIN_WORKSPACE}/s1.gen" \
+  "-Dsonic2.rom.path=${OPENGGF_MAIN_WORKSPACE}/s2.gen" \
+  "-Ds3k.rom.path=${OPENGGF_MAIN_WORKSPACE}/s3k.gen" \
+  "-Dkis2.rom.path=${OPENGGF_MAIN_WORKSPACE}/kis2.gen" \
+  '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+
+The fixed fourteen-class run passed all 205 cases with zero failures, errors or
+skips: Lives HUD 4, S1 animator 6, S3K animator 9, retained PLC 25, AIZ2 end
+sequence 58, fire-curtain diagnostics 3, playable base rewind 14, logical-input
+latch 5, subclass rewind 4, respawn strategies 29, sidekick CPU rewind 2, HTZ lava
+3, Ring Manager 35 and zone-feature provider 8. All 205 unique source identities
+were checked in fresh XML, with no parameterized rows in this selection. The
+PLC layout needs testcase-level accounting: the outer report is empty and the
+nested report contains 24 outer-class cases plus its one `RomBackedComposite`
+case. Both reports were inspected; the nested native check ran. All required
+ROM checks and the S2 donor assumptions ran without skipping.
+
+Every report carried the exact fixed selector, Java 25, explicit surfaceless EGL
+and all four verified absolute ROM properties. Both owned Java processes were
+also checked live for the unset desktop/JVM-option variables and correct
+JAVA_HOME/LUA_BIN. Queue wait was 300 seconds; Maven execution was 32.186 seconds.
+All 30 XML/text reports were inspected and consumed; no capture/measurement
+opt-in was enabled and no pass cache/archive was created. The submitted source
+fingerprint remained fixed throughout waiting, compilation and execution.
+
+
+The separate exact singleton guard passed all eight source identities with zero
+failures, errors or skips. Its fresh XML also confirms Java 25.0.5.0.2, the exact
+selector, EGL flag and four absolute ROM properties; both reports were consumed.
+Lua was 5.4.9. Queue wait was 35 seconds; Maven execution was 28.148 seconds.
+Per-command waiting and execution are distinct intervals, not summed into elapsed
+delivery time; other work time is unmeasured and no user-response wait occurred.
+The final source fingerprint matches both completed jobs.
+
+This slice closes thirteen exact keys and retains the mixed PLC-art key. It
+claims only the fixed 205 focused cases and eight exact singleton guard cases,
+not a composed inventory total or complete guards. No broad/full suite,
+unchanged earlier-family run, standalone capture/measurement, pixel certification
+or arbitrary incoming-world/module matrix was run. Earlier branches and the
+parent's separate closures remain unchanged. The branch stops at a clean local
+review-ready commit; review, composition, integration, push and branch/worktree
+cleanup remain the parent's responsibility.

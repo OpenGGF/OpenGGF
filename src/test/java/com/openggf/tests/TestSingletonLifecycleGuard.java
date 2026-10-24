@@ -21,22 +21,9 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/audio/AudioRegressionTest.java#setUpClass
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
-            src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
-            src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
-            src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
-            src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestPlayableSubclassRewind.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
-            src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
-            src/test/java/com/openggf/tests/TestRingManager.java#setUp
-            src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
             src/test/java/com/openggf/trace/replay/TraceReplaySessionBootstrapConfigTest.java#setUp
             """);
     private static final Set<String> SCANNER_UTILITY_FILES = Set.of(

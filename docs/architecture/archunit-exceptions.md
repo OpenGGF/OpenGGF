@@ -151,7 +151,7 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 21 methods across 20 files,
+The ambient singleton-setup inventory now contains 8 methods across 7 files,
 down from 102/100 after direct manager construction and named module fixtures
 replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
@@ -688,3 +688,9 @@ protected no-argument constructor, retain their own ROM and rebuild. The two
 legacy sequencer restore-owner constructors remain qualified and byte-unchanged.
 The component's90 behavior and58 strict/API checks passed; final joint evaluation
 remains pending.
+
+Thirteen further ROM/world setup identities close through existing fixture
+owners, with205 behavior cases and8 guard controls passing without skips.
+The mixed ROM-free/method-level ROM PLC-art setup remains retained, as do the
+preference-sensitive and legacy visual boundaries. The local allowance is8
+methods across7 files; joint final verification remains pending.
