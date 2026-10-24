@@ -1814,9 +1814,10 @@ release publication, subdelegation or worktree removal is requested here.
 
 ### Observed component evidence
 
-All checks below ran on the pinned base plus this staged component, with no
-production/test-source edits after compilation. `ModApiVersion` changes only
-its description. The task tree had no target before relocation; explicit
+All checks below ran on the pinned base plus the implementation later committed
+as `40980eb496a39115e416e5ccd4060968bef453fb`, before the newline/documentation
+correction recorded below. No production logic or test body changed after
+compilation. `ModApiVersion` changes only its description. The task tree had no target before relocation; explicit
 classfile checks after the build found exactly the two `sprites/art` definitions
 and no `data` provider classfiles. No clean-build workaround was needed.
 `test-compile` compiled 4,336 production and 4,444 test sources, including
@@ -1825,10 +1826,13 @@ Lua 5.4 and PowerShell prerequisites without executing tests.
 
 The regenerated 22,482-line pin equals the old pin under only the two provider
 FQN substitutions and sorting: exactly 14 removals/14 replacements. Recursive
-type and canonical `@ModApi` inventories both remain 1,246. Every one of the 30
-direct consumer files equals baseline under only those FQN substitutions; both
-moved definitions retain byte-identical comments, annotations, declarations and
-bodies after package/import normalization. The other 144 frozen records are
+type and canonical `@ModApi` inventories both remain 1,246. The original check
+of all 30 direct consumer files used text-mode I/O, which implicitly normalized
+newlines; it established normalized-text equality under the FQN substitutions,
+not raw byte equality. Independent review established 29/30 literal byte matches
+at `40980eb49`; the remaining file also lost two CRLF endings, as corrected below.
+Both moved definitions retain byte-identical comments, annotations, declarations
+and bodies after package/import normalization. The other 144 frozen records are
 byte-identical and ordered. Release descriptor, API roots, internal terminals,
 platform allowlist, frozen historical keys/settings, `data.Game` and inferred
 Stageplay consumer are unchanged. No permissions were added.
@@ -1883,3 +1887,30 @@ entry point with target/classes and the dependency classpath, then compared
 against the exact baseline substitution. Remaining full/composed guard and
 global-count obligations, the four required S3K controls, independent review,
 integration and push belong to the parent. No live command handles remain.
+
+
+### Review correction: preserve the consumer's mixed line endings
+
+Independent code review found a P3 exactness issue in `40980eb496a39115e416e5ccd4060968bef453fb`:
+TestCrossGameFeatureProviderRefactor's baseline lines 2 and 3 ended in CRLF,
+and the implementation's text-mode rewrite changed both to LF. The parent
+independently reproduced these two byte differences after the intended FQN
+substitutions. This was an implementation/comparison error; the original 30/30
+claim was too strong, and the original commit remains a 29/30 raw-byte match.
+
+The bounded correction reconstructs only that file from the raw bytes at
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7`, applying only the two literal provider
+FQN byte substitutions. Relative to `40980eb49`, this adds exactly two `0D`
+bytes at the ends of lines 2 and 3 (corrected-file offsets 26 and 68, zero-based),
+restoring the existing mixed endings without normalizing the rest of the file.
+All 30 consumer files then match baseline raw bytes under only the two intended
+FQN byte substitutions. Both moved definitions also pass raw-byte comparison
+under their exact package/import replacements. The 14-line pin rewrite and
+three-record frozen removal are unchanged, as are the release descriptor,
+provider policy and all production logic/test bodies.
+
+Validation for this correction is raw-byte comparison of all 30 consumers and
+both definitions, exact pin/frozen-store comparisons, protected-file checks and
+Git diff/policy checks. The completed Maven, canonical Javadoc, behavior and
+fresh guard runs above are reused; none was repeated for this newline/prose-only
+correction. No push, integration, delegation or worktree cleanup is included.
