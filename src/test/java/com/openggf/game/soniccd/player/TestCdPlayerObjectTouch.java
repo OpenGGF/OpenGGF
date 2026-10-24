@@ -147,7 +147,9 @@ class TestCdPlayerObjectTouch {
 
             var changed = result.changedSlot().orElseThrow();
             assertArrayEquals(expected, changed.copyBytes());
-            assertEquals(routine == 0xFE ? 0 : 1, changed.unsignedByte(SOLID_TYPE));
+            assertEquals(routine == 0xFE ? 0 : 1, changed.unsignedByte(ROUTINE));
+            assertEquals(0xD9, changed.unsignedByte(SOLID_TYPE));
+            assertEquals(0xB1, changed.unsignedByte(LAYER));
             assertSame(original.identity(), changed.identity());
             assertSame(original, pool.state(127));
         }

@@ -2624,3 +2624,26 @@ These pure owners are not yet dispatched by the opening world at this commit.
 Solid FloatBlock, alternate ramp fall, animal roaming, enemy/hazard response,
 live art residency, native ramp player mode and complete route parity remain
 open. Existing first-Ring evidence and the terrain/SAT publication gap are unchanged.
+
+
+### Secondary native slot aliases, 24 October 2026
+
+Corrected oSolidType and oLayer aliases to physical bytes25/29, matching
+Level/_Definitions.inc:59-66 at the pinned reference. Each zero-size declaration
+follows the primary byte, so it shares the following secondary byte. The prior
+names incorrectly shared primary routine/subtype24/28. The item-touch test had
+encoded the same incorrect alias; it now checks that the primary routine wraps
+while secondary solidity/layer retain their actual dirty values. A raw64-byte
+regression proves alias writes change only25/29. Existing screen-Y byte view is
+compatibility evidence, not a new word-wide screen-coordinate owner.
+
+Both corrected regressions failed against the old aliases in session14216
+(2tests/2failures/0errors/skips). After the minimal enum-value correction,
+session89744 passed complete pool/touch classes:26tests/0failures/errors/skips,
+Java25.0.5.0.2 verified in both reports. This enables later explosion/solid owners;
+no existing production consumer used these two aliases, and enemy response is
+still unadmitted. No player values or collision outcomes were adjusted.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectPool,TestCdPlayerObjectTouch' test -B
+```

@@ -24,8 +24,10 @@ public final class CdObjectState {
         PRIORITY(0x18), WIDTH(0x19), MAP_FRAME(0x1A), ANIMATION_FRAME(0x1B),
         ANIMATION(0x1C), PREVIOUS_ANIMATION(0x1D), ANIMATION_TIME(0x1E),
         COLLISION_TYPE(0x20), COLLISION_STATUS(0x21), FLAGS(0x22), SAVED_FLAGS_ID(0x23),
-        ROUTINE(0x24), SOLID_TYPE(0x24), ROUTINE_2(0x25), ANGLE(0x26), SUBTYPE(0x28),
-        LAYER(0x28), SUBTYPE2(0x29),
+        // oSolidType / oLayer (Level/_Definitions.inc:59-66) use rs.b 0
+        // after the primary byte, aliasing the following secondary byte.
+        ROUTINE(0x24), SOLID_TYPE(0x25), ROUTINE_2(0x25), ANGLE(0x26), SUBTYPE(0x28),
+        LAYER(0x29), SUBTYPE2(0x29),
         // ObjRing_Init:.InitSubObj / ObjRing_Collect: one-based member at oVar34.
         RING_MEMBER(0x34),
         // Obj3DRamp_Main (3D Ramp/Main.asm:230,294,326): launch timer byte at oVar2E. Storage only.

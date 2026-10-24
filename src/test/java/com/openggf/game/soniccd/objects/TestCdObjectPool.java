@@ -9,7 +9,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.LongField.*;
 import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Authored before the implementation; all cases UNRUN by the external author. */
+/** Native dynamic-slot storage and allocation behavior. */
 class TestCdObjectPool {
     @Test
     void fixedNinetySixPhysicalIdentitiesAndIdOnlyAllocationThroughLastSlot() {
@@ -63,6 +63,28 @@ class TestCdObjectPool {
         pool.deleteObject(32);
         assertArrayEquals(new byte[64], pool.state(32).copyBytes());
         assertEquals(32, pool.state(32).identity().wholeIndex());
+    }
+
+    @Test
+    void nativeSolidAndLayerAliasesShareSecondaryBytesWithoutChangingRoutineOrSubtype() {
+        // oSolidType / oLayer (Level/_Definitions.inc:59-66) are zero-size
+        // declarations AFTER the primary byte; they alias the following byte.
+        var pool = new CdObjectPool();
+        var state = pool.state(32).moveByte(ROUTINE, 0x14).moveByte(ROUTINE_2, 0xA3)
+                .moveByte(SUBTYPE, 0x62).moveByte(SUBTYPE2, 0xD5)
+                .moveLong(X_POSITION, 0x12345678);
+        assertEquals(0xA3, state.unsignedByte(SOLID_TYPE));
+        assertEquals(0xD5, state.unsignedByte(LAYER));
+        assertEquals(0x56, state.unsignedByte(SCREEN_Y));
+        var changed = state.moveByte(SOLID_TYPE, 7).moveByte(LAYER, 9);
+        var expected = state.copyBytes();
+        expected[0x25] = 7;
+        expected[0x29] = 9;
+        assertArrayEquals(expected, changed.copyBytes());
+        assertEquals(0x14, changed.routine());
+        assertEquals(0x62, changed.unsignedByte(SUBTYPE));
+        assertEquals(7, changed.unsignedByte(ROUTINE_2));
+        assertEquals(9, changed.unsignedByte(SUBTYPE2));
     }
 
     @Test
