@@ -688,6 +688,9 @@ display hold and retirement through their native movement and visibility latches
 Hidden-monitor conversion retains the occupied native SST through replacement
 cleanup. Both special-stage return prefixes pass; broader complete-route parity
 remains separate from these scoped native-owner checks.
+S3K item monitors retain contents only when a later object slot admits them.
+A full tail leaves a remembered broken shell without an icon or reward, and
+rewind can capture that state immediately after the break.
 
 The AIZ2 bombing ship's two propellers are now native objects. They take
 the slots after the ship, turn at the original three-frame rate, and

@@ -1765,3 +1765,22 @@ jobs have completed. Final documentation/source-link and policy checks,
 integration, push and cleanup still follow; the four dirty submodules and five
 untracked user files in main remain outside this work. Shader/command, the next
 S1 fixture family and monitor admission remain owned, unmerged follow-ons.
+
+## Monitor contents admission follow-up
+
+The isolated monitor worker at base `591c679b3` reproduced a real source concern
+from the native allocation-bridge audit. Full tail occupancy left the parent
+holding rejected, unregistered contents, so immediate capture failed before its
+next dispatch; the embedded icon could also award rings without admitted
+contents. Corrected baseline validation executed eleven graph cases with exactly
+those three failures and eight passing controls, zero errors/skips. The
+[field-audit continuation](../audits/2026-10-24-rewind-disposition-review.md#s3k-monitor-contents-admission)
+records exact identities, commands, pinned native failure branches, rejected
+shapes and scope. All ten dynamic-add bridges remain QUALIFIED RETAIN, count one
+each, with no wrappers or allowance changes. Minimal parent admission ownership
+keeps existing icon/callback dispatch and allocation order. The affected seven
+exact classes passed 47 cases, zero failures/errors/skips, including both physical
+monitor fixtures, creator content and real child-slot/occupancy/recycle controls.
+Only documentation changed afterwards. Consumed XML was inspected and removed;
+no live Maven handle remains. The review-ready local branch/worktree stays with
+the parent, which owns composed gates, integration and push.
