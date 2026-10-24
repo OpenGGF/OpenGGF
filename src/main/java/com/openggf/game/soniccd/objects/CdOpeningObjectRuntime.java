@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
@@ -35,7 +36,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
  * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower art (the inert Animal path draws nothing).
  * The initial Ring, contact and score globals are caller-declared DEV ingress, never an entry proof.
- * Live dynamic IDs $10 Ring, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
+ * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
  * and aftermath IDs $18/$1C/$1F are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
@@ -92,11 +93,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
     }
 
-    public enum UnsupportedContactBoundary { DEAD_CAMERA_FREEZE }
+    public enum UnsupportedContactBoundary { DEAD_CAMERA_FREEZE, LOST_RING_NATIVE_CLOCK }
     public static final class UnsupportedContact extends UnsupportedOperationException {
         private final UnsupportedContactBoundary boundary;
         private UnsupportedContact(UnsupportedContactBoundary boundary) {
-            super(boundary + ": native Level_MainLoop death camera/scroll branch is not owned yet");
+            super(boundary + (boundary == UnsupportedContactBoundary.DEAD_CAMERA_FREEZE
+                    ? ": native Level_MainLoop death camera/scroll branch is not owned yet"
+                    : ": LostRing binding requires an explicitly represented absolute native V-int counter"));
             this.boundary = boundary;
         }
         public UnsupportedContactBoundary boundary() { return boundary; }
@@ -111,7 +114,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     @FunctionalInterface public interface PrimaryAngleWrite { void write(int unsignedByte); }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -120,6 +123,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
     public record RingSubCpu(CdRing.SubCpuCommand command) implements SoundRequest {
         public RingSubCpu { Objects.requireNonNull(command, "Ring sub-CPU command"); }
+    }
+    public record LostRingFm(CdLostRing.Sound sound) implements SoundRequest {
+        public LostRingFm { Objects.requireNonNull(sound, "LostRing FM sound"); }
     }
     public record MosquiFm(CdMosqui.Sound sound) implements SoundRequest {
         public MosquiFm { Objects.requireNonNull(sound, "Mosqui FM sound"); }
@@ -136,6 +142,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final Object owner;
         private final CdObjectPlacementRuntime.Snapshot placement;
         private final CdRingGlobals ringGlobals;
+        private final CdRingSpillGlobals spillGlobals;
         private final CdObjectDrawQueue.Snapshot queue;
         private final SpritePresentation.Frame displayedFrame;
         private final List<SoundRequest> sounds;
@@ -144,12 +151,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final ScoreGlobals scoreGlobals;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdRingGlobals ringGlobals,
+                         CdRingSpillGlobals spillGlobals,
                          CdObjectDrawQueue.Snapshot queue, SpritePresentation.Frame displayedFrame,
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals) {
             this.owner = owner;
             this.placement = placement;
             this.ringGlobals = ringGlobals;
+            this.spillGlobals = spillGlobals;
             this.queue = queue;
             this.displayedFrame = displayedFrame;
             this.sounds = List.copyOf(sounds);
@@ -159,6 +168,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         public CdRingGlobals ringGlobals() { return ringGlobals; }
+        public CdRingSpillGlobals spillGlobals() { return spillGlobals; }
         public DevGlobals devGlobals() { return devGlobals; }
         public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
         public ScoreGlobals scoreGlobals() { return scoreGlobals; }
@@ -181,12 +191,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdExplosion explosion;
     private final CdPoints points;
     private final CdFlower flower;
+    private final CdLostRing lostRing;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
     private final CdR11aObjectAssets.FrontierArtBank frontierArt;
     private final CdR11aObjectAssets.ContactArtBank contactArt;
     private CdRingGlobals ringGlobals;
+    // Level/Main.asm:178-184 ClearFlowers covers the three ringLoss animation values.
+    private CdRingSpillGlobals spillGlobals = new CdRingSpillGlobals(0, 0, 0);
     private DevGlobals devGlobals = new DevGlobals(0, 0);
     private CdPlayerBody.ContactGlobals contactGlobals;
     private ScoreGlobals scoreGlobals;
@@ -292,6 +305,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         flower = new CdFlower(placement, CdFlower.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        lostRing = new CdLostRing(placement, CdLostRing.Assets.fromObjectAssets(objects),
+                new CdPlayerMath(assets.player()), new CdPlayerTerrain(assets.terrain()),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), CdRing::collectRing);
     }
 
     public Phase phase() { return phase; }
@@ -300,6 +316,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdObjectPlacementRuntime placement() { return placement; }
     /** Immutable diagnostic state; no reset, HUD acknowledgement or time-stop writer is invented. */
     public CdRingGlobals ringGlobals() { return ringGlobals; }
+    public CdRingSpillGlobals spillGlobals() { return spillGlobals; }
     /** Explicit owned DEV globals read by the bodies; no native writer (projector, good-future) is admitted. */
     public DevGlobals devGlobals() { return devGlobals; }
     public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
@@ -449,13 +466,20 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 @Override public CdRingGlobals read() { checkActive(Phase.DYNAMIC_SLOTS); return ringGlobals; }
                 @Override public void write(CdRingGlobals value) {
                     checkActive(Phase.DYNAMIC_SLOTS);
-                    // Ring writes rewards only; all other three fields are pass-through.
+                    // Ring rewards/LostRing Init own these fields; the other three globals pass through.
                     if (value.timeStopTimer() != ringGlobals.timeStopTimer()
                             || value.ringAnimationTimer() != ringGlobals.ringAnimationTimer()
                             || value.ringAnimationFrame() != ringGlobals.ringAnimationFrame()) {
                         throw new IllegalStateException("Ring reward attempted to write another global owner");
                     }
                     ringGlobals = value;
+                }
+            };
+            var spillPort = new CdLostRing.SpillGlobalsPort() {
+                @Override public CdRingSpillGlobals read() { checkActive(Phase.DYNAMIC_SLOTS); return spillGlobals; }
+                @Override public void write(CdRingSpillGlobals value) {
+                    checkActive(Phase.DYNAMIC_SLOTS);
+                    spillGlobals = Objects.requireNonNull(value, "LostRing animation state");
                 }
             };
             var calls = new CdRing.SourceCalls() {
@@ -474,6 +498,29 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     ring.executeSelected(whole, new CdRing.Inputs(assets.identity().variant(), assets.identity().stage(),
                             gates.zoneAct() >>> 8, preScrollForeground.xWord(), gates.timeZone(), gates.timeWarpDirection()),
                             globalsPort, calls);
+                } else if (id == CdLostRing.OBJECT_ID) {
+                    // Binding requires an absolute clock, never engine frames or an unknown-seed delta.
+                    int nativeVInt = (int) frame.vIntClock().absoluteValue().orElseThrow(() ->
+                            new UnsupportedContact(UnsupportedContactBoundary.LOST_RING_NATIVE_CLOCK));
+                    var result = lostRing.run(whole, new CdLostRing.Inputs(nativeVInt, 127 - whole,
+                            gates.zoneAct() >>> 8, environment.movement().bounds().bottom()),
+                            new CdLostRing.Ports(globalsPort, spillPort));
+                    for (var effect : result.effects()) {
+                        if (effect instanceof CdLostRing.GlobalWrite write) {
+                            if (write.field() != CdLostRing.GlobalField.PRIMARY_ANGLE) {
+                                throw new UnsupportedOperationException("Unowned LostRing shared global " + write.field());
+                            }
+                            primaryAngleWrite.write(write.value());
+                            checkActive(Phase.DYNAMIC_SLOTS);
+                        } else if (effect instanceof CdLostRing.SoundRequest request) {
+                            appendSound(new LostRingFm(request.sound()));
+                        } else if (effect instanceof CdLostRing.RewardFmRequest request) {
+                            appendSound(new RingFm(request.sound()));
+                        } else if (effect instanceof CdLostRing.RewardSubCpuRequest request) {
+                            appendSound(new RingSubCpu(request.command()));
+                        }
+                        // Allocation/delete/call metadata describes committed work; never replay it.
+                    }
                 } else if (id == CdMosqui.OBJECT_ID) {
                     var player = frame.state().motion();
                     // goodFuture=0 is the named DEV world's explicit missing-global policy,
@@ -553,10 +600,11 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 () -> queue.finishAfterCamera(Objects.requireNonNull(cameras, "actual post-scroll cameras")));
     }
 
-    /** UpdateGlobalAnims.Rings (Main.asm:520-525), exactly once after build, including time stop. */
+    /** UpdateGlobalAnims.Rings then RingSpill (Main.asm:520-549), once after an unpaused build. */
     public void finishOrdinaryTail() {
         perform(Phase.BUILT, Phase.TAIL, Phase.CLOSED_CUT, () -> {
             ringGlobals = ringGlobals.advanceGlobalRingAnimation();
+            spillGlobals = spillGlobals.advanceTail();
             preScrollForeground = null; // Camera/scroll is root-owned, and is never restored here.
             return null;
         });
@@ -575,7 +623,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     public Snapshot captureClosedCut() {
         requireCut();
-        return new Snapshot(captureOwner, placement.capture(), ringGlobals, queue.captureClosedCut(), displayed, sounds,
+        return new Snapshot(captureOwner, placement.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
                 devGlobals, contactGlobals, scoreGlobals);
     }
 
@@ -587,6 +635,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         placement.validateRestore(snapshot.placement);
         queue.validateRestore(snapshot.queue);
         Objects.requireNonNull(snapshot.ringGlobals, "captured Ring globals");
+        Objects.requireNonNull(snapshot.spillGlobals, "captured ring-spill globals");
         Objects.requireNonNull(snapshot.displayedFrame, "captured immutable picture");
         Objects.requireNonNull(snapshot.sounds, "captured immutable sound requests");
         Objects.requireNonNull(snapshot.devGlobals, "captured DEV globals");
@@ -604,6 +653,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             placement.restore(snapshot.placement);
             queue.restore(snapshot.queue);
             ringGlobals = snapshot.ringGlobals;
+            spillGlobals = snapshot.spillGlobals;
             devGlobals = snapshot.devGlobals;
             contactGlobals = snapshot.contactGlobals;
             scoreGlobals = snapshot.scoreGlobals;

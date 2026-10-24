@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.function.Consumer;
 
 import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
@@ -29,13 +30,13 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests authored BEFORE production. ALL CASES UNCOMPILED/UNRUN.
+ * Tests authored BEFORE production. Bounded execution is recorded in the dated CD implementation plan.
  * Every case opts into the real USA media loader; no invented authenticated aggregate,
  * reflection, substitute Body/queue, production test constructor or fallback bytes.
  * Explicit state edits use existing public owner APIs as constructed ingress, never
  * as evidence of reaching that state by a native route. No engine/GL is required.
  */
-@DisplayName("UNRUN: bounded opening object cycle over actual USA assets")
+@DisplayName("Bounded opening object cycle over actual USA assets")
 class TestCdOpeningObjectRuntime {
     private static final CameraWords PRE = new CameraWords(0, 0x70B);
     private static final DrawCameras POST = new DrawCameras(PRE, PRE, PRE);
@@ -1007,19 +1008,139 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    @Test void ringBearingHurtReachesTheRealUnownedLostRingDispatchInsteadOfSuppressingIt() throws Exception {
+    @Test void ringBearingHurtExecutesTheRealLostRingPassAndRestoresEveryOwnedSpillByte() throws Exception {
         var initial = new CdRingGlobals(3, 3, 0, 0, 0, 0, 0, 0);
         try (var f = new Fixture(initial)) {
             f.firstCycle(); seedContactPlayer(f);
             var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
             pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
                     .moveByte(COLLISION_TYPE, 0xAB).moveWord(X, 64).moveWord(Y, 0x759));
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var objects = f.runtime.captureClosedCut();
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+                    assertEquals(new CdRingSpillGlobals(0, 0, 0), f.runtime.spillGlobals());
+                    assertEquals(3, f.runtime.ringGlobals().rings());
+                }
+                f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+                assertEquals(4, f.frame.state().motion().routine());
+                assertEquals(0x11, f.slot(32).id()); assertEquals(0x759, f.slot(32).centreY(), "pre-unroll Y");
+                assertEquals(3, f.runtime.ringGlobals().rings(), "LostRing Init owns clearing the ring counter");
+                f.runtime.runDynamicSlotsAfterReservedSlots();
+                assertEquals(0, f.runtime.ringGlobals().rings()); assertEquals(0x80, f.runtime.ringGlobals().updateHudRings());
+                assertEquals(0, f.runtime.ringGlobals().livesFlags());
+                assertEquals(new CdRingSpillGlobals(0xFF, 0, 0), f.runtime.spillGlobals());
+                assertEquals(List.of(32, 33, 34), pool.capture().slots().stream().filter(slot -> slot.id() == 0x11)
+                        .map(slot -> slot.identity().wholeIndex()).toList());
+                assertEquals(-0x3D4, (short) f.slot(32).word(Y_VELOCITY));
+                assertEquals(-0x3D4, (short) f.slot(33).word(Y_VELOCITY));
+                assertEquals(-0x338, (short) f.slot(34).word(Y_VELOCITY));
+                assertEquals(1, f.runtime.lastSoundRequests().stream()
+                        .filter(CdOpeningObjectRuntime.LostRingFm.class::isInstance).count());
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                assertEquals(new CdRingSpillGlobals(0xFE, 0xFF, 0), f.runtime.spillGlobals());
+                assertEquals(f.runtime.spillGlobals(), f.runtime.captureClosedCut().spillGlobals());
+            }
+        }
+    }
+
+    @Test void unknownAbsoluteVIntRejectsTheLostRingBindingWithoutInventingASeed() throws Exception {
+        try (var f = new Fixture(INITIAL, CONTACT, SCORE, false)) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, 0x11).moveWord(X, 64).moveWord(Y, 0x759));
+            var before = pool.capture().slots();
             f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
-            assertEquals(4, f.frame.state().motion().routine());
-            assertEquals(0x11, f.slot(32).id()); assertEquals(0x759, f.slot(32).centreY(), "pre-unroll Y");
-            assertEquals(3, f.runtime.ringGlobals().rings(), "LostRing Init, not HurtPlayer, owns clearing the ring counter");
-            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
-            assertTrue(failure.getMessage().contains("$11")); assertTrue(f.runtime.closed());
+            var failure = assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class,
+                    f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LOST_RING_NATIVE_CLOCK, failure.boundary());
+            assertEquals(before, pool.capture().slots()); assertTrue(f.runtime.closed());
+            assertTrue(f.frame.vIntClock().absoluteValue().isEmpty());
+        }
+    }
+
+    @Test void liveLostRingCollectionUsesTheExistingRewardAndSharedSatWithoutSavedFlagWrites() throws Exception {
+        var initial = new CdRingGlobals(99, 3, 0, 0, 0, 0, 0, 0);
+        try (var f = new Fixture(initial)) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            var assets = CdLostRing.Assets.fromObjectAssets(f.assets.openingObjects());
+            pool.write(pool.state(40).moveByte(ID, 0x11).moveByte(ROUTINE, 4).moveByte(SPRITE_FLAGS, 4)
+                    .moveLong(MAPPINGS, assets.mappingsAddress()).moveWord(TILE, assets.baseTileWord())
+                    .moveWord(X, 64).moveWord(Y, 0x760).moveByte(WIDTH, 8).moveByte(Y_RADIUS, 8));
+            var flags = f.runtime.placement().capture().savedFlags().copy();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(100, f.runtime.ringGlobals().rings()); assertEquals(4, f.runtime.ringGlobals().lives());
+            assertEquals(List.of(new CdOpeningObjectRuntime.RingSubCpu(CdRing.SubCpuCommand.SCMD_YESSFX)),
+                    f.runtime.lastSoundRequests());
+            assertEquals(6, f.slot(40).routine()); assertEquals(4, f.slot(40).unsignedByte(MAP_FRAME));
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(List.of(40), cpu.provenance().stream().map(p -> p.slotRef().wholeIndex()).distinct().toList());
+            assertArrayEquals(flags, f.runtime.placement().capture().savedFlags().copy());
+        }
+    }
+
+    @Test void pauseAndLagAdvanceOnlyTheFrameClockAndNeverTheUnpausedRingSpillTail() throws Exception {
+        try (var f = new Fixture(new CdRingGlobals(1, 3, 0, 0, 0, 0, 0, 0))) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, 0x11).moveWord(X, 64).moveWord(Y, 0x759));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var spill = f.runtime.spillGlobals(); var clock = f.frame.vIntClock();
+            f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertEquals(spill, f.runtime.spillGlobals());
+            assertEquals(clock.deltaSinceAdmittedCut() + 1, f.frame.vIntClock().deltaSinceAdmittedCut());
+            f.service(0x80);
+            assertTrue(f.frame.paused()); assertEquals(spill, f.runtime.spillGlobals());
+            assertEquals(clock.deltaSinceAdmittedCut() + 2, f.frame.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+        }
+    }
+
+    @Test void lostRingFloorPhaseUsesTheDeclaredAbsoluteCounterAndPublishesOneAngle() throws Exception {
+        try (var f = new Fixture(INITIAL, CONTACT, SCORE, OptionalLong.of(1))) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots(); f.angleWrites.clear();
+            pool.write(pool.state(42).moveByte(ID, 0x11).moveByte(ROUTINE, 2)
+                    .moveWord(X, 64).moveWord(Y, 0x720).moveWord(Y_VELOCITY, 0)
+                    .moveByte(Y_RADIUS, 8).moveByte(WIDTH, 8).moveByte(SPRITE_FLAGS, 0));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            assertEquals(3, f.frame.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(2, f.frame.vIntClock().deltaSinceAdmittedCut());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            // Ring/Main.asm:415-418: (absolute 3 + d7 85) & 3 == 0.
+            // Delta/levelFrames/pre-increment 2 would skip this exact probe.
+            assertEquals(List.of(0), f.angleWrites);
+            assertEquals(0, f.slot(42).id(), "zero spill timer deletes only after the floor probe");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void nonzeroSpillCaptureRestoresItsAccumulatorAndReplaysTheNextTail() throws Exception {
+        try (var f = new Fixture(new CdRingGlobals(1, 3, 0, 0, 0, 0, 0, 0))) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, 0x11).moveWord(X, 64).moveWord(Y, 0x759));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(new CdRingSpillGlobals(0xFE, 0xFF, 0), f.runtime.spillGlobals());
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            List<CdObjectState> expectedSlots = null;
+            for (int replay = 0; replay < 2; replay++) {
+                if (replay != 0) {
+                    f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+                    f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+                    assertEquals(new CdRingSpillGlobals(0xFE, 0xFF, 0), f.runtime.spillGlobals());
+                }
+                f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+                f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+                assertEquals(new CdRingSpillGlobals(0xFD, 0x1FD, 0), f.runtime.spillGlobals());
+                if (replay == 0) expectedSlots = pool.capture().slots();
+                else assertEquals(expectedSlots, pool.capture().slots());
+            }
         }
     }
 
@@ -1057,8 +1178,17 @@ class TestCdOpeningObjectRuntime {
         Fixture() throws Exception { this(INITIAL, CONTACT, SCORE); }
         Fixture(CdRingGlobals initial) throws Exception { this(initial, CONTACT, SCORE); }
         Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score) throws Exception {
+            this(initial, contact, score, true);
+        }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact,
+                CdOpeningObjectRuntime.ScoreGlobals score, boolean declaredClock) throws Exception {
+            this(initial, contact, score, declaredClock ? OptionalLong.of(0) : OptionalLong.empty());
+        }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact,
+                CdOpeningObjectRuntime.ScoreGlobals score, OptionalLong seed) throws Exception {
             assets = load();
-            frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
+            frame = seed.isPresent() ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, seed.getAsLong())
+                    : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
                     new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });

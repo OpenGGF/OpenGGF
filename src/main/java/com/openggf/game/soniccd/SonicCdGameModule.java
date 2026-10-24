@@ -244,8 +244,9 @@ public final class SonicCdGameModule implements GameModule {
         }
         playerMode = mode;
         try {
+            // Declared DEV native V-int seed0 at this admitted cut, not measured retail entry.
             playerFrame = openingObjectsAdmission
-                    ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets())
+                    ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0)
                     : CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
             if (openingObjectsAdmission) {
                 var banks = playerPresentation.reserveOpeningPictureBank();

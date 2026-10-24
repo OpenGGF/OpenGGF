@@ -3129,3 +3129,31 @@ actualEGL selection at15:31:15BST,0skips; allfreshXMLJava25/media/EGL verified.
 Independent Opus review found only that same testP2; source behavior is sound.
 The eventual module's seed0 is an explicit DEV policy, not retail title/fade or
 native phase proof. Hurt's additive Frame changes are a separate next unit.
+
+
+### Live lost-ring frame composition, 24 October 2026
+
+The physical ID11 dispatch now invokes the source-owned LostRing with the
+Frame's declared raw absolute V-int counter, d7=127-whole, actual zone and bottom
+bound. Unknown absolute time stops at the live binding before the body, never
+substituting a delta or engine clock. The opening module explicitly selects DEV
+seed0; terrain-only admission remains unknown. This is not retail entry-phase
+or mid-pass lag timing certification. One runtime store owns spill bytes,
+capture/restore and the once-per-unpaused-loop tail after Ring animation.
+Shared rewards and ordered sound/angle effects are applied once; allocation,
+call and delete observations are not replayed.
+
+Root98350 passed149affected cases with actual media/EGL, no failures/errors/
+skips. Root95177 then passed38Runtime cases including two review regressions:
+a seed1/slot42 probe distinguishes absolute time from delta/engine frames and
+requires exactly one angle write; an FE/FF/0 spill capture is restored and its
+next tail replays to FD/1FD/0. Exact reward sound order and paused-clock advance
+are now checked. World captures include the spill. Independent Opus source
+review found noP1/P2. CdObjectState.signedWord is a real short-returning helper;
+the earlier brief's contrary premise was wrong, not a production defect.
+
+These checks remain bounded. Root95177 selected532cases at8314b20f6 plus eleven
+pending source/test files:531passed, no skips, while the new walking input
+proposal missed contact and reached the existing unowned FloatBlock12. This is
+not described as a532pass. Hurt admission and its final controller route are
+recorded in the next checkpoint, not inferred from device cases.
