@@ -152,8 +152,9 @@ Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
 The ambient singleton-setup inventory now contains 6 methods across 5 files,
-down from 102/100 after direct manager construction and named module fixtures
-replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
+down from the original102/100 inventory. Relative to the pre-delivery `e9d8087ac`
+95/94 inventory, this continuation removes89 setup methods across89 files with
+zero additions, through direct construction and existing named fixture owners. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
 inject their render service and graphics owner; S1/S2 object and MGZ2 event checks name their module fixtures. Engine/session and frontend checks use the engine-only boundary when no gameplay world is required.
 GameLoop keeps its initial raw bootstrap configuration and the preference/display/module order,
@@ -347,7 +348,9 @@ set. The live dependency census on 2026-10-23 found seven unused permissions:
 These were pruned from 159 to 152; editor art import adds the narrowly owned
 `editor -> tools` pair (also used by Stageplay screenplay import/export, owned by
 `editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
-adds `stageplay -> util`, giving that historical merged tree 154 permissions. The art-provider contract migration removes the sole `data -> sprites` permission and its matching cycle ignore; the prepared composition now has 153 permissions. The three matching obsolete
+adds `stageplay -> util`, giving that historical merged tree154 permissions. Art-provider relocation removes
+`data -> sprites`; Game relocation removes `data -> audio`; the composed Game and
+PaletteLoader moves remove `data -> level`. The current set has151 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
@@ -609,7 +612,7 @@ typed allowances. The sampler-height correction is composed locally alongside th
 scalar GPU boundary; combined focused checks and fresh guards passed. The
 original broad smoke request remains incomplete.
 
-The preceding verified composition contains 136 low-level records: the pooled command
+At the earlier verified136-record checkpoint, the pooled command
 boundary removes nine identities and adds five (147 → 143), both GPU backend
 boundaries remove twenty-one and add seventeen (143 → 139), and the complete
 art-provider contracts remove three (139 → 136). GraphicsManager retains its typed
@@ -618,7 +621,7 @@ to `sprites.art` intentionally changes the unpublished 0.7 candidate; compiled
 mods must rebuild as documented in the compatibility guide. The release descriptor
 remains unchanged. Independent review is complete. The composed candidate passed
 846 focused behavior/API/tooling cases and 769 fresh structural checks with zero
-failures/errors/skips. Broad smoke, integration and push remain pending. The
+failures/errors/skips. The broader smoke request later timed out; integration and push remain pending. The
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
 
@@ -637,35 +640,34 @@ separately reviewed `Game` contract still used that edge. Focused decoder behavi
 combined parent delivery remains separate.
 
 The earlier decoder/fixture composition had 126 low-level records. Decoder component
-qualification is complete; its joint composition checks and delivery remain
-pending. The earlier 846 focused / 769 guard results above stay attributed to
+qualification completed there; joint composition checks were still pending at
+that checkpoint. The earlier 846 focused / 769 guard results above stay attributed to
 the preceding 136-record executable state.
 
-The preceding local fixture composition removes twenty additional setup identities:
+An intermediate fixture checkpoint removed twenty additional setup identities:
 ten module/world keys, eight direct or engine-only keys, and two event/sensor
-keys. Its inventory is42 methods across41 files. GameLoop remains
-qualified for its preference-sensitive setup; oil suffocation and S1 monitor
-landing remain world consumers pending a separate fixture qualification. The
-new composition's checks have not yet run.
+keys. Its inventory was42 methods across41 files. At that stage GameLoop was retained
+for preference-sensitive setup, and oil suffocation/S1 monitor landing awaited
+world-consumer qualification. Those later closures appear below.
 
 Four additional engine-only setups now use the existing reset owner: the editor
 rendering/controller controls and injected ICZ freezer/MGZ pulley-mantis tests.
 Their explicit world-creation helpers, camera bounds and consumer bodies remain
-unchanged. The local inventory is38 methods across37 files; all110 focused/guard cases passed
+unchanged. That checkpoint had38 methods across37 files; all110 focused/guard cases passed
 with zero failures/errors/skips. No production or shared fixture helper changed.
 
-Five formerly held fixture keys are being qualified with their existing
+Five formerly held fixture keys were then qualified with their existing
 lifecycle owners: trace-launch setup retains a gameplay world before installing
 its recording backend; live-rewind audio keeps engine reset before its backend;
 provider tests keep no world; graphics binding/SAT tests retain their explicit
 bootstrap/reconstruction operations in consumer bodies. No helper was added.
-The current local allowance is33 methods across32 files. All47 focused/guard cases
+That historical checkpoint had33 methods across32 files. All47 focused/guard cases
 passed with zero failures/errors/skips, including both nested real-ROM controls.
 
 The reviewed world-consumer slice closes twelve further keys, including oil and
 S1 monitor tests whose earlier direct isolation was rejected. Their full-world
 fixtures preserve session camera/game-state consumers and authoritative module
-sampling. The local inventory is21 methods across20 files; these component
+sampling. That historical checkpoint had21 methods across20 files; these component
 checks passed110 cases plus8 guards, with joint validation still pending.
 
 The preceding Game composition contains123 low-level records: complete `Game`
@@ -696,11 +698,37 @@ remains pending.
 Thirteen further ROM/world setup identities close through existing fixture
 owners, with205 behavior cases and8 guard controls passing without skips.
 The mixed ROM-free/method-level ROM PLC-art setup remains retained, as do the
-preference-sensitive and legacy visual boundaries. The local allowance is8
-methods across7 files; joint final verification remains pending.
+preference-sensitive and legacy visual boundaries. That historical checkpoint had8
+methods across7 files; joint final verification was still pending there.
 
 The audio regression class now resolves its configured S2 ROM before using the
 engine-only reset, then keeps one private ROM/loader/DAC initialization in
 `BeforeAll`. Only its setup key is removed; the three exact PCM identities and workload
-control executed without skips, alongside all8 singleton guard controls. External WAV comparisons and untagged
-measurement methods are not selected. The local inventory is7 methods/6 files.
+control executed without skips, alongside all8 singleton guard controls. External WAV comparisons and
+measurement methods were excluded from that exact selection. That checkpoint
+had7 methods/6 files. The three previously untagged measurement probes now carry
+the existing `performance-measurement` tag; ordinary class selection executed
+exactly four behavior controls with no measurement or external-WAV cases.
+
+
+## Current continuation status
+
+The composed candidate has121 low-level records,151 unique permitted package
+pairs, and6 ambient setup methods across5 files. GameLoop's existing per-test
+owner closes the last qualified ordinary setup after preservation controls for
+base preferences and incoming world/data identities. The six remaining methods
+are the mixed ROM/ROM-free PLC-art setup, preference-preserving trace bootstrap,
+and four legacy visual setups (two in InstaShield). The visual obligations need
+compatible owned-context and pixel evidence; setting the EGL property alone
+does not satisfy their fixed-function GLFW lifecycle.
+
+The parent observed669 runtime/loader/renderer cases,15 audio/DAC/lifecycle
+cases,458 fixture cases and119 creator/API/tooling cases with zero failures,
+errors or skips in their recorded selections. Engine/SDK packaging succeeded;
+canonical packaged Javadoc contains the new supported Game/art-provider pages
+and excludes their old identities. Fresh final guards and integration remain
+pending. The broad request completed68/75 batches then timed out with36,812
+tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
+green or complete smoke result. Exact commands, source states and limits are
+in the continuation plan. Remaining allowances have qualified retention reasons,
+not an assertion that every native lifecycle or external caller is certified.

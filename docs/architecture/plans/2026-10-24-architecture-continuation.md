@@ -4358,3 +4358,59 @@ files consumed. Source remained fixed throughout that request.
 Current composed counts are121 low-level records,151 permitted package pairs,
 and6 ambient methods across5 files. The descriptor and exact40-name API delta
 remain unchanged. Final creator packaging/API and fresh guards are pending.
+
+### Final composed ledger review and creator qualification
+
+Independent source audit of01d57eba8 accepted the exact121 records,151 package
+permissions, descriptor equality and40 disjoint API FQN replacements. It found
+stale present-tense intermediate counts and the outdated untagged-audio claim.
+Those are corrected as historical checkpoints; current6/5 includes the later
+GameLoop closure,89 exact removals and zero additions against main e9's95/94.
+No additional migration was established by count alone.
+
+Build-only package at a273a43e passed in37.413s, without test admission or tests.
+Engine JAR inspection verified all four moved class identities and absence of
+the old paths. Canonical Javadoc JAR verified Game and both supported art-provider
+pages at their new names, all old pages absent. The first artifact probe wrongly
+expected runtime API classfiles inside the tooling-only SDK JAR; that assertion
+was corrected after inspecting its actual tool/starter layout. Runtime types
+belong to the engine JAR; no production/package change was made for the probe.
+
+The20-selector creator/API group passed119 cases in20 reports, zero failures/
+errors/skips, with Java25/EGL verified. Queue wait0s; Maven execution2:22. All40
+XML/text files consumed. This includes canonical-signature/pin/release controls,
+SDK/Javadoc/starters/scaffolder checks and the maintained sample scenarios; it
+is not a native-image or all-external-mod compatibility claim. Commands use the
+same four absolute ROM properties/environment as final runtime group, with
+selector list retained below.
+
+A cleanup inspection found the old broad probe's generated spring-vine REAL-gap
+report. Grounding establishes intentional generatedPivot96->-1 invalidation
+beside captured surface RAM, not lost gameplay state. It also identifies a
+diagnostic defect: the comparator respects neither Java transient nor the
+RewindTransient annotation despite its report claiming the latter exclusion.
+A separate bounded correction will use existing schema Field plans, excluding
+only declared TRANSIENT deltas while retaining ordinary/final/structural
+comparison. Gameplay/schema/annotations and guard allowances stay unchanged.
+Unsupported/no-context constructor skips remain unproved coverage.
+
+Exact final parent argument selections, with the checkout path rendered as
+`${MAIN_CHECKOUT}` for reproduction (commands ran separately in root11):
+
+Runtime/loader/renderer:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestPhase3SharedFoundation,TestGameModuleProfiles,TestRomDetectionService,TestSidekickGating,TestSonic3kVineAngleOwnership,TestSonic3kDeferredLevelResourceLoading,TestGameDataSourceSharedFetches,TestGameDataSourceSessionOwnership,TestLevelManagerDeferredResourceLoading,TestLevelManagerPreparedModLoading,TestLevelMusicCoordinator,TestLevelPlayableArtInitializerModArt,TestBackgroundScroll,TestModRegistrationRuntime,TestModZoneAdapterRouting,TestModZoneRuntimeProfile,TestOwnerAwareStandaloneModule,TestStandaloneGameSpec,TestModContextAndFaultBoundary,TestOwnerBoundGamePatch,TestRomLogic,TestSpawnPositions,TestAizIntroFgTerrain,TestSonic3kLevelLoading,TestS3kAiz1SkipHeadless,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic1PlcProducerCoverage#levelInitOwnerClearsThenPublishesHeaderPrimaryAndMain2BeforeTitleCard,TestKis2HeadlessBoot,TestKis2EndingContinue,TestNativeCarriedPlayerArtBinding,TestS3kCanonicalEntryLifecycle,TestS3kHpzSanctuaryLifecycleProduction,TestSonic1SmpsLoaderSfxDispatchBoundary,TestSonic2SaxmanLoadReadiness,TestS3kVoiceResolution,TestCrossGameSegaDac,TestRomAudioIntegration,TestSonic3kAudioProfile,TestPatternRendererIngress' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B'
+```
+
+Late fixtures:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestLegalDisclaimerHandoff,TestPostLoadAssemblyBehavior,TestS3kCharacterSpeeds,TestSpindashGating,TestSonic3kTitleScreenBootstrap,TestSpriteManagerRender,TestLevelManagerSlotBackgroundCopy,TestObjectManagerRewindDynamicClassification,TestObjectManagerRewindSnapshot,TestPlaneSwitcherStateIsolation,TestOilSurfaceManager,TestSonic1MonitorObjectInstance,TestSonic1LivesHudDonation,TestSonic1PatternAnimatorRewindSnapshot,TestSonic3kPatternAnimatorRewindSnapshot,TestSonic3kPlcArtRewindSnapshot*,TestAiz2BossEndSequenceObjects,TestFireCurtainBoundaryDiag,TestAbstractPlayableSpriteRewindCapture,TestLogicalInputControlLockLatch,TestPlayableSubclassRewind,TestRespawnStrategies,TestSidekickCpuControllerRewindCapture,TestHTZRisingLavaDisassemblyParity,TestRingManager,TestSonic3kZoneFeatureProvider,TestEditorRenderingSmoke,TestLevelEditorController,TestS3kIczFreezerObject,TestS3kMgzPulleyAndMantis,TestTraceSessionLauncherRewindPresentation,TestCrossGameFeatureProviderRefactor*,TestLiveRewindManagerAudioCleanup,TestGraphicsManagerFadeRebinding,TestGraphicsManagerSpriteSatReplay' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
+
+Creator/API/tooling:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiJavadocTool,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestPurposeStarters,TestProjectScaffolder,TestSampleModsPackage,TestPhase3StandaloneSampleIntegration,TestSamplePlatformerIntegration,TestSampleFlappyIntegration,TestSampleRomArtRemixIntegration,TestEmeraldRemix#recipeRebuildsActOneFromStockStripsAndCloverValleyFollowsActTwo,TestInfiniteSonic#freshReloadResetsTheCourseAndFinalZoneRemainsStock,TestSonicSurvivors#campStartsARunAndTheArenaHoldsSonic,TestStarpostValleyExample#packagesAndPassesValidation,TestStarpostRealValley#terrainAndBackgroundKeepTheirRomColoursWithinHostBudgets,TestStarpostRealRuins#everyDailyChamberLoadsThroughSharedEncoderAndRegeneratesByDay,TestStarpostRealFestivals#nativeRouteResultAndReturn,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
