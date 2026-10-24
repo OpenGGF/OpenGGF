@@ -1,5 +1,8 @@
-package com.openggf.audio.smps;
+package com.openggf.game.sonic1.audio.smps;
 
+import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.FmVoiceOperatorOrder;
+import com.openggf.audio.smps.SmpsHeaderDecoder;
 
 /**
  * SMPS 68k music data parser for Sonic 1.

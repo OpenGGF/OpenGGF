@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.openggf.audio.smps.Sonic1SmpsData;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
