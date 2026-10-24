@@ -1,6 +1,20 @@
 package com.openggf;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioAdmissionObserver;
+import com.openggf.audio.AudioRequestObserver;
+import com.openggf.audio.driver.SfxContentionObserver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.audio.Sonic2SoundRequestService;
+import com.openggf.game.sonic2.audio.smps.Sonic2SfxData;
+import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
@@ -18,12 +32,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -148,6 +169,103 @@ class TestSonic2UnifiedAudioPresentationRomIntegration {
         assertEquals(ringLeftBefore, audio.captureLogicalSnapshot().ringLeft(),
                 "the second ring must restore the alternation");
 
+        // Stock Smash: authenticate the installed reader and its cached native program.
+        var source = AudioManagerTestDiagnostics.baseSmpsSourceBinding(audio);
+        var worldRom = SessionManager.getCurrentWorldSession()
+                .getDataSource().rom().orElseThrow();
+        assertSame(worldRom, source.rom());
+        assertSame(worldRom, source.loaderRom());
+        assertSame(GameServices.module().getAudioProfile(), source.profile());
+        assertTrue(source.generation() > 0);
+        assertEquals("8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1")
+                        .digest(source.loaderRom().readAllBytes())));
+        int smashId = Sonic2Sfx.SMASH.id;
+        var loader = assertInstanceOf(Sonic2SmpsLoader.class, source.loader());
+        assertTrue(loader.getAvailableSfxIds().contains(smashId),
+                "the installed loader must already have parsed stock B9");
+        var parsed = assertInstanceOf(Sonic2SfxData.class, loader.loadSfx(smashId));
+        assertEquals(smashId, parsed.getId());
+        assertSmashHeader(parsed);
+        assertEquals(List.of(0x80, 0x80, 0x80, 0x80),
+                parsed.getTrackEntries().stream().map(t -> t.playbackFlags).toList());
+        var pointers = parsed.getTrackEntries().stream()
+                .map(t -> t.pointer()).toList();
+        assertTrue(pointers.stream().allMatch(p -> p > 0 && p < parsed.dataLength()));
+        var program = SmpsSourceDescriptor.from(parsed);
+        var expectedSource = SmpsSourceDescriptor.baseSfx(source.generation(),
+                parsed, program.dataLength(), program.dataHash());
+
+        audio.stopAllSfx();
+        assertTrue(presentUntilSilent(fixture), "B9 starts after the second ring is silent");
+        assertEquals(source, AudioManagerTestDiagnostics.baseSmpsSourceBinding(audio));
+        assertTrue(audio.captureLogicalSnapshot().presentation()
+                .smpsLogical().sequencers().isEmpty());
+
+        var decisions = new ArrayList<AudioAdmissionObserver.AudioAdmissionDecision>();
+        var admissions = new ArrayList<SfxContentionObserver.Admission>();
+        record Serviced(SmpsDriverServiceObserver.ServiceEvent event,
+                        SmpsDriverSnapshot snapshot) { }
+        var services = new ArrayList<Serviced>();
+        try (var diagnostics = audio.acquireDiagnosticObservers(
+                new AudioManager.DiagnosticObserverSet(
+                        AudioRequestObserver.NONE, decisions::add,
+                        new SmpsDriverServiceObserver() {
+                            @Override
+                            public void onServiceEnd(ServiceEvent event,
+                                                     SmpsDriverSnapshot snapshot) {
+                                if (event.kind() == ServiceKind.SEQUENCER_TICK) {
+                                    services.add(new Serviced(event, snapshot));
+                                }
+                            }
+                        }, ChipWriteObserver.NONE, new SfxContentionObserver() {
+                            @Override
+                            public void onSfxAdmitted(Admission admission) {
+                                admissions.add(admission);
+                            }
+                        }))) {
+            assertTrue(audio.playSfx(smashId), "submit native B9 through the real mailbox");
+            var submitted = assertInstanceOf(Sonic2SoundRequestService.Snapshot.class,
+                    audio.captureLogicalSnapshot().forwardServiceSnapshot());
+            assertEquals(smashId, submitted.pipeline().sfx0().requestByte());
+            assertTrue(presentSmashUntilAudible(fixture, source, expectedSource),
+                    "admitted stock B9 must produce isolated nonzero final PCM");
+        }
+        assertEquals(source, AudioManagerTestDiagnostics.baseSmpsSourceBinding(audio));
+        assertEquals(1, decisions.size());
+        var decision = decisions.getFirst();
+        assertEquals(smashId, decision.context().requestedSoundId());
+        assertEquals(smashId, decision.context().resolvedSoundId());
+        assertEquals(smashId, decision.result().resolvedSoundId());
+        assertTrue(decision.result().accepted());
+        assertEquals(1, admissions.size());
+        var admission = admissions.getFirst();
+        assertEquals(expectedSource, admission.source().descriptor());
+        var roles = List.of(
+                new SfxContentionObserver.Role(SfxContentionObserver.Bus.FM, 2),
+                new SfxContentionObserver.Role(SfxContentionObserver.Bus.FM, 3),
+                new SfxContentionObserver.Role(SfxContentionObserver.Bus.FM, 4),
+                new SfxContentionObserver.Role(SfxContentionObserver.Bus.PSG, 2));
+        assertEquals(roles, admission.declaredRoles());
+        assertFalse(services.isEmpty(), "B9 must receive actual sequencer service");
+        assertTrue(services.stream().allMatch(s -> s.event().sequencer().sfx()
+                && expectedSource.equals(s.event().sequencer().source())),
+                "no other SMPS source may contribute during the isolated B9 phase");
+        var serviced = services.getFirst();
+        var admitted = serviced.snapshot().sequencers().stream()
+                .filter(e -> e.sfx() && expectedSource.equals(e.source()))
+                .findFirst().orElseThrow();
+        assertTrue(expectedSource.matchesData(admitted.smpsData()));
+        var frozen = assertInstanceOf(SmpsSfxData.class, admitted.smpsData());
+        assertSmashHeader(frozen);
+        assertEquals(pointers, frozen.getTrackEntries().stream()
+                .map(t -> t.pointer()).toList());
+        assertEquals(List.of(SmpsSequencer.TrackType.FM, SmpsSequencer.TrackType.FM,
+                        SmpsSequencer.TrackType.FM, SmpsSequencer.TrackType.PSG),
+                admitted.snapshot().tracks().stream().map(t -> t.type()).toList());
+        assertEquals(List.of(2, 3, 4, 2), admitted.snapshot().tracks().stream()
+                .map(t -> t.channelId()).toList());
+
         // Special stage.
         audio.stopAllSfx();
         assertTrue(presentUntilSilent(fixture),
@@ -260,6 +378,46 @@ class TestSonic2UnifiedAudioPresentationRomIntegration {
                     "speaker and recorder must receive identical copies of one"
                             + " producer packet at frame " + frame);
             if (allZero(speakerPacket)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void assertSmashHeader(SmpsSfxData data) {
+        // Sound39_Smash_Header (sound/sfx/B9 - Smash.asm:1-10):
+        // FM3, FM4, FM5, PSG3; native tempoSFX 1.
+        assertEquals(1, data.getTickMultiplier());
+        assertEquals(List.of(List.of(0x02, 0x10, 0), List.of(0x04, 0, 0),
+                        List.of(0x05, 0x10, 0), List.of(0xC0, 0, 0)),
+                data.getTrackEntries().stream().map(t ->
+                        List.of(t.channelMask(), t.transpose(), t.volume())).toList());
+    }
+
+    private boolean presentSmashUntilAudible(HeadlessTestFixture fixture,
+            AudioManagerTestDiagnostics.BaseSmpsSourceBinding source,
+            SmpsSourceDescriptor expectedSource) {
+        short[] speakerPacket = new short[speaker.maxStereoFramesPerPacket() * 2];
+        short[] recordedPacket = new short[recording.maxStereoFramesPerPacket() * 2];
+        for (int frame = 0; frame < MAX_FRAMES_PER_PHASE; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            Arrays.fill(speakerPacket, (short) 0);
+            Arrays.fill(recordedPacket, (short) 0);
+            int speakerFrames = speaker.drainPresentationFrame(speakerPacket);
+            int recordedFrames = recording.drainPresentationFrame(recordedPacket);
+            assertTrue(speakerFrames > 0);
+            assertEquals(speakerFrames, recordedFrames);
+            assertArrayEquals(speakerPacket, recordedPacket,
+                    "B9 speaker/recorder packet at frame " + frame);
+            assertEquals(source, AudioManagerTestDiagnostics.baseSmpsSourceBinding(audio));
+            var presented = audio.captureLogicalSnapshot().presentation();
+            assertNull(presented.activeMusic());
+            assertNull(presented.rawPcmVoiceId());
+            assertTrue(presented.voices().isEmpty());
+            assertNotNull(presented.smpsLogical());
+            assertTrue(presented.smpsLogical().sequencers().stream()
+                    .allMatch(e -> e.sfx() && expectedSource.equals(e.source())));
+            if (!allZero(speakerPacket)) {
                 return true;
             }
         }

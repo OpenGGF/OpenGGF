@@ -6752,3 +6752,110 @@ python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
   "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
   "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
 ```
+
+
+### 2026-10-24 — Stock S2 Smash reaches real final PCM
+
+This isolated test-only slice starts from `1d7201b2e19d69c6c0ca93910fb174feb6185e56`.
+The old category's bare `Failed to parse SFX ID b9` tail still has no retained
+reader, ROM, testcase or causal frame. It is not retrospectively authenticated
+by this new result. The S2 loader eagerly tries A0–F0 and omits failed programs;
+construction or an unrelated passing sound test does not prove B9 loaded.
+
+Only the existing unified S2 audio integration test and its existing test-source
+diagnostic bridge change. The new phase follows the second ring and precedes
+the unchanged special-stage phase. Every original assertion, phase, wait bound
+and cleanup remains, with no deleted original source line. The bridge reads the
+private installed tuple and the loader's final reader under the manager monitor;
+it writes no application state and adds no production or creator API getter.
+The phase authenticates both readers against the actual world-session reader,
+then hashes that reader to stock S2 SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. B9 must already exist in the installed
+loader's eager cache before the ordinary load call.
+
+The independent header oracle is `Sound39_Smash_Header`
+(`sound/sfx/B9 - Smash.asm:1-10`) at S2 disassembly pin
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`. The source blob is
+`4908a7acfee101805662407b7109b5eaf3209441`. Header/macro evidence supplies tempo
+1 and four flags/channel/transpose/volume tuples, in hex:
+`80/02/10/00`, `80/04/00/00`, `80/05/10/00`, `80/C0/00/00`.
+The channel, source-driver and encoding rules are in `_smps2asm_inc.asm`
+(lines170–178,226–266,372–386) and `SonicDriverVer=2` (`s2.asm:69`). No numeric
+pointer or program fingerprint is invented: those derive from this authenticated
+cached program, and must remain equal through frozen admission and service.
+
+The real numeric `Sonic2Sfx.SMASH` request must enqueue B9, receive one accepted
+request decision, and complete driver admission with FM3/FM4/FM5/PSG3 roles.
+Append-only observers record actual `SEQUENCER_TICK` service without throwing
+assertions inside callbacks. Post-service snapshots must contain the matching
+source/generation/program fingerprint, all four frozen headers and four
+materialized sequencer tracks. The phase excludes other presentation sources,
+requires equal nonempty speaker/recorder packets and isolated nonzero final PCM.
+The existing title/gameplay, left/right rings and real special-stage audio
+oracles then remain in the same passing method. The phase adds at most360
+successful outer steps, making1800 across all phase waits; setup, ROM decoding
+and driver setup-only attempts are additional, not an elapsed-time promise.
+
+Exactly one normal queued request ran from the isolated S2 Smash worktree:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestSonic2UnifiedAudioPresentationRomIntegration#sonic2TitleGameplayRingAndSpecialStageProduceFinalPcm' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+The queue wrapper and stock-ROM directory placeholders denote the original
+main checkout paths. All three original CRC/SHA identities were verified before
+launch, with unchanged file identity/size/mtime/ctime after it. Java25,
+`ALSOFT_DRIVERS=null`, the explicit EGL flag and surfaceless environment were
+retained; ambient JVM/Maven/display/driver overrides were absent. This flag is
+not a rendered-pixel qualification. No extra build/preflight/version probe,
+profile, API/guard/broad request, resource override or retry was submitted.
+Normal lifecycle compilation covered4545 production and4762 test sources.
+
+Actual: **one distinct method, one PASS, zero failures/errors/skips**.
+Suite0.586s; case0.374s. Rounded queue wait67s, Maven1:30 and supervised wall
+158.282s are separate measures. All69 properties, both identical classpaths
+(79 nonempty owned/dependency entries plus trailing implicit owned cwd), the
+624-byte recursive stream, text report and full124-line/15,948-byte console
+were inspected. The first combined display truncated a console prefix; that
+prefix was separately read before qualification. Java25.0.5.0.2/class-major69,
+exact selector, cwd and three ROM properties matched. Only FAST/NONE runtime
+warnings appeared (XML4, console5), plus the initial tmpdir warning and26
+compiler deprecations. No B9 parse/load fault, unexpected caught application
+fault or fresh dump appeared in this case.
+
+Tested index tree: `32d5d7419b6847d141e6f3eff37262f43b4505b8`.
+Full tracked input frame: `442ae48336dbae8696bc0982ef671d6d39ec28e44439d9e3ffeb6fa8eaf7a92d`,
+15,167 paths /957,194,021 bytes, exact before/after execution. Test SHA-256:
+`b90f8d74e9a593210fc1684aafb554ab939526645c3cfc10093113e71f4a7ca7`;
+bridge SHA-256: `45a9a20ccc1b73b822e90dbfe84803b4b11c83bf2064d71758f902296b7ac172`.
+The subsequent factual Plan append changes that full frame's prose only; all
+other tracked input and both tested source blobs remain fixed. Current wrapper
+and imported-module pins matched. Consumed XML/text/log and the two
+jar-byte-verified native extractions were removed under the supported metadata
+lock; useful source/classes, unknown outputs and all lock files remain.
+
+Separately, source-only disposition of the already retained category evidence
+matched125 disjoint actual-case-bound emission keys to130 key/case negative
+proofs across84 recorded identities. Owner callback, save/storage, scene-art and
+HTTP fixtures explicitly inject those failures and assert attribution/recovery.
+These are evidence-disposition counts, not new JUnit results. The corresponding
+pinned test/support preimages match2a9→1d; owning assertion excerpts were checked.
+The reserved MHZ warning and unbound early SFX/audio/configuration evidence
+remain open. No missing case ordinal or original log was reconstructed.
+
+Current stock B9 parsing, request/driver admission and emulated final
+presentation are now directly qualified. Per-channel native waveform/hardware,
+measured timing, rendered art and old-warning provenance remain unproved.
+Standalone profile/ROM pair-install semantics and the weak ordinary
+hardware-timing failure fixture remain separate source questions; no production
+correction is included here. The old category41 failures/97 skips, earlier broad
+incompleteness and prior guard epochs are unchanged. No aggregate-green,
+full-suite, route completion or newness claim follows. The local leaf stays held
+from Root ancestry reception; Main/provider activation/paired MHZ, remote,
+PR/CI actions and new ancestry reception remain closed.
