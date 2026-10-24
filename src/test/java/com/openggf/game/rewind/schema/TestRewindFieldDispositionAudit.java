@@ -23,6 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
     @Test
+    void wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath() {
+        Class<?> owner = com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance.class;
+        assertTrue(com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
+        boolean captured = CompactFieldCapturer.supportsDefaultObjectSubclassScalars(owner)
+                ? RewindSchemaRegistry.defaultObjectSubclassSchemaFor(owner).capturedFields().stream()
+                        .anyMatch(plan -> plan.field().getName().equals("wallExplosions"))
+                : com.openggf.game.rewind.GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(owner)
+                        .stream().anyMatch(field -> field.getName().equals("wallExplosions"));
+        assertTrue(captured, "wallExplosions must be captured on the path this owner actually uses");
+        List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
+        RewindFieldDispositionAudit.auditClass(owner, gaps);
+        assertEquals(List.of(), gaps, "the holder must be captured, without excluding the owner from the audit");
+    }
+
+    @Test
     void lbzPanelHolderIsCapturedWithoutDisablingTheDefaultOwnerPath() {
         assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(LbzMinibossInstance.class));
         assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(LbzMinibossInstance.class));
