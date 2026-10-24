@@ -1666,3 +1666,102 @@ height concerns remain separate. There are no API-pin, annotation/exclusion,
 manual owner override, frozen baseline or allowance edits. Parent-composed checks
 and delivery remain outstanding; this worker stops at a local review-ready commit
 without pushing or removing its branch/worktree. All worker test jobs completed.
+
+### Seventh-loop composed acceptance
+
+The seventh executable composition is `8b9793756b68b9518d2c4358869cb23837a8cc76`,
+based on pushed main `591c679b39c61f162a839cde6baaedd387135bc4`. It contains both
+accepted boss-history closures, the S1 fixture slice, the intact S2 overlay move,
+donated-team correction `53ff4fa89` and donor RGB restoration `ce52bf334`.
+The latter two merges touch separate production owners. Their append-only plan
+histories were merged against their actual bases, retaining the earlier rejected
+water-sharing shape and its correction. No production or test source changed
+after submission of the following composed checks.
+
+The planner selected 3,745 smoke classes because it classifies the snapshot DTO,
+mode context, guard accounting and several renamed/comment-only paths as shared.
+Inspection established the actual boundary: the existing palette adapter/key is
+extended, its legacy constructor and two-array snapshot constructor remain, and
+gameplay passes an additional donor-context supplier. There is no new timing,
+physics, generic capture algorithm, public API pin or test-selection policy.
+The owner-local boss changes and unchanged overlay bodies have focused graph and
+behavior evidence. A combined consumer matrix, API/pin checks, required S3K
+checks and complete fresh-JVM structural guards therefore replace the broad
+selection. Tool preflight passed in the actual Java 25/Lua environment. This is
+bounded validation, not all-smoke, full-suite or route certification.
+
+The composed focused invocation passed **437 distinct cases in 45 reports**,
+zero failures/errors/skips. All 43 selector names matched executed classes.
+Both S3K loading classes executed, along with API pins, registry/legacy palette
+consumers, both boss graphs, the results screens, S1 fixtures and the required
+S3K controls. The seven donated-team cases include all five real-ROM team cases
+and two missing-donor prerequisite controls; the donor-rewind case executed real
+CPU/GPU/pixel checks. Admission was 68 seconds; Maven reported 94 seconds.
+
+A separate fresh-JVM, unfiltered guards profile passed **769 distinct cases in
+92 reports**, zero failures/errors/skips. Admission was 54 seconds; Maven
+reported 325 seconds. Actual XML identities include all 33 ArchUnit checks,
+14 exact-policy controls, eight compact-policy controls, four rewind architecture
+checks and eight singleton-lifecycle checks. The generated field census and its
+baseline are both empty. The lifecycle census still matches all 513 keys and
+their counts; no allocation or destruction permission changed. The 90 focused
+and 184 guard XML/text reports and both inspected censuses were consumed and
+removed after exact identities and skip elements were checked.
+
+Commands used this coordinator's target, existing absolute ROM paths, display
+and JVM-option variables unset, Java 25 and Lua 5.4. The MAIN_CHECKOUT/ROM_ROOT
+bindings above expand to the current main checkout and its existing ROMs:
+
+```bash
+FOCUSED_SEVEN='TestLbzEndBossLaunchRewind,TestLbzEndBossInstance,TestS3kLbzEndBossChildLinksRewind,TestLbzFinalBoss1Instance,TestLbzFinalBoss1GraphRewind,TestLbzFinalBoss1FieldDisposition,TestDonatedTeamPalettes,TestCrossGameFeatureProviderRefactor,TestLevelPlayableArtInitializerModArt,TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind,TestSonic3kSuperStateRewind,TestPaletteColorRewindRegistration,TestGameplayModeContextRewindRegistry,TestGameplayModeContextPlaybackController,TestSessionManager,TestSessionManagerReadAccessors,TestRenderContext,TestPaletteUploadLatch,TestUnderwaterPaletteUpload,TestPaletteFadePresentation,TestAppearancePalettes,TestScopedPalettePresentationRewind,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestRewindFieldDispositionAudit,TestRewindPolicyRegistry,TestS3kSuperProfiles,TestSonic1GargoyleObjectInstanceRender,TestSonic1LavaGeyserOutOfRange,TestKis2ResultsMessageHandoff,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageSuperResults,TestSplitNameResultsMessages'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED_SEVEN" \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Current allowances are 147 low-level records, zero object-base naming records,
+zero earlier package-naming records, zero concrete Engine/GameLoop references,
+95 ambient setup methods across 94 files and 154 top-level package permissions.
+Cross-game host donation remains ten members in two grouped records. Empty
+stored cycles follow explicit ignores; this is not a proof of a globally acyclic
+production graph. Empty field debt establishes this audit's dispositions, not
+capture/replay correctness for arbitrary routes or handwritten owners.
+
+Donor rewind's gameplay proof remains solo S2 Sonic on dry S3K MGZ1. The
+completed-team cases broaden initialization coverage, not team Super-state
+rewind, underwater gameplay or every host/donor route. The overlay's tally,
+readiness, mapping and command checks do not certify full special-stage routing.
+These limits remain explicit despite a green guard profile.
+
+The next components are separate: reviewed shader capacity `187e15346` has
+98 focused passes and no frozen delta; reviewed staged GPU command
+`ff2f79ad1` has 123 focused passes and exact component accounting
+147 − 9 + 5 = 143, retaining the other 138 identities including the four SAT
+adapter records. Neither is part of this seventh composition. The native
+allocation-bridge study retains all ten count-one permissions: existing child
+helpers also alter ownership/probe/reconstruction handling, and changing call
+spelling alone removes no responsibility. Specific roles include lowest-free
+independent effects, monitor/puff-source SST anchoring, fixed/auxiliary fallback
+and movement bootstrap. Their native references use the main SHA's recorded
+disassembly pins rather than dirty working heads. Monitor rejected admission
+and boss-explosion RNG-before-admission are source-derived concerns needing
+real-manager reproduction; no new native failure is claimed from that study.
+The monitor concern now has a bounded implementation worker, with the ten
+permissions intentionally retained.
+
+A main fetch/fast-forward pull found no intervening upstream changes. All parent
+jobs have completed. Final documentation/source-link and policy checks,
+integration, push and cleanup still follow; the four dirty submodules and five
+untracked user files in main remain outside this work. Shader/command, the next
+S1 fixture family and monitor admission remain owned, unmerged follow-ons.
