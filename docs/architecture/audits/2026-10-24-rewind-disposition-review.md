@@ -2241,3 +2241,123 @@ identities and zero skip/failure results were inspected; no pass cache or catego
 run was created. No live Maven request remains. The same branch/worktree is
 retained, and this result remains pending parent review/integration rather than
 a claim about the untested loop-6 composition or parent delivery gates.
+
+## S3K monitor contents admission
+
+Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch
+`bugfix/ai-s3k-monitor-admission-20261024`, checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9664868d`. This is a behavior correction
+from the native allocation-bridge audit, not an allowance reduction. All ten
+dynamic-add bridges remain **QUALIFIED RETAIN**, one occurrence each; the monitor
+contents and explosion calls remain directly visible and in their original order.
+
+The base records skdisasm `8b2cf3c4178f2382f844da67798de4befc50c5e0`.
+Evidence was read with `git -C docs/skdisasm show <pin>:sonic3k.asm`, without
+updating or resetting the working submodule. `Obj_MonitorSpawnIcon`
+(sonic3k.asm:40685-40710) allocates contents, branches to `.skipiconcreation`
+on failure, then separately allocates the explosion and branches to
+`.skipexplosioncreation` on failure. Both attempts use the monitor's own SST as
+the anchor. `AllocateObjectAfterCurrent` (sonic3k.asm:37957-37972) scans later
+slots. Remembering the shell follows both attempts; failed contents never reach
+`loc_1D7CE` / `sub_1D820` (sonic3k.asm:40730-40778) or its reward routine.
+
+The real manager marks a rejected child destroyed and returns before identity
+registration, without an unload callback. The old parent retained that child
+and continued its embedded icon. Capture immediately after touch, before parent
+dispatch, therefore threw `RewindIdentityTable has no registered id for object
+reference` at `Sonic3kMonitorObjectInstance#monitorContentsSlot`. Without capture,
+the full-tail ring monitor still awarded ten rings. Neither claim was assumed
+from the source audit alone.
+
+`TestS3kMonitorGraphRewind` now fills the tail with registered, reconstructible
+inert occupants, leaving zero, one or two noncontiguous free slots. A recording
+manager delegates both calls to the production ObjectManager allocator and
+identity registry; it does not mock admission or reserve bare bits. The six
+stock-ring / creator-factory-Eggman cases check immediate capture, exact IDs and
+slots, both allocation results/order/anchors, broken/remembered flags, icon and
+reward state, unchanged break SFX, zero RNG consumption, destructive graph
+restore, every forward snapshot through retirement, pre-break reallocation and
+remembered respawn. Both admitted links must restore bidirectionally and exactly.
+Two additional dispatch cases break from SST 3 and 80: the monitor remains the
+allocation anchor and its already-passed slot defers icon motion until the next
+pass. Another case independently checks that rejection cannot award a reward.
+
+The initial test submission had an ambiguous JUnit method reference and stopped
+at compilation (no tests executed). After correction, seven cases executed and
+failed: two real invalid-reference failures, one real rejected reward, and four
+incorrect test assumptions about context-free capture. The admitted monitor's
+public no-table capture already rejects its non-null managed child link; that
+strict contract is preserved. Correcting those four assertions, without changing
+production, produced **11 cases: three failures, eight passes, zero errors/skips**.
+The failing identities were
+`nativeAdmissionCapturesBeforeDispatchAndReplaysExactGraph(int, boolean)[1,4]`
+(zero free slots, stock/factory) and
+`rejectedContentsNeverAwardEvenWithoutAnImmediateCapture`. Cases `[2,3,5,6]`,
+both `touchDuringAnotherSlotKeepsMonitorAnchorAndDispatchPhase(int)` invocations,
+and the two original graph methods passed on the unchanged production base.
+
+The fix keeps a local candidate until admission succeeds. Rejection clears the
+parent's `iconActive` and `effectTarget`, leaving no retained unregistered link.
+It intentionally keeps initialization before insertion: identity registration
+reads the child's parent-derived icon position through `getSpawn()`. Starting
+the icon after insertion would change the admitted child's spawn/identity recipe.
+Inactive seeded motion values remain captured but never advance or pay out.
+Moving the whole icon into the child was rejected as unnecessary: it would change
+dispatch, drawing and protected callback ownership to solve a local admission
+error. `applyPowerup` and its existing manager/creator fault boundary stay with
+the parent. The null-manager path, creator content selection and exact placement
+contract in `creator-helpers.md` remain supported. No codec, capture override,
+exclusion, API pin, framework, global state or allowance changes are involved.
+
+All Maven commands run from the worker checkout using this environment:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS3kMonitorGraphRewind' test -B
+```
+
+That is the corrected RED command. The initial two submissions instead selected
+`TestS3kMonitorGraphRewind#nativeAdmissionCapturesBeforeDispatchAndReplaysExactGraph+rejectedContentsNeverAwardEvenWithoutAnImmediateCapture`.
+The initial compile-only attempt waited 69 seconds and Maven reported 1:23;
+the seven-case run waited 5 seconds and reported 25.445 seconds; corrected RED
+waited 28 seconds and reported 27.173 seconds. These are distinct queue/execution
+observations, not total delivery time.
+
+The affected GREEN command uses the same wrapper/environment/flags with the exact
+selector below, plus the verified absolute existing ROM properties:
+
+```text
+-Dtest=com.openggf.game.rewind.TestS3kMonitorGraphRewind,com.openggf.game.sonic3k.objects.TestSonic3kMonitorContentOverride,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,com.openggf.tests.TestSonic3kMonitorObjectInstance,com.openggf.level.objects.TestObjectManagerChildSlotAllocation,com.openggf.level.objects.TestNativeObjectSlotOccupancy,com.openggf.tests.objects.TestObjectManagerSlotRecycleIdentity
+-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen
+```
+
+The three files match the documented CRC32/SHA-1 identities. The queued version
+probe reported Java 25.0.5.0.2; `/usr/bin/lua5.4 -v` reported 5.4.9. The affected
+selection passed **47 cases across seven exact classes, zero failures, errors or
+skips**: graph 11, creator contents 4, native monitor fixture 20, the second
+physical monitor fixture 2, child allocation 8, raw occupancy 1 and recycled
+identity 1. The formerly failing graph identities now pass. Final graph assertions
+also cover unchanged SFX requests and remembered reload after all three capacity
+outcomes. The tested state is the base above plus this commit's production and
+test changes; only documentation changed after the completed run. Admission
+waited 81 seconds; Maven reported 1:30. All XML identities and absence of
+failures/errors/skips were inspected, then the consumed reports were removed.
+No category run, pass cache or validation receipt was created. The bounded
+citation check against the recorded pin completed successfully (15 exact, one
+nearby and 31 unverifiable historical/source references); the native ranges
+above were also read directly from Git objects. `git diff --check` passed.
+No live Maven handle remains and no duplicate request or resource-flag change
+was used for admission. The local branch/checkout remain for parent review; the
+worker neither pushes nor removes them. Parent owns combined guards/API/S3K stability,
+integration and push; this worker claims no full route, GPU rendering, exhaustive
+trace or release-suite certification. Existing parent-owned break SFX is retained
+even when explosion allocation fails; native `loc_1E61A`
+(sonic3k.asm:42224-42227) instead requests it in the admitted explosion's dispatch.
+That inherited timing difference is outside this correction. No creator semantic
+was narrowed to conceal a disagreement with native behavior.
