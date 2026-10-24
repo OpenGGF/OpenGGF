@@ -58,12 +58,11 @@ public class SolFireballObjectInstance extends AbstractObjectInstance
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        SolBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestSol(ctx);
-        SolFireballObjectInstance fireball = new SolFireballObjectInstance(ctx.spawn(), parent, 0);
-        if (parent != null) {
-            parent.attachFireballForRewind(fireball);
-        }
-        return fireball;
+        return new SolFireballObjectInstance(ctx.spawn(), null, 0);
+    }
+
+    boolean belongsTo(SolBadnikInstance owner) {
+        return parent == owner;
     }
 
     @Override

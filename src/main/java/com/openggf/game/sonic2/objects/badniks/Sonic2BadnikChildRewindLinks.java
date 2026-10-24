@@ -11,10 +11,6 @@ final class Sonic2BadnikChildRewindLinks {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, BalkiryBadnikInstance.class);
     }
 
-    static RexonBadnikInstance nearestRexon(RewindRecreateContext ctx) {
-        return RewindRecreateObjectLinks.nearestLiveObject(ctx, RexonBadnikInstance.class);
-    }
-
     static ShellcrackerBadnikInstance nearestShellcracker(RewindRecreateContext ctx) {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, ShellcrackerBadnikInstance.class);
     }
@@ -23,7 +19,4 @@ final class Sonic2BadnikChildRewindLinks {
         return RewindRecreateObjectLinks.nearestLiveObject(ctx, SlicerBadnikInstance.class);
     }
 
-    static SolBadnikInstance nearestSol(RewindRecreateContext ctx) {
-        return RewindRecreateObjectLinks.nearestLiveObject(ctx, SolBadnikInstance.class);
-    }
 }

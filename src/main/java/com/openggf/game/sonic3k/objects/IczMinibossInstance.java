@@ -142,7 +142,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
     private int parentFlags;
     private int arenaAnchorX;
     private int arenaAnchorY;
-    private S3kSharedBossCameraGate cameraGate;
+    private final S3kSharedBossCameraGate cameraGate = new S3kSharedBossCameraGate();
     private boolean arenaGateInitialized;
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
@@ -216,11 +216,6 @@ public final class IczMinibossInstance extends AbstractBossInstance
         arenaGateInitialized = false;
         arenaGateComplete = false;
         bossMusicStarted = false;
-        if (cameraGate == null) {
-            cameraGate = new S3kSharedBossCameraGate();
-        } else {
-            cameraGate.reset();
-        }
         waitCallback = WaitCallback.RELEASE_SHARDS;
         attackPatternIndex = 0;
         attackPassCounter = 0;
@@ -1352,6 +1347,12 @@ public final class IczMinibossInstance extends AbstractBossInstance
 
         private record RewindState(int x, int y, int childDx, int childDy, int timer, int routine) {}
 
+        // The existing helper-array codec reconstructs only captured present slots,
+        // then restores all fields, including the immutable shard recipe.
+        private ShardState() {
+            this(0, 0, 0, 0, 0, 0, 0);
+        }
+
         private ShardState(int x, int y, int childDx, int childDy, int frame, int packedVelocity, int timer) {
             this.x = x;
             this.y = y;
@@ -1409,6 +1410,12 @@ public final class IczMinibossInstance extends AbstractBossInstance
                                    int angleC, int angleD, int targetAngle,
                                    int frame, int priority, int collisionFlags,
                                    int frameCounter, boolean front) {}
+
+        // Rewind materialization only: normal creation stays behind loc_711EC's
+        // camera gate, with the original index and RNG-consuming position setup.
+        private OrbState() {
+            this(0, 0, 0);
+        }
 
         private OrbState(int index, int x, int y) {
             this.index = index;

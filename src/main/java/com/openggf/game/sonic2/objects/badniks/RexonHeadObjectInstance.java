@@ -121,7 +121,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         NORMAL,
         DEATH_DROP
     }
-    private final RexonBadnikInstance parent;
+    private RexonBadnikInstance parent;
     // headIndex/headNumber/xFlip are non-final so GenericFieldCapturer captures them and
     // restoreObjectRewindState reapplies them after the rewind recreate hook rebuilds this head
     // (the hook passes placeholders; these values are not derivable from the ObjectSpawn).
@@ -203,15 +203,12 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        RexonBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestRexon(ctx);
         ObjectSpawn spawn = ctx.spawn();
-        if (parent == null) {
-            return null;
-        }
-        RexonHeadObjectInstance head =
-                new RexonHeadObjectInstance(spawn, parent, spawn.x(), spawn.y(), 0, false);
-        parent.attachHeadForRewind(head);
-        return head;
+        return new RexonHeadObjectInstance(spawn, null, spawn.x(), spawn.y(), 0, false);
+    }
+
+    boolean belongsTo(RexonBadnikInstance owner) {
+        return parent == owner;
     }
 
     /**

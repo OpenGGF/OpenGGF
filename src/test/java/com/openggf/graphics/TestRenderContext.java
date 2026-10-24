@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import com.openggf.game.GameId;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -275,6 +278,212 @@ public class TestRenderContext {
         assertEquals(120, Byte.toUnsignedInt(c.r));
         assertEquals(60, Byte.toUnsignedInt(c.g));
         assertEquals(30, Byte.toUnsignedInt(c.b));
+    }
+
+    @Test
+    void legacyWaterDerivationLooksUpBothBaseColorsBeforeReadingTheirFields() {
+        List<String> calls = new ArrayList<>();
+        LegacyPalette normal = new LegacyPalette("normal", calls);
+        LegacyPalette water = new LegacyPalette("water", calls);
+        LegacyPalette donor = new LegacyPalette("donor", calls);
+        for (int i = 0; i < 16; i++) {
+            water.colors[i] = new Palette.Color((byte) 65, (byte) 230, (byte) 100);
+            donor.colors[i] = new Palette.Color((byte) 201, (byte) 145, (byte) 231);
+        }
+        water.onLookup = i -> {
+            Palette.Color returnedNormal = normal.colors[i];
+            normal.colors[i] = new Palette.Color((byte) 1, (byte) 1, (byte) 1);
+            returnedNormal.r = (byte) 129;
+            returnedNormal.b = (byte) 200;
+        };
+
+        Palette result = RenderContext.deriveUnderwaterPalette(donor, normal, water);
+
+        List<String> expected = new ArrayList<>();
+        for (int i = 1; i < 16; i++) {
+            expected.add("normal " + i);
+            expected.add("water " + i);
+        }
+        for (int i = 0; i < 16; i++) {
+            expected.add("donor " + i);
+            assertRgb(result, i, 100, 145, 115);
+        }
+        assertEquals(expected, calls, "one legacy lookup per entry, with no PaletteView channel calls");
+    }
+
+    @Test
+    void blackNormalStillLooksUpNullWaterColorsWithoutReadingThem() {
+        List<String> calls = new ArrayList<>();
+        LegacyPalette normal = new LegacyPalette("normal", calls);
+        LegacyPalette water = new LegacyPalette("water", calls);
+        Palette donor = new Palette();
+        donor.colors[0] = new Palette.Color((byte) 255, (byte) 128, (byte) 201);
+        java.util.Arrays.fill(water.colors, null);
+
+        Palette result = RenderContext.deriveUnderwaterPalette(donor, normal, water);
+
+        assertRgb(result, 0, 255, 128, 201);
+        assertEquals(30, calls.size());
+        for (int i = 1; i < 16; i++) {
+            assertEquals("normal " + i, calls.get((i - 1) * 2));
+            assertEquals("water " + i, calls.get((i - 1) * 2 + 1));
+        }
+    }
+
+    @Test
+    void nullNormalColorFailsOnlyAfterTheWaterLookup() {
+        List<String> calls = new ArrayList<>();
+        LegacyPalette normal = new LegacyPalette("normal", calls);
+        LegacyPalette water = new LegacyPalette("water", calls);
+        normal.colors[1] = null;
+
+        assertThrows(NullPointerException.class,
+                () -> RenderContext.deriveUnderwaterPalette(new Palette(), normal, water));
+        assertEquals(List.of("normal 1", "water 1"), calls);
+    }
+
+    @Test
+    void waterLookupFailureWinsOverBlackOrNullNormalColor() {
+        for (boolean nullNormal : new boolean[]{false, true}) {
+            List<String> calls = new ArrayList<>();
+            LegacyPalette normal = new LegacyPalette("normal", calls);
+            LegacyPalette water = new LegacyPalette("water", calls);
+            if (nullNormal) normal.colors[1] = null;
+            water.onLookup = i -> { throw new IllegalArgumentException("water lookup " + i); };
+
+            IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> RenderContext.deriveUnderwaterPalette(new Palette(), normal, water));
+
+            assertTrue(failure.getMessage().startsWith("water lookup "));
+            assertEquals(List.of("normal 1", "water 1"), calls);
+        }
+    }
+
+    @Test
+    void normalLookupFailurePrecedesWaterLookupAndDonorFailureFollowsAllBaseLookups() {
+        List<String> calls = new ArrayList<>();
+        LegacyPalette normal = new LegacyPalette("normal", calls);
+        LegacyPalette water = new LegacyPalette("water", calls);
+        LegacyPalette donor = new LegacyPalette("donor", calls);
+        normal.onLookup = i -> { throw new IllegalStateException("normal lookup " + i); };
+        water.onLookup = i -> { throw new IllegalArgumentException("water lookup " + i); };
+        IllegalStateException normalFailure = assertThrows(IllegalStateException.class,
+                () -> RenderContext.deriveUnderwaterPalette(donor, normal, water));
+        assertTrue(normalFailure.getMessage().startsWith("normal lookup "));
+        assertEquals(List.of("normal 1"), calls);
+
+        calls.clear();
+        normal.onLookup = i -> { };
+        water.onLookup = i -> { };
+        donor.onLookup = i -> { throw new IllegalStateException("donor lookup " + i); };
+        IllegalStateException donorFailure = assertThrows(IllegalStateException.class,
+                () -> RenderContext.deriveUnderwaterPalette(donor, normal, water));
+        assertTrue(donorFailure.getMessage().startsWith("donor lookup "));
+        assertEquals(31, calls.size());
+        assertEquals("water 15", calls.get(29));
+        assertEquals("donor 0", calls.get(30));
+    }
+
+    @Test
+    void eligibleNormalAndDonorStillRejectNullColors() {
+        Palette normal = new Palette();
+        normal.colors[1].r = 1;
+        Palette water = new Palette();
+        water.colors[1] = null;
+        assertThrows(NullPointerException.class,
+                () -> RenderContext.deriveUnderwaterPalette(new Palette(), normal, water));
+        Palette donor = new Palette();
+        donor.colors[0] = null;
+        assertThrows(NullPointerException.class,
+                () -> RenderContext.deriveUnderwaterPalette(donor, new Palette(), new Palette()));
+    }
+
+    @Test
+    void underwaterMathKeepsUnsignedChannelsTruncationAndZeroChannelDenominators() {
+        Palette normal = new Palette();
+        normal.colors[0] = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+        normal.colors[1] = new Palette.Color((byte) 129, (byte) 0, (byte) 200);
+        normal.colors[2] = new Palette.Color((byte) 1, (byte) 0, (byte) 0);
+        Palette water = new Palette();
+        water.colors[0] = new Palette.Color((byte) 1, (byte) 1, (byte) 1);
+        water.colors[1] = new Palette.Color((byte) 65, (byte) 255, (byte) 100);
+        water.colors[2] = new Palette.Color((byte) 2, (byte) 1, (byte) 0);
+        water.colors[3] = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+        Palette donor = new Palette();
+        donor.colors[0] = new Palette.Color((byte) 255, (byte) 129, (byte) 251);
+        donor.colors[1] = new Palette.Color((byte) 201, (byte) 255, (byte) 1);
+
+        Palette result = RenderContext.deriveUnderwaterPalette(donor, normal, water);
+
+        assertRgb(result, 0, 130, 129, 125);
+        assertRgb(result, 1, 102, 255, 0);
+    }
+
+    @Test
+    void derivationReturnsFreshColorsAndPreservesOrdinaryInputsAndAliases() {
+        Palette normal = new Palette();
+        Palette water = new Palette();
+        Palette donor = new Palette();
+        for (int i = 0; i < 16; i++) {
+            normal.colors[i] = new Palette.Color((byte) 200, (byte) 100, (byte) 50);
+            water.colors[i] = new Palette.Color((byte) 100, (byte) 50, (byte) 25);
+            donor.colors[i] = new Palette.Color((byte) 180, (byte) 80, (byte) 40);
+        }
+        Palette normalBefore = normal.deepCopy();
+        Palette waterBefore = water.deepCopy();
+        Palette donorBefore = donor.deepCopy();
+        Palette first = RenderContext.deriveUnderwaterPalette(donor, normal, water);
+        Palette second = RenderContext.deriveUnderwaterPalette(donor, normal, water);
+        assertNotSame(first, second);
+        for (int i = 0; i < 16; i++) {
+            assertNotSame(donor.colors[i], first.colors[i]);
+            assertNotSame(first.colors[i], second.colors[i]);
+            assertRgb(first, i, 90, 40, 20);
+        }
+        for (Palette[] aliases : new Palette[][]{
+                {normal, normal, water}, {water, normal, water},
+                {donor, normal, normal}, {normal, normal, normal}}) {
+            Palette result = RenderContext.deriveUnderwaterPalette(aliases[0], aliases[1], aliases[2]);
+            int[] expected = aliases[0] == water ? new int[]{50, 25, 12}
+                    : aliases[2] == water ? new int[]{100, 50, 25}
+                    : aliases[0] == donor ? new int[]{180, 80, 40} : new int[]{200, 100, 50};
+            for (int i = 0; i < 16; i++) {
+                assertNotSame(aliases[0].colors[i], result.colors[i]);
+                assertRgb(result, i, expected[0], expected[1], expected[2]);
+            }
+        }
+        assertTrue(normal.dataEquals(normalBefore));
+        assertTrue(water.dataEquals(waterBefore));
+        assertTrue(donor.dataEquals(donorBefore));
+    }
+
+    private static void assertRgb(Palette palette, int index, int red, int green, int blue) {
+        Palette.Color color = palette.getColor(index);
+        assertEquals(red, color.r & 255, "red " + index);
+        assertEquals(green, color.g & 255, "green " + index);
+        assertEquals(blue, color.b & 255, "blue " + index);
+    }
+
+    private static final class LegacyPalette extends Palette {
+        private final String name;
+        private final List<String> calls;
+        private IntConsumer onLookup = i -> { };
+
+        private LegacyPalette(String name, List<String> calls) {
+            this.name = name;
+            this.calls = calls;
+        }
+
+        @Override
+        public Color getColor(int index) {
+            calls.add(name + " " + index);
+            onLookup.accept(index);
+            return super.getColor(index);
+        }
+
+        @Override public byte red(int index) { throw new AssertionError("legacy red override called"); }
+        @Override public byte green(int index) { throw new AssertionError("legacy green override called"); }
+        @Override public byte blue(int index) { throw new AssertionError("legacy blue override called"); }
     }
 
     @Test

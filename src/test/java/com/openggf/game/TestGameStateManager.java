@@ -1,11 +1,5 @@
 package com.openggf.game;
 
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.SessionManager;
-import com.openggf.tests.TestEnvironment;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,26 +12,9 @@ public class TestGameStateManager {
 
     private GameStateManager gsm;
 
-    @BeforeAll
-    static void configureEngineServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-    }
-
     @BeforeEach
     public void setUp() {
-        TestEnvironment.activeGameplayMode();
-        gsm = GameServices.gameState();
-        // Reset to defaults before each test
-        gsm.configureSpecialStageProgress(7, 7);
-        gsm.resetSession();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        // Restore singleton to clean defaults so other tests are not affected
-        gsm.configureSpecialStageProgress(7, 7);
-        gsm.resetSession();
-        SessionManager.clear();
+        gsm = new GameStateManager();
     }
 
     @Test

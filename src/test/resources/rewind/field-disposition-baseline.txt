@@ -4,17 +4,11 @@
 # giving fields dispositions (central policy entries preferred); never grow this.
 # Resolved keys fail the guard too: remove them so a recurrence cannot reuse debt.
 com.openggf.game.sonic1.objects.Sonic1RingInstance#childRingSpawns
-com.openggf.game.sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList
-com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList
-com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#heads
-com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#fireballs
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#activeWaves
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#emeralds
 com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars
 com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris
-com.openggf.game.sonic3k.objects.IczMinibossInstance#childComponents
-com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren
 com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#panels
 com.openggf.game.sonic3k.objects.LightningSparkObjectInstance#sparkTiles

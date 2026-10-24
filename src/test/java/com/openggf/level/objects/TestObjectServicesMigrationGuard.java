@@ -293,6 +293,32 @@ class TestObjectServicesMigrationGuard {
     }
 
     @Test
+    void consolidatedGlobalAccessScan_rejectsMethodReferencesToRuntimeFallbacks(@TempDir Path tempDir)
+            throws IOException {
+        Path root = fixtureSourceRoot(tempDir);
+        Path source = root.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+                final class SharedFixtureObjectInstance {
+                    Object manager = LevelManager::getInstance;
+                    Object runtime = RuntimeManager::getCurrent;
+                    Object registry = GameModuleRegistry::getCurrent;
+                    Object bootstrap = EngineContext::fromLegacySingletonsForBootstrap;
+                    Object bridge = this::staticObjectManager;
+                }
+                """);
+        List<String> violations = collectForbiddenGlobalAccessViolations(root);
+        assertEquals(5, violations.size());
+        for (String operation : List.of("LevelManager.getInstance", "RuntimeManager.getCurrent",
+                "GameModuleRegistry.getCurrent", "EngineContext.fromLegacySingletonsForBootstrap",
+                "staticObjectManager")) {
+            assertTrue(violations.stream().anyMatch(line -> line.contains(operation + "::reference")),
+                    () -> "Expected runtime method reference to be reported: " + operation + " / " + violations);
+        }
+    }
+
+    @Test
     void consolidatedGlobalAccessScan_failsOnMissingPackageOrUnreadableInput(@TempDir Path tempDir)
             throws IOException {
         Path root = fixtureSourceRoot(tempDir);
