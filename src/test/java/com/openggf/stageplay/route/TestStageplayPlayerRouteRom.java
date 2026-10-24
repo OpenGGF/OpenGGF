@@ -34,6 +34,49 @@ class TestStageplayPlayerRouteRom {
         verify("s1", "sonic1.rom.path");
     }
 
+    /**
+     * Sonic_Loops plane switching (_incObj/01 Sonic.asm:1536-1611) belongs to collision, so the
+     * isolated route probe must run it too. Without it the probe met GHZ1's first loop as a ramp
+     * and launched at x~5515, so a Run route that the live world completes could never qualify.
+     */
+    @Test
+    @RequiresRom(SonicGame.SONIC_1)
+    void ghzLoopRouteSwitchesNativeLoopPlanesInTheIsolatedProbe() throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of("s1", Path.of(System.getProperty("sonic1.rom.path"))));
+                var resources = new StageplayResources(library, false)) {
+            retireInitialWorld(library);
+            var source = new SetSource("s1", 0, 0, "", "");
+            var module = library.module("s1");
+            try (var probe = PlayablePuppet.createNativeWorldProbe(resources.routeTerrain(source), module, 0, 0,
+                    module, "sonic", SpriteArtSet.EMPTY, 5100, 686, 0, true, false)) {
+                double highest = Double.MAX_VALUE;
+                for (int frame = 0; frame < 200; frame++) {
+                    probe.tick(false, true, false, frame);
+                    var sample = probe.sample();
+                    if (frame > 10) assertTrue(sample.onGround(), "Loop must not launch the probe at frame " + frame
+                            + " x=" + sample.x() + " y=" + sample.y());
+                    highest = Math.min(highest, sample.y());
+                }
+                assertTrue(highest < 560, "The probe must run over the top of the loop, reached y=" + highest);
+            }
+            var actor = new Actor("hero", "Sonic", "s1", "sonic",
+                    List.of(new ActorKey(0, 5100, 686, 0, -1, false, true, 1, Interpolation.HOLD)));
+            var scene = StageplayDocument.empty("s1", 0, 0, 5260, 470, 480, 270)
+                    .withSet(source)
+                    .withDurationFrames(420)
+                    .withActors(List.of(actor))
+                    .withPuppets(List.of(new PuppetTrack("hero", true, 0, List.of())));
+            var request = new StageplayRouteRequest("hero", 0, 5860, 621, 419, 1024, 120_000, 60_000, 1, null, 1,
+                    new RouteMotion(StartAction.WALK, TravelSpeed.RUN, EndingAction.HARD_STOP, EndingFacing.LEFT));
+            var result = StageplayRoutePlanner.plan(resources, library, scene, request, "ghz-loop-run", () -> false);
+            assertEquals(StageplayRouteResult.Status.VERIFIED, result.status(), result.message());
+            assertTrue(result.path().stream().anyMatch(point -> point.grounded() && point.y() < 560),
+                    "The verified route must follow the loop rather than bypass it");
+            assertEquals(request.targetX(), result.path().getLast().x(), 6);
+            assertNull(SessionManager.getCurrentWorldSession());
+        }
+    }
+
     @Test
     @RequiresRom(SonicGame.SONIC_2)
     void ehzRouteIsQualifiedAndPreservesOutsideCommands() throws Exception {
