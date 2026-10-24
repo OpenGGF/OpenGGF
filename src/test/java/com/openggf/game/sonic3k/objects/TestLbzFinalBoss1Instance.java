@@ -3,6 +3,9 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameRng;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
+import org.mockito.MockedStatic;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -42,6 +45,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,13 +57,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestLbzFinalBoss1Instance {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
 
+    private enum ChildKind {
+        ROBOTNIK_HEAD,
+        TOP_ATTACHMENT,
+        TURRET_SEGMENT,
+        LASER_HEAD,
+        MUZZLE_LASER,
+        LASER_TRAIL,
+        ORBITING_POD,
+        GUN_POD,
+        HIT_SPARK,
+        DEBRIS,
+        BOSS_EXPLOSION,
+        RESULTS_SCREEN,
+        P2_ENDING_POSE_WATCHER,
+        TAILS_CPU_RELEASE,
+        ENGINE_FLAME,
+        EXPLOSION_SEQUENCER,
+        DEATH_EGG_MINIATURE,
+        DEATH_EGG_SMOKE,
+        MUSIC_FADE,
+        FINAL_BOSS_2_HANDOFF
+    }
+
+    private MockedStatic<ObjectConstructionContext> constructionObserver;
+
     @BeforeEach
     void setUp() {
+        // Run the real allocator unchanged and observe its return outside owner state.
+        // Unlike the semantic child hook, this also sees unmanaged FindFreeObj calls.
+        constructionObserver = mockStatic(ObjectConstructionContext.class, CALLS_REAL_METHODS);
+        constructionObserver.when(() -> ObjectConstructionContext.construct(any(), any()))
+                .thenAnswer(call -> {
+                    Object result = call.callRealMethod();
+                    if (call.getArgument(0) instanceof HarnessServices services
+                            && result instanceof ObjectInstance child) {
+                        services.spawned.add(child);
+                    }
+                    return result;
+                });
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
     }
 
     @AfterEach
     void resetObjectCameraBounds() {
+        if (constructionObserver != null) constructionObserver.close();
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
@@ -75,24 +120,69 @@ class TestLbzFinalBoss1Instance {
         assertEquals(0x0C, boss.getMappingFrame(), "Robotnik ship body starts on frame $0C");
         assertEquals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP, boss.getBodyArtKey());
         assertEquals(Sonic3kObjectArtKeys.LBZ_FINAL_BOSS_1, boss.getTurretArtKey());
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).size());
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TOP_ATTACHMENT).size());
-        assertEquals(3, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).size());
-        assertTrue(firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT)
+        assertEquals(1, services.childrenOfKind(ChildKind.ROBOTNIK_HEAD).size());
+        assertEquals(1, services.childrenOfKind(ChildKind.TOP_ATTACHMENT).size());
+        assertEquals(3, services.childrenOfKind(ChildKind.TURRET_SEGMENT).size());
+        assertTrue(firstBossChild(services, ChildKind.TURRET_SEGMENT)
                         .usesCurrentTouchResponseState(),
                 "boss children publish their refreshed post-move coordinates");
-        assertEquals(4, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size(),
+        assertEquals(4, services.childrenOfKind(ChildKind.LASER_HEAD).size(),
                 "ChildObjDat_737BA is reached by both loc_7308E and loc_730F8, so top and middle segments each get a laser-head pair");
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
-        assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.GUN_POD).size());
-        assertEquals(-1, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).paletteOverrideForTest(),
+        assertEquals(1, services.childrenOfKind(ChildKind.ORBITING_POD).size());
+        assertEquals(2, services.childrenOfKind(ChildKind.GUN_POD).size());
+        assertEquals(-1, firstBossChild(services, ChildKind.TURRET_SEGMENT).paletteOverrideForTest(),
                 "ObjDat3_736D8/736E4 use make_art_tile(ArtTile_LBZFinalBoss1,1,1); keep platform/turret art on line 1");
-        assertEquals(0, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.GUN_POD).paletteOverrideForTest(),
+        assertEquals(0, firstBossChild(services, ChildKind.GUN_POD).paletteOverrideForTest(),
                 "word_736F0 uses make_art_tile(ArtTile_LBZFinalBoss1,0,1) for the thruster/gun pods");
         // ROM: boss music arrives through Obj_Song_Fade_Transition, not a direct play.
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUSIC_FADE).size());
+        assertEquals(1, services.childrenOfKind(ChildKind.MUSIC_FADE).size());
         assertTrue(services.musicIds.isEmpty(),
                 "loc_729DE spawns a fade-transition object instead of playing mus_EndBoss directly");
+    }
+
+    @Test
+    void unmanagedBootstrapIsImmediateAndDoesNotAllocateAgainOnTheFirstSegmentTicks() {
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        assertNull(services.objectManager());
+
+        boss.update(0, null);
+
+        assertEquals(13, services.spawned.size(), "seven direct children plus six nested children");
+        List<String> allocated = services.spawnedClassNames();
+        assertEquals(List.of("SongFadeTransitionInstance", "RobotnikHeadChild", "TopAttachmentChild",
+                "TurretSegmentChild", "TurretSegmentChild", "TurretSegmentChild", "OrbitingPodChild",
+                "LaserHeadChild", "LaserHeadChild", "LaserHeadChild", "LaserHeadChild",
+                "GunPodChild", "GunPodChild"), allocated);
+        for (Object child : services.childrenOfKind(ChildKind.TURRET_SEGMENT)) {
+            ((AbstractObjectInstance) child).update(1, null);
+        }
+        assertEquals(allocated, services.spawnedClassNames(), "bootstrap must not retry nested tables");
+    }
+
+    @Test
+    void publicNoTableSnapshotsWorkBeforeServicesAndForAnInitializedUnmanagedOwner() {
+        LbzFinalBoss1Instance empty = new LbzFinalBoss1Instance(new ObjectSpawn(
+                0x44A0, 0x0780, OBJ_LBZ_FINAL_BOSS_1, 0, 0, false, 0));
+        var beforeServices = assertDoesNotThrow(() -> empty.captureRewindState());
+        empty.setCentreYForTest(0x0790);
+        assertDoesNotThrow(() -> empty.restoreRewindState(beforeServices));
+        assertEquals(0x0780, empty.getCentreY());
+
+        HarnessServices services = new HarnessServices(PlayerCharacter.SONIC_AND_TAILS);
+        LbzFinalBoss1Instance boss = newBoss(services);
+        boss.update(0, null);
+        List<ObjectInstance> children = List.copyOf(services.spawned);
+        var initialized = assertDoesNotThrow(() -> boss.captureRewindState());
+        boss.setCentreYForTest(0x0790);
+        boss.forceHitCountForTest(2);
+        assertDoesNotThrow(() -> boss.restoreRewindState(initialized));
+        assertEquals(0x0780, boss.getCentreY());
+        assertEquals(9, boss.getCollisionProperty());
+        assertEquals(children.size(), services.spawned.size(), "owner-only restore cannot allocate helpers");
+        for (int index = 0; index < children.size(); index++) {
+            assertSame(children.get(index), services.spawned.get(index));
+        }
     }
 
     @Test
@@ -118,7 +208,7 @@ class TestLbzFinalBoss1Instance {
         boss.activateForTest();
         LbzFinalBoss1Instance.RobotnikHeadChild head = assertInstanceOf(
                 LbzFinalBoss1Instance.RobotnikHeadChild.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).get(0));
+                services.childrenOfKind(ChildKind.ROBOTNIK_HEAD).get(0));
 
         boss.forceHitCountForTest(2);
         boss.setCentreYForTest(services.cameraY() - 0xB0);
@@ -149,8 +239,8 @@ class TestLbzFinalBoss1Instance {
         boss.update(0, null);
         boss.activateForTest();
         boss.setRenderXFlipForTest(false);
-        LbzFinalBoss1Instance.LaserHeadChild head = boss.childrenOfKindForTest(
-                        LbzFinalBoss1Instance.ChildKind.LASER_HEAD).stream()
+        LbzFinalBoss1Instance.LaserHeadChild head = services.childrenOfKind(
+                        ChildKind.LASER_HEAD).stream()
                 .filter(LbzFinalBoss1Instance.LaserHeadChild.class::isInstance)
                 .map(LbzFinalBoss1Instance.LaserHeadChild.class::cast)
                 .findFirst()
@@ -162,20 +252,20 @@ class TestLbzFinalBoss1Instance {
         head.update(1, null);
 
         assertTrue(boss.isLaserFiringNotchSet(), "frame $04 sets $38 bit3 so routine $04 can reposition");
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
+        assertEquals(1, services.childrenOfKind(ChildKind.MUZZLE_LASER).size(),
                 "matching direction at the firing notch creates loc_7321A muzzle child");
         LbzFinalBoss1Instance.MuzzleLaserChild muzzle = assertInstanceOf(
                 LbzFinalBoss1Instance.MuzzleLaserChild.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).get(0));
+                services.childrenOfKind(ChildKind.MUZZLE_LASER).get(0));
         assertEquals(0, muzzle.paletteOverrideForTest(),
                 "word_73704 uses make_art_tile(ArtTile_LBZFinalBoss1,0,1) for the muzzle/laser");
 
         for (int frame = 4; frame < 120
-                && boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_TRAIL).isEmpty(); frame++) {
+                && services.childrenOfKind(ChildKind.LASER_TRAIL).isEmpty(); frame++) {
             muzzle.update(frame, null);
         }
         assertTrue(muzzle.isFiredForTest(), "muzzle should reach loc_732BA and fire the beam");
-        assertEquals(0, firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.LASER_TRAIL).paletteOverrideForTest(),
+        assertEquals(0, firstBossChild(services, ChildKind.LASER_TRAIL).paletteOverrideForTest(),
                 "word_7370C is the beam trail child and must match the laser palette");
 
         // Step 0 -> 1: frame $04 with table bit7 set — notch strobes but the
@@ -185,7 +275,7 @@ class TestLbzFinalBoss1Instance {
         head.update(2, null);
 
         assertTrue(boss.isLaserFiringNotchSet(), "frame $04 always strobes $38 bit3");
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
+        assertEquals(1, services.childrenOfKind(ChildKind.MUZZLE_LASER).size(),
                 "mismatched head direction must not spawn a second muzzle");
 
         head.forceArcStepForTest(1);
@@ -209,7 +299,7 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.isDetachFlagSetForTest(0), "HP 5 sets $38 bit0 — the TOP segment detaches");
         assertEquals(8, boss.getRoutine(), "detach threshold enters routine $08 recoil wait");
         assertEquals(0x0F, boss.getRecoilTimer());
-        assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.HIT_SPARK).size());
+        assertEquals(2, services.childrenOfKind(ChildKind.HIT_SPARK).size());
 
         boss.finishHitFlashForTest();
         boss.forceHitCountForTest(2);
@@ -230,10 +320,10 @@ class TestLbzFinalBoss1Instance {
         boss.setRenderXFlipForTest(false);
         LbzFinalBoss1Instance.TurretSegmentChild topSegment = assertInstanceOf(
                 LbzFinalBoss1Instance.TurretSegmentChild.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).get(0));
+                services.childrenOfKind(ChildKind.TURRET_SEGMENT).get(0));
         LbzFinalBoss1Instance.LaserHeadChild head = assertInstanceOf(
                 LbzFinalBoss1Instance.LaserHeadChild.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).get(0));
+                services.childrenOfKind(ChildKind.LASER_HEAD).get(0));
 
         head.forceArcStepForTest(8);
         head.forceStepTimerExpiredForTest();
@@ -249,7 +339,7 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.isLaserFiringNotchSet(),
                 "ROM loc_731F4 runs sub_733FC before Child_Draw_Sprite_FlickerMove reacts to the detached parent, "
                         + "so the final frame-$04 strobe can still set $38 bit3.");
-        assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.MUZZLE_LASER).size(),
+        assertEquals(1, services.childrenOfKind(ChildKind.MUZZLE_LASER).size(),
                 "The final strobe should still create the loc_7321A muzzle child before the head becomes debris.");
     }
 
@@ -339,9 +429,9 @@ class TestLbzFinalBoss1Instance {
         boss.update(11, null);
 
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_RESULTS_COMPLETE, boss.getFinalePhase());
-        assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.RESULTS_SCREEN).stream()
+        assertTrue(services.childrenOfKind(ChildKind.RESULTS_SCREEN).stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance));
-        assertFalse(boss.spawnedClassNamesForTest().contains("Obj_LBZFinalBoss2"),
+        assertFalse(services.spawnedClassNames().contains("Obj_LBZFinalBoss2"),
                 "Sonic/Tails route must not enter the Knuckles handoff branch");
     }
 
@@ -371,7 +461,7 @@ class TestLbzFinalBoss1Instance {
                 "Sonic/Tails finale should force the victory animation");
         assertEquals(0, player.getForcedInputMask(), "ending pose clears scripted input");
         assertFalse(services.gameState.isEndOfLevelFlag(), "Obj_LBZFinalBoss1 clears End_of_level_flag before results");
-        assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.RESULTS_SCREEN).stream()
+        assertTrue(services.childrenOfKind(ChildKind.RESULTS_SCREEN).stream()
                 .anyMatch(S3kResultsScreenObjectInstance.class::isInstance));
     }
 
@@ -395,7 +485,7 @@ class TestLbzFinalBoss1Instance {
         boss.update(2, null);
         assertEquals(services.cameraY() - 0x50, boss.getCentreY(),
                 "the equality frame is still drawn before the ROM's blo branch takes the handoff");
-        assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.FINAL_BOSS_2_HANDOFF).isEmpty());
+        assertTrue(services.childrenOfKind(ChildKind.FINAL_BOSS_2_HANDOFF).isEmpty());
 
         boss.update(3, null);
 
@@ -404,7 +494,7 @@ class TestLbzFinalBoss1Instance {
         assertTrue(boss.isFinalBoss2HandoffFlagSetForTest(), "loc_73070 sets bit 5 in FinalBoss1 $38");
         assertTrue(boss.isDestroyed(), "loc_73088 deletes FinalBoss1 after allocating Obj_LBZFinalBoss2");
         LbzFinalBoss2Instance handoffTarget = assertInstanceOf(LbzFinalBoss2Instance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.FINAL_BOSS_2_HANDOFF)
+                services.childrenOfKind(ChildKind.FINAL_BOSS_2_HANDOFF)
                         .stream().findFirst().orElseThrow());
         assertEquals("LBZFinalBoss2", handoffTarget.getName());
         assertEquals(0xCC, handoffTarget.getSpawn().objectId(), "S3KL object $CC is Obj_LBZFinalBoss2");
@@ -482,7 +572,7 @@ class TestLbzFinalBoss1Instance {
         assertFalse(player.getForcedAnimationId() == Sonic3kAnimationIds.LOOK_UP.id(),
                 "loc_72C3C only holds Up and clears facing; the visible turn-away pose comes from "
                         + "Animate_ExternalPlayerSprite after milestone A");
-        assertEquals(2, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ENGINE_FLAME).size(),
+        assertEquals(2, services.childrenOfKind(ChildKind.ENGINE_FLAME).size(),
                 "FinalBoss1 finale step 5 spawns the two Death Egg engine flames");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_A, boss.getFinalePhase());
     }
@@ -567,12 +657,12 @@ class TestLbzFinalBoss1Instance {
         boss.forceSonicFinalePhaseForTest(LbzFinalBoss1Instance.FinalePhase.AUTOWALK);
 
         boss.update(30, player);
-        AbstractObjectInstance flame = (AbstractObjectInstance) boss.childrenOfKindForTest(
-                LbzFinalBoss1Instance.ChildKind.ENGINE_FLAME).get(0);
+        AbstractObjectInstance flame = (AbstractObjectInstance) services.childrenOfKind(
+                ChildKind.ENGINE_FLAME).get(0);
         services.rng().setSeed(0x12345678L); // Random_Number returns $1234C399.
         flame.update(31, player);
         AbstractObjectInstance explosion = assertInstanceOf(AbstractObjectInstance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.BOSS_EXPLOSION).get(0));
+                services.childrenOfKind(ChildKind.BOSS_EXPLOSION).get(0));
         assertEquals(0x4439, explosion.getX());
         assertEquals(0x072C, explosion.getY(), "sub_83E90 uses SWAP, not a byte shift, for Y");
 
@@ -668,7 +758,7 @@ class TestLbzFinalBoss1Instance {
 
         sequencer.update(0, null);
 
-        List<Object> miniatures = boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_MINIATURE);
+        List<Object> miniatures = services.childrenOfKind(ChildKind.DEATH_EGG_MINIATURE);
         assertEquals(7, miniatures.size());
         AbstractObjectInstance lead = assertInstanceOf(AbstractObjectInstance.class, miniatures.get(0));
         AbstractObjectInstance lowerLeft = assertInstanceOf(AbstractObjectInstance.class, miniatures.get(1));
@@ -690,7 +780,7 @@ class TestLbzFinalBoss1Instance {
         sequencer.update(0, null);
         assertEquals(0x12345678L, services.rng().getSeed(), "AllocateObject does not run loc_72E54");
         AbstractObjectInstance debris = assertInstanceOf(AbstractObjectInstance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.BOSS_EXPLOSION).get(0));
+                services.childrenOfKind(ChildKind.BOSS_EXPLOSION).get(0));
         debris.update(1, null);
         assertEquals(8, readIntField(debris, "mappingFrame"));
         assertEquals((services.camera.getX() & 0xFFFF) + 0x20 + 0x34, debris.getX());
@@ -710,20 +800,20 @@ class TestLbzFinalBoss1Instance {
         for (; dispatch <= 390; dispatch++) {
             sequencer.update(dispatch, null);
         }
-        long debris = boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.BOSS_EXPLOSION)
+        long debris = services.childrenOfKind(ChildKind.BOSS_EXPLOSION)
                 .stream().filter(o -> o.getClass().getSimpleName().equals("DeathEggExplosionDebrisChild")).count();
         assertEquals(23, debris);
         assertTrue(services.lbzState.consumePadCollapseStartRequested());
         sequencer.update(dispatch++, null);
-        assertEquals(23, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.BOSS_EXPLOSION).size(),
+        assertEquals(23, services.childrenOfKind(ChildKind.BOSS_EXPLOSION).size(),
                 "loc_72E00 branches before allocation on count $18");
         for (int i = 0; i < 382; i++) {
             sequencer.update(dispatch++, null);
-            assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_MINIATURE).isEmpty());
+            assertTrue(services.childrenOfKind(ChildKind.DEATH_EGG_MINIATURE).isEmpty());
         }
         sequencer.update(dispatch, null);
         assertTrue(sequencer.isDestroyed());
-        assertEquals(7, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_MINIATURE).size());
+        assertEquals(7, services.childrenOfKind(ChildKind.DEATH_EGG_MINIATURE).size());
     }
 
     @Test
@@ -735,22 +825,22 @@ class TestLbzFinalBoss1Instance {
         writeIntField(sequencer, "milestoneWait", 0);
         sequencer.update(0, null);
         AbstractObjectInstance lead = assertInstanceOf(AbstractObjectInstance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_MINIATURE).get(0));
+                services.childrenOfKind(ChildKind.DEATH_EGG_MINIATURE).get(0));
         int startY = lead.getY();
         lead.update(16, null);
-        assertTrue(boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_SMOKE).isEmpty(),
+        assertTrue(services.childrenOfKind(ChildKind.DEATH_EGG_SMOKE).isEmpty(),
                 "loc_72E9E initializes even on a VBlank divisible by 16");
         assertEquals(startY, lead.getY());
         assertFalse(lead.isHighPriority());
         assertEquals(7, lead.getPriorityBucket());
         lead.update(32, null);
         AbstractObjectInstance smoke = assertInstanceOf(AbstractObjectInstance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_SMOKE).get(0));
+                services.childrenOfKind(ChildKind.DEATH_EGG_SMOKE).get(0));
         smoke.update(32, null);
         assertTrue(readBooleanField(smoke, "hFlip"), "loc_72F7A rotates immediately at V_int_run_count & 3 == 0");
         assertEquals(6, smoke.getPriorityBucket());
         AbstractObjectInstance puff = assertInstanceOf(AbstractObjectInstance.class,
-                boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.DEATH_EGG_SMOKE).get(1));
+                services.childrenOfKind(ChildKind.DEATH_EGG_SMOKE).get(1));
         int[] expected = {4, 4, 4, 5, 5, 5, 6, 6, 6};
         for (int i = 0; i < expected.length; i++) {
             puff.update(32 + i, null);
@@ -828,10 +918,10 @@ class TestLbzFinalBoss1Instance {
     }
 
     private static LbzFinalBoss1Instance.BossChild firstBossChild(
-            LbzFinalBoss1Instance boss,
-            LbzFinalBoss1Instance.ChildKind kind) {
+            HarnessServices services,
+            ChildKind kind) {
         return assertInstanceOf(LbzFinalBoss1Instance.BossChild.class,
-                boss.childrenOfKindForTest(kind).stream().findFirst().orElseThrow());
+                services.childrenOfKind(kind).stream().findFirst().orElseThrow());
     }
 
     private static boolean hFlipForTest(LbzFinalBoss1Instance.BossChild child) throws Exception {
@@ -853,6 +943,41 @@ class TestLbzFinalBoss1Instance {
     }
 
     private static final class HarnessServices extends StubObjectServices {
+        // Historical diagnostics belong to this observer, outside runtime snapshots.
+        private final List<ObjectInstance> spawned = new ArrayList<>();
+
+        private List<String> spawnedClassNames() {
+            return spawned.stream().map(child -> child.getClass().getSimpleName()).toList();
+        }
+
+        private List<Object> childrenOfKind(ChildKind kind) {
+            List<String> names = switch (kind) {
+                case ROBOTNIK_HEAD -> List.of("RobotnikHeadChild");
+                case TOP_ATTACHMENT -> List.of("TopAttachmentChild");
+                case TURRET_SEGMENT -> List.of("TurretSegmentChild");
+                case LASER_HEAD -> List.of("LaserHeadChild");
+                case MUZZLE_LASER -> List.of("MuzzleLaserChild");
+                case LASER_TRAIL -> List.of("LaserTrailChild");
+                case ORBITING_POD -> List.of("OrbitingPodChild");
+                case GUN_POD -> List.of("GunPodChild");
+                case HIT_SPARK -> List.of("HitSparkChild");
+                case DEBRIS -> List.of("DebrisChild");
+                case BOSS_EXPLOSION -> List.of("ExplosionShowerChild", "S3kBossExplosionChild",
+                        "DeathEggExplosionDebrisChild");
+                case RESULTS_SCREEN -> List.of("LbzFinalBossResultsScreenObjectInstance");
+                case P2_ENDING_POSE_WATCHER -> List.of("P2EndingPoseWatcherChild");
+                case TAILS_CPU_RELEASE -> List.of("TailsCpuReleaseChild");
+                case ENGINE_FLAME -> List.of("EngineFlameChild");
+                case EXPLOSION_SEQUENCER -> List.of("ExplosionSequencerChild");
+                case DEATH_EGG_MINIATURE -> List.of("DeathEggMiniatureChild");
+                case DEATH_EGG_SMOKE -> List.of("DeathEggSmokeChild", "DeathEggSmokePuffChild");
+                case MUSIC_FADE -> List.of("SongFadeTransitionInstance");
+                case FINAL_BOSS_2_HANDOFF -> List.of("LbzFinalBoss2Instance");
+            };
+            return spawned.stream().filter(child -> names.contains(child.getClass().getSimpleName()))
+                    .map(child -> (Object) child).toList();
+        }
+
         private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera = new Camera();
         private final LbzZoneRuntimeState lbzState;
