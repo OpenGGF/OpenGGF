@@ -3298,3 +3298,61 @@ additions. The independent grounding's retention limits above still apply. This
 is bounded fixture evidence, not a new native cross-game, local-manager registry
 registration, full-route or pixel guarantee. No broad smoke was rerun. The local
 branch remains for later composed validation, integration, push and cleanup.
+
+
+### Loop-eleven fixture/decoder composition checkpoint
+
+At fixed clean commit `48dbe26d014a30460a6784cfcefb1040aafe44ae`, the combined
+twenty fixture removals and intact palette-decoder move passed388 cases in28
+reports, with zero failures/errors/skips. Exact XML identities and Java25/EGL
+properties were inspected, including all four supplied absolute ROM paths. The
+selection comprises150 module cases,74 direct/engine-only cases,69 event/sensor
+cases,86 decoder/water consumers and9 exact singleton/published-count controls.
+The 56 XML/text reports were consumed. Maven execution1:30; exact queue admission
+wait was not retained. This fresh checkout compiled all source consumers with
+the relocated decoder. The prior 146-case decoder run already supplied the four
+required S3K selectors; no unchanged stability rerun was added as a ceremony.
+
+### Remaining engine-only fixture continuation
+
+The next bounded edit owns only `TestEditorRenderingSmoke#setUp`,
+`TestLevelEditorController#setUp`, `TestS3kIczFreezerObject#setUp` and
+`TestS3kMgzPulleyAndMantis#setUp`, their exact guard keys and count/evidence prose.
+All use the existing `resetEngineOnly()` owner. The editor controls issue CPU
+commands or record draw calls; no GLFW/real-pixel precondition is introduced.
+Their test-body session/editor construction remains intact. Freezer and pulley
+controls retain the original early `SessionManager.clear()`, camera-bound setup
+and construction-context teardown. Freezer helpers still explicitly open S3K
+worlds and attach managers where native child allocation requires them; keep
+`EngineServices.current()` in those helpers.
+
+Do not replace these controls with gameplay fixtures: their initial boundary
+requires no active world, and the existing reset prefix owns teardown/config
+cleanup. No production or helper implementation changes. All consumer bodies,
+assertions and test identities remain unchanged; only setup/imports differ.
+Four exact deletions move the local baseline42 to38 methods (37 files), without
+adding allowances or restoring any older key. Focused qualification selects the
+four classes and exact singleton lifecycle guard. Results remain pending.
+
+
+The four-class selection and exact singleton guard passed110 cases, zero
+failures/errors/skips: editor rendering10, controller51, ICZ freezer25, MGZ
+pulley/mantis16 and guard8. Every XML identity matches its source test method;
+Java25 and explicit EGL propagation were inspected. Queue wait227 seconds; Maven
+execution30.226 seconds. The ten XML/text reports were consumed. These controls
+use synthetic/injected data and no ROM or real-pixel prerequisite; EGL is a
+launch setting, not a claim of new GPU coverage.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" --lean \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestEditorRenderingSmoke,TestLevelEditorController,TestS3kIczFreezerObject,TestS3kMgzPulleyAndMantis,TestSingletonLifecycleGuard' test -B
+```
+
+All102 original consumer bodies/assertions and explicit world helpers compare
+identically after setup/import normalization. The shared fixture implementation
+is byte-identical to the preceding commit. Exactly four keys disappear; no
+allowance, production logic or assertion changes. Complete joint guards and
+parent integration/push/cleanup remain pending.

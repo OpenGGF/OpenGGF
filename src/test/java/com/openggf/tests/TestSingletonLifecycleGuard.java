@@ -20,8 +20,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/TestGameLoop.java#setUp
             src/test/java/com/openggf/TestTraceSessionLauncherRewindPresentation.java#setUp
             src/test/java/com/openggf/audio/AudioRegressionTest.java#setUpClass
-            src/test/java/com/openggf/editor/TestEditorRenderingSmoke.java#setUp
-            src/test/java/com/openggf/editor/TestLevelEditorController.java#setUp
             src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
@@ -56,8 +54,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/tests/TestRingManager.java#setUp
             src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
-            src/test/java/com/openggf/tests/TestS3kIczFreezerObject.java#setUp
-            src/test/java/com/openggf/tests/TestS3kMgzPulleyAndMantis.java#setUp
             src/test/java/com/openggf/trace/replay/TraceReplaySessionBootstrapConfigTest.java#setUp
             """);
     private static final Set<String> SCANNER_UTILITY_FILES = Set.of(

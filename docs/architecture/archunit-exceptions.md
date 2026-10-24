@@ -151,7 +151,7 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 42 methods across 41 files,
+The ambient singleton-setup inventory now contains 38 methods across 37 files,
 down from 102/100 after direct manager construction and named module fixtures
 replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
@@ -637,9 +637,15 @@ qualification is complete; its joint composition checks and delivery remain
 pending. The earlier 846 focused / 769 guard results above stay attributed to
 the preceding 136-record executable state.
 
-The next local fixture composition removes twenty additional setup identities:
+The preceding local fixture composition removes twenty additional setup identities:
 ten module/world keys, eight direct or engine-only keys, and two event/sensor
-keys. Its current inventory is42 methods across41 files. GameLoop remains
+keys. Its inventory is42 methods across41 files. GameLoop remains
 qualified for its preference-sensitive setup; oil suffocation and S1 monitor
 landing remain world consumers pending a separate fixture qualification. The
 new composition's checks have not yet run.
+
+Four additional engine-only setups now use the existing reset owner: the editor
+rendering/controller controls and injected ICZ freezer/MGZ pulley-mantis tests.
+Their explicit world-creation helpers, camera bounds and consumer bodies remain
+unchanged. The local inventory is38 methods across37 files; all110 focused/guard cases passed
+with zero failures/errors/skips. No production or shared fixture helper changed.
