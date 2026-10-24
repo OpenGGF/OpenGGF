@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.data.Rom;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.RomTestUtils;
@@ -9,10 +8,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -56,9 +52,7 @@ class TestSonic3kMgz2ChunkEvents {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
         GameServices.level().setLevel(new SyntheticMgzLevel());
     }
 

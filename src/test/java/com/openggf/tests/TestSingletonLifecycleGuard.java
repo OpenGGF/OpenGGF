@@ -55,11 +55,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectManager.java#setUp
             src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java#configureEngineServices
             src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java#configureEngineServices
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2BgRiseEvents.java#setUp
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2ChunkEvents.java#setUp
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2CollapseEvents.java#setUp
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2EndBossEvents.java#setUp
-            src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2QuakeEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp

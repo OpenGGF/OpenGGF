@@ -1900,3 +1900,43 @@ preserves the existing `resetAll()` suffix, with the affected families and reset
 consumers covered directly. These are bounded ROM-free checks, not broad smoke,
 full-suite, all-guard or ROM/trace certification. Integration, push and worktree
 cleanup remain parent-owned.
+
+## Ninth-loop MGZ2 named fixture family
+
+On coordinator `9a6aaa7bf50b322c5bb9f053f34dde39c33d2a2e`, five MGZ2 event
+setup methods now use the existing named S3K fixture: `TestSonic3kMgz2BgRiseEvents`,
+`TestSonic3kMgz2ChunkEvents`, `TestSonic3kMgz2CollapseEvents`,
+`TestSonic3kMgz2EndBossEvents`, and `TestSonic3kMgz2QuakeEvents`. The shared fixture
+owns bootstrap reset and module/session initialization; the synthetic levels,
+playable setup, previous-module restoration and cleanup remain at their existing
+boundaries. The explicit end-boss default-configuration reset is supplied by the
+fixture's existing prefix. Direct services alone would omit the module-owned
+level-event and playable collaborators these checks exercise.
+
+Only imports and the five setup bodies changed. A normalized comparison verified
+that all other source is identical, preserving 94 test methods and all 345
+assertion or verification calls. Exactly their five `#setUp` keys leave the
+singleton inventory. No production source, runtime algorithm, API pin, lifecycle
+permission or test expectation changed.
+
+Focused command from this coordinator, with `MAIN_CHECKOUT` denoting the existing
+main checkout and `ROM_ROOT` its verified supplied-ROM directory:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic3kMgz2BgRiseEvents,TestSonic3kMgz2ChunkEvents,TestSonic3kMgz2CollapseEvents,TestSonic3kMgz2EndBossEvents,TestSonic3kMgz2QuakeEvents,TestSingletonLifecycleGuard' \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+All **102 cases** passed with zero failures, errors or skips: background rise
+18, chunks 3, collapse 15, end boss 38, quake 20 and exact singleton guard 8.
+The S3K SHA-1 was verified as `CFBF98C36C776677290A872547AC47C53D2761D6`.
+Every XML method identity matched the source declarations; Java 25, EGL and the
+absolute S3K property were inspected in all six reports. The three ROM-backed
+chunk cases executed. Admission took 6 seconds; Maven compilation/execution took
+29.460 seconds. All 12 consumed XML/text reports were removed. This is event
+fixture and ROM-data evidence, not a complete route or native GPU certification.
+The final composed S3K/API/guard gates remain parent-owned.
