@@ -499,7 +499,9 @@ Unreleased. The earlier development themes remain in
   player instead of vanishing while the status remained. Rewinding in Mushroom
   Hill restores mushroom-cap bounces, curled vines, catapults, dropping platforms,
   launched Mushmeanie shells and the act 2 Knuckles cutscene's player lift
-  exactly. Launch Base falling platforms keep their riders and Marble Garden
+  exactly. Unordered rider sets encode stable team membership independently of
+  allocation history, while ordered collections retain their encounter order.
+  Launch Base falling platforms keep their riders and Marble Garden
   sinking mud keeps each player's sink depth through rewind. Rewinding to the first
   frame of a Lava Reef load replays its background setup: act 2 no longer refills
   its background or adds a second Death Egg, and Knuckles keeps act 1's background

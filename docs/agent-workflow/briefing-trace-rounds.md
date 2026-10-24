@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A test-batch-only snapshot mismatch need not be a leaked gameplay flag
+(2026-10-24, Day Off follow-up, `a04ae4b20`). MHZ2's catapult failed in the
+exact 50-class batch but passed alone and after its 27-class prefix. Its two
+differing scalar bytes encoded the same rider IDs in opposite identity-hash
+iteration orders. Engine resets cannot reset JVM allocation history. Decode the
+fields first and reproduce equivalent state under deliberately opposite hash
+orders; fix canonical encoding in the production codec instead of masking the
+diff or fitting test teardown. The exact original batch remains the integration
+check; the deterministic regression prevents accidental green heap layouts from
+being mistaken for a repair.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their

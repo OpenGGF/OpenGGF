@@ -377,3 +377,102 @@ not counted. No hook/policy edit or broad smoke run was needed. Follow-up commit
 are local only, with clean worktrees retained for the lead; exact engine/desktop
 head SHAs are in the completion handoff. Generated test reports and capture work
 are removed after the retained review images and results have been inspected.
+
+## Order-dependent MHZ2 snapshot follow-up
+
+Starting integration head: `a04ae4b20` (the Day Off commits, the lead's
+`a7cd9cef3` Apply-first refinement, develop `633d0e807`, and guide reconciliation).
+The lead reported `TestS3kMhzAct2AuthoredRoute`'s team invocation failing inside
+the exact 50-class smoke batch 65, while both the isolated route and the same
+batch on develop passed. The reported batch contained 2,925 tests with one
+failure and no errors/skips. These are lead-provided attribution results, not
+additional runs by this follow-up.
+
+The production owner is `RewindCodecs.CollectionCodec.capture`. MHZ's
+`MhzMushroomCatapultObjectInstance.childRiders` is a final identity-map-backed
+unordered set. Capturing it wrote participant references in identity-hash bucket
+order. Restoring recreated sprites could reverse that order without changing
+membership or gameplay. The reported differing bytes, 39 and 44, are the first
+bytes of the two little-endian participant IDs in `childRiders`: main player
+`1` and sidekick `2`. The set begins at byte 34 (four-byte size, followed by
+one presence byte plus four ID bytes per rider). `InstaShieldObjectInstance`
+appeared in the assertion's inventory of dynamic objects; it was not a differing
+field.
+
+Both the catapult and the collection codec were unchanged from develop
+`633d0e807`. This is an allocation-history-dependent encoding defect exposed by
+the integrated branch, rather than evidence of a surviving music lease, catalog
+selection or reported-ability flag. A 27-class prefix of the same list passed
+759 cases here; that narrowed check was not treated as proof of a repair.
+No additional singleton resets or test ordering controls were introduced.
+
+The shared codec now encodes unordered player sets in stable participant-ID
+order, sorting only a capture copy. Lists and sequenced sets retain their
+encounter order; live identity semantics and final-set restoration stay intact.
+This extends the existing stable encoding policy for identity-keyed player
+maps. No game/zone condition, snapshot-diff filtering, fitted allocation pattern,
+hook or policy change is used.
+
+Three regressions were added to `TestRewindPlayerReferenceCodecs`:
+
+- `mushroomCatapultRiderSnapshotsIgnoreRecreatedIdentityHashOrder` exercises the
+  actual catapult through ordinary piece contact and compact capture/restore.
+  It failed before the fix at byte 39, matching the smoke assertion.
+- `unorderedPlayerSetsCaptureStableMembershipAcrossRecreatedIdentities` covers
+  duplicate character labels, null membership, replacement references, unchanged
+  live iteration and in-place restoration. It failed before the fix too.
+- `orderedPlayerSetsAndListsRetainTheirEncounterOrder` is the passing control
+  for deliberate order and repeated list entries.
+
+Participant roles are assigned opposite to measured set iteration in the
+recreated state. The regressions are deterministic; they do not guess identity
+hashes or depend on the previous test's allocations. Before implementation, the
+complete player-reference class ran 12 tests: 10 passed, two expected failures,
+zero errors/skips. Queue waiting was 21s; Maven execution was 27.213s. The prefix
+run waited 6s and completed Maven in 2m09s with no failures/errors/skips.
+
+Commands run from the engine task checkout, with
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk`, DISPLAY/WAYLAND_DISPLAY unset, and the
+same `Q`/`R` meanings used above:
+
+```bash
+# Investigation prefix: exactly the first 27 comma-separated classes in the
+# lead-provided mhz-batch-classes.txt, including all three MHZ2 route invocations.
+python3 "$Q" -Dmse=off -Psmoke "-Dtest=$PREFIX" -Dsonic1.rom.path="$R/s1.gen" -Dsonic2.rom.path="$R/s2.gen" -Ds3k.rom.path="$R/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test
+
+# RED, before the codec change: 12 cases, two expected failures.
+python3 "$Q" --lean -Dmse=off '-Dtest=TestRewindPlayerReferenceCodecs' test
+
+# Codec consumers, real catapult behavior, and the required S3K load controls.
+python3 "$Q" -Dmse=off '-Dtest=TestRewindPlayerReferenceCodecs,TestRewindCollectionCodecs,TestRewindObjectReferenceCodecs,TestRewindHelperCodecs,TestRewindRecordCodecs,TestRewindSchemaRegistry,TestMhzMushroomCatapultObjectInstance,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' -Dsonic1.rom.path="$R/s1.gen" -Dsonic2.rom.path="$R/s2.gen" -Ds3k.rom.path="$R/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test
+```
+
+The complete focused selection passed 128 cases with zero failures/errors/skips,
+including both package-qualified classes matched by `TestSonic3kLevelLoading`.
+Queue waiting was 10s; Maven execution was 1m28s. This is bounded regression and
+consumer coverage, not a complete smoke-suite result. No Java changes followed
+this focused pass.
+
+The integration replay uses the lead's complete `mhz-batch-classes.txt` as
+`BATCH` (50 comma-separated class names, MHZ2 at position 27, no duplicates),
+without narrowing or adding classes:
+
+```bash
+python3 "$Q" -Dmse=off -Psmoke "-Dtest=$BATCH" -Dsonic1.rom.path="$R/s1.gen" -Dsonic2.rom.path="$R/s2.gen" -Ds3k.rom.path="$R/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test
+python3 "$Q" -Dmse=off -Pguards test -B
+```
+
+The exact 50-class replay passed all 2,925 cases, with zero failures/errors/skips.
+`TestS3kMhzAct2AuthoredRoute` ran all three incoming routes successfully inside
+that same fork (18.50s). Queue waiting was 41s; Maven execution was 8m38s.
+The full smoke suite was not repeated: this was the specific lead-requested
+batch replay, after the deterministic regressions and focused consumers passed.
+
+The complete `-Pguards test -B` run then passed 778 cases with zero
+failures/errors/skips, including all 34 ArchUnit checks. Queue waiting was 137s;
+Maven execution was 5m24s. All follow-up runs were sequential, on `a04ae4b20`
+plus the codec/test changes described here; later edits only recorded evidence
+in documentation. The prepared commit message was checked with
+`git interpret-trailers --parse`; hooks were used normally. Delivery is a local
+follow-up commit on the existing task branch, with no push or merge. Temporary
+run logs are consumed and removed; the lead's supplied evidence is preserved.

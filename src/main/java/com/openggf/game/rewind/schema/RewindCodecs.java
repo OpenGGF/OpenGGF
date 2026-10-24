@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.SequencedSet;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -940,7 +942,19 @@ public final class RewindCodecs {
             if (collection == null) {
                 return;
             }
-            for (Object element : collection) {
+            Iterable<?> elements = collection;
+            if (collection instanceof Set<?> && !(collection instanceof SequencedSet<?>)
+                    && isPlayerReferenceType(elementType) && collection.size() > 1) {
+                // Unordered sets (including identity-map-backed rider sets) change
+                // bucket order when rewind recreates players. Encode membership in
+                // participant-ID order without mutating live gameplay iteration.
+                // Lists and explicitly ordered sets retain their encounter order.
+                List<Object> stableElements = new ArrayList<>(collection);
+                stableElements.sort(Comparator.nullsFirst(Comparator.comparingInt(
+                        element -> encodePlayerRef((PlayableEntity) element, context).encoded())));
+                elements = stableElements;
+            }
+            for (Object element : elements) {
                 writeCollectionValue(elementType, element, scalarData, opaqueValues, context);
             }
         }
