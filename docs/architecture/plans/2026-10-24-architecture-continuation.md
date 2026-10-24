@@ -4414,3 +4414,123 @@ Creator/API/tooling:
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiJavadocTool,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestPurposeStarters,TestProjectScaffolder,TestSampleModsPackage,TestPhase3StandaloneSampleIntegration,TestSamplePlatformerIntegration,TestSampleFlappyIntegration,TestSampleRomArtRemixIntegration,TestEmeraldRemix#recipeRebuildsActOneFromStockStripsAndCloverValleyFollowsActTwo,TestInfiniteSonic#freshReloadResetsTheCourseAndFinalZoneRemainsStock,TestSonicSurvivors#campStartsARunAndTheArenaHoldsSonic,TestStarpostValleyExample#packagesAndPassesValidation,TestStarpostRealValley#terrainAndBackgroundKeepTheirRomColoursWithinHostBudgets,TestStarpostRealRuins#everyDailyChamberLoadsThroughSharedEncoderAndRegeneratesByDay,TestStarpostRealFestivals#nativeRouteResultAndReturn,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
 ```
+
+### Final rewind-probe classification correction
+
+This bounded implementation used only
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-189070e3`, renamed its local branch to
+`bugfix/ai-rewind-probe-classification-20261024`, and fast-forwarded normally
+from `e9d8087aca13f8868c783a4fe001b39aa7015ca7` to parent
+`a273a43e048b7005a6fe1cc874abf462b30728f9` before edits. Installed hooks are
+active. No other worktree or parent build output was used for implementation
+or validation.
+
+Parent grounding identified the ignored root8 report's
+`SozSpringVine.generatedPivot: 96 -> -1` REAL gap as intentional derived-cache
+invalidation beside captured surface RAM. The comparator nevertheless compared
+both Java `transient` and `@RewindTransient` fields, while its report claimed
+annotation exclusion. `RewindSchemaRegistry.schemaFor(type).fields()` already
+assigns both forms `TRANSIENT`; these metadata semantics were unambiguous.
+
+The diagnostic now collects only `TRANSIENT` field plans into a set of reflected
+`Field` values and excludes those exact fields. Declaring-class identity keeps
+hidden superclass/subclass fields separate. All other dispositions remain
+compared within the existing primitive/enum/String scope, including deferred
+state and final/structural constructor scalars. The comparator remains private;
+tests use the existing coverage tests' reflective-private-helper convention.
+No gameplay, capture policy, schema, annotation, whitelist or allowance changed.
+Report methodology and helper/test Javadoc now state that declared `TRANSIENT`
+metadata excludes fields from this diagnostic; it does not prove transient
+correctness. `TestRewindTransientGuard` remains an independent architecture guard.
+
+Eight focused controls were added to the existing probe test. A mechanical
+comparison against the parent confirmed all four original discovery-sweep test
+bodies are unchanged. Exact method selection below runs only the new controls,
+never those four discovery methods or the 1,330-class sweep.
+
+The first characterization attempt failed test compilation because the new
+fixture imported `PlayableEntity` from the wrong package (two compiler errors,
+zero executed test cases). This was a fixture error, not the baseline red.
+After correcting that import, the unchanged comparator ran eight cases:
+three passed, five failed, zero errors/skips. Exact red identities and deltas:
+
+- `comparatorExcludesJavaTransientDelta`: wrongly reported `javaCache: 17 -> -1`.
+- `comparatorExcludesAnnotatedTransientDelta`: wrongly reported `annotatedCache: 23 -> -1`.
+- `comparatorMatchesHiddenFieldPoliciesByDeclaringField`: reported both transient
+  deltas as well as the two intended ordinary deltas; names are hidden in both
+  directions, with different per-declaring-field policy.
+- `comparatorExcludesVineDerivedCacheInvalidation`: reproduced exactly
+  `generatedPivot: 96 -> -1`, with captured slope data equal.
+- `comparatorReportsVineAuthoritativeScalarLoss`: found the deliberate
+  authoritative `pivot: 96 -> 0` loss but also the unwanted cache delta.
+
+The passing baseline controls were `comparatorReportsOrdinaryStateLoss`
+(the fixture deliberately discards captured `ordinaryState: 37 -> 0` in its
+restore hook), `comparatorReportsFinalConstructorScalars` (final int, String
+and enum differences), and `comparatorReportsDeferredScalarDelta`.
+
+Exact test commands, both run from the isolated worktree above.
+`OPENGGF_MAIN_WORKSPACE` denotes the existing main checkout; its absolute queue
+wrapper path was used, following this plan's existing environment-variable
+convention for machine-local paths:
+
+```bash
+probe_controls='com.openggf.game.rewind.coverage.TestRewindRoundTripProbe#comparatorExcludesJavaTransientDelta+comparatorExcludesAnnotatedTransientDelta+comparatorReportsOrdinaryStateLoss+comparatorReportsFinalConstructorScalars+comparatorReportsDeferredScalarDelta+comparatorMatchesHiddenFieldPoliciesByDeclaringField+comparatorExcludesVineDerivedCacheInvalidation+comparatorReportsVineAuthoritativeScalarLoss'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=${probe_controls}" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=${probe_controls},com.openggf.game.sonic3k.objects.TestSozSpringVine,com.openggf.game.rewind.schema.TestRewindSchemaRegistry" test -B
+```
+
+After the sole comparator correction, the second command passed all 48 cases:
+eight comparator controls, all 15 existing `TestSozSpringVine` cases and all 25
+`TestRewindSchemaRegistry` cases, zero failures/errors/skips. This includes the
+existing vine pivot-zero captured-surface/child-Y preservation and regeneration
+controls, and schema classification/order/identity controls. Every case identity,
+count and skip was inspected in fresh XML under this worktree's
+`target/surefire-reports/TEST-<fully-qualified-class>.xml`. The `test` property
+matched each exact selector; Java `25.0.5.0.2` and explicit surfaceless EGL
+reached every test JVM. Lua was `5.4.9`; no ROM property or real display was
+needed or supplied. Both baseline XML/text files and all six green XML/text
+files were consumed and removed; no report was copied or archived.
+
+Source remained fixed throughout each completed test request. Fingerprints are
+SHA-256 of `git diff a273a43e048b7005a6fe1cc874abf462b30728f9 -- src/main src/test pom.xml`:
+baseline red `80bd97c06f1c85e5eb4386e1f1cb4f91d3223dc0cbf2268a16ea12309f91fe80`;
+final green `def2b5c954f00a33fd69a7762ef402addc2f72584e41a342c76dac37ce82082e`.
+The helper's baseline/final file hashes were
+`80fa67ba759f1d00317c0cb96679fb185ec3cc5509ea2ad8ce919f673274a22d` /
+`706616548572a940365e667340ffa09d0d847e0b633ad6b0eaeabddc86eb209a`;
+the focused test's baseline/final hashes were
+`9468e6b9d88c4fc9836fd49135eb4284e759b82bb0557c35196709a4492257c3` /
+`df758c6551b3182381893f51b8677fc81573da25ae12100c4c5b25d54028f244`.
+The test's final changes after baseline were Javadoc only. Admission wait was
+zero for both completed test runs; Maven reported execution 25.440 seconds
+red and 28.083 seconds green. The earlier compile-only failure took 01:05 min,
+also with zero admission wait. Other work time is unmeasured; these intervals
+are not a delivery-duration or performance claim.
+
+The discovery sweep/report was not regenerated. Array/reference comparison,
+frame-stepped discovery coverage, transient correctness, joint fresh guards,
+broad smoke/full suites and integration are outside this local verification.
+No release note is needed for this test-only diagnostic correction. This slice
+stops at a clean local commit; parent owns final joint fresh guards, integration,
+push and worktree/branch cleanup. No live validation handles remain.
+
+Parent source review of2490c192 accepts the comparator's exact schema-Field
+TRANSIENT exclusion and the eight positive/negative controls, retaining all
+other dispositions and every original discovery method. The source diff hash
+was independently recomputed as def2b5c954f00a33fd69a7762ef402addc2f72584e41a342c76dac37ce82082e,
+matching the worker's tested green state. Reported48 focused passes remain
+worker observations; parent final fresh guards follow on the composed tree.
+Both independent appendices were preserved against their common a273a43e base.
+Low-level121, permission151, ambient6/5 and API/descriptor identities are
+unchanged by the diagnostic correction.
