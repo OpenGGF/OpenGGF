@@ -179,14 +179,8 @@ public class AudioManager implements MusicRestoreSink {
     }
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
-    /**
-     * Single offline-capture compatibility lease over the authoritative
-     * producer. It is an ordinary non-consuming capture handle: it never
-     * replaces the producer, registry, or sink.
-     */
-    private LiveCaptureAudioHandle offlineCaptureHandle;
-    private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
-    private boolean liveCaptureAwaitingRebind;
+    /** Capture lifetime spans presentation producer generations for this manager. */
+    private final CaptureLeases captureLeases = new CaptureLeases();
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
@@ -656,41 +650,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public synchronized LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
-        // Scene music uses the same final packets and therefore requires no second capture lease.
-        if (activeLiveCaptureAudioHandle != null) {
-            throw new IllegalStateException("A live capture audio handle is already attached");
-        }
-        ensureShadowPresentation();
-        LiveCaptureAudioHandle capture = shadowProducer.attachCapture(frameRate);
-        ManagerLiveCaptureAudioHandle handle =
-                new ManagerLiveCaptureAudioHandle(capture, frameRate);
-        activeLiveCaptureAudioHandle = handle;
-        return handle;
-    }
-
-    /**
-     * Idempotently closes the live-recording lease. Identical rule to
-     * {@link #endCaptureMode()}: the manager's view of the lease is retired
-     * only after the producer has accepted the detach.
-     *
-     * <p>A capture lease can only be released on the producer's owner thread,
-     * so an off-thread close throws with the lease still attached. Marking the
-     * handle closed or clearing {@code activeLiveCaptureAudioHandle} first
-     * would leave this manager believing it holds no lease while the producer
-     * keeps copying every presented packet into the orphan, would let the next
-     * {@code beginLiveCaptureAudio} attach a second lease instead of rejecting
-     * it, and would make a retry from the owner thread a no-op so the orphan
-     * could never be detached at all.
-     */
-    private synchronized void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
-        if (handle.closed) {
-            return;
-        }
-        handle.capture.close();
-        handle.closed = true;
-        if (activeLiveCaptureAudioHandle == handle) {
-            activeLiveCaptureAudioHandle = null;
-        }
+        return captureLeases.beginLiveCaptureAudio(frameRate);
     }
 
     /**
@@ -719,34 +679,7 @@ public class AudioManager implements MusicRestoreSink {
      * outer frame, then {@link #drainCaptureFrame} that packet once.
      */
     public synchronized void beginCaptureMode(int sampleRate, int frameRate) {
-        if (offlineCaptureHandle != null) {
-            throw new IllegalStateException(
-                    "An offline capture lease is already attached");
-        }
-        if (frameRate <= 0) {
-            throw new IllegalArgumentException("frameRate must be positive");
-        }
-        ensureShadowPresentation();
-        // ensureShadowPresentation guarantees the presentation sink and the
-        // producer share one sample rate (a mismatched sink is replaced before
-        // the producer is built, and replaceSink rejects an incompatible one),
-        // so the sink rate is the producer rate.
-        int producerSampleRate = outputSampleRate();
-        if (sampleRate != producerSampleRate) {
-            throw new IllegalArgumentException(
-                    "offline capture sample rate " + sampleRate
-                            + " does not match the presentation producer rate "
-                            + producerSampleRate);
-        }
-        if (frameRate != shadowFrameRate) {
-            throw new IllegalArgumentException(
-                    "offline capture frame rate " + frameRate
-                            + " does not match the presentation producer frame"
-                            + " rate " + shadowFrameRate
-                            + "; a mismatched lease would truncate or zero-pad"
-                            + " every presented packet");
-        }
-        offlineCaptureHandle = shadowProducer.attachCapture(frameRate);
+        captureLeases.beginCaptureMode(sampleRate, frameRate);
     }
 
     /**
@@ -757,8 +690,7 @@ public class AudioManager implements MusicRestoreSink {
      * rate (for example a PAL region pins the engine to 50 fps).
      */
     public synchronized int presentationFrameRate() {
-        ensureShadowPresentation();
-        return shadowFrameRate;
+        return captureLeases.presentationFrameRate();
     }
 
     /**
@@ -769,10 +701,7 @@ public class AudioManager implements MusicRestoreSink {
      * stale PCM.
      */
     public synchronized int drainCaptureFrame(short[] target) {
-        if (offlineCaptureHandle == null) {
-            throw new IllegalStateException("beginCaptureMode() not called");
-        }
-        return offlineCaptureHandle.drainPresentationFrame(target);
+        return captureLeases.drainCaptureFrame(target);
     }
 
     /**
@@ -789,12 +718,7 @@ public class AudioManager implements MusicRestoreSink {
      * rejecting it.
      */
     public synchronized void endCaptureMode() {
-        LiveCaptureAudioHandle handle = offlineCaptureHandle;
-        if (handle == null) {
-            return;
-        }
-        handle.close();
-        offlineCaptureHandle = null;
+        captureLeases.endCaptureMode();
     }
 
     private int configuredFrameRate() {
@@ -832,7 +756,7 @@ public class AudioManager implements MusicRestoreSink {
         clearPreparedReverseRestore();
         // A backend swap replaces the output device; it is not a reason to end
         // a recording of what the engine is playing.
-        detachLiveCaptureAudioHandleForRebuild();
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = backend;
@@ -860,7 +784,7 @@ public class AudioManager implements MusicRestoreSink {
     public void setBackendForLaunch(AudioBackend backend) {
         invalidateAndReleaseStreamedMusicSession();
         clearPreparedReverseRestore();
-        detachLiveCaptureAudioHandleForRebuild();
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         destroyBackendQuietly(this.backend, "previous AudioBackend");
         this.backend = java.util.Objects.requireNonNull(backend, "backend");
@@ -3763,7 +3687,7 @@ public class AudioManager implements MusicRestoreSink {
             // retiring the lease here killed the recording's audio before the
             // retained backend could rebuild its sink. Only destroy() is a genuine
             // teardown.
-            detachLiveCaptureAudioHandleForRebuild();
+            captureLeases.detachLiveCaptureAudioHandleForRebuild();
             closeShadowPresentation();
             clearDonorAudioState();
             donorGenerationCounters = Map.of();
@@ -3938,14 +3862,14 @@ public class AudioManager implements MusicRestoreSink {
                 shadowResolver, commandTimeline, shadowParity);
         shadowSmpsSession = smpsSession;
         shadowFrameRate = frameRate;
-        rebindLiveCaptureAudioHandle(sampleRate);
+        captureLeases.rebindLiveCaptureAudioHandle(sampleRate);
     }
 
     private void replaceShadowPresentationForBaseMutation() {
         int musicTempoPercent = shadowSmpsSession == null ? 100
                 : shadowSmpsSession.captureSnapshot().musicTempoPercent();
         clearPreparedReverseRestore();
-        detachLiveCaptureAudioHandleForRebuild();
+        captureLeases.detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         ensurePresentationSink();
         ensureShadowPresentation();
@@ -3963,38 +3887,16 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void closeShadowPresentation() {
-        // Closing the producer closes every lease attached to it, so neither
-        // the offline compatibility lease nor the live-recording lease may
-        // outlive its producer. Both manager-side references are retired here
-        // rather than through closeLiveCaptureAudio/endCaptureMode: the
-        // producer releases the underlying leases itself on close, and a
-        // detach can only be issued on its owner thread.
-        //
-        // Both follow one rule — the reference is dropped exactly when the
-        // producer accepted the detach — because the producer has two distinct
-        // close failure modes:
-        //   * an off-owner-thread close is rejected before anything is
-        //     released, so the manager must keep believing it still holds both
-        //     leases and the caller can retry from the owner thread;
-        //   * a close on the owner thread marks every lease closed and detaches
-        //     it before any teardown step that can throw, so once the producer
-        //     reports itself closed the manager must drop both references even
-        //     if teardown then failed. Keeping a dead handle would refuse every
-        //     later beginCaptureMode/beginLiveCaptureAudio for the rest of the
-        //     process; dropping a live one would let the next lease attach
-        //     twice.
+        // Producer teardown stays here. The capture owner reconciles accepted
+        // release against the current producer, including callback replacements.
         if (shadowProducer != null) {
             try {
                 shadowProducer.close();
             } finally {
-                if (shadowProducer.isClosed()) {
-                    offlineCaptureHandle = null;
-                    retireLiveCaptureAudioHandle();
-                }
+                captureLeases.reconcileProducerClose();
             }
         } else {
-            offlineCaptureHandle = null;
-            retireLiveCaptureAudioHandle();
+            captureLeases.retireWithoutProducer();
             if (presentationSink != null) {
                 presentationSink.close();
             }
@@ -4014,83 +3916,6 @@ public class AudioManager implements MusicRestoreSink {
         shadowRestoreRequested = false;
         presentationCoordFlagHandlers = null;
         presentationCoordHandlerGameIds.clear();
-    }
-
-    /**
-     * A rebuild of the presentation must not end a recording that is already
-     * running. Both rebuild entry points mark the lease here: {@link
-     * #setBackend} (entering gameplay installs the real audio backend) and
-     * {@link #resetState} (a mode transition such as leaving the master title
-     * screen, or a level teardown). Retiring the lease at either of them meant a
-     * recording started on the master title screen lost its audio the moment the
-     * player started a game, and the Task 11 degradation turned that into
-     * permanent silence rather than a visible failure.
-     *
-     * <p>{@link #destroy()} does not mark, so a genuine teardown still retires.
-     */
-    private synchronized void detachLiveCaptureAudioHandleForRebuild() {
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        liveCaptureAwaitingRebind = live != null && !live.closed;
-    }
-
-    /**
-     * Re-attaches a carried lease to the freshly built producer.
-     *
-     * <p>Nothing here may escape: {@link #ensureShadowPresentation()} is reached
-     * from most of this class, so a throw would surface as an unrelated failure
-     * far from the recording. A lease that cannot be carried is retired instead,
-     * which the recorder already degrades to phase-correct clocked silence with
-     * one logged warning.
-     *
-     * @param producerSampleRate the rebuilt producer's rate. A recording is
-     *        muxed at the rate captured when it started (ffmpeg {@code -ar}),
-     *        so carrying a lease onto a producer running at a different rate
-     *        would write pitch-shifted audio — which looks like it worked.
-     *        Refusing the carry is the honest answer.
-     */
-    private synchronized void rebindLiveCaptureAudioHandle(int producerSampleRate) {
-        if (!liveCaptureAwaitingRebind) {
-            return;
-        }
-        liveCaptureAwaitingRebind = false;
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        if (live == null || live.closed || shadowProducer == null) {
-            return;
-        }
-        if (live.capture.sampleRate() != producerSampleRate) {
-            LOGGER.warning("Live recording lease cannot follow the presentation"
-                    + " from " + live.capture.sampleRate() + " Hz to "
-                    + producerSampleRate + " Hz; the recording continues"
-                    + " without audio rather than pitch-shifted");
-            retireLiveCaptureAudioHandle();
-            return;
-        }
-        try {
-            // Carry the phase so the recorded audio does not jump at the swap.
-            long carried = live.capture.totalStereoFrames();
-            live.capture = shadowProducer.attachCapture(
-                    live.requestedFrameRate, live.capture.clockSnapshot());
-            live.carriedStereoFrames += carried;
-        } catch (RuntimeException rebindFailure) {
-            AudioDiagnosticObserverException.rethrowIfPresent(rebindFailure);
-            LOGGER.log(Level.WARNING,
-                    "Live recording lease could not be carried across a"
-                            + " presentation rebuild", rebindFailure);
-            retireLiveCaptureAudioHandle();
-        }
-    }
-
-    private synchronized void retireLiveCaptureAudioHandle() {
-        if (liveCaptureAwaitingRebind) {
-            // A rebuild is in flight and will rebind this lease to the new
-            // producer. Only a genuine teardown retires it.
-            return;
-        }
-        ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
-        if (live != null) {
-            live.closed = true;
-            activeLiveCaptureAudioHandle = null;
-        }
     }
 
     private PresentationCoordHandlerPreparation
@@ -4264,66 +4089,273 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
-    private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
-        private LiveCaptureAudioHandle capture;
-        private final int requestedFrameRate;
+    /**
+     * Owns capture admission, accepted release and continuity across producer
+     * generations. Packet storage and clocks remain with the producer. Monitor
+     * coverage follows the compatibility caller or the explicit manager regions;
+     * this owner never substitutes its own monitor.
+     */
+    private final class CaptureLeases {
+        /** Single non-consuming offline compatibility lease. */
+        private LiveCaptureAudioHandle offlineCaptureHandle;
+        private ManagerLiveCaptureAudioHandle activeLiveCaptureAudioHandle;
+        private boolean liveCaptureAwaitingRebind;
+
+        private LiveCaptureAudioHandle beginLiveCaptureAudio(int frameRate) {
+            // Scene music uses the same final packets and therefore requires no second capture lease.
+            if (activeLiveCaptureAudioHandle != null) {
+                throw new IllegalStateException("A live capture audio handle is already attached");
+            }
+            ensureShadowPresentation();
+            LiveCaptureAudioHandle capture = shadowProducer.attachCapture(frameRate);
+            ManagerLiveCaptureAudioHandle handle =
+                    new ManagerLiveCaptureAudioHandle(capture, frameRate);
+            activeLiveCaptureAudioHandle = handle;
+            return handle;
+        }
+
+        private void beginCaptureMode(int sampleRate, int frameRate) {
+            if (offlineCaptureHandle != null) {
+                throw new IllegalStateException(
+                        "An offline capture lease is already attached");
+            }
+            if (frameRate <= 0) {
+                throw new IllegalArgumentException("frameRate must be positive");
+            }
+            ensureShadowPresentation();
+            // ensureShadowPresentation guarantees the presentation sink and the
+            // producer share one sample rate (a mismatched sink is replaced before
+            // the producer is built, and replaceSink rejects an incompatible one),
+            // so the sink rate is the producer rate.
+            int producerSampleRate = AudioManager.this.outputSampleRate();
+            if (sampleRate != producerSampleRate) {
+                throw new IllegalArgumentException(
+                        "offline capture sample rate " + sampleRate
+                                + " does not match the presentation producer rate "
+                                + producerSampleRate);
+            }
+            if (frameRate != shadowFrameRate) {
+                throw new IllegalArgumentException(
+                        "offline capture frame rate " + frameRate
+                                + " does not match the presentation producer frame"
+                                + " rate " + shadowFrameRate
+                                + "; a mismatched lease would truncate or zero-pad"
+                                + " every presented packet");
+            }
+            offlineCaptureHandle = shadowProducer.attachCapture(frameRate);
+        }
+
+        private int presentationFrameRate() {
+            ensureShadowPresentation();
+            return shadowFrameRate;
+        }
+
+        private int drainCaptureFrame(short[] target) {
+            if (offlineCaptureHandle == null) {
+                throw new IllegalStateException("beginCaptureMode() not called");
+            }
+            return offlineCaptureHandle.drainPresentationFrame(target);
+        }
+
+        private void endCaptureMode() {
+            LiveCaptureAudioHandle handle = offlineCaptureHandle;
+            if (handle == null) {
+                return;
+            }
+            handle.close();
+            offlineCaptureHandle = null;
+        }
+
         /**
-         * Frames drained through leases this handle has already outlived. A
-         * fresh lease deliberately starts its own total at zero, but a rebind
-         * continues one recording, so the totals are summed rather than reset.
+         * Idempotently closes the live-recording lease. Identical rule to
+         * {@link #endCaptureMode()}: the manager's view of the lease is retired
+         * only after the producer has accepted the detach.
+         *
+         * <p>A capture lease can only be released on the producer's owner thread,
+         * so an off-thread close throws with the lease still attached. Marking the
+         * handle closed or clearing {@code activeLiveCaptureAudioHandle} first
+         * would leave this manager believing it holds no lease while the producer
+         * keeps copying every presented packet into the orphan, would let the next
+         * {@code beginLiveCaptureAudio} attach a second lease instead of rejecting
+         * it, and would make a retry from the owner thread a no-op so the orphan
+         * could never be detached at all.
          */
-        private long carriedStereoFrames;
-        private boolean closed;
-
-        private ManagerLiveCaptureAudioHandle(LiveCaptureAudioHandle capture,
-                                              int requestedFrameRate) {
-            this.capture = capture;
-            this.requestedFrameRate = requestedFrameRate;
-        }
-
-
-        @Override
-        public int sampleRate() {
-            return capture.sampleRate();
-        }
-
-        @Override
-        public int frameRate() {
-            return capture.frameRate();
-        }
-
-        @Override
-        public int maxStereoFramesPerPacket() {
-            return capture.maxStereoFramesPerPacket();
-        }
-
-        @Override
-        public int drainPresentationFrame(short[] target) {
+        private void closeLiveCaptureAudio(ManagerLiveCaptureAudioHandle handle) {
             synchronized (AudioManager.this) {
-                if (closed) {
-                    throw new IllegalStateException("Live capture audio handle is no longer attached");
+                if (handle.closed) {
+                    return;
                 }
-                return capture.drainPresentationFrame(target);
+                handle.capture.close();
+                handle.closed = true;
+                if (activeLiveCaptureAudioHandle == handle) {
+                    activeLiveCaptureAudioHandle = null;
+                }
             }
         }
 
-        @Override
-        public long totalStereoFrames() {
+        /**
+         * Reconcile against the producer currently published after close callbacks.
+         * A foreign-thread close rejects before release. An accepted close marks
+         * leases closed before fallible teardown, so offline admission retires even
+         * if later manager-wide cleanup is skipped. Live retirement separately takes
+         * the manager monitor and preserves any pending rebuild carry.
+         */
+        private void reconcileProducerClose() {
+            // Preserve the live read and its failure precedence if a callback
+            // cleared the producer; an earlier snapshot or null guard changes it.
+            if (shadowProducer.isClosed()) {
+                offlineCaptureHandle = null;
+                retireLiveCaptureAudioHandle();
+            }
+        }
+
+        private void retireWithoutProducer() {
+            offlineCaptureHandle = null;
+            retireLiveCaptureAudioHandle();
+        }
+
+        /**
+         * A rebuild of the presentation must not end a recording that is already
+         * running. Backend replacement, launch replacement, reset and base-source
+         * replacement mark the lease here. Retiring it at a mode transition meant a
+         * recording started on the master title screen lost its audio the moment the
+         * player started a game, and the Task 11 degradation turned that into
+         * permanent silence rather than a visible failure.
+         *
+         * <p>{@link AudioManager#destroy()} does not mark. It normally retires,
+         * but an already-pending carry survives that teardown too.
+         */
+        private void detachLiveCaptureAudioHandleForRebuild() {
             synchronized (AudioManager.this) {
-                return carriedStereoFrames + capture.totalStereoFrames();
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                liveCaptureAwaitingRebind = live != null && !live.closed;
             }
         }
 
-        @Override
-        public AudioFrameClock.Snapshot clockSnapshot() {
+        /**
+         * Re-attaches a carried lease to the freshly built producer.
+         *
+         * <p>Ordinary attachment failures retire the recording, which the recorder
+         * degrades to phase-correct clocked silence with one warning. Diagnostic
+         * observer failures escape before retirement. Sample-rate validation stays
+         * outside that attachment catch.
+         *
+         * @param producerSampleRate the rebuilt producer's rate. A recording is
+         *        muxed at the rate captured when it started (ffmpeg {@code -ar}),
+         *        so carrying a lease onto a producer running at a different rate
+         *        would write pitch-shifted audio — which looks like it worked.
+         *        Refusing the carry is the honest answer.
+         */
+        private void rebindLiveCaptureAudioHandle(int producerSampleRate) {
             synchronized (AudioManager.this) {
-                return capture.clockSnapshot();
+                if (!liveCaptureAwaitingRebind) {
+                    return;
+                }
+                liveCaptureAwaitingRebind = false;
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                if (live == null || live.closed || shadowProducer == null) {
+                    return;
+                }
+                if (live.capture.sampleRate() != producerSampleRate) {
+                    LOGGER.warning("Live recording lease cannot follow the presentation"
+                            + " from " + live.capture.sampleRate() + " Hz to "
+                            + producerSampleRate + " Hz; the recording continues"
+                            + " without audio rather than pitch-shifted");
+                    retireLiveCaptureAudioHandle();
+                    return;
+                }
+                try {
+                    // Carry the phase so the recorded audio does not jump at the swap.
+                    long carried = live.capture.totalStereoFrames();
+                    live.capture = shadowProducer.attachCapture(
+                            live.requestedFrameRate, live.capture.clockSnapshot());
+                    live.carriedStereoFrames += carried;
+                } catch (RuntimeException rebindFailure) {
+                    AudioDiagnosticObserverException.rethrowIfPresent(rebindFailure);
+                    LOGGER.log(Level.WARNING,
+                            "Live recording lease could not be carried across a"
+                                    + " presentation rebuild", rebindFailure);
+                    retireLiveCaptureAudioHandle();
+                }
             }
         }
 
-        @Override
-        public void close() {
-            closeLiveCaptureAudio(this);
+        private void retireLiveCaptureAudioHandle() {
+            synchronized (AudioManager.this) {
+                if (liveCaptureAwaitingRebind) {
+                    // Preserve the pending carry even through a later destroy;
+                    // successful realization can still bind it to a new producer.
+                    return;
+                }
+                ManagerLiveCaptureAudioHandle live = activeLiveCaptureAudioHandle;
+                if (live != null) {
+                    live.closed = true;
+                    activeLiveCaptureAudioHandle = null;
+                }
+            }
+        }
+
+        private final class ManagerLiveCaptureAudioHandle implements LiveCaptureAudioHandle {
+            private LiveCaptureAudioHandle capture;
+            private final int requestedFrameRate;
+            /**
+             * Frames drained through leases this handle has already outlived. A
+             * fresh lease deliberately starts its own total at zero, but a rebind
+             * continues one recording, so the totals are summed rather than reset.
+             */
+            private long carriedStereoFrames;
+            private boolean closed;
+
+            private ManagerLiveCaptureAudioHandle(LiveCaptureAudioHandle capture,
+                                                  int requestedFrameRate) {
+                this.capture = capture;
+                this.requestedFrameRate = requestedFrameRate;
+            }
+
+
+            @Override
+            public int sampleRate() {
+                return capture.sampleRate();
+            }
+
+            @Override
+            public int frameRate() {
+                return capture.frameRate();
+            }
+
+            @Override
+            public int maxStereoFramesPerPacket() {
+                return capture.maxStereoFramesPerPacket();
+            }
+
+            @Override
+            public int drainPresentationFrame(short[] target) {
+                synchronized (AudioManager.this) {
+                    if (closed) {
+                        throw new IllegalStateException("Live capture audio handle is no longer attached");
+                    }
+                    return capture.drainPresentationFrame(target);
+                }
+            }
+
+            @Override
+            public long totalStereoFrames() {
+                synchronized (AudioManager.this) {
+                    return carriedStereoFrames + capture.totalStereoFrames();
+                }
+            }
+
+            @Override
+            public AudioFrameClock.Snapshot clockSnapshot() {
+                synchronized (AudioManager.this) {
+                    return capture.clockSnapshot();
+                }
+            }
+
+            @Override
+            public void close() {
+                closeLiveCaptureAudio(this);
+            }
         }
     }
 

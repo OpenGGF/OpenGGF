@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 119 records | Hold at 119 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -118,7 +118,28 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 3305 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+and 2367 (`GameLoop`, reduced from the completed special-stage base of 2443 by
+the complete title presentation/release transfer, including its live adapter).
+The title lifecycle is capped at 253 effective lines: exactly three mutable
+values (lazy provider, destination and persistent release result), with immutable
+Host/logger dependencies. It owns acquisition, cold observation, cache-only reset,
+entry, locks, neutral prelude, locked update and shared release. Its 21-operation
+Host exposes live typed slots, genuine virtual compatibility seams, session
+participation and narrow Root-owned effects. Update acquisition precedes argument
+snapshots; shared release reads live bindings. It adds no loading, frame-driving,
+disposal or rewind owner. Title method spans are update 131, entry 47, release 65
+and neutral prelude 19 physical lines.
+The loop-owned bonus session is capped at 357 effective lines, including its
+typed live host and six meaningful visit fields. It retains the coordinator,
+provider/deferred identity and pending obligations while shared frame, PLC,
+audio, playback and rewind execution stay in the root. The special-stage/results lifecycle is capped at 571 effective lines, including
+its fifteen state fields, captured-frame algorithm and typed live Host. Its
+constructor only retains collaborators; boundary admission and pacing input stay
+in Root, while shared title release belongs to the title lifecycle. Its results-title span falls from 62 to
+60 physical lines because listener notification is a narrow Host effect.
+The complete ending
+session is capped at 320 effective lines, including its typed live host, provider/pending ownership, phase selection
+and ending-only cleanup. The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
 share these identities, and ambiguous dispatcher names fail. Exchanging one
 large method for another no longer
@@ -129,7 +150,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 | Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoopTitleCardLifecycle.update`: 131, `GameLoopTitleCardLifecycle.enterTitleCard`: 47, `GameLoopTitleCardLifecycle.exitTitleCard`: 65, `GameLoopTitleCardLifecycle.runInputNeutralTitleCardPlayerPrelude`: 19, `GameLoopBonusStageSession.doExitBonusStage`: 111, `GameLoopSpecialStageLifecycle.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoopSpecialStageLifecycle.enterTitleCardFromResults`: 60, `GameLoopBonusStageSession.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
 `TestObjectPhysicsStandardizationGuard` now compares parsed lifecycle calls with
@@ -276,7 +297,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 121
+- `low_level_layers_do_not_depend_on_runtime_layers`: 119
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -625,12 +646,14 @@ failures/errors/skips. The broader smoke request later timed out; integration an
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
 
-The two legacy `SmpsSequencer` restore-owner lookup constructors remain qualified
-exceptions. They sample the configured audio root at construction; replacing this
-with a retained backend owner would change lifetime semantics across104 callers.
-Existing explicit `MusicRestoreSink` overloads serve newly owned callers. No
-demonstrated restore defect justifies the broad migration here; allowance delta0.
-The continuation plan records the alternative and evidence needed to reopen it.
+At the earlier136-record qualification checkpoint, the two legacy
+`SmpsSequencer` restore-owner lookup constructors were retained. They sampled the
+configured audio root at construction; a retained backend destination would
+change lifetime semantics across104 callers. Existing explicit `MusicRestoreSink`
+overloads served newly owned callers. That source-only qualification established
+the lifetime difference without demonstrating a restore defect, and its allowance
+delta was0. The explicit lifetime migration below supersedes that retention
+decision through a deliberate architectural contract change.
 
 The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
 canonical-palette decoding dependencies (136 → 126), with no replacement frozen
@@ -685,7 +708,7 @@ permissions and matching cycle ignores are removed, leaving151 directed pairs.
 The parent will verify the actual compiled graph and exact published counts;
 component results are not a claim of completed joint delivery.
 
-The current source composition has121 low-level records. Native SMPS readers
+The preceding native-reader composition had121 low-level records. Native SMPS readers
 retain their own identical caller-supplied ROM reference; the generic cache/hex
 dispatch base is ROM-free. Its two obsolete records disappear without replacement
 or permission removal. All three public native `(Rom)` constructors and supported
@@ -713,7 +736,16 @@ exactly four behavior controls with no measurement or external-WAV cases.
 
 ## Current continuation status
 
-The composed candidate has121 low-level records,151 unique permitted package
+The updated integration checkpoint composes the ownership slices with upstream
+`81f25c89f04d402c68998106cab17c0ddd79d928`. The low-level store remains 119 records,
+with 151 unique permitted package pairs and 6 ambient methods across 5 files.
+Upstream Stageplay/facing API additions are preserved: its pin has 22,541 unique
+sorted rows and 1,250 matching ModApi type/classfile markers. The ownership cuts
+add no API/pin delta relative to that updated base. Combined runtime/guard
+qualification is pending; the recorded results below are earlier checkpoints,
+not certification of this updated source state.
+
+The standalone restore-destination slice has119 low-level records,151 unique permitted package
 pairs, and6 ambient setup methods across5 files. GameLoop's existing per-test
 owner closes the last qualified ordinary setup after preservation controls for
 base preferences and incoming world/data identities. The six remaining methods
@@ -722,8 +754,8 @@ and four legacy visual setups (two in InstaShield). The visual obligations need
 compatible owned-context and pixel evidence; setting the EGL property alone
 does not satisfy their fixed-function GLFW lifecycle.
 
-The parent observed669 runtime/loader/renderer cases,15 audio/DAC/lifecycle
-cases,458 fixture cases and119 creator/API/tooling cases with zero failures,
+At an earlier parent checkpoint,669 runtime/loader/renderer cases,15 audio/DAC/lifecycle
+cases,458 fixture cases and119 creator/API/tooling cases were observed with zero failures,
 errors or skips in their recorded selections. Engine/SDK packaging succeeded;
 canonical packaged Javadoc contains the new supported Game/art-provider pages
 and excludes their old identities. Fresh final guards passed769 cases with zero failures/errors/skips on the
@@ -732,3 +764,46 @@ tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
 green or complete smoke result. Exact commands, source states and limits are
 in the continuation plan. Remaining allowances have qualified retention reasons,
 not an assertion that every native lifecycle or external caller is certified.
+
+The ending transfer preserves the public virtual GameLoop ending-provider getter;
+all six Engine samples still use it. Source controls reject retained root ending
+state/choreography and root/context/erased-service access in the new owner, with
+positive and negative samples. At its component base the low-level121 and
+ambient6/5 inventories were unchanged; this responsibility transfer removes no
+frozen records. The subsequent SMPS slice below reduces the composed store to119.
+
+
+### Explicit SMPS restore-request destination lifetime (2026-10-24)
+
+The renewed cleanup goal reopened the qualified retention recorded above. This
+slice deliberately changes the lifetime contract: each backend now requires one
+nonnull `MusicRestoreSink` for its
+usable lifetime; production passes its exact receiving `AudioManager`. Root A
+reconfiguration to B does not transfer a retained backend, including music,
+mixed SFX and standalone SFX constructed later. Installing on another manager
+requires a replacement backend. This is a caller composition contract under the
+existing owner-thread/retirement rules, not concurrent-root support or a new
+runtime enforcement mechanism. The sink owns restore requests, not every mutation.
+
+Exactly the two obsolete constructor-to-`GameServices.audio()` records are
+removed from `40afa018-d450-4b84-8cb9-d539d75d8062`:121 -> 119, zero replacements;
+all other bytes/order, stores, 151 package permissions and API/descriptor pins
+are preserved. All 104 convenience calls migrate (four production, 100 fixtures
+in 18 files). Six production backend compositions,21 existing test compositions,
+three test subclasses/twelve instantiations and the standalone native-tool
+composition pass their existing receiving/configured manager. Existing explicit
+sequencer sinks and isolated raw-tool no-ops retain their roles.
+
+SoundTest captures the configured-root sink when composing its window and keeps
+it for later WAV export. The reference generator captures its CLI owner and
+requires it in its constructor. Normal snapshots retain the actual sink and
+live-reference reconstruction preserves it; explicit resolvers may choose another
+sink. No blanket identity assertion changes that resolver contract. The legacy
+singleton config binder and deferred presentation natural-restore callback stay
+unchanged. Removing public convenience constructors on `SmpsSequencer` and the
+concrete SMPS backends changes their unsupported source and binary contracts.
+External users must supply their existing restore destination through the
+explicit constructor forms and rebuild against matching engine artifacts. These
+constructors are outside the supported recursive API; no repinning is warranted.
+Focused evidence and limits are appended to the existing
+[continuation artifact](plans/2026-10-24-architecture-continuation.md).

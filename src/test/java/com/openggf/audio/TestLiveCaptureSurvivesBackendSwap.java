@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.presentation.AudioPresentationFrameView;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.capture.BackpressurePolicy;
@@ -13,6 +14,7 @@ import com.openggf.capture.CapturedFrame;
 import com.openggf.capture.LiveCaptureController;
 import com.openggf.capture.VideoFrameGrabber;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -232,6 +234,82 @@ class TestLiveCaptureSurvivesBackendSwap {
     // ---------------------------------------------------------------
     // Fixture
     // ---------------------------------------------------------------
+
+    @Test
+    void fractionalClockAndCumulativeTotalsSurviveEveryRebuildTrigger() {
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 2);
+        installSpeaker(5);
+        installProfileAndAssets();
+        LiveCaptureAudioHandle recording = audio.beginLiveCaptureAudio(2);
+        audio.beginCaptureMode(5, 2);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        audio.presentFrame(PresentationMode.FORWARD);
+        short[] packet = new short[6];
+        assertEquals(2, recording.drainPresentationFrame(packet));
+        assertAudible(packet, "first generation");
+        assertEquals(2, audio.drainCaptureFrame(new short[6]));
+        assertEquals(2, recording.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 2, 1), recording.clockSnapshot());
+
+        speaker = new RecordingSpeakerSink(5);
+        audio.setBackendForLaunch(new SpeakerBackend(speaker));
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(new short[6]));
+        audio.presentationFrameRate();
+        // Profile and ROM replacement each rebuild again without draining a
+        // segment. Neither may count the first segment twice or reset its phase.
+        installProfileAndAssets();
+        assertEquals(2, recording.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 0, 1), recording.clockSnapshot());
+        audio.beginCaptureMode(5, 2);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        audio.presentFrame(PresentationMode.FORWARD);
+        Arrays.fill(packet, (short) 0);
+        assertEquals(3, recording.drainPresentationFrame(packet));
+        assertAudible(packet, "second generation");
+        assertEquals(5, recording.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 3, 0), recording.clockSnapshot());
+
+        audio.resetState();
+        assertThrows(IllegalStateException.class, () -> audio.drainCaptureFrame(new short[6]));
+        installSpeaker(5);
+        installProfileAndAssets();
+        audio.beginCaptureMode(5, 2);
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        audio.presentFrame(PresentationMode.FORWARD);
+        Arrays.fill(packet, (short) 0);
+        assertEquals(2, recording.drainPresentationFrame(packet));
+        assertAudible(packet, "third generation");
+        assertEquals(7, recording.totalStereoFrames());
+        assertEquals(new AudioFrameClock.Snapshot(5, 2, 2, 1), recording.clockSnapshot());
+        short[] offline = new short[6];
+        assertEquals(2, audio.drainCaptureFrame(offline));
+        assertArrayEquals(Arrays.copyOf(packet, 4), Arrays.copyOf(offline, 4));
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(2),
+                "the same caller handle still occupies admission after every trigger");
+        recording.close();
+        audio.beginLiveCaptureAudio(2).close();
+    }
+
+    @Test
+    void incompatibleRebuildDegradesTheRecorderAtItsExistingFractionalPhase() {
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.FPS, 2);
+        installSpeaker(5);
+        installProfileAndAssets();
+        audio.submitShadowRawPcmForTesting(rampPcm(20), 5);
+        startRecording();
+        short[] before = presentAndCapture();
+        assertEquals(4, before.length, "first 5 Hz / 2 fps packet contains two stereo frames");
+        assertAudible(before, "before incompatible rebuild");
+
+        installSpeaker(7);
+        audio.presentationFrameRate();
+        short[] degraded = presentAndCapture();
+        assertEquals(6, degraded.length, "the carried half-frame requires three frames next");
+        assertSilent(degraded, "first degraded packet");
+        short[] next = presentAndCapture();
+        assertEquals(4, next.length);
+        assertSilent(next, "second degraded packet");
+    }
 
     /** Exactly what {@code Engine.exitMasterTitleScreen} does to the audio. */
     private void enterGameplayFromMasterTitle() {

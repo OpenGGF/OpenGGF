@@ -258,7 +258,7 @@ public class TestDonorAudioRouting {
             String hostGameId) {
         HeadlessSmpsAudioBackend realBackend =
                 new HeadlessSmpsAudioBackend(
-                        SonicConfigurationService.getInstance(), null);
+                        SonicConfigurationService.getInstance(), null, audioManager);
         audioManager.setBackend(realBackend);
         audioManager.setAudioProfile(
                 new HostAudioProfile(hostGameId, new StubSmpsLoader()));

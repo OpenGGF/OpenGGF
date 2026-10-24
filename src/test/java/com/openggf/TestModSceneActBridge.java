@@ -299,7 +299,7 @@ class TestModSceneActBridge {
         config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT,
             width==320 ? "NATIVE_4_3" : "WIDE_16_9");
         config.resolveDisplayAspect();
-        GameServices.audio().setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(config,GameServices.profiler()));
+        GameServices.audio().setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(config,GameServices.profiler(), GameServices.audio()));
         assertTrue(ModSceneLauncher.openStartupScene(loop, SonicConfigurationService.getInstance(), 0,
                 GraphicsManager.getInstance(),width,224)); drainFade();
         assertTrue(loop.modSceneHost.debugJump("new "+farmer), "Sonic 1 must be supplied for this round trip");

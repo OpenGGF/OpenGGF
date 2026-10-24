@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.AudioBackend;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.ChannelType;
@@ -176,7 +177,7 @@ public class TestTitleScreenAudioRegression {
         assertNotNull(sparkle, "Sparkle SFX should load from ROM");
 
         DacData dacData = loader.loadDacData();
-        SmpsSequencer seq = new SmpsSequencer(sparkle, dacData, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(sparkle, dacData, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSfxMode(true);
 
         int ticks = 0;

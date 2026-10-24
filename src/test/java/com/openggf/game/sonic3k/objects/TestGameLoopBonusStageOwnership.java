@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.GameLoop;
+import com.openggf.BonusStageSessionTestAccess;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -185,7 +186,7 @@ class TestGameLoopBonusStageOwnership {
         var provider = new Sonic3kBonusStageCoordinator();
         provider.onEnter(BonusStageType.GUMBALL, null);
         Fixture fixture = fixture(provider);
-        doAnswer(call -> { set(fixture.loop, "activeBonusStageProvider", null); return null; })
+        doAnswer(call -> { BonusStageSessionTestAccess.provider(fixture.loop, null); return null; })
                 .when(fixture.playback).onLevelFrameAdvanced();
         fixture.config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
         fixture.input.handleKeyEvent(GLFW_KEY_F11, GLFW_PRESS);
@@ -205,10 +206,10 @@ class TestGameLoopBonusStageOwnership {
         set(loop, "configService", config);
         set(loop, "inputHandler", input);
         set(loop, "levelManager", levels);
-        set(loop, "titleCardProvider", title);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         set(loop, "playbackDebugManager", playback);
-        set(loop, "activeBonusStageProvider", provider);
-        set(loop, "bonusStageTransitionPending", true);
+        BonusStageSessionTestAccess.provider(loop, provider);
+        BonusStageSessionTestAccess.pending(loop, true);
         set(loop, "audioUpdatedThisStep", true);
         set(loop, "activePlcLifecycleFrame", mock(PlcLifecycleFrame.class));
         return new Fixture(loop, config, input, levels, title, playback);

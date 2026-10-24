@@ -87,7 +87,7 @@ class TestGameLoopSpecialStageSkipGate {
         provider = mock(SpecialStageProvider.class);
         when(provider.specialStagePlcLifecyclePhase())
                 .thenReturn(PlcLifecyclePhase.SPECIAL_STAGE);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         hardwareBoundaries = new ArrayList<>();
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
         context.setHardwareTimingBoundaryObserver(hardwareBoundaries::add);

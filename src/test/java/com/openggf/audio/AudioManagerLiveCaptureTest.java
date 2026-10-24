@@ -2,14 +2,25 @@ package com.openggf.audio;
 
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.presentation.AudioPresentationFrameView;
+import com.openggf.audio.output.AudioPresentationSink;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Live-recording attachment over the single authoritative presentation
@@ -219,6 +230,140 @@ class AudioManagerLiveCaptureTest {
                 "a retry on the owner thread releases it");
         LiveCaptureAudioHandle reattached = audio.beginLiveCaptureAudio(1);
         reattached.close();
+    }
+
+    @Test
+    void invalidLiveRateIsValidatedOnlyAfterRealization() {
+        RuntimeException realizationFailure = new IllegalStateException("realization refused");
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationTuning presentationTuning() {
+                assertTrue(Thread.holdsLock(audio));
+                throw realizationFailure;
+            }
+        });
+        assertSame(realizationFailure, assertThrows(IllegalStateException.class,
+                () -> audio.beginLiveCaptureAudio(0)));
+        audio.setBackend(new FixedRateNullBackend(2));
+        assertThrows(IllegalArgumentException.class, () -> audio.beginLiveCaptureAudio(0));
+        audio.beginLiveCaptureAudio(1).close();
+    }
+
+    @Test
+    void closedMetadataDoesNotAcquireTheManagerMonitorAndClosedDrainWinsOverNull() throws Exception {
+        LiveCaptureAudioHandle handle = audio.beginLiveCaptureAudio(1);
+        assertThrows(NullPointerException.class, () -> handle.drainPresentationFrame(null));
+        handle.close();
+        CountDownLatch metadataRead = new CountDownLatch(1);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread reader = new Thread(() -> {
+            try {
+                assertEquals(2, handle.sampleRate());
+                assertEquals(1, handle.frameRate());
+                assertEquals(2, handle.maxStereoFramesPerPacket());
+            } catch (Throwable problem) {
+                failure.set(problem);
+            } finally {
+                metadataRead.countDown();
+            }
+        }, "capture-metadata-reader");
+        try {
+            synchronized (audio) {
+                reader.start();
+                assertTrue(metadataRead.await(5, TimeUnit.SECONDS),
+                        "metadata remains readable while another thread holds the manager monitor");
+            }
+        } finally {
+            reader.join(5_000);
+        }
+        assertFalse(reader.isAlive());
+        assertNull(failure.get());
+        assertThrows(IllegalStateException.class, () -> handle.drainPresentationFrame(null));
+    }
+
+    @Test
+    void producerRealizationKeepsTheCallingEntryPointsMonitorCoverage() {
+        AtomicReference<Boolean> locked = new AtomicReference<>();
+        audio.setBackend(new NullAudioBackend() {
+            @Override public AudioPresentationTuning presentationTuning() {
+                locked.set(Thread.holdsLock(audio));
+                return AudioPresentationTuning.DEFAULT;
+            }
+        });
+        audio.presentationFrameRate();
+        assertEquals(Boolean.TRUE, locked.get());
+        audio.resetState();
+        locked.set(null);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(Boolean.FALSE, locked.get(),
+                "producer realization outside the synchronized compatibility API stays unlocked");
+    }
+
+    @Test
+    void pendingRealizationFailureKeepsAdmissionAndExplicitCloseCancelsTheCarry() {
+        AtomicReference<RuntimeException> failure = new AtomicReference<>();
+        audio.setBackend(new NullAudioBackend() {
+            @Override public int outputSampleRate() { return 2; }
+            @Override public AudioPresentationTuning presentationTuning() {
+                RuntimeException problem = failure.getAndSet(null);
+                if (problem != null) throw problem;
+                return AudioPresentationTuning.DEFAULT;
+            }
+        });
+        LiveCaptureAudioHandle live = audio.beginLiveCaptureAudio(1);
+        assertEquals(2, live.drainPresentationFrame(new short[4]));
+        audio.resetState();
+        RuntimeException realizationFailure = new IllegalStateException("pending realization");
+        failure.set(realizationFailure);
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(0),
+                "duplicate admission wins over both realization and invalid live rate");
+        assertSame(realizationFailure, assertThrows(IllegalStateException.class,
+                audio::presentationFrameRate), "duplicate rejection did not consume realization");
+        assertEquals(2, live.totalStereoFrames(), "failed realization adds no carried total");
+        assertThrows(IllegalStateException.class, () -> live.drainPresentationFrame(new short[4]));
+
+        live.close();
+        LiveCaptureAudioHandle replacement = audio.beginLiveCaptureAudio(1);
+        assertEquals(2, replacement.drainPresentationFrame(new short[4]));
+        assertEquals(2, replacement.totalStereoFrames(), "the replacement starts a new recording");
+        assertThrows(IllegalStateException.class, () -> live.drainPresentationFrame(null));
+        replacement.close();
+    }
+
+    @Test
+    void failedRebuildThenDestroyKeepsThePendingRecordingForLaterRealization() {
+        RuntimeException teardownFailure = new IllegalStateException("rebuild sink teardown");
+        AudioPresentationSink sink = new AudioPresentationSink() {
+            @Override public int sampleRate() { return 2; }
+            @Override public void accept(AudioPresentationFrameView frame) { }
+            @Override public void onReverseBoundary() { }
+            @Override public void close() {
+                assertFalse(Thread.holdsLock(audio), "launch replacement has no method-wide manager lock");
+                throw teardownFailure;
+            }
+        };
+        audio.setBackend(new NullAudioBackend() {
+            @Override public int outputSampleRate() { return 2; }
+            @Override public AudioPresentationSink createPresentationSink(
+                    Consumer<Throwable> failure, Consumer<String> warning) { return sink; }
+        });
+        LiveCaptureAudioHandle live = audio.beginLiveCaptureAudio(1);
+        audio.beginCaptureMode(2, audio.presentationFrameRate());
+        assertEquals(2, live.drainPresentationFrame(new short[4]));
+
+        assertSame(teardownFailure, assertThrows(IllegalStateException.class,
+                () -> audio.setBackendForLaunch(new FixedRateNullBackend(2))));
+        assertThrows(IllegalArgumentException.class, () -> audio.beginCaptureMode(2, 0),
+                "accepted close retires offline admission even though the rebuild failed");
+        assertThrows(IllegalStateException.class, () -> live.drainPresentationFrame(new short[4]));
+        audio.destroy();
+        assertThrows(IllegalStateException.class, () -> audio.beginLiveCaptureAudio(1),
+                "destroy does not cancel an already-pending carry");
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(2, live.drainPresentationFrame(new short[4]));
+        assertEquals(4, live.totalStereoFrames(), "the old segment is counted once on successful rebind");
+        assertEquals(new AudioFrameClock.Snapshot(2, 1, 2, 0), live.clockSnapshot(),
+                "clock snapshots stay segment-local even when totals are cumulative");
+        live.close();
     }
 
     private static final class FixedRateNullBackend extends NullAudioBackend {

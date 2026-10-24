@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.driver.SmpsDriver;
 import org.junit.jupiter.api.Test;
@@ -49,7 +50,7 @@ class TestSmpsNoteListener {
     @Test void repeatedPitchAndDurationOnlyAreSeparateAttacksButRestIsNot() {
         byte[] bytes = {(byte) 0x85, 1, (byte) 0x85, 1, 1, (byte) 0x80, 1};
         SmpsSequencer seq = new SmpsSequencer(new Program(bytes), AudioTestFixtures.EMPTY_DAC,
-                new SmpsDriver(), new SmpsSequencerConfig.Builder().build());
+                new SmpsDriver(), GameServices.audio(), new SmpsSequencerConfig.Builder().build());
         seq.addTrack(new SmpsSequencer.Track(0, SmpsSequencer.TrackType.FM, 0));
         List<Integer> attacks = new ArrayList<>();
         seq.setNoteListener(new SmpsNoteListener() {
@@ -63,7 +64,7 @@ class TestSmpsNoteListener {
     @Test void holdExtendsOneAttackInsteadOfCreatingAnother() {
         byte[] bytes = {(byte) 0x85, 1, (byte) 0xE7, (byte) 0x87, 1, (byte) 0x80, 1};
         SmpsSequencer seq = new SmpsSequencer(new Program(bytes), AudioTestFixtures.EMPTY_DAC,
-                new SmpsDriver(), new SmpsSequencerConfig.Builder()
+                new SmpsDriver(), GameServices.audio(), new SmpsSequencerConfig.Builder()
                 .noteOnPrevent(SmpsSequencerConfig.NoteOnPrevent.HOLD).build());
         seq.addTrack(new SmpsSequencer.Track(0, SmpsSequencer.TrackType.FM, 0));
         List<Integer> attacks = new ArrayList<>();

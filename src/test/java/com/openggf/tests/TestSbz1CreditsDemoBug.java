@@ -92,12 +92,15 @@ public class TestSbz1CreditsDemoBug {
                             0x957, 0x5CC, 0x800, 0x308, 1));
         }
         var loop = new com.openggf.GameLoop();
-        var field = com.openggf.GameLoop.class.getDeclaredField("endingProvider");
+        var sessionField = com.openggf.GameLoop.class.getDeclaredField("endingSession");
+        sessionField.setAccessible(true);
+        var ending = sessionField.get(loop);
+        var field = ending.getClass().getDeclaredField("endingProvider");
         field.setAccessible(true);
-        field.set(loop, provider);
-        var load = com.openggf.GameLoop.class.getDeclaredMethod("loadEndingDemoZone");
+        field.set(ending, provider);
+        var load = ending.getClass().getDeclaredMethod("loadEndingDemoZone");
         load.setAccessible(true);
-        load.invoke(loop);
+        load.invoke(ending);
 
         var player = fixture.sprite();
         System.out.printf("DEMO %d PLAYER: anim=%02X mapping=%02X air=%s speed=%04X%n",
@@ -120,11 +123,11 @@ public class TestSbz1CreditsDemoBug {
         assertEquals(camera.getY(), camera.getYWithShake());
         int[] initialScroll = parallax.getHScroll().clone();
         short initialY = parallax.getVscrollFactorFG();
-        var update = com.openggf.GameLoop.class.getDeclaredMethod("updateEndingCreditsDemo");
+        var update = ending.getClass().getDeclaredMethod("updateEndingCreditsDemo");
         update.setAccessible(true);
         // Frozen PalFadeIn_Alt frames must retain the prepared viewport.
         for (int frame = 0; frame < 22; frame++) {
-            update.invoke(loop);
+            update.invoke(ending);
             assertEquals(1, player.getMappingFrame(), "PalFadeIn_Alt does not execute Sonic_Animate");
             assertEquals(initialAnimationTick, player.getAnimationTick());
             assertEquals(initialAnimationFrame, player.getAnimationFrameIndex());

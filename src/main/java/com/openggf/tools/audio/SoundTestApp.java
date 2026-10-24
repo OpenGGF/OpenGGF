@@ -18,6 +18,7 @@ import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
 import com.openggf.audio.session.OwnedSmpsAudioStream;
 import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.game.GameServices;
@@ -178,7 +179,7 @@ public final class SoundTestApp {
         // its producer owner executor, so the EDT never touches audio state.
         ScheduledExecutorService exec = Executors.newSingleThreadScheduledExecutor();
         InteractiveState state = new InteractiveState(startSongId, loader, dacData, host,
-                catalog, seqConfig, validSfx, exec);
+                catalog, seqConfig, validSfx, exec, GameServices.audio());
         SwingUtilities.invokeAndWait(() -> state.show(options.nullAudio, options.romPath));
         exec.scheduleAtFixedRate(host::presentFrame, 0, 16, TimeUnit.MILLISECONDS);
         state.awaitClose();
@@ -306,6 +307,7 @@ public final class SoundTestApp {
             AbstractSmpsData data,
             DacData dacSamples,
             SmpsSequencerConfig seqConfig,
+            MusicRestoreSink musicRestoreSink,
             File outputFile,
             boolean isSfx,
             double outputRate,
@@ -319,7 +321,7 @@ public final class SoundTestApp {
             driver.setRegion(SmpsSequencer.Region.NTSC);
 
             SmpsSequencer seq = new SmpsSequencer(
-                    data, dacSamples, driver, seqConfig);
+                    data, dacSamples, driver, musicRestoreSink, seqConfig);
             seq.setSampleRate(outputRate);
             seq.setSfxMode(isSfx);
             driver.addSequencer(seq, isSfx);
@@ -398,6 +400,7 @@ public final class SoundTestApp {
         private final StandaloneAudioPresentationHost host;
         private final SoundTestCatalog catalog;
         private final SmpsSequencerConfig seqConfig;
+        private final MusicRestoreSink musicRestoreSink;
         private int songId;
         private int sfxId;
         private boolean sfxMode = false;
@@ -419,7 +422,7 @@ public final class SoundTestApp {
         InteractiveState(int songId, SmpsLoader loader, DacData dacData,
                 StandaloneAudioPresentationHost host,
                 SoundTestCatalog catalog, SmpsSequencerConfig seqConfig, TreeSet<Integer> validSfx,
-                ScheduledExecutorService audioExec) {
+                ScheduledExecutorService audioExec, MusicRestoreSink musicRestoreSink) {
             this.audioExec = audioExec;
             this.songId = songId;
             this.loader = loader;
@@ -427,6 +430,9 @@ public final class SoundTestApp {
             this.host = host;
             this.catalog = catalog;
             this.seqConfig = seqConfig;
+            // Capture the configured root at window composition, including for
+            // later WAV exports after a root change. The playback host is private.
+            this.musicRestoreSink = java.util.Objects.requireNonNull(musicRestoreSink, "musicRestoreSink");
             this.sfxNames = catalog.getSfxNames();
             this.validSfx = validSfx;
             if (!validSfx.isEmpty()) {
@@ -790,7 +796,7 @@ public final class SoundTestApp {
             double outputRate = getOutputSampleRate();
             int sampleRate = (int) Math.round(outputRate);
             return SoundTestApp.renderToWav(
-                    data, dacSamples, seqConfig, outputFile, isSfx,
+                    data, dacSamples, seqConfig, musicRestoreSink, outputFile, isSfx,
                     outputRate,
                     isSfx ? sampleRate * 10 : sampleRate * 60);
         }

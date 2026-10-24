@@ -195,7 +195,7 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
         assertEquals(1, count(order, "reset"),
                 "SPECIAL_STAGE_KEY should call the special-stage debug handler exactly once");
         assertEquals(GameMode.SPECIAL_STAGE_RESULTS, loop.getCurrentGameMode());
-        assertEquals(1, (int) getField(loop, "resultsFrameCounter"),
+        assertEquals(1, (int) SpecialStageLifecycleTestAccess.read(loop, "resultsFrameCounter"),
                 "the global key branch must not skip the shared results-mode step tail");
         assertNull(context.getRewindController());
     }
@@ -288,7 +288,7 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
 
     private void activateSpecialStage(RecordingProvider provider) {
         context.registerSpecialStageAdapter(provider);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
     }
 

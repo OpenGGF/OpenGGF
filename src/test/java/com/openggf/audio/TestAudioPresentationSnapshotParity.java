@@ -444,7 +444,7 @@ class TestAudioPresentationSnapshotParity {
         // still prove the source-construction backend is untouched.
         audio.setBackend(new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.createStandalone(),
-                PerformanceProfiler.getInstance()));
+                PerformanceProfiler.getInstance(), audio));
 
         audio.playMusic(0x80);
         audio.setRewindHistoryArmed(true);
@@ -580,7 +580,7 @@ class TestAudioPresentationSnapshotParity {
                 new HeadlessSmpsAudioBackend(
                         SonicConfigurationService.createStandalone(),
                         PerformanceProfiler.getInstance(),
-                        44_101);
+                        44_101, audio);
         audio.setBackend(realBackend);
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend);
         audio.presentationCoordFlagHandlersForTesting().state()

@@ -1825,7 +1825,7 @@ class TestTraceSessionLauncherRunBranch {
         new Engine(EngineServices.current());
         GameLoop loop = Engine.currentGameLoop();
         loop.setGameMode(GameMode.SPECIAL_STAGE);
-        setObjectField(loop, "activeSpecialStageProvider",
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider",
                 GameServices.module().getSpecialStageProvider());
 
         TraceRunManifest run = TraceRunManifest.load(

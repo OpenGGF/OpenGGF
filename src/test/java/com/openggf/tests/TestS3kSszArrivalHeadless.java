@@ -159,9 +159,7 @@ class TestS3kSszArrivalHeadless {
         loop.setGameplayMode(fixture.gameplayMode());
         // The fixture already initialized the omitted title's art lease. Substitute only
         // presentation, retaining the real GameLoop entry and arrival objects.
-        var providerField = com.openggf.GameLoop.class.getDeclaredField("titleCardProvider");
-        providerField.setAccessible(true);
-        providerField.set(loop, org.mockito.Mockito.mock(com.openggf.game.TitleCardProvider.class));
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, org.mockito.Mockito.mock(com.openggf.game.TitleCardProvider.class));
         loop.enterTitleCard(Sonic3kZoneIds.ZONE_SSZ, 0);
 
         assertEquals(com.openggf.game.GameMode.TITLE_CARD, loop.getCurrentGameMode());

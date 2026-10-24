@@ -106,13 +106,10 @@ import java.util.logging.Logger;
  * and call {@link #step()} to advance one frame.
  */
 public class GameLoop {
-    static final int STATUS_FIRE_SHIELD_BIT = 4;
-    static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
-    static final int STATUS_BUBBLE_SHIELD_BIT = 6;
-    static final int SAVED_SHIELD_MASK =
-            (1 << STATUS_FIRE_SHIELD_BIT)
-                    | (1 << STATUS_LIGHTNING_SHIELD_BIT)
-                    | (1 << STATUS_BUBBLE_SHIELD_BIT);
+    static final int STATUS_FIRE_SHIELD_BIT = GameLoopBonusStageSession.STATUS_FIRE_SHIELD_BIT;
+    static final int STATUS_LIGHTNING_SHIELD_BIT = GameLoopBonusStageSession.STATUS_LIGHTNING_SHIELD_BIT;
+    static final int STATUS_BUBBLE_SHIELD_BIT = GameLoopBonusStageSession.STATUS_BUBBLE_SHIELD_BIT;
+    static final int SAVED_SHIELD_MASK = GameLoopBonusStageSession.SAVED_SHIELD_MASK;
     private static final int USER_RECORDING_FAST_FORWARD_EXTRA_STEPS_PER_FRAME = 8;
 
     private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName());
@@ -138,17 +135,13 @@ public class GameLoop {
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
-    private final GameLoopDebugShortcuts debugShortcuts = new GameLoopDebugShortcuts(
-            this::getCurrentGameMode, this::getActiveSpecialStageProvider,
-            this::enterResultsScreenWithDebugRings);
+    private final GameLoopDebugShortcuts debugShortcuts;
     private final GameLoopContinueCoordinator continueScreen = new GameLoopContinueCoordinator(this);
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
     final ModSceneActBridge modSceneActBridge;
     final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
-    private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
-            new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
     final GameLoopSuspension suspension = new GameLoopSuspension(this);
@@ -157,7 +150,6 @@ public class GameLoop {
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
     private GameplayModeContext gameplayMode;
-    private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
     /** Comparison-only pacing for special-stage object passes observed per V-blank. */
     interface SpecialStageObservationPacing {
@@ -203,14 +195,9 @@ public class GameLoop {
         }
     }
 
-    private SpecialStageObservationPacing specialStageObservationPacing;
-
     void setSpecialStageObservationPacing(SpecialStageObservationPacing pacing) {
-        this.specialStageObservationPacing = pacing;
+        specialStageLifecycle.setObservationPacing(pacing);
     }
-
-    // Title card provider - lazily initialized when GameModule is available
-    private TitleCardProvider titleCardProvider;
 
     private InputHandler inputHandler;
     private final GameLoopEditorController editorMode = new GameLoopEditorController();
@@ -233,55 +220,16 @@ public class GameLoop {
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
 
-    // Special stage results screen
-    private ResultsScreen resultsScreen;
-    int ssRingsCollected;
-    boolean ssEmeraldCollected;
-    int ssStageIndex;
-    private EmeraldRewardKind activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
-    private int resultsFrameCounter = 0;
-
-    // Flag to track when returning from special stage (for title card exit
-    // handling)
-    private boolean returningFromSpecialStage = false;
-
-    // Flag to freeze level updates during special stage entry transition
-    private boolean specialStageTransitionPending = false;
     private boolean specialStageRewindBoundaryThisFrame;
-    private final SpecialStageEntryPresentationController specialStageEntryPresentation =
-            new SpecialStageEntryPresentationController();
 
-    // Bonus stage entry/exit state
-    private boolean bonusStageTransitionPending;
-    /** The results-exit fade completed this iteration; the exit body waits one more. */
-    private boolean resultsExitFadeCompleted;
-    private boolean resultsExitToWhite = true;
-    /** The results-exit body runs at the start of this iteration's mode update. */
-    private boolean resultsExitReady;
-    /** Remaining game-owned pre-level fade frames; -1 while no exit is in flight. */
-    private int resultsExitPreLevelFadeFramesRemaining = -1;
-    private BonusStageProvider activeBonusStageProvider;
-    // Star-post activation high-water captured at bonus entry (ROM: the star post's
-    // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
-    // exit so the return star post stays used even though Last_star_post_hit was
-    // zeroed (sonic3k.asm:61964). -1 when no bonus entry is in flight.
-    private int pendingBonusReturnStarPostMark = -1;
-
-    // Flag to freeze level updates during the final-boss fade into ending mode.
-    private boolean endingTransitionPending;
-
-    private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
-    private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
+    private final GameLoopTitleCardLifecycle titleCardLifecycle;
     private final LevelIterationAdmissionController levelIterationAdmission;
 
-    // Deferred bonus stage setup — applied when title card exits with BONUS_STAGE destination
-    private BonusStageProvider deferredBonusProvider;
-    private BonusStageType deferredBonusType;
-    private BonusStageState deferredBonusState;
-    private ShieldType pendingBonusStageShieldRestore;
+    private final GameLoopSpecialStageLifecycle specialStageLifecycle;
 
-    // Game-agnostic ending/credits provider (wraps S1 CreditsManager, S2 credits, etc.)
-    private EndingProvider endingProvider;
+    private final GameLoopBonusStageSession bonusSession;
+
+    private final GameLoopEndingSession endingSession;
 
     // Listener for game mode changes (used by Engine to update projection)
     GameModeChangeListener gameModeChangeListener;
@@ -341,11 +289,18 @@ public class GameLoop {
         this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
+        this.specialStageLifecycle = new GameLoopSpecialStageLifecycle(new SpecialStageHost(), audioManager);
+        this.debugShortcuts = new GameLoopDebugShortcuts(
+                this::getCurrentGameMode, this::getActiveSpecialStageProvider,
+                specialStageLifecycle::enterResultsScreenWithDebugRings);
+        this.bonusSession = new GameLoopBonusStageSession(new BonusHost(), audioManager);
+        this.endingSession = new GameLoopEndingSession(new EndingHost(), audioManager);
+        this.titleCardLifecycle = new GameLoopTitleCardLifecycle(new TitleCardHost());
         this.masterTitleExitCoordinator = new MasterTitleExitCoordinator(
                 () -> masterTitleLaunchCoordinator,
                 () -> currentGameMode == GameMode.MASTER_TITLE_SCREEN, this::hasReadyGameplayRuntime,
                 () -> changeGameModeForBoundary(GameMode.LEVEL), () -> resolveFadeManager().startFadeFromBlack(null),
-                () -> requestSessionSave(SaveReason.PROGRESSION_SAVE), pending -> endingTransitionPending = pending,
+                () -> requestSessionSave(SaveReason.PROGRESSION_SAVE), endingSession::setTransitionPending,
                 audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(), suspension::leave, suspension::modOwnsEscapeTap);
@@ -436,7 +391,7 @@ public class GameLoop {
 
     public void resetModuleScopedProviders() {
         continueScreen.reset();
-        titleCardProvider = null;
+        titleCardLifecycle.clearProviderCache();
     }
 
     public void setInputHandler(InputHandler inputHandler) {
@@ -609,10 +564,7 @@ public class GameLoop {
      * @return the title card provider
      */
     private TitleCardProvider getTitleCardProviderLazy() {
-        if (titleCardProvider == null) {
-            titleCardProvider = GameServices.module().getTitleCardProvider();
-        }
-        return titleCardProvider;
+        return titleCardLifecycle.provider();
     }
 
     public InputHandler getInputHandler() {
@@ -660,7 +612,7 @@ public class GameLoop {
         GameMode oldMode = currentGameMode;
         if (oldMode != nextMode) {
             if (oldMode == GameMode.SPECIAL_STAGE) {
-                specialStageEntryPresentation.clear();
+                specialStageLifecycle.clearEntryPresentation();
             }
             currentGameMode = nextMode;
             reportRewindModeBoundary(oldMode, nextMode);
@@ -671,7 +623,7 @@ public class GameLoop {
     GameMode changeGameModeWithoutRewindBoundary(GameMode nextMode) {
         GameMode oldMode = currentGameMode;
         if (oldMode == GameMode.SPECIAL_STAGE && oldMode != nextMode) {
-            specialStageEntryPresentation.clear();
+            specialStageLifecycle.clearEntryPresentation();
         }
         currentGameMode = nextMode;
         return oldMode;
@@ -716,9 +668,7 @@ public class GameLoop {
     }
 
     GameMode enterBonusTitleCardAfterLevelLoadBoundary() {
-        markBonusEntryNonRewindableBoundary();
-        postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
-        return changeGameModeWithoutRewindBoundary(GameMode.TITLE_CARD);
+        return titleCardLifecycle.enterBonusTitleCardAfterLevelLoadBoundary();
     }
 
     /**
@@ -838,7 +788,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardProvider);
+        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardLifecycle.cachedProvider());
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),
                 inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
@@ -854,7 +804,7 @@ public class GameLoop {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
                 }, specialStagePacingInput, gameplayAudioRateOwned);
-        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardProvider, inputHandler, engineServices,
+        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardLifecycle.cachedProvider(), inputHandler, engineServices,
                 liveRewindManager::isRewindingOrReleasing, this::canUseGameplayPacing,
                 () -> resolveFadeManager().isActive());
     }
@@ -874,7 +824,7 @@ public class GameLoop {
     private boolean canUseGameplayPacingOutsideRewind() {
         return GameLoopPacingActivity.allows(currentGameMode,
                 currentGameMode == GameMode.SPECIAL_STAGE ? getActiveSpecialStageProvider() : null,
-                activeBonusStageProvider, titleCardProvider, camera, levelManager, specialStageRewindBoundaryThisFrame)
+                bonusSession.provider(), titleCardLifecycle.cachedProvider(), camera, levelManager, specialStageRewindBoundaryThisFrame)
                 && !isPaused() && !isNonRewindableTransitionPending()
                 && !ExternalFrameOrInputOwnership.active(engineServices)
                 && (inputHandler == null || !inputHandler.hasLogicalOverride())
@@ -911,9 +861,9 @@ public class GameLoop {
         // Called unconditionally near the top of stepInternal(), before any
         // currentGameMode-specific dispatch -- levelManager can be null in
         // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
-        return modSceneActBridge.isTransitioning() || specialStageTransitionPending
-                || bonusStageTransitionPending
-                || endingTransitionPending
+        return modSceneActBridge.isTransitioning() || specialStageLifecycle.transitionPending()
+                || bonusSession.isTransitionPending()
+                || endingSession.isTransitionPending()
                 || (levelManager != null && levelManager.isLevelInactiveForTransition());
     }
 
@@ -977,7 +927,7 @@ public class GameLoop {
     }
 
     /**
-     * Set when {@link #exitTitleCard()} releases into {@link GameMode#LEVEL}
+     * Set when {@link GameLoopTitleCardLifecycle#exitTitleCard()} releases into {@link GameMode#LEVEL}
      * during the current iteration, and cleared at the top of every iteration.
      * Read only by {@link #runGapRowContinuesSourceLevelMainLoop()}.
      */
@@ -1066,8 +1016,8 @@ public class GameLoop {
      */
     private boolean isBonusStageRewindable() {
         return currentGameMode == GameMode.BONUS_STAGE
-                && activeBonusStageProvider != null
-                && activeBonusStageProvider.supportsRewind();
+                && bonusSession.provider() != null
+                && bonusSession.provider().supportsRewind();
     }
 
     private boolean isSpecialStageRewindable() {
@@ -1077,8 +1027,7 @@ public class GameLoop {
     }
 
     private boolean isActiveSpecialStageProviderRewindable() {
-        return activeSpecialStageProvider != null
-                && activeSpecialStageProvider.supportsRewind();
+        return specialStageLifecycle.retainedProviderRewindable();
     }
 
     private void severSpecialStageRewindForLiveOnlyShortcut() {
@@ -1106,7 +1055,6 @@ public class GameLoop {
             fadeOutTo(open);
         }
     }
-
 
     private void requireInputHandler() {
         if (inputHandler == null) {
@@ -1371,13 +1319,13 @@ public class GameLoop {
                 ? resolveBonusStageDebugShortcut(inputHandler)
                 : BonusStageType.NONE;
         if (debugBonusType != BonusStageType.NONE) {
-            handleBonusStageDebugKey(debugBonusType);
+            bonusSession.handleBonusStageDebugKey(debugBonusType);
         }
 
         if (currentGameMode == GameMode.SPECIAL_STAGE) {
-            updateSpecialStageMode();
+            specialStageLifecycle.updateSpecialStageMode();
         } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            updateSpecialStageResultsMode();
+            specialStageLifecycle.updateSpecialStageResultsMode();
         } else if (currentGameMode == GameMode.TITLE_CARD) {
             throw new IllegalStateException("title-card admission must own the iteration");
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
@@ -1408,8 +1356,7 @@ public class GameLoop {
                 || currentGameMode == GameMode.CREDITS_DEMO
                 || currentGameMode == GameMode.TRY_AGAIN_END
                 || currentGameMode == GameMode.ENDING_CUTSCENE) {
-            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
-                    GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
+            endingSession.runFrame(activePlcLifecycleFrame);
             inputHandler.update();
             profiler.endSection("input");
             return;
@@ -1484,7 +1431,7 @@ public class GameLoop {
         syncPlaybackInputBridge();
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
-                () -> titleReleaseResult, levelManager, gameplayMode,
+                titleCardLifecycle::releaseResult, levelManager, gameplayMode,
                 !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
@@ -1525,103 +1472,10 @@ public class GameLoop {
         return true;
     }
 
-    /**
-     * SPECIAL_STAGE per-frame update: debug shortcuts, sprite-debug navigation,
-     * the special-stage input/update tick, and the completion → results-screen
-     * handoff. Falls through (no early return) to the shared post-update tail,
-     * matching the original dispatcher.
-     */
-    private void updateSpecialStageMode() {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        GameLoopSpecialStageLifecycle.update(ssProvider, configService,
-                this::isUnmodifiedDebugKeyPressed,
-                debugShortcuts::debugCompleteSpecialStageWithEmerald, debugShortcuts::debugFailSpecialStage,
-                inputHandler, gameplayMode, activePlcLifecycleFrame,
-                specialStageObservationPacing, this::updateSpecialStageInput,
-                specialStageEntryPresentation, fadeManager,
-                () -> revealSpecialStage(ssProvider), this::isSpecialStageRewindable,
-                liveRewindManager, currentGameMode, this::enterResultsScreen);
-    }
-
-
-    /**
-     * SPECIAL_STAGE_RESULTS per-frame update: advances the results screen and
-     * exits when complete. Falls through to the shared post-update tail.
-     */
+    /** Commits the trace-owned terminal boundary through the production results request. */
     public boolean commitDeferredTraceRunModeBoundaryIfReady() {
         return TraceSessionLauncher.commitDeferredRunModeBoundary(
-                currentGameMode, getActiveSpecialStageProvider(), this::enterResultsScreen);
-    }
-
-    private void updateSpecialStageResultsMode() {
-        if (resultsScreen instanceof com.openggf.game.internal.ResultsResourcePreparation preparation
-                && preparation.isPreparingResults()) {
-            // The resource loop has VBlank and queue tails, but no results sprite yet.
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    PlcLifecyclePhase.SPECIAL_STAGE_RESULTS, () -> { });
-            preparation.finishResultsPreparationIteration();
-            return;
-        }
-        // ROM SS_NormalExit is a full loop iteration: VintID_TitleCards, a
-        // V-int that runs ProcessPLC_9Tiles (docs/s1disasm/sonic.asm:946),
-        // ExecuteObjects, BuildSprites, then RunPLC at the tail
-        // (docs/s1disasm/sonic.asm:3402-3413). Claiming the lifecycle frame
-        // alone never reached the hardware timing boundaries, so the loop-tail
-        // arm was never submitted as hardware work.
-        LevelFrameStep.executeHardwareTimedObjectScan(
-                LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                PlcLifecyclePhase.SPECIAL_STAGE_RESULTS,
-                this::runSpecialStageResultsIteration);
-    }
-
-    /** One ROM SS_NormalExit iteration (docs/s1disasm/sonic.asm:3402-3413). */
-    private void runSpecialStageResultsIteration() {
-        if (resultsExitReady) {
-            // ROM: the GM loop only falls through to the next mode's dispatch
-            // on the frame after the whiteout's final WaitForVBla, so the
-            // returning level's load (and its ClearPLC/AddPLC submissions)
-            // belongs to the first frame past the results screen's last
-            // sampled row, never to that row itself.
-            if (resultsExitPreLevelFadeFramesRemaining < 0) {
-                // Level begins before its counted fade: Sonic 2's loc_3EC4
-                // PlaySound(F9) precedes ClearPLC/Pal_FadeToBlack.
-                levelManager.beginLevelEntry();
-                resultsExitPreLevelFadeFramesRemaining = GameServices.module()
-                        .getLevelInitProfile().preLevelFadeOutFrames();
-            }
-            if (resultsExitPreLevelFadeFramesRemaining > 0) {
-                // The next mode's own entry fades out the previous screen
-                // before it queues the returning level's PLCs (S1: GM_Level's
-                // ClearPLC + PaletteFadeOut, sonic.asm:2710-2716). Each fade
-                // frame is a WaitForVBlank row whose RunPLC only ever sees the
-                // cleared queue, so hold the exit body — and with it the
-                // reload's PLC submissions — for the fade's duration.
-                resultsExitPreLevelFadeFramesRemaining--;
-                return;
-            }
-            resultsExitPreLevelFadeFramesRemaining = -1;
-            resultsExitReady = false;
-            doExitResultsScreen();
-            return;
-        }
-        if (resultsExitFadeCompleted) {
-            // The exit fade's completion fired during this iteration's fade
-            // update; hold the (already white) screen for the rest of the
-            // frame — the ROM CPU is still inside PaletteWhiteOut's final
-            // wait — and run the exit body on the next iteration.
-            resultsExitFadeCompleted = false;
-            resultsExitReady = true;
-        } else {
-            // Update results screen
-            resultsFrameCounter++;
-            if (resultsScreen != null) {
-                resultsScreen.update(resultsFrameCounter, null);
-                if (resultsScreen.isComplete()) {
-                    exitResultsScreen();
-                }
-            }
-        }
+                currentGameMode, getActiveSpecialStageProvider(), specialStageLifecycle::enterResultsScreen);
     }
 
     /**
@@ -1631,11 +1485,10 @@ public class GameLoop {
      *         {@code false} if the card is still in its locked phase
      */
     private boolean updateTitleCardMode(boolean doFrameStep) {
-        return GameLoopTitleCardLifecycle.update(
+        return titleCardLifecycle.update(
                 doFrameStep, getTitleCardProviderLazy(), activePlcLifecycleFrame,
                 gameplayMode, levelManager, spriteManager, camera, inputHandler,
-                this::runInputNeutralTitleCardPlayerPrelude, postTitleCardDestination,
-                this::exitTitleCard, result -> titleReleaseResult = result,
+                titleCardLifecycle.destination(),
                 this::beginGameplayAudioFrameForTick,
                 () -> advanceGameplayAudioFrameForTick(doFrameStep),
                 phase -> GameLoopPlcLifecycle.prepare(activePlcLifecycleFrame, phase),
@@ -1791,7 +1644,7 @@ public class GameLoop {
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
-                    startEndingFade();
+                    endingSession.startEndingFade();
                 }
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
@@ -1930,13 +1783,13 @@ public class GameLoop {
             SpecialStageEntryRequest specialStageRequest =
                     levelManager.consumeSpecialStageEntryRequest();
             if (specialStageRequest != null) {
-                enterSpecialStage(specialStageRequest);
+                specialStageLifecycle.enterSpecialStage(specialStageRequest);
             }
 
             // Check if a bonus star requested a bonus stage
             BonusStageType bonusRequest = levelManager.consumeBonusStageRequest();
             if (bonusRequest != null) {
-                enterBonusStage(bonusRequest);
+                bonusSession.enterBonusStage(bonusRequest);
             }
 
             // Drive the trace session completion-hold + auto-fade state.
@@ -2116,26 +1969,6 @@ public class GameLoop {
         return run != null ? run.getRunPolicy() : GameplayRunPolicy.stock();
     }
 
-    private void runInputNeutralTitleCardPlayerPrelude() {
-        java.util.List<AbstractPlayableSprite> playables = spriteManager.getAllSprites().stream()
-                .filter(AbstractPlayableSprite.class::isInstance)
-                .map(AbstractPlayableSprite.class::cast)
-                .toList();
-        int[] forcedInputMasks = new int[playables.size()];
-        for (int i = 0; i < playables.size(); i++) {
-            AbstractPlayableSprite playable = playables.get(i);
-            forcedInputMasks[i] = playable.getForcedInputMask();
-            playable.clearForcedInputMask();
-        }
-        try {
-            spriteManager.update(inputHandler);
-        } finally {
-            for (int i = 0; i < playables.size(); i++) {
-                playables.get(i).setForcedInputMask(forcedInputMasks[i]);
-            }
-        }
-    }
-
     /**
      * BONUS_STAGE per-frame update: overlay tick, provider-declared bootstrap, the
      * shared level frame step (with the bonus-stage high-priority enforcement
@@ -2148,11 +1981,11 @@ public class GameLoop {
         com.openggf.game.internal.BonusStageFrameLifecycle.updateOverlay(getTitleCardProviderLazy());
 
         com.openggf.game.internal.BonusStageFrameLifecycle.ensureBootstrapPresent(
-                activeBonusStageProvider, levelManager.getObjectManager());
+                bonusSession.provider(), levelManager.getObjectManager());
 
         // Bonus stage runs the same level frame steps as LEVEL mode
-        BonusStageProvider executedProvider = activeBonusStageProvider;
-        boolean freezeForBonusExit = bonusStageTransitionPending;
+        BonusStageProvider executedProvider = bonusSession.provider();
+        boolean freezeForBonusExit = bonusSession.isTransitionPending();
         if (!freezeForBonusExit) {
             GameplayModeContext executedOwner = gameplayMode;
             GameMode executedMode = currentGameMode;
@@ -2178,7 +2011,7 @@ public class GameLoop {
 
                 // Restore priority only for stages using the ordinary bonus-player
                 // policy. This must follow physics because hurt-landing can clear it.
-                forcePlayerHighPriorityInBonusStage();
+                bonusSession.forcePlayerHighPriorityInBonusStage();
 
                 // Notify coordinator of frame tick
                 com.openggf.game.internal.BonusStageFrameLifecycle.updateProvider(executedProvider);
@@ -2194,8 +2027,8 @@ public class GameLoop {
                 }
 
                 // Check bonus stage completion
-                if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
-                    exitBonusStage();
+                if (bonusSession.provider() != null && bonusSession.provider().isStageComplete()) {
+                    bonusSession.exitBonusStage();
                 }
             } else if (levelManager.getObjectManager() != null) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
@@ -2329,9 +2162,9 @@ public class GameLoop {
         if (currentGameMode == GameMode.LEVEL) {
             enterSpecialStage();
         } else if (currentGameMode == GameMode.SPECIAL_STAGE) {
-            enterResultsScreen(false);
+            specialStageLifecycle.enterResultsScreen(false);
         } else if (currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            exitResultsScreen();
+            specialStageLifecycle.exitResultsScreen();
         }
     }
 
@@ -2407,55 +2240,6 @@ public class GameLoop {
     }
 
     /**
-     * Handles the debug bonus stage shortcut.
-     * Shift+B enters Gumball, Ctrl+B enters Glowing Spheres, Alt+B enters Slots.
-     * When in bonus stage mode, triggers immediate exit back to level.
-     */
-    private void handleBonusStageDebugKey(BonusStageType debugType) {
-        if (currentGameMode == GameMode.LEVEL) {
-            enterBonusStage(debugType);
-        } else if (currentGameMode == GameMode.BONUS_STAGE) {
-            // Force exit
-            if (activeBonusStageProvider != null) {
-                activeBonusStageProvider.requestExit();
-            }
-        }
-    }
-
-    /**
-     * Enters results screen with a specific ring count (for debug).
-     * Uses fade-to-white transition like the normal path.
-     */
-    private void enterResultsScreenWithDebugRings(boolean emeraldCollected, int ringsCollected) {
-        if (currentGameMode != GameMode.SPECIAL_STAGE) {
-            return;
-        }
-
-        // Don't start another fade if one is already in progress
-        FadeManager fadeManager = this.fadeManager;
-        if (fadeManager.isActive()) {
-            return;
-        }
-
-        // Store special stage results for the results screen
-        ssRingsCollected = ringsCollected;
-        ssEmeraldCollected = emeraldCollected;
-        ssStageIndex = getActiveSpecialStageProvider().getCurrentStage();
-
-        // Publish only for providers that retain legacy GameLoop ownership.
-        if (emeraldCollected) {
-            SpecialStageTransitionSupport.publishRewardIfLoopOwned(
-                    getActiveSpecialStageProvider(), gameState,
-                    ssStageIndex, activeSpecialStageRewardKind);
-        }
-
-        // Start fade-to-white, then show results when complete
-        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, this::doEnterResultsScreen);
-
-        LOGGER.info("DEBUG: Starting fade-to-white to exit Special Stage");
-    }
-
-    /**
      * Enters the special stage from level mode.
      * Uses GameStateManager to track which stage to enter (cycles 0-6).
      * <p>
@@ -2475,78 +2259,7 @@ public class GameLoop {
      * twice.
      */
     public void enterSpecialStage() {
-        enterSpecialStage(SpecialStageEntryRequest.ordinary());
-    }
-
-    private void enterSpecialStage(SpecialStageEntryRequest request) {
-        if (currentGameMode != GameMode.LEVEL) {
-            return;
-        }
-
-        if (!runPolicy().specialStageEntry()) {
-            return;
-        }
-
-        FadeManager fadeManager = this.fadeManager;
-        boolean screenAlreadyFaded = false;
-        boolean fadeFromBlack = false;
-        boolean transitionSfxAlreadyPlayed = false;
-
-        if (fadeManager.isActive()) {
-            FadeManager.FadeState fadeState = fadeManager.getState();
-            if (fadeState == FadeManager.FadeState.HOLD_WHITE) {
-                // Screen is held white (S1 big ring -> results -> fade to white path).
-                // Take over and enter special stage directly with fade-from-white.
-                screenAlreadyFaded = true;
-                fadeFromBlack = false;
-                transitionSfxAlreadyPlayed = true;
-            } else if (fadeState == FadeManager.FadeState.HOLD_BLACK) {
-                // Screen is held black. Enter special stage with fade-from-black.
-                screenAlreadyFaded = true;
-                fadeFromBlack = true;
-            } else {
-                // Different fade in progress, can't start
-                return;
-            }
-        }
-
-        SpecialStageProvider ssProvider = getCurrentModuleSpecialStageProvider();
-        if (!ssProvider.hasSpecialStages()) {
-            LOGGER.fine("Current game module has no special stages; ignoring entry request");
-            return;
-        }
-
-        // Clear power-ups before entering special stage
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            playable.clearPowerUps();
-        }
-
-        if (shouldPlaySpecialStageEntrySfx(transitionSfxAlreadyPlayed)) {
-            playSpecialStageTransitionSfx(ssProvider);
-        }
-
-        if (ssProvider.fadesMusicOnEntry()) {
-            // S2 SpecialStage queues MusID_FadeOut between its entry SFX and
-            // Pal_FadeToWhite (s2.asm:6542-6546). The provider owns whether
-            // this shared entry path submits that command.
-            audioManager.fadeOutMusic();
-        }
-
-        // Determine which stage to enter
-        final int stageIndex = SpecialStageTransitionSupport.resolveStageIndex(
-                request, ssProvider, gameState);
-        activeSpecialStageRewardKind = request.rewardKind();
-
-        // The provider owns the entry white-out; preserve the level's last
-        // frame until its reveal boundary rather than delaying the mode change.
-        if (screenAlreadyFaded) {
-            fadeManager.cancel();
-        }
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack);
-        LOGGER.info("Entered Special Stage " + (stageIndex + 1)
-                + " revealing from " + (fadeFromBlack ? "black" : "white"));
+        specialStageLifecycle.enterSpecialStage(SpecialStageEntryRequest.ordinary());
     }
 
     /**
@@ -2558,9 +2271,9 @@ public class GameLoop {
      */
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
-        SpecialStageStartupPolicy startupPolicy = defaultSpecialStageStartupPolicy();
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
-                activeSpecialStageRewardKind);
+        SpecialStageStartupPolicy startupPolicy = specialStageLifecycle.defaultSpecialStageStartupPolicy();
+        specialStageLifecycle.doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
+                specialStageLifecycle.rewardKind());
         if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
             // Startup policy and external scheduling admission are independent
             // contracts. Retain the legacy provider notification for callers
@@ -2571,492 +2284,31 @@ public class GameLoop {
         }
     }
 
-    /**
-     * FAST skips the ROM's masked-interrupt entry load, which is right for
-     * ordinary interactive play where nothing supplies those frames. When a
-     * {@link PlaybackDebugManager} BK2 session is actively driving playback
-     * -- the dev movie-playback hotkeys, or a headless multi-stage trace-run
-     * chain drive (see {@code AbstractRunChainTest}) -- the recorded lag rows
-     * are admitted by the timing port, so the provider must add nothing or
-     * recorded per-frame input would skew against the stage's own ticks. {@code TraceSessionLauncher}'s own dedicated special-stage trace
-     * session already calls {@code TRACE_ACCURATE} directly for the same
-     * reason (it owns its transition trigger); this generalizes the same
-     * ROM-state predicate (a BK2 session is playing) to the organic
-     * giant-ring/checkpoint-star entry path used by ordinary gameplay AND by
-     * any other BK2-driven session that reaches this transition.
-     */
-    private SpecialStageStartupPolicy defaultSpecialStageStartupPolicy() {
-        return LevelIterationAdmissionController.specialStageStartupPolicy(
-                playbackDebugManager.isSessionPlaying());
-    }
-
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                              boolean fadeFromBlack, SpecialStageStartupPolicy startupPolicy) {
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
+        specialStageLifecycle.doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
                 EmeraldRewardKind.CHAOS_EMERALD);
     }
 
-    private void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
-                                     boolean fadeFromBlack,
-                                     SpecialStageStartupPolicy startupPolicy,
-                                     EmeraldRewardKind rewardKind) {
-        // Clear the transition freeze flag (now we're in special stage mode)
-        specialStageTransitionPending = false;
-        activeSpecialStageRewardKind = rewardKind;
-
-        try {
-            ssProvider.reset();
-            if (activeSpecialStageRewardKind == EmeraldRewardKind.CHAOS_EMERALD) {
-                // Preserve the established S1/S2 and ordinary S3K startup seam.
-                ssProvider.initializeStage(stageIndex, startupPolicy);
-            } else {
-                ssProvider.initializeStage(stageIndex, startupPolicy, activeSpecialStageRewardKind);
-            }
-            activeSpecialStageProvider = ssProvider;
-            GameplayModeContext context = resolveGameplayModeContext();
-            if (context != null) {
-                context.registerSpecialStageAdapter(ssProvider);
-            }
-
-            // The level camera survives the ROM's entry fade-to-white, which
-            // still shows the level's last frame; revealSpecialStage origins it.
-            specialStageEntryPresentation.begin(ssProvider, fadeFromBlack, fadeManager,
-                    () -> revealSpecialStage(ssProvider),
-                    gameplayMode.plcFrameLifecycle());
-
-            GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
-
-            // Notify listener of mode change
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-
-            LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
-        } catch (IOException e) {
-            specialStageEntryPresentation.clear();
-            deregisterSpecialStageAdapter();
-            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
-            throw new RuntimeException("Failed to initialize Special Stage " + (stageIndex + 1), e);
-        } catch (RuntimeException e) {
-            specialStageEntryPresentation.clear();
-            deregisterSpecialStageAdapter();
-            activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
-            throw e;
-        }
-    }
-
-    // ==================== Bonus Stage Methods ====================
-
-    /**
-     * Enters a bonus stage from level mode.
-     * Captures current state, fades to black, loads the bonus zone.
-     */
-    private void enterBonusStage(BonusStageType type) {
-        if (currentGameMode != GameMode.LEVEL || !runPolicy().bonusStageEntry()) {
-            return;
-        }
-
-        BonusStageProvider provider = GameServices.module().getBonusStageProvider();
-        if (!provider.hasBonusStages()) {
-            LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
-            return;
-        }
-
-        if (type == null || type == BonusStageType.NONE) {
-            LOGGER.fine("Bonus stage entry ignored: NONE type");
-            return;
-        }
-
-        if (fadeManager.isActive()) {
-            LOGGER.fine("Bonus stage entry ignored: fade already in progress");
-            return;
-        }
-
-        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
-                ? candidate
-                : null;
-        var capture = bonusStageTransitionCoordinator.captureEntry(
-                levelManager,
-                camera,
-                waterSystem,
-                playable,
-                GameServices.module().getLevelEventProvider(),
-                encodeSavedShieldStatus(playable));
-        BonusStageState savedState = capture.savedState();
-        pendingBonusReturnStarPostMark = capture.pendingStarPostActivationMark();
-
-        // Fade out music
-        audioManager.fadeOutMusic();
-
-        bonusStageTransitionPending = true;
-        fadeManager.startFadeToBlack(() -> {
-            doEnterBonusStage(provider, type, savedState);
-        });
-
-        LOGGER.info("Starting fade-to-black for Bonus Stage " + type);
-    }
-
-    /**
-     * Actually enters the bonus stage after the fade-to-black completes.
-     * Loads the bonus zone, then shows the "BONUS STAGE" title card.
-     * The actual gameplay setup (HUD, rings, priority, music) is deferred
-     * to {@link #applyDeferredBonusStageSetup()} when the title card exits.
-     */
-    private void doEnterBonusStage(BonusStageProvider provider, BonusStageType type,
-                                    BonusStageState savedState) {
-        bonusStageTransitionPending = false;
-        pendingBonusStageShieldRestore = null;
-
-        // Register provider on the active gameplay mode so objects can access it via GameServices.bonusStage().
-        activeBonusStageProvider = provider;
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.setActiveBonusStageProvider(provider);
-        }
-
-        provider.onEnter(type, savedState);
-
-        if (gameplayMode != null) {
-            gameplayMode.registerBonusStageAdapter(provider);
-        }
-
-        // Load the bonus zone through the normal level loading path
-        int zoneId = provider.getZoneId(type);
-        int zone = (zoneId >> 8) & 0xFF;
-        int act = zoneId & 0xFF;
-
-        try {
-            // Suppress auto-music: bonus music plays later in applyDeferredBonusStageSetup
-            levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
-            // Consume the default title card request — we'll show the bonus card instead
-            levelManager.consumeTitleCardRequest();
-        } catch (IOException e) {
-            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
-            LOGGER.severe("Failed to load bonus stage zone: " + e.getMessage());
-            provider.onExit();
-            activeBonusStageProvider = null;
-            if (gameplayMode != null) {
-                gameplayMode.setActiveBonusStageProvider(null);
-                gameplayMode.deregisterBonusStageAdapter();
-            }
-            changeGameModeForBoundary(GameMode.LEVEL);
-            return;
-        }
-        GameMode oldMode = enterBonusTitleCardAfterLevelLoadBoundary();
-
-        prepareBonusStageForTitleCard(type, savedState);
-
-        // Defer bonus-stage-specific setup to exitTitleCard() when the title card completes
-        deferredBonusProvider = provider;
-        deferredBonusType = type;
-        deferredBonusState = savedState;
-
-        // Initialize the bonus title card
-        TitleCardProvider tcp = getTitleCardProviderLazy();
-        if (tcp != null) {
-            tcp.initializeBonus();
-        }
-
-        // Play bonus stage music at title card start (ROM: Restore_LevelMusic during title card)
-        int musicId = provider.getMusicId(type);
-        if (musicId >= 0) {
-            audioManager.playMusic(musicId);
-        }
-
-        // Enter TITLE_CARD mode — exitTitleCard will transition to BONUS_STAGE
-        applyTitleCardControlLock(true);
-
-        // Cancel the FadeManager overlay — the stage fades in through its own
-        // Level/loc_64DC Animate_Palette fade. The FadeManager was in HOLD_BLACK from
-        // the fade-to-black; clearing it lets the title card's own black rect and
-        // text render without being covered by the fade overlay.
-        fadeManager.cancel();
-
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-
-        LOGGER.info("Entered bonus title card for " + type + " (zone 0x"
-                + Integer.toHexString(zoneId) + ")");
-    }
-
-    /**
-     * Forces ordinary bonus player sprites to VDP high priority, unless the
-     * coordinator owns player priority through its presentation policy.
-     * This only restores the tile-priority bit; it does not rewrite the player's
-     * display bucket, which remains governed by the normal priority model.
-     */
-    private void forcePlayerHighPriorityInBonusStage() {
-        com.openggf.game.internal.BonusStageFrameLifecycle.restorePlayerPriority(activeBonusStageProvider, spriteManager);
-    }
-
-    private void prepareBonusStageForTitleCard(BonusStageType type, BonusStageState savedState) {
-        if (savedState != null && levelManager.getLevelGamestate() != null) {
-            levelManager.getLevelGamestate().pauseTimer();
-            levelManager.getLevelGamestate().setRings(savedState.savedRingCount());
-        }
-        levelManager.setBonusStageHudLayout(true);
-        if (savedState != null) {
-            applyBonusStageEntryShieldRestore(
-                    resolveMainPlayableSprite(), savedState.savedStatusSecondary());
-        }
-        restorePlayableStateForBonusTitleCard();
-        forcePlayerHighPriorityInBonusStage();
-        refreshPlayableSpriteArtCaches();
-        ensureBonusStageBootstrapObjectPresent(type);
-    }
-
-    private void ensureBonusStageBootstrapObjectPresent(BonusStageType type) {
-        BonusStageBootstrapInstaller.ensurePresent(
-                activeBonusStageProvider, type, levelManager.getObjectManager());
-    }
-
-    private void restorePlayableStateForBonusTitleCard() {
-        for (var sprite : spriteManager.getAllSprites()) {
-            if (sprite instanceof AbstractPlayableSprite playable) {
-                playable.setHidden(false);
-                playable.setObjectControlled(false);
-            }
-        }
-    }
-
-    private void refreshPlayableSpriteArtCaches() {
-        for (var sprite : spriteManager.getAllSprites()) {
-            if (sprite instanceof AbstractPlayableSprite playable
-                    && playable.getSpriteRenderer() != null) {
-                playable.getSpriteRenderer().invalidateDplcCache();
-            }
-        }
-    }
-
-    /**
-     * Exits the current bonus stage. Fades to black, restores previous zone.
-     */
-    private void exitBonusStage() {
-        if (currentGameMode != GameMode.BONUS_STAGE || activeBonusStageProvider == null) {
-            return;
-        }
-
-        BonusStageProvider provider = activeBonusStageProvider;
-        BonusStageState savedState = provider.getSavedState();
-
-        audioManager.fadeOutMusic();
-
-        bonusStageTransitionPending = true;
-        if (shouldStartBonusStageExitFade(provider)) {
-            // Restart_level_flag re-enters Level:, whose Pal_FadeToBlack holds the
-            // frozen stage for 22 V-ints ($15 + dbf) and services the Nemesis queue
-            // on each (sonic3k.asm:7928, 7536-7556, 5074-5083): the death-restart fade.
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    () -> doExitBonusStage(provider, savedState));
-            LOGGER.info("Starting fade-to-black to exit Bonus Stage");
-        } else {
-            doExitBonusStage(provider, savedState);
-            LOGGER.info("Exiting Bonus Stage using provider-completed fade-to-black");
-        }
-    }
-
+    // Compatibility seams; host-side visit state and choreography belong to bonusSession.
     static boolean shouldStartBonusStageExitFade(BonusStageProvider provider) {
-        return provider == null || !provider.hasCompletedExitFadeToBlack();
-    }
-
-    /**
-     * Actually exits the bonus stage after the fade-to-black completes.
-     */
-    private void doExitBonusStage(BonusStageProvider provider, BonusStageState savedState) {
-        bonusStageTransitionPending = false;
-
-        // ROM: on bonus-stage exit the live HUD Ring_count is copied straight into
-        // Saved_ring_count (loc_61076: move.w (Ring_count).w,(Saved_ring_count).w,
-        // sonic3k.asm:127814; the pachinko/slots exits do the same at 96683/99001),
-        // and the returning level reload then restores Ring_count from
-        // Saved_ring_count. So the count carried back is the interior's LIVE ring
-        // total at exit, NOT the entry snapshot plus a bookkeeping reward. This
-        // matters where a machine's per-item ring award differs between the HUD
-        // Ring_count and the Saved_ring_count it also bumps: the gumball ring ball
-        // adds +10 to the HUD but +20 to Saved_ring_count (loc_6114E, :127899), and
-        // that transient +20 is discarded here by the Ring_count->Saved_ring_count
-        // copy. Capture the live HUD ring total now, before onExit()/loadZoneAndAct
-        // reset it, and restore it on return below (replacing the former
-        // savedRingCount + rewards.rings() reconstruction, which double-counted the
-        // gumball ball as +20 and returned 79 rings where the ROM returns 69).
-        int interiorExitRingCount =
-                bonusStageTransitionCoordinator.captureInteriorExitRingCount(levelManager, savedState);
-
-        // Capture rewards BEFORE onExit() in case it resets counters.
-        BonusStageProvider.BonusStageRewards rewards = provider.getRewards();
-
-        provider.onExit();
-        activeBonusStageProvider = null;
-        levelManager.setBonusStageHudLayout(false);
-
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.setActiveBonusStageProvider(null);
-            gameplayMode.deregisterBonusStageAdapter();
-        }
-
-        if (savedState == null) {
-            LOGGER.warning("No saved state for bonus stage exit — returning to zone 0,0");
-            try {
-                levelManager.loadZoneAndAct(0, 0);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to load fallback level", e);
-            }
-            changeGameModeForBoundary(GameMode.LEVEL);
-            fadeManager.startFadeFromBlack(null);
-            return;
-        }
-
-        // Restore previous zone
-        int zone = (savedState.savedZoneAndAct() >> 8) & 0xFF;
-        int act = savedState.savedZoneAndAct() & 0xFF;
-
-        try {
-            // Signal bonus stage return so onInitLevel() can skip intros (ROM: Level_FromSavedGame)
-            levelManager.setBonusStageReturnCheckpointIndex(savedState.savedLastStarPostHit());
-            // Suppress auto-music: zone music starts below during the title card
-            levelManager.setSuppressNextMusicChange(true);
-            bonusStageTransitionCoordinator.prepareReturnLoad(levelManager, savedState);
-            levelManager.loadZoneAndAct(zone, act);
-            // Consume the auto-generated title card request — we initialize it ourselves below
-            levelManager.consumeTitleCardRequest();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to reload level after bonus stage", e);
-        } finally {
-            levelManager.clearBonusStageReturn();
-        }
-
-        var sprite = spriteManager.getSprite(resolveMainCharacterCode());
-        AbstractPlayableSprite playable = sprite instanceof AbstractPlayableSprite candidate
-                ? candidate
-                : null;
-        ShieldType shieldToRestore = playable != null
-                ? resolveShieldToRestore(rewards, savedState.savedStatusSecondary())
-                : null;
-        if (playable != null) {
-            pendingBonusStageShieldRestore = shieldToRestore;
-        }
-        bonusStageTransitionCoordinator.restoreReturnState(
-                levelManager,
-                camera,
-                waterSystem,
-                playable,
-                GameServices.module().getLevelEventProvider(),
-                savedState,
-                pendingBonusReturnStarPostMark,
-                interiorExitRingCount,
-                shieldToRestore,
-                rewards,
-                gameState::addLife);
-        pendingBonusReturnStarPostMark = -1;
-
-        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
-        // or Act3_flag (sonic3k.asm:7762-7767); the recorded gumball exit shows it.
-        int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
-        int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
-        TitleCardProvider tcp = getTitleCardProviderLazy();
-        if (tcp != null) {
-            tcp.initialize(apparentZone, apparentAct);
-        }
-
-        // Enter TITLE_CARD mode — exitTitleCard will transition to LEVEL
-        postTitleCardDestination = PostTitleCardDestination.LEVEL;
-        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
-        applyTitleCardControlLock(true);
-
-        // Play zone music (ROM: Restore_LevelMusic during title card wait)
-        levelManager.playCurrentLevelMusic();
-
-        // The reload re-enters Level: the zone card appears over black at full colour.
-        GameLoopPlcLifecycle.revealLevelRoutineEntry(resolveGameplayModeContext(), fadeManager, tcp);
-
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-        LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+        return GameLoopBonusStageSession.shouldStartBonusStageExitFade(provider);
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
-        if (playable == null || !playable.hasShield()) {
-            return 0;
-        }
-        ShieldType shieldType = playable.getShieldType();
-        if (shieldType == null) {
-            return 0;
-        }
-        return switch (shieldType) {
-            case FIRE -> 1 << STATUS_FIRE_SHIELD_BIT;
-            case LIGHTNING -> 1 << STATUS_LIGHTNING_SHIELD_BIT;
-            case BUBBLE -> 1 << STATUS_BUBBLE_SHIELD_BIT;
-            default -> 0;
-        };
+        return GameLoopBonusStageSession.encodeSavedShieldStatus(playable);
     }
 
     static ShieldType resolveShieldToRestore(BonusStageProvider.BonusStageRewards rewards, int savedStatusSecondary) {
-        if (rewards.fireShield()) {
-            return ShieldType.FIRE;
-        }
-        if (rewards.bubbleShield()) {
-            return ShieldType.BUBBLE;
-        }
-        if (rewards.lightningShield()) {
-            return ShieldType.LIGHTNING;
-        }
-        if (rewards.shield()) {
-            return ShieldType.BASIC;
-        }
-
-        return savedShieldType(savedStatusSecondary);
+        return GameLoopBonusStageSession.resolveShieldToRestore(rewards, savedStatusSecondary);
     }
 
-    /**
-     * ROM {@code SpawnLevelMainSprites_SpawnPowerup} {@code loc_6A02}
-     * (docs/skdisasm/sonic3k.asm:8326-8355) tests the saved elemental bits in
-     * fire -> lightning -> bubble order and re-gives that shield.
-     */
     static ShieldType savedShieldType(int savedStatusSecondary) {
-        int savedShieldBits = savedStatusSecondary & SAVED_SHIELD_MASK;
-        if ((savedShieldBits & (1 << STATUS_FIRE_SHIELD_BIT)) != 0) {
-            return ShieldType.FIRE;
-        }
-        if ((savedShieldBits & (1 << STATUS_LIGHTNING_SHIELD_BIT)) != 0) {
-            return ShieldType.LIGHTNING;
-        }
-        if ((savedShieldBits & (1 << STATUS_BUBBLE_SHIELD_BIT)) != 0) {
-            return ShieldType.BUBBLE;
-        }
-        return null;
+        return GameLoopBonusStageSession.savedShieldType(savedStatusSecondary);
     }
 
-    /**
-     * ROM {@code SpawnLevelMainSprites_SpawnPowerup}
-     * (docs/skdisasm/sonic3k.asm:8296-8322) runs on every level spawn, and the
-     * bonus zones are explicitly routed into its restore arm --
-     * {@code cmpi.b #$13,(Current_zone).w / beq loc_69E0} and the same for
-     * {@code #$14} (:8302-8305). It re-gives Player 1 the shield saved in
-     * {@code Saved_status_secondary}, so the ROM's player keeps its elemental
-     * shield for the DURATION of the bonus stage, not only after returning to
-     * the level.
-     *
-     * <p>The engine captured the value at entry
-     * ({@link #encodeSavedShieldStatus}) but consumed it only on the way out
-     * ({@link #resolveShieldToRestore}), leaving the bonus-stage player
-     * shieldless. In Pachinko that removes {@code Test_Ring_Collisions}'
-     * {@code Status_LtngShield} arm (:18486-18489), which allocates
-     * {@code Obj_Attracted_Ring} and pulls a nearby ring into the player.
-     */
-    public static void applyBonusStageEntryShieldRestore(
-            AbstractPlayableSprite playable, int savedStatusSecondary) {
-        if (playable == null) {
-            return;
-        }
-        ShieldType shieldType = savedShieldType(savedStatusSecondary);
-        if (shieldType != null) {
-            playable.giveShield(shieldType);
-        }
+    public static void applyBonusStageEntryShieldRestore(AbstractPlayableSprite playable, int savedStatusSecondary) {
+        GameLoopBonusStageSession.applyBonusStageEntryShieldRestore(playable, savedStatusSecondary);
     }
 
     AbstractPlayableSprite resolveMainPlayableSprite() {
@@ -3066,431 +2318,15 @@ public class GameLoop {
     }
 
     void applyPendingBonusStageShieldRestore(AbstractPlayableSprite playable) {
-        if (pendingBonusStageShieldRestore == null || playable == null) {
-            return;
-        }
-        ShieldType shieldType = pendingBonusStageShieldRestore;
-        pendingBonusStageShieldRestore = null;
-        playable.giveShield(shieldType);
+        bonusSession.applyPendingBonusStageShieldRestore(playable);
     }
 
     void setPendingBonusStageShieldRestoreForTest(ShieldType shieldType) {
-        pendingBonusStageShieldRestore = shieldType;
+        bonusSession.setPendingShield(shieldType);
     }
 
     boolean hasPendingBonusStageShieldRestoreForTest() {
-        return pendingBonusStageShieldRestore != null;
-    }
-
-    /**
-     * Enters the results screen after special stage completion/failure.
-     * Performs fade-to-white transition before showing results.
-     *
-     * @param emeraldCollected true if an emerald was collected
-     */
-    private void enterResultsScreen(boolean emeraldCollected) {
-        if (currentGameMode != GameMode.SPECIAL_STAGE) {
-            return;
-        }
-
-        // Check if the SS manager pre-started a fade (S1: concurrent fade during exit spin)
-        FadeManager fadeManager = this.fadeManager;
-        boolean fadeAlreadyWhite = (fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE);
-
-        // The pre-started S1 fade carries no completion, so the screen is simply held
-        // white and this call owns the transition. The fade-to-white started below also
-        // parks in HOLD_WHITE for one frame before FadeManager runs its completion, and
-        // a finished stage re-raises this transition every frame -- so that window must
-        // keep waiting. Taking it over would enter the results screen twice and open a
-        // second native blocking fade while the pending completion still owns the first.
-        if (fadeManager.isActive() && (!fadeAlreadyWhite || fadeManager.hasPendingCompletion())) {
-            return; // Different fade in progress, or our own completion still pending
-        }
-
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-
-        // Store special stage results for the results screen
-        ssRingsCollected = ssProvider.getRingsCollected();
-        ssEmeraldCollected = emeraldCollected;
-        ssStageIndex = ssProvider.getCurrentStage();
-
-        // Mark emerald as collected now (so it shows in results screen)
-        if (emeraldCollected) {
-            SpecialStageTransitionSupport.publishRewardIfLoopOwned(
-                    ssProvider, gameState, ssStageIndex,
-                    activeSpecialStageRewardKind);
-        }
-
-        if (fadeAlreadyWhite || (ssProvider instanceof com.openggf.game.internal.SpecialStageResultsEntry entry
-                && entry.hasCompletedResultsEntryFade())) {
-            // Fade pre-started by SS manager (S1) - screen is already white.
-            // Go directly to results; doEnterResultsScreen() calls startFadeFromWhite().
-            doEnterResultsScreen();
-        } else {
-            // Normal path (S2): start fade-to-white, then callback to results.
-            // This boundary is raised from updateSpecialStageMode's tail, after
-            // specialStageEntryPresentation.update has already spent this
-            // iteration's FadeManager tick, so the ROM's first
-            // Pal_FadeToWhite WaitForVint is already the NEXT iteration's --
-            // deferring again would give the routine 23 V-ints instead of the
-            // 22 its dbf loop runs (docs/s2disasm/s2.asm:3571-3582) and push
-            // the results loop's first VintID_Level (s2.asm:6797-6803, 781,
-            // 1770) one row late.
-            //
-            // Note that V-int does NOT retire the stage's last player DPLC
-            // pair, as an earlier version of this comment claimed. The results
-            // setup block zeroes the queue head first -- unguarded, so the
-            // shipped ROM runs it -- at s2.asm:6759-6760, and ProcessDMAQueue
-            // stops on a zero first word (s2.asm:1772-1790). The ROM DISCARDS
-            // that pair; it never transfers. Vint_Fade (s2.asm:1068-1070) does
-            // not call ProcessDMAQueue either, so nothing drains between the
-            // mode change and the clear.
-            GameLoopPlcLifecycle.startToWhiteAfterFrameFadeTick(
-                    resolveGameplayModeContext(), fadeManager, () -> {
-                        doEnterResultsScreen();
-                    });
-        }
-
-        LOGGER.info("Starting fade-to-white to exit Special Stage");
-    }
-
-    /**
-     * The special-stage identity a recorded run segment is cut on: the value
-     * {@code Current_Special_Stage} held when the ROM entered
-     * {@code GameModeID_SpecialStage}, held constant for the whole recorded
-     * segment.
-     *
-     * <p>The ROM's byte is not constant across that segment. A won stage
-     * increments it inside the stage itself, in the same block that raises
-     * {@code SS_Check_Rings_flag} ({@code addi_.b #1,(Current_Special_Stage).w},
-     * docs/s2disasm/s2.asm:72467-72477), and it is zeroed only on a later entry
-     * once it reaches 7 (s2.asm:6538-6540). The run recorder samples it once, at
-     * the first {@code GameModeID_SpecialStage} frame
-     * ({@code S2RunCaptureRunner.StartSsSegment}), so a segment's recorded
-     * {@code special_stage_index} is that pre-increment number for the whole
-     * segment, results tail included.
-     *
-     * <p>The engine splits that one ROM mode into {@code SPECIAL_STAGE} plus
-     * {@code SPECIAL_STAGE_RESULTS}, and entering results deinitialises the
-     * stage manager ({@code SpecialStageProvider#resetForResults}), dropping its
-     * scratch stage index back to 0. Reading the live provider during the
-     * results tail therefore reports 0 for every stage -- which only happened to
-     * match the recorded identity for stage 0. The results phase belongs to the
-     * stage captured at the exit boundary, so report that instead.
-     */
-    public Integer recordedSpecialStageIdentity(GameMode observedMode) {
-        if (observedMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            return ssStageIndex;
-        }
-        if (observedMode != GameMode.SPECIAL_STAGE) {
-            return null;
-        }
-        SpecialStageProvider provider = getActiveSpecialStageProvider();
-        return provider != null ? provider.getCurrentStage() : null;
-    }
-
-    /**
-     * Actually enters the results screen after fade-to-white completes.
-     */
-    void doEnterResultsScreen() {
-        // Reset special stage provider
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        ssProvider.resetForResults();
-
-        // Transition to results mode
-        GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE_RESULTS);
-        resultsFrameCounter = 0;
-
-        // Create results screen with current emerald count via provider
-        int totalEmeralds = gameState.getEmeraldCount();
-        resultsScreen = ssProvider.createResultsScreen(
-                ssRingsCollected, ssEmeraldCollected, ssStageIndex, totalEmeralds);
-
-        if (resultsScreen == null) {
-            resultsScreen = NoOpResultsScreen.INSTANCE;
-        }
-
-        playSpecialStageResultsMusic(ssProvider);
-
-        // Notify listener of mode change
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-
-        // Neither game fades back in here. After the stage's whiteout both ROMs
-        // rebuild the screen and then write the results palette straight to the
-        // active palette in one go -- S2 `moveq #PalID_Result,d0 / bsr.w
-        // PalLoad_Now` (docs/s2disasm/s2.asm:6762-6763) and S1
-        // `moveq #palid_SSResult,d0 / bsr.w PalLoad` (docs/s1disasm/sonic.asm:3382-3383)
-        // -- so the results screen appears at full intensity on the very first
-        // V-blank of its tally loop (S2 `VintID_Level` at s2.asm:6797-6800, S1
-        // `SS_NormalExit` at sonic.asm:3403-3406). A fade-from-white here would
-        // instead hold PALETTE_FADE for its whole duration and push the first
-        // results-owned V-blank that many rows late. (That V-blank's
-        // ProcessDMAQueue retires nothing: s2.asm:6759-6760 zeroes the queue
-        // head first, unguarded, so the ROM discards the stage's last player
-        // DPLC pair rather than transferring it.)
-        fadeManager.clearOverlayForImmediatePaletteLoad();
-
-        LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
-                ", emerald=" + ssEmeraldCollected + ")");
-    }
-
-    /**
-     * Exits the results screen and shows the title card before returning to the
-     * level.
-     * Performs fade-to-black transition before showing title card.
-     */
-    private void exitResultsScreen() {
-        if (currentGameMode != GameMode.SPECIAL_STAGE_RESULTS) {
-            return;
-        }
-
-        // Don't start another fade if one is already in progress
-        FadeManager fadeManager = this.fadeManager;
-        if (fadeManager.isActive()) {
-            return;
-        }
-
-        // Fade out, then show title card when complete. The completion only latches the exit:
-        // the fade update that completes it runs at the start of the results screen's last
-        // faded frame, and the exit body (the returning level's load) must not run until the
-        // iteration after that frame's V-int sample.
-        resultsExitToWhite = getActiveSpecialStageProvider().resultsExitFadesToWhite();
-        if (resultsExitToWhite) {
-            playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
-            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager,
-                    () -> resultsExitFadeCompleted = true);
-        } else {
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    () -> resultsExitFadeCompleted = true);
-        }
-    }
-
-    /**
-     * Actually exits the results screen after fade-to-black completes.
-     */
-    private void doExitResultsScreen() {
-        // Clean up results screen
-        resultsScreen = null;
-        deregisterSpecialStageAdapter();
-        activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
-
-        // S3K's special-stage clear sets bit 7 in Last_star_post_hit before
-        // the return reload, enabling Load_Starpost_Settings' Saved2 branch.
-        levelManager.setLastStarPostHit();
-
-        if (levelManager.getCurrentLevel() == null) {
-            // No level was loaded (special stage launched from level select).
-            // Load the starting level; loadCurrentLevel() will request its own title card.
-            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
-            try {
-                levelManager.loadZoneAndAct(0, 0);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to load starting level after special stage", e);
-            }
-
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-
-            startResultsReturnFadeIn();
-
-            LOGGER.info("Exited Results Screen, loaded starting level (no previous level)");
-            return;
-        }
-
-        // ROM HPZ results rebuild the sanctuary as the results-screen backdrop only.
-        // The pedestal that launched the stage (loc_90926) sets
-        // Special_bonus_entry_flag = 1, so Load_Starpost_Settings takes loc_2D2C2 and
-        // restores Saved2_* — the player resumes in the zone the Big Ring was collected
-        // in, not in the sanctuary. The sanctuary is re-entered only through another
-        // Big Ring.
-        //
-        // Otherwise (and for every other game) the ROM runs the full Level: function,
-        // which clears all object RAM (bridges/stateful objects reset to initial state)
-        // and reloads level data:
-        // - S1: zone/act may have been advanced before SS entry
-        // - S2: same zone/act, objects reset, rings cleared (Obj79_LoadData clr.w Ring_count)
-        // - S3K: same zone/act, objects reset, rings restored from Saved2_ring_count
-        boolean sanctuaryReturn;
-        // The star-post activation mark is the engine's model of the ROM's
-        // "last checkpoint reached" byte, and that byte is NOT part of what the
-        // return's level reload clears.
-        //
-        // S3K: Load_Starpost_Settings' giant-ring/bonus branch loc_2D2C2
-        // (docs/skdisasm/sonic3k.asm:61833-61859) restores the whole Saved2_*
-        // block but deliberately writes no Last_star_post_hit, so the value the
-        // special-stage exit left there survives -- the exit's
-        // "ori.b #$80,(Last_star_post_hit).w" (:12157, :12712) over the subtype
-        // sub_2D164 stored when the post was touched (:61744), with LevelSizeLoad's
-        // "andi.b #$7F,(Last_star_post_hit).w" (:7913) stripping the marker bit
-        // before LevelLoop. sub_2D028 then reads it as already-hit for every post
-        // whose subtype is at or below it ("cmp.b d2,d1 / bhs.w loc_2D0EA",
-        // :61646-61650), which is what stops the post the player entered from
-        // re-arming its 20-ring bonus stars (:61678-61681) on the return.
-        //
-        // S1 is the same shape: v_lastlamp is cleared only by the end-of-act card
-        // (docs/s1disasm/_incObj/3A Got Through Card.asm:198), a death
-        // (_incObj/01 Sonic.asm:1116) and a new game (sonic.asm:1968) -- never by a
-        // level reload -- and Lamp_Blue gates on the identical "last >= subtype"
-        // comparison (_incObj/79 Lamppost.asm:57-62).
-        //
-        // The bonus-stage return already carries this across its own reload
-        // (BonusStageTransitionCoordinator.restoreReturnState); the
-        // special-stage return is the second implementation of the same contract
-        // and was missing it.
-        int returnStarPostActivationMark = -1;
-        RespawnState checkpointBeforeReturnReload = levelManager.getCheckpointState();
-        if (checkpointBeforeReturnReload != null) {
-            returnStarPostActivationMark =
-                    checkpointBeforeReturnReload.getStarPostActivationMark();
-        }
-        // The reload's title card is presented below by this method, so the
-        // load must request it (keeping the queued initial PLCs live for the
-        // card's locked loop) rather than model an omitted presentation.
-        levelManager.setResultsReturnCardOwnedByCaller(true);
-        try {
-            sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                    levelManager, activeSpecialStageRewardKind, ssStageIndex);
-        } finally {
-            levelManager.setResultsReturnCardOwnedByCaller(false);
-        }
-        if (returnStarPostActivationMark >= 0) {
-            RespawnState checkpointAfterReturnReload = levelManager.getCheckpointState();
-            if (checkpointAfterReturnReload != null) {
-                checkpointAfterReturnReload.restoreStarPostActivationMark(
-                        returnStarPostActivationMark);
-            }
-        }
-
-        // Consume any pending title card request to prevent double title card
-        // (we're manually entering the title card below)
-        levelManager.consumeTitleCardRequest();
-
-        if (sanctuaryReturn) {
-            // ROM GameMode_SpecialStageResults installs the HPZ hub directly;
-            // there is no intervening HPZ title card. The controller consumes
-            // the typed return context and runs success choreography or exposes
-            // the failed pedestal immediately.
-            returningFromSpecialStage = false;
-            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-            startResultsReturnFadeIn();
-            requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
-            LOGGER.info("Exited Results Screen directly into the HPZ sanctuary hub"
-                    + " (stage=" + ssStageIndex + ", success=" + ssEmeraldCollected + ")");
-            return;
-        }
-
-        // Set flag so exitTitleCard knows to restore checkpoint state
-        returningFromSpecialStage = true;
-
-        // Enter title card mode for the APPARENT zone/act. Obj_TitleCardInit
-        // never reads Current_zone_and_act: the act-number art is chosen by
-        // "tst.b (Apparent_act).w / bne" -- Num2 when non-zero, Num1 when zero
-        // (sonic3k.asm:62171-62181) -- and the zone art by
-        // "move.b (Apparent_zone_and_act).w,d0" (sonic3k.asm:62195). The two
-        // acts diverge across an S3K seamless act transition, because
-        // Current_act advances inside the act-1 background-event dispatch while
-        // Apparent_act is only raised later, by the end-sign results object's
-        // "move.b #1,(Apparent_act).w" at loc_2DD06 (sonic3k.asm:62754). A
-        // giant-ring special stage entered in that window returns to a card the
-        // ROM still draws with the act-1 digit. The bonus-stage return already
-        // reads Saved_apparent_zone_and_act for the same reason.
-        int zoneIndex = levelManager.getCurrentZone();
-        int actIndex = levelManager.getApparentAct();
-        enterTitleCardFromResults(zoneIndex, actIndex);
-
-        // Reveal the title card from the exit fade's colour. Without this, the overlay
-        // persists indefinitely because completeFade() sees no new fade was started.
-        startResultsReturnFadeIn();
-        requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
-
-        LOGGER.info("Exited Results Screen, entering Title Card for zone " + zoneIndex + " act " + actIndex);
-    }
-
-    private void startResultsReturnFadeIn() {
-        if (getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
-                && boundary.hasImmediateFreshLevelPalette()) {
-            fadeManager.clearOverlayForImmediatePaletteLoad();
-            return;
-        }
-        if (resultsExitToWhite) {
-            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
-        } else {
-            GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
-        }
-    }
-
-    /**
-     * Enters the title card from the results screen context.
-     * Similar to enterTitleCard but allows entry from SPECIAL_STAGE_RESULTS mode.
-     * Restores the player to their checkpoint position before showing title card.
-     */
-    private void enterTitleCardFromResults(int zoneIndex, int actIndex) {
-        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
-
-        // Restore player to checkpoint state BEFORE title card starts
-        // This prevents the player from falling/dying during the title card animation
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            RespawnState checkpointState = levelManager.getCheckpointState();
-
-            if (levelManager.hasBigRingReturn()
-                    && (levelManager.isSanctuaryOriginRestorePending(zoneIndex, actIndex)
-                        || levelManager.sanctuaryReentryStage().isEmpty())) {
-                // S3K big ring path: restore all Saved2_* state
-                restoreBigRingReturn(playable);
-            } else if (checkpointState != null && checkpointState.isActive()) {
-                // S2 checkpoint star path: restore to checkpoint (ROM: Saved_* variables)
-                checkpointState.restoreToPlayer(playable, camera);
-            } else {
-                // No checkpoint - camera will follow player at level start position
-                camera.updatePosition(true);
-            }
-
-            // Freeze all movement during title card
-            playable.setXSpeed((short) 0);
-            playable.setYSpeed((short) 0);
-            playable.setGSpeed((short) 0);
-            playable.setAir(false);
-            // Clear death/hurt state to prevent dying during title card
-            playable.setDead(false);
-            playable.setHurt(false);
-            playable.setDeathCountdown(0);
-            playable.setInvulnerableFrames(0);
-            playable.setRolling(false);
-            // Restore visibility and controls (cleared by S3K big ring entry sequence)
-            playable.setHidden(false);
-            playable.setObjectControlled(false);
-            // Unfreeze camera (frozen by S3K big ring entry sequence)
-            camera.setFrozen(false);
-
-            // ROM SpawnLevelMainSprites_SpawnPlayers, both arms
-            // (docs/skdisasm/sonic3k.asm:8399 sidekick, :8420 Tails-as-Player_1).
-            SpecialStageReturnSpawn.applyMainCharacterSpawnOffset(playable, configService);
-            SpecialStageReturnSpawn.respawnSidekicks(
-                    playable, spriteManager.getSidekicks(), levelManager);
-        }
-        InLevelTitleCardCoordinator.prepareResultsTransition(
-                sprite, this::applyTitleCardControlLock, GameServices::module, spriteManager, levelManager);
-
-        // Initialize the title card manager
-        if (getTitleCardProviderLazy() != null) {
-            getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
-        }
-
-        // Start zone music immediately when title card begins (not at the end)
-        levelManager.playCurrentLevelMusic();
-
-        // Notify listener of mode change
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
+        return bonusSession.hasPendingShield();
     }
 
     private void restoreBigRingReturn(AbstractPlayableSprite playable) {
@@ -3506,59 +2342,11 @@ public class GameLoop {
      * @param actIndex  Act index (0-2)
      */
     public void enterTitleCard(int zoneIndex, int actIndex) {
-        if (currentGameMode != GameMode.LEVEL) {
-            return;
-        }
-
-        boolean freshBoundary = levelManager.hasPendingFreshLevelTransitionBoundary();
-        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
-
-        // Freeze the player during title card - full state reset
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (!freshBoundary && sprite instanceof AbstractPlayableSprite playable) {
-            // Freeze all movement
-            playable.setXSpeed((short) 0);
-            playable.setYSpeed((short) 0);
-            playable.setGSpeed((short) 0);
-            playable.setAir(false);
-            // Clear death/hurt state to prevent dying during title card
-            playable.setDead(false);
-            playable.setHurt(false);
-            playable.setDeathCountdown(0);
-            playable.setInvulnerableFrames(0);
-            playable.setRolling(false);
-        }
-        applyTitleCardControlLock(true);
-
-        // Initialize the title card manager
-        if (getTitleCardProviderLazy() != null) {
-            if (freshBoundary) {
-                getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
-            } else {
-                getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
-            }
-        }
-
-        // ScreenInit can already own the camera through Scroll_lock (SSZ1_ScreenInit
-        // sets $F49 before Obj_57C1E positions the player). A forced player snap would
-        // override that scripted origin and clamp it against the arrival's $BC0 bound.
-        if (!freshBoundary && !camera.getFrozen()) {
-            camera.updatePosition(true);
-        }
-
-        // Notify listener of mode change
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-
-        LOGGER.info("Entered Title Card for zone " + zoneIndex + " act " + actIndex);
+        titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);
     }
 
     void startPendingInLevelTitleCard() {
-        InLevelTitleCardCoordinator.startIfRequested(
-                levelManager, getTitleCardProviderLazy(),
-                GameServices.gameState().isEndOfLevelActive(), this::applyTitleCardControlLock);
+        titleCardLifecycle.startPendingInLevelTitleCard();
     }
 
     /**
@@ -3582,115 +2370,7 @@ public class GameLoop {
      * while the title card is on screen.
      */
     void applyTitleCardControlLock(boolean locked) {
-        if (spriteManager == null) {
-            return;
-        }
-        for (var sprite : spriteManager.getAllSprites()) {
-            if (sprite instanceof AbstractPlayableSprite playable) {
-                playable.setControlLocked(locked);
-            }
-        }
-    }
-
-    /**
-     * Exits the title card and returns to level mode.
-     * Note: We do NOT reset the title card manager here because the overlay
-     * (TEXT_WAIT and TEXT_EXIT phases) still needs to run. The title card
-     * will reset itself when it reaches COMPLETE state, or when a new
-     * title card is initialized.
-     */
-    private void exitTitleCard() {
-        if (currentGameMode != GameMode.TITLE_CARD) {
-            return;
-        }
-
-        GameMode oldMode = currentGameMode;
-        applyTitleCardControlLock(false);
-
-        if (postTitleCardDestination == PostTitleCardDestination.BONUS_STAGE) {
-            // Transitioning to bonus stage after "BONUS STAGE" title card
-            postTitleCardDestination = PostTitleCardDestination.LEVEL;
-            changeGameModeForBoundary(GameMode.BONUS_STAGE);
-
-            // Apply deferred bonus stage setup
-            applyDeferredBonusStageSetup();
-
-            // Re-arm the playback forced-input bridge now that the mode is
-            // BONUS_STAGE. This exit runs mid-step and falls through to
-            // BONUS_STAGE gameplay processing in the SAME loop.step(): that
-            // fall-through frame IS the interior's first gameplay tick. The
-            // step-top syncPlaybackInputBridge already ran while the mode was
-            // still TITLE_CARD, which PlaybackDebugManager.isDriving() does not
-            // drive (only LEVEL/BONUS_STAGE), so the player's first interior tick
-            // would otherwise run with a stale/neutral forced mask -- dropping the
-            // recorded frame-0 controller input the ROM's first bonus frame reads
-            // (e.g. the gumball's frame-0 left press that produces the single
-            // grounded ground-move before the player falls into the machine).
-            // Re-syncing here, after control is released and the mode is
-            // BONUS_STAGE, applies the current forced-input mask so the
-            // fall-through tick reads the recorded input. Bonus-entry only; LEVEL
-            // title-card exits are unaffected.
-            syncPlaybackInputBridge();
-
-            LOGGER.info("Exited bonus title card, entering BONUS_STAGE mode");
-        } else if (returningFromSpecialStage) {
-            changeGameModeForBoundary(GameMode.LEVEL);
-            returningFromSpecialStage = false;
-            LOGGER.info("Exited Title Card, returned to level from special stage at checkpoint");
-        } else {
-            changeGameModeForBoundary(GameMode.LEVEL);
-            applyPendingBonusStageShieldRestore(resolveMainPlayableSprite());
-
-            // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
-            LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-            if (!levelManager.hasPendingFreshLevelTransitionBoundary() && levelEvents != null) {
-                levelEvents.applyZonePlayerStateAfterTitleCard();
-            }
-            LOGGER.info("Exited Title Card, starting level");
-        }
-
-        // A title-card release falls through into the destination gameplay in
-        // this same loop.step(). The step-top bridge sync ran while the mode was
-        // still TITLE_CARD (which is intentionally not driven), so refresh the
-        // forced input now for LEVEL as well as for BONUS_STAGE above. Otherwise
-        // a death/restart consumes one stale pre-reload input on the first native
-        // Level_MainLoop frame before a trace comparator can observe it.
-        if (currentGameMode == GameMode.LEVEL) {
-            TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode);
-            syncPlaybackInputBridge();
-        }
-
-        if (currentGameMode == GameMode.LEVEL) {
-            titleCardReleasedIntoLevelThisIteration = true;
-        }
-
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-    }
-
-    /**
-     * Applies bonus stage setup that was deferred until the title card completed.
-     * Mirrors the setup previously done inline in doEnterBonusStage.
-     */
-    private void applyDeferredBonusStageSetup() {
-        BonusStageProvider provider = deferredBonusProvider;
-
-        // Clear deferred state
-        deferredBonusProvider = null;
-        deferredBonusType = null;
-        deferredBonusState = null;
-
-        if (provider == null) {
-            LOGGER.warning("No deferred bonus stage provider — skipping setup");
-            return;
-        }
-
-        provider.onDeferredSetupComplete();
-
-        // Music already started in doEnterBonusStage (at title card init).
-        // Background fade is handled by the title card's own per-channel rect fade
-        // during DISPLAY (synchronized with the 22-frame hold, matching ROM).
+        titleCardLifecycle.applyTitleCardControlLock(locked);
     }
 
     // ==================== Master Title Screen Methods ====================
@@ -3786,7 +2466,6 @@ public class GameLoop {
     void fadeOutTo(Runnable next) {
         GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager, next);
     }
-
 
     /**
      * Exits the master title screen after the user selects a game.
@@ -4603,7 +3282,7 @@ public class GameLoop {
      * @return the results screen object, or null if not in results mode
      */
     public ResultsScreen getResultsScreen() {
-        return resultsScreen;
+        return specialStageLifecycle.resultsScreen();
     }
 
     /** Declared-setup hook for capture tools: the special-stage debug completion without a key read. */
@@ -4612,432 +3291,137 @@ public class GameLoop {
     }
 
     public SpecialStageProvider getActiveSpecialStageProvider() {
-        if (currentGameMode == GameMode.SPECIAL_STAGE || currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
-            return activeSpecialStageProvider != null ? activeSpecialStageProvider : NoOpSpecialStageProvider.INSTANCE;
-        }
-        return getCurrentModuleSpecialStageProvider();
+        return specialStageLifecycle.provider();
     }
 
-    private SpecialStageProvider getCurrentModuleSpecialStageProvider() {
-        var module = GameServices.module();
-        if (module == null) {
-            return NoOpSpecialStageProvider.INSTANCE;
-        }
-        return module.getSpecialStageProvider();
+    public Integer recordedSpecialStageIdentity(GameMode observedMode) {
+        return specialStageLifecycle.recordedSpecialStageIdentity(observedMode);
     }
 
-    private void playSpecialStageTransitionSfx(SpecialStageProvider ssProvider) {
-        int sfxId = ssProvider.getTransitionSfxId();
-        if (sfxId >= 0) {
-            audioManager.playSfx(sfxId);
-        }
+    /** Genuine virtual completion seam used by immediate and delayed results entry. */
+    void doEnterResultsScreen() {
+        specialStageLifecycle.doEnterResultsScreen();
     }
 
     /** Transition SFX is emitted by the owner that starts the fade. */
     static boolean shouldPlaySpecialStageEntrySfx(boolean transitionSfxAlreadyPlayed) {
-        return !transitionSfxAlreadyPlayed;
+        return GameLoopSpecialStageLifecycle.shouldPlaySpecialStageEntrySfx(transitionSfxAlreadyPlayed);
     }
 
-    private void revealSpecialStage(SpecialStageProvider ssProvider) {
-        camera.setX((short) 0);
-        camera.setY((short) 0);
-        // Special-stage entry clears gameplay power-ups. Clear both audio
-        // speed mechanisms at the same boundary, immediately before the new
-        // song is constructed, so it cannot inherit the outgoing level's
-        // speed-shoes tempo. S3K's stage-local acceleration starts from here.
-        audioManager.setSpeedShoes(false);
-        audioManager.setSpeedMultiplier(1);
-        int musicId = ssProvider.getStageMusicId();
-        if (!audioManager.playMusic(ssProvider.getStageMusic()) && musicId >= 0) {
-            audioManager.playMusic(musicId);
-        }
-    }
-
-    private void playSpecialStageResultsMusic(SpecialStageProvider ssProvider) {
-        int musicId = ssProvider.getResultsMusicId();
-        if (!audioManager.playMusic(ssProvider.getResultsMusic()) && musicId >= 0) {
-            audioManager.playMusic(musicId);
-        }
-    }
-
-    private void updateSpecialStageInput() {
-        SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        if (GameLoopSpecialStageInput.handleDebugInput(ssProvider, configService,
-                this::isUnmodifiedDebugKeyPressed)) {
-            return;
-        }
-
-        specialStagePacingInput.apply(ssProvider, inputHandler, resolveGameplayModeContext().getWorldSession());
-    }
-
-    // ==================== Ending / Credits Sequence Methods ====================
-
-    /**
-     * Starts the fade-to-white transition to enter the ending sequence.
-     * Called when the level requests credits (e.g., after final boss defeat).
-     */
-    private void startEndingFade() {
-        LOGGER.info("Starting fade-to-white for ending sequence");
-        EndingProvider provider = GameServices.module().getEndingProvider();
-        if (provider != null) {
-            provider.saveReasonOnEndingStart().ifPresent(this::requestSessionSave);
-        }
-        endingTransitionPending = true;
-        audioManager.fadeOutMusic();
-        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, this::doEnterEnding);
-    }
-
-    /**
-     * Actually enters the ending sequence after fade-to-white completes.
-     * Initializes the EndingProvider from the current GameModule.
-     */
-    private void doEnterEnding() {
-        endingProvider = GameServices.module().getEndingProvider();
-        if (endingProvider == null) {
-            endingTransitionPending = false;
-            LOGGER.warning("No EndingProvider available, returning to title screen");
-            setGameMode(GameMode.TITLE_SCREEN);
-            TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-            if (titleScreen != null) {
-                titleScreen.initialize();
-            }
-            return;
-        }
-
-        if (endingProvider instanceof com.openggf.game.resources.NativeFadeLifecycleAware aware) {
-            aware.bindNativeFadeLifecycle(gameplayMode.plcFrameLifecycle());
-        }
-        endingProvider.initialize();
-        endingTransitionPending = false;
-        setGameMode(gameModeForPhase(endingProvider.getCurrentPhase()));
-
-        // Reveal the ending scene. Only start our own fade if the provider didn't
-        // already start one during initialize() (e.g., S1 credits starts its own
-        // fade-from-black with a state-advancing callback that must not be overwritten).
-        FadeManager fadeManager = this.fadeManager;
-        if (!fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE) {
-            // Screen is currently white from startEndingFade's fade-to-white.
-            // ROM: Normal_palette starts all $0EEE (white), display enabled.
-            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
-        }
-
-        LOGGER.info("Entered ending sequence, phase=" + endingProvider.getCurrentPhase());
-    }
-
-    /**
-     * Unified update method for all ending-related game modes.
-     * Dispatches to phase-specific logic based on the current EndingPhase.
-     */
-    private void updateEnding() {
-        if (endingProvider == null) {
-            return;
-        }
-
-        EndingPhase phase = endingProvider.getCurrentPhase();
-
-        switch (phase) {
-            case CREDITS_TEXT -> updateEndingCreditsText();
-            case CREDITS_DEMO -> updateEndingCreditsDemo();
-            case POST_CREDITS -> updateEndingPostCredits();
-            case CUTSCENE -> updateEndingCutscene();
-            case FINISHED -> exitEndingToTitleScreen();
-        }
-
-        // Sync GameMode to the current phase (in case provider changed phase internally)
-        if (endingProvider != null && !endingProvider.isComplete()) {
-            EndingPhase newPhase = endingProvider.getCurrentPhase();
-            GameMode targetMode = gameModeForPhase(newPhase);
-            if (targetMode != currentGameMode) {
-                setGameMode(targetMode);
-            }
+    /** Typed live slots keep capture-time and callback-time title observations distinct. */
+    private final class TitleCardHost implements GameLoopTitleCardLifecycle.Host {
+        @Override public LevelManager level() { return levelManager; }
+        @Override public SpriteManager sprites() { return spriteManager; }
+        @Override public Camera camera() { return camera; }
+        @Override public InputHandler input() { return inputHandler; }
+        @Override public GameModule module() { return GameServices.module(); }
+        @Override public GameMode currentMode() { return currentGameMode; }
+        @Override public boolean endOfLevelActive() { return GameServices.gameState().isEndOfLevelActive(); }
+        @Override public String mainCharacterCode() { return resolveMainCharacterCode(); }
+        @Override public AbstractPlayableSprite mainPlayable() { return resolveMainPlayableSprite(); }
+        @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
+        @Override public void restorePendingShield(AbstractPlayableSprite playable) { applyPendingBonusStageShieldRestore(playable); }
+        @Override public GameMode changeMode(GameMode mode) { return changeGameModeForBoundary(mode); }
+        @Override public GameMode changeModeWithoutRewindBoundary(GameMode mode) { return GameLoop.this.changeGameModeWithoutRewindBoundary(mode); }
+        @Override public void markBonusEntryBoundary() { markBonusEntryNonRewindableBoundary(); }
+        @Override public boolean returningFromSpecialStage() { return specialStageLifecycle.returningFromSpecialStage(); }
+        @Override public void completeTitleReturn() { specialStageLifecycle.completeTitleReturn(); }
+        @Override public void applyDeferredBonusStageSetup() { bonusSession.applyDeferredBonusStageSetup(); }
+        @Override public void syncPlaybackInput() { syncPlaybackInputBridge(); }
+        @Override public void admitDestination() { TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode); }
+        @Override public void recordLevelRelease() { titleCardReleasedIntoLevelThisIteration = true; }
+        @Override public void notifyModeChanged(GameMode oldMode) {
+            if (gameModeChangeListener != null) gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
     }
 
-    /**
-     * CREDITS_TEXT phase: update provider, check for demo load requests and completion.
-     */
-    private void updateEndingCreditsText() {
-        endingProvider.update();
-
-        // Check if the provider wants to load a demo zone
-        if (endingProvider.hasDemoLoadRequest()) {
-            endingProvider.consumeDemoLoadRequest();
-            loadEndingDemoZone();
+    /** Typed live slots preserve capture versus callback-time reads across rebinding. */
+    private final class SpecialStageHost implements GameLoopSpecialStageLifecycle.Host {
+        @Override public LevelManager level() { return levelManager; }
+        @Override public SpriteManager sprites() { return spriteManager; }
+        @Override public Camera camera() { return camera; }
+        @Override public FadeManager fade() { return fadeManager; }
+        @Override public GameStateManager gameState() { return gameState; }
+        @Override public GameModule module() { return GameServices.module(); }
+        @Override public GameMode currentMode() { return currentGameMode; }
+        @Override public GameplayRunPolicy runPolicy() { return GameLoop.this.runPolicy(); }
+        @Override public SonicConfigurationService config() { return configService; }
+        @Override public InputHandler input() { return inputHandler; }
+        @Override public PlaybackDebugManager playback() { return playbackDebugManager; }
+        @Override public GameplayModeContext boundGameplayContext() { return gameplayMode; }
+        @Override public GameplayModeContext resolvedGameplayContext() { return resolveGameplayModeContext(); }
+        @Override public PlcLifecycleFrame plcFrame() { return activePlcLifecycleFrame; }
+        @Override public LiveRewindManager rewind() { return liveRewindManager; }
+        @Override public GameLoopSpecialStageInput pacingInput() { return specialStagePacingInput; }
+        @Override public SpecialStageProvider activeProvider() { return getActiveSpecialStageProvider(); }
+        @Override public String mainCharacterCode() { return resolveMainCharacterCode(); }
+        @Override public TitleCardProvider titleCard() { return getTitleCardProviderLazy(); }
+        @Override public GameMode changeMode(GameMode mode) { return changeGameModeForBoundary(mode); }
+        @Override public boolean debugKeyPressed(int key) { return isUnmodifiedDebugKeyPressed(key); }
+        @Override public boolean rewindable() { return isSpecialStageRewindable(); }
+        @Override public Runnable debugCompletionCallback() { return debugShortcuts::debugCompleteSpecialStageWithEmerald; }
+        @Override public Runnable debugFailureCallback() { return debugShortcuts::debugFailSpecialStage; }
+        @Override public void deregisterSpecialStageAdapter() { GameLoop.this.deregisterSpecialStageAdapter(); }
+        @Override public void doEnterSpecialStage(SpecialStageProvider provider, int stage, boolean black) {
+            GameLoop.this.doEnterSpecialStage(provider, stage, black);
         }
+        @Override public void doEnterResultsScreen() { GameLoop.this.doEnterResultsScreen(); }
+        @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
+        @Override public void restoreBigRingReturn(AbstractPlayableSprite playable) { GameLoop.this.restoreBigRingReturn(playable); }
+        @Override public void notifyModeChanged(GameMode oldMode) {
+            if (gameModeChangeListener != null) gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+        }
+        @Override public void requestSessionSave(SaveReason reason) { GameLoop.this.requestSessionSave(reason); }
+    }
 
-        // Check if ending is complete (e.g., after "PRESENTED BY SEGA")
-        if (endingProvider.isComplete()) {
-            exitEndingToTitleScreen();
+    /** Live cached-manager reads preserve callback rebinding; published and resolved contexts differ. */
+    private final class BonusHost implements GameLoopBonusStageSession.Host {
+        @Override public LevelManager level() { return levelManager; }
+        @Override public SpriteManager sprites() { return spriteManager; }
+        @Override public Camera camera() { return camera; }
+        @Override public WaterSystem water() { return waterSystem; }
+        @Override public FadeManager fade() { return fadeManager; }
+        @Override public GameStateManager gameState() { return gameState; }
+        @Override public GameModule module() { return GameServices.module(); }
+        @Override public GameMode currentMode() { return currentGameMode; }
+        @Override public GameplayRunPolicy runPolicy() { return GameLoop.this.runPolicy(); }
+        @Override public GameplayModeContext publishedGameplayContext() { return SessionManager.getCurrentGameplayMode(); }
+        @Override public GameplayModeContext resolvedGameplayContext() { return resolveGameplayModeContext(); }
+        @Override public String mainCharacterCode() { return resolveMainCharacterCode(); }
+        @Override public AbstractPlayableSprite mainPlayable() { return resolveMainPlayableSprite(); }
+        @Override public TitleCardProvider titleCard() { return getTitleCardProviderLazy(); }
+        @Override public GameMode enterBonusTitleCardAfterLevelLoadBoundary() { return GameLoop.this.enterBonusTitleCardAfterLevelLoadBoundary(); }
+        @Override public GameMode changeMode(GameMode mode) { return changeGameModeForBoundary(mode); }
+        @Override public void titleDestination(PostTitleCardDestination destination) { titleCardLifecycle.destination(destination); }
+        @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
+        @Override public void notifyModeChanged(GameMode oldMode) {
+            if (gameModeChangeListener != null) gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
     }
 
-    /**
-     * CREDITS_DEMO phase: update provider, run level physics with demo input.
-     */
-    private void updateEndingCreditsDemo() {
-        boolean shouldAdvanceFrozenScene = endingProvider.shouldAdvanceFrozenDemoScene();
-        endingProvider.update();
-        shouldAdvanceFrozenScene = shouldAdvanceFrozenScene || endingProvider.shouldAdvanceFrozenDemoScene();
-
-        // Apply demo input to player
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            if (!endingProvider.shouldRunDemoGameplay()) {
-                player.setForcedInputMask(0);
-            } else {
-            // ROM does NOT set obj_control during demos — it writes demo input
-            // directly to jpadhold1/jpadpress1 (MoveSonicInDemo.asm).
-            // Do NOT use controlLocked here: PlayableSpriteMovement re-reads it
-            // and would zero out left/right/jump, overriding the forced input.
-                player.setForcedInputMask(endingProvider.getDemoInputMask());
-            }
-        }
-
-        if (!endingProvider.shouldRunDemoGameplay()) {
-            if (shouldAdvanceFrozenScene) {
-                levelManager.updateObjectPositionsWithoutTouches();
-                levelManager.updateEndingDemoScene();
-            }
-            // Level_Delay / PalFadeIn_Alt do not dispatch Sonic_Animate.
-
-            if (endingProvider.hasTextReturnRequest()) {
-                endingProvider.consumeTextReturnRequest();
-                returnFromEndingDemo();
-            }
-            if (endingProvider.isComplete()) {
-                exitEndingToTitleScreen();
-            }
-            return;
-        }
-
-        // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
-        // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
-        spriteManager.publishHeldInputForLevelEvents(inputHandler);
-        levelManager.updateZoneFeaturesPrePhysics();
-        // Mirror LevelFrameStep step 1c: S1/S2 move the water level before the
-        // player's underwater check; LevelManager.update() skips the move when
-        // this flag is set, so run it here too.
-        if (levelManager.advanceWaterLevelBeforePlayerPhysics()) {
-            levelManager.advanceDynamicWaterLevel();
-        }
-        if (levelManager.objectsExecuteAfterPlayerPhysics()) {
-            spriteManager.update(inputHandler);
-            levelManager.updateObjectPositionsPostPhysicsWithoutTouches();
-        } else {
-            levelManager.updateObjectPositions();
-            spriteManager.update(inputHandler);
-        }
-        // Camera/scroll in ROM order (DeformLayers (REV01).asm:16-18): the camera
-        // move/clamp (ScrollVertical) runs BEFORE the zone event handler, and the
-        // boundary easing (DynamicLevelEvents tail) runs AFTER it. Mirrors
-        // LevelFrameStep steps 4a/4b/4c. Camera/scroll only if not frozen (during
-        // fadeout, scroll freezes).
-        boolean scrollFrozen = endingProvider.isScrollFrozen();
-        if (!scrollFrozen) {
-            camera.updatePosition();
-            camera.captureRenderCopy();
-        }
-        LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-        if (levelEvents != null) {
-            levelEvents.update();
-        }
-        if (!scrollFrozen) {
-            camera.updateBoundaryEasing();
-            if (levelEvents != null) {
-                levelEvents.updateAfterCameraBoundaryEasing();
-            }
-            levelManager.postCameraObjectPlacementSync();
-            // The ending cutscene drives LevelManager directly rather than
-            // through LevelFrameStep, which now owns the loop-top increment.
-            levelManager.advanceLevelFrameCounter();
-            levelManager.update();
-            levelManager.refreshObjectPostCameraRenderState();
-        }
-
-        // Check if returning to text phase
-        if (endingProvider.hasTextReturnRequest()) {
-            endingProvider.consumeTextReturnRequest();
-            returnFromEndingDemo();
-        }
-
-        // Check if ending is complete
-        if (endingProvider.isComplete()) {
-            exitEndingToTitleScreen();
-        }
-    }
-
-    /**
-     * POST_CREDITS phase: update the post-credits screen (e.g., TRY AGAIN / END).
-     * Delegates to the provider's {@code updatePostCredits} / {@code consumePostCreditsExitRequest}
-     * methods so each game handles its own input-driven exit logic.
-     */
-    private void updateEndingPostCredits() {
-        endingProvider.updatePostCredits(inputHandler);
-        if (endingProvider.consumePostCreditsExitRequest()) {
-            exitEndingToTitleScreen();
-            return;
-        }
-        if (endingProvider.isComplete()) {
-            exitEndingToTitleScreen();
-        }
-    }
-
-    /**
-     * CUTSCENE phase: update provider (e.g., S2 Tornado flyby).
-     */
-    private void updateEndingCutscene() {
-        endingProvider.update();
-
-        if (endingProvider.isComplete()) {
-            exitEndingToTitleScreen();
-        }
-    }
-
-    /**
-     * Loads a demo zone for ending credits and transitions to CREDITS_DEMO mode.
-     * Reads zone/act/position from the EndingProvider.
-     */
-    private void loadEndingDemoZone() {
-        int zone = endingProvider.getDemoZone();
-        int act = endingProvider.getDemoAct();
-        int startX = endingProvider.getDemoStartX();
-        int startY = endingProvider.getDemoStartY();
-
-        try {
-            // Suppress zone music — credits music should continue playing
-            levelManager.setSuppressNextMusicChange(true);
-            levelManager.loadZoneAndAct(zone, act);
-            // Consume the title card request since we don't want a title card
-            levelManager.consumeTitleCardRequest();
-        } catch (IOException e) {
-            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
-            LOGGER.severe("Failed to load ending demo zone " + zone + " act " + act + ": " + e.getMessage());
-            return;
-        }
-
-        // Suppress HUD during credits demos (ROM: HUD is never drawn during credits)
-        levelManager.setForceHudSuppressed(true);
-
-        // Position the player at the demo start position (ROM uses center coordinates)
-        DemoLamppostState lamppost = endingProvider.getDemoLamppostState();
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            // ROM: EndingDemoLoad clears rings, time, score, lamppost (sonic.asm:4148-4152)
-            player.setRingCount(0);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
-            // Don't set controlLocked — ROM doesn't use obj_control during demos.
-            // PlayableSpriteMovement re-reads obj_control and would block all input.
-            player.setControlLocked(false);
-            player.setForcedInputMask(0);
-
-            if (lamppost != null) {
-                // Demo starts at a lamppost — restore saved position/camera/water
-                player.setCentreX((short) lamppost.playerX());
-                player.setCentreY((short) lamppost.playerY());
-                player.setRingCount(lamppost.rings());
-                camera.setX((short) lamppost.cameraX());
-                camera.setY((short) lamppost.cameraY());
-                camera.setMaxY((short) lamppost.cameraMaxY());
-
-                // Restore lamppost water state
-                int featureZone = levelManager.getFeatureZoneId();
-                int featureAct = levelManager.getFeatureActId();
-                WaterSystem waterSystem = this.waterSystem;
-                waterSystem.setWaterLevelDirect(featureZone, featureAct,
-                        lamppost.waterHeight());
-                waterSystem.setWaterLevelTarget(featureZone, featureAct,
-                        lamppost.waterHeight());
-                ZoneFeatureProvider zfp = levelManager.getZoneFeatureProvider();
-                if (zfp != null) {
-                    zfp.setWaterRoutine(lamppost.waterRoutine());
-                }
-            } else {
-                // All other demos: use startpos (center coordinates)
-                player.setCentreX((short) startX);
-                player.setCentreY((short) startY);
-            }
-        }
-
-        // Snap camera to player position (unless lamppost demo has explicit camera coords)
-        if (lamppost == null) {
-            camera.updatePosition(true);
-        }
-
-        // Prepare the viewport and native player initialization before the fade.
-        levelManager.prepareEndingDemoScene();
-
-        // Suppress player keyboard input — demo input comes from forcedInputMask only
-        spriteManager.setInputSuppressed(true);
-
-        // Switch to CREDITS_DEMO mode
-        setGameMode(GameMode.CREDITS_DEMO);
-
-        // Notify provider that zone is loaded
-        endingProvider.onDemoZoneLoaded();
-
-        LOGGER.info("Loaded ending demo zone " + zone + " act " + act +
-                " at (" + startX + ", " + startY + ")");
-    }
-
-    /**
-     * Returns from CREDITS_DEMO to CREDITS_TEXT for the next credit.
-     */
-    private void returnFromEndingDemo() {
-        // Restore player keyboard input and clear HUD suppression
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-
-        setGameMode(GameMode.CREDITS_TEXT);
-        endingProvider.onReturnToText();
-
-        LOGGER.info("Returned from ending demo to credits text");
-    }
-
-    /**
-     * Exits the ending sequence and returns to the title screen.
-     */
-    private void exitEndingToTitleScreen() {
-        LOGGER.info("Ending sequence complete, returning to title screen");
-        GameLoopGameOverExit.startEndingReturn(spriteManager, levelManager, resolveMainCharacterCode(),
-                audioManager, fadeManager, resolveGameplayModeContext(), this::doExitEndingToTitleScreen);
-    }
-
-    /**
-     * Actually transitions to the title screen after fade completes.
-     */
-    private void doExitEndingToTitleScreen() {
-        endingProvider = null;
-        continueScreen.returnToTitleScreen();
-        LOGGER.info("Ending -> Title Screen");
-    }
-
-    /**
-     * Maps an {@link EndingPhase} to the corresponding {@link GameMode}.
-     */
-    private GameMode gameModeForPhase(EndingPhase phase) {
-        return switch (phase) {
-            case CUTSCENE -> GameMode.ENDING_CUTSCENE;
-            case CREDITS_TEXT -> GameMode.CREDITS_TEXT;
-            case CREDITS_DEMO -> GameMode.CREDITS_DEMO;
-            case POST_CREDITS -> GameMode.TRY_AGAIN_END;
-            case FINISHED -> GameMode.TITLE_SCREEN;
-        };
+    /** Reads cached slots at the original expression points, including after callbacks. */
+    private final class EndingHost implements GameLoopEndingSession.Host {
+        @Override public LevelManager level() { return levelManager; }
+        @Override public SpriteManager sprites() { return spriteManager; }
+        @Override public Camera camera() { return camera; }
+        @Override public WaterSystem water() { return waterSystem; }
+        @Override public FadeManager fade() { return fadeManager; }
+        @Override public GameModule module() { return GameServices.module(); }
+        @Override public InputHandler input() { return inputHandler; }
+        @Override public String mainCharacterCode() { return resolveMainCharacterCode(); }
+        @Override public GameMode currentMode() { return currentGameMode; }
+        @Override public GameplayModeContext boundGameplayContext() { return gameplayMode; }
+        @Override public GameplayModeContext resolvedGameplayContext() { return resolveGameplayModeContext(); }
+        @Override public void setGameMode(GameMode mode) { GameLoop.this.setGameMode(mode); }
+        @Override public void requestSessionSave(SaveReason reason) { GameLoop.this.requestSessionSave(reason); }
+        @Override public TitleScreenProvider titleScreen() { return getTitleScreenProviderLazy(); }
+        @Override public void returnToTitleScreen() { continueScreen.returnToTitleScreen(); }
     }
 
     /**
      * Gets the ending provider (for rendering in Engine.java).
      */
     public EndingProvider getEndingProvider() {
-        return endingProvider;
+        return endingSession.provider();
     }
 }

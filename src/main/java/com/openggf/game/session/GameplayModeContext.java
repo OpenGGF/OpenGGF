@@ -1022,7 +1022,8 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry == null) {
             return;
         }
-        var root = com.openggf.game.rewind.NativeRewindAdapterPublication.nativeRoot(worldSession.rootGameModule());
+        var root = com.openggf.game.rewind.NativeRewindAdapterPublication.publicationOwner(
+                worldSession.rootGameModule(), worldSession.getGameModule());
         Set<RewindSnapshottable<?>> nativePublications = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         if (root != null) nativePublications.addAll(root.rewindAdapters());
         for (RewindSnapshottable<?> adapter : worldSession.getGameModule().rewindAdapters()) {

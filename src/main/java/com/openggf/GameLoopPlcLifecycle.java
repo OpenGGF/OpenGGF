@@ -1,6 +1,5 @@
 package com.openggf;
 
-import com.openggf.game.EndingProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.internal.FreshLevelTitleBoundaryPublication;
@@ -27,19 +26,6 @@ final class GameLoopPlcLifecycle {
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
-    }
-
-    static PlcLifecyclePhase endingPhase(EndingProvider provider) {
-        if (provider == null) {
-            return PlcLifecyclePhase.ENDING;
-        }
-        return provider.plcLifecyclePhaseOverride().orElseGet(() ->
-                switch (provider.getCurrentPhase()) {
-                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
-                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
-                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
-                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
-                });
     }
 
     /** Samples the current module at the caller's pre-load or post-load boundary. */

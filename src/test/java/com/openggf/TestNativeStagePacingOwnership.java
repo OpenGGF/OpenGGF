@@ -55,7 +55,7 @@ class TestNativeStagePacingOwnership {
         when(context.getWorldSession()).thenReturn(world);
         when(context.isGameplayRuntimeReady()).thenReturn(true);
         set(loop, "gameplayMode", context); set(loop, "audioManager", mock(AudioManager.class));
-        set(loop, "fadeManager", mock(FadeManager.class)); set(loop, "activeSpecialStageProvider", provider);
+        set(loop, "fadeManager", mock(FadeManager.class)); SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.setGameMode(GameMode.SPECIAL_STAGE); loop.stepPresentationFrame();
         assertEquals(1, loop.ticks, "Only a native engine owner may opt into four-tick scheduling");
         verify(reported, never()).pacingState();

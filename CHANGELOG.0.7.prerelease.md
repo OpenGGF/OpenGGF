@@ -615,17 +615,32 @@ Unreleased. The earlier development themes remain in
   reused capture processes off desktop audio devices.
 
 - **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Destination
+  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  rewind publications keep their selected module owner across fresh service
+  incarnations, while both exposed and suppressed native services remain protected
+  from creator capture. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
   replacement owner's history. Floors and checkpoints include completed frame
   publication; inactive outgoing worlds cannot seed new history. Audio's installed
   source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  One loop-lifetime special-stage lifecycle now owns entry presentation, retained
+  provider identity, captured results and return completion through the existing
+  virtual controller seams. Shared rewind admission stays in the game loop; a
+  loop-lifetime title owner keeps its lazy provider binding, presentation, locks
+  and complete release sequence together through the existing entry and rendering
+  seams, preserving input timing and native destination assembly.
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
   reject stale rewind and dependency allowances, and identify raw lifecycle calls
   by caller rather than a shared total. Shared menu animation and execution-time
-  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics injection close the remaining menu/framework seams. Ending provider
+  state, credits-demo execution and ending cleanup share one session owner while
+  the game loop retains frame admission. Bonus visits likewise keep admission,
+  provider publication, deferred assembly and return restoration in one loop-owned
+  session, preserving the shared frame and title-card boundaries. Each graphics
+  host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
+  allocation and immediate rewind redraws. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Stock title
   previews use detached game-owned providers, preserving animated pixels and
@@ -634,7 +649,12 @@ Unreleased. The earlier development themes remain in
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
   audio callers supply their selected profile to the reusable presentation host;
-  desktop sound-test composition lives with the developer tools. Native SMPS
+  desktop sound-test composition lives with the developer tools. SMPS backends
+  keep their explicitly supplied restore-request destination for their usable
+  lifetime, including later source construction after engine-root reconfiguration;
+  SoundTest windows retain their configured destination for WAV export. Capture
+  admission, rebuild continuity and retirement share one manager-owned lifetime
+  boundary, preserving live recordings across presentation replacements. Native SMPS
   loaders retain their own ROM references while the shared cache and hexadecimal
   dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence

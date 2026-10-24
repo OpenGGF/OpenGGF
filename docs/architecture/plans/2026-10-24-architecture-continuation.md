@@ -4600,3 +4600,2706 @@ owned-worktree cleanup are reported in the final task handoff, not assumed here.
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
 ```
+
+### Broader ownership loop: ending session and palette publication
+
+The user explicitly renewed the looping goal beyond small already-qualified
+guard reductions. Retained allowances, migration size and lack of a runtime
+defect are not architectural exhaustion or automatic blockers. This loop seeks
+complete responsibility/lifetime transfers, followed by the normal reviewed
+verification, develop integration/push and owned-worktree cleanup.
+
+The new pre-task destination is97eb86f186b432722024ca419a00b901b38f5ec2. Main
+fast-forwarded from81bc16e2c, preserving the upstream Stageplay ground-placement
+and shared native-terrain scanning changes (42 files). The ending source is
+unchanged across that update. Main stays on develop with its four inherited
+dirty submodules and five unrelated user files. The coordinator uses isolated
+branch `bugfix/ai-architecture-ownership-loop12-20261024`; cowtree completed a
+normal checkout with `fallback=yes`, because copy-on-write was unavailable.
+Hooks are installed. Actual preflight passed Java25/Lua5.4/PowerShell.
+
+Before product edits, the queued lean `com.openggf.TestGameLoop` selector passed
+all103 invocations, zero failures/errors/skips, at97eb86f18: both existing
+parameter pairs and all ordinary identities inspected. Java25/EGL and exact
+selector verified. Fresh compile covered4344 production and4452 test/maintained
+consumer sources. Queue wait0s; Maven execution1:29. The two XML/text reports
+were consumed. No ROM/display prerequisite was needed by this selection.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestGameLoop' test -B
+```
+
+Ending design alternatives were source-grounded independently: consolidating
+the existing root keeps the ownership problem; a GameplayModeContext owner
+broadens parked-session, rendering and standalone routing; a package-private
+GameLoopEndingSession owned by GameLoop is the bounded choice. It will own both
+mutable fields, all12 ending methods, ending phase/PLC selection and ending-only
+exit cleanup. Bonus choreography stays outside this first slice. GameLoop keeps
+shared admission, input advancement, timer/audio/profiling/trace orchestration.
+
+Independent design review accepts that ownership with three corrections. Keep
+all six Engine calls through the existing virtual GameLoop.getEndingProvider
+boundary, whose body delegates to the session. GameLoop itself is absent from
+the normalized API pin; the existing viewport getter mocks still demonstrate
+observable dispatch. No guard may ban that boundary merely for owner purity.
+The new private host adapter must preserve cached-slot reads separately from
+module/public-mode dispatch, and bound gameplay context separately from resolved
+context. Re-read after callbacks where the source did; retain local snapshots
+where it did, especially the ending-return argument-evaluation boundary.
+
+The pending bit also gates standalone completion. It remains one boolean in
+the new owner, wired directly to MasterTitleExitCoordinator's existing consumer;
+its raw black fade and save/pending/music order remain unchanged. Do not derive
+pending from provider presence or add a transition framework. Initialize the
+owner before that consumer is constructed. Generic mode changes, runtime refresh
+and park/resume retain existing ending state; no new teardown-on-rebind policy.
+
+Characterization must cover fresh provider lookup at fade completion (S1/S2/
+KiS2 factories return fresh providers), initialization partial failures, native
+fade binding/reveal order, consumed request counts, short-circuit frozen-scene
+sampling, water/player/object/camera ordering, load/rebind effects, both exit
+branches, original deferred-abort identity, and actual shared freeze/rewind gate
+wiring. Retarget moved private test locators without weakening assertions or
+keeping root private wrappers solely for tests. One existing final-audio-field
+reflection fixture must construct through the existing injected EngineContext
+instead, retaining its assertions for the constructor-owned audio dependency.
+
+After extraction, enforce real ownership and measure GameLoop's effective cap,
+stepInternalBody and the moved84-line demo-load method with the existing parser;
+retain zero concrete-game references and unchanged supported pins. Low-level121
+and ambient6/5 are expected unchanged, not the success criterion.
+
+The independent next-candidate grounding recommends a concrete graphics palette
+texture/publication/residency owner rather than changing CPU donor identity or
+shared bank allocation. That state machine is independent enough to implement
+in a separate worktree while ending ownership is reviewed. Its public virtual
+call timing, aliases, requested/displayed fades, pending versus detached water
+inputs, scoped generations and selective disposal must survive. Its expected
+frozen delta is zero; any required identity changes need explicit parent review,
+never automatic refreezing or type erasure. CPU bank lifetime and all closed
+SAT/PreparedPiece/background/water-math decisions stay intact in that slice.
+
+Parent owns the combined change-based validation plan, affected ROM/GPU/domain
+checks and fresh guards after stable composition. Existing credits traces often
+drive HeadlessTestFixture directly, so they are supporting physics evidence, not
+proof of the new controller path. S3K's native ending remains a LEVEL route;
+keep its transition and the four required S3K stability selectors as shared-loop
+regressions. No broad/full-suite or successful extraction claim is made yet.
+
+### Ending session implementation — isolated child delivery
+
+The ending child fast-forwarded its T3-owned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-678685ef` from97eb86f18 to the parent plan
+commit1e5ff35c1836aad35cacef2c09f7acd16164c649 before product edits, on local
+`bugfix/ai-ending-session-owner-20261024`. It neither switched nor wrote main,
+and did not access/copy the parent's target. Parent's original103-case GameLoop
+baseline is reused, rather than repeated before implementation. No delegation,
+push, integration or worktree cleanup belongs to this child slice.
+
+`GameLoopEndingSession` now owns the provider and single pending bit, all12
+ending methods, phase/PLC routing and ending-only return cleanup. The root owns
+admission, frame/input/audio/timer/trace orchestration and supplies the existing
+PLC frame. Its private adapter reads the original cached manager/input/mode
+slots at their original expression boundaries; module resolution remains at
+root composition. Native-fade binding uses the bound gameplay context, while
+fade wrapping uses the resolved context. Audio is a stable constructor input.
+Initialization and virtual mode notification precede the local reveal-fade
+snapshot. Return cleanup retains the original all-arguments-captured boundary;
+the later shared title handoff still reads live bindings. The pending consumer
+is wired directly after owner construction to the existing standalone exit
+coordinator. Refresh, generic mode changes, provider reset and park/resume do
+not reset ending state.
+
+The accepted review corrections supersede the original direct-owner rendering
+proposal: all six Engine calls remain through the existing public virtual
+`GameLoop.getEndingProvider()`, and the viewport tests are unchanged. GameLoop
+is absent from the0.7 pin; pin stability is additional API evidence rather than
+proof of this facade's dispatch compatibility. Bonus, native S3K ending, palette
+publication, audio, Stageplay, physics, public signatures, pins and descriptors
+are outside this cut. Neither the rejected gameplay-context owner nor a new
+transition framework was introduced.
+
+Before product edits,30 new temporal controls plus the existing freeze test's
+behavioral replacement passed against the original implementation:31 cases,
+zero failures/errors/skips. The Java source aggregate was
+`e54c8fd7d079ca69a29d665c230dcf445a4e0072c2d07f5e4116b4eed1968bbe`.
+The aggregate is SHA256 over sorted `src/main/java` and `src/test/java` Java
+paths, each encoded as path + NUL + bytes + NUL. The initial21-case attempt
+exposed one incomplete replacement-module fixture (missing RNG flavour).
+Completing a real S2 provider in the new freeze control also aborted the JVM
+at its native GPU palette upload with no context. A supplied mock provider
+removed that unintended rendering obligation; no production change was used
+to make these fixture failures pass. Source was stable through the successful
+characterization run. The structural ownership control then failed on the
+original root's two fields, all12 methods and nondelegating facade; its positive
+and negative samples passed. This was an ownership red control, not a fabricated
+behavior regression.
+
+The first transferred selection passed170 cases (103 GameLoop,30 temporal,
+27 outer-audio,8 unchanged viewport,2 ownership controls), zero failures/errors/
+skips. The final runtime selection below passed262 cases across18 classes,
+zero failures/errors/skips:103 GameLoop,36 ending-owner,27 audio,8 viewport,
+7 rewind-boundary,7 suspension,3 S3K ending presentation,7 provider contract,
+3 master-title exit,30 PLC-frame lifecycle,1+1 provider-owned-fade,5 S1 credits,
+1 S1 credits PLC owner,2 S1 ending-headless,3 KiS2 ending/continue,9 SBZ credits.
+The36 owner cases include fresh factory and module lookup, initialization
+partial failure, bound/resolved distinction, active reveal versus HOLD_WHITE,
+actual reveal callback survival, post-mode fade capture, live load/provider/
+manager/input rebinding, exact frozen/request query counts, water/player/object/
+camera/event/counter order, load/request acknowledgements, lamppost restoration,
+both captured-dependency exit branches, actual standalone freeze/rewind wiring,
+state retention across park/resume and a constructor with no runtime queries.
+Existing IO fallback and deferred-abort identity assertions remain intact.
+Private fixture locators alone moved to the new owner, except the requested
+actual freeze replacement and constructor audio injection in the save fixture.
+
+Both successful post-transfer selections used Java25.0.5.0.2 and explicit
+surfaceless EGL; every XML identity, environment and skip was inspected and the
+reports consumed. The runtime-selection Java source aggregate is
+`8360ce09c8ff87dd65b96b2ddcfef7bd5b85d82873984270ba8d97f9ea3016e8`.
+The category runner's pre-documentation whole-tree fingerprint at this state
+was51680aaec7a33d2d20372d528bb0f356104a88ca8f460b74854bc6f355030c70.
+Parent baseline timing is the parent's observation:0s queue,1:29 execution.
+The first transfer run waited8s and executed1:19; final runtime admission
+waited0s and Maven executed1:27. These are individual job intervals, not summed
+delivery elapsed time; other time is unmeasured, with no user-response wait.
+
+The existing source parser measured GameLoop at3085 effective lines (3305→3085),
+the complete new session at320, stepInternalBody at276 physical lines (277→276),
+and moved loadEndingDemoZone at its unchanged84. Root and owner caps are
+ratcheted to those measured values; the loader budget is retargeted rather than
+deleted. Ownership samples reject root state/private choreography and owner
+root/context/erased locator access, while explicitly permitting the virtual
+getter. No frozen records or ambient allowances were changed. API/source/
+architecture guard results are pending at this checkpoint.
+
+Reproducible command definitions (run in the child checkout, with
+`MAIN_CHECKOUT` set to the existing absolute main root):
+
+```bash
+QUEUE="${MAIN_CHECKOUT}/tools/testing/maven_queue.py"
+# All queued Maven invocations used this environment and common properties:
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=$SELECTION" test -B
+```
+
+The pre-transfer selection was
+`TestGameLoopEndingSession,TestGameLoop#endingFadeFreezesGameplayUntilEndingModeEnters`.
+The ownership red used
+`TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers`.
+The first transfer used
+`TestGameLoop,TestGameLoopEndingSession,TestGameLoopAudioPresentationModes,TestViewportLifecycleContract,TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers`.
+The final runtime used
+`TestGameLoop,TestGameLoopEndingSession,TestGameLoopAudioPresentationModes,TestViewportLifecycleContract,TestSbz1CreditsDemoBug,TestSonic1EndingSequenceHeadless,TestKis2EndingContinue,TestMasterTitleExitCoordinator,TestEndingProviderContract,TestSonic1CreditsManager,TestSonic2EndingProvider,TestSonic1CreditsPlcLifecycleOwner,com.openggf.game.sonic1.credits.TestPlcProviderOwnedFadeLifecycle,com.openggf.game.sonic2.credits.TestPlcProviderOwnedFadeLifecycle,TestPlcFrameLifecycleCoordinator,TestGameLoopRewindBoundaryPolicy,TestGameLoopSuspension,TestS3kEndingTransitionPresentation`.
+That invocation additionally supplied these exact absolute ROM properties:
+
+```bash
+"-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen"
+```
+
+Discovered existing main-root images were hash-verified without copying them:
+S1 CRC32 AFE05EEE / SHA1 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B;
+S2 7B905383 / 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9;
+S3K 63522553 / CFBF98C36C776677290A872547AC47C53D2761D6;
+KiS2 2AC1E7C6 / 6CD0537A3AEE0E012BB86D5837DDFF9342595004.
+Native headless fixture controls support behavior preservation; the eight SBZ
+load/frozen-scene cases exercise the moved controller implementation. Direct
+HeadlessTestFixture ending/credits stepping is not claimed as new controller
+proof. No exhaustive credits trace sweep, visual/pixel certification, broad
+smoke or full-suite run was performed. Parent owns independent review, combined
+validation including the four required S3K selectors, integration/push/cleanup.
+
+Final child verification: all138 selected API/architecture cases passed with no
+failures/errors/skips (11 signature surface,4 pin policy,34 runtime ArchUnit,
+1 test ArchUnit,9 review guards,79 source guards); admission waited41s and Maven
+executed48.518s. The separate8-case singleton-lifecycle scanner passed with no
+failures/errors/skips, preserving the6 methods/5 files inventory; admission0s,
+execution29.995s. Both used the common environment above; the scanner additionally
+used `--lean`. The guard selection was
+`TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestArchUnitRules,TestArchUnitTestRules,TestModApiSignatureSurface,TestModApiPinPolicy`;
+the lifecycle selection was `TestSingletonLifecycleGuard`.
+
+A final guard-only tightening requires the session itself to contain both state
+fields and all12 methods; its negative samples remove each field/method in turn.
+The four affected ownership/budget controls then passed with no failures/errors/
+skips using `--lean`,0s admission and29.515s Maven execution, selection
+`TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`.
+No runtime source or behavior test changed after the262-case run. The final
+main-and-test Java aggregate is
+`9c43b671cb049680c8b93cd5490ad5ee29dace809e28aaacf5c7e30979aa1681`;
+the stable production-only Java aggregate is
+`d63e112576fe7e933954e6fd810dac0d7ee24476204b2f187d1babc41249ea9d`.
+The existing parser independently reconfirmed3085/320 effective lines,
+276-line root step body and84-line owned loader. Exact XML identities and
+skips were inspected and consumed for every completed run. No raw diagnostic
+archive, validation receipt or pass cache is retained. All child jobs have
+finished; parent independent review and combined delivery remain outstanding.
+
+### Bounded palette texture/publication owner (2026-10-24)
+
+Implementation checkout `${TASK_CHECKOUT}`, local
+branch `bugfix/ai-palette-publication-owner-20261024`, starts at verified
+`97eb86f186b432722024ca419a00b901b38f5ec2`. This is a responsibility transfer,
+not a runtime repair or an allowance-count reduction. No delegation, integration,
+push, branch switch in main, or other checkout's build output is involved.
+
+`GraphicsManager` now holds one package-private concrete `PaletteTextureOwner`.
+It owns normal/water texture handles and physical capacity; native staging;
+aliased cached/pending sources and publication gates; requested/displayed fade
+state and rewind hold; raw published-water snapshots, content/derived-row caches;
+scoped leases, world binding and generations; and the appearance residency
+registry. Display conversion settings live with the upload state they control.
+The owner performs the uploads, recomposition, publication, invalidation and
+resource disposal. `AppearancePalettes.Rows` addresses it directly. Existing
+publication, scoped-handle, visual-source and command-residency bridges reach it
+through package-local access. Nothing is mirrored back into `GraphicsManager`.
+
+The host keeps rendering orchestration and underwater shader selection. Its
+supported public methods keep their signatures and virtual dispatch. In
+particular, pending water replay crosses the host's typed adapter and invokes
+its public virtual `cacheUnderwaterPaletteTexture`; the two casts/source reads
+remain ordered separately. Nonvirtual package-local host reads preserve original
+backing-field sampling rather than invoking overridable mode/profile/fade getters.
+Resource reset still clears the tracking map before renderer cleanup and then
+calls the host's virtual `clearPaletteTextures`. Construction allocates no GPU
+resources or native buffers. There are no per-frame/per-row injection adapters,
+new interfaces, callback frameworks, gameplay/session lookups, CPU-bank changes,
+or RGB rewind protocol changes.
+
+Rejected cuts: moving methods while retaining palette state on the manager would
+leave lifetime authority split; moving only texture IDs would split publication,
+fade and residency dependencies; a facade/interface would add indirection without
+an owner. The alternative CPU-bank/token migration would change rewind identity
+and require frozen-edge review, so it is outside this selected cut. No frozen
+records are replaced, erased or refrozen. All seven root shader capacity fixes,
+shared row allocation, SAT/PreparedPiece/background ownership, NativeGroundScan
+and upstream Stageplay changes remain intact.
+
+Before production edits, five adversarial controls characterized public upload
+and cleanup overrides, private getter bypass, reentrant replay/latch restoration,
+exception consumption with later normal publication, selective disposal,
+headless null rows, and row selection before ordered RGB reads. The first run
+was 4 pass / 1 failure because the new test incorrectly expected LIMITED expansion
+to change RAW_RGB black; the corrected baseline was 5 pass, zero errors/skips.
+The first candidate invocation stopped at compilation on a missing
+`GL_CLAMP_TO_EDGE` import; no candidate tests ran in that invocation. The import
+was corrected. A source-body comparison found all 58 transferred method bodies
+unchanged after mapping the explicit host mode/reset/replay reads. Renderer test
+fixtures now inject their dummy handles into the actual owner rather than the
+removed manager fields.
+
+The final production/test source delta SHA-256 is
+`17f850bf4ab1dc4eb1d97287dde6cb4386f3090fe2d5ef3d7cfdb659d94877f6`,
+computed from `git diff 97eb86f186b432722024ca419a00b901b38f5ec2 -- src/main src/test`
+after staging all new files. The 70-case run used
+`2d91603bcc4a407b6d33718c9ee50096d2e09c3d56d140574a1940f82e657a63`;
+the subsequent test change added the independent same-live-bank, two-adapter
+regression in `TestPaletteColorStateAdapter`. The 91/135-case requests compiled
+and tested delta `d956819843ca1c126ec48fd528c6d39a248c0854e59efaec4aa3245b94d04a9c`.
+The commit hook then correctly rejected machine-local home paths in this appendix;
+they were replaced with checkout variables. Its conservative declaration projection
+also caught the wrapper's parameter spelling `profile` in place of the original
+`displayColorProfile`, although the compiled signature pin was unchanged. Restoring
+the original name made the hook's public declaration projection identical. This
+last source edit changes only that parameter/local reference spelling, no method
+body behavior or frozen identity. A fresh narrow final run passed all 20 cases
+(TestPalettePublicationDispatch 5, TestModApiSignatureSurface 11,
+TestModApiPinPolicy 4), zero failures/errors/skips, on the final fingerprint.
+
+Observed candidate results, with every report's failures/errors/skips and Java25 /
+surfaceless-EGL properties inspected:
+
+| Selection | Cases | Failures/errors/skips |
+| --- | ---: | --- |
+| TestPalettePublicationDispatch | 5 | 0/0/0 |
+| TestPaletteUploadLatch | 6 | 0/0/0 |
+| TestAppearancePalettes | 5 | 0/0/0 |
+| TestScopedPaletteGraphicsAccess | 3 | 0/0/0 |
+| TestUnderwaterPaletteUpload | 22 | 0/0/0 |
+| TestGraphicsManagerHeadless | 24 | 0/0/0 |
+| TestPaletteFadePresentation | 5 | 0/0/0 |
+| TestPaletteTextureCapacity | 11 | 0/0/0 |
+| TestNativeWhitePaletteFade | 14 | 0/0/0 |
+| TestDonorPaletteRewind | 1 | 0/0/0 |
+| TestScopedPalettePresentationRewind | 3 | 0/0/0 |
+| TestDonatedTeamPalettes | 7 | 0/0/0 |
+| TestPaletteColorStateAdapter | 13 | 0/0/0 |
+| TestPresentationPatternBatching | 8 | 0/0/0 |
+| TestPatternRendererIngress | 13 | 0/0/0 |
+| TestGraphicsManagerPatternAtlasPageOrdering | 12 | 0/0/0 |
+| TestSatReplayBatching | 5 | 0/0/0 |
+| TestRenderProjection | 4 | 0/0/0 |
+| TestModApiSignatureSurface | 11 | 0/0/0 |
+| TestModApiPinPolicy | 4 | 0/0/0 |
+| TestArchUnitRules | 34 | 0/0/0 |
+| TestArchitecturalReviewGuard | 9 | 0/0/0 |
+| TestArchitecturalSourceGuard | 77 | 0/0/0 |
+
+The first three candidate invocations passed 70, 91 and 135 cases (296 total);
+the justified final header-spelling control added 20 passing executions.
+All 4,345 production and 4,454 test-source files compiled. Real pixels use the
+existing production offscreen/session owners, with DISPLAY and WAYLAND_DISPLAY
+unset. Coverage includes ten capacity/render paths, independently retained hosts,
+reclamation/disposal/reinitialization, native white fades and transparent zero,
+donor super mutation with immediate redraw/backward restore/forward replay,
+normal/native-water team selection, deferred scoped relocation/release/reacquisition,
+wrong-host/stale-generation/exact-world isolation, appearance recomposition,
+pending aliases versus detached water publication, fade hold and reveal failure
+restoration, and public virtual dispatch. The two-adapter control preserves the
+existing independent adapter lifetime authority on the same still-live bank.
+
+Exact invocations are expressed below with their shared shell prefix factored
+out; `MAIN_CHECKOUT` denotes the existing project main checkout and
+`TASK_CHECKOUT` the T3-owned implementation checkout. Every command ran in the
+implementation checkout. No broad smoke, whole-S3K
+group, release full suite, native parity sweep or performance certification was
+requested or implied. The first candidate compile failure was followed by the
+required focused rerun. Queue waiting was pending work; admission/elapsed delivery
+time was not measured here. Maven execution totals were 1:27, 32.144s and 41.919s
+for the first three successful candidate requests; the final narrow request
+reported 1:28. These are not total delivery time.
+
+```bash
+palette_maven=(env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py"
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl)
+# Pre-extraction baseline, after correcting the RAW_RGB assertion: 5/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch test -B
+# Stable focused owner controls: 70/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch,TestPaletteUploadLatch,TestAppearancePalettes,TestScopedPaletteGraphicsAccess,TestUnderwaterPaletteUpload,TestGraphicsManagerHeadless,TestPaletteFadePresentation test -B
+# Pixels, real ROMs, identity and affected renderer fixtures: 91/0/0/0.
+"${palette_maven[@]}" "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dtest=TestPaletteTextureCapacity,TestNativeWhitePaletteFade,TestDonorPaletteRewind,TestScopedPalettePresentationRewind,TestDonatedTeamPalettes,TestPaletteColorStateAdapter,TestPresentationPatternBatching,TestPatternRendererIngress,TestGraphicsManagerPatternAtlasPageOrdering,TestSatReplayBatching,TestRenderProjection test -B
+# One fresh API/pin/strict frozen/source-guard request: 135/0/0/0.
+"${palette_maven[@]}" -Pguards -Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchUnitRules,TestArchitecturalReviewGuard,TestArchitecturalSourceGuard test -B
+# Original public parameter spelling restored for conservative hook admission: 20/0/0/0.
+"${palette_maven[@]}" -Dtest=TestPalettePublicationDispatch,TestModApiSignatureSurface,TestModApiPinPolicy test -B
+```
+
+Before the ROM-backed invocation, root `.gen` discovery and SHA-1/CRC32 checks
+verified the exact paths above: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`. No ROMs were copied or linked.
+
+The strict `low_level_layers_do_not_depend_on_runtime_layers` identity passed.
+Every frozen file compares byte-for-byte with the base; the low-level store still
+has 121 records and SHA-256
+`59a620bd64e55dd9bf8113259bb48997af7e07656e9ccbf8cac8fd12f4c112de`.
+Frozen delta is zero, with no replacement identities. API pins, descriptor,
+terminals, all root shaders, RenderContext allocation/colours and palette RGB
+rewind production code also compare unchanged. Reports and temporary diagnostics
+were inspected and consumed; no pass receipts or log archives were retained.
+
+No public behavior, configuration or discrepancy changed, so no release-note,
+guide or policy update is required. The parent owns independent review,
+composition, joint validation, main delivery and checkout/branch cleanup.
+This slice stops after the complete first owner transfer; no live test jobs remain.
+
+### Parent composition checkpoint — ending and palette owners
+
+The integration worktree fast-forwarded to ending commit
+`7b9b0c22e47f562152e2ff950061fbb401d0d2d1` and merged palette commit
+`0976bda5bc69fdc8e86e6e830c99512616ab5256`. The only conflict was two independent
+appendices at the end of this artifact; both are retained in full. No Java
+conflict resolution was needed. Main remains on develop at integration base
+`97eb86f186b432722024ca419a00b901b38f5ec2`, with its unrelated changes preserved.
+Independent source reviews of both components are pending at this checkpoint;
+worker results above are component evidence, not a composed validation claim.
+
+The next parallel slice deliberately gives each SMPS backend a non-null,
+constructor-supplied restore-request destination for its usable lifetime. Root
+reconfiguration does not transfer a retained backend, and each interactive sound
+test window similarly retains the sink captured at window composition. This
+changes per-sequencer/per-export root sampling intentionally. The destination is
+not an owner of every backend mutation. Production must pair it with the manager
+receiving the backend; no identity registry or new runtime enforcement is added.
+Default snapshot reconstruction preserves its captured sink within that lifetime;
+explicit dependency resolvers retain authority to supply another sink.
+
+The independent design review approved that contract with two corrections: add
+`TestModSceneActBridge` and the standalone `NativeGameplayCheck` backend callers,
+and qualify the snapshot guarantee as above. The complete migration includes
+104 legacy sequencer calls, six main-source backend constructions, 21 test
+constructions, one standalone native-tool construction and three test subclasses.
+The native tool needs explicit compilation outside Maven's ordinary source set.
+Existing natural restore publication, legacy configuration binding and explicit
+snapshot resolver behavior stay unchanged. Only the two ambient sequencer
+constructor records are expected to disappear: 121 to119, zero replacements.
+
+Parent delivery validation is deferred until the three source components and
+reviews are stable. The combined selection will use the pinned97eb86f18 base,
+actual category preflight, affected ROM/EGL/domain controls and fresh guards.
+No broad or full-suite success is claimed at this checkpoint.
+
+Both independent component reviews subsequently found no actionable blockers.
+The ending reviewer verified all12 moved methods, PLC and return behavior,
+original live/snapshot and virtual dispatch boundaries, and the single pending
+alias. Independent measurements agree: GameLoop3305 to3085 effective lines,
+owner320, step body277 to276, moved loader84. Ending full binary diff SHA-256
+against97eb86f18 is
+`77179ce754bab66063c92aa164815b5c3de6e566dbf5e2e5a32fa29efa44d05a`.
+
+The palette reviewer verified actual coupled work ownership, all132 preserved
+public/protected GraphicsManager declarations, the live typed replay bridge,
+pending aliases and detached publication inputs, and teardown dispatch/order.
+Palette full binary diff SHA-256 is
+`67b18aba8844ece7b75f3ffcb81eb24a80d1ebee8e7374dc33477251c666ce96`.
+Both reviews were source-only: reported test executions remain worker evidence,
+not independent reruns. Parent static comparison at composed8b4ff54d6 also
+confirms the frozen low-level store, candidate signature pin and release
+descriptor are byte-identical to97eb86f18; the store retains121 records.
+
+The preliminary change-based plan at8b4ff54d6 selects all3755 candidate classes
+across ten ordinary smoke categories plus fresh guards, because the shared loop
+and source controls affect multiple subsystems. No run has been submitted for
+this preliminary state. The final SMPS composition will be planned afresh and
+validated once stable. Its new source cannot be certified by completed component
+checks. The next bonus-stage ownership candidate is being grounded read-only;
+it does not extend the current frozen validation source.
+
+
+### Explicit SMPS restore-request destination lifetime migration (2026-10-24)
+
+This bounded implementation slice starts at the required
+`97eb86f186b432722024ca419a00b901b38f5ec2` in the clean T3-created isolated
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-23df97c4` worktree. Its setup branch was
+renamed to `bugfix/ai-smps-restore-owner-20261024`; hooks were installed. Main
+`develop` was not changed. The renewed cleanup goal reopened the qualified
+retention above. This implementation deliberately chooses a stable destination
+lifetime as an architectural change; no previously observed gameplay defect is
+claimed. The parent owns combined smoke, composed S3K, fresh
+full guards, integration, push and cleanup; this worker owns characterization,
+caller-complete migration, focused checks and a local commit only.
+
+A backend requires a nonnull `MusicRestoreSink` at composition and retains it for
+its usable lifetime. Production supplies the exact manager receiving that backend.
+Reconfiguring root A to B does not transfer a retained backend; music, mixed SFX
+and standalone SFX constructed later still request restore from A. Another
+receiving manager requires a replacement backend. Existing owner-thread and
+retirement rules apply; mismatched composition remains a caller violation,
+without a new ownership registry or concurrent independent-root guarantee.
+`MusicRestoreSink` does not become owner of every backend mutation.
+
+SoundTest captures the configured-root restore sink at window composition and
+threads it into WAV rendering, intentionally retaining A across a later A->B
+root change in the same window. Its private playback host remains private. The
+reference generator captures its configured CLI owner in main, requires the sink
+in its constructor and passes its retained field to all five sequencers. Normal
+snapshot entries store the actual sink; default live-reference reconstruction
+retains it within that lifetime. Explicit resolvers can supply another sink, with
+existing resolution/fallback behavior unchanged.
+
+Rejected alternatives remain the previous lazy singleton/presentation-owner
+substitution, backend-local `restoreMusic` callback, no-op manager-intent
+replacement, per-sequencer callback adapters, new manager/locator/registry/facade,
+and executor/thread-marshalling. None is needed for this composition migration.
+The existing singleton legacy-config binder and handler/freeze policy remain;
+so do two-argument backend music behavior, inferred hosts, source descriptors,
+`LEGACY_RECOMPUTE`, nullable sequencer DAC and presentation source factories.
+Explicit constructor failure order remains inferred-target null rejection before
+the canonical chain; canonical order is data, trust, required/computed descriptor,
+sink, target, host, config. The removed ambient lookup-before-validation was
+intentional. Backend validation is config before sink, and the package-private
+headless rate seam remains `(config, profiler, sampleRate, sink)`, validating rate
+after super.
+
+`AudioManager.restoreMusic()` continues to publish RESTORE mutator intent before
+rewind suppression, then EXPLICIT timeline/mirror work when unsuppressed.
+`sendLiveBackendCommands=false` means this is not a direct legacy stack-pop
+contract. `this::restoreShadowMusic` remains NATURAL_RESTORE authority plus registry
+request and deferred outer publication; it must not acquire an extra EXPLICIT
+command.
+
+The census migrates all 104 former convenience calls: three backend construction
+sites plus SoundTest WAV, and100 fixture calls across 18 files (three detached,
+97 target-bound). Already explicit overloads and deliberate raw-tool no-ops are
+preserved. The backend census includes six production constructions,21 existing
+test constructions across15 files, the separate NativeGameplayCheck construction,
+and three subclasses/twelve instantiations. The two previously missed receiving
+sites are TestModSceneActBridge and NativeGameplayCheck. Performance fixtures are
+compiled only; no performance measurement or external audio-local-wave reference
+is justified or run. The sole frozen delta removes the two obsolete sequencer
+constructor->GameServices.audio records from
+`40afa018-d450-4b84-8cb9-d539d75d8062`,121->119 with zero replacements and every
+remaining byte/order preserved. Other stores,151 package permissions, API pins,
+terminals, versions and descriptor stay unchanged.
+
+Characterization used the original absolute S1/S2/S3K ROMs under
+the existing main checkout (`$MAIN_CHECKOUT`), verifying SHA1/CRC32 against the documented
+identities; KiS2 SHA1 was `6cd0537a3aee0e012bb86d5837ddff9342595004`.
+No ROM was copied, renamed or linked. All Maven requests run from this worktree
+through the updated main wrapper, without desktop environment or injected JVM
+options. Reusable command definitions below are notation for the actual exact
+arguments, not a stored validation receipt:
+
+```bash
+MAIN_CHECKOUT="${MAIN_CHECKOUT:?set to the existing main checkout}"
+run_focused() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+    python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off "$@" \
+    "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+    "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen" \
+    "-Dsonic.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+}
+run_focused '-Dtest=TestSmpsRestoreOwnerContract,TestSoundTestWavExport,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestSmpsFadeInRestoreDriverModes,TestMusicOverrideRestore'
+run_focused '-Dtest=TestSmpsRestoreOwnerContract'
+```
+
+Before any production edit, 39 focused cases passed without failures/errors/skips
+on 97eb86f186b4 plus the new characterization fixture (15s admission wait, Maven
+1:24). A second unchanged-production run pinned and verified the four oracle
+hash pairs in TestSmpsRestoreOwnerContract:2 passes, zero skips (24s admission
+wait, Maven 28.185s). Each fixed-rate/fixed-input window hashes exact PCM and the
+ordered chip-write/service/lifecycle stream with driver logical snapshots and
+backend state: music 18 frames, mixed SFX 18, standalone SFX 18, one-up 360,48kHz,
+800 stereo frames per step. These hashes characterize this engine baseline;
+they are not an independent ROM parity oracle. No golden WAV was regenerated.
+The same fixture also pins explicit constructor failure order, nullable DAC and
+legacy descriptor trust. Java25.0.5.0.2, exact XML identities and all skips were
+inspected; consumed XML/text reports were deleted. Source stayed stable during
+each request. Remaining migration verification is recorded below at completion.
+
+
+#### Focused migration verification and local handoff
+
+All executable inputs stayed fixed from the final core request through the
+caller, API/accounting and package/native checks. The only subsequent edits are
+this evidence and the standalone ledger wording; no gameplay, timing, fades,
+admission, chip-write or snapshot resolver implementation changed.
+
+The first migrated request selected TestSmpsRestoreOwnerContract and
+TestSoundTestWavExport:15 passes and 3 errors, zero skips (27s admission wait,
+Maven 1:24). The errors were the new natural-restore observer attempting a full
+manager snapshot while the producer's presentation boundary was active. The
+existing producer correctly rejected that test observation. The fixture now
+observes intent and mirror count inside the service, asserts that full snapshot
+capture is still rejected there, and compares foreground state outside the
+boundary. No production behavior was adjusted to make the checks pass. The four
+unchanged-root PCM/event oracle pairs matched even on that first migrated run.
+
+Final commands, using run_focused above:
+
+```bash
+run_focused -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSmpsRestoreOwnerContract,TestSoundTestWavExport,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom,TestSmpsFadeInRestoreDriverModes,TestMusicOverrideRestore,TestAudioCommandTimeline,TestAudioManagerRuntimeInstallation,TestAudioPresentationSnapshotParity,TestSmpsDriverSnapshot,TestSmpsSequencerSnapshot,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity'
+run_focused -Dopenggf.headless.gl=surfaceless-egl '-Dtest=AudioRegressionTest#testHybridReadModeMatchesFallbackForMusicEhz+testHybridReadModeMatchesFallbackForMixedMusicSfx+testHybridReadModeMatchesFallbackForResultsTallyStress+testResultsTallyStressBenchmarkWorkloadUsesExactSampleCount,TestSmpsFadeHybridParity,TestSmpsFmVoiceWriteProfiles,TestSmpsNoteListener,TestSonic3kFm3SpecialMode,TestSonic3kSmpsMetaCommandOperands,TestRomAudioIntegration,TestSmpsDriver,TestSmpsFrequencyWrap,TestSmpsInstrumentParsing,TestSmpsKeyDisplacement,TestSmpsSequencer,TestSonic1AudioPriority,TestSonic3kCoordFlagParity,TestSonic3kVoiceData,TestTitleScreenAudioRegression,AudioManagerCaptureModeTest,TestAudioDiagnosticObservers,TestAudioManagerSfxCatalogReuse,TestDonorAudioRouting,TestS3kFadeOutPsgSilence,TestStreamedBackendIntegration,TestLiveRewindManagerAudioCleanup,TestEngineConfiguredHeadlessStartup,TraceCaptureSessionTest,TestTraceCaptureUnifiedAudio,TestProductionBk2AudioRunner,TestPhase3StandaloneSampleIntegration'
+run_focused -Dopenggf.headless.gl=surfaceless-egl -Pguards '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \\
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -DskipTests package -B
+ENGINE="$PWD/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar"
+SDK="$PWD/target/OpenGGF-0.7.prerelease-openggf-mod-sdk.jar"
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \\
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk /usr/lib/jvm/java-25-openjdk/bin/javac \\
+  --release 25 -cp "$ENGINE:$SDK:$PWD/target/classes" -d "$PWD/target/native-restore-owner-classes" \\
+  "$PWD/tools/modding/native-linux/NativeSceneInspection.java" \\
+  "$PWD/tools/modding/native-linux/NativeGameplayCheck.java"
+```
+
+- Core restore/ownership: 102 passes, zero failures/errors/skips; admission 7s,
+  Maven 1:25. The 13 new restore-contract cases cover retained A requests after
+  root B for music/mixed/standalone sources; actual RESTORE intent before ordered
+  EXPLICIT ledger/mirror work and foreground restoration; rewind suppression
+  retaining intent without timeline/mirror; destructive default reconstruction
+  retaining the captured sink and explicit resolver override to B; reset,
+  replacement retirement versus ledger, failure and headless teardown. Each
+  S1/S2/S3K natural case restores a mid-jingle snapshot after root replacement,
+  sees exactly one NATURAL_RESTORE and one deferred outer publication, and no
+  EXPLICIT restore. Existing real-ROM mid-fade and driver/sequence snapshot cases
+  remain green. WAV checks execute real E4 against supplied A, retain A through
+  a window's later export after root B, close on failure and preserve exact
+  truncation/frame counts and ROM SFX completion. The fixed-input PCM, ordered
+  writes/services and logical-state hashes all match the pre-edit source.
+- Caller regressions: 266 passes across 28 requested classes, zero
+  failures/errors/skips; admission 1s, Maven 37.428s. This covers the migrated
+  sequencer fixtures and actual backend/capture/catalog/donor/streamed/cleanup
+  consumers. AudioRegressionTest ran exactly its three hybrid/fallback PCM
+  comparisons and exact workload-size control; no benchmark or external WAV
+  identity executed. TestModSceneActBridge, allocation/throughput fixtures and
+  the reference-generator CLI were compiled rather than measured/run.
+- API/accounting: 52 passes, zero failures/errors/skips; admission 3s,
+  Maven 36.884s. ArchUnit's field selector expanded to all 27 TestArchUnitRules
+  fields, all passing; this is recorded rather than claimed as a one-rule run.
+  Signature 11, pins 4, architectural review 9 and the one affected source guard
+  also passed. No store-update flags or pin/terminal/permission/descriptor edits
+  were used. This is not the parent's complete fresh guard selection.
+- Build-only package passed (Maven 41.685s, no test admission requested).
+  All 4344 production and 4453 maintained Maven/racing/test sources compiled in
+  the focused/build requests, including performance fixtures. Bundled mod
+  packaging and engine/SDK artifacts completed. NativeGameplayCheck plus its
+  NativeSceneInspection dependency compiled separately with Java25 against the
+  newly packaged own-worktree engine/SDK/classes, matching its native build's
+  Java release/classpath shape; javac elapsed 0.603s. No native-image, display,
+  gameplay or native runtime qualification is claimed. Compiled
+  NativeGameplayCheck.class SHA256:
+  da4fcaaf9dabcd77f0bd5a90325256302318e31a2cf45a65efe7da9a28432c5f.
+
+Exact XML identities, outcomes, skips and Java25.0.5.0.2/EGL properties were
+inspected for each completed final request; all consumed XML/text reports were
+deleted. The current-source final selections total 420 passing cases. These
+bounded selections are not a smoke/full-suite or universal parity result.
+Queue wait and Maven execution above are distinct; other work time is unmeasured,
+and these numbers are not elapsed delivery time or performance evidence.
+
+A source-matched census independently verified 104 convenience migrations,
+including exactly three detached calls; all 11 already-explicit four-argument
+calls remain text-identical. The tracked constructor-arity census moved from
+3:3 /4:112 /5:86 /7:4 /8:12 to4:14 /5:187 /7:4 /8:12. All surviving sequencer
+constructor bodies and the rest of that source are byte-identical after only
+the two specified overloads and unused import are removed. Source scans include
+wildcard consumers, method references/reflection and maintained Java outside
+Maven; NativeGameplayCheck is the sole outside-Maven backend construction.
+
+The exact frozen-byte comparison passed: only the two specified records removed,
+all other bytes/order/stores preserved. SHA256 old:
+59a620bd64e55dd9bf8113259bb48997af7e07656e9ccbf8cac8fd12f4c112de;
+new:7858e1dd1e6905c17cd7e6e479cd15bf72e07751b02a32de485845d7cd11bb50.
+Published standalone counts are 119 low-level records, 151 directed permissions,
+and the inherited 6 ambient setup methods / 5 files. AGENTS/CLAUDE and all skill
+mirrors match; git diff --check passes. No API terminal/version/descriptor or
+other frozen-store change occurred. The parent must reconcile these standalone
+counts with any separately composed slice.
+
+The work stops at a local commit on the isolated task branch. Parent-owned
+combined smoke, mandatory composed S3K, full fresh guards, integration/push and
+cleanup have not been performed by this worker. No broad/full suite,
+performance measurement, external audio-local-wave fixture, desktop automation,
+subdelegation or push was launched. No live job handles or retained diagnostics
+remain; generated compilation/package output stays only under this target/.
+
+Final tested source/fixture/tool patch SHA256 (`git diff --cached --binary
+97eb86f186b432722024ca419a00b901b38f5ec2 -- src tools`):
+`545bc3c041a4eac09b8771a9e619125d571b299491da5af52b1aa844a5394b53`. Documentation-only checkpoint edits after validation do not
+change that fingerprint. The final commit/tree identity belongs to the task
+handoff, avoiding a self-referential evidence commit.
+
+### Three-owner parent composition and next candidate
+
+SMPS componentf2b77c313d9f8ba38c28e07ba589915774c4ec97 is merged into the
+ending/palette composition. Java merged without conflicts. Both documentation
+conflicts were independent appended evidence; both records are retained. The
+ending component's121-record statement is now explicitly historical, followed
+by the composed119 count. The parent also corrects attribution: stable backend
+and window destinations are implementation choices within the renewed cleanup
+goal, not an exact lifetime rule dictated by the user.
+
+SMPS independent source review is active. Its102 restore/ownership,266 caller
+and52 API/accounting passes, packaging and standalone native-tool compilation
+are component observations, not composed results. The parent will now run the
+composed ending/ROM/GPU/restore controls, including the four required S3K selectors,
+then wait for review before the final all-smoke/guard request. No broader success
+is claimed. Future bonus/special-stage research does not modify this source.
+
+The completed read-only bonus brief at8b4ff54d6 recommends a loop-owned visit
+session with its own existing level-state coordinator, pending/active/deferred
+provider obligations, star-post mark and pending shield. The coordinator and
+provider retain their separate state responsibilities. Two write-only deferred
+type/state fields can disappear after meaningful test migration. The loop's
+retained provider and context-published provider have different identity/lifetime
+semantics; the owner must preserve both. Captured entry context, live post-load
+manager reads, delayed ring/reward capture, one-shot title release, rewind
+assembly floor and park/resume are concrete controls. Independent design review
+is pending. Special-stage/results ownership is being grounded separately; neither
+proposal is an implemented or validated part of this delivery.
+
+### Composed domain verification and SMPS review closure
+
+At850948ad9fccf29dff0e99a8765bf5c23a68fd73, the composed domain request
+passed302 unique invocations across23 physical reports, zero failures/errors/
+skips. Fresh compilation covered4346 production and4456 test/maintained sources.
+Every report carried the exact requested selector, Java25.0.5.0.2, surfaceless EGL
+and all four verified absolute ROM paths. All103 GameLoop cases and36 ending
+owner controls ran; SMPS owner controls contributed13, and S1/S2/S3K one-up
+controls contributed24. Literal palette-capacity pixels, native white fades,
+donor RGB rewind and donated-team policies executed alongside native ending and
+headless ownership controls. The required S3K selection ran60 cases: Bootstrap6,
+Decoding3, game-package LevelLoading36, AIZ1 skip8 and legacy LevelLoading7.
+No assumed ROM/display skip is counted as that coverage.
+
+Admission waiting was observed through361 seconds; the exact eventual admission
+time was not captured. Maven execution reported1:32. Queue time is separate from
+execution; other elapsed delivery time is unmeasured. All46 XML/text reports were
+inspected for identities/properties/skips and consumed. The worktree remained
+clean at the tested commit throughout. This is composed focused evidence, not a
+complete smoke-suite claim.
+
+Independent SMPS source review accepted the code and exact104 caller migrations,
+receiving-manager pairing, unchanged11 explicit four-argument callers, default
+snapshot/resolver semantics and121-to119 frozen delta. Full binary diff SHA-256
+against97eb86f18 was
+`41ed9ee8b6eed82bcad318981b078faeb1f252d108398de11dc6e89bad73be0e`.
+The review's two P3 findings are resolved in parent prose: the earlier retention
+paragraph is labeled superseded, and the unsupported constructor ABI change is
+explicit. Removed public sequencer/backend convenience constructors require
+unsupported external source/binary consumers to migrate to explicit destinations
+and rebuild. Supported pins remain unchanged; no compatibility repinning follows.
+The reviewer did not run tests or inspect artifacts.
+
+The forthcoming final change-based request retains all3756 smoke candidates in
+76 ordinary batches plus a separate fresh guard JVM. Expected execution is a
+coarse90–150 minutes plus admission; the180-minute invocation budget excludes
+queue waiting. It stops on its timeout, launcher/tool failure or source drift;
+JUnit failures and skips must be inspected and attributed before integration.
+New or worsened failures block delivery. This is ordinary smoke, never the
+release-only full suite. The exact final command and result follow on completion.
+
+The next bonus session implementation is isolated on850948ad9 and cannot modify
+this delivery's source. Its reviewed brief preserves three distinct exception
+contracts, the bootstrap helper's guarded expression, and exact native pilot
+selectors. Special-stage/results grounding separately recommends a stateful
+loop-lifetime collaborator; its shared per-frame boundary flag and public virtual
+callbacks require independent design review. These future slices have no runtime
+success claim here.
+
+The composed focused command used the existing main checkout variable:
+
+```bash
+SELECTION='TestGameLoop,TestGameLoopEndingSession,TestViewportLifecycleContract,TestSbz1CreditsDemoBug,TestSonic1EndingSequenceHeadless,TestKis2EndingContinue,TestS3kEndingTransitionPresentation,TestDonorPaletteRewind,TestPaletteTextureCapacity,TestNativeWhitePaletteFade,TestScopedPalettePresentationRewind,TestDonatedTeamPalettes,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSmpsRestoreOwnerContract,TestHeadlessAudioOwnership,TestHeadlessGameBootAudioIdentity,TestS1OneUpRestoreRom,TestS2OneUpRestoreRom,TestS3kOneUpRestoreRom'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=${SELECTION}" \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+## Complete loop-owned bonus visit slice
+
+The isolated branch `bugfix/ai-bonus-stage-session-owner-20261024` started at
+`97eb86f186b432722024ca419a00b901b38f5ec2` and fast-forwarded only its own branch
+to composed source `850948ad9fccf29dff0e99a8765bf5c23a68fd73` before source edits.
+The implementation leaves parent/main workspaces, their queued jobs, and their
+delivery ownership alone. Parent-reported baseline evidence at that commit is
+302 unique cases in 23 physical reports, zero failures/errors/skips, including
+all 103 `TestGameLoop` cases. The worker reuses that matched baseline rather than
+launching another complete baseline selection. Composition, smoke, complete
+fresh guards, integration, push and eventual worktree cleanup remain parent-owned.
+
+`GameLoopBonusStageSession` owns the complete host visit: coordinator, pending
+transition, nullable active provider, return star-post mark, deferred provider
+identity and pending second shield restore. The coordinator still owns its
+persistent respawn capture; provider runtime, saved entry state and rewards
+retain their original owners. The two write-only deferred type/state fields are
+removed after observable provider one-shot controls pass on original production.
+The session retains its constructor-supplied audio manager. Its root-private
+adapter reads the actual cached managers live at each original expression point,
+and distinguishes the current published session context from the resolved loop
+context used for fade/PLC operations. This implementation chooses loop-lifetime
+retention to preserve existing park, binding-loss and reset behavior; no new
+session-disposal policy is introduced.
+
+The root keeps shared frame/PLC/audio/playback/rewind driving, its shared title
+machine, public static bootstrap body, shield compatibility helpers/constants,
+and package-private virtual player and bonus-title boundary operations. Entry
+registers/cleans its pre-`onEnter` context; exit looks up publication only after
+`onExit`. Return restoration preserves the bound `gameState::addLife` receiver
+and Java argument evaluation order. Entry propagates a trusted deferred callback
+abort by exact identity before ordinary IO cleanup. Fallback and normal return
+wrap every IOException with their existing distinct messages; only normal return
+executes the then-current level manager's `clearBonusStageReturn` in its existing
+finally. No rollback or uniform unwrapping replaces these contracts.
+
+Rejected alternatives are a gameplay-context lifetime (which needs a new policy
+for retained callbacks while parked or rebound), expanding the reusable public
+coordinator into a host lifecycle framework, and consolidating provider reads
+into publication or a visit-wide manager snapshot. Those shapes change ownership
+or observation timing without evidence requiring a behavior change. Reflection
+migration uses a typed test-only bridge, including installation of the actual
+root adapter/session for constructor-bypassing Mockito driver fixtures. No
+production wrapper exists solely to preserve private reflection.
+
+Before extraction, `TestGameLoopBonusStageSession` passed 17 cases, then its
+completed 21-case selection passed with zero failures/errors/skips against the
+unchanged bonus production. The initial compile attempt found two incorrect
+new-test imports and executed no tests; both were corrected before these passes.
+The 21 controls cover admission order/rejection, pre-fade capture, entry
+publication/registration and load rebinding, exact trusted abort and return
+wrappers/partial state, registration/zone-selection throws, deferred identity and
+clear-before-callback retry, pre-fade saved state versus completion-time live
+rings/rewards, exit lookup/throw state, bound life awards, shield null retention
+and title ordering, executed versus current provider/owner/mode, lag/frozen
+V-blank and playback, and bonus title/interior/exit park retention. Divergent
+providers, contexts, rings and life receivers distinguish incorrect timing.
+These are preservation controls, not runtime defect reproductions.
+
+Original `GameLoop.java` SHA-256:
+`c4c546911ad817146385f558b4de2da9b3ab546273f688fa9a7657d1c6c42632`.
+The 21-case characterization source SHA-256 is
+`f4aa0a8939347381ca05f72644243f75130efa4e40409a7f7adb40ccbaadf8f3`.
+Its unchanged-production invocation waited 38 seconds; Maven execution reported
+27.815 seconds. The earlier 17-case pass waited 7 seconds with 26.717 seconds
+Maven execution. XML confirmed Java `25.0.5.0.2`, EGL, exact selector, identities
+and no skips; reports were consumed. A separate structural red ran only the two
+new ownership tests: the actual owner requirement failed on the original root
+state/choreography and absent owner, while positive/negative synthetic controls
+passed (zero errors/skips; zero-second admission wait, Maven 29.257 seconds).
+That failure establishes the ownership change, not a gameplay bug.
+
+Commands use the main checkout's current queue tool from the task worktree:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+unset DISPLAY WAYLAND_DISPLAY XAUTHORITY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+ROM_ARGS=(
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen"
+)
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestGameLoopBonusStageSession test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestArchitecturalSourceGuard#bonusVisitSessionOwnsStateAndChoreographyWithTypedLiveBindings+bonusOwnershipSamplesRejectMirrorsBackreferencesDeadStateAndWideHosts' test -B
+```
+
+The existing S1/S2/S3&K files under `"$MAIN_CHECKOUT"` were SHA-1 verified against
+repository identities; `kis2.gen` is `6cd0537a3aee0e012bb86d5837ddff9342595004`.
+No ROMs or links are created, renamed or copied. No complete product matrix,
+trace campaign, release-only suite or measurement is part of this slice. The
+absent round-trip chain fixtures remain a coverage gap and are never counted as
+executed evidence. Post-move focused results and exact measured budgets follow
+when their invocations complete.
+
+
+The first post-extraction focused invocation selected the characterization,
+`TestGameLoop` and six migrated driver classes plus bootstrap and architectural
+source guards. It executed 270 cases in 10 physical XML reports: 268 passed,
+two test-infrastructure failures, zero errors/skips. The bonus branch of
+`deferredLoadAbortEscapesBonusAndEndingIoFallbacks(String)[1]` still expected the
+old reflection wrapper after typed test access had already exposed the same
+original callback abort directly. Its migration now asserts the exact abort
+identity on the typed bonus route and retains the reflective ending assertion.
+`releaseCriticalLargeClassesDoNotGrowWithoutExtraction` reported the actual root
+count of 2811 against a provisional cap of 2810; the final cap is the measured
+2811, a reduction of 274 from the actual composed 3085 base. The owner is 357
+effective lines. Entry retains 45 physical lines; exit is 111 after listener
+notification becomes one narrow host operation instead of three inline lines.
+The unchanged 21 preservation cases, all 27 audio-mode cases, all migrated
+priority/pacing/rewind/ownership drivers, bootstrap's seven source controls and
+the other architectural controls passed in that invocation. Admission waited
+116 seconds; Maven reported 1:31 execution. Every XML had the exact selector,
+Java 25.0.5.0.2, EGL and all four absolute ROM properties; identities and the two
+failures were inspected before reports were consumed. No production behavior
+repair was needed. Sources remained stable from submission to completion.
+
+Its exact selector was:
+
+```bash
+MIGRATION='TestGameLoopBonusStageSession,TestGameLoop,TestGameLoopAudioPresentationModes,TestGameLoopBonusPlayerPriority,TestGameLoopNativeStageMutatorPacing,TestGameLoopSpecialStageRewindGate,TestNativeStageSpeedScopeRegression,TestGameLoopBonusStageOwnership,TestArchitecturalSourceGuard,TestBootstrapModuleProviderCachingGuard'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$MIGRATION" "${ROM_ARGS[@]}" test -B
+```
+
+The corrected lifecycle/contract selection adds the existing shields,
+coordinator, boundary/title, playback, rewind-owner, suspension and object-service
+controls, API signature surface and ambient setup guard; only the corrected
+mixed failure-route method repeats from `TestGameLoop`:
+
+```bash
+LIFECYCLE='TestGameLoop#deferredLoadAbortEscapesBonusAndEndingIoFallbacks,TestGameLoopBonusStageSession,TestBonusStageShieldRestore,TestBonusStageShieldRestoreOnTitleCardExit,TestBonusStageTransitionCoordinator,TestGameLoopRewindBoundaryPolicy,TestGameLoopTitleCardLifecycle,TestBonusStagePlaybackBridge,TestLiveRewindOwnerLifetime,TestGameLoopSuspension,TestObjectServicesExpansion,TestModApiSignatureSurface,TestArchitecturalSourceGuard,TestSingletonLifecycleGuard'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$LIFECYCLE" "${ROM_ARGS[@]}" test -B
+```
+
+No protected production owner/helper/build/API file changed: Engine, the accepted
+ending session/adapter/getter, palette/SMPS implementations, coordinator,
+provider/context/shared frame implementations, release policy/descriptor,
+version and signature pins remain composed-base bytes. The six ambient keys
+across five files and all 119 low-level records are unchanged, with frozen store
+creation/updates disabled. Root static bootstrap source and virtual player/entry
+boundary methods compare byte-for-byte with the composed base. The production
+fingerprint, SHA-256 of UTF-8 `GameLoop.java` followed by the owner source, is
+`32be8ae27f6a54012d8a44fd293bbdbb755f9ee86035df69b56817a841f80025`.
+
+
+The corrected lifecycle/contract command completed **181 unique cases in 13
+physical reports**, zero failures/errors/skips. This includes 21 preservation,
+two corrected mixed-route, seven shield, seven coordinator, seven root-boundary,
+two shared-title, 17 rewind-owner, seven suspension, 11 object-service, 11 API,
+81 architectural-source and eight ambient-setup cases. XML confirmed exact
+identities and the same Java/EGL/all-four-ROM environment; reports were consumed.
+Admission waited 696 seconds, separately from Maven's 1:30 execution. The
+provisional cap and reflection-access expectations are now reconciled without a
+production behavior change. In particular the compiled candidate signature
+surface matches its unchanged 0.7 pin.
+
+Coverage inspection found that selecting outer `TestBonusStagePlaybackBridge`
+executed neither of its nested classes. Those missing executions are not counted
+as passes; an explicit nested selection follows the native pilot run. After the
+181-case pass, source edits are confined to an extra provider-mirror negative
+sample/state-field count in the two bonus ownership guards and removal of two
+unused reflection imports in the already-migrated native tests. The production
+fingerprint remains unchanged. The stronger guard permits the maintained shield
+compatibility delegates and rejects an additional provider/pending mirror.
+
+The exact native selection intentionally excludes the finite product matrices:
+
+```bash
+NATIVE='TestGameLoopDeferredSetupRewind,TestS3kBonusStageReturnProducts#declaredStageRequestLoadsAndReturnsThroughRealBoundaries,TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries+shortSlotInteriorReplayUsesTheActualPortalAndReturn,TestPachinkoTitleCardIntegration,TestBonusStageReturnWaterRestore,TestS3kLevelPaletteFadeOwner,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestArchitecturalSourceGuard#bonusVisitSessionOwnsStateAndChoreographyWithTypedLiveBindings+bonusOwnershipSamplesRejectMirrorsBackreferencesDeadStateAndWideHosts'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$NATIVE" "${ROM_ARGS[@]}" test -B
+PLAYBACK='TestBonusStagePlaybackBridge$IsDrivingWidening,TestBonusStagePlaybackBridge$BonusStageModeCursorAdvance'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$PLAYBACK" "${ROM_ARGS[@]}" test -B
+```
+
+
+The native command passed **89 unique cases in 12 physical XML reports**, zero
+failures/errors/skips. It executed exactly five declared-request return pilots,
+five short portal/mechanism pilots and three real Slots controller/replay pilots;
+none of either class's finite-matrix methods executed. It also ran all three
+`TestGameLoopDeferredSetupRewind` cases (including actual Slots title release,
+completed runtime assembly and its first non-keyframe rewind), two Pachinko,
+two water-return, seven palette-owner and the two strengthened ownership guards.
+The required S3K stability coverage is 60 cases: AIZ skip eight, bootstrap six,
+decoding three, and both physical level-loading classes (36 plus seven). All
+requested native selectors have executed cases without ROM assumptions/skips.
+Every XML retained the exact selection, Java `25.0.5.0.2`, EGL and all four
+verified absolute ROM properties. Identities, skipped/failure elements and
+properties were inspected before reports were consumed. Admission waited 1520
+seconds; Maven execution was 47.500 seconds. This bounds the actual native
+request/portal/title/interior/return and rewind controllers exercised here; local
+approach/exit placement is explicit in those pilots and is not an uninterrupted
+whole-zone traversal or exhaustive product certification.
+
+
+The explicit playback command passed eight unique cases, zero failures/errors/
+skips: seven `IsDrivingWidening` cases and the actual ROM-backed
+`BonusStageModeCursorAdvance.updateBonusStageModeAdvancesCursorAndAppliesForcedInput`.
+Surefire wrote three physical reports, including the zero-case outer container;
+only the eight executed nested identities count. The actual movie exists in the
+pinned tree. XML confirmed the exact two nested selectors, Java/EGL/all-four-ROM
+properties and absence of skips/failures before reports were consumed. Queue
+wait was 79 seconds, Maven execution 31.243 seconds. This closes the omitted
+nested playback coverage without repeating the completed lifecycle selection.
+
+All worker-owned test sessions are complete. The final staged `src/` diff over
+`850948ad9fccf29dff0e99a8765bf5c23a68fd73` has SHA-256
+`623d654fb4a690860a95e63abba28833aecf0e0a0b8d55a633aa2d2d723fed61`
+(`git diff --cached --binary 850948ad9 -- src/` before commit; the committed
+base-to-HEAD source diff is equivalent). Runtime production stayed unchanged
+through the corrected 181-case run, 89-case native run and eight-case nested
+playback run. The only later edits are this evidence prose. All ten identified
+reflection consumers have executed their migrated behavior; the original 103
+root identities are covered by their post-move run plus the narrowly corrected
+mixed-route method, with the matching original baseline supplied by the parent.
+Completed source/API checks are bounded and do not replace the parent's next
+combined smoke and fresh complete guard validation of the composed candidate.
+No full suite, exhaustive matrix, trace sweep, public release, push, integration
+or task-worktree cleanup was performed. Missing Gumball/Pachinko round-trip trace
+directories remain an explicit coverage gap. Source/policy/link/fence checks and
+the exact prepared co-author trailer are checked before the local commit; the
+branch and clean worktree remain for parent composition and cleanup.
+
+
+## Next composition: accepted bonus ownership
+
+The separate next-composition checkout starts at
+`8f34cad77297663523100fb7fdbf120cd9b259c1` and merges bonus commit
+`a79e3295a4d29c0e55980baecf8ab70d052604cd`. The only conflict was concurrent
+append-only continuation evidence: both the prior composed-domain/SMPS review
+closure and the complete bonus evidence above are retained. The two independently
+reviewed SMPS prose corrections also remain: earlier retention is historical,
+and removed unsupported constructor consumers must migrate and rebuild.
+
+At that bonus merge, all runtime/test/tooling/policy inputs under `src/`,
+`tools/`, `.githooks/`, `pom.xml` and the release descriptor matched the accepted
+bonus commit exactly.
+Its source diff over `850948ad9` retains SHA-256
+`623d654fb4a690860a95e63abba28833aecf0e0a0b8d55a633aa2d2d723fed61`.
+The independent bonus review found no actionable findings and matched its
+11,192-file scoped aggregate to committed content. The parent independently
+recomputed that aggregate as
+`a8983008f41f8cb33d319d6cd273a2632d88a60b3b88ed32eb8b4e1177e163ff`
+before composition. Its initially pending nested playback observation is closed
+by the worker's eight executed nested cases recorded above, before the commit;
+no reviewed Java/test/guard-document input changed afterwards.
+
+At that bonus-only checkpoint, the checkout had no build output or new
+execution result. The current fixed
+ending/palette/SMPS delivery continues its existing smoke request at `8f34cad77`
+in a separate checkout. That request cannot validate this bonus composition.
+Special-stage/results ownership and the separately qualified Sideways admission
+gap were future inputs at that checkpoint. Final composed checks, main integration, push and
+owned-worktree cleanup are outstanding; main remains on `develop`.
+
+
+### Sideways admission qualification joined to the next composition
+
+The next composition also merges qualification commits `f350a9007` and
+`190220882f6b0a32f7f32c236d31df23baee882f`. Independent source review accepted
+the follow-up after all three P2 findings were resolved: exact rejected-link
+context, genuinely admitted fresh return pairs, and a canonical open-bug entry.
+The qualification source retains SHA-256
+`bd74251920c88045988c603f961e3152792b0dbac74aa21b56782c87c2762850`.
+The worker observed ten affected cases passing with zero failures/errors/skips;
+the reviewer ran no tests. This merge adds no new execution claim.
+
+Production is unchanged by this qualification. Exhausted native allocation
+aliases the fixed Tails slot and requires a separate complete model for failure
+writes, empty/live fixed-slot state, paired deletion/respawn and reversible
+capture. The canonical bug and retained audit state those removal conditions.
+Strict codecs, all ten count-one bridges, the119-record store, pins and package
+permissions remain unchanged. The next composition still requires its eventual
+combined verification and delivery; the preceding live smoke source is untouched.
+### Special-stage/results owner — isolated next slice (2026-10-24)
+
+The implementation worktree starts at `a79e3295a4d29c0e55980baecf8ab70d052604cd`,
+fast-forwarded only on `bugfix/ai-specialstage-results-owner-20261024` from its
+T3 setup commit `97eb86f18`. Hooks are installed. This is a following delivery;
+the parent's ending/palette/SMPS validation does not test this source. No parent,
+bonus-worker or Sideways target/job observation, push, integration or cleanup is
+part of this worker's scope. The inherited root ceiling is 2811, bonus 357 and
+ending 320; all 119 low-level records and six ambient keys/five files stay fixed.
+Later parent prose corrections must win over historical counts in composition.
+
+The agreed cut instantiates the existing package-private special lifecycle once
+per GameLoop. It transfers fifteen fields and entry/results/return choreography,
+with a root-private typed Host reading original cached slots at expression time.
+The per-iteration rewind boundary bit, scoped pacing input and shared title
+release stay root-owned. BONUS takes title precedence, then the special return,
+then ordinary release. Public virtual getters, both package entry overloads,
+virtual results entry and nested pacing type remain compatibility seams.
+Constructor work is GL-free and performs no eager Host reads. Retained provider
+rewind capability never routes through the public virtual provider getter.
+
+Checkpoint: production remains byte-identical to `a79e3295a`; only new preservation
+controls, bounded domain pilots and this plan are dirty. The first focused
+`TestGameLoopSpecialStageLifecycle` request is waiting in its own command session;
+it has executed no cases yet. New controls distinguish genuine factory dispatch
+from overriding early-outcome observation, module replacement, callback-time
+provider/fade/camera/input rebinding, repeated pass counts, partial publication,
+entry exception/cleanup replacement and null results rebinding. Existing actual
+freeze/rewind/hardware controllers remain required. New domain pilots stop after
+S2's first return, one local KiS2 checkpoint visit, two single-row S3K outcome
+products and one genuine HCZ results return. No broad/full suite or complete
+campaign/matrix is authorized here. The next action is to inspect this focused
+result, repair test fixtures as needed and finish unchanged-production controls
+before moving production ownership.
+
+All invocations use the main checkout's current queue wrapper from the task tree,
+Java 25 and Lua 5.4, unset `DISPLAY`, `WAYLAND_DISPLAY`, `XAUTHORITY`,
+`JAVA_TOOL_OPTIONS` and `JDK_JAVA_OPTIONS`, and retain `-Dmse=off` and explicit
+surfaceless EGL. Commands below use a portable quoted main-checkout variable:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+unset DISPLAY WAYLAND_DISPLAY XAUTHORITY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+ROM_ARGS=(
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen"
+)
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestGameLoopSpecialStageLifecycle test -B
+```
+
+The existing original S1/S2/S3&K SHA-1 and CRC32 match the repository table.
+KiS2 is SHA-1 `6cd0537a3aee0e012bb86d5837ddff9342595004`, CRC32 `2AC1E7C6`.
+Both selected S1 and S2 run manifests exist in the task tree. No ROM/link was
+created, copied or renamed. Queue waiting remains pending, not failed coverage.
+
+The unchanged-production preservation run executed 27 identities with one new
+fixture assertion failure: root construction already reads the module through
+`LiveRewindManager.scriptedRewind`. Narrowing that assertion to provider sampling
+and presentation preserves the approved constructor requirement. The corrected
+27-case run passed with zero failures/errors/skips, Java `25.0.5.0.2` and EGL.
+First admission wait was 236 seconds and Maven execution 1:21; corrected admission
+wait was 25 seconds and execution 28.062 seconds. Root source SHA-256 remains
+`32ba74a19d1db171f58622438e46859e993bc4310ef38bbc72ffdb818dc2efcb`.
+Corrected characterization SHA-256 is
+`ea6b726a764c690cc88b1215c4ff6bd32fd276317c68fd60fe642b40b327310e`.
+Exact XML identities/properties and absence of skipped nodes were inspected.
+
+The new domain baseline used `-Ptrace-replay -Dsurefire.forkCount=1
+-Dsurefire.reuseForks=true`, EGL and all four verified absolute ROM properties:
+
+```bash
+PILOTS='TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider,TestS3kSanctuaryOriginReturnLifecycle#donatedTailsNativeWidthResultsReturnPilot+nativeKnucklesWideMixedTeamResultsReturnPilot,TestS3kInitialObjectSetupLifecycle#genuineHczSpecialStageControllerReturnRestoresMeanWaterAndTarget,TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeFirstReturnLifecyclePrefix'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true "-Dtest=$PILOTS" "${ROM_ARGS[@]}" test -B
+```
+
+It executed exactly five cases: both declared S3K results-return products, the
+genuine HCZ controller return and S2 first-return prefix passed; KiS2 errored on
+its actual return reload. Zero skips; all XML identities, Java/EGL and four ROM
+properties were inspected. Queue wait was 30 seconds, Maven execution 32.362
+seconds. The S2 prefix contains 8,704 represented rows plus transition work; no
+second roundtrip or whole chain was selected.
+
+KiS2 reaches the real `Kis2SpecialStageProvider`, chip data loader, controller
+results/reset and preserved recorded identity. Its return reload then fails in
+unchanged production: `RewindRegistry.registerOrRefresh` rejects the new
+`sonic2-plc-service` adapter. `Kis2GameModule.createGame` replaces its chip service;
+`rewindAdapters()` substitutes it for the base S2 publication, while native-root
+publication resolves through the decorator to base S2. The new chip incarnation
+therefore has neither identical adapter nor native-root replacement authority.
+This is a baseline production failure, not missing ROM coverage or a lifecycle
+extraction regression. No registry erasure, disabling, replacement, source fix or
+runtime rescue has been added to the pilot. The user has been asked whether to
+continue with this exact inherited validation limit or stop at characterization;
+production remains unchanged while that judgment is pending. Both worker-owned
+command sessions have completed. No live test handle remains.
+
+Parent scope judgment is to continue the complete transfer while retaining the
+exact inherited KiS2 failing pilot and its intended-return assertions. Integration
+of this following slice remains gated on separate qualification or a justified
+KiS2 ownership repair. The canonical open-bug ledger now links the bounded
+reproduction and removal condition; no intentional-discrepancy or unfixed-gap
+release note was added. Routine scope questions go to the parent task thread.
+
+Checkpoint: only `GameLoop.java` and the existing lifecycle file change in
+production. The owner contains all fifteen session fields; root retains the
+per-iteration bit and scoped input collaborator. The stateless frame algorithm
+is now a private captured-argument implementation inside that owner. Both virtual
+results handoffs call the root compatibility delegate through its typed Host.
+BONUS and ending Host bodies compare byte-for-byte with the accepted base, and
+their owner files, Engine, launcher, return helpers, providers, timing/PLC owners,
+APIs/pins and frozen store have no changes. Test-only access constructs the real
+private root Host/owner for constructor-bypassing fixtures; no production lazy
+rescue or mirrored state exists. `GameLoopTestStep` still latches the real token,
+clears it in finally and unwraps Exception/Error by identity.
+
+A build-only `test-compile` exposed Java definite-assignment rejection of a field
+initializer callback referencing the new blank-final owner. The debug-shortcut
+collaborator's passive constructor now runs immediately after owner construction;
+it only retains the same virtual mode/provider suppliers and the owner results
+callback. No eager sampling or Host reads were introduced. This adds one measured
+root line: final caps are 2443 root and 571 lifecycle, preserving bonus357 and
+ending320. The input method remains9 physical lines; results-title is60 instead
+of62 after the narrow listener Host effect removes two lines. The first build
+failed compilation with no tests executed (58.408 seconds Maven execution).
+
+The synthetic ownership-sample request remains alive while test admission is
+pending. The final controller/trace selection is also queued in this same tree,
+with exact class selectors and all four original ROM properties. A separate
+build-only `test-compile` owns its own worktree lock and releases activity before
+queued tests; it runs no tests and does not bypass test admission. Runtime
+source is now stable for these requests. The next step is to inspect compilation
+and focused results, repair only extraction/test-migration failures, then execute
+exact native selectors and affected architecture/API checks. No broad/full suite,
+parent job observation, push, integration or worktree cleanup has occurred.
+
+Build-only `test-compile` now passes (Maven execution1:24, no test admission wait
+and no cases executed). Source fingerprint, SHA-256 of UTF-8 GameLoop followed
+by lifecycle, is `44081f2a339ccedbcbade7ca960ee1a44d5966cacd31d05b68f64e354c09de96`.
+The controller selection uses the following exact classes; it includes every
+`TestGameLoop` case on this extracted source and all migrated state callers:
+
+```bash
+FOCUSED='TestGameLoopSpecialStageLifecycle,TestGameLoop,TestGameLoopSpecialStageEntryRequest,TestGameLoopSpecialStageEntryPresentation,TestGameLoopSpecialStageResultsHandoff,TestGameLoopSpecialStageRewindGate,TestGameLoopSpecialStageRewindBoundary,TestGameLoopSpecialStageRewindDebugBoundary,TestGameLoopSpecialStageSkipGate,TestGameLoopFreezeContractWiring,TestGameLoopHardwareTimingBoundaries,TestTraceSessionLauncherSpecialStageEntry,TestSpecialStageVisualTraceSession,TestSpecialStageHardwareTimingLifecycle,TestTraceSessionSpecialStageTerminalExit,TestSpecialStageProviderRewindOwnership,TestNativeStagePacingOwnership,TestNativeStagePacingRewind,TestNativeStageSpeedScopeRegression,TestGameLoopNativeStageMutatorPacing,TestTraceSessionLauncherRunBranch'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" "${ROM_ARGS[@]}" test -B
+NATIVE='TestS1GhzMazeRoundTripChain#ghzMazeSpecialStageReturnPresentationBridge,TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeFirstReturnLifecyclePrefix,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider,TestS3kSanctuaryOriginReturnLifecycle#nativeResultOutcomeOwnersReturnToTheActualSaved2Origin+donatedTailsNativeWidthResultsReturnPilot+nativeKnucklesWideMixedTeamResultsReturnPilot,TestS3kSanctuaryPedestalLifecycle#nativeOutcomeOwnersReturnADeclaredDirectSceneWithoutInventingSaved2,TestS3kInitialObjectSetupLifecycle#specialStageEntryPausedTickAndResultsRetainPendingSetup+genuineSpecialStageReturnReloadArmsAndLevelReleaseConsumesExactlyOnce+representedSpecialStageReturnRestorationDiscardsBeforeLevelRelease+genuineHczSpecialStageControllerReturnRestoresMeanWaterAndTarget,TestS3kLevelPaletteFadeOwner#specialStageReturnFadesBehindTheFreshCardHold,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true "-Dtest=$NATIVE" "${ROM_ARGS[@]}" test -B
+```
+
+The native selection expects88 cases in12 physical classes, including both
+physical `TestSonic3kLevelLoading` classes and exactly nine outcomes for each
+native sanctuary method. The S1 prefix represents8,085 rows; S2 represents8,704
+rows. No full chain or product matrix is selected. KiS2 keeps normal intended
+return assertions and always rethrows its runtime failure. It additionally
+observes the inherited registry-error partial state before rethrowing; that is
+never a passing expected-exception test.
+
+The affected architecture/API request selects all83 source methods exactly once
+across the pending single-sample and remaining82-method request, plus
+`TestArchitecturalReviewGuard`, `TestArchUnitRules`, `TestSingletonLifecycleGuard`,
+`TestModApiSignatureSurface`, `TestHardwareTimingAuthorityGuard`,
+`TestBootstrapModuleProviderCachingGuard` and `TestRewindArchitectureGuard`.
+Both store creation and update are false in unchanged `archunit.properties`;
+the architecture request also passes explicit false system properties. This is
+bounded affected-guard coverage, not the parent's fresh full guard suite.
+
+Expression review also retained the original debug-callback receiver capture:
+the Host materializes the two existing bound debug callbacks at their original
+helper argument positions, before debug dispatch. It does not defer receiver
+lookup through a new forwarding lambda. A bounded control replaces the root's
+debug collaborator from the first debug callback and distinguishes the original
+completion receiver from its replacement. The root/provider/fade/input/context/
+rewind capture checks likewise distinguish captured execution from late input,
+reveal camera and eligibility reads. No per-frame aggregate or callback framework
+was introduced; the existing frame helper retains its argument capture boundary.
+
+The ownership samples passed1/0/0/0 after1199 seconds waiting and26.425 seconds
+Maven execution. XML confirmed the exact identity, Java25/EGL and no skips.
+The first extracted controller command executed218 cases across20 reports:
+211 passed, six entry-audio fixture failures and one incomplete Host fixture
+error, zero skips. All103 `TestGameLoop` identities and29 lifecycle controls
+passed, including original/debug callback receivers, captured execution versus
+live input/reveal/eligibility, virtual dispatch and the new owner constructor.
+All other executed rewind, hardware, launch, skip and terminal controls passed.
+Admission wait was771 seconds, Maven execution1:25. XML identities/properties
+(including all four absolute ROM properties) and every failure were inspected.
+The runtime source fingerprint for this executed command is
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`.
+The captured frame algorithm compares byte-for-byte with a79 after changing only
+its private method name/visibility.
+
+Six `TestGameLoopSpecialStageEntryPresentation` cases still compiled their old
+fixture, which reflectively replaced root audio after the new owner had correctly
+retained constructor audio. That fixture now injects audio through EngineContext
+before constructing the loop. The terminal-closure sample's new Host lacked
+its resolved context and scoped input collaborator; both are now supplied.
+No production edit was needed for either correction. Source remains the same
+fingerprint. The ordinary selection also correctly excluded the slow-tagged
+`TestTraceSessionLauncherRunBranch`; its absence is not counted as execution.
+Only its directly migrated admission method is selected next under the existing
+exact-selector trace profile, together with the eleven corrected entry cases
+and terminal-closure method:
+
+```bash
+CORRECTED='TestGameLoopSpecialStageEntryPresentation,TestGameLoopFreezeContractWiring#specialStageTerminalBoundaryWaitsForTheClosureBridge,TestTraceSessionLauncherRunBranch#specialStageAdmissionRecapturesExhaustionBeforeDestinationClosure'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true "-Dtest=$CORRECTED" "${ROM_ARGS[@]}" test -B
+```
+
+The native command completed exactly88 cases in12 physical reports:87 passed,
+zero failures, the exact inherited KiS2 error, zero skips. Both selected S1/S2
+prefixes pass; the S2 dynamic-art report compares5733 interior rows with zero
+errors, and its gap report has zero failures. All18 native sanctuary outcomes,
+the two donated/team/width outcome pilots, four setup/HCZ-return cases, palette
+return and60 mandated S3K cases execute successfully. The mandatory loading
+selector resolves to36+7 cases across two physical packages, not one class.
+XML confirmed all exact names, Java25.0.5.0.2/EGL and four absolute ROM properties.
+Admission wait was452 seconds; Maven execution43.604 seconds.
+
+KiS2 retains exactly the original cause chain and leaf locations:
+`RuntimeException` from `LevelManager.loadCurrentLevel:3669` → `IOException:
+Failed to load level due to unexpected error.` from `LevelLoadAttempt.failure:94`
+→ `IllegalStateException: RewindSnapshottable already registered:
+sonic2-plc-service` at `RewindRegistry.insert:69`, `registerOrRefresh:91`,
+`GameplayModeContext.registerGameModuleRewindAdapters:1031`,
+`registerLevelAdapters:919` and `LevelManager.initObjectSystem:1071`.
+The path through unchanged `SpecialStageTransitionSupport.loadSpecialStageReturnLevel:76`
+now reaches the moved `GameLoopSpecialStageLifecycle.doExitResultsScreen:612`
+in place of root `GameLoop.doExitResultsScreen:2919`. The same suppressed
+`IllegalStateException: missing PLC preparation for SPECIAL_STAGE_RESULTS`
+remains at `PlcLifecycleFrame.finishPublication:648`. These are the a79 exception,
+wrappers and ordered-cleanup consequences, not a newly normalized failure policy.
+The extracted pilot additionally observes and asserts the partial state before
+rethrow: mode is SPECIAL_STAGE_RESULTS, results null, retained provider NoOp,
+registered special provider null. The original root source establishes those
+same pre-load assignments; no claim is made that the old pilot sampled them
+separately. Complete KiS2 return is unvalidated here and remains a parent
+composition gate after the independent repair; no exception is converted to a
+passing expectation. No KiS2/registry/provider production source was changed.
+
+The architecture/API request passed180 unique cases in8 physical reports,
+zero failures/errors/skips:82 source,34 ArchUnit,9 review,8 ambient-setup,
+11 signature,25 timing-authority,7 provider-cache and4 rewind-architecture cases.
+The prior distinct ownership-sample case completes all83 source controls without
+repeating it. Exact XML selectors, Java/EGL, explicit false store properties and
+skipped/failure nodes were inspected. Maven execution was53.162 seconds;
+architecture admission wait was not recovered from the bounded completion
+output and is reported as unknown. These are affected guards, not a complete
+fresh guard-suite or combined smoke pass. Source and frozen records stayed fixed.
+
+The corrected exact selection passed all 13 cases in three XML reports, with
+zero failures/errors/skips. This includes all eleven entry-presentation cases,
+`specialStageTerminalBoundaryWaitsForTheClosureBridge` and the directly migrated
+`specialStageAdmissionRecapturesExhaustionBeforeDestinationClosure` method.
+Admission waited 235 seconds; Maven execution was 37.998 seconds. Exact identities,
+Java 25/EGL, all four original ROM properties and skipped/failure elements were
+inspected. This closes the fixture corrections without repeating the unchanged
+103 root cases, other passing controller classes or broad coverage.
+
+The resulting focused qualification covers 219 unique controller/launcher
+identities across the first selection and necessary narrow corrections, 87
+passing native identities, and 181 distinct affected source/architecture/API
+identities. The additional KiS2 native identity retains the exact attributed
+baseline error. These counts exclude unchanged-production characterization
+runs, omit no failed run from the history above, and never count KiS2 as a
+successful complete return. No broad/full, complete trace campaign, finite
+product matrix or parent's fresh full guards were run by this worker.
+
+Final runtime source is still pair SHA-256
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`:
+GameLoop `dd55633bbb3a5bd003c56ece5a5aa74da517fc84ca14a2a244a0ca09aa6fbfc6`,
+lifecycle `4c6203cde26e9e4b9c1557c955f0b863c2aff6f747049628adaf60e8364d01f4`.
+All executed commands tested the dirty source over `a79e3295a`; the local commit
+records that same source, with only subsequent evidence prose. The two accepted
+root Host adapters, all protected production files, 119 low-level records, API
+pins and ambient six-key/five-file inventory remain unchanged. The source guard
+observes root 2443/lifecycle 571, owner input 9 and results-title 60; bonus 357 and
+ending 320 stay fixed. These are measured ratchets, not forecast allowances.
+
+All worker-owned command handles are terminal. After inspecting XML and trace
+summaries, consumed Surefire/trace diagnostics are removed from this worktree's
+`target/`; no raw logs, receipts or pass cache are retained. The final checks are
+whitespace, new Markdown links/fences, unchanged protected files/store, staged
+policy obligations and exact co-author trailer parsing. Hooks remain enabled.
+The worktree and local branch are retained; no push, integration or worktree
+cleanup is authorized. Parent owns independent review, subsequent composition,
+combined smoke, fresh full guards and the separately repaired KiS2 return gate.
+
+Final staged source diff over `a79e3295a` has SHA-256
+`8b14ee88311b3318bdcdc95a2935e00e90c3f506f6c3c04d393394aba5eb911f`
+(`git diff --cached --binary a79e3295a -- src/`). The staged main-Java tree is
+`ec54b3079c96ff7600bd0d4295337bc9f37ac2ac` and complete `src/` tree is `b245c2b7485a978dbb219238b3fef484e4d66d52`.
+A final staged-only whitespace check removed one blank-line trailing space in
+the new lifecycle test; runtime source and all test behavior remain unchanged.
+That formatting delta was reported to the parent for review mapping and requires
+no repeated runtime check. Markdown fences/new local links, protected-owner/store
+bytes and staged whitespace pass. The exact prepared commit message parses the
+required `Co-authored-by: OpenAI Codex GPT-6.1-Sol <noreply@openai.com>` line.
+
+
+### Special-stage/results production joined for the next bounded transfer
+
+The next composition merges `34faee3a8cc60ec7bb8194312bec9027cfba25a9`.
+Both concurrent continuation appendices are preserved. Its production pair
+remains SHA-256
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`,
+with root/lifecycle caps2443/571 and bonus/ending caps357/320. All source,
+tooling, API and policy inputs match that component except the independently
+accepted Sideways qualification. The119-record store remains byte-identical.
+
+Independent source review found no production correctness issue and one P2:
+the deferred-boundary test's zero counter was disconnected from the lifecycle's
+actual entry path. Its original passing result does not close that observation.
+A test-only follow-up reconnects the observer, adds a matched positive control
+and retains the real closure's exactly-once assertion; its focused execution
+and fresh delta review remain pending at this checkpoint.
+
+The supplied runtime evidence is219 controller/launcher and181 guard/API
+passes, plus87 native passes and the exact inherited KiS2 return error, with
+zero skips. The normal full-return assertion remains intact. A separately
+reviewed publication-authority repair is being implemented outside the two
+SS production files; the parent will compose it and run the actual KiS2
+controller return before claiming that route is validated. This local merge
+adds no runtime result or integration claim.
+
+The independent title-card design review now establishes a bounded next cut:
+its three retained fields and complete shared presentation/release decisions
+can move into the existing title lifecycle. The completed SS return seam
+retains its own state and restoration; BONUS-first release precedence and
+shared frame admission remain explicit. That future code is not validated
+by either this component evidence or the preceding live smoke request.
+### Special-stage terminal observer review correction (2026-10-24)
+
+Independent source review found a P2 in the migrated terminal-closure control at
+`34faee3a8cc60ec7bb8194312bec9027cfba25a9`. Its `resultsEntries` counter was only
+incremented by the separately supplied closure callback; the actual lifecycle
+entry path never reached that observer. Thus the earlier passing zero assertion
+and the 13-case correction checkpoint above were executions, but not
+sufficient discriminating evidence against eager results entry. This follow-up
+supersedes that weak-observer qualification honestly; it finds no production
+correctness defect and changes no runtime source.
+
+Only `TestGameLoopFreezeContractWiring` and this continuation evidence are owned.
+The fixture now supplies valid current mode, actual game state and a held-white
+completed fade, so the real `enterResultsScreen` path can capture the original
+provider's rings/stage and reach `Host.doEnterResultsScreen`. That compatibility
+seam owns the observer increment and publishes results mode in the fixture.
+The original real driver/PLC terminal row still defers boundary commit. Its
+closure now calls the actual lifecycle entry method through
+`TraceSessionLauncher.commitDeferredRunModeBoundary`, rather than incrementing
+a disconnected test counter. The results mode rejects a second closure request,
+leaving exactly one observed entry. A matched positive control changes only the
+driver row's deferral flag and requires the actual non-deferred owner update to
+reach that same observer once, with the captured stage identity intact.
+
+The committed 34fa test file SHA-256 is
+`c9f6a3a2f1d6866bf957d06fd6dd44e976e1670da074e9f03da5c447b1ce0c04`.
+The corrected fixture hash is recorded after the focused run. For bounded
+baseline discrimination, the new positive control is first run with only the
+observer increment temporarily disconnected, while retaining valid entry state
+and mode publication. It must fail on count1 versus0 after verifying the actual
+compatibility seam and provider capture, not on a null fixture error. Production
+is never modified for this negative control. The final run restores the observer
+and selects only the affected deferred method and its new matched positive.
+
+All commands use the existing quoted `MAIN_CHECKOUT`/`ROM_ARGS` environment above,
+Java25/Lua5.4, cleared display/launcher variables, `-Dmse=off` and surfaceless EGL:
+
+```bash
+NEGATIVE='TestGameLoopFreezeContractWiring#specialStageTerminalOwnerRequestsResultsWhenBoundaryIsNotDeferred'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$NEGATIVE" "${ROM_ARGS[@]}" test -B
+FOCUSED='TestGameLoopFreezeContractWiring#specialStageTerminalBoundaryWaitsForTheClosureBridge+specialStageTerminalOwnerRequestsResultsWhenBoundaryIsNotDeferred'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" "${ROM_ARGS[@]}" test -B
+```
+
+Checkpoint: HEAD is still 34fa, the weak-observer negative-control request is live
+in this worktree and no other job has been submitted. Runtime pair remains
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`.
+No production/cap/store/ambient/pin, provider-authority, exception-policy or native
+timing edit is made. The inherited KiS2 error and complete-return gap remain
+attributed to the earlier source; the independent repair is outside this scope.
+No unchanged controller/guard/native rerun, broad/full validation, subdelegation,
+push, integration, amendment or worktree cleanup is part of this correction.
+
+The weak-observer negative fixture (test-file SHA-256
+`7aea0c7b98ee1d9418843284c46f4d32f9b85978d38b96b507b9b3bbece87e95`)
+executed exactly the new non-deferred positive control. It failed as intended:
+`AssertionFailedError: the same observer must detect entry through the actual
+non-deferred lifecycle path ==> expected: <1> but was: <0>` at the final counter
+assertion. The preceding actual Host entry, provider-ring/stage capture, results
+mode and recorded-stage assertions passed. There were no errors or skips; this
+was not a null fixture failure. Admission waited 467 seconds; Maven execution was
+28.893 seconds. XML confirmed the exact identity, Java25.0.5.0.2, EGL and all four
+absolute original-ROM properties. Its reports were inspected and consumed.
+
+The observer increment is restored, producing corrected test-file SHA-256
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+The production pair is byte-identical before and after the negative control.
+The final two-method selection is now live in the same worktree. No other test
+selection or production mutation is required by this discrimination.
+
+The final exact two-method run passed 2/0/0/0: both named JUnit identities
+executed, with no errors, failures or skips. The deferred row observes zero real
+entry requests, its genuine closure makes one, and a second results-mode closure
+is rejected. The matched non-deferred row observes one actual lifecycle request
+through the same seam. The positive control's preceding disconnected-observer
+failure makes this observation falsifiable. Admission waited 139 seconds;
+Maven execution was 28.928 seconds. Exact XML identities, Java25.0.5.0.2, EGL,
+all four absolute ROM properties and skipped/failure nodes were inspected.
+
+The tested corrected test-file SHA-256 remains
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+Its scoped test diff over 34fa has SHA-256 `60bc7118735750133617f1f37ad89d95044bf41ca052cecf62604be0e8e03eb5`
+(`git diff --binary 34faee3a8 -- src/test/java/com/openggf/TestGameLoopFreezeContractWiring.java`).
+Only subsequent evidence prose follows the tested fixture. Production pair
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`,
+root/lifecycle caps 2443/571, 119 low-level records, six ambient keys and API pins
+are unchanged by byte/scope comparison; no unchanged runtime/guard/native rerun
+is claimed. The inherited KiS2 gap remains as previously attributed and untested
+by this correction. Both owned command handles are terminal; inspected reports
+are consumed without archives or receipts. The local follow-up preserves 34fa
+as direct history, keeps hooks and the parsed required co-author trailer, and
+retains the worktree without push, integration or branch/worktree cleanup.
+
+
+### Deferred-boundary observer review closure
+
+Follow-up `1c66bfe7b27eed67541c9ccc7919559f9f6ca742` addresses the sole
+SS source-review P2. The parent performed a fresh read-only review of the two
+changed controls: the actual lifecycle reaches the Host entry observer, the
+real closure invokes lifecycle entry, and a second closure in results mode is
+rejected. A matched non-deferred row independently demonstrates the observer.
+The worker's disconnected-observer control failed at count1 versus0 after the
+actual entry/provider/mode/identity checks; the restored two controls passed
+with no failures/errors/skips. These executions remain worker observations.
+
+Parent byte checks match the committed test SHA-256
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+Reconstructing the previously reviewed file produces the independent review's
+11,195-file aggregate
+`c965c8aec76a83c1faaaff7b92384841fa3082374819acab623beb49e3a5cdbe`;
+with this sole scoped test delta, the committed aggregate is
+`ae37c1ece7780d1abc4e775165647c50d4460eecdc9d09b938c48af8e8a09a0d`.
+Encoding is sorted path UTF-8, NUL, decimal content-byte length, NUL, then raw
+SHA-256 of content. Production remains the reviewed pair unchanged. No complete
+runtime selection was repeated for this test-only correction. The inherited
+KiS2 gate and final composed validation/delivery remain outstanding.
+
+### Bounded KiS2 native rewind publication repair (following composition)
+
+Implementation ownership is limited to
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-f0b7e10f`, branch
+`bugfix/ai-kis2-native-publication-owner-20261024`. This T3-created checkout
+started at `97eb86f186b432722024ca419a00b901b38f5ec2` and only its branch
+fast-forwarded to `85b030248ada59654b653f45c63517f7023ccb4b`; hooks were installed.
+Main remains `develop`. No parent, special-stage worker, bonus or Sideways
+source/target/job is owned by this repair. No delegation, integration, push,
+broad smoke/full suite, trace campaign or worktree cleanup is authorized here.
+The parent owns independent source review, composition and combined validation.
+
+The actual unchanged-production reproduction used the genuine `Kis2GamePatch`,
+its raw PLC service and `GameplayModeContext`, plus production
+`HeadlessGameBoot.openResolvedSessionForBoot` and repeated full level loads.
+At base `85b030248`, production `src/main` tree
+`c5960a2ec76241e97f942ced742bb4c662adfaf2`, the reproduction test blobs were
+`cbc769d406dc8d8280b482879d6a9f04a950f3a4` (new ownership class) and
+`9626a6356da15dd4a4ae28319b5121e7e5be1672` (headless class).
+Five cases executed, zero failures/skips, three errors: chip-present
+`genuineRecreationRefreshesTheSelectedRawPublication(boolean, boolean)[1]`
+(KiS2 session root) and `[2]` (S2 root/resolved KiS2) both rejected the second
+publication with `IllegalStateException: RewindSnapshottable already registered:
+sonic2-plc-service` through `RewindRegistry.registerOrRefresh`. Both forced
+fallback controls `[3]`/`[4]` passed. The second full headless load in
+`repeatedFullLoadsRecreateTheActualChipPlcPublication` failed through the same
+registry path, wrapped by the level-load IOException/RuntimeException boundary.
+This is an independent discrimination of the supplied SS worker finding, not
+execution of that worker's controller test. XML identities, ROM properties,
+Java version and zero skips were inspected; the reports were consumed/deleted.
+
+The first reproduction attempt stopped at a fixture checked-exception compile
+error, before any tests; that fixture was corrected before the above baseline.
+Its queue wait was 132 seconds and Maven reported 1 minute 22 seconds.
+The successful reproduction admission wait was five seconds and Maven time
+28.968 seconds. Terminal sessions `35802` and `5947` are completed.
+
+All focused Maven invocations here use the absolute wrapper
+`$MAIN_CHECKOUT/tools/testing/maven_queue.py` from the owned
+checkout (`MAIN_CHECKOUT` is the main root supplied in the task brief), with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, and `DISPLAY`, `WAYLAND_DISPLAY`, `XAUTHORITY`,
+`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS` unset. Common command arguments are
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and these original absolute ROM
+properties (no files or links created):
+
+- `sonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen`
+- `sonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen`
+- `s3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+- `kis2.rom.path=$MAIN_CHECKOUT/kis2.gen`
+
+Verified CRC32/SHA-1 pairs are S1 `AFE05EEE` /
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, S2 `7B905383` /
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, S3K `63522553` /
+`cfbf98c36c776677290a872547ac47c53d2761d6`, and KiS2 `2AC1E7C6` /
+`6cd0537a3aee0e012bb86d5837ddff9342595004`. Surefire reported Java
+`25.0.5.0.2` and the supplied paths. The reproduction selector was:
+
+```text
+-Dtest=TestKis2NativeRewindPublicationOwnership,TestKis2HeadlessBoot#repeatedFullLoadsRecreateTheActualChipPlcPublication test
+```
+
+The repair changes exactly four production files: a methodless, unannotated
+internal `NativeRewindPublicationOwner` role, its unconditional implementation
+by final package-private `Kis2GameModule`, publication resolution/reservation,
+and the `GameplayModeContext` registration caller. `nativeRoot` still means the
+canonical base. The separate owner operation traverses the resolved module's
+verified structural lineage and requires actual session-root object identity in
+that chain; sibling publishers sharing a base cannot satisfy the anchor.
+Only concrete engine-loaded decorators confer the role. Outer foreign decorators
+use final `base()` and verified outer projections use their engine handler's
+inherited provenance, without donating their own publications. Foreign inner
+bases deny owner admission. A proxy below a marked owner also denies that
+owner's admission: even a verified creator projection can append creator-owned
+publications, so its inherited lineage does not prove its exposed inventory.
+Cycle/length checks continue after finding the candidate owner.
+
+Both selected and canonical inventories validate before either identity set is
+reserved. Distinct same-key chip and stock services are legitimate across those
+two inventories; they are never registered as a union. Registration admits only
+the selected owner's exact current publications. Cold attachment, fallback,
+creation and reset retain the same KiS2 authority for inherited state. The PLC
+producer, raw lifecycle instance, queue and generic registry refresh remain
+unchanged; no clear, deregistration, retained-service workaround, key claim,
+projection-handler change or API pin update is used.
+
+The inspected change-based plan (`run_categories.py --base 85b030248`) selects
+3,759 smoke candidate classes because these paths are shared/unclassified.
+That broad run is deliberately not launched in this bounded worker. Focused
+qualification addresses native/creator admission, genuine queue/reload behavior,
+existing owner/fault/snapshot consumers, and API/source guards; the parent owns
+the following composition's combined smoke/guards. The exact normal
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+remains a **required parent gate** with the eventual SS commit. No result here
+claims actual SS/results/controller return is green or removes a canonical bug
+ledger entry owned by that worker.
+
+First repaired-state checkpoint: four production blobs are
+`33b8c180ed14c522e93ed4d13daf57271794c4be` (role),
+`44ba625fa3822abfc2ec1ccff0b1027e1502c038` (publication),
+`9b442e8f745418bc0fd9022f4cdf3709fb31007f` (context), and
+`514028be65483e174ffe377fd4983614bc39510e` (KiS2 module).
+The SHA-256 over sorted repository-relative path + NUL + contents + NUL for
+all files under `src/main`, `src/test`, `racing/time-attack/src`, and
+`racing/server/src` was
+`637d426eedb851b1c2f56739d27d9515d04d01c77d99d8f28ef6b4d4c7ba6b59`.
+The first repaired invocation (terminal `32865`, completed) used:
+
+```text
+-Dtest=TestKis2NativeRewindPublicationOwnership,TestNativeRewindAdapterPublication,TestKis2PlcService,TestGameplayModeContextRewindRegistry,TestKis2HeadlessBoot,TestKis2EndingContinue,TestOwnerBoundGamePatch,TestModContextAndFaultBoundary,TestRewindRegistry,TestCompositeSnapshotOwnership test
+```
+
+It compiled all 4,348 production and 4,460 maintained test/consumer sources.
+Admission waited 136 seconds; Maven reported 1 minute 30 seconds. All 126
+cases executed with zero errors/skips, but four newly authored FIFO assertions
+failed: a fixed 30-boundary fixture window had legitimately advanced beyond
+Coconuts to Masher in both ROM tiers. This was a fixture expectation error,
+not changed queue behavior. The corrected window derives the number of ordinary
+three-pattern boundaries from the captured ROM head's remaining pattern count.
+No producer/timing code changes. The other 122 cases passed, including all seven
+`TestKis2HeadlessBoot` cases (the new actual repeated chip full-load path included),
+all nine original native-publication controls, all three existing KiS2 PLC cases,
+29 context-registry cases, three ending/continue cases, 21 owner-patch cases,
+23 context/fault cases, 16 registry cases and three snapshot-ownership cases.
+The eight other new ownership/security cases also passed. Exact reports,
+properties and skips were inspected and consumed. Terminal `4833` is the
+single focused follow-up for the corrected ownership class; no duplicate broad
+or unchanged consumer run was submitted.
+
+The corrected full ownership class passed all 12 cases, zero failures/errors/
+skips (terminal `4833`, completed; four seconds admission, 27.754 seconds Maven).
+This includes the four genuine ROM-tier/root-shape vectors through creation,
+reset/recreation, raw lifecycle/publication identity, registry FIFO/progress
+capture/restore/replay, current/old full snapshots and retained-course rejection
+before world mutation. Its XML and actual case identities were inspected and
+consumed. Three further targeted checks strengthen live owned-projection
+recreation/creator-state partitioning, actual sibling-owner rejection and
+validation of both inventories before either is marked. Terminal `3658` is the
+sole queued request for those three methods; source/test fingerprint at this
+checkpoint is
+`d95c1206383d1783c90597393cca854eab06b1e0ed890910c76526a64ead8f83`.
+Production remains the four blobs above. Waiting is admission delay, not Maven
+execution or a failed run. The exact SS controller gate is still parent-owned.
+
+The three-method extension attempt (`3658`, completed) waited 479 seconds,
+then stopped at test compilation after 22.707 seconds Maven: a new local
+`inherited` variable conflicted with an existing lambda parameter in the same
+method. Zero tests executed. The test-only name is corrected; the new fixture
+also uses the existing engine-only reset boundary instead of a raw bootstrap
+setup, keeping the six ambient keys/five files intact. The final focused request
+is terminal `72277`, comprising all 13 ownership cases (including the new live
+projection case) and the affected source/API/frozen/inventory guards. This
+repeat is justified by the test edits and previously unexecuted assertions;
+the unchanged 114 existing consumer controls are not repeated.
+
+Final bounded qualification (`72277`, completed) passed **177 cases, zero
+failures/errors/skips** in ten exact reports. Admission waited 62 seconds;
+Maven time was 50.244 seconds. Command suffix, with the common environment,
+wrapper and ROM properties above:
+
+```text
+-Pguards -Dtest=TestKis2NativeRewindPublicationOwnership,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestArchUnitRules,TestArchUnitTestRules,TestSingletonLifecycleGuard,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy test
+```
+
+All 13 ownership cases executed and passed: four genuine creation/reset/
+recreation tier/root vectors, five bundle/expert reservation vectors, and four
+focused projection/lineage/inventory cases. The actual projection case restores
+registry-captured chip state through recreation while course restore leaves
+creator mode state alone and full restore restores it. The lineage checks use
+actual foreign-loaded decorator/root/handler classes, an engine-loaded marker
+proxy with zero foreign invocation/lineage reads, a genuine engine-owned
+projection, sibling/mismatched roots, and cycle/length negatives. Inventory
+negatives include null adapter/key, bounds, distinct same-key adapters and no
+partial canonical marking when selected validation fails; repeated identical
+entries retain deduplication. Both cold inventories and unregistered live chip/
+suppressed base identities resist bundle capture, expert returned callbacks,
+direct/delegate retagging and preserve owner/dependent quarantine.
+
+The other 164 cases are the actual source guard (81), architecture review (9),
+ArchUnit production rules (34), test rules (1), singleton lifecycle/inventory (8),
+API signatures/terminals (11), API pin policy (4), API release policy (15), and
+API runtime policy (1). The 119-record low-level store, six ambient keys/five
+files, all other frozen records, API signature/terminal resources, release
+descriptor and ModApiVersion remain byte-identical to base. No pin was expanded.
+The methodless role is not annotated or exported into the candidate surface.
+The final source/test fingerprint (same path/content SHA-256 definition as
+above) is
+`f3f9325b8b2adcdff2ff9354279bb2219a90045a44fde3928b6fb16e53da76a1`;
+the four production blobs remain unchanged from the first repaired run.
+All final XML case identities, Java 25, absolute ROM properties, EGL property
+and zero skips were inspected, then the reports were consumed/deleted. Together
+with the unchanged 114 earlier consumer cases, this is bounded passing evidence
+for 127 distinct behavior/ownership cases plus 164 focused guards/API cases;
+it is not a smoke/full-suite or SS-controller-return claim.
+
+The existing runtime-ownership release theme and implementation-pitfall catalogue
+record the ownership lesson. Their new local link resolves; AGENTS/CLAUDE still
+match, and whitespace checks pass. No trace frontier moved. No live task test
+handle remains: `35802`, `5947`, `32865`, `4833`, `3658`, `72277` are terminal;
+the temporary read-only fingerprint helper `35383` was stopped after its digest
+completed because its redundant per-file Git-status loop was unnecessary.
+No timing measurement is inferred from these overlapping independent activities.
+Only queue waits and Maven durations reported by each invocation are recorded.
+The checkout/branch is retained for parent review and composition; no push,
+integration or worktree/branch removal is performed. The normal genuine
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+remains a required parent gate after the SS commit is composed, followed by the
+parent's combined smoke/guards, integration, push and cleanup.
+
+Local staging initially found an empty stale Git `index.lock` in this task's
+Git worktree metadata, timestamped to the stopped redundant status helper.
+There was no live Git process or open-file owner (`lsof`); the exact empty
+inode was verified before removing only that task-owned stale Git lock.
+Maven queue/worktree/slot locks and resource settings were untouched.
+
+
+### Composed KiS2 publication repair: controller gate pending
+
+The next composition merges `b5371e7130ea7e97da879085ce5b1e0aa064ee97`.
+Independent source/security review accepted its four-file production boundary,
+anchored resolved lineage and separate validated selected/canonical reservations.
+The review's 11,424-entry working and committed aggregates match SHA-256
+`d2242a4e08e0cadd7637a26ee8bca03b846c0fc1acd17b3e1b3a097305e16aa8`.
+For this composition, the parent compared all seven changed source/test mode,
+blob-ID and path entries against the accepted commit; every entry matches.
+The composed SS production and corrected observer retain their own accepted
+bytes. Concurrent continuation evidence is preserved in full.
+
+The worker observed127 distinct behavior/ownership cases and164 affected
+API/source/architecture checks passing without skips, including actual repeated
+headless full loads. This is distinct from the normal SS/results controller
+return. The parent will run that exact previously failing case on this composed
+source, with intended-return assertions unchanged. Until it executes, canonical
+KiS2 bug reconciliation and full-return qualification remain outstanding.
+The current three-owner delivery's smoke is a different source and supplies
+no proof for this repair. Title ownership is isolated future work.
+
+Before that composed gate, the parent removed the pilot's temporary catch/print
+block used only to classify the old KiS2 failure. The ordinary controller loop
+and all intended successful-return assertions are retained. Historical failure
+identity/partial state remains in the component evidence and original commit;
+new failures propagate directly. No production behavior changed in this cleanup.
+
+
+### Composed KiS2 controller return qualification
+
+At `aafe14c012075aac40a2e337f980a39370ab3a5c`, the parent executed the normal
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+pilot: one case, zero failures/errors/skips. It used the genuine patched module
+and chip provider through entry, actual results, return reload, native title and
+LEVEL release. The normal provider identity, captured stage, emerald award,
+checkpoint index, saved 47 rings and released control assertions all executed.
+The previous failing pilot and its original partial-state diagnostic remain in
+component history; the successful-return conditions were not weakened.
+
+XML confirmed the exact selector, Java 25.0.5.0.2, surfaceless EGL and all four
+verified existing absolute ROM properties. Admission waited 137 seconds; Maven
+execution was 1:27, and the case reported 0.755 seconds. Both inspected XML/text
+reports were consumed. This establishes the repaired controller route on that
+composition, not a native-pixel, uninterrupted campaign or complete-game claim.
+The canonical open KiS2 adapter-replacement entry is removed because its stated
+repair and real-return condition is met; the unrelated Sideways gap remains.
+
+```bash
+SELECTION='TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider'
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=${SELECTION}" \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" test -B
+```
+
+The following title transfer is a different source state and will need its
+affected composed checks. The preceding fixed three-owner smoke also remains
+separate and incomplete here. Its editor pattern-window fixture error has a
+matched passing `97eb` baseline and a narrow constructor-owned test correction
+in progress; neither observation is claimed as a completed delivery.
+### Palette-owner follow-up: mod pattern-window fixture receiver
+
+The palette implementation branch was clean and had no own-checkout Maven/test
+processes before it was fast-forwarded, without edits, to composed source
+`8f34cad77297663523100fb7fdbf120cd9b259c1` (tree
+`1afc31b8e75ac0d40faa4c792a1d658cf9e53723`). Main, the parent's smoke source,
+foreign build outputs and jobs were not accessed or changed. This follow-up owns
+only `TestLevelManagerModPatternWindows` and this appendix.
+
+The parent reported a new composed-smoke error in
+`TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching`:
+`PaletteUploadPresentation.release:64` → `LevelEditorViewPreparation.prepare:20`
+→ `LevelManager.restoreEditorLevelView:890` → `EditorSessionFactory.create:47`
+→ the fixture's editor creation. Source inspection confirms why: the fixture's
+plain Mockito `GraphicsManager` bypasses construction and stubs only
+`getPatternAtlas()`. Before the owner transfer, release invoked the mocked
+package-local `setPaletteUploadLatched(false)`, doing nothing. The complete owner
+now performs release, so the constructor-bypassed fake has no component to receive
+it. The parent subsequently verified the unchanged pre-task `97eb86f1` exact
+identity passed 1/0/0/0, with XML showing Java25.0.5.0.2, surfaceless EGL and all
+four absolute ROM properties. Parent-reported admission wait was22s and Maven
+execution27.086s; its reports were consumed. Together with the current composed
+smoke error this attributes the fixture regression to the owner-transfer path.
+These baseline/smoke observations are parent-verified evidence; this worker does
+not duplicate or independently claim execution of those jobs.
+
+The correction constructs a real, GL-free anonymous `GraphicsManager` and
+overrides only its existing virtual atlas getter to return the same
+`RecordingPatternAtlas`. The constructor initializes the concrete palette owner
+with this actual receiver; no spy copies an owner pointing to another host.
+Editor preparation now executes real publication release and fade clearing on
+initial, empty state. That path needs no GPU upload, GL initialization, headless
+platform setup, ROM or native-effect stub. All four art-initialization cycles,
+every ordered event, real `cachePatternHeadless` assertion, total-window assertion,
+private gameplay/editor/resumed contexts and editor destruction remain unchanged.
+No production dispatch or lifetime defect was established; production null/lazy
+rescue and a facade restoration are unjustified.
+
+The original fixture SHA-256 at `8f34cad77` is
+`eae6022311b56c54d0e42041e73acfe9c62fdfc56d10b2b4b0542e14784a5724`;
+the corrected fixture is
+`bf146f2833211c89a40b8d080909856336ea01b4d0729c53e7f1f2fe673bb6cf`.
+The exact production/test delta from `8f34cad77`, including the tested patch, is
+`be99725e99829a64bc03aa258221f7f613156c3f4eb9504a736a5232429fec9f`
+(`git diff 8f34cad77297663523100fb7fdbf120cd9b259c1 -- src/main src/test | sha256sum`).
+The diff contains only the fixture receiver and its explanatory comment. The
+current 119-record frozen store, six keys, API/pins/descriptor and permission
+state are inherited unchanged from the fast-forwarded composition; this patch
+never restores the earlier 121 checkpoint.
+
+The worker's corrected exact identity passed 1 test, zero failures/errors/skips.
+XML confirmed `com.openggf.level.TestLevelManagerModPatternWindows` and
+`everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching`, actual
+Java/runtime25.0.5.0.2, surfaceless EGL and this implementation checkout as
+`project.basedir`. Source/test hashes remained fixed throughout the request.
+Admission waited696s (the wrapper's acquisition line); Maven execution reported
+1:25, including compilation of4,346 production and4,456 test sources. These are
+separate intervals, not a performance comparison with the parent's baseline;
+other delivery time is unmeasured. The only JUnit selection was this method.
+
+The exact command ran from `${TASK_CHECKOUT}` using its current wrapper. The
+portable `${MAIN_CHECKOUT}` convention still denotes the existing main checkout
+in the surrounding evidence; this request invokes no wrapper or target there.
+No ROM properties are needed by this logic-only fixture, which has no ROM/display
+prerequisite or skip. Selecting the existing offscreen flag is not a claim that
+this test creates a GL context or provides pixel/native coverage.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching' test -B
+```
+
+The matching XML/text reports and invocation log were inspected and consumed,
+with no pass receipt/archive. No old palette groups, broad/full suite, or guards
+were rerun. This supplies a narrow corrected-fixture result, not a composed
+smoke pass or independent baseline execution. Parent owns the combined baseline
+attribution, remaining smoke, review, integration, push and checkout cleanup.
+The follow-up stops at a local commit with a clean retained checkout and no
+live validation handles; no production/API/policy edit or new scope judgment
+is needed.
+
+
+### Editor graphics fixture correction accepted
+
+The parent reviewed the fixture delta in
+`0d919c0803d2ee24716bb55c5fd0ffd881d16e67`: a constructed graphics receiver
+retains its palette owner and overrides only the virtual atlas getter. All four
+private gameplay/editor/resumed lifecycle paths, CPU atlas checks and exact event
+assertions remain intact. Production, resources, pins and policy inputs are
+byte-unchanged from `8f34cad77`; only this test and continuation evidence differ.
+The test diff retains SHA-256
+`be99725e99829a64bc03aa258221f7f613156c3f4eb9504a736a5232429fec9f`.
+
+The exact pre-task `97eb86f` method passed one case with no failures/errors/skips
+in the parent's matched baseline: 22 seconds admission, 27.086 seconds Maven.
+The current broad request exposed the constructor-bypassed mock's null owner;
+the worker's corrected exact method passed one case without failures/errors/
+skips, after 696 seconds admission and 1:25 Maven execution. This is a test
+fixture adaptation to the explicit owner, not a production null/lazy rescue.
+The current broad source stays frozen until it finishes. Its observed original
+error and this focused correction must both be reported; no broad green claim
+or repeated unchanged full engine selection follows from this merge.
+
+
+### Complete title presentation/release owner — local implementation slice
+
+The implementation worker retained `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b39622ca`,
+renamed only its branch to `bugfix/ai-titlecard-session-owner-20261024`, and
+fast-forwarded it from `97eb86f186b432722024ca419a00b901b38f5ec2` to the approved
+`b0865737f6fdf1ee2b6afb0b063a0d324694d79d`. Hooks were installed before edits.
+No parent/main/other-worker sources or targets, push, integration, subdelegation
+or worktree cleanup belong to this slice. T3 reports `gpt-6.1-sol`, xhigh,
+service tier `default`; no fast/priority setting was enabled.
+
+The approved boundary is exactly `GameLoop.java` and the existing
+`GameLoopTitleCardLifecycle.java`. The latter now retains the nullable lazy
+provider, LEVEL destination and persistent GAMEPLAY_FRAME result, plus immutable
+Host/logger dependencies. Its 21-operation typed Host has no root/context
+backreference, locator, load callback or whole-frame capability. Root preserves
+its real virtual entry, pending, lock, bonus-boundary, character/player, shield
+and mode seams. The private Root update is production snapshot glue: lazy
+acquisition completes before the later frame/context/manager/input/destination
+arguments. Cache-only observation remains cold at all three policy/pacing sites.
+
+The owner contains ordinary/bonus entry, pending in-level initiation,
+all-playable locks, neutral prelude, locked update and shared exit. The captured
+update provider, context/managers and destination remain distinct from the live
+shared-exit destination/bindings. The PLC callback rereads Root's live frame;
+neutral update rereads the receiver/input after clearing captured masks. Clearing
+still precedes the try; finally restores the captured list. Both enum release
+edges ignore the return value and publish SETUP_ONLY only after successful
+completeRelease. BONUS wins after unlock without a new guard, clears destination
+before mode change, and synchronizes unconditionally after deferred setup; the
+separate common LEVEL checks remain. SS observes/completes through its existing
+owner. Ordinary release resolves the virtual player/shield, current module events
+and live fresh-boundary state. Cache clearing follows successful Continue reset;
+entry/reset/rebinding/parking/teardown do not reset destination or release result.
+No disposal, recovery, rewind, session-restoration, admission, latch, PLC, audio,
+input, trace, native-load or transition choreography was moved.
+
+The production base has Root SHA-256
+`dd55633bbb3a5bd003c56ece5a5aa74da517fc84ca14a2a244a0ca09aa6fbfc6`
+and old title helper SHA-256
+`064407b94c0077effd7129602957dacad9d2603b20437f465d45908df53afd04`.
+Before production edits, 36 unique new ownership cases passed against those
+unchanged bytes. They cover branch precedence and untouched lower-priority state,
+cache/cold/park/refresh/reset lifetime, null/reentry assignment, callback rebinding
+and mode changes, sentinel failure identity/partial effects, virtual traversal,
+fresh snapshots, captured versus live destination, live PLC/neutral receivers,
+multi-playable locks and partial masks, result persistence and publication/floor
+ordering. Root construction's title-provider reads are forbidden; existing module
+reads for other Root responsibilities are allowed, rather than a blanket
+zero-module-access assertion. Two subsequent owner/pending-seam cases complement
+these controls on the new source.
+
+Old-source commands used the common environment/queue command below, with these
+exact `-Dtest` selections (successes were not rerun as an unchanged baseline):
+
+```bash
+OLD_INITIAL='TestGameLoopTitleCardOwnership'
+OLD_FOLLOWUP='TestGameLoopTitleCardOwnership#bothReleaseEdgesPublishResultOnlyAfterListenerAndAssembly+coldPacingAndPresentationObservationsDoNotAcquireProvider+cacheAndDestinationSurviveRealParkResumeAndTeardown+resetClearsCacheOnlyAfterContinueResetSuccessfullyReturns+twoSeparateLiveLevelChecksSeeSynchronizationModeChange+bonusSynchronizationIsUnconditionalAndThenLiveLevelTailCanAlsoRun+plcPreparationReadsTheReboundFrameAfterCapturedProviderUpdate+freshPublicationPrecedesProviderHandoffAndDestinationSetup+listenerFailurePreventsEnumAssemblyFloorAndSuccessfulReleaseOrdersItLast,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass'
+OLD_NATIVE='TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass'
+OLD_FINAL='TestGameLoopTitleCardOwnership#acquisitionFailurePreservesIdentityAndNullCache+initializeCallbackRebindsLaterCameraAndListenerAndChangesLiveMode+secondPlayableLockFailureRetainsTheFirstLockAndPublishedMode,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass'
+```
+
+The initial run executed 25/2/0/0 (run/failure/error/skip): its listener correctly
+observed GAMEPLAY_FRAME during release, then mistakenly expected it on a later
+re-entry after SETUP_ONLY had persisted. Clearing that fixture listener before
+re-entry fixed the two assertions. Queue wait was 22 seconds; Maven reported
+1:19 execution. Follow-up executed 13/3/0/0: ten ownership controls passed;
+three new logic-only pilots omitted the initial title by the existing headless
+policy. Queue waited 504 seconds; Maven took 28.731 seconds. The pilots were
+moved to existing GameplayCaptureSession with its genuine no-device audio and
+owned surfaceless EGL renderer, driving actual GameLoop.step and renderFrame.
+That native run executed 3/0/1/0: S1 and S2 standard passed; 424-pixel capture was
+rejected because it is not a supported preset. Queue waited 9 seconds; Maven
+took 27.399 seconds. The final old-source selection executed 5/0/0/0 (three new
+sentinel/rebinding/partial-lock controls and S2 standard/400-pixel Sonic+Tails).
+Queue waited 246 seconds; Maven took 29.217 seconds. Together the three native
+pilots pass the real request-consumption/fade/load/title/release path with native
+providers, all-playable locks and first controller input, with no extra ordinary
+pass. S1 has one uncounted prelude; existing S2 LevelFrameStep dispatches 26 locked
+object passes and resets only the sprite counter on release (level/sprite 26/0,
+then 27/1 on the first ordinary input). The pilot preserves this existing
+behavior; the title extraction does not correct or re-fit counters.
+
+All original test identities/assertions remain. Cache/destination/private-exit
+fixtures now use typed TitleCardLifecycleTestAccess, including explicit owner
+installation for constructor-bypassing CALLS_REAL_METHODS drivers. Root's private
+update is accessed through that bridge; direct static-helper tests construct a
+typed owner and observe its persistent result/real release. The existing
+trace-admission source assertion follows the owner decision plus Root's narrow
+effects. In `TestGameLoopFreezeContractWiring`, the entire intended edit is one
+line in `suppressedLevelRowDoesNotAdvanceOrStartAnInLevelTitleOverlay`: replace
+Root cache reflection with the typed provider installation. No imports or edits
+to `specialStageTerminalBoundaryWaitsForTheClosureBridge` are included.
+
+Parent coordination reports independent SS observer commit `1c66bfe7` and a
+composed KiS2 publication/SS repair at `aafe14c012075aac40a2e337f980a39370ab3a5c`,
+where its exact normal entry/results/return test passed 1/0/0/0. This worker's
+pinned base intentionally predates those repairs. They are neither absorbed nor
+reopened here; parent owns canonical-bug reconciliation and the composed gate.
+
+New measured effective-source caps are Root 2367 (2443 minus 76, including
+adapter cost) and title 253. SS571/bonus357/ending320 remain byte-for-byte;
+Root dispatcher spans stay 58/276. Title method spans are update131, entry47,
+release65 and neutral-prelude19 physical lines. Guard positive samples allow
+real compatibility delegates and legitimate GameLoop.class logging; negative
+samples reject retained state/decisions, root/context references, wide Hosts,
+extra owner state and eager construction. No blanket type-token ban is used.
+Frozen119, six ambient keys/five files, package permissions, API annotations,
+signature/terminal pins, ModApiVersion and release descriptor are not repinned.
+
+Validation commands are run only from the retained task worktree, with no
+parallel own-target writer. The same queued request is retained through admission
+waits; queue and Maven time are distinct. Portable equivalent command prefix:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+unset DISPLAY WAYLAND_DISPLAY XAUTHORITY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+ROMS=(
+  "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen"
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+  "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen"
+)
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SELECTION" "${ROMS[@]}" test -B
+```
+
+Original S1/S2/S3K ROM identities match AGENTS CRC32 and SHA-1. KiS2 is
+CRC32 `2AC1E7C6`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`.
+All ROM properties are absolute and XML identities/properties/skips are inspected.
+There are no ROM copies/links/renames, desktop fallback or trace-derived runtime
+state. This is bounded preservation evidence; parent owns combined smoke, fresh
+combined guards and delivery. No full suite, broad smoke, finite route matrix or
+trace campaign is part of this worker slice.
+
+New-source first focused selection:
+
+```bash
+FOCUSED='TestGameLoop,TestGameLoopTitleCardOwnership,TestGameLoopTitleCardLifecycle,TestGameLoopTitleCardPause,TestGameLoopSpecialStageLifecycle#titleReleaseSpecialBranchSkipsOrdinaryZoneCallbackAndBonusWinsFirst,TestGameLoopBonusStageSession#secondShieldRetainsOnNullAndClearsBeforeGiveAndBeforeZoneState+deferredProviderIsIndependentAndClearedBeforeThrowWithoutReplay,TestGameLoopRewindBoundaryPolicy#bonusStageEntryTitleCardTransitionDoesNotDuplicateExplicitModeExit,TestGameLoopHardwareTimingBoundaries#s3kTitleCardIterationServicesBeforeAndImmediatelyAfterProviderScan,TestLevelIterationHardwareTimingAdmissionOrder#lockedTitleCardDeactivatesStaleRowBeforeItsHardwareScan,TestPlcLifecycleDriverParity#lockedSonic2TitleCardUsesOneTitleCardTokenWithoutOrdinaryNesting+normallyPresentedTitleCardDispatchesOneGameVblankWithoutObjectClockCoupling,TestTitleCardManagerNativeExitTiming,TestTitleCardObjectExecution,TestSonic2VisibleTitleReleasePlcOrdering,TestGameLoopTraceRunPostIteration#titleCardReleaseAdmitsRunBeforeLevelFallThroughInput,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestModApiSignatureSurface'
+```
+
+Executed 175/0/0/0 across 17 physical classes, including all103 TestGameLoop,
+38 ownership, both native games plus the small S2 team/width variant, release/PLC/
+hardware checks and11 API cases. Queue waited537 seconds; Maven reported1:30.
+XML testcase identities/counts and Java25.0.5.0.2, surfaceless EGL and all four
+absolute ROM properties were inspected; consumed XML/text reports were removed.
+The tested production remains Root SHA-256
+`5f9a606a6682d9a6358a040dda84301dd119a966caf27720e5fca92b8f0db7fc`
+and title SHA-256
+`05c92763d282eb732136bbc54c5ba0ab28d26b04dffdcb54a9a2535ffdda37c6`.
+After this run only a source-guard negative pattern was broadened to reject a
+Root LevelFrameResult field under any name; the runtime/test behavior was not
+changed. That guard is checked freshly below rather than repeating unaffected
+Root cases.
+
+Checkpoint: current commit/base b0865737, dirty scope two production files,
+maintained test migrations/new preservation pilots, focused guard and existing
+architecture/changelog records. First new-source job82366 is terminal-success;
+next request39774 is the bounded S3K/native/fixture selection below. Parent/main
+state and foreign jobs/targets have not been inspected.
+
+```bash
+NATIVE='TestGameLoopFreshLevelHandoff#liveCompletionHonoursPauseAndRepeatsWithFreshPublicationState,TestS3kSszArrivalHeadless#presentedTitleCardPreservesTheScreenInitCameraLock,TestInheritedZoneTitleLifecycle#inheritedHcz1PostTitleReleaseRestoresAirbornePlayerState,TestGameLoopDeferredSetupRewind,TestTitleCardWidescreenBounds,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestGameLoopFreezeContractWiring#suppressedLevelRowDoesNotAdvanceOrStartAnInLevelTitleOverlay,TestNativeStageSpeedScopeRegression,TestGameLoopNativeStageMutatorPacing,TestGameLoopBonusStageOwnership,TestS3kInitialObjectSetupLifecycle#bonusTitleCardReleaseConsumesFreshSetupBeforeFirstGameplayRow+genuineSpecialStageReturnReloadArmsAndLevelReleaseConsumesExactlyOnce+genuineHczSpecialStageControllerReturnRestoresMeanWaterAndTarget+representedSpecialStageReturnRestorationDiscardsBeforeLevelRelease+visibleTitleReleaseAndNoTitleFirstFrameConvergeForFreshCnz'
+```
+
+Native selection39774 completed99/0/0/0 across15 physical classes. The mandated
+four selectors expand to five physical classes and60 cases: AIZ skip8,
+`game.sonic3k.TestSonic3kLevelLoading`36,
+`tests.TestSonic3kLevelLoading`7, bootstrap6 and decoding3. Complementary results:
+deferred-assembly rewind3, migrated freeze method1, fresh handoff1, mutator pacing9,
+native speed2, bonus ownership12, inherited HCZ events1, initial setup/release5,
+SSZ arrival width2 and title bounds3. Queue waited13 seconds; Maven33.773 seconds.
+Exact XML identities, properties and zero skips were inspected and consumed.
+Production hashes remain unchanged. Request92430 now owns the fresh bounded
+three-class structural check under `-Pguards`; store creation/update remain false
+in unchanged `src/test/resources/archunit.properties`.
+
+```bash
+GUARDS='TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Pguards "-Dtest=$GUARDS" "${ROMS[@]}" test -B
+RETURN_PREFIX='TestS1CompleteEmeraldRunPrefix#specialStageReturnThroughGhz2PresentationBridge,TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeFirstReturnLifecyclePrefix'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.reuseForks=true \
+  "-Dtest=$RETURN_PREFIX" "${ROMS[@]}" test -B
+```
+
+The two exact existing return methods are warranted by moving shared SS title
+release: helper-only precedence and the ordinary native pilots do not prove a
+real S1/S2 results-return path. They stop at the existing GHZ2 presentation bridge
+and first S2 return prefix; no whole chain, route sweep, KiS2 rerun or campaign is
+requested. They use existing production input/timing contracts and native state,
+not trace hydration. This extraction does not select or move a trace frontier.
+
+Fresh structural request92430 passed102/0/0/0: source85, architectural review9,
+singleton lifecycle8. Queue waited18 seconds; Maven33.753 seconds. XML count,
+Java25 and EGL properties were inspected and the consumed reports removed.
+The actual Root/title class and title-method caps pass against the final source;
+frozen119 and the six ambient keys across five files remain unchanged. The API
+signature/annotation/terminal control already passed11 cases on these same
+production bytes. The two return-prefix methods now run in request29327; no
+other own-tree command writes target and no worker broad/full suite was launched.
+
+Return request29327 passed2/0/0/0 on unchanged production hashes. Queue waited17
+seconds; Maven35.999 seconds. XML names are exactly
+`specialStageReturnThroughGhz2PresentationBridge` and
+`ehzHalfpipeFirstReturnLifecyclePrefix`; Java25/EGL/absolute ROM properties match.
+Consumed JSON diagnostics report complete source segments with zero physics,
+animation and bootstrap errors/warnings; S1 source has11 lag rows, S2 none.
+Special-stage dynamic-art comparisons are3728 (S1) and5733 (S2), both zero errors
+and mismatches. Each gap journal has two gaps, zero failures. All twelve owned
+JSON/owner diagnostic files and the exact XML/text reports were consumed and
+removed. These existing prefixes do not establish complete-chain parity or a
+new frontier, so no frontier-log change is warranted.
+
+Final local evidence is378/0/0/0 across the disjoint new-source focused175,
+native/fixture99, structural102 and return-prefix2 selections. No production
+edit followed the first run; the only later executable edit was the documented
+negative source-guard pattern, freshly compiled and tested in the structural
+run. Root103, mandated S3K60 and API11 are observed counts, not inferred from
+selector names. There is no broad/full-suite claim, no KiS2 route claim and no
+fresh-main/integration claim. Parent retains combined validation, source review,
+intent merge of its independent SS observer/KiS2 repairs and delivery.
+
+Documentation obligations: fold title ownership into the active prerelease
+runtime-ownership theme; refresh existing engine-map and measured budget prose.
+No guide, configuration, known-discrepancy, API/version/pin, agent-doc or skill
+behavior changed. No object/ROM algorithm or frontier moved. No temporary probe
+warrants promotion. Only the approved Root/title production pair changed; SS,
+bonus, ending, Engine, frozen119/ambient inventories and public contract files
+are byte-identical to the pinned base. All test source changes are preservation
+controls or necessary fixture/source-assertion migration, as identified above.
+
+Checkpoint before local commit: all command sessions65660,38550,89100,16151,
+82366,39774,92430 and29327 are terminal; no live task-owned job remains. The first
+three sessions include the documented fixture failures; the completed local
+selections are green with zero skips. No waiting request was cancelled/restarted
+for admission. Queue waits and execution times above are observed and separate;
+analysis and other time is unmeasured. Sources remain pinned to b0865737 plus this
+slice; the worktree/branch will be retained clean for parent review. No push,
+integration or worktree/branch removal was attempted.
+
+The prepared final `src/` tree fingerprint is `8fbba001735283b2626911d38861a58d0a93987e`; documentation added
+after validation does not change that tested source tree. Final commit/root-tree
+identities are returned in the parent handoff; no self-referential commit hash
+is embedded in this commit.
+
+### Parent composition of the accepted title owner
+
+The parent merged reviewed candidate `737b161eac5eeba6be3ed85ee595ed3173674448`
+into composition `fc520ae0b4a41b42903b6ad5a40247ef0ebd329e`. The sole conflict
+was this append-only evidence section; both records remain. All 29 reviewed
+files map to aggregate `0dce8f7879ef596e729b358761bb1d8ada4a3c99d38a7f42dede12e9799496ce`;
+the two production files map to
+`b782192bdb9feb98b88389e42a1272c16541bb3ef6f5069960389e1be6b696a9`
+using the review's bytewise path and blob-hash algorithm.
+
+The automatic FreezeContractWiring merge combines only the provider-installation
+migration with the independently accepted real-entry observer correction; it
+preserves both terminal-boundary controls. The KiS2 publication repair and its
+canonical bug closure, editor fixture correction, and all earlier ownership cuts
+remain present. No worker result establishes this composed tree's runtime
+behavior. The affected KiS2 return, title/SS/bonus consumers, fresh guards and
+change-based smoke remain parent delivery gates.
+
+### Parent controller qualification after composing title ownership
+
+At `903722281d493def6df3ced6e7c3f12203a67ec6` (tree
+`911930b8177af4da32f77bf8aff5f3e0e3c1a638`), the parent observed **242 unique
+executed controls, zero failures/errors/skips**, across eleven physical XML
+reports. These comprise Root 103, bonus 21, ending 36, freeze-boundary 9, the
+previously unselected generic-provider reveal 1, SS 29, title 38, genuine S1
+request-to-release 1, S2 normal/wide-team request-to-release 2, the actual KiS2
+SS/results return 1, and the constructor-owned editor fixture 1. This includes
+both the corrected real-entry observer controls; neither was weakened by the
+one-line title-provider installation migration.
+
+With `MAIN_CHECKOUT` set to the existing main checkout, the exact selection was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  '-Dtest=TestGameLoop,TestGameLoopTitleCardOwnership,TestGameLoopSpecialStageLifecycle,TestGameLoopBonusStageSession,TestGameLoopEndingSession,TestGameLoopFreezeContractWiring,TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider,TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching,TestGameLoopFreshLevelHandoff#genericProviderRetainsItsFadeFromBlack,TestGameLoopZoneActHandoffS1#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass,TestGameLoopZoneActHandoffS2#rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass' test
+```
+
+Queue waiting was 193s; Maven reported 1:30 execution. Every XML identity and
+parameter row was checked, including all 103 Root invocations and all three
+native request-to-release pilots. Java 25.0.5.0.2, surfaceless EGL and all four
+verified absolute ROM properties were present. The 22 XML/text reports were
+consumed. Root observed these outcomes; worker-reported tests above remain
+separate evidence. Both Bash and PowerShell commit-range policies passed for
+`97eb86f18..903722281`, each auditing 14,633 tree entries.
+
+This is focused composed qualification, not a smoke/full-suite claim. The
+change-based plan inspected against the pinned original destination `97eb86f18`
+selects all ten smoke categories, 3,762 candidate classes and fresh guards. Main remains on the pinned pre-task destination `97eb86f18`; the lead will run
+that complete plan while the preceding wave's remaining coverage finishes.
+The two worktrees contain different source states, so these are independent
+required checks. Shared-loop changes require the complete selection; existing
+focused results do not replace it.
+
+### Qualified next boundary: native fixed-tail storage
+
+The follow-up Git-object study of composed `fc520ae0b` and S2 disassembly pin
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7` does not establish a safe bounded
+Sideways repair. The failed after-current allocation aliases physical fixed-tail
+storage: its unwanted link writes can redirect a live tail's parent, and later
+platform retirement clears whichever occupant then inhabits that location.
+Dormant bytes, later installation, multiple aliases, animation/DPLC effects and
+separate late tail dispatch matter. An incarnation-only object reference cannot
+supply those storage/lifetime semantics.
+
+Current slot projections and the player-bound tail controller do not close that
+boundary. A per-manager storage owner with explicit controller binding is a
+credible future responsibility transfer, but its authoritative field and
+consumer coverage remains incomplete. The next discriminating evidence is a
+controlled native pressure probe of empty/live fixed targets, failed writes,
+fixed-tail dispatch, retirement, reinstallation and two-parent aliasing. It must
+observe SST bytes and the separate DPLC cache without hydrating engine gameplay
+from reference data. Manager rebuild alone is not authority for native RAM
+clearing; shared modules must not become storage owners for separate worlds.
+
+Therefore the accepted Sideways qualification and canonical open-bug entry stay
+intact. All ten count-one bridges and the 119-record store remain unchanged. This
+is a concrete evidence prerequisite, not architectural exhaustion or a claim
+that migration cost precludes the improvement. No native probe or runtime test
+was executed by that read-only study.
+
+### Following composition smoke launch boundary
+
+The parent preflight passed in the actual Linux launch environment: Java 25,
+Lua 5.4 and PowerShell are available. The environment unsets DISPLAY,
+WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS and sets
+`MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl`, with the four existing verified
+ROMs discovered from the main checkout. There is no desktop fallback.
+
+The complete change-based selection has 3,762 candidates in 76 ordinary batches,
+then a fresh guard JVM. Expected execution is approximately 90–150 minutes plus
+queue waiting; this is an estimate, not a measured completion time. The stopping
+rules are the runner's 180-minute execution budget (queue waiting excluded),
+ten-minute no-output limit, source-fingerprint mismatch, or infrastructure
+failure without JUnit reports. JUnit failures remain identified for bounded
+attribution and correction. Do not manually narrow the plan or launch the
+release-only full suite.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base 97eb86f186b432722024ca419a00b901b38f5ec2 \
+  --rom-directory "${MAIN_CHECKOUT}" --max-minutes 180 --run
+```
+
+
+### Audio capture-lifetime characterization gate (owned 2026-10-24 worktree)
+
+The implementation child owns only
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-07f71851`, branch
+`bugfix/ai-audio-capture-lifetime-20261024`. Its clean initial `97eb86f18` was
+fast-forwarded **only** to accepted composition
+`0396a458181a0ca654846f8c82ac7a412ffa3cd5` (tree
+`946b11143af0a255a6cc488c04b9f6ac97a193a9`) before edits. Hooks were installed.
+No parent/foreign target or validation job was inspected. The main checkout was
+used only for the expressly authorized current queue wrapper and existing ROM
+inputs. No subdelegation, integration, push, broad/full suite or measurement was
+performed by this phase.
+
+The independent design review authorized alternative A after this gate: one
+private concrete `CaptureLeases` per manager, spanning producer generations and
+owning admission, accepted release, carry and retirement. Qualified retention B
+is coherent but leaves that policy dispersed. A state bag with decisions left in
+the manager, an added Host/service lookup, top-level producer caller, broadened
+catch or automatic API repinning are rejected: none transfers this complete
+responsibility within the existing authority. Producer clocks, packets and
+attachment mechanics remain producer-owned. This gate does not itself implement
+or certify the extraction.
+
+Unchanged production blobs throughout the gate:
+
+- `AudioManager.java`: `a6c82855fc765eb5a1448fa209b7e6172568e4f7`.
+- `AudioPresentationProducer.java`: `9826716a97c1fbb781e41a668f1016ce1d4362e8`.
+
+The exact command for both original and expanded controls, from the owned tree,
+with `MAIN_CHECKOUT` resolving to the existing main checkout (the executed
+wrapper argument was that absolute path):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestHeadlessAudioOwnership' test
+```
+
+The original control completed **29/29** (14 + 8 + 5 + 2); queue wait 156s,
+Maven execution 1:26. The expanded gate completed **43/43** (21 + 13 + 7 + 2);
+queue wait 46s, Maven execution 27.798s. Both had zero failures/errors/skips.
+Terminal command handles: `72837`, `91063`, both exit 0. The existing
+`profile_small_tests.source_fingerprint(Path.cwd())` function was used solely to
+hash build inputs, without launching a profiler or measurement. Original
+SHA-256: `e97faa1918eb2570e203d1e194c7882a74348585dcb6795e510376a211ba72ee`;
+expanded pre/post SHA-256:
+`c7e1e37de8fa86aade50f1c73c9d894d806640eb608e2b11e2da435b115beccc`.
+Every XML test identity, count, skip and Java/EGL/selector property was inspected;
+Java was `25.0.5.0.2`, EGL `surfaceless-egl`. No ROM properties were needed by
+these synthetic controls. The eight XML/text reports from each invocation were
+consumed; no category-run diagnostics or result caches were created.
+
+All 27 original characterization identities/assertions were retained. The
+additional executed identities are:
+
+- `AudioManagerCaptureModeTest`: `offlineValidationPrecedesRealizationButSampleValidationFollowsIt`,
+  `sampleRateMismatchPrecedesPositiveFrameRateMismatch`,
+  `offlineValidationUsesVirtualManagerSampleRateDispatch`,
+  `sampleRateCallbackAttachesToTheCurrentProducerAfterReentry`,
+  `acceptedCloseRetiresReferencesEvenWhenSinkTeardownThrows`,
+  `throwingReentrantCloseReconcilesTheCurrentlyPublishedProducer`,
+  `reentrantCloseThatClearsTheProducerPreservesFinallyFailurePrecedence`.
+- `AudioManagerLiveCaptureTest`: `invalidLiveRateIsValidatedOnlyAfterRealization`,
+  `closedMetadataDoesNotAcquireTheManagerMonitorAndClosedDrainWinsOverNull`,
+  `producerRealizationKeepsTheCallingEntryPointsMonitorCoverage`,
+  `pendingRealizationFailureKeepsAdmissionAndExplicitCloseCancelsTheCarry`,
+  `failedRebuildThenDestroyKeepsThePendingRecordingForLaterRealization`.
+- `TestLiveCaptureSurvivesBackendSwap`:
+  `fractionalClockAndCumulativeTotalsSurviveEveryRebuildTrigger`,
+  `incompatibleRebuildDegradesTheRecorderAtItsExistingFractionalPhase`.
+
+These use real producers, no-device sinks/backends and existing packet fixtures.
+One isolated real-manager spy intercepts only virtual `outputSampleRate()`:
+validation accepts its dispatched 44.1 kHz value while the actual producer still
+drains 800 frames at 48 kHz. Callback lock observations distinguish synchronized
+capture admission/rate access from unlocked realization, destroy and launch
+replacement. Closed metadata completes on another thread while the manager
+monitor is held; closed drain rejects before its null argument. Existing foreign
+thread checks retain both admission and owner-thread retry.
+
+Accepted close plus throwing teardown retires admission but leaves producer/sink
+references uncleared until a later lifecycle operation. Reentrant sink close
+can publish a replacement producer; its new leases survive the outer finally's
+**current** producer read. If reentry instead clears that producer, the current
+null read throws `NullPointerException`, superseding the sink exception. A failed
+launch rebuild followed by destroy preserves an already-pending wrapper for later
+realization. These source-derived predictions are now reproduced behavior,
+**not** newly claimed runtime defects and not targets for rescue in this cut.
+
+At 5 Hz / 2 fps, the same caller handle drains **2, 3, 2**, sums to **7**, and
+reports segment-local clock totals **2, 3, 2** with remainders **1, 0, 1**.
+Backend, launch-backend, reset, profile and ROM replacement are all exercised,
+including empty intermediate segments; offline admission retires independently.
+PCM is nonzero in each generation and the last independent offline packet
+matches the live packet. Incompatible rebuild through the real controller
+substitutes silence with packet counts **3 then 2** after the original two-frame
+packet, preserving the fractional phase.
+
+Coverage limits: ordinary failure *inside* rebind's attachment try and diagnostic
+observer escape from that try are not legitimately inducible through these real
+fixtures: `attachCapture` has no observer callback, and a newly published producer
+has no exposed pre-rebind capacity/owner hook. No fake producer, private-field
+mutation or new injection seam was added to pretend otherwise. The outside-try
+sample-rate mismatch, failed pre-publication realization, explicit close while
+pending and failure partial effects are covered. Receiver-before-arguments
+rebind evaluation, selected-wrapper retention and exact wrapper lock regions
+still require preservation review alongside these tests. No emulator-parity,
+ROM-backed, smoke, full-suite or performance result is implied by this gate.
+
+
+### Audio capture-lifetime extraction: preservation and fixture qualification
+
+The unchanged-production gate above was committed locally as
+`b1b5358e479f3268ed7ff5746cd56047aa285d86` (tree
+`dee013758762a9d92b18b10d8aa1d232caff8b0a`). Implementation then moved all
+seven responsibility fields into one final per-manager private concrete
+`CaptureLeases`, including its nested stable-handle implementation. All manager
+factories initialize that owner through normal instance initialization. No
+reset or producer replacement replaces it. Compatibility methods delegate
+without pre-evaluating collaborators; construction, close and general teardown
+remain in AudioManager. Lifecycle sites announce all four existing rebuild
+boundaries and publication; the owner makes admission, detach-acceptance,
+reconciliation, carry and retirement decisions and executes their effects.
+
+The five public capture/rate methods remain synchronized. Moved live close,
+rebuild marking, rebind and retirement explicitly synchronize on
+`AudioManager.this`; wrapper drain/total/clock retain that monitor. Metadata stays
+unlocked. Reconciliation clears offline admission before calling the separately
+synchronized live-retirement method, with no new enclosing lock. Destroy,
+launch-backend replacement, producer realization and close retain their original
+method-wide synchronization boundaries. Reconciliation takes no producer
+argument: the current field is read in the original finally, including the
+characterized null-read failure. The sample-rate guard remains outside rebind's
+try, diagnostic rethrow precedes retirement, and totals accrue only after a
+successful attachment using the selected wrapper and unchanged Java
+receiver-before-arguments expression.
+
+A temporary source comparison stripped comments/whitespace and the newly
+explicit enclosing-manager monitor wrapper: all five moved compatibility bodies
+and all four moved manager-monitor helper bodies matched their originals
+(the virtual rate call was explicitly qualified with `AudioManager.this`). All
+**116** root public/protected declaration lines matched exactly. This is source
+preservation evidence, separate from runtime tests and compiled API inventory.
+The only migrated reflection is `TestTraceCaptureUnifiedAudio.attachedLease()`:
+it now reads the offline handle through the private owner; its original tests and
+assertions remain unchanged. No root capture predicate or mirrored state remains.
+
+The first extraction focused request (handle `63353`, exit 1) completed all
+**114** identities, with 113 passing, zero skips and one fixture error:
+`AudioManagerCaptureModeTest.offlineValidationUsesVirtualManagerSampleRateDispatch`
+threw `IllegalArgumentException` reporting dispatched 44100 versus actual 48000.
+Queue wait was 38s; Maven execution 1:34. Its input SHA-256 was
+`42b98b567fcf65dbb8d9645f56212bf18a4a36a822ad5672ce7606b6e3bc324c`.
+All XML identities/properties and the failure stack were inspected and consumed.
+The failed probe used `spy(AudioManager.createSilent())`, which shallow-copies a
+constructed manager and therefore retains an instance-bound owner's original
+manager. This is a fixture-copy artifact, not authority to redirect production
+ownership or bypass the owner's virtual call.
+
+The fixture now constructs the spy itself with `spy(AudioManager.class)`, so
+normal initialization binds its owner to the actual intercepted instance. The
+44.1 kHz virtual-validation and real 800-frame packet assertions are unchanged.
+A matched check restored only the original AudioManager source blob
+`a6c82855fc765eb5a1448fa209b7e6172568e4f7` in this owned tree and ran the gate's
+exact environment/wrapper command with selector
+`-Dtest=AudioManagerCaptureModeTest#offlineValidationUsesVirtualManagerSampleRateDispatch`.
+It passed **1/1**, zero failures/errors/skips, Java `25.0.5.0.2`, EGL
+`surfaceless-egl`; handle `49153` exit 0, queue wait 18s, Maven execution 1:27.
+The tested input SHA-256 was
+`8fe33bfe7037cec0f19d097858c3cea1caa95ee785bca91484b8879795052e10`.
+Its XML/text reports were consumed. The extraction source was then restored;
+only this task's compiled AudioManager classes were removed before recompilation
+to avoid stale nested-class inventory from that matched-source control. The
+temporary extraction-source copy was deleted. No production behavior was rescued
+and no characterization assertion was weakened.
+
+
+### Audio extraction focused qualification
+
+Final tested build-input SHA-256 (same before and after the completed focused run):
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+AudioManager production blob:
+`899549538e1f9d96a45a4fd8b4649dc76807ece6`; producer blob remains
+`9826716a97c1fbb781e41a668f1016ce1d4362e8`. Tested state is the baseline
+commit plus the eight-file extraction diff; the final commit records these same
+build inputs. Documentation edits do not enter this build-input hash.
+
+From this owned tree, with the existing main checkout in `MAIN_CHECKOUT`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestTraceCaptureUnifiedAudio,TestAudioManagerRuntimeInstallation,TestUnifiedAudioPresentationIntegration,TraceCaptureSessionTest,DrainPcmAudioTapTest,LiveCaptureControllerTest,TestHeadlessAudioOwnership,TestModApiSignatureSurface' test
+```
+
+The corrected request `88089` completed exit 0: **114 unique tests**, zero
+failures/errors/skips, queue wait 13s and Maven execution 1:26. This rerun was
+required by the fixture correction and restored extraction source, not review
+ceremony. Eleven XML reports had exact requested identities and selector,
+Java `25.0.5.0.2`, EGL `surfaceless-egl`; no ROM property was required.
+All 22 XML/text reports were consumed after inspection.
+
+| Class | Executed |
+| --- | ---: |
+| `AudioManagerCaptureModeTest` | 21 |
+| `AudioManagerLiveCaptureTest` | 13 |
+| `TestLiveCaptureSurvivesBackendSwap` | 7 |
+| `TestTraceCaptureUnifiedAudio` | 8 |
+| `TestAudioManagerRuntimeInstallation` | 7 |
+| `TestUnifiedAudioPresentationIntegration` | 10 |
+| `TraceCaptureSessionTest` | 7 |
+| `DrainPcmAudioTapTest` | 3 |
+| `LiveCaptureControllerTest` | 25 |
+| `TestHeadlessAudioOwnership` | 2 |
+| `TestModApiSignatureSurface` | 11 |
+
+The eleven compiled API controls include exact current signature pin,
+recursive annotation/classpath inventory and engine-internal terminals. Their
+passing result is compiled verification, not an inferred consequence of private
+nesting. Signature/terminal pins, producer source and frozen stores remain
+byte-identical to accepted composition. No automatic repinning was performed.
+The source-derived, uninducible rebind-catch gaps described above remain explicit.
+
+
+### Audio extraction native packet and no-device qualification
+
+The three existing main-root ROMs were read without copying or linking them.
+Their CRC32/SHA-1 identities matched the repository contract: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic1UnifiedAudioPresentationRomIntegration#sonic1TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic2UnifiedAudioPresentationRomIntegration#sonic2TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic3kUnifiedAudioPresentationRomIntegration#sonic3kTitleGameplayRingAndSpecialStageProduceFinalPcm,TestHeadlessGameBootAudioIdentity' test
+```
+
+Request `73075` completed exit 0: **6/6**, zero failures/errors/skips. Queue
+wait was 48s; Maven execution 29.749s. The three exact `ProduceFinalPcm`
+identities above executed once each. The other three identities were
+`TestHeadlessGameBootAudioIdentity.audioDisabledBootRetiresAnAlreadyInstalledBackend`,
+`replacingTheBackendWithTheSameImplementationDoesNotMatchOrReinstallItsOwner`,
+and `nativeBootOwnsItsAudioAndPublishesOnePacketAtTheOrdinaryOuterBoundary`.
+All four XML reports contained Java `25.0.5.0.2`, EGL `surfaceless-egl`, the exact
+selector and all three existing absolute ROM properties. Reports were inspected,
+then all eight XML/text files consumed. Build-input SHA-256 remained
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+These controls establish bounded engine final-packet audibility/independent
+leases and no-device ownership, not emulator parity, arbitrary route coverage or
+a ROM/trace campaign.
+
+
+### Audio extraction fresh guard qualification and handoff boundary
+
+A separate fresh guard JVM was launched from the same unchanged build inputs:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards \
+  '-Dtest=TestAudioPresentationBoundary,TestAudioPresentationArchitectureGuard,TestAudioBackendBypassGuard,TestArchUnitRules,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' test
+```
+
+Request `47992` completed exit 0: **91 unique tests**, zero
+failures/errors/skips. Queue wait was 9s; Maven execution 45.756s. All six
+XML reports had exact requested identities/selector, Java `25.0.5.0.2` and EGL
+`surfaceless-egl`; all twelve XML/text files were consumed. Counts:
+`TestAudioPresentationBoundary` 1, `TestAudioPresentationArchitectureGuard` 38,
+`TestAudioBackendBypassGuard` 1, `TestArchUnitRules` 34,
+`TestArchitecturalReviewGuard` 9, `TestSingletonLifecycleGuard` 8. This includes
+the compiled nested-producer boundary, frozen low-level dependencies, singleton
+lifecycle ratchet and published frozen-record accounting. Frozen stores and
+signature/terminal pins remain byte-identical to `0396a4581`; **delta zero**,
+with store updating disabled. No allowance, API, annotation or terminal change
+was made. Post-guard source SHA-256 remains
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+
+All task-owned requests are terminal: `72837`, `91063`, `49153`, `88089`,
+`73075`, `47992` exit 0; `63353` exit 1 is the fully attributed, corrected
+spy-copy fixture failure above. No task validation remains queued/running.
+Diagnostic directories were checked empty after consumption. No category run,
+pass receipt, report archive, extra helper/API, guard-policy change, broader
+suite, measurement, subdelegation, push, integration or worktree removal was
+performed. The only production change is AudioManager; exactly the eight
+reviewed files differ from accepted composition. The parent's frozen smoke jobs
+remain separate and untouched.
+
+The extracted candidate preserves the characterized pending-rebind/destroy and
+accepted-close/throwing-teardown partial states. Ordinary/diagnostic failures
+inside rebind's attachment catch remain the explicitly reported fixture gap;
+source/body comparison preserves their branch and propagation order. All
+required bounded focused/native/guard selections are green, with the limits
+above. Parent retains fresh independent code review, combined change-based smoke,
+integration and delivery; this child retains its clean local branch/worktree for
+that handoff. Commit hooks and commit-range policy are the final local checks;
+no unchanged runtime selection will be repeated solely for review.
+
+### Parent acceptance and preparation of capture-lifetime composition
+
+The parent mapped the eight-file change from `0396a4581` to reviewed extraction
+`d53bd5b8c598c178c3d65703228448bc9c9eea78`, including characterization commit
+`b1b5358e479f3268ed7ff5746cd56047aa285d86`. Its sorted
+`path<TAB>Git-blob-id<LF>` mapping hashes to
+`8ef8f6a41ffd2a80d1f31efa43d5f7da08edd47535439e68055b818dc14db695`.
+AudioManager's accepted production blob is
+`899549538e1f9d96a45a4fd8b4649dc76807ece6`. Independent source review found no
+actionable issue: all seven fields and capture decisions move together, while
+all 116 public/protected declaration lines, producer authority, monitor regions,
+virtual dispatch, reentrant observations and failure partial effects remain.
+
+The ordinary/diagnostic rebind-attachment catch branches remain an explicit
+unexecuted coverage limit. The existing final producer exposes no supported,
+deterministic callback to force that window. Review accepted mechanical branch
+and propagation-order preservation without adding an artificial producer or
+injection framework. The corrected real-subclass virtual-rate control also
+passed against unchanged production before the final focused run. Worker 43
+baseline, 114 focused, 6 native and 91 guard outcomes above remain worker-observed;
+this source acceptance does not independently certify their runtime artifacts.
+
+The new parent composition starts at the reviewed extraction and merges audit
+`c008b4d209f7e3a7b930f243f075c9837d970729`. That commit adds only 196 lines to the
+existing disposition audit, preserving the fixed-tail source findings and the
+still-unexecuted probe obligation. Its audit file SHA-256 is
+`8d06fb4c3b9d54b788c6e00bd711f346fa310bbe8d6e1e15ba9827a80a40d3b7`.
+No storage-owner or engine behavior change is included. The separate reference
+probe must satisfy installation provenance and execute under owned admission
+before observations can qualify a later implementation.
+
+The inspected capture-only change-based plan against pre-capture composition
+`0396a4581` selects audio, common, rewind and tooling: 1,348 candidate classes in 27
+ordinary batches, then fresh guards. This is provisional planning, not completed
+coverage. The lead will inspect the actual destination diff when the preceding
+deliveries finish, and run the complete appropriate selection without manually
+narrowing it. The two earlier smoke trees stay frozen and independent. No native
+trace campaign, performance measurement or release-only full suite is planned.
+
+### Reserve scene boundary retained by authority
+
+A completed Git-object study of `0396a4581` and `fc520ae0b` recommends retaining
+LevelManager's scene boundary. Its three cache fields select the current level
+identity and successful FULL-load generation. There is no separate driven
+lifecycle or disposal obligation: reset/null-level rejection and lazy replacement
+remain loading policy. LoadedLevelScene already owns art residency/projection,
+and callers own independently surviving presenter resources. A new owner would
+mainly interpose between those established authorities.
+
+The maintained caller census found 55 direct capture/presenter expressions in
+five files, including Putt-Putt Paradise's actual GolfMode/GolfOnline production
+consumers and its presentation, mod and peer-probe tests. Thus absence of an
+external engine-src/main caller is not absence of supported use. Both capture
+overloads and presenter creation are recursively supported and pinned. Retention
+changes zero API/frozen identities and avoids inventing cache invalidation,
+revocation, close or rewind behavior. This is an authority-placement finding,
+not a rejection based on class size, migration cost or lack of a reproduced bug.
+No tests or runtime observations were made by that research.
+
+### Updated upstream integration boundary and retired old-base runs
+
+A fresh fetch found destination `develop` advanced from `97eb86f18` to
+`81f25c89f04d402c68998106cab17c0ddd79d928`: 723 paths include Stageplay menu,
+voice and native-facing work. Main was fast-forward pulled without switching
+its branch. Its four dirty reference/tool submodules and seven unrelated
+untracked files remained untouched; no submodule pin changed upstream.
+
+Those edits include Engine and AudioManager. The parent therefore intentionally
+stopped its two old-base validation requests, rather than finishing checks that
+could not certify the new composition. Both owned sessions 18430 and 79050
+terminated 130, their Maven children/requests were reaped, and an exact owned-path
+process check found none remaining. This deliberate cancellation is distinct
+from the earlier unexplained interruption of session 58718. No source in either
+frozen tree was changed before termination, and no incomplete run is called a
+smoke pass.
+
+| Source/run | Completed coverage | Recorded outcome and limits |
+| --- | --- | --- |
+| `8f34cad77`, `20261024T114201Z-5fbd565e` | 61/76 batches; 27,365 reported tests | 1 failure, 1 error, 90 skips; includes any reports from interrupted batch 62; no guards |
+| Same frozen source, exact continuation | Original batches 62–69 completed; 9,990 reported tests | 0 failures/errors, 3 opt-in SOZ skips; batch 70 interrupted with 96 additional testcases across 14 XML suites; no guards |
+| `0396a4581`, `20261024T151501Z-75fc807a` | 60/76 batches; 25,590 reported tests | 1 failure, 0 errors, 90 skips; includes 66 testcases from interrupted batch 61; no guards |
+
+Counts are executions reported by their own commands and include incomplete
+batch output where stated. They are not a deduplicated combined total. The
+continuation's `TestSessionInvocationExtensionTest` intentionally runs twice
+with the same XML display tuple; both 417 invocations in batch 66 were counted,
+not deduplicated to 416. All inspected raw continuation reports through the
+cancelled partial batch 70 were consumed after identity/property/skip inspection.
+All showed Java 25 and the explicit EGL/four existing absolute ROM properties.
+
+The sole following-tree failure exactly matches baseline 97's isolated
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`:
+`AssertionFailedError`, “GLFW must initialize for pixel verification”, expected
+true/actual false at line 53. The fixture is byte-identical through both
+compositions and upstream 81; no repaired display prerequisite is claimed. The
+first tree's additional editor mock NPE is corrected by reviewed 0d919c0; its exact
+worker test and the parent 242-case composition selection passed. The following
+run has no recurrence of that error. Earlier observed skips retain their exact
+identities/reasons; no explicit missing-ROM skip was found. Environment/opt-in
+and external-jar skips do not establish those omitted behaviors.
+
+The updated integration worktree starts from 81f25c89 and merges accepted
+composition 97a7941ca. Engine and AudioManager merge automatically. Static inverse
+comparison proves their result is precisely the accepted owner implementation
+plus five and three unchanged upstream edit blocks, respectively. GameLoop and
+its four lifecycle owners, GraphicsManager/PaletteTextureOwner and all thirteen
+frozen stores match the accepted composition exactly. Upstream AGENTS/CLAUDE,
+release descriptor, ModApiVersion, Stageplay architectural admission and all
+API pins remain byte-identical to 81f25c89. The sole conflict was adjacent entries
+in the measurement-hazard catalogue; both complete entries were retained.
+
+Upstream's API pin has 22,541 unique sorted rows, with 1,250 paired ModApi
+annotation/classfile markers. Its 59-row addition is upstream work, preserved
+without attributing it to these private ownership transfers. Relative to this
+updated base, the only frozen change remains removal of the two resolved SMPS
+constructor lookups, 121→119; no replacement record or new permission is added.
+New combined focused/domain and complete change-based smoke/fresh guard checks
+are required on this updated source. Old component observations remain useful
+bounded evidence, not a substitute for that qualification.

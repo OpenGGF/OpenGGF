@@ -26,6 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_1)
 class TestGameLoopZoneActHandoffS1 {
+    @org.junit.jupiter.api.Test
+    void rootRequestRunsFadeLoadTitleAndFirstInputWithoutExtraPass() throws Exception {
+        RootTitleCardPilot.run(SonicGame.SONIC_1, false);
+    }
+
     @AfterEach
     void tearDown() {
         SessionManager.clear();

@@ -208,7 +208,7 @@ class TestPhase3StandaloneSampleIntegration {
                 fixture.catalog.effective(), tracks, sfx, 8_000);
         PreparedModMusic music = PreparedModMusic.build(fixture.catalog.effective(), tracks, sfx,
                 session, 8_000, OWNER);
-        PcmPoolBackend backend = new PcmPoolBackend();
+        PcmPoolBackend backend = new PcmPoolBackend(GameServices.audio());
         StreamedMusicPort port = new com.openggf.ModStreamedMusicPort(
                 music, new StreamedMusicPlayer(8_000), OWNER);
         backend.installStreamedMusicPort(port);
@@ -502,8 +502,8 @@ class TestPhase3StandaloneSampleIntegration {
 
     private static final class PcmPoolBackend extends AbstractSmpsAudioBackend {
 
-        private PcmPoolBackend() {
-            super(SonicConfigurationService.createStandalone(), null);
+        private PcmPoolBackend(com.openggf.audio.MusicRestoreSink musicRestoreSink) {
+            super(SonicConfigurationService.createStandalone(), null, musicRestoreSink);
         }
 
         @Override protected int getDeviceSampleRate() { return 8_000; }

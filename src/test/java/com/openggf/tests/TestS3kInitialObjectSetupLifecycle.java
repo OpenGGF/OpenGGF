@@ -354,6 +354,32 @@ class TestS3kInitialObjectSetupLifecycle {
     }
 
     @Test
+    void genuineHczSpecialStageControllerReturnRestoresMeanWaterAndTarget() throws Exception {
+        SharedLevel shared = SharedLevel.load(SonicGame.SONIC_3K, 1, 0);
+        try {
+            var manager = GameServices.level();
+            var player = GameServices.sprites().getMainPlayable();
+            var camera = GameServices.camera();
+            int water = 0x06A0;
+            var saved = new com.openggf.level.BigRingReturnState(player.getCentreX(), player.getCentreY(),
+                    camera.getX(), camera.getY(), 37, player.getTopSolidBit(), player.getLrbSolidBit(),
+                    camera.getMaxY(), 0, water);
+            manager.saveBigRingReturn(saved);
+            var loop = new GameLoop(new InputHandler());
+            loop.setGameplayMode(TestEnvironment.activeGameplayMode());
+            setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
+            invoke(loop, "doExitResultsScreen", new Class<?>[0]);
+            assertEquals(GameMode.TITLE_CARD, loop.getCurrentGameMode());
+            assertEquals(water, GameServices.water().getWaterLevelY(1, 0));
+            assertEquals(water, GameServices.water().getWaterLevelTarget(1, 0));
+            assertFalse(manager.hasBigRingReturn());
+            installReleasingTitleProvider(loop);
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
+            assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
+        } finally { shared.dispose(); }
+    }
+
+    @Test
     void representedSpecialStageReturnRestorationDiscardsBeforeLevelRelease()
             throws Exception {
         SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
@@ -639,11 +665,7 @@ class TestS3kInitialObjectSetupLifecycle {
         loop.setGameplayMode(TestEnvironment.activeGameplayMode());
         installReleasingTitleProvider(loop);
         setField(loop, "currentGameMode", GameMode.TITLE_CARD);
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        Object target = Enum.valueOf(
-                (Class<? extends Enum>) Class.forName("com.openggf.PostTitleCardDestination"),
-                destination);
-        setField(loop, "postTitleCardDestination", target);
+        com.openggf.TitleCardLifecycleTestAccess.bonusDestination(loop, destination.equals("BONUS_STAGE"));
         return loop;
     }
 
@@ -652,8 +674,7 @@ class TestS3kInitialObjectSetupLifecycle {
                 .latchBeforeFadeUpdate();
         setField(loop, "activePlcLifecycleFrame", frame);
         try {
-            return (boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false);
+            return com.openggf.TitleCardLifecycleTestAccess.update(loop);
         } finally {
             setField(loop, "activePlcLifecycleFrame", null);
             frame.finish();
@@ -671,7 +692,7 @@ class TestS3kInitialObjectSetupLifecycle {
         TitleCardProvider provider = mock(TitleCardProvider.class);
         when(provider.shouldReleaseControl()).thenReturn(true);
         when(provider.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(true);
-        setField(loop, "titleCardProvider", provider);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, provider);
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {
@@ -682,6 +703,9 @@ class TestS3kInitialObjectSetupLifecycle {
 
     private static Object invoke(Object target, String name, Class<?>[] types,
                                  Object... args) throws Exception {
+        if (target instanceof GameLoop loop && com.openggf.SpecialStageLifecycleTestAccess.isOwnerMethod(name)) {
+            return com.openggf.SpecialStageLifecycleTestAccess.invoke(loop, name, types, args);
+        }
         Method method = target.getClass().getDeclaredMethod(name, types);
         method.setAccessible(true);
         return method.invoke(target, args);

@@ -2282,3 +2282,19 @@ preserve native allocation order, routine advancement and lifecycle flags. The
 [AIZ correction evidence](plans/2026-10-24-architecture-continuation.md#fifth-loop-focused-results-correction-and-acceptance)
 distinguishes this admission boundary from arbitrary early collector retirement,
 which remains a separate unproven lifecycle contract.
+
+**A native decorator's publication owner is distinct from its canonical base.**
+KiS2 creates a fresh chip PLC service and substitutes it in the exposed rewind
+inventory, while `base()` still exposes the stock service with the same key.
+Canonical-base admission classifies the chip service as generic and correctly
+rejects its next incarnation. Use the internal publication-owner role throughout
+cold/live/reset, anchored by actual session-root identity in the resolved module's
+verified lineage. A shared base does not prove sibling publisher identity. Inspect
+all lineage nodes after finding the owner, never dispatch foreign provenance, and
+deny native admission when an inner creator publication inventory cannot be proved.
+Reserve both fully validated native identity inventories before creator callbacks;
+register only the selected owner's publications. Merging the two inventories by key
+loses either legitimate replacement or reachable suppressed-service protection.
+Keep raw lifecycle queries and ordinary strict registry refresh unchanged. The
+[bounded KiS2 evidence](plans/2026-10-24-architecture-continuation.md#bounded-kis2-native-rewind-publication-repair-following-composition)
+separates actual repeated full-load evidence from the composed SS controller gate.
