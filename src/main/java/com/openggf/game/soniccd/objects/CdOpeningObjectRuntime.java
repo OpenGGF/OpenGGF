@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.graphics.SpritePresentation;
@@ -33,7 +34,7 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
  * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower art (the inert Animal path draws nothing).
- * The initial Ring globals are caller-declared ingress, never an entry proof.
+ * The initial Ring, contact and score globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
  * and aftermath IDs $18/$1C/$1F are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
@@ -57,7 +58,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * Root reserves/binds its eight disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
-     * module uses: plant = mosqui + 70 and ramp = plant + 28, so the whole picture is
+     * module uses: plant = mosqui + 70 and ramp = plant + 28.
      * The contact spans append 70 + 5 + 39 tiles, for 313 patterns in all.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
@@ -82,6 +83,23 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 throw new IllegalArgumentException("DEV globals are unsigned native bytes");
             }
         }
+    }
+
+    /** Native longs plus one HUD byte, owned only here; actor/Frame captures never duplicate them. */
+    public record ScoreGlobals(int score, int nextLifeScore, int updateHudScore) {
+        public ScoreGlobals {
+            if ((updateHudScore & ~0xFF) != 0) throw new IllegalArgumentException("HUD score flag requires a byte");
+        }
+    }
+
+    public enum UnsupportedContactBoundary { DEAD_CAMERA_FREEZE }
+    public static final class UnsupportedContact extends UnsupportedOperationException {
+        private final UnsupportedContactBoundary boundary;
+        private UnsupportedContact(UnsupportedContactBoundary boundary) {
+            super(boundary + ": native Level_MainLoop death camera/scroll branch is not owned yet");
+            this.boundary = boundary;
+        }
+        public UnsupportedContactBoundary boundary() { return boundary; }
     }
 
     /**
@@ -122,10 +140,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final SpritePresentation.Frame displayedFrame;
         private final List<SoundRequest> sounds;
         private final DevGlobals devGlobals;
+        private final CdPlayerBody.ContactGlobals contactGlobals;
+        private final ScoreGlobals scoreGlobals;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdRingGlobals ringGlobals,
                          CdObjectDrawQueue.Snapshot queue, SpritePresentation.Frame displayedFrame,
-                         List<SoundRequest> sounds, DevGlobals devGlobals) {
+                         List<SoundRequest> sounds, DevGlobals devGlobals,
+                         CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals) {
             this.owner = owner;
             this.placement = placement;
             this.ringGlobals = ringGlobals;
@@ -133,10 +154,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.displayedFrame = displayedFrame;
             this.sounds = List.copyOf(sounds);
             this.devGlobals = devGlobals;
+            this.contactGlobals = contactGlobals;
+            this.scoreGlobals = scoreGlobals;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         public CdRingGlobals ringGlobals() { return ringGlobals; }
         public DevGlobals devGlobals() { return devGlobals; }
+        public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
+        public ScoreGlobals scoreGlobals() { return scoreGlobals; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -147,6 +172,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdR11aObjectAssets objects;
     private final CdObjectPlacementRuntime placement;
     private final CdPlayerObjectTouch scanner;
+    private final CdPlayerTouchResponse touchResponse;
     private final CdRing ring;
     private final CdMosqui mosqui;
     private final CdAnimal animal;
@@ -162,6 +188,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdR11aObjectAssets.ContactArtBank contactArt;
     private CdRingGlobals ringGlobals;
     private DevGlobals devGlobals = new DevGlobals(0, 0);
+    private CdPlayerBody.ContactGlobals contactGlobals;
+    private ScoreGlobals scoreGlobals;
     private List<SoundRequest> sounds = List.of();
     private SpritePresentation.Frame displayed = SpritePresentation.Frame.empty();
     private CameraWords preScrollForeground;
@@ -188,11 +216,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     public static CdOpeningObjectRuntime usaR11aOpeningDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+            CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore,
             byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         Objects.requireNonNull(assets, "actual R11A assets");
         Objects.requireNonNull(frame, "external-touch player Frame");
         Objects.requireNonNull(initialGlobals, "explicit initial Ring globals");
+        Objects.requireNonNull(initialContact, "explicit initial contact bytes");
+        Objects.requireNonNull(initialScore, "explicit initial score globals");
         Objects.requireNonNull(banks, "explicit logical bank bases");
         Objects.requireNonNull(preScrollForeground, "explicit pre-scroll foreground");
         Objects.requireNonNull(primaryAngleWrite, "required existing shared primaryAngle writer");
@@ -215,11 +246,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         CdObjectPresentation.usaR11aContactDevPreloadedArt(frame.artState(), objects, frontier, contact,
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
                 banks.explosion(), banks.points(), banks.flower());
-        return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initial, banks,
+        return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initial, banks,
                 preScrollForeground, primaryAngleWrite, objects, frontier, contact, placement, mappings);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+                                   CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore,
                                    byte[] initial, LogicalBanks banks, CameraWords camera,
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
                                    CdR11aObjectAssets.FrontierArtBank frontier,
@@ -234,9 +266,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         this.banks = banks;
         this.primaryAngleWrite = primaryAngleWrite;
         ringGlobals = initialGlobals;
+        contactGlobals = initialContact;
+        scoreGlobals = initialScore;
         preScrollForeground = camera;
         cameraPrepared = true;
         scanner = CdPlayerObjectTouch.fromAssets(objects);
+        touchResponse = CdPlayerTouchResponse.fromAssets(objects);
         ring = CdRing.fromAssets(placement, objects);
         queue = new CdObjectDrawQueue(new CdDrawSlots() {
             @Override public LiveDrawSlot read(CdSlotRef ref) { return readLiveSlot(ref); }
@@ -267,6 +302,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdRingGlobals ringGlobals() { return ringGlobals; }
     /** Explicit owned DEV globals read by the bodies; no native writer (projector, good-future) is admitted. */
     public DevGlobals devGlobals() { return devGlobals; }
+    public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
+    public ScoreGlobals scoreGlobals() { return scoreGlobals; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -315,7 +352,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /**
-     * Detached item commit ONLY after the complete Frame.runBody returns.
+     * Detached touch commit ONLY after the complete Frame.runBody returns.
      * Exactly one fresh pool capture
      * is passed in one ephemeral TouchContext; neither is stored here or in a
      * snapshot. The actor bridge subsequently calls enqueuePlayer exactly once
@@ -326,9 +363,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      */
     public CdPlayerFrameRuntime.BodyPublication runPlayerBody(int levelFrames) {
         return perform(Phase.SPAWNED, Phase.PLAYER_BODY, Phase.PLAYER_DONE, () -> {
+            var callCut = placement.pool().capture();
+            var context = new CdPlayerBody.ResponseContext(touchResponse, contactGlobals,
+                    new CdPlayerTouchResponse.WorldGlobals(ringGlobals.rings(), ringGlobals.lives(),
+                            ringGlobals.updateHudLives(), scoreGlobals.score(), scoreGlobals.nextLifeScore(),
+                            scoreGlobals.updateHudScore()));
             var publication = frame.runBody(levelFrames,
-                    Optional.of(new CdPlayerBody.TouchContext(scanner, placement.pool().capture())));
+                    Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)));
             checkActive(Phase.PLAYER_BODY);
+            if (publication.result().state().motion().routine() >= 6
+                    && publication.result().environment().globals().debugMode() == 0) {
+                throw new UnsupportedContact(UnsupportedContactBoundary.DEAD_CAMERA_FREEZE);
+            }
             boolean displaySeen = false;
             boolean touchSeen = false;
             for (var effect : publication.result().effects()) {
@@ -339,12 +385,40 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 } else if (effect instanceof CdPlayerBody.ObjectTouchResult touch) {
                     if (touchSeen) { throw new IllegalStateException("Body published more than one touch result"); }
                     touchSeen = true;
-                    touch.result().changedSlot().ifPresent(placement.pool()::write);
+                    touch.result().changedSlot().ifPresent(image -> commitTouchImages(callCut, List.of(image)));
+                } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) {
+                    if (touchSeen) { throw new IllegalStateException("Body published more than one touch result"); }
+                    touchSeen = true;
+                    var result = touch.result();
+                    var world = result.world();
+                    // Construct and validate EVERY new immutable value before the first pool write.
+                    var nextRing = new CdRingGlobals(world.rings(), world.lives(), ringGlobals.livesFlags(),
+                            ringGlobals.updateHudRings(), world.updateHudLives(), ringGlobals.timeStopTimer(),
+                            ringGlobals.ringAnimationTimer(), ringGlobals.ringAnimationFrame());
+                    var nextScore = new ScoreGlobals(world.score(), world.nextLifeScore(), world.updateHudScore());
+                    var nextContact = touch.contact();
+                    commitTouchImages(callCut, result.changedSlots());
+                    ringGlobals = nextRing; scoreGlobals = nextScore; contactGlobals = nextContact;
+                    // The final actor/invincible/scoreChain values already belong to Frame. Never replay them here.
                 }
             }
             for (var sound : publication.sounds()) { appendSound(new PlayerSound(sound)); }
             return publication;
         });
+    }
+
+    /** Same call-cut/owner preflight for all images precedes every commit; no callbacks can observe a partial patch. */
+    private void commitTouchImages(CdObjectPool.Snapshot cut, List<CdObjectState> changed) {
+        var pool = placement.pool();
+        pool.validateRestore(cut);
+        for (var image : changed) {
+            pool.validateWrite(image);
+            var expected = cut.slots().get(image.identity().dynamicIndex());
+            if (!pool.state(image.identity().wholeIndex()).equals(expected)) {
+                throw new IllegalStateException("CD touch slot changed after its call-cut at " + image.identity().wholeIndex());
+            }
+        }
+        for (var image : changed) pool.write(image);
     }
 
     /**
@@ -502,7 +576,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), ringGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals);
+                devGlobals, contactGlobals, scoreGlobals);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -516,6 +590,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(snapshot.displayedFrame, "captured immutable picture");
         Objects.requireNonNull(snapshot.sounds, "captured immutable sound requests");
         Objects.requireNonNull(snapshot.devGlobals, "captured DEV globals");
+        Objects.requireNonNull(snapshot.contactGlobals, "captured contact globals");
+        Objects.requireNonNull(snapshot.scoreGlobals, "captured score globals");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -529,6 +605,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             queue.restore(snapshot.queue);
             ringGlobals = snapshot.ringGlobals;
             devGlobals = snapshot.devGlobals;
+            contactGlobals = snapshot.contactGlobals;
+            scoreGlobals = snapshot.scoreGlobals;
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;

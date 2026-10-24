@@ -35,9 +35,14 @@ public final class CdObjectPool {
 
     /** Commit an immutable image from this same pool, retaining physical identity. */
     public void write(CdObjectState state) {
+        validateWrite(state);
+        slots[dynamicIndex(state.identity().wholeIndex())] = state;
+    }
+
+    /** Pure same-owner preflight used before committing a staged multi-slot response. */
+    void validateWrite(CdObjectState state) {
         Objects.requireNonNull(state);
         if (!state.belongsTo(owner)) { throw new IllegalArgumentException("Foreign CD dynamic slot owner"); }
-        slots[dynamicIndex(state.identity().wholeIndex())] = state;
     }
 
     /** FindObjSlot tests ID only, in physical order, with no writes/reservation/implicit clear. */

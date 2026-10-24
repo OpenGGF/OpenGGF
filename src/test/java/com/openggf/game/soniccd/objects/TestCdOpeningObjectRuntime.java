@@ -41,6 +41,8 @@ class TestCdOpeningObjectRuntime {
     private static final DrawCameras POST = new DrawCameras(PRE, PRE, PRE);
     private static final CdOpeningObjectRuntime.LogicalBanks BANKS =
             new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000);
+    private static final CdPlayerBody.ContactGlobals CONTACT = new CdPlayerBody.ContactGlobals(0, 0, 0);
+    private static final CdOpeningObjectRuntime.ScoreGlobals SCORE = new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0);
     private static final CdRingGlobals INITIAL = new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0);
     private static CdR11aAssets mediaAssets;
 
@@ -601,20 +603,20 @@ class TestCdOpeningObjectRuntime {
         var otherAssets = loadFresh();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    otherAssets, frame, INITIAL, new byte[640], BANKS, PRE, value -> { }));
+                    otherAssets, frame, INITIAL, CONTACT, SCORE, new byte[640], BANKS, PRE, value -> { }));
         }
         try (var terrain = CdPlayerFrameRuntime.terrainOnlyDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, terrain, INITIAL, new byte[640], BANKS, PRE, value -> { }));
+                    assets, terrain, INITIAL, CONTACT, SCORE, new byte[640], BANKS, PRE, value -> { }));
         }
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, new byte[639], BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, new byte[639], BANKS, PRE, value -> { }));
             byte[] nonempty = new byte[640]; nonempty[0] = 1;
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, nonempty, BANKS, PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, nonempty, BANKS, PRE, value -> { }));
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
+                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(0, 0, 0), PRE, value -> { }));
         }
     }
 
@@ -812,7 +814,7 @@ class TestCdOpeningObjectRuntime {
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             // Plant base inside the Mosqui span: the frontier pixel policy rejects at construction.
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
+                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
                     PRE, value -> { }));
         }
         try (var f = new Fixture()) {
@@ -919,11 +921,129 @@ class TestCdOpeningObjectRuntime {
         var assets = load();
         try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
             assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                    assets, frame, INITIAL, new byte[640],
+                    assets, frame, INITIAL, CONTACT, SCORE, new byte[640],
                     new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 298, 369, 374), PRE, value -> { }));
             assertFalse(frame.closed());
             assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
         }
+    }
+
+    @Test void rollingEnemyContactCommitsTheWholeResponseThenExecutesAndReplaysLiveAftermath() throws Exception {
+        try (var f = new Fixture(INITIAL, CONTACT, new CdOpeningObjectRuntime.ScoreGlobals(0, 10, 0))) {
+            f.firstCycle(); seedContactPlayer(f);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
+                    .moveByte(COLLISION_TYPE, 0x2B).moveWord(X, 64).moveWord(Y, 0x759));
+            var preContact = f.runtime.captureClosedCut();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var publication = f.body(2);
+            var response = publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                    .map(CdPlayerBody.ObjectTouchResponse.class::cast).findFirst().orElseThrow().result();
+            assertEquals(com.openggf.game.soniccd.player.CdPlayerTouchResponse.Exit.KILL_ENEMY, response.exit());
+            assertEquals(0x18, f.slot(40).id()); assertEquals(0, f.slot(40).routine());
+            assertEquals(0x38, f.frame.state().motion().yVelocity());
+            assertEquals(2, f.frame.environment().movement().globals().scoreChain());
+            assertEquals(new CdOpeningObjectRuntime.ScoreGlobals(10, 5010, 1), f.runtime.scoreGlobals());
+            assertEquals(4, f.runtime.ringGlobals().lives()); assertEquals(1, f.runtime.ringGlobals().updateHudLives());
+            assertEquals(response.changedSlots().getFirst(), f.slot(40));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0, f.slot(40).unsignedByte(COLLISION_TYPE));
+            assertEquals(0x1C, f.slot(32).id()); assertEquals(0, f.slot(32).routine(), "earlier child waits one pass");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var saved = f.runtime.captureClosedCut();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(23, f.slot(32).unsignedByte(POINTS_TIMER));
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var slots = pool.capture().slots(); var shown = f.runtime.displayedFrame(); var sounds = f.runtime.lastSoundRequests();
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(saved);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(saved);
+            assertEquals(saved.scoreGlobals(), f.runtime.scoreGlobals()); assertEquals(saved.contactGlobals(), f.runtime.contactGlobals());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertArrayEquals(cpu.bytes(), replay.bytes()); assertEquals(cpu.provenance(), replay.provenance());
+            assertEquals(slots, pool.capture().slots()); assertEquals(shown, f.runtime.displayedFrame());
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(new CdOpeningObjectRuntime.ScoreGlobals(10, 5010, 1), f.runtime.scoreGlobals());
+            f.runtime.restore(preContact); // Unit partition restore; no later gameplay runs with the separately retained Frame.
+            assertEquals(new CdOpeningObjectRuntime.ScoreGlobals(0, 10, 0), f.runtime.scoreGlobals());
+            assertEquals(3, f.runtime.ringGlobals().lives()); assertEquals(0, f.runtime.ringGlobals().updateHudLives());
+            assertEquals(CONTACT, f.runtime.contactGlobals());
+        }
+    }
+
+    @Test void shieldedHazardCommitsTheContactByteWithoutCreatingAFalseLostRing() throws Exception {
+        try (var f = new Fixture(INITIAL, new CdPlayerBody.ContactGlobals(0, 1, 1), SCORE)) {
+            f.firstCycle(); seedContactPlayer(f);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
+                    .moveByte(COLLISION_TYPE, 0xAB).moveWord(X, 64).moveWord(Y, 0x759));
+            var preContact = f.runtime.captureClosedCut();
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            assertEquals(4, f.frame.state().motion().routine());
+            assertEquals(0x78, f.frame.state().timers().hurt());
+            assertEquals(new CdPlayerBody.ContactGlobals(0, 0, 1), f.runtime.contactGlobals());
+            assertTrue(pool.capture().slots().stream().noneMatch(s -> s.id() == 0x11));
+            assertEquals(SCORE, f.runtime.scoreGlobals());
+            f.runtime.runDynamicSlotsAfterReservedSlots(); f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            f.runtime.restore(preContact);
+            assertEquals(new CdPlayerBody.ContactGlobals(0, 1, 1), f.runtime.contactGlobals());
+        }
+    }
+
+    @Test void zeroRingContactDeathClosesAtTheUnownedSameFrameCameraBoundary() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); seedContactPlayer(f);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
+                    .moveByte(COLLISION_TYPE, 0xAB).moveWord(X, 64).moveWord(Y, 0x759));
+            var slots = pool.capture().slots();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var failure = assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, () -> f.body(2));
+            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.DEAD_CAMERA_FREEZE, failure.boundary());
+            assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.frame.closed());
+            assertEquals(6, f.frame.state().motion().routine());
+            assertTrue(f.runtime.lastSoundRequests().isEmpty(), "the death boundary precedes Runtime sound publication");
+            assertEquals(slots, pool.capture().slots()); assertEquals(SCORE, f.runtime.scoreGlobals());
+        }
+    }
+
+    @Test void ringBearingHurtReachesTheRealUnownedLostRingDispatchInsteadOfSuppressingIt() throws Exception {
+        var initial = new CdRingGlobals(3, 3, 0, 0, 0, 0, 0, 0);
+        try (var f = new Fixture(initial)) {
+            f.firstCycle(); seedContactPlayer(f);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
+                    .moveByte(COLLISION_TYPE, 0xAB).moveWord(X, 64).moveWord(Y, 0x759));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            assertEquals(4, f.frame.state().motion().routine());
+            assertEquals(0x11, f.slot(32).id()); assertEquals(0x759, f.slot(32).centreY(), "pre-unroll Y");
+            assertEquals(3, f.runtime.ringGlobals().rings(), "LostRing Init, not HurtPlayer, owns clearing the ring counter");
+            var failure = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(failure.getMessage().contains("$11")); assertTrue(f.runtime.closed());
+        }
+    }
+
+    @Test void contactScoreIngressIsExplicitAndOnlyTheRuntimeSnapshotOwnsIt() throws Exception {
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.ScoreGlobals(0, 0, 256));
+        assertEquals(-1, new CdOpeningObjectRuntime.ScoreGlobals(-1, Integer.MIN_VALUE, 255).score());
+        try (var f = new Fixture(INITIAL, new CdPlayerBody.ContactGlobals(0x80, 2, 1),
+                new CdOpeningObjectRuntime.ScoreGlobals(1234, 5000, 0x80))) {
+            var cut = f.runtime.captureClosedCut();
+            assertEquals(new CdPlayerBody.ContactGlobals(0x80, 2, 1), cut.contactGlobals());
+            assertEquals(new CdOpeningObjectRuntime.ScoreGlobals(1234, 5000, 0x80), cut.scoreGlobals());
+            f.runtime.restore(cut);
+            assertEquals(cut.contactGlobals(), f.runtime.contactGlobals()); assertEquals(cut.scoreGlobals(), f.runtime.scoreGlobals());
+        }
+    }
+
+    /** Constructed ingress for transaction tests, not evidence of a normal-input route to this cut. */
+    private static void seedContactPlayer(Fixture f) {
+        var cut = f.frame.captureActor(); var s = cut.state();
+        var m = new CdPlayerMotionState(64 << 16, 0x7580000, 0, 0x100, 0, 2, 0, 6, 4,
+                7, 14, 2, 2, 1, 0, 0, 0, 0, 0, 0);
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(cut.owner(),
+                new CdPlayerBody.State(m, new CdPlayerBody.AnimationCursor(0, 0, 0), s.header(),
+                        s.timers(), s.history(), s.rotationDistance()), Optional.empty()));
     }
 
     private static final class Fixture implements AutoCloseable {
@@ -934,12 +1054,13 @@ class TestCdOpeningObjectRuntime {
         final List<Integer> angleWrites = new ArrayList<>();
         Consumer<Integer> onAngle = value -> { };
 
-        Fixture() throws Exception { this(INITIAL); }
-        Fixture(CdRingGlobals initial) throws Exception {
+        Fixture() throws Exception { this(INITIAL, CONTACT, SCORE); }
+        Fixture(CdRingGlobals initial) throws Exception { this(initial, CONTACT, SCORE); }
+        Fixture(CdRingGlobals initial, CdPlayerBody.ContactGlobals contact, CdOpeningObjectRuntime.ScoreGlobals score) throws Exception {
             assets = load();
             frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
             frame.bindArtPublication((request, state) -> artPublications.add(state));
-            runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial,
+            runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
                     new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         void service(int held) { service(held, PRE); }

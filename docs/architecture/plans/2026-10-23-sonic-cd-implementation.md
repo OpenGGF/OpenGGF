@@ -2982,3 +2982,54 @@ These are bounded CD call ports, not routine4 or death gameplay admission.
 ```bash
 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdOpeningObjectRuntime,TestCdObjectPool,TestCdPlayerMovement,TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
 ```
+
+
+### World contact transaction and first actual enemy route, 24 October 2026
+
+The opening Runtime constructs the actual asset-bound response once and passes
+the SAME ephemeral pool capture through scanner, pure handler and unchanged-slot
+compare-and-set. All new slot images and score/contact/ring values are validated
+before writes; actor/invincible/chain values already belong to the final Body
+and are not replayed from its earlier touch cut. The Runtime exclusively owns
+contact(timeWarp/shield/combineRing), score/next-life native longs and HUD-score,
+and captures/restores them once beside the existing ring/placement/SAT partition.
+Module contact0/HUD-score0 are explicit DEV policy; score0/next5000/lives3 also
+match first-load native reset writers. There is no retail title-entry claim.
+
+Zero-ring contact death terminates at DEAD_CAMERA_FREEZE before effects/render,
+because native's after-RunObjects death camera branch is still unowned. Ring-
+bearing hurt reaches the actual unowned11 live dispatch rather than suppressing
+it. Hurt4/death6/8, absolute native entry timing and complete USA remain open.
+
+The first fixed controller-only real-World EGL proposal succeeded unchanged:
+`2 -;80 R;repeat 14 {8 R+B;7 R}`. Call152 defeats first Mosqui(slot34), score0to10;
+call160 visibly runs explosion/points; victim is Flower1F by178(off-screen in the
+final picture). The checkpoint at82 and96-row continuation reproduce every
+captured partition and final framebuffer through both full and course restore.
+Terrain outside displayed sprites agrees with the completed-scroll control.
+No native rows/clock/position/slot data feed this route. Durable pictures, input
+and observations live externally in Downloads/Sonic-CD/native/engine-contact-
+world-r1 and-r2; four PNGs are byte-identical between captures.
+
+Root81731:406selected/0fail/0error/1skip at14:25:22BST;405executed passes,
+Java25/media/EGL confirmed in12freshXML. Queue344s/execution2m09. The missing
+S2-path cartridge-to-CD handoff case was then run ALONE with existing absolute
+REV01 ROM verified CRC7B905383/SHA1 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9:
+Root11040 passed1/0/0/0 at14:27:33BST,21squeue/29.463sexecution. Thus all406
+selected cases executed across the two invocations; do not sum the overlapping
+historical selections as unique coverage. Independent Opus source review found
+noP1/P2 or wrong literal in the seven-file world and two-file helper candidates.
+
+Root strengthened W1 by restoring pre-contact score/life/shield values in the
+constructed tests, W2 by checking empty terminal-death sound publication, and
+W4 by checking the exact kill+26 continuation. Both rendered replay lanes now
+draw/check each row; session/banks close before graphics/context; each capture
+has its own correct CSV header and outcome. Root88628 passed35cases/0failures/
+errors/skips at14:51:23BST (Runtime33/EGL2), Java25/media/EGL verified, queue458s/
+execution32.288s. Production was unchanged; the concurrent pure KillPlayer call
+extraction was separately validated by336affected cases, and remains a separate
+source unit. No complete ordinary-smoke/full-suite/native-pixel parity claim.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
+```

@@ -132,6 +132,17 @@ class TestCdObjectPool {
     }
 
     @Test
+    void writePreflightChecksOwnershipWithoutCommittingEitherImage() {
+        var pool = new CdObjectPool(); var foreign = new CdObjectPool();
+        var staged = pool.state(32).moveByte(ID, 0x18);
+        pool.validateWrite(staged);
+        assertEquals(0, pool.state(32).id());
+        assertThrows(IllegalArgumentException.class, () -> pool.validateWrite(foreign.state(33).moveByte(ID, 0x1C)));
+        assertEquals(0, pool.state(32).id()); assertEquals(0, pool.state(33).id());
+        pool.write(staged); assertEquals(0x18, pool.state(32).id());
+    }
+
+    @Test
     void captureIsDeepImmutableAndForeignPoolWritesOrRestoreRejectUnchanged() {
         var pool = new CdObjectPool();
         pool.write(pool.state(127).moveByte(ID, 0x3D).moveLong(X_POSITION, 0x0270ABCD));

@@ -214,16 +214,21 @@ class TestSonicCdOpeningWorldEgl {
     }
 
     private static Path openCaptureOutput(String sourceInputLog) throws Exception {
-        String requested = System.getProperty("soniccd.opening.output");
+        Path output = openCaptureOutput(sourceInputLog, "soniccd.opening.output");
+        if (output != null) Files.writeString(output.resolve("state.csv"),
+                "call,input_mask,action_mask,level_frames,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,rings,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,camera_x,camera_y,prepared_camera_x,prepared_camera_y,published_camera_x,published_camera_y,cpu_sprites,displayed_tiles,sounds\n",
+                StandardOpenOption.CREATE_NEW);
+        return output;
+    }
+
+    private static Path openCaptureOutput(String sourceInputLog, String property) throws Exception {
+        String requested = System.getProperty(property);
         if (requested == null || requested.isBlank()) return null;
         Path taskRoot = Path.of(System.getProperty("user.home"), "Downloads", "Sonic-CD").toRealPath();
         Path output = Path.of(requested).toAbsolutePath().normalize();
         assertTrue(output.getParent().toRealPath().startsWith(taskRoot), "Capture parent must be in Downloads/Sonic-CD");
         Files.createDirectory(output); // Never replace an earlier capture.
         Files.writeString(output.resolve("input-log.txt"), sourceInputLog, StandardOpenOption.CREATE_NEW);
-        Files.writeString(output.resolve("state.csv"),
-                "call,input_mask,action_mask,level_frames,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,rings,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,camera_x,camera_y,prepared_camera_x,prepared_camera_y,published_camera_x,published_camera_y,cpu_sprites,displayed_tiles,sounds\n",
-                StandardOpenOption.CREATE_NEW);
         return output;
     }
 
@@ -249,6 +254,101 @@ class TestSonicCdOpeningWorldEgl {
                 runtime.displayedFrame().tiles().size(), sounds);
         Files.writeString(output.resolve("state.csv"), row, StandardOpenOption.APPEND);
         ScreenshotCapture.savePNG(image, output.resolve(String.format(Locale.ROOT, "frame-%03d.png", call)));
+    }
+
+    @Test void actualEglNormalInputEnemyDefeatAndAftermathReplay() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // Fixed held-state input proposal; revise only from observed engine state if the route fails.
+        // No native rows, frame fences, positions or slot values are supplied to gameplay.
+        String script = System.getProperty("soniccd.contact.script", "2 -;80 R;repeat 14 {8 R+B;7 R}");
+        String log = InputScriptCompiler.compileToInputLog(script);
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("contact-world-input-log"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.contact.output");
+        if (output != null) Files.writeString(output.resolve("contact-state.csv"),
+                "call,centre_x16_16,centre_y16_16,x_velocity,y_velocity,routine,flags,rings,score,camera_x,camera_y\n",
+                StandardOpenOption.CREATE_NEW);
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                for (int i = 0; i < 82; i++) step(loop, movie.getFrame(i));
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var rows = new ArrayList<Bk2FrameInput>(); var expected = new ArrayList<Capture>();
+                int killCall = -1, victim = -1;
+                RgbaImage previous = beforePixels;
+                for (int index = 82; index < movie.getFrameCount(); index++) {
+                    var input = movie.getFrame(index);
+                    var priorScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                    step(loop, input); rows.add(input); expected.add(capture(module));
+                    var image = render(module, true);
+                    assertTerrainOutsideSprites(image, renderTerrain(module, priorScroll), runtime.displayedFrame());
+                    if (output != null) {
+                        var motion = module.requirePlayerFrame().state().motion();
+                        String row = String.format(Locale.ROOT, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n", index + 1,
+                                motion.centreX16_16(), motion.centreY16_16(), motion.xVelocity(), motion.yVelocity(),
+                                motion.routine(), motion.flags(), runtime.ringGlobals().rings(), runtime.scoreGlobals().score(),
+                                GameServices.camera().getX(), GameServices.camera().getY());
+                        Files.writeString(output.resolve("contact-state.csv"), row, StandardOpenOption.APPEND);
+                    }
+                    if (killCall < 0 && runtime.scoreGlobals().score() != 0) {
+                        killCall = index + 1;
+                        victim = runtime.placement().pool().capture().slots().stream().filter(s -> s.id() == 0x18)
+                                .findFirst().orElseThrow().identity().wholeIndex();
+                        assertEquals(10, runtime.scoreGlobals().score());
+                        assertTrue(runtime.lastSoundRequests().stream().anyMatch(request -> request instanceof
+                                CdOpeningObjectRuntime.PlayerSound sound && sound.sound() instanceof
+                                CdPlayerFrameRuntime.ContactFmSound fm && fm.sound() ==
+                                com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_DESTROY));
+                        if (output != null) {
+                            ScreenshotCapture.savePNG(previous, output.resolve("before-defeat.png"));
+                            ScreenshotCapture.savePNG(image, output.resolve("defeat.png"));
+                        }
+                    }
+                    if (output != null && killCall >= 0 && index + 1 == killCall + 8) {
+                        ScreenshotCapture.savePNG(image, output.resolve("explosion-points.png"));
+                    }
+                    previous = image;
+                    if (killCall >= 0 && index + 1 >= killCall + 26) break;
+                }
+                assertTrue(killCall >= 0, "Fixed normal-input proposal reached no kill; inspect state before revising input");
+                assertEquals(killCall + 26, 82 + rows.size(), "the fixed route must include the complete aftermath interval");
+                assertEquals(0x1F, runtime.placement().pool().state(victim).id(), "the live explosion became a flower");
+                var after = capture(module); var finalPixels = render(module, true);
+                if (output != null) ScreenshotCapture.savePNG(finalPixels, output.resolve("after-defeat.png"));
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module);
+                    assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int i = 0; i < rows.size(); i++) {
+                        step(loop, rows.get(i)); assertCapture(expected.get(i), module);
+                        render(module, true);
+                        assertCapture(expected.get(i), module);
+                    }
+                    assertCapture(after, module);
+                    assertArrayEquals(finalPixels.pixels(), render(module, true).pixels());
+                }
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: normal-input enemy defeat, live aftermath, completed-scroll terrain and full/course rendered replay.\n"
+                        + "Defeat call: " + killCall + "; victim slot: " + victim + "; continuation rows: " + rows.size() + "\n"
+                        + "Development USA R11A only; silent audio and explicit preloaded object art, no native/full-game parity claim.\n",
+                        StandardOpenOption.CREATE_NEW);
+            } finally {
+                // Retire world banks and pictures while graphics/context remain alive, as in the Ring route.
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
     }
 
     private static void step(GameLoop loop, Bk2FrameInput row) {
@@ -334,6 +434,8 @@ class TestSonicCdOpeningWorldEgl {
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
         assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
+        assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
+        assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());

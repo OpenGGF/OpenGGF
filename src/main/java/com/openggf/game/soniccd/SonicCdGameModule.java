@@ -255,6 +255,8 @@ public final class SonicCdGameModule implements GameModule {
                     // Reserved owners 1..31 absent, goodFuture=0, object art preloaded.
                     openingObjects = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
                             candidate.assets(), playerFrame, new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0),
+                            new CdPlayerBody.ContactGlobals(0, 0, 0),
+                            new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0),
                             new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
                             new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF),
                             playerFrame::applyObjectPrimaryAngle);
