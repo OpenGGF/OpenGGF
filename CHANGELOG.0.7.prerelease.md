@@ -610,7 +610,11 @@ Unreleased. The earlier development themes remain in
   catalogue ROM views without consulting a suspended game's live services.
   Title-card mapping and drawing now share one domain owner. Event and object-service
   bridge allowances pin callers and call counts, and special-stage rewind coverage
-  follows the registered provider through replacement and retirement. Remaining
+  follows the registered provider through replacement and retirement. Standalone
+  audio callers supply their selected profile to the reusable presentation host;
+  desktop sound-test composition lives with the developer tools. Rewinding a
+  partially collapsed Sonic 1 false floor preserves the remaining break sequence
+  and cleanup. Remaining
   migrations and exact allowance accounting live in the
   [exception guide](docs/architecture/archunit-exceptions.md).
 

@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 167 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 156 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -78,6 +78,7 @@ continues those cuts rather than treating the inventory as untouched.
 | Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K pixel/token fingerprints, detached ROM views, card-owned selection, source and strict frozen guards | Completed; focused behavior/API checks and strict frozen rules passed; see the [preview plan](plans/2026-10-23-title-preview-providers.md) |
 | Title-card sprite rendering / `game.titlecard` | Remove the helper's 14 low-level reverse dependencies | Exact tile submissions, asymmetric flipped-art pixels and manager draw order at 320/424 pixels, unchanged API pins and strict frozen rules | Completed; low-level records 181 → 167; focused behavior/API checks and strict frozen rules passed |
+| Standalone audio composition / `tools.audio`, reusable presentation host | Remove the desktop app's eleven low-level records and the host's app callback | Parser/catalog characterization, actual supplied-profile use, independent host state, WAV export, ROM hub themes, launcher and strict guards | Completed; low-level records 167 → 156; behavior, CLI, API and complete guards passed; see the [second-loop plan](plans/2026-10-24-architecture-loop-two.md) |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Investigation complete; retain the graphics/context owner and all five records. Native resource checks passed; see the [follow-through plan](plans/2026-10-24-architecture-followthrough.md) |
 
 The October 23 combined guard run recorded one independently reproduced
@@ -148,7 +149,9 @@ Shared event composition owners retain their explicit whole-file exclusions.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
-records five proven reconstruction policies, leaving 18 exact obligations. The
+records six proven reconstruction policies, leaving 17 exact obligations after
+the false-floor partial-collapse correction. Its surviving children dispatch by
+their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
 occurrences. Initialized provider registration, restore and retirement checks
@@ -235,7 +238,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 167
+- `low_level_layers_do_not_depend_on_runtime_layers`: 156
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -265,6 +268,17 @@ submission remains separate from the graphics-owned sprite expansion contract.
 The public static entry point keeps its parameter and return types.
 The helper has no `@ModApi` marker or curated root, and no recursive candidate
 signature names it. The release descriptor has no published API baselines.
+
+2026-10-24, second loop: `SoundTestApp` moves intact from `audio.debug` to
+`tools.audio`. Its selected profile is passed to the reusable presentation host,
+as is the hub's existing detached profile. The host no longer calls the desktop
+application, and its execution/device/cleanup ownership is unchanged. Exactly
+eleven app records are removed, reducing 167 to 156 without replacement entries.
+The old internal overloads are deleted with their callers migrated. A direct
+dependency rule rejects non-tool references to the app and its nested classes;
+the sole AWT exception follows the exact new file. The now-unused `audio.debug`
+concrete-provider construction exemption is removed. This is not a claim of
+complete transitive native-image closure.
 
 The installed-owner rewind change removed 10 framework-root records, leaving
 one. Injecting execution-time graphics selection into `ScriptFramesApplyStrategy`

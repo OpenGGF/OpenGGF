@@ -51,7 +51,6 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
 5. [S2 EHZ Boss Animation Tables Contain Three Extra Frames](#s2-ehz-boss-animation-tables-contain-three-extra-frames)
-6. [S1 False-Floor Rewind During Partial Collapse](#s1-false-floor-rewind-during-partial-collapse)
 
 ---
 
@@ -69,28 +68,6 @@ for these directed appearances. Correct the native tables with matched animation
 timing checks before removing this entry. The comparison and rejected aggregate
 animation approach are recorded in the
 [Stageplay plan](../architecture/plans/2026-10-21-stageplay-live-world-plan.md).
-
----
-
-
-## S1 False-Floor Rewind During Partial Collapse
-
-**Location:** `Sonic1FalseFloorInstance.reattachChildBlock()` and
-`updateDisintegrating()`.
-
-Source review identifies a restoration defect after a child retires: recreation
-packs surviving children into a dense list, but the captured collapse cursor
-still indexes their original positions. With block 0 gone and `currentFrame=1`,
-the next dispatch targets block 2 instead of block 1; the cursor can stall at 7
-before cleanup. This case was not reproduced at runtime during the architecture
-campaign. The existing restore test covers all eight children before collapse
-and the first subsequent signal, which does not establish this boundary.
-
-The `childBlocks` field remains in the rewind disposition baseline. Close this
-entry only after destructive restore during partial collapse preserves remaining
-block order, identities and eventual cleanup against uninterrupted execution.
-See the [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md)
-for the rejected transient classification and its evidence limits.
 
 ---
 
