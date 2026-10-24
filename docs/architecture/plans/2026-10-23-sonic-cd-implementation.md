@@ -2327,3 +2327,32 @@ This commit contains only the five touch/player test paths and this existing
 record. Mosqui is a separately reviewed component. Pool commit, live dynamic
 execution, shared CPU SAT and displayed-next-VInt pixels remain root-owned
 world integration, with no touch suppression or generic Ring fallback.
+
+
+### Native Mosqui body and floor call, 24 October 2026
+
+The selected $3D body now uses the sole placement pool/saved bank and actual
+Mosqui tables, including Init/Main fall-through, dirty-slot bytes, the second
+movement on patrol reversal, pointer-selected animation, full-word debug gate,
+dive/floor/landing/Wait and source draw/despawn order. Synchronous DrawObject
+observes committed fields; the body reloads the live slot afterward, retaining
+callback writes and zeroed-slot behavior. Unknown routine/script/good-future
+conversion stops at its explicit ownership boundary. No enemy-touch response,
+Explosion, audio driver, native art preload or complete-act support is implied.
+
+Astra found no P1/P2 in the four frozen files. Root narrowed only the imported
+javadocs: the shared DrawObject port must not reenter body dispatch, and the
+returned PRIMARY_ANGLE byte is for the caller's existing shared scratch owner;
+unlike pool/bank writes, that global has not already been committed. It must
+not be ignored based on a universal overwrite claim. The immutable player
+previous-angle bytes remain a separate field. The external mirror/review bytes
+are preserved; no executable Mosqui expression changed after review/testing.
+
+Parent83771 executed all33 Mosqui/floor invocations (26 body including eight
+range rows and actual-USA assets, seven floor helper), zero failures/errors/skips,
+within the244-case touch/player integration selection documented above. Actual
+USA media bound both mapping/script pairs at their source addresses. Constructed
+terrain verifies the dive continuation; this does not prove its actual opening
+column, native capture parity, multibody World ordering or displayed pixels.
+Root's next composition owns those globals, shared queue, displayed-next-VInt
+latch, live Ring/Mosqui pass, unknown-ID rejection and capture/restore.
