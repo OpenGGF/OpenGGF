@@ -3,13 +3,16 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssetLoader;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
+import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
+import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -1213,7 +1216,7 @@ class TestCdOpeningObjectRuntime {
             f.runtime.runDynamicSlotsAfterReservedSlots();
             f.runtime.finishAfterCamera(POST);
             f.runtime.finishOrdinaryTail();
-            // Init, Main, the dynamic owners and the tail hold no port to these nine globals.
+            // No writer changes these nine values here; the selector-8 LoadShieldArt cut rewrites powerup 0 (bit 7 clear).
             assertEquals(LEVEL, f.runtime.levelGlobals());
             assertEquals(LEVEL, f.runtime.captureClosedCut().levelGlobals());
             f.runtime.restore(cold);
@@ -1276,6 +1279,291 @@ class TestCdOpeningObjectRuntime {
             f.runtime.runDynamicSlotsAfterReservedSlots();
             assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LEVEL_RESTART,
                     assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, f.runtime::beforeCameraStep).boundary());
+        }
+    }
+
+    // U5-C2, written before production. Catches a missing ninth span, a powerup base derived from the wrong counts
+    // (flower + 39 Art_Flower tiles), or an admission that validates only the eight contact spans: the 36-tile
+    // window ($480 / 32) must reject a logical overlap or bound failure before the Frame services anything.
+    @Test void ninthPowerupBankFollowsFlowerAndAnOverlappingNinthSpanRejectsBeforeAdmission() throws Exception {
+        assertEquals(12275, BANKS.powerup(), "12000 + 70 + 28 + 63 + 70 + 5 + 39");
+        assertEquals(413, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138).powerup());
+        assertEquals(413, new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236).powerup());
+        assertEquals(new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8, 47),
+                new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8));
+        assertEquals(9, new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8, 9).powerup());
+        var assets = load();
+        // Flower's last ID, the explosion/points IDs, the player span, then a negative and an overflowing base.
+        for (int powerup : List.of(12274, 12200, 9990, -1, Integer.MAX_VALUE - 34)) {
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236, powerup);
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }), "base " + powerup);
+                assertFalse(frame.closed());
+                assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    // U5-C1 over the committed DeadChkGone cut (Sonic/Main.asm:2410-2444, then Game Over/Main.asm:27-49,64-73).
+    // Catches a missing $3B dispatch, a lives writer, writers that replace other level bytes, replaying
+    // Deleted/CallReturned metadata, forwarding anything but SubCpuRequest, a C1 draw, or a C1 art request.
+    @Test void deadGoneWithLivesRemainingDeletesTheGameOverSlotAfterOnlyItsTwoByteStoresAndOneFadeRequest() throws Exception {
+        var ring = new CdRingGlobals(7, 3, 0x81, 2, 0xFF, 0, 5, 2);
+        var level = new CdLevelGlobals(0, 1, 0x22, 0x33, 0x44, 0x556677, 0x66, 0x35, 0xFE);
+        try (var f = new Fixture(ring, CONTACT, SCORE, level, OptionalLong.of(0))) {
+            var cold = f.runtime.powerupArtState();
+            assertEquals(new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), cold);
+            f.firstCycle(); seedLevelPlayer(f, 6, 0);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveWord(X, 0x1234).moveByte(SPRITE_FLAGS, 0xA5));
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var publication = f.body(2);
+            var afterBody = f.runtime.ringGlobals();
+            assertEquals(2, afterBody.lives()); assertEquals(0x3B, f.slot(32).id());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(new byte[64], f.slot(32).copyBytes(), "C1 DeleteObject clears all 64 bytes");
+            // MOVE.B #8,powerup and the BCLR #0 store ($FE stays $FE); updateHUDTime 0 is DeadChkGone's write.
+            assertEquals(new CdLevelGlobals(0, 0, 0x22, 0x33, 0x44, 0x556677, 0x66, 8, 0xFE), f.runtime.levelGlobals());
+            assertEquals(afterBody, f.runtime.ringGlobals(), "ObjGameOver only tests lives");
+            var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+            for (var sound : publication.sounds()) expected.add(new CdOpeningObjectRuntime.PlayerSound(sound));
+            expected.add(new CdOpeningObjectRuntime.GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM));
+            assertEquals(expected, f.runtime.lastSoundRequests());
+            var cpu = f.runtime.finishAfterCamera(POST);
+            assertTrue(cpu.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 32), "C1 never draws");
+            f.runtime.finishOrdinaryTail();
+            f.service(0);
+            assertEquals(8, f.runtime.levelGlobals().powerup(), "bit 7 clear: LoadShieldArt leaves the byte");
+            assertEquals(cold, f.runtime.powerupArtState(), "and copies nothing");
+        }
+    }
+
+    // Game Over/Main.asm:50-88,92-112, then VInt_Level:829-837 -> LoadShieldArt (Powerup/Main.asm:157-176).
+    // Catches a stale BSET read ($B5, not $88), dispatch from a captured list (the later OVER child must run Main
+    // now), drawing the parent that returned through SubCPUCmd, converting before LoadShieldArt, keeping bit 7,
+    // or a partial/aliased window. Literals: Mappings.asm GAME frame 1 and the USA $EF92 oMap operand $20F03E.
+    @Test void zeroLivesGameOverRunsTheLaterOverChildNowAndTheNextSelectorEightLoadsItsArtBeforeConversion() throws Exception {
+        var ring = new CdRingGlobals(0, 1, 0, 0, 0, 0, 0, 0);
+        var level = new CdLevelGlobals(0, 1, 0x22, 0x33, 0x44, 0x556677, 0x66, 0x35, 0xFE);
+        try (var f = new Fixture(ring, CONTACT, SCORE, level, OptionalLong.of(0))) {
+            var cold = f.runtime.powerupArtState();
+            f.firstCycle(); seedLevelPlayer(f, 6, 0);
+            f.runtime.placement().pool().clearDynamicSlots();
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var publication = f.body(2);
+            assertEquals(0, f.runtime.ringGlobals().lives()); assertEquals(0x1E0, f.frame.state().timers().reset());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(new CdLevelGlobals(0, 0, 0x22, 0x33, 0x44, 0x556677, 0x66, 0x88, 0xFE), f.runtime.levelGlobals());
+            var parent = f.slot(32);
+            assertEquals(List.of(0x3B, 2, 0x80, 0x120, 0xE0, 0x8544, 0x20F03E, 0), List.of(parent.id(), parent.routine(),
+                    parent.centreX(), parent.word(GAME_OVER_DEST_X), parent.word(X_FRACTION), parent.word(TILE),
+                    parent.longBits(MAPPINGS), parent.unsignedByte(MAP_FRAME)), "JMP SubCPUCmd returned before Main");
+            var child = f.slot(33);
+            assertEquals(List.of(0x3B, 2, 0x1B8, 0x120, 0xE0, 0x8544, 0x20F03E, 1), List.of(child.id(), child.routine(),
+                    child.centreX(), child.word(GAME_OVER_DEST_X), child.word(X_FRACTION), child.word(TILE),
+                    child.longBits(MAPPINGS), child.unsignedByte(MAP_FRAME)), "the later child ran Main in this pass");
+            var expected = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+            for (var sound : publication.sounds()) expected.add(new CdOpeningObjectRuntime.PlayerSound(sound));
+            expected.add(new CdOpeningObjectRuntime.GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM));
+            expected.add(new CdOpeningObjectRuntime.GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_GMOVERMUS));
+            assertEquals(expected, f.runtime.lastSoundRequests());
+            var cpu = f.runtime.finishAfterCamera(POST);
+            var entries = new ArrayList<Integer>();
+            for (int i = 0; i < cpu.provenance().size(); i++) {
+                int whole = cpu.provenance().get(i).slotRef().wholeIndex();
+                assertNotEquals(32, whole, "the parent queued nothing");
+                if (whole == 33) entries.add(i * 8);
+            }
+            byte[] sat = cpu.bytes();
+            // GAME frame 1 pieces (-8,$0D,$0010,+8) and (-8,$0D,$0018,+40), absolute from oYScr $E0 and oX $1B8.
+            assertEquals(2, entries.size());
+            int a = entries.get(0), b = entries.get(1);
+            assertEquals(List.of(0xD8, 0x0D, 0x8554, 0x1C0), List.of(word(sat, a), sat[a + 2] & 255, word(sat, a + 4), word(sat, a + 6)));
+            assertEquals(List.of(0xD8, 0x0D, 0x855C, 0x1E0), List.of(word(sat, b), sat[b + 2] & 255, word(sat, b + 4), word(sat, b + 6)));
+            f.runtime.finishOrdinaryTail();
+            assertEquals(cold, f.runtime.powerupArtState(), "no art moves before the next selector-8 V-int");
+            f.service(0);
+            assertEquals(0x08, f.runtime.levelGlobals().powerup(), "BCLR #7 clears only the request bit");
+            byte[] window = new byte[0x480]; // Art_GameOver's $400-byte copy; the $80-byte RAM tail stays cold zero.
+            System.arraycopy(f.assets.shield().copy(3).bytes().copy(), 0, window, 0, 0x400);
+            assertEquals(new CdPowerupArtRuntime.State(window, window), f.runtime.powerupArtState());
+            var shown = f.runtime.displayedFrame();
+            var pixels = CdAssetBytes.copyOf(window);
+            for (int tile = 0; tile < 32; tile++) {
+                var version = shown.patternVersions().get(BANKS.powerup() + tile);
+                if (tile < 16) assertNull(version, "no GAME piece was queued for window tile " + tile);
+                else assertEquals(CdObjectPresentation.patternVersion(pixels.slice(tile * 32, 32)), version, "tile " + tile);
+            }
+        }
+    }
+
+    // Game Over/Main.asm:39-46,51-86,92-112 and LoadShieldArt. Catches ignoring the TIME root or its ADDQ ($8A),
+    // running the earlier OVER child in its allocation pass, omitting Init's fall-through Main draw, resetting the
+    // serviced window between V-ints (the stale Shield picture below), or a picture converted before its load.
+    // The $82 powerup byte and the settled slot-36 text are constructed ingress, not a native route.
+    @Test void timeOverDrawsFromInitWhileTheEarlierChildWaitsAndItsLoadLeavesTheStaleShieldPictureIntact() throws Exception {
+        try (var f = new Fixture(new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x82, 0x01))) {
+            f.firstCycle(); // Its selector-8 V-int services the explicit $82 request: slot 0, Art_Shield.
+            byte[] shield = new byte[0x480];
+            System.arraycopy(f.assets.shield().copy(0).bytes().copy(), 0, shield, 0, 0x400);
+            assertEquals(new CdPowerupArtRuntime.State(shield, shield), f.runtime.powerupArtState());
+            assertEquals(0x02, f.runtime.levelGlobals().powerup());
+            f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(36).moveByte(ID, 0x3B).moveByte(ROUTINE, 2).moveWord(TILE, 0x8544).moveLong(MAPPINGS, 0x20F042)
+                    .moveWord(X_FRACTION, 0xE0).moveWord(X, 0x120).moveWord(GAME_OVER_DEST_X, 0x120));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            pool.write(pool.state(40).moveByte(ID, 0x3B)); // A clean $3B enters Init at its next dispatch.
+            f.service(0);
+            var stale = f.runtime.displayedFrame();
+            var shieldPixels = CdAssetBytes.copyOf(shield);
+            assertEquals(14, stale.patternVersions().size(), "TIME frame 0 draws window tiles 0..13 only");
+            for (int tile = 0; tile < 14; tile++) {
+                assertEquals(CdObjectPresentation.patternVersion(shieldPixels.slice(tile * 32, 32)),
+                        stale.patternVersions().get(BANKS.powerup() + tile), "stale Shield tile " + tile);
+            }
+            f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x8A, 0), f.runtime.levelGlobals());
+            assertEquals(List.of(new CdOpeningObjectRuntime.GameOverSubCpu(CdGameOver.SubCpuCommand.SCMD_FADEPCM)),
+                    f.runtime.lastSoundRequests(), "lives remain: no GMOVERMUS");
+            var child = f.slot(32);
+            assertEquals(List.of(0x3B, 2, 0x1C0, 0x20F042, 1), List.of(child.id(), child.routine(), child.centreX(),
+                    child.longBits(MAPPINGS), child.unsignedByte(MAP_FRAME)), "the earlier child waits one pass");
+            var parent = f.slot(40);
+            assertEquals(List.of(2, 0x88, 0x20F042), List.of(parent.routine(), parent.centreX(), parent.longBits(MAPPINGS)));
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(List.of(36, 36, 40, 40), cpu.provenance().stream().map(p -> p.slotRef().wholeIndex()).toList());
+            byte[] sat = cpu.bytes();
+            // TIME frame 0 pieces (-8,$0D,$0000,-68) and (-8,$09,$0008,-36) from the parent's moved oX $88.
+            assertEquals(List.of(0xD8, 0x0D, 0x8544, 0x44), List.of(word(sat, 16), sat[18] & 255, word(sat, 20), word(sat, 22)));
+            assertEquals(List.of(0xD8, 0x09, 0x854C, 0x64), List.of(word(sat, 24), sat[26] & 255, word(sat, 28), word(sat, 30)));
+            f.service(0);
+            assertEquals(0x0A, f.runtime.levelGlobals().powerup());
+            byte[] timeOver = new byte[0x480];
+            System.arraycopy(f.assets.shield().copy(4).bytes().copy(), 0, timeOver, 0, 0x400);
+            assertEquals(new CdPowerupArtRuntime.State(timeOver, timeOver), f.runtime.powerupArtState(),
+                    "the complete window: Art_TimeOver's copy plus the cold zero tail");
+            var shown = f.runtime.displayedFrame();
+            var timePixels = CdAssetBytes.copyOf(timeOver);
+            for (int tile = 0; tile < 14; tile++) {
+                assertEquals(CdObjectPresentation.patternVersion(timePixels.slice(tile * 32, 32)),
+                        shown.patternVersions().get(BANKS.powerup() + tile), "now-serviced tile " + tile);
+                assertEquals(CdObjectPresentation.patternVersion(shieldPixels.slice(tile * 32, 32)),
+                        stale.patternVersions().get(BANKS.powerup() + tile), "the earlier picture keeps its own pixels");
+            }
+            f.runtime.spawnBeforeReservedSlots(); f.body(4); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x1B8, f.slot(32).centreX(), "the child's first Main runs one pass after its allocation");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // VInt_Level (Level/Main.asm:821-847) runs UpdateAnimTiles for ordinary and paused loops alike; PP lag
+    // (VInt_Lag:738-742) does not. Catches a lag load or lag re-conversion, a skipped paused load, or paused and
+    // ordinary selector-8 dispositions that diverge. The zero-lives text and absent player are constructed ingress.
+    @Test void pausedSelectorEightLoadsLikeAnOrdinaryServiceWhileLagRetainsTheRequestWindowAndPicture() throws Exception {
+        try (var f = new Fixture(new CdRingGlobals(0, 0, 0, 0, 0, 0, 0, 0))) {
+            var cold = f.runtime.powerupArtState();
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveByte(ID, 0x3B));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(0x88, f.runtime.levelGlobals().powerup());
+            var objects = f.runtime.captureClosedCut(); var actor = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var before = f.runtime.displayedFrame();
+            f.frame.prepareInput(0); f.runtime.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertEquals(0x88, f.runtime.levelGlobals().powerup(), "lag keeps the request bit");
+            assertEquals(cold, f.runtime.powerupArtState());
+            assertSame(before, f.runtime.displayedFrame());
+            f.service(0x80);
+            assertTrue(f.frame.paused());
+            assertEquals(0x08, f.runtime.levelGlobals().powerup());
+            byte[] window = new byte[0x480];
+            System.arraycopy(f.assets.shield().copy(3).bytes().copy(), 0, window, 0, 0x400);
+            assertEquals(new CdPowerupArtRuntime.State(window, window), f.runtime.powerupArtState());
+            var pausedPicture = f.runtime.displayedFrame();
+            assertEquals(CdObjectPresentation.patternVersion(CdAssetBytes.copyOf(window).slice(16 * 32, 32)),
+                    pausedPicture.patternVersions().get(BANKS.powerup() + 16), "the OVER child's first tile, now serviced");
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(0x88, f.runtime.levelGlobals().powerup()); assertEquals(cold, f.runtime.powerupArtState());
+            f.service(0);
+            assertFalse(f.frame.paused());
+            assertEquals(0x08, f.runtime.levelGlobals().powerup());
+            assertEquals(new CdPowerupArtRuntime.State(window, window), f.runtime.powerupArtState());
+            assertEquals(pausedPicture, f.runtime.displayedFrame(), "both selector-8 dispositions convert the same previous SAT");
+        }
+    }
+
+    // Catches a snapshot that drops, re-derives or cold-resets the window or its request byte, or that services
+    // during restore: the pending request and the loaded nonzero window both restore exactly and replay forward.
+    @Test void nonzeroPowerupWindowAndItsRequestByteRestoreExactlyAndReplayForward() throws Exception {
+        try (var f = new Fixture(new CdRingGlobals(0, 0, 0, 0, 0, 0, 0, 0))) {
+            var cold = f.runtime.powerupArtState();
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveByte(ID, 0x3B));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var requested = f.runtime.captureClosedCut();
+            var requestedActor = f.frame.captureActor(); var requestedShared = f.frame.captureShared();
+            assertEquals(0x88, requested.levelGlobals().powerup()); assertEquals(cold, requested.powerupArtState());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var loaded = f.runtime.captureClosedCut();
+            var loadedActor = f.frame.captureActor(); var loadedShared = f.frame.captureShared();
+            byte[] window = new byte[0x480];
+            System.arraycopy(f.assets.shield().copy(3).bytes().copy(), 0, window, 0, 0x400);
+            assertEquals(new CdPowerupArtRuntime.State(window, window), loaded.powerupArtState());
+            assertEquals(0x08, loaded.levelGlobals().powerup());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(4); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var slots = pool.capture().slots(); var shown = f.runtime.displayedFrame(); var level = f.runtime.levelGlobals();
+            f.frame.validateActorRestore(loadedActor); f.frame.validateSharedRestore(loadedShared); f.runtime.validateRestore(loaded);
+            f.frame.restoreActor(loadedActor); f.frame.restoreShared(loadedShared); f.runtime.restore(loaded);
+            assertEquals(loaded.powerupArtState(), f.runtime.powerupArtState(), "the nonzero window, not a cold reset");
+            assertEquals(0x08, f.runtime.levelGlobals().powerup());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(4); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertArrayEquals(cpu.bytes(), replay.bytes()); assertEquals(slots, pool.capture().slots());
+            assertEquals(shown, f.runtime.displayedFrame()); assertEquals(level, f.runtime.levelGlobals());
+            assertEquals(loaded.powerupArtState(), f.runtime.powerupArtState());
+            f.frame.validateActorRestore(requestedActor); f.frame.validateSharedRestore(requestedShared);
+            f.runtime.validateRestore(requested);
+            f.frame.restoreActor(requestedActor); f.frame.restoreShared(requestedShared); f.runtime.restore(requested);
+            assertEquals(cold, f.runtime.powerupArtState()); assertEquals(0x88, f.runtime.levelGlobals().powerup());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(loaded.powerupArtState(), f.runtime.powerupArtState(), "the replayed load");
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(4); f.runtime.runDynamicSlotsAfterReservedSlots();
+            replay = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertArrayEquals(cpu.bytes(), replay.bytes()); assertEquals(slots, pool.capture().slots());
+            assertEquals(shown, f.runtime.displayedFrame()); assertEquals(level, f.runtime.levelGlobals());
+        }
+    }
+
+    // LoadShieldArt reads ShieldArtIndex after BCLR #7 (Powerup/Main.asm:158-164); selector $80 gives
+    // ((0 - 2) & $FF) * 2 = $1FC, past the five pointers. Catches committing the cleared byte or a partial window
+    // before the failure, converting or retrying afterwards, Finish/count or the Start toggle after the failed cut,
+    // or claiming to roll back the Frame's completed controller read.
+    @Test void invalidActiveSelectorAtTheVIntCutClosesBothOwnersBeforeFinishWithNothingCommittedOrRolledBack() throws Exception {
+        try (var f = new Fixture(new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x80, 0))) {
+            var cold = f.runtime.powerupArtState();
+            var admitted = f.runtime.captureClosedCut();
+            assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, f.frame.prepareInput(0x80).phase());
+            var failure = assertThrows(CdPowerupArtRuntime.UnsupportedArt.class,
+                    () -> f.runtime.serviceVBlank(PlcLifecyclePhase.NORMAL_PAUSE));
+            assertEquals(0x1FC, failure.pointerOffset());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertEquals(0, f.frame.vIntClock().deltaSinceAdmittedCut(), "no VInt_Finish/count after the failed cut");
+            assertFalse(f.frame.paused(), "the Start toggle follows Finish, so it never ran");
+            assertEquals(0x80, f.frame.environment().controls().rawHeld(), "the completed ReadController stays committed");
+            assertEquals(0x80, f.runtime.levelGlobals().powerup(), "no Result existed, so no cleared byte was committed");
+            assertEquals(cold, f.runtime.powerupArtState(), "and no window either");
+            assertThrows(IllegalStateException.class, f.runtime::displayedFrame);
+            assertThrows(IllegalStateException.class, () -> f.runtime.restore(admitted));
         }
     }
 

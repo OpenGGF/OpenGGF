@@ -3440,3 +3440,30 @@ Subsequent independent Body and world-summary/level-art reviews also found no
 P1/P2. Their supplied execution results remain Root's observations; their
 static source reasoning does not count as another run. The unreachable killed
 ceiling/tunnel stop remains an advisory for the later roll-tunnel owner.
+
+
+### Live Game Over and powerup art ownership — 24 October 2026
+
+The Runtime now dispatches $3B in the same physical object walk. Lives are read
+from the Ring store; powerup and timeOver are read and updated through the one
+level-global store. Only typed sub-CPU requests enter the ordered sound ledger;
+committed pool/global/call metadata is never replayed. One complete immutable
+powerup CPU/resident state is captured, validated and restored with the World.
+The selector8 callback services it after Sonic art and before Finish, including
+pause; lag retains it. Picture conversion then uses the now-serviced nine spans.
+Cold zeros are justified only for the existing fresh DEV admission, not restart.
+
+Root5086 at978ec39d8 plus the exact Runtime2/client3 candidates has fresh reports
+for255checks with zero failures, errors or skips: Runtime50, Presentation14,
+Mappings9, Frame112, Powerup18, GameOver29, WorldLoad17 and EGL6. All eight XML
+confirm Java25.0.5.0.2, supplied media and the requested EGL properties. Queue
+telemetry ended18:44:17BST with1.8s waiting and99.8s execution. The command handle
+was unavailable after context recovery; the completed JUnit/queue evidence was
+used without repeating validation or inventing a recovered console exit status.
+The independent Runtime source review found no P1/P2 and re-derived all seven
+new cases. It also checked actual Nemesis extents: Springs ends exactly at
+$A880 and HUD starts at$AD00; no R11A PLC overlaps the powerup window. On an
+unreachable invalid-selector failure, the pure owner publishes no partial
+BCLR result, so the closed Runtime keeps its pre-call diagnostic byte; this is
+not the native post-BCLR byte and no closed owner consumer may rely on it.
+Actual World route/capture results belong to the following client checkpoint.

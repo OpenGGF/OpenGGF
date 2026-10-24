@@ -12,6 +12,7 @@ import com.openggf.game.soniccd.player.CdPlayerMath;
 import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.player.CdPlayerTerrain;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
+import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.graphics.SpritePresentation;
 
 import java.io.IOException;
@@ -36,9 +37,11 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
  * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower art (the inert Animal path draws nothing).
+ * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
- * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
- * and aftermath IDs $18/$1C/$1F are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
+ * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
+ * aftermath IDs $18/$1C/$1F and the death row's $3B Game/Time Over are owned; every other ID
+ * (including $12 FloatBlock) fails at its live dispatch.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -57,19 +60,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its eight disjoint subdivisions; this value neither
+     * Root reserves/binds its nine disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
-     * The contact spans append 70 + 5 + 39 tiles, for 313 patterns in all.
+     * The contact spans append 70 + 5 + 39 tiles. The shorter forms then place the
+     * 36-tile powerup window (LVLDMA aniArtBuffer,$A880,$480: Powerup/Main.asm:173)
+     * at flower + 39, for 349 patterns in all; the canonical form takes it explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower) {
+                               int explosion, int points, int flower, int powerup) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp) {
             this(player, ring, mosqui, plant, ramp, ramp + 63, ramp + 63 + 70, ramp + 63 + 70 + 5);
+        }
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points, int flower) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, flower + 39);
         }
     }
 
@@ -115,7 +123,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     @FunctionalInterface public interface PrimaryAngleWrite { void write(int unsignedByte); }
 
     /** Ordered requests only, no playback and no claim to the omitted service/music ledger. */
-    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm { }
+    public sealed interface SoundRequest permits PlayerSound, RingFm, RingSubCpu, MosquiFm, LostRingFm, GameOverSubCpu { }
     public record PlayerSound(CdPlayerFrameRuntime.Sound sound) implements SoundRequest {
         public PlayerSound { Objects.requireNonNull(sound, "player sound"); }
     }
@@ -131,11 +139,16 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public record MosquiFm(CdMosqui.Sound sound) implements SoundRequest {
         public MosquiFm { Objects.requireNonNull(sound, "Mosqui FM sound"); }
     }
+    /** ObjGameOver's SubCPUCmd requests (Game Over/Main.asm:28-29,87-88); no handshake, PCM fade or music. */
+    public record GameOverSubCpu(CdGameOver.SubCpuCommand command) implements SoundRequest {
+        public GameOverSubCpu { Objects.requireNonNull(command, "Game Over sub-CPU command"); }
+    }
 
     /**
      * Privately minted owned partition; callers cannot replace its pieces or owner.
      * Placement already contains the ONLY pool/saved-bank snapshot. Queue contains
      * the CPU SAT; displayedFrame freezes its own pixels, possibly an older picture.
+     * powerupArtState is the one immutable LoadShieldArt CPU/resident window.
      * No actor/shared Frame, pending input, TouchContext, scan snapshot, camera or
      * scroll capture is stored. Root captures/prevalidates those owners separately.
      */
@@ -151,13 +164,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final CdPlayerBody.ContactGlobals contactGlobals;
         private final ScoreGlobals scoreGlobals;
         private final CdLevelGlobals levelGlobals;
+        private final CdPowerupArtRuntime.State powerupArtState;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdRingGlobals ringGlobals,
                          CdRingSpillGlobals spillGlobals,
                          CdObjectDrawQueue.Snapshot queue, SpritePresentation.Frame displayedFrame,
                          List<SoundRequest> sounds, DevGlobals devGlobals,
                          CdPlayerBody.ContactGlobals contactGlobals, ScoreGlobals scoreGlobals,
-                         CdLevelGlobals levelGlobals) {
+                         CdLevelGlobals levelGlobals, CdPowerupArtRuntime.State powerupArtState) {
             this.owner = owner;
             this.placement = placement;
             this.ringGlobals = ringGlobals;
@@ -169,6 +183,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             this.contactGlobals = contactGlobals;
             this.scoreGlobals = scoreGlobals;
             this.levelGlobals = levelGlobals;
+            this.powerupArtState = powerupArtState;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         public CdRingGlobals ringGlobals() { return ringGlobals; }
@@ -177,6 +192,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         public CdPlayerBody.ContactGlobals contactGlobals() { return contactGlobals; }
         public ScoreGlobals scoreGlobals() { return scoreGlobals; }
         public CdLevelGlobals levelGlobals() { return levelGlobals; }
+        public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -197,6 +213,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdPoints points;
     private final CdFlower flower;
     private final CdLostRing lostRing;
+    private final CdGameOver gameOver;
+    private final CdPowerupArtRuntime powerupArt;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
@@ -209,6 +227,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private CdPlayerBody.ContactGlobals contactGlobals;
     private ScoreGlobals scoreGlobals;
     private CdLevelGlobals levelGlobals;
+    // The one owned LoadShieldArt window; only the selector-8 V-int cut and restore replace this immutable value.
+    private CdPowerupArtRuntime.State powerupArtState;
     private List<SoundRequest> sounds = List.of();
     private SpritePresentation.Frame displayed = SpritePresentation.Frame.empty();
     private CameraWords preScrollForeground;
@@ -233,6 +253,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * empty-SAT policy. This is not a native retail title-to-level ingress proof.
      * Preload describes the pixel source only; root owns actual graphics banks.
      * Level globals are caller-declared post-LevelStart values with no default.</p>
+     *
+     * <p>Cold DEV powerup window: CPU aniArtBuffer ($FF1980, $480 bytes; Main CPU Variables.inc:190) and its
+     * resident VRAM copy at $A880 both start all zero. LevelStart's .ClearFlowers zeroes $A00 bytes from flowerPosBuf,
+     * covering the buffer (Level/Main.asm:178-184); the MMD Start's InitVDP (Level/Initialization.asm:78-79)
+     * DMA-fills VRAM with zero (Level/Functions (General).asm:137-150). PLC_Std's neighbouring destinations are
+     * $A400 and $AD00 (Palmtree Panic/Data (Act 1 Present).asm:54-83), and LevelStart's UpdateAnimTiles call
+     * (Level/Main.asm:312) finds powerup cleared at :167. An in-module restart skips InitVDP, so this is no restart
+     * or carry seed, and CdShieldArt's general resident tail stays UNKNOWN.</p>
      */
     public static CdOpeningObjectRuntime usaR11aOpeningDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -263,12 +291,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         var contact = objects.contactArtBank();
         var placement = CdObjectPlacementRuntime.fromAssets(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate physical/logical bank extents and overlaps now, even for an empty picture.
-        CdObjectPresentation.usaR11aContactDevPreloadedArt(frame.artState(), objects, frontier, contact,
+        // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
+        var initialPowerup = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
+        // Validate all nine physical/logical bank extents and overlaps now, even for an empty picture.
+        CdObjectPresentation.usaR11aGameOverDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower());
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
-                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, placement, mappings);
+                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, placement, mappings, initialPowerup);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -277,7 +307,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
                                    CdR11aObjectAssets.FrontierArtBank frontier,
                                    CdR11aObjectAssets.ContactArtBank contact,
-                                   CdObjectPlacementRuntime placement, CdObjectMappings mappings) {
+                                   CdObjectPlacementRuntime placement, CdObjectMappings mappings,
+                                   CdPowerupArtRuntime.State initialPowerup) {
         this.assets = assets;
         this.frame = frame;
         this.objects = objects;
@@ -290,6 +321,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         contactGlobals = initialContact;
         scoreGlobals = initialScore;
         levelGlobals = initialLevel;
+        powerupArtState = initialPowerup;
+        // One pure LoadShieldArt over the aggregate's actual five raw copies (Powerup/Main.asm:157-186).
+        powerupArt = new CdPowerupArtRuntime(assets.shield());
         preScrollForeground = camera;
         cameraPrepared = true;
         scanner = CdPlayerObjectTouch.fromAssets(objects);
@@ -317,6 +351,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         lostRing = new CdLostRing(placement, CdLostRing.Assets.fromObjectAssets(objects),
                 new CdPlayerMath(assets.player()), new CdPlayerTerrain(assets.terrain()),
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), CdRing::collectRing);
+        gameOver = new CdGameOver(placement, CdGameOver.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
 
     public Phase phase() { return phase; }
@@ -332,6 +368,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public ScoreGlobals scoreGlobals() { return scoreGlobals; }
     /** The one level-flow store; Body summaries commit here without retaining their call context. */
     public CdLevelGlobals levelGlobals() { return levelGlobals; }
+    /** The owned immutable LoadShieldArt CPU/resident window (Powerup/Main.asm:157-176). */
+    public CdPowerupArtRuntime.State powerupArtState() { return powerupArtState; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -344,7 +382,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         });
     }
 
-    /** Exactly one existing Frame service. NORMAL_PAUSE publishes; PP LAG retains its picture. */
+    /**
+     * Exactly one existing Frame service. NORMAL_PAUSE publishes; PP LAG retains its picture. Both selector-8
+     * dispositions run LoadShieldArt at the Frame's level-art cut; lag retains the powerup byte and window.
+     */
     @Override public void serviceVBlank(PlcLifecyclePhase servicePhase) {
         boolean ordinary = servicePhase == PlcLifecyclePhase.ORDINARY_LEVEL;
         perform(Phase.CLOSED_CUT, Phase.SERVICING, ordinary ? Phase.SERVICED : Phase.CLOSED_CUT, () -> {
@@ -352,14 +393,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (ordinary && !cameraPrepared) {
                 throw new IllegalStateException("Root must supply the next ordinary pre-scroll camera at a closed cut");
             }
-            frame.serviceVBlank(servicePhase);
+            frame.serviceVBlank(servicePhase, this::servicePowerupArtAtVInt);
             checkActive(Phase.SERVICING); // Also detects a swallowed callback's reentrant failure.
             if (servicePhase != PlcLifecyclePhase.LAG) {
-                // VInt_Level:827 SAT DMA then :829-834 art. At the completed boundary,
-                // convert PREVIOUS CPU SAT using NOW-serviced immutable resident pixels.
-                var pixels = CdObjectPresentation.usaR11aContactDevPreloadedArt(frame.artState(), objects,
-                        frontierArt, contactArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                        banks.explosion(), banks.points(), banks.flower());
+                // VInt_Level:827 SAT DMA, then :829-837 Sonic art and LoadShieldArt. At the completed boundary,
+                // convert PREVIOUS CPU SAT using NOW-serviced immutable player and powerup resident pixels.
+                var pixels = CdObjectPresentation.usaR11aGameOverDevPreloadedArt(frame.artState(), powerupArtState,
+                        objects, frontierArt, contactArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(),
+                        banks.ramp(), banks.explosion(), banks.points(), banks.flower(), banks.powerup());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -367,6 +408,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (ordinary) { sounds = List.of(); }
             return null;
         });
+    }
+
+    /**
+     * UpdateAnimTiles is JMP LoadShieldArt (Palmtree Panic/Animated Tiles Update.asm:7-8; VInt_Level, Level/Main.asm:837).
+     * The Frame calls this once per selector-8 V-int, ordinary or paused, after the Sonic DPLC/DMA and before
+     * VInt_Finish/count; never at PP lag. The pure service reads the ONE shared powerup byte and the owned window. Its
+     * State already reflects LVLDMA aniArtBuffer,$A880,$480 (Powerup/Main.asm:173), so there is no GPU callback or
+     * replay. Both immutable values exist before the single commit. UnsupportedArt leaves no Result, so nothing is
+     * committed; the Frame and this runtime then close through their existing failure paths, with no rollback.
+     */
+    private void servicePowerupArtAtVInt() {
+        checkActive(Phase.SERVICING);
+        var result = powerupArt.service(powerupArtState, levelGlobals.powerup());
+        var old = levelGlobals;
+        var nextLevel = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(), old.spawnMode(),
+                old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), result.powerup(), old.timeOver());
+        powerupArtState = result.state();
+        levelGlobals = nextLevel;
     }
 
     @Override public void spawnBeforeReservedSlots() {
@@ -549,6 +608,26 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     spillGlobals = Objects.requireNonNull(value, "LostRing animation state");
                 }
             };
+            // ObjGameOver tests lives in the ONE Ring store and read-modify-writes powerup/timeOver in the ONE level
+            // store, re-read at every TST/BCLR/ADDQ/BSET cut; each store replaces only its own byte.
+            var gameOverPort = new CdGameOver.GlobalsPort() {
+                @Override public CdGameOver.Globals read() {
+                    checkActive(Phase.DYNAMIC_SLOTS);
+                    return new CdGameOver.Globals(ringGlobals.lives(), levelGlobals.powerup(), levelGlobals.timeOver());
+                }
+                @Override public void writePowerup(int value) {
+                    checkActive(Phase.DYNAMIC_SLOTS);
+                    var old = levelGlobals;
+                    levelGlobals = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(), old.spawnMode(),
+                            old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), value, old.timeOver());
+                }
+                @Override public void writeTimeOver(int value) {
+                    checkActive(Phase.DYNAMIC_SLOTS);
+                    var old = levelGlobals;
+                    levelGlobals = new CdLevelGlobals(old.levelRestart(), old.updateHudTime(), old.checkpoint(), old.spawnMode(),
+                            old.plcLoadFlags(), old.flowerCount(), old.fadeEnableDisplay(), old.powerup(), value);
+                }
+            };
             var calls = new CdRing.SourceCalls() {
                 @Override public void playFmSound(CdRing.FmSound sound) { appendSound(new RingFm(sound)); }
                 @Override public void subCpuCommand(CdRing.SubCpuCommand command) { appendSound(new RingSubCpu(command)); }
@@ -651,6 +730,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
+                } else if (id == CdGameOver.OBJECT_ID) {
+                    // Init/Main over the live pool; the OVER child runs only when this walk reaches its own ID.
+                    for (var effect : gameOver.run(whole, gameOverPort).effects()) {
+                        if (effect instanceof CdGameOver.SubCpuRequest request) {
+                            appendSound(new GameOverSubCpu(request.command()));
+                        }
+                        // OverText/Deleted/CallReturned metadata describes committed pool work; never replay it.
+                    }
                 } else {
                     throw new UnsupportedOperationException("Unowned CD object ID $"
                             + Integer.toHexString(id) + " at live physical slot " + whole);
@@ -706,7 +793,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public Snapshot captureClosedCut() {
         requireCut();
         return new Snapshot(captureOwner, placement.capture(), ringGlobals, spillGlobals, queue.captureClosedCut(), displayed, sounds,
-                devGlobals, contactGlobals, scoreGlobals, levelGlobals);
+                devGlobals, contactGlobals, scoreGlobals, levelGlobals, powerupArtState);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -724,6 +811,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(snapshot.contactGlobals, "captured contact globals");
         Objects.requireNonNull(snapshot.scoreGlobals, "captured score globals");
         Objects.requireNonNull(snapshot.levelGlobals, "captured level globals");
+        Objects.requireNonNull(snapshot.powerupArtState, "captured powerup art window");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -741,6 +829,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             contactGlobals = snapshot.contactGlobals;
             scoreGlobals = snapshot.scoreGlobals;
             levelGlobals = snapshot.levelGlobals;
+            powerupArtState = snapshot.powerupArtState; // Exactly the captured window: no cold reset or load replay.
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;
