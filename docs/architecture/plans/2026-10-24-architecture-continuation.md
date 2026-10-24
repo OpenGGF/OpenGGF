@@ -7248,7 +7248,7 @@ No tests or runtime observations were made by that research.
 A fresh fetch found destination `develop` advanced from `97eb86f18` to
 `81f25c89f04d402c68998106cab17c0ddd79d928`: 723 paths include Stageplay menu,
 voice and native-facing work. Main was fast-forward pulled without switching
-its branch. Its four dirty reference/tool submodules and seven unrelated
+its branch. Its four dirty reference/tool submodules and five unrelated
 untracked files remained untouched; no submodule pin changed upstream.
 
 Those edits include Engine and AudioManager. The parent therefore intentionally
@@ -7303,3 +7303,29 @@ constructor lookups, 121→119; no replacement record or new permission is added
 New combined focused/domain and complete change-based smoke/fresh guard checks
 are required on this updated source. Old component observations remain useful
 bounded evidence, not a substitute for that qualification.
+
+### Updated-base validation launch plan
+
+At `f5152bfb64930c2d7a5718e2a59db42f20708b76`, inspection against the updated
+pre-task destination `81f25c89f04d402c68998106cab17c0ddd79d928` selects all ten
+smoke categories: 3,768 candidate classes, 76 ordinary batches and fresh guards.
+The complete selection will run after focused interaction checks finish.
+Expected execution is approximately 90–150 minutes plus queue waiting; stop on
+the runner's 180-minute active-execution limit, ten minutes without output,
+source-fingerprint change, or infrastructure failure without test reports.
+JUnit failures stay identified for matched bounded attribution and repair. No
+release-only full suite or unchanged baseline-wide rerun is planned.
+
+The focused selection combines all 103 Root controls, the four lifecycle owners,
+corrected freeze/closure and editor fixtures, actual KiS2 return, genuine S1/S2
+request-to-title/first-input pilots, capture leases, SMPS owner/one-up behavior,
+the required S3K stability selectors and upstream speech/facing/occlusion
+interactions. In particular the newly enforced Stageplay pixel cases must run
+with supplied ROMs and owned EGL rather than receiving a prerequisite waiver.
+A fresh actual-environment preflight checks Java 25, Lua 5.4 and PowerShell.
+
+All commands unset desktop and JVM-injection variables, use Java 25, pass the
+explicit surfaceless-EGL property and discover the four verified original ROMs
+through their existing absolute main-checkout paths. No source state changes
+during an active check. Old-base partial runs remain historical component
+evidence and are being acknowledged/consumed; they are not a green final gate.
