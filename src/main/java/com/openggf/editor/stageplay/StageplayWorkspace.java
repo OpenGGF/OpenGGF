@@ -76,7 +76,7 @@ public final class StageplayWorkspace {
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
-        DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), AUDIO("Audio cues"),
+        DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), SPEAKER_VOICE("Speaker voice"), AUDIO("Audio cues"),
         RECORD("Record actor take (R)"), PLAY("Play / pause"), STOP("Stop"),
         UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
         private final String label;
@@ -232,6 +232,11 @@ public final class StageplayWorkspace {
                 case DIALOGUE -> dialogueMenu();
                 case DIALOGUE_TYPERS -> typerMenu();
                 case DIALOGUE_SKINS -> skinMenu();
+                case SPEAKER_VOICE -> {
+                    String actor = controller.selectedActorId();
+                    if (actor.isEmpty()) throw new IllegalArgumentException("Select a cast member to edit their voice");
+                    voiceForm(actor, "");
+                }
                 case AUDIO -> audioMenu();
                 case RECORD -> { if (recording()) stop(); else startTake(); }
                 case PLAY -> { if (controller.playing() || recording()) stop(); else play(); }
@@ -780,7 +785,7 @@ public final class StageplayWorkspace {
     private static StageplayDocument withCast(StageplayDocument d,List<Actor> actors,List<PuppetTrack> puppets) {
         return new StageplayDocument(d.version(),d.name(),d.durationFrames(),d.width(),d.height(),d.set(),actors,d.camera(),
                 d.captions(),d.audio(),d.cameraEffects(),d.sceneChanges(),d.dialogueTypers(),d.dialogueSkins(),d.dialogue(),puppets,
-                d.objectActors(),d.worldCommands());
+                d.objectActors(),d.worldCommands(),d.voices());
     }
 
     /** Native physics owns motion, scale and animation; authored keys retain shot placement and visibility. */
@@ -1100,12 +1105,12 @@ public final class StageplayWorkspace {
         }
         return new StageplayDocument(doc.version(),doc.name(),doc.durationFrames(),doc.width(),doc.height(),doc.set(),
                 actors,camera,doc.captions(),doc.audio(),doc.cameraEffects(),changes,doc.dialogueTypers(),doc.dialogueSkins(),doc.dialogue(),doc.puppets(),
-                objects,doc.worldCommands());
+                objects,doc.worldCommands(),doc.voices());
     }
 
 
     private static StageplayDocument removeActor(StageplayDocument d,String id) {
-        return withCast(d,d.actors().stream().filter(a -> !a.id().equals(id)).toList(),d.puppets().stream().filter(p -> !p.actorId().equals(id)).toList());
+        return withCast(d.withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(id)).toList()),d.actors().stream().filter(a -> !a.id().equals(id)).toList(),d.puppets().stream().filter(p -> !p.actorId().equals(id)).toList());
     }
 
     private void deleteActor() {
@@ -1118,7 +1123,14 @@ public final class StageplayWorkspace {
                 action("Keep dialogue as offscreen speech", () -> edit(d -> {
                     var cues = d.dialogue().stream().map(c -> c.speakerActor().equals(actor.id())
                             ? dialogueSpeaker(c, "", StageplayDialogue.speakerName(d,c)) : c).toList();
-                    return removeActor(d.withDialogue(cues),actor.id());
+                    var voices = new ArrayList<>(d.voices());
+                    var voice = com.openggf.stageplay.StageplaySpeech.voice(d, actor.id(), "");
+                    for (var line : d.dialogue()) if (line.speakerActor().equals(actor.id())) {
+                        String name = StageplayDialogue.speakerName(d, line);
+                        if (voices.stream().noneMatch(v -> v.speakerActor().isEmpty() && v.speakerName().equals(name)))
+                            voices.add(new SpeakerVoice("", name, voice.tone(), voice.rhythm(), voice.pitch(), voice.variation(), voice.lengthFrames(), voice.level()));
+                    }
+                    return removeActor(d.withDialogue(cues).withVoices(voices),actor.id());
                 })), action("Remove actor and their dialogue", () -> edit(d -> removeActor(d.withDialogue(d.dialogue().stream()
                         .filter(c -> !c.speakerActor().equals(actor.id())).toList()),actor.id()))), action("Keep actor", () -> { })));
     }
@@ -1143,7 +1155,8 @@ public final class StageplayWorkspace {
                 action("Choose typer", () -> dialogueProfileMenu(cue,true)),
                 action("Custom reveal timing", () -> revealForm(cue)),
                 action("Use typer timing", () -> edit(d -> replaceDialogue(d,dialogueTiming(cue,List.of())))),
-                action("Delete line", () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList())))));
+                action("Delete line", () -> edit(d -> d.withDialogue(d.dialogue().stream().filter(c -> !c.id().equals(cue.id())).toList()))),
+                action("Speaker voice", () -> voiceForm(cue.speakerActor(), cue.speakerActor().isEmpty() ? cue.speakerName() : ""))));
     }
 
     private void speakerMenu(DialogueCue cue) {
@@ -1152,11 +1165,39 @@ public final class StageplayWorkspace {
             if (cue == null) dialogueForm(newDialogue(actor.id(),""));
             else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
         }));
+        for (var actor : controller.document().objectActors()) choices.add(action(actor.name()+" (object)", () -> {
+            if (cue == null) dialogueForm(newDialogue(actor.id(),""));
+            else edit(d -> replaceDialogue(d,dialogueSpeaker(cue,actor.id(),"")));
+        }));
         choices.add(action("Offscreen speaker / narrator", () -> {
             if (cue == null) dialogueForm(newDialogue("","Narrator"));
             else dialogueForm(dialogueSpeaker(cue,"",StageplayDialogue.speakerName(controller.document(),cue)));
         }));
         menu.showActions("Who is speaking?", choices);
+    }
+
+    private void voiceForm(String actorId, String offscreenName) {
+        var doc = controller.document();
+        var voice = com.openggf.stageplay.StageplaySpeech.voice(doc, actorId, offscreenName);
+        String name = actorId.isEmpty() ? offscreenName : doc.actors().stream().filter(a -> a.id().equals(actorId))
+                .map(Actor::name).findFirst().orElseGet(() -> doc.objectActors().stream().filter(a -> a.id().equals(actorId))
+                        .map(ObjectActor::name).findFirst().orElseThrow());
+        menu.showForm(name + " / voice", List.of(
+                new EditorProjectMenu.Field("tone", "Tone", voice.tone().name(), List.of("DEFAULT", "OFF", "SQUARE", "CHIME", "HOLLOW", "BUZZ")),
+                new EditorProjectMenu.Field("rhythm", "Blip on each", voice.rhythm().name(), List.of("WORD", "LETTER")),
+                number("pitch", "Pitch (48=C3, 72=C5, 96=C7)", voice.pitch()),
+                number("variation", "Pitch variation (0-12 semitones)", voice.variation()),
+                number("length", "Blip length (1-18 frames)", voice.lengthFrames()),
+                number("level", "Voice level (0-100%)", voice.level())), "Apply voice", values -> edit(d -> {
+            var voices = new ArrayList<>(d.voices());
+            voices.removeIf(v -> actorId.isEmpty() ? v.speakerActor().isEmpty() && v.speakerName().equals(offscreenName)
+                    : v.speakerActor().equals(actorId));
+            if (!values.get("tone").equals("DEFAULT")) voices.add(new SpeakerVoice(actorId, offscreenName,
+                    VoiceTone.valueOf(values.get("tone")), VoiceRhythm.valueOf(values.get("rhythm")),
+                    integer(values,"pitch"), integer(values,"variation"), integer(values,"length"), integer(values,"level")));
+            return d.withVoices(voices);
+        }));
+        menu.setSubtitle("DEFAULT resets. OFF silences.");
     }
 
     private DialogueCue newDialogue(String actor, String name) {

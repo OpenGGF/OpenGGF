@@ -195,6 +195,15 @@ folder, with gain from 0 to 1. Copy the audio under that folder, then enter its
 relative path. Each encoded clip is bounded; the scene's decoded voice cache is
 limited to 64 MiB. Missing or invalid resources fail playback before it starts.
 
+Player and ROM object cast members can speak through the dialogue track. Select a
+cast member and choose **Speaker voice**, or use that action in a dialogue line's
+menu. Six controls set tone/off, word/letter rhythm, pitch, variation, blip length
+and level. `DEFAULT` restores the character's voice. Sonic, Tails, Knuckles and ROM
+object roles have distinct defaults. These noises come from the engine's PSG and
+follow the actual text reveal in preview and export. They require no audio files.
+Imported recordings remain separate audio cues; use voice tone `OFF` when a recording
+should be the only performance. See the [speech settings and screenplay fields](stageplay-authoring.md#character-speech-noises).
+
 Seeking is visual and silences owned voice tails. It never retriggers historical
 cues or reconstructs a song's arbitrary sample position. Playback starts cues at
 and after the chosen playhead. Start at frame zero for the complete soundtrack.

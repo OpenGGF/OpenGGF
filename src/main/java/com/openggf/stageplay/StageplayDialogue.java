@@ -38,12 +38,19 @@ public final class StageplayDialogue {
     /** An explicit name overrides the role's display name; a nonempty role reference must always resolve. */
     public static String speakerName(StageplayDocument document, DialogueCue cue) {
         Objects.requireNonNull(document, "document");
-        Actor speaker = null;
+        return speakerName(document.actors(), document.objectActors(), cue);
+    }
+
+    static String speakerName(List<Actor> actors, List<ObjectActor> objects, DialogueCue cue) {
+        String name = cue.speakerName();
         if (!cue.speakerActor().isEmpty()) {
-            speaker = document.actors().stream().filter(actor -> actor.id().equals(cue.speakerActor())).findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Unknown dialogue speaker: " + cue.speakerActor()));
+            String actorName = actors.stream().filter(actor -> actor.id().equals(cue.speakerActor()))
+                    .map(Actor::name).findFirst().orElseGet(() -> objects.stream()
+                            .filter(actor -> actor.id().equals(cue.speakerActor())).map(ObjectActor::name).findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException("Unknown dialogue speaker: " + cue.speakerActor())));
+            if (name.isEmpty()) name = actorName;
         }
-        return cue.speakerName().isEmpty() ? Objects.requireNonNull(speaker, "speaker").name() : cue.speakerName();
+        return name;
     }
 
     public static int graphemeCount(String text) {

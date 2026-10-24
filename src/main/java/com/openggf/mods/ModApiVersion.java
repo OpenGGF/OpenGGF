@@ -110,8 +110,8 @@ public final class ModApiVersion {
      * expose native S3K CRAM passes; prior GameRules constructors retain their overlay default.
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
-     * Stageplay v6 unifies native and initially cleared worlds, donor performers and
-     * directed framing; v1-v5 documents retain explicit compatibility execution policies.
+     * Stageplay unifies native and initially cleared worlds, donor performers and
+     * directed framing; only its current unpublished document shape is accepted.
      * Stageplay route motion settings and actor-declared movement abilities remain in candidate 0.7.
      * Stageplay v7 adds object source/mode keys, visual child-part frames and timed world commands;
      * registry/graph/ROM presentation owners remain internal. Stable placement targets, bounded
@@ -121,6 +121,9 @@ public final class ModApiVersion {
      * player/camera borrowing with captured handover and fault revocation.
      * Reusable dialogue typers and skins, grapheme-safe reveal schedules and
      * shared dialogue layout keep creator styling portable between both editors.
+     * Stageplay's required voices list adds per-speaker PSG tone/rhythm/pitch/variation/length/level,
+     * object dialogue speakers, cast identity on native object observations and bounded transient PCM.
+     * These unpublished format and signature changes retain candidate 0.7.0 without migration.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

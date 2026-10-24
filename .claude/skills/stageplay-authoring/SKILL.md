@@ -162,8 +162,15 @@ pointer, supported by framing, facing and performance; color alone is not suffic
 identification. Use captions for titles and overlays. Reusable `dialogueTypers` and
 `dialogueSkins` support cadence, pauses, custom reveal schedules and creator PNG
 decorations. Package their relative assets with the scene, and reject overflow or
-missing resources before rendering. Scrubbing/reveal sampling is silent; use audio
-cues for deliberately timed sound. The existing engine font coverage still applies. Keep labels consistent
+missing resources before rendering. Each player or object cast ID can be a speaker, with a tail following its resolved
+native position. Built-in PSG speech noises follow actual grapheme reveal in forward
+playback; each speaker has a distinct character/object default. Use root `voices`
+overrides (tone/off, word/letter rhythm, MIDI pitch, semitone variation, lengthFrames,
+level) or either editor's compact Speaker voice form. Offscreen voices key by exact
+speakerName. DEFAULT removes an override; OFF silences it. Inspect `timeline`'s
+`speech` events for reveal sync. Scrubbing/reveal sampling stays silent; use audio
+cues for deliberately timed effects or imported performances, and disable speech
+noises when an imported voice should stand alone. The existing engine font coverage still applies. Keep labels consistent
 when several roles share the same stock sprite. Time captions and voice cues with
 the speaking turn, leave enough time to read, and avoid obscuring the line beneath
 a transition's opaque midpoint. Listener reactions help the exchange read as action.

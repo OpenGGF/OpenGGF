@@ -960,3 +960,10 @@ current screenplay v6 actions supply an explicit policy or their normal defaults
 There is no serialized-format migration. The mutable 0.7 signature pin and runtime
 candidate description change together; API version/status and the release policy
 descriptor remain unchanged, as required for ordinary candidate regeneration.
+
+Stageplay character speech adds required canonical `voices` and screenplay root
+`voices` overrides, `SpeakerVoice`/tone/rhythm types, and cast IDs on native object
+observations. Object cast IDs now resolve as dialogue speakers. Generated, bounded
+transient PCM uses the existing scene sample lifetime. These unpublished shapes
+change directly; the candidate remains 0.7.0 and its normalized `0.7` pin is replaced
+in place. Rebuild compiled mods that construct or consume these records.

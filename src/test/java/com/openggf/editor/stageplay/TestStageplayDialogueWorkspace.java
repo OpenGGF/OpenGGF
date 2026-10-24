@@ -61,6 +61,38 @@ class TestStageplayDialogueWorkspace {
         workspace.invoke(UNDO); assertEquals(before,workspace.controller().document());
     }
 
+    @Test void compactVoiceFormEditsSelectedCastAndObjectSpeakersWithUndoAndReset() throws Exception {
+        var workspace=workspace(); var cue=addLine(workspace); var original=workspace.controller().document();
+        workspace.invoke(SPEAKER_VOICE);
+        assertEquals(6,workspace.menu().values().size());
+        assertEquals("SQUARE",workspace.menu().values().get("tone"));
+        workspace.menu().setValue("tone","BUZZ");workspace.menu().setValue("pitch","65");workspace.menu().submit();
+        assertNull(workspace.menu().error());
+        var voiced=workspace.controller().document();assertEquals(VoiceTone.BUZZ,voiced.voices().getFirst().tone());
+        workspace.invoke(SCENE);workspace.menu().setValue("name","Edited");workspace.menu().submit();
+        assertEquals(voiced.voices(),workspace.controller().document().voices());
+        workspace.seek(100);workspace.invoke(SCENE_CHANGES);choose(workspace.menu(),0);workspace.menu().submit();
+        assertNull(workspace.menu().error());assertEquals(voiced.voices(),workspace.controller().document().voices());
+        workspace.invoke(UNDO);workspace.invoke(UNDO);workspace.invoke(UNDO);assertEquals(original,workspace.controller().document());
+        workspace.invoke(REDO); workspace.selectActor(cue.speakerActor());workspace.invoke(SPEAKER_VOICE);
+        workspace.menu().setValue("tone","DEFAULT");workspace.menu().submit();assertTrue(workspace.controller().document().voices().isEmpty());
+        workspace.invoke(OBJECTS);choose(workspace.menu(),0);
+        workspace.menu().setValue("name","Motobug");workspace.menu().setValue("game","s1");workspace.menu().setValue("object","64");
+        workspace.menu().setValue("mode","POSE");workspace.menu().submit();assertNull(workspace.menu().error());
+        String object=workspace.controller().document().objectActors().getFirst().id();
+        workspace.invoke(DIALOGUE);choose(workspace.menu(),0);choose(workspace.menu(),1);workspace.menu().submit();
+        assertNull(workspace.menu().error());assertEquals(object,workspace.controller().document().dialogue().getLast().speakerActor());
+        workspace.selectActor(object);workspace.invoke(SPEAKER_VOICE);assertEquals("BUZZ",workspace.menu().values().get("tone"));
+        workspace.menu().setValue("tone","OFF");workspace.menu().submit();
+        workspace.saveTo(root.resolve("voices.stageplay"));
+        assertEquals(workspace.controller().document(),StageplayStore.read(root.resolve("voices.stageplay")));
+        workspace.invoke(OBJECTS);choose(workspace.menu(),6);choose(workspace.menu(),5);
+        assertNull(workspace.menu().error());assertTrue(workspace.controller().document().objectActors().isEmpty());
+        assertTrue(workspace.controller().document().dialogue().stream().noneMatch(c->c.speakerActor().equals(object)));
+        assertTrue(workspace.controller().document().voices().stream().noneMatch(v->v.speakerActor().equals(object)));
+        workspace.invoke(UNDO);assertFalse(workspace.controller().document().objectActors().isEmpty());
+    }
+
     @Test void reusableProfilesCanBeCreatedSelectedEditedAndRemovedAtomically() {
         var workspace=workspace(); addLine(workspace);
         workspace.invoke(DIALOGUE_TYPERS); choose(workspace.menu(),0);

@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FFmpeg input seeking into a Stageplay Matroska/FLAC export is not a sample-accurate
+speech-onset oracle (2026-10-24 voice audition, base `ac46111bc`). An eight-second
+input `-ss` cut produced 383,992 rather than 384,000 stereo sample frames and
+moved the next line's first nonzero PCM from expected sample 19,203 to 18,179.
+Decoding from the beginning and cutting exact sample indices retained all 384,000
+frames and the correct reveal onset. Decode the master PCM once, slice by
+`frame * sampleRate / 60`, and pair that WAV with the video cut; measure the encoded
+AAC true peak separately. Do not change the engine's timing to fit a seeked clip.
+
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
 bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive

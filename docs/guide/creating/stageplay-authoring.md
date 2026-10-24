@@ -225,7 +225,7 @@ distinguish those observed events from authored audio cues.
 ## Dialogue profiles and decorations
 
 Use `dialogue` for speech and `captions` for titles or ordinary overlays. A dialogue
-cue names its `speakerActor`; its displayed name comes from that cast member.
+cue names a player or ROM object cast ID in `speakerActor`; its displayed name comes from that cast member.
 `speakerName` overrides the label or identifies an offscreen speaker when the actor
 reference is empty. The name appears immediately, independently of text reveal.
 An optional pointer follows an onstage speaker through camera motion.
@@ -258,7 +258,11 @@ cadence and pauses. A rate of zero displays the whole line immediately. `revealF
 can override the profile with one nondecreasing elapsed-frame offset per Unicode
 grapheme. This supports manually timed bursts and pauses without executable scripts.
 All text must finish before the line ends. Scrubbing and drawing emit no sounds;
-use explicit audio cues for authored sound effects.
+forward playback alone admits speech blips and authored audio cues. Punctuation and
+whitespace are silent. Word rhythm treats apostrophes and hyphens as part of a word;
+letter rhythm follows Unicode letter/digit graphemes. A group revealed in one frame
+makes one blip, including instant text. Each blip ends before the next blip of that
+line or the dialogue interval's end.
 
 The complete text wraps before revealing, so words stay in place. The panel must
 fit inside the film and contain the speaker name and all wrapped rows; overflow is
@@ -273,6 +277,58 @@ Keep PNGs beside or beneath the scene, compile beside the screenplay, and move t
 whole package together. In mods, images use the registering owner's bounded asset
 root and typed loads, sharing the existing encoded asset budget with voices/sets.
 The same definitions work in both editors and offline rendering without mod code.
+
+### Character speech noises
+
+Every speaker has a deterministic Genesis PSG voice. Sonic uses bright square-word
+beeps, Tails high octave chimes on letters, and Knuckles low hollow-word tones.
+Object defaults derive from their ROM object identity: S1 Motobug uses mid-register
+word buzzes; S1 Buzz Bomber uses higher letter chimes. Boss roles use low, deliberate
+hollow tones. Offscreen names use a neutral square-word voice. A name override does
+not change the cast member's sound. Object pointers follow resolved native cast
+positions, including Free movement, and disappear when the object is absent.
+
+Add `voices` at screenplay root to override a speaker for the entire scene:
+
+```json
+"voices": [
+  {"speakerActor":"moto","tone":"BUZZ","rhythm":"WORD","pitch":69,
+   "variation":4,"lengthFrames":8,"level":80},
+  {"speakerName":"Narrator","tone":"OFF"}
+]
+```
+
+Use exactly one cast ID (`speakerActor`) or offscreen `speakerName`; names match
+exactly. Duplicate overrides or missing cast IDs fail. The canonical document
+requires `voices` (an empty array selects defaults); the unpublished formats change
+directly and older shapes are not migrated.
+
+| Setting | Meaning / screenplay default |
+| --- | --- |
+| `tone` | `OFF`, `SQUARE`, `CHIME` (octave), `HOLLOW` (open fifth), `BUZZ` (periodic PSG noise); `SQUARE` |
+| `rhythm` | `WORD` or `LETTER`; `WORD` |
+| `pitch` | MIDI note 48–96 (C3–C7); 72 |
+| `variation` | Deterministic pitch range in semitones, 0–12; 4 |
+| `lengthFrames` | Maximum blip length at 60 Hz, 1–18; 6 |
+| `level` | Voice percentage, 0–100; 80 |
+
+An explicit override uses these compiler defaults for omitted controls; it does not
+partially inherit the character default. Omitting the override restores that default.
+Both editors expose **Speaker voice** for the selected cast member and in each
+line's dialogue menu. The six-field form has tone/rhythm choices; `DEFAULT` removes
+the override and `OFF` silences the speaker. Edits share save, screenplay export and
+Undo/Redo. Removing an object role also removes its dialogue/voice; detaching a player
+as offscreen speech retains its sound.
+
+Voices run through the engine's SN76489 emulator, then the normal final PCM mix,
+capture and no-device export path. They do not take channels from ROM music/SFX or
+write audio assets. Imported `VOICE` clips remain available separately; turn speech
+noises off when an imported performance should be the sole voice. Short chip blips
+have click-reducing edges and bounded levels. The scene-sample mixer reduces an
+overloaded block to preserve headroom. At most 32 scene samples overlap; a scene
+speech plan is limited to 100,000 blips. `timeline` reports production `speech`
+events alongside each revealed frame for sync inspection. Seeking stops tails and
+never plays historical syllables; resumed playback starts with future reveals.
 
 ## Pixel stability and performance
 

@@ -76,6 +76,26 @@ class TestStageplayDialogueRendering {
         }
     }
 
+    @Test void objectPointerUsesResolvedCastIdentityRatherThanAnAmbiguousLayoutOrAuthoredPosition() throws Exception {
+        var object=new ObjectActor("moto","Motobug","s1",0,0,64,0,-1,List.of(
+                new ObjectKey(0,20,20,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+        var document=StageplayDocument.empty("s1",0,0,0,0,320,224).withObjectActors(List.of(object))
+                .withDialogue(List.of(new DialogueCue("line",0,100,"moto","","Day off.","","",12,130,296,70,"",List.of())));
+        try(var resources=new StageplayResources(game->null,List.of());var surface=new SceneSurface()) {
+            resources.prepareDialogue(document);var source=StageplayTimeline.sample(document,0);
+            var camera=new StageplayTimeline.CameraPose(40,0,1);
+            var world=new StageplayTimeline.WorldSample(0,0,List.of(),List.of(
+                    new StageplayTimeline.LiveObject(-1,64,0,40,30,"Other","other"),
+                    new StageplayTimeline.LiveObject(-1,64,0,200,80,"Motobug","moto")),List.of(),List.of());
+            var frame=new StageplayTimeline.Frame(0,source.actors(),camera,source.captions(),source.set(),source.transition(),
+                    camera,source.dialogue(),source.puppets(),world);
+            surface.record(320,224,canvas->StageplayDialogueRenderer.draw(document,frame,canvas,resources));
+            assertTrue(surface.recordedFrame().stream().anyMatch(op->op.image()==null && op.x0()==160 && op.x1()==161 && op.y0()==122));
+            surface.record(320,224,canvas->StageplayDialogueRenderer.draw(document,source,canvas,resources));
+            assertTrue(surface.recordedFrame().stream().noneMatch(op->op.y0()==122),"Unresolved object has no invented pointer");
+        }
+    }
+
     private StageplayDocument scene() {
         return legacyScene("s2", 0, 0, 0, 0, 320, 224)
                 .withActors(List.of(new Actor("tails", "TAILS", "s2", "tails", List.of(

@@ -188,7 +188,11 @@ public final class StageplayTimeline {
     @ModApi public record LiveActor(String actorId, int rings, int ringDelta, boolean hurt, boolean dead,
                                    boolean onObject, int ridingLayoutIndex, String ability, int abilityState,
                                    int abilityTimer, int animation, int mappingFrame, String targetStatus) { }
-    @ModApi public record LiveObject(int layoutIndex, int objectId, int subtype, int x, int y, String type) { }
+    @ModApi public record LiveObject(int layoutIndex, int objectId, int subtype, int x, int y, String type, String actorId) {
+        public LiveObject(int layoutIndex, int objectId, int subtype, int x, int y, String type) {
+            this(layoutIndex, objectId, subtype, x, y, type, "");
+        }
+    }
     @ModApi public record LiveRing(int placementId, int x, int y, boolean collected, int sparkleStartFrame) {
         public LiveRing(int x, int y, boolean collected, int sparkleStartFrame) { this(-1, x, y, collected, sparkleStartFrame); }
     }
