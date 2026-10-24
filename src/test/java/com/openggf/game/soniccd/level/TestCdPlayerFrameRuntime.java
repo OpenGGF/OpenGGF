@@ -71,6 +71,38 @@ class TestCdPlayerFrameRuntime {
         assertTrue(fixture.dmas.isEmpty()); assertThrows(IllegalStateException.class, () -> f.runBody(1));
     }
 
+    @ParameterizedTest @CsvSource({"0,0", "32,127", "161,254"})
+    void objectLinksSurviveBodyCallsProjectionPortsActorRestoreAndReplay(int push, int stand) throws IOException {
+        var f = new Fixture().runtime();
+        var links = new CdPlayerBody.ObjectLinks(push, stand);
+        var seed = new Actor(f); seed.objectLinks = links; seed.install(f);
+        service(f, 0); f.runBody(1);
+        assertEquals(links, f.state().objectLinks(), "Init preserves both object links");
+        var hurt = new Actor(f); hurt.routine = 4; hurt.flags = 6; hurt.y = 1886 << 16; hurt.install(f);
+        service(f, 0); f.runBody(2);
+        assertEquals(links, f.state().objectLinks(), "Hurt landing preserves both links");
+        service(f, 0); f.runBody(3);
+        assertEquals(links, f.state().objectLinks(), "Main does not clear the source object bytes");
+        f.publishDrawObjectOnScreen(true); f.applyObjectYVelocity(-0xC00); f.applyObjectPrimaryAngle(0x40);
+        assertEquals(links, f.state().objectLinks(), "The existing narrow ports preserve both links");
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var changed = new Actor(f); changed.objectLinks = new CdPlayerBody.ObjectLinks(push ^ 0xFF, stand ^ 0xFF);
+        changed.install(f); assertNotEquals(links, f.state().objectLinks());
+        f.restoreActor(actor); f.restoreShared(shared); assertEquals(links, f.state().objectLinks());
+        service(f, 0); f.runBody(4); var after = f.captureActor();
+        f.restoreActor(actor); f.restoreShared(shared); service(f, 0); f.runBody(4);
+        assertEquals(after, f.captureActor()); assertEquals(links, f.state().objectLinks());
+    }
+
+    @Test void coldAndRestartFactoriesExplicitlyClearThePlayerObjectLinks() throws IOException {
+        var assets = new Fixture().assets();
+        try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var restarted = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, coldIngress())) {
+            assertEquals(new CdPlayerBody.ObjectLinks(0, 0), cold.state().objectLinks());
+            assertEquals(new CdPlayerBody.ObjectLinks(0, 0), restarted.state().objectLinks());
+        }
+    }
+
     @ParameterizedTest @ValueSource(ints = {0, 1, 128, 255})
     void rotationByteSurvivesInitMainVIntProjectionObjectWritesAndActorReplay(int rotation) throws IOException {
         var f = new Fixture().runtime();
@@ -103,7 +135,7 @@ class TestCdPlayerFrameRuntime {
     void rotationByteRequiresExplicitUnsignedNativeStorage(int invalid) throws IOException {
         var s = new Fixture().runtime().state();
         assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.State(s.motion(), s.animation(),
-                s.header(), s.timers(), s.history(), invalid));
+                s.header(), s.timers(), s.history(), invalid, s.objectLinks()));
     }
 
     // U5-B0, written before production. oPlayerReset ($3A, Level/_Definitions.inc:86) is actor state:
@@ -1076,8 +1108,9 @@ class TestCdPlayerFrameRuntime {
     /** Test edit of an explicit same-owner immutable capture, not another load/factory ingress. */
     private static final class Actor {
         final CdPlayerBody.State base;
+        CdPlayerBody.ObjectLinks objectLinks;
         int slot, charge, gv, invincibility, reset, flags, y, yv, routine, spriteFlags, animation, rotationDistance;
-        Actor(CdPlayerFrameRuntime f) { base = f.state(); slot = base.header().slotId(); charge = base.motion().charge();
+        Actor(CdPlayerFrameRuntime f) { base = f.state(); objectLinks = base.objectLinks(); slot = base.header().slotId(); charge = base.motion().charge();
             gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); reset = base.timers().reset();
             flags = base.motion().flags(); yv = base.motion().yVelocity(); animation = base.motion().animation();
             y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); }
@@ -1088,7 +1121,7 @@ class TestCdPlayerFrameRuntime {
                     m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
                     m.previousPrimaryAngle(), m.previousSecondaryAngle());
             var state = new CdPlayerBody.State(motion, base.animation(), new CdPlayerBody.Header(slot, h.mappingAddress(), h.tile(), h.priority(), h.width()),
-                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes(), reset), base.history(), rotationDistance);
+                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes(), reset), base.history(), rotationDistance, objectLinks);
             var display = a.display().map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(), p.priority(),
                     p.width(), p.mapFrame(), spriteFlags, p.centreX16_16(), p.centreY16_16()));
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), state, display));

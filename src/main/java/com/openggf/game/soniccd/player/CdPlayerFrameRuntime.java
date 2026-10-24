@@ -296,7 +296,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         var cold = coldDevelopmentCut(assets, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
         var s = cold.state();
         var state = new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
-                new CdPlayerBody.History(carried.history(), 0), s.rotationDistance());
+                new CdPlayerBody.History(carried.history(), 0), s.rotationDistance(), s.objectLinks());
         var e = cold.environment(); var m = e.movement(); var g = m.globals(); var c = e.controls(); var b = e.globals();
         var globals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
                 g.boredTimer(), g.scoreChain(), carried.debugAngle(), carried.debugAngleShift(), carried.debugQuadrant(),
@@ -331,7 +331,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(0, 0, 0),
                 new CdPlayerBody.Header(1, 0, 0, 0, 0), new CdPlayerBody.Timers(0, 0, 0, 0), // ClearObjects zeroes $3A too.
-                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0); // Cold ClearObjects owns byte39.
+                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0, new CdPlayerBody.ObjectLinks(0, 0)); // Cold ClearObjects owns byte39 and both object-link bytes.
         var movement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0, 0, 0),
                 new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), bounds.bottom(), 0),
                 new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 0),
@@ -525,7 +525,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance());
+        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
     }
 
     /**
@@ -566,7 +566,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), (m.spriteFlags() & 0x7F) | bit, m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance());
+        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
         var nextDisplay = display.map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(),
                 p.priority(), p.width(), p.mapFrame(), (p.spriteFlags() & 0x7F) | bit, p.centreX16_16(), p.centreY16_16()));
         state = nextState; display = nextDisplay;

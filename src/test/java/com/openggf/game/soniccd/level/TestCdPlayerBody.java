@@ -32,6 +32,27 @@ import static org.junit.jupiter.api.Assertions.*;
  * Constructed format inputs do not authenticate a retail disc or native frame.
  */
 class TestCdPlayerBody {
+    // S2: these native bytes survive ObjSonic; LevelStart's ClearObjects owns their initial zero.
+    @Test void objectLinksRequireTwoExplicitNativeBytesAndANonNullStateComponent() {
+        for (int bad : new int[]{-1, 256, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.ObjectLinks(bad, 0));
+            assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.ObjectLinks(0, bad));
+        }
+        assertEquals(255, new CdPlayerBody.ObjectLinks(255, 128).pushObject());
+        assertEquals(128, new CdPlayerBody.ObjectLinks(255, 128).standObject());
+        Actor a = new Actor(); a.objectLinks = null;
+        assertThrows(NullPointerException.class, a::state);
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 2, 4})
+    void initMainAndHurtPreserveObjectLinksWithoutNormalizingOrClearingThem(int routine) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.routine = routine;
+        a.objectLinks = new CdPlayerBody.ObjectLinks(0xA1, 0xFE);
+        if (routine == 4) a.flags = 2;
+        var before = a.state(); var result = f.owner().step(before, f.environment());
+        assertEquals(before.objectLinks(), result.state().objectLinks());
+    }
+
     @Test void initIsOnlyInitializationAfterOnePredispatchAndKeepsUnwrittenIngress() {
         Fixture f = new Fixture(); Actor a = new Actor(); a.routine = 0; a.charge = 29;
         a.xr = 3; a.yr = 4; a.spr = 0xC3; a.pri = 0x12; a.sec = 0x34;
@@ -2093,13 +2114,14 @@ class TestCdPlayerBody {
     static final class Actor {
         int x = 64 << 16, y = 76 << 16, xv, yv, gv, routine = 2, angle, flags, spr = 4;
         int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes, reset, rotationDistance;
+        CdPlayerBody.ObjectLinks objectLinks = new CdPlayerBody.ObjectLinks(0, 0);
         CdPlayerBody.Header header = new CdPlayerBody.Header(1, 0x21F200, 0x780, 2, 24);
         CdPlayerBody.AnimationCursor cursor = new CdPlayerBody.AnimationCursor(0, 0, 0);
         CdPlayerBody.History history = new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[256]), 0);
         CdPlayerBody.State state() {
             return new CdPlayerBody.State(new CdPlayerMotionState(x, y, xv, yv, gv, routine, angle, flags, spr, xr, yr,
                     anim, prev, jump, charge, lock, stick, ctrl, pri, sec), cursor, header,
-                    new CdPlayerBody.Timers(hurt, invinc, shoes, reset), history, rotationDistance);
+                    new CdPlayerBody.Timers(hurt, invinc, shoes, reset), history, rotationDistance, objectLinks);
         }
     }
 

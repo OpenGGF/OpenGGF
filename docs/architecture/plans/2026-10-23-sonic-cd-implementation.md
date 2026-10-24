@@ -3638,3 +3638,25 @@ open-air prediction test does not distinguish the killed Y velocity; stronger
 row-terrain coverage remains advisory. S4 must validate pool ownership before
 committing the returned object/other-slot images. World integration, the
 player's support continuation and Floating Block dispatch remain separate.
+
+### Player push/stand storage — 24 October 2026
+
+Body State now requires ObjectLinks(pushObject,standObject), the unsigned raw
+bytes at$20/$3D (_Definitions.inc:92-93). They hold whole-slot indices rather
+than object IDs. All0..255 values are retained; a solid-object dereference,
+not storage construction, owns reserved/out-of-pool address admission. There
+is no old State overload or zero fallback. LevelStart's ClearObjects supplies
+explicit cold/restart zeros; Init and all Body calls preserve supplied values.
+Existing actor capture/Extra rewind owns the pair automatically. State copies,
+the narrow projection/Y-velocity ports and constructed test cuts preserve them.
+
+The first21-constructor migration missed the fully-qualified EGL call: Root87868
+stopped at testCompile, exit1, with no JUnit execution. R2 adds old.objectLinks()
+to that ninth file; it does not weaken the new required ingress. Root86248 then
+passed486/0/0/0 in11affected classes, actual CD media/EGL/S2ROM and Java25,
+exit0 at20:33:31BST (0swait,81sMaven). Body199 and Frame121 include eight new
+width/null, Init/Main/Hurt, cold/restart and actor restore/replay cases. World,
+render, actor and signature-pin consumers also executed. Independent Codex
+review accounts for all21calls/ninefiles and finds no remainingP1/P2 after R2.
+This owns the storage; solid-result application and the next supported-object
+MODE continuation remain separate. No new World support or parity is claimed.

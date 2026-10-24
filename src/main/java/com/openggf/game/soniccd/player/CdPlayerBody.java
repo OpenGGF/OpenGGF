@@ -59,6 +59,16 @@ public final class CdPlayerBody {
     }
 
     /**
+     * Raw player object bytes oPlayerPushObj ($20) and oPlayerStandObj ($3D),
+     * Level/_Definitions.inc:92-93. These are whole-slot indices, not object IDs.
+     * All native byte values are ingress; SolidObject owns address admission at an actual dereference.
+     * LevelStart .ClearObjects (Level/Main.asm:186-192) initializes them; ObjSonic never resets them.
+     */
+    public record ObjectLinks(int pushObject, int standObject) {
+        public ObjectLinks { byteValue(pushObject); byteValue(standObject); }
+    }
+
+    /**
      * Complete sonicRecordBuf, with its actual word index. No implicit clear.
      * Native RecordPos writes at the CURRENT index, then increments only its
      * low byte. Non-buffer/unaligned indices reject at that call, not at Init.
@@ -84,10 +94,11 @@ public final class CdPlayerBody {
      * There is no implicit zero/default overload: the actor ingress/capture supplies it.
      */
     public record State(CdPlayerMotionState motion, AnimationCursor animation, Header header,
-                        Timers timers, History history, int rotationDistance) {
+                        Timers timers, History history, int rotationDistance, ObjectLinks objectLinks) {
         public State {
             Objects.requireNonNull(motion); Objects.requireNonNull(animation); Objects.requireNonNull(header);
             Objects.requireNonNull(timers); Objects.requireNonNull(history); byteValue(rotationDistance);
+            Objects.requireNonNull(objectLinks, "player object links");
         }
     }
 
@@ -948,12 +959,13 @@ public final class CdPlayerBody {
         Controls controls;
         final int levelFrames, timeAttack, debugMode, debugCheat, timeWarpTimer, bossMusic;
         int camX, invincible, hurt, invincibilityTimer, shoesTimer, resetTimer, rotationDistance;
+        final ObjectLinks objectLinks;
         boolean displayEligible;
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
         Cursor(State state, Environment environment) {
             motion = state.motion(); animation = state.animation(); header = state.header(); history = state.history();
-            rotationDistance = state.rotationDistance();
+            rotationDistance = state.rotationDistance(); objectLinks = state.objectLinks();
             env = environment; controls = environment.controls(); var g = environment.globals();
             levelFrames = g.levelFrames(); camX = g.cameraXCentre(); timeAttack = g.timeAttackMode();
             debugMode = g.debugMode(); debugCheat = g.debugCheat(); timeWarpTimer = g.timeWarpTimer();
@@ -1074,7 +1086,7 @@ public final class CdPlayerBody {
         }
         Result finish(Boundary boundary) {
             var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer, resetTimer),
-                    history, rotationDistance);
+                    history, rotationDistance, objectLinks);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN

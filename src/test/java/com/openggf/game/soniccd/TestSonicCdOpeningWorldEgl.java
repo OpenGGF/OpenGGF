@@ -520,7 +520,7 @@ class TestSonicCdOpeningWorldEgl {
                             new com.openggf.game.soniccd.player.CdPlayerBody.AnimationCursor(0, 0, 0),
                             new com.openggf.game.soniccd.player.CdPlayerBody.Header(header.slotId(), header.mappingAddress(),
                                     header.tile() | 0x8000, 0, header.width()),
-                            new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0, 0, 0, 0), old.history(), old.rotationDistance());
+                            new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0, 0, 0, 0), old.history(), old.rotationDistance(), old.objectLinks());
                     frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
                     module.requirePlayerActor().rebindAfterRestore();
                     runtime.placement().pool().clearDynamicSlots();

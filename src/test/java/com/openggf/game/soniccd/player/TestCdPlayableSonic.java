@@ -208,7 +208,7 @@ class TestCdPlayableSonic {
                 0x18, 0x18, 0, 0, 0, 8, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
                 new CdPlayerBody.AnimationCursor(0, 0, 0), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
-                h.tile() | 0x8000, 0, h.width()), new CdPlayerBody.Timers(0, 0, 0, 0), s.history(), 0x11), Optional.empty()));
+                h.tile() | 0x8000, 0, h.width()), new CdPlayerBody.Timers(0, 0, 0, 0), s.history(), 0x11, s.objectLinks()), Optional.empty()));
         var shared = frame.captureShared(); var e = shared.environment(); var mv = e.movement();
         var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(mv.physics(),
                 new CdPlayerMovement.Bounds(0, 0x2897, 0x710, 0), mv.gates(), mv.globals()), e.controls(), e.globals(),
@@ -323,7 +323,7 @@ class TestCdPlayableSonic {
                 m.xRadius(), m.yRadius(), 0x1A, m.previousAnimation(), 0, 0, 0, 0, 0x40,
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
-                s.header(), new CdPlayerBody.Timers(120, 0, 0, s.timers().reset()), s.history(), s.rotationDistance()), Optional.empty()));
+                s.header(), new CdPlayerBody.Timers(120, 0, 0, s.timers().reset()), s.history(), s.rotationDistance(), s.objectLinks()), Optional.empty()));
         var shared = frame.captureShared(); var e = shared.environment(); var g = e.globals(); var mv = e.movement();
         var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(mv.physics(),
                 new CdPlayerMovement.Bounds(0, 0x2897, 0x710, 0), mv.gates(), mv.globals()), e.controls(),

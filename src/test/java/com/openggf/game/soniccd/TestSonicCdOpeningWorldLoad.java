@@ -165,7 +165,7 @@ class TestSonicCdOpeningWorldLoad {
                 0, routine == 4 ? 2 : 0, 4, 9, 19, routine == 4 ? 0x1A : 0, m.previousAnimation(),
                 0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var actor = new CdPlayerBody.State(motion, old.animation(), old.header(),
-                new CdPlayerBody.Timers(0, 0, 0, old.timers().reset()), old.history(), old.rotationDistance());
+                new CdPlayerBody.Timers(0, 0, 0, old.timers().reset()), old.history(), old.rotationDistance(), old.objectLinks());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), actor, Optional.empty()));
         h.module().requirePlayerActor().rebindAfterRestore();
         var pool = runtime.placement().pool();
@@ -593,7 +593,7 @@ class TestSonicCdOpeningWorldLoad {
                 m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
         var timers = old.timers();
         var state = new CdPlayerBody.State(motion, old.animation(), old.header(), new CdPlayerBody.Timers(
-                timers.hurt(), timers.invincibility(), timers.speedShoes(), 1), old.history(), old.rotationDistance());
+                timers.hurt(), timers.invincibility(), timers.speedShoes(), 1), old.history(), old.rotationDistance(), old.objectLinks());
         frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), state, Optional.empty()));
         h.module().requirePlayerActor().rebindAfterRestore();
         step(h, LogicalInputSnapshot.neutral());

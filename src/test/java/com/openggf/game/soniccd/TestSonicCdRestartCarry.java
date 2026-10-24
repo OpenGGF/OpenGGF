@@ -108,7 +108,7 @@ class TestSonicCdRestartCarry {
                 9, 19, 0x18, 0x18, 0, 0, 0, 0, 0, 0x11, 0x22);
         var actor = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(3, 4, 5),
                 new CdPlayerBody.Header(1, 0x21F200, 0x8780, 0, 24), new CdPlayerBody.Timers(5, 6, 7, 0),
-                new CdPlayerBody.History(bytes(0x100, 7), 0xFC), 0x99);
+                new CdPlayerBody.History(bytes(0x100, 7), 0xFC), 0x99, new CdPlayerBody.ObjectLinks(0xA1, 0xFE));
         var movement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 0xC, 0x80),
                 new CdPlayerMovement.Bounds(0, 0x1000, 0x70B, 0),
                 new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 0),
