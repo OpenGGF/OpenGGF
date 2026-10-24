@@ -8,6 +8,7 @@ import com.openggf.game.rules.DynamicArtDmaServiceModel;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PaletteWhiteFadeModel;
+import com.openggf.game.rules.PresentationOnlyRules;
 import com.openggf.sprites.playable.CharacterPhysicsSpec;
 
 /** Engine projection for the complete native slot; shared movement never consumes this profile. */
@@ -25,15 +26,12 @@ public final class CdPlayerEngineRules implements PhysicsProvider {
 
     private static final PhysicsModifiers UNUSED_MODIFIERS = new PhysicsModifiers(
             1, 1, 1, 1, (short) 0x680, (short) 0, (short) 0, 1, 1, 1, 1);
-    private static final GameRules RULES = new GameRules(
-            null, null, null, null,
+    private static final GameRules RULES = PresentationOnlyRules.create(
             new CameraRules((short) 0, false, 0, false, false, false),
-            null,
             new ObjectInteractionRules(false, false, false, false, false, false,
                     false, false, true, false, false, false, false, false, false, false,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX, false),
-            null, null, null,
             DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,
             PaletteWhiteFadeModel.SCREEN_OVERLAY);
 

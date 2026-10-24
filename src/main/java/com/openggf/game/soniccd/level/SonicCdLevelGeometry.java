@@ -7,7 +7,6 @@ import com.openggf.level.ChunkDesc;
 import com.openggf.level.Map;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
-import com.openggf.level.PatternDesc;
 import com.openggf.level.SolidTile;
 
 import java.util.List;
@@ -103,15 +102,18 @@ class SonicCdLevelGeometry extends AbstractLevel {
         chunks = new Chunk[chunkCount];
         for (int id = 0; id < chunkCount; id++) {
             Chunk chunk = new Chunk();
+            byte[] encoded = new byte[Chunk.CHUNK_SIZE_IN_ROM];
             for (int y = 0; y < 2; y++) {
                 for (int x = 0; x < 2; x++) {
-                    chunk.setPatternDesc(x, y, new PatternDesc(terrain.blockWord(id, x, y).rawWord()));
+                    int word = terrain.blockWord(id, x, y).rawWord();
+                    int offset = (y * 2 + x) * 2;
+                    encoded[offset] = (byte) (word >>> 8);
+                    encoded[offset + 1] = (byte) word;
                 }
             }
             // FindLevelFloor rejects block ID 0 before indexing collisionPtr (Collision Floor.asm:690-708).
             int collisionId = id == 0 ? 0 : terrain.collision().idForBlock(id);
-            chunk.setSolidTileIndex(collisionId);
-            chunk.setSolidTileAltIndex(collisionId);
+            chunk.fromSegaFormat(encoded, collisionId, collisionId);
             chunks[id] = chunk;
         }
     }
@@ -123,11 +125,8 @@ class SonicCdLevelGeometry extends AbstractLevel {
         // GetBlockDataAbsXY (Block Draw.asm:202-235); GetLevelBlock (Collision Floor.asm:481-515).
         // R11A's actual block 0 contains pattern 0; the supplied pattern is transparent.
         blocks[0] = new Block(GRID_SIDE);
-        for (int y = 0; y < GRID_SIDE; y++) {
-            for (int x = 0; x < GRID_SIDE; x++) {
-                blocks[0].setChunkDesc(x, y, new ChunkDesc(0));
-            }
-        }
+        // Decode independent zero descriptors rather than sharing mutable ChunkDesc.EMPTY.
+        blocks[0].fromSegaFormat(new byte[GRID_SIDE * GRID_SIDE * 2], GRID_SIDE * GRID_SIDE);
         for (int id = 1; id < blockCount; id++) {
             blocks[id] = new ResidentBoundedBlock(terrain, id);
         }

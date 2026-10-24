@@ -4149,8 +4149,9 @@ class TestBuildToolingGuard {
         String developerSetup = Files.readString(Path.of("docs/guide/contributing/dev-setup.md"));
         assertFalse(developerSetup.contains("git clone --recurse-submodules"),
                 "the default developer clone must not initialize optional disassembly references");
-        assertTrue(developerSetup.contains("git clone https://github.com/OpenGGF/OpenGGF.git"),
-                "the default developer setup must use an ordinary clone");
+        assertTrue(Pattern.compile("(?m)^git clone(?: --branch develop)? https://github\\.com/OpenGGF/OpenGGF\\.git\\s*$")
+                        .matcher(developerSetup).find(),
+                "the default developer setup must use an ordinary clone, optionally selecting develop");
         assertTrue(developerSetup.contains("git submodule update --init"),
                 "disassembly-backed development must retain an explicit opt-in command");
 
@@ -5038,11 +5039,11 @@ class TestBuildToolingGuard {
     }
 
     private static List<String> canonicalDisassemblyPaths() {
-        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm");
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm", "docs/scddisasm");
     }
 
     private static List<String> localDisassemblyPaths() {
-        return List.of("docs/kis2disasm", "docs/scddisasm");
+        return List.of("docs/kis2disasm");
     }
 
     private record ProcessResult(int exitCode, String output) {

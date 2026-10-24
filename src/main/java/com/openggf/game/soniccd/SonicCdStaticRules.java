@@ -7,14 +7,14 @@ import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.DynamicArtDmaServiceModel;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PaletteWhiteFadeModel;
+import com.openggf.game.rules.PresentationOnlyRules;
 
 /** Only consulted presentation rules are available; there is no fabricated CD player profile. */
 final class SonicCdStaticRules implements PhysicsProvider {
-    private final GameRules rules = new GameRules(
-            null, null, null, null,
+    private final GameRules rules = PresentationOnlyRules.create(
             // No following/look, water shimmer or wrap simulation in the frozen camera view.
             new CameraRules((short) 0, false, 0, false, false, false),
-            null, null, null, null, null,
+            null,
             // The coordinator requires a policy at attachment. HOLD submits/claims no work,
             // and no player art exists to audit. This is not a CD DMA timing model.
             DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT,

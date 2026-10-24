@@ -4,6 +4,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.patch.*;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.session.GameplayRewindFixture;
 import com.openggf.io.*;
 import com.openggf.mods.*;
 import org.junit.jupiter.api.Test;
@@ -567,15 +568,22 @@ public class TestOwnerBoundGamePatch {
             assertInstanceOf(SecurityException.class, scopedCreation.getCause());
             var hiddenRegistry = (RegistryCreation) probe.getMethod("hiddenRegistry").invoke(null);
             assertThrows(SecurityException.class, () -> hiddenRegistry.create(new Object(), null, null));
+            assertSame(com.openggf.game.rewind.EngineRewindRegistryFactory.class.getClassLoader(),
+                    OwnershipProbe.class.getClassLoader());
+            assertThrows(SecurityException.class, () -> OwnershipProbe.scopedRegistry(new Object()));
+            assertThrows(SecurityException.class, () -> OwnershipProbe.scopedRegistry(null));
             RegistryCreation engineRegistry = com.openggf.game.rewind.EngineRewindRegistryFactory::create;
-            var engineCreated = assertDoesNotThrow(() -> engineRegistry.create(new Object(), null, null));
-            Mode engineState = new Mode(null); engineState.suppliedKey = "factory-state"; engineState.state = 17;
-            engineCreated.register(engineState);
-            var engineSnapshot = engineCreated.capture();
-            engineState.state = 99;
-            engineCreated.restore(engineSnapshot);
-            assertEquals(17, engineState.state);
-            assertThrows(NullPointerException.class, () -> engineRegistry.create(null, null, null));
+            assertThrows(SecurityException.class, () -> engineRegistry.create(new Object(), null, null));
+            assertThrows(SecurityException.class, () -> engineRegistry.create(null, null, null));
+            try (var gameplay = new GameplayRewindFixture()) {
+                var engineCreated = assertDoesNotThrow(() -> gameplay.emptyRegistry(gameplay.newWorld()));
+                Mode engineState = new Mode(null); engineState.suppliedKey = "factory-state"; engineState.state = 17;
+                engineCreated.register(engineState);
+                var engineSnapshot = engineCreated.capture();
+                engineState.state = 99;
+                engineCreated.restore(engineSnapshot);
+                assertEquals(17, engineState.state);
+            }
             var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
                     () -> probe.getMethod("forge").invoke(null));
             assertInstanceOf(SecurityException.class, failure.getCause());

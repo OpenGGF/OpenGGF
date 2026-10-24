@@ -14,6 +14,26 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Pure component adaptation, without forging an authenticated CdR11aAssets or booting an engine. */
 class TestSonicCdLevelGeometry {
     @Test
+    void initialDecodeKeepsAllPatternQuadrantsAndIndependentBlankDescriptors() {
+        Fixture f = new Fixture();
+        word(f.blocks, 7 * 8, 0xA123);
+        word(f.blocks, 7 * 8 + 2, 0x4132);
+        word(f.blocks, 7 * 8 + 4, 0x6250);
+        word(f.blocks, 7 * 8 + 6, 0xFB13);
+        var first = f.level();
+        var second = f.level();
+        var chunk = first.getChunk(7);
+        assertEquals(0xA123, chunk.getPatternDesc(0, 0).get());
+        assertEquals(0x4132, chunk.getPatternDesc(1, 0).get());
+        assertEquals(0x6250, chunk.getPatternDesc(0, 1).get());
+        assertEquals(0xFB13, chunk.getPatternDesc(1, 1).get());
+        assertNotSame(first.getBlock(0).getChunkDesc(0, 0), first.getBlock(0).getChunkDesc(1, 0));
+        assertNotSame(first.getBlock(0).getChunkDesc(0, 0), second.getBlock(0).getChunkDesc(0, 0));
+        first.getBlock(0).setChunkDesc(0, 0, new ChunkDesc(7));
+        assertEquals(0, second.getBlock(0).getChunkDesc(0, 0).get());
+    }
+
+    @Test
     void engineNestingResolvesOneBasedNativeChunksAndZeroBasedNativeBlocks() {
         Fixture f = new Fixture();
         f.fg[2] = 121;

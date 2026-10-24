@@ -26,6 +26,7 @@ import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.rewind.EngineRewindRegistryFactory;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
@@ -354,7 +355,8 @@ public final class GameplayModeContext implements ModeContext {
             dynamicArtLifecycle.beginRun();
         }
 
-        this.rewindRegistry = worldSession.createRewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
+        this.rewindRegistry = EngineRewindRegistryFactory.create(worldSession.rewindScope(), profiler,
+                worldSession.getGameModule().gameplayFrameController());
         this.levelEventExtraRewindKeys.clear();
         this.contributedZoneRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);

@@ -14,4 +14,3 @@
 [submodule "docs/scddisasm"]
 	path = docs/scddisasm
 	url = https://github.com/OpenGGF/scddisasm.git
-	branch = ai-development

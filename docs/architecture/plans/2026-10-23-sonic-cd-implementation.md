@@ -2386,3 +2386,53 @@ sprite/plane-priority overlap approximation remains an explicit parity gap: nati
 sprite winner precedes plane comparison; do not reorder SAT to compensate. This
 pure unit does not certify foreground compositing, native residency, actual
 opening-object rendering, shared World restore or gameplay parity.
+
+
+### Guard attribution and world composition repair, 24 October 2026
+
+The completed smoke at clean9598c663c executed all74 ordinary batches plus
+guards:38,921 ordinary cases, two failures, two errors and176 skips;722 guard
+cases, eight failures. Matched19-case baseline/current runs reproduced the
+exact same four ordinary failure identities, types and messages: bare GLFW
+without a display, a same-JVM cleared EGL property, and an inherited Java launcher
+notice preceding the audio CLI's stderr prefix. No unrelated donor or graphics
+code was changed to hide those failures. Diagnostics were consumed and removed.
+This remains a bounded red smoke with attributed environmental failures, not a
+complete green delivery or a release/full-suite result.
+
+Repair the introduced ownership violations at their owners. WorldSession keeps
+only a private opaque scope; GameplayModeContext composes its registry through
+the exact-caller EngineRewindRegistryFactory. Its single composition-root
+allowlist entry does not widen creator authority. Public unscoped constructors
+assign their own fields directly; frozen architecture stores and API pins stay
+unchanged. Reconciled tests use actual gameplay contexts and empty registry
+fixtures, retaining the original size-estimator constants. Independent Opus
+review found no P1/P2; parent67225 passed141 rewind/core/API cases with zero
+failures/errors/skips, Java25 and required cartridge properties inspected.
+
+Initial CD geometry now uses the existing Sega-format decoders while retaining
+independent blank descriptors. A root mistake passed a grid side instead of its
+256 entries; the resulting failure and Mockito cascades were inspected, the
+count corrected, then parent83759 passed58 geometry/retail/module/actor/API/SAT
+cases with zero failures/errors/skips and actual regional media. Presentation
+rules use an engine-owned semantic factory; unimplemented shared gameplay gates
+remain absent. No cartridge profile or game-name exception was introduced.
+
+The optional canonical scddisasm pin remains1ecc5f3a. Remove its floating branch
+hint and include it with the other three canonical reference paths in structural
+checks. Parent15071 then passed721 of722 guards; the remaining assertion rejected
+the documented ordinary clone's optional --branch develop. Port the current
+main-workspace assertion accepting only that optional branch, leaving developer
+instructions unchanged. Parent27346 passed the exact corrected case, zero skips.
+Following opening-world composition, parent55552 freshly passed111 affected
+architecture/rewind/module/presentation guards, zero failures/errors/skips. All
+selected XML Java25 identities were inspected. Unchanged guard coverage is reused
+proportionately rather than repeated as a ceremony.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards '-Dtest=TestArchUnitRules,TestArchitecturalSourceGuard,TestRewindArchitectureGuard,TestGameModuleRegistryUsageGuard,TestProductionAwtBlacklistGuard,TestNoWorldPresentation' test -B
+```
+
+All work stays on private local branches. Public changelog/guide publication is
+intentionally deferred under the user's explicit no-disclosure instruction;
+this existing dated engineering record preserves the corrections and limits.

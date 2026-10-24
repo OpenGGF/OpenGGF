@@ -461,7 +461,8 @@ class TestArchitecturalSourceGuard {
                     .toList()) {
                 String relative = root.relativize(file).toString().replace('\\', '/');
                 if (relative.equals("com/openggf/game/rules/GameRules.java")
-                        || relative.equals("com/openggf/game/rules/CrossGameRuleComposer.java")) {
+                        || relative.equals("com/openggf/game/rules/CrossGameRuleComposer.java")
+                        || relative.equals("com/openggf/game/rules/PresentationOnlyRules.java")) {
                     continue;
                 }
                 String source = stripCommentsAndStrings(Files.readString(file));

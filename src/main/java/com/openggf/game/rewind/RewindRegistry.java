@@ -45,18 +45,25 @@ public final class RewindRegistry {
     private long courseLayoutVersion;
     private LayoutState layoutState;
 
+    // Assign directly: public private-registry construction must not invoke the engine-scoped constructor.
     public RewindRegistry() {
-        this(null, null, null);
+        this.profiler = null;
+        this.modeAdapter = null;
+        this.scope = null;
     }
 
     public RewindRegistry(SectionProfiler profiler) {
-        this(profiler, null, null);
+        this.profiler = profiler;
+        this.modeAdapter = null;
+        this.scope = null;
     }
 
     /** The session supplies its actual controller; creator keys never select the partition. */
     public RewindRegistry(SectionProfiler profiler,
                           com.openggf.game.mode.GameplayFrameController controller) {
-        this(profiler, controller, null);
+        this.profiler = profiler;
+        this.modeAdapter = controller instanceof RewindSnapshottable<?> ? controller : null;
+        this.scope = null;
     }
 
     RewindRegistry(SectionProfiler profiler,
