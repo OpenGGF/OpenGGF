@@ -1,8 +1,6 @@
 package com.openggf.physics;
 
-import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.GameServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,10 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class TestTerrainCollisionManagerReset {
+    private TerrainCollisionManager manager;
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.activeGameplayMode();
+        manager = new TerrainCollisionManager();
     }
 
     @AfterEach
@@ -36,7 +35,7 @@ class TestTerrainCollisionManagerReset {
 
     @Test
     void resetStateClearsPooledResults() {
-        TerrainCollisionManager tcm = GameServices.terrainCollision();
+        TerrainCollisionManager tcm = manager;
 
         // Populate the pooled-result buffer with a real scan so resetState has
         // something to clear.

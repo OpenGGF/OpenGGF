@@ -151,9 +151,9 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 72 methods across 71 files,
+The ambient singleton-setup inventory now contains 62 methods across 61 files,
 down from 102/100 after direct manager construction and named module fixtures
-replaced thirty methods in twenty-nine test classes. The four FadeManager unit cases
+replaced forty methods in thirty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
 inject their render service and graphics owner; S1/S2 object and MGZ2 event checks name their module fixtures. Engine/session and frontend checks use the engine-only boundary when no gameplay world is required.
 These count setup obligations, not demonstrated leaks. Removing four unused GameLoop imports first tightened

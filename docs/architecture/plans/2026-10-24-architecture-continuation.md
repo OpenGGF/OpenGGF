@@ -2736,3 +2736,82 @@ worker stops at its local commit, without push, integration, branch deletion or
 worktree removal. Coverage is bounded component/renderer behavior on Linux EGL;
 no broad smoke, full suite, cross-platform GL, native gameplay/trace parity,
 performance or exhaustive arithmetic claim is made.
+
+### Ten-key direct-manager and engine-only continuation
+
+This slice fast-forwarded the clean existing task branch normally from
+`1cb7d3570b965cab6de095fa3bf0982cf34f608f` to parent
+`b888984f8758863a419b5b5e4f660ce2a5e68ae4`, after verifying no owned Maven jobs.
+The updated parent includes its seven S2 and five MGZ setup closures. This slice
+owns only the ten test classes below, their exact lifecycle allowances and this
+appendix; the reviewed reset helper and production code are unchanged.
+
+Timer error reporting and both terrain tests now own real manager instances.
+Terrain result ordering also uses `resetEngineOnly()` for its dummy playable's
+engine configuration. The other seven setups use that reviewed boundary;
+provider lifetime keeps `@BeforeAll`, with the remaining hooks at `@BeforeEach`.
+The mutation pipeline begins without a world. Resolver tests retain their own
+S3K world creation, manager attachment, team selection and big-ring return setup.
+Every existing teardown and helper remains unchanged, including scoped logger
+cleanup and the original session/configuration cleanup paths.
+
+Exact source comparison against the pinned parent preserves all 50 method
+identities and assertions. Forty-eight test bodies are byte-identical. The only
+two body edits replace the terrain-session locator with the locally owned manager:
+`TestTerrainCollisionManager.testSensorResultOrdering` calls
+`manager.getSensorResult(sensors)`, and
+`TestTerrainCollisionManagerReset.resetStateClearsPooledResults` aliases
+`manager` as its existing `tcm` variable. Sensor scans, pooled-result assertions,
+timer subjects/ticks and all expected values remain intact.
+
+The removed allowance keys are exactly:
+
+```text
+src/test/java/com/openggf/tests/TestTodo30_TimerErrorReporting.java#setUp
+src/test/java/com/openggf/physics/TestTerrainCollisionManagerReset.java#setUp
+src/test/java/com/openggf/physics/TestTerrainCollisionManager.java#setUp
+src/test/java/com/openggf/game/TestZoneLayoutMutationPipeline.java#setUp
+src/test/java/com/openggf/game/sonic2/TestSonic2PlcArtRewindSnapshot.java#setUp
+src/test/java/com/openggf/level/rings/TestRingManagerRewindSnapshot.java#setUp
+src/test/java/com/openggf/game/TestGameModuleProviderLifetimes.java#configureEngineServices
+src/test/java/com/openggf/sprites/managers/TestSpriteManagerUpdateOrder.java#configureRuntime
+src/test/java/com/openggf/sprites/playable/TestOnObjectAtFrameStartSnapshot.java#configureRuntime
+src/test/java/com/openggf/game/sonic3k/TestSonic3kBootstrapResolver.java#setUp
+```
+
+No inspected key needs retention. The separate eighth-wave S1 moving-block,
+Buzz Bomber and Caterkiller keys remain untouched; final count composition and
+its guide/changelog prose belong to the parent.
+
+The fixed ten-class run passed all 50 cases with zero failures/errors/skips;
+XML matches every source test identity and the exact selector, including all six
+`TestSonic3kBootstrapResolver` cases. The fork reports Java 25.0.5.0.2, and the
+launch environment has Lua 5.4.9. Queue admission waited 35 seconds; Maven reported
+1:22 execution. These checks need no ROM or GL rendering; display variables are
+unset and no EGL context is requested. The separate exact singleton lifecycle
+guard passed all eight cases with zero failures/errors/skips; its fresh XML
+identities and fork version were inspected. Queue admission waited 31 seconds;
+Maven execution was 28.094 seconds. The two submitted jobs kept fixed selections
+and source inputs throughout execution. Their 22 exact XML/text reports were
+consumed after inspection; no result archive or pass cache was created.
+
+The commands use the current absolute parent-checkout wrapper from this task's
+own working directory and target. `OPENGGF_MAIN_WORKSPACE` below denotes that
+absolute parent checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=TestTodo30_TimerErrorReporting,TestTerrainCollisionManagerReset,TestTerrainCollisionManager,TestZoneLayoutMutationPipeline,TestSonic2PlcArtRewindSnapshot,TestRingManagerRewindSnapshot,TestGameModuleProviderLifetimes,TestSpriteManagerUpdateOrder,TestOnObjectAtFrameStartSnapshot,TestSonic3kBootstrapResolver' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+This is bounded fixture/guard evidence. No broad/full suite, unchanged frontend
+or engine-family rerun, ROM/trace replay or pixel validation was submitted.
+The parent retains the composed four-selector S3K/API/guards checks and delivery;
+this slice ends with a local commit and retained branch/worktree.

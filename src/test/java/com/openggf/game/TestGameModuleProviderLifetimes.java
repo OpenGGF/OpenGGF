@@ -1,8 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -18,7 +17,7 @@ public class TestGameModuleProviderLifetimes {
 
     @BeforeAll
     static void configureEngineServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
