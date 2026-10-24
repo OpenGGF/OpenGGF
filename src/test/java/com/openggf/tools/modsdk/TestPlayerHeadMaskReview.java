@@ -1,6 +1,6 @@
 package com.openggf.tools.modsdk;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.io.PngCodec;
 import com.openggf.tests.FullReset;

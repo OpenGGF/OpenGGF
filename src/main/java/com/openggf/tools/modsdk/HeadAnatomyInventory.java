@@ -1,6 +1,6 @@
 package com.openggf.tools.modsdk;
 
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.render.SpritePresentationRenderer;

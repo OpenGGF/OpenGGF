@@ -165,7 +165,6 @@ class TestArchUnitRules {
             "data -> audio",
             "data -> game",
             "data -> level",
-            "data -> sprites",
             "debug -> camera",
             "debug -> configuration",
             "debug -> control",
@@ -557,7 +556,6 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("audio"))
                             .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("level"))
-                            .ignoreDependency(inTopLevelSlice("data"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("camera"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("configuration"))
                             .ignoreDependency(inTopLevelSlice("debug"), inTopLevelSlice("control"))

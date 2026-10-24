@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.configuration.WidescreenAspect;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.debug.playback.Bk2FrameInput;

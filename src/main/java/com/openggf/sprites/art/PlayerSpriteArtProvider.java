@@ -1,7 +1,6 @@
-package com.openggf.data;
+package com.openggf.sprites.art;
 
 import com.openggf.level.Palette;
-import com.openggf.sprites.art.SpriteArtSet;
 
 import java.io.IOException;
 

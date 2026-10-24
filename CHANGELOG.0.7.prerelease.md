@@ -637,6 +637,12 @@ Unreleased. The earlier development themes remain in
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts
   live with their managers.
+  The unpublished art-provider candidate moves `PlayerSpriteArtProvider` and
+  `SpindashDustArtProvider` from `com.openggf.data` to `com.openggf.sprites.art`,
+  preserving game-owned construction and donation. This intentionally breaks
+  old imports and binaries: mods, donor implementations and callers must rebuild
+  against matching artifacts even when their manifest range still accepts `0.7.0`.
+  See the [import migration](docs/modding/getting-started.md#player-art-provider-import-migration).
   Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the

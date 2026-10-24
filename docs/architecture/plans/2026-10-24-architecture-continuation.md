@@ -2022,3 +2022,151 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
 This is bounded frontend/guard evidence, not broad smoke, a full-suite pass,
 all-guard coverage or display-free pixel certification. Integration, push and
 worktree/branch cleanup remain parent-owned.
+
+## Bounded player-art provider candidate migration
+
+Implementation starts at `e9d8087aca13f8868c783a4fe001b39aa7015ca7` in isolated
+branch `bugfix/ai-art-provider-owner-20261024`. Independent candidate review
+accepted moving both complete annotated providers from `data` to the existing
+`sprites.art` owner. The initial proposal to edit the release descriptor was
+rejected: ordinary unpublished regeneration retains `0.7.0`, candidate status,
+empty published baselines and the existing develop/next alias topology. The
+descriptor must remain byte-identical. No published compatibility obligation was
+found. Old candidate binaries are deliberately retired with compulsory source
+import migration and rebuilds; the same manifest range cannot distinguish them.
+The [compatibility decision](../mod-api-compatibility.md#player-art-provider-candidate-migration)
+and [creator migration](../../modding/getting-started.md#player-art-provider-import-migration)
+record both replacements.
+
+The bounded cut moves two definitions, updates 22 direct production consumers
+and eight test consumers, and leaves inferred Stageplay factory consumers
+unchanged. Native/scripted host art, configured donors, registered mod suppliers,
+palette refresh/load order, Tails banks, aliases/restoration and the supplied-ROM
+scene decoder/palette wrapper keep their implementation bodies. The pinned
+palette method has no checked exception (despite the initial brief's shorthand);
+its exact default-null declaration is preserved. Both art-loading methods retain
+`throws IOException`, and `Palette`/`SpriteArtSet` remain canonical.
+
+Component accounting is exactly 147 -> 144 frozen low-level records: remove only
+PlayerSpriteArtProvider's Palette and SpriteArtSet return edges and
+SpindashDustArtProvider's SpriteArtSet return edge. All other records retain byte
+content and order. Remove only the `data -> sprites` top-level permission and its
+matching cycle ignore; retain `data.Game`, historical rule keys/settings and every
+other permission. Empty cycle results apply after remaining exclusions, not to
+the global dependency graph. This component does not overwrite guide counts or
+compose the parent's separate 143-record command candidate (combined prediction
+140, before any later component).
+
+Validation is focused: compile all production/test sources; regenerate the
+candidate pin and require precisely 14 old lines -> 14 replacements under only
+the two FQN substitutions; preserve recursive annotation cardinality; run API,
+SDK, maintained sample/starter, donor/palette/scene/ghost/KiS2 and eight affected
+test classes. Generate the actual canonical Javadoc inventory separately and
+assert both new pages exist and both old pages do not. A fresh strict ArchUnit
+run checks the exact edge/debt cut. The parent owns composed validation, the
+four mandatory S3K controls, integration and push. No broad smoke/full suite,
+release publication, subdelegation or worktree removal is requested here.
+
+
+### Observed component evidence
+
+All checks below ran on the pinned base plus the implementation later committed
+as `40980eb496a39115e416e5ccd4060968bef453fb`, before the newline/documentation
+correction recorded below. No production logic or test body changed after
+compilation. `ModApiVersion` changes only its description. The task tree had no target before relocation; explicit
+classfile checks after the build found exactly the two `sprites/art` definitions
+and no `data` provider classfiles. No clean-build workaround was needed.
+`test-compile` compiled 4,336 production and 4,444 test sources, including
+maintained racing sources, successfully. Actual tool preflight passed Java 25,
+Lua 5.4 and PowerShell prerequisites without executing tests.
+
+The regenerated 22,482-line pin equals the old pin under only the two provider
+FQN substitutions and sorting: exactly 14 removals/14 replacements. Recursive
+type and canonical `@ModApi` inventories both remain 1,246. The original check
+of all 30 direct consumer files used text-mode I/O, which implicitly normalized
+newlines; it established normalized-text equality under the FQN substitutions,
+not raw byte equality. Independent review established 29/30 literal byte matches
+at `40980eb49`; the remaining file also lost two CRLF endings, as corrected below.
+Both moved definitions retain byte-identical comments, annotations, declarations
+and bodies after package/import normalization. The other 144 frozen records are
+byte-identical and ordered. Release descriptor, API roots, internal terminals,
+platform allowlist, frozen historical keys/settings, `data.Game` and inferred
+Stageplay consumer are unchanged. No permissions were added.
+
+| Completed focused selection | Distinct cases | Failures/errors/skips | Queue wait | Maven execution |
+| --- | ---: | --- | ---: | ---: |
+| API, SDK, maintained samples and starters (10 classes) | 60 | 0/0/0 | 72 s | 35.584 s |
+| Art/donation/scene/ghost/KiS2 behavior (26 selectors, 27 reports) | 488 | 0/0/0 | 38 s | 2 min 39 s |
+| Fresh JVM, strict TestArchUnitRules | 33 | 0/0/0 | 156 s | 34.184 s |
+| Full canonical Javadoc generation | not a test run | successful page assertions | 319 s | 2.723 s |
+
+Case identities and skip elements were inspected, including all eight affected
+classes. Surefire puts CrossGameFeatureProviderRefactor's nine outer cases and
+two S3kTailsDonationIntegration cases in the nested report; its empty parent
+report is not evidence of execution by itself. All 11 identities were observed.
+Both KiS2 checks executed all nine cases with explicit supplied-ROM paths.
+S1/S2/S3K matched the documented identities; KiS2 was 3,407,872 bytes, CRC32
+`2AC1E7C6`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, matching
+RomIdentityTable. Donor palette rewind executed its CPU/GPU/pixel case. These
+are bounded consumer checks, not all routes or all-smoke coverage.
+
+The canonical generator used its actual annotated inventory into previously
+absent `target/art-provider-canonical-javadocs`: 1,248 HTML files, including
+`com/openggf/sprites/art/PlayerSpriteArtProvider.html` and
+`com/openggf/sprites/art/SpindashDustArtProvider.html`. Both corresponding
+`com/openggf/data/` pages were absent, with no duplicate provider pages.
+These assertions are separate from the SDK tests' fixture-only inventories.
+The generated docs, consumed reports and invocation logs were removed.
+
+Commands used the existing absolute wrapper
+`$MAIN_CHECKOUT/tools/testing/maven_queue.py` from this
+component's own cwd/target. Each Maven invocation used `-Dmse=off -B`, Java 25,
+`LUA_BIN=/usr/bin/lua5.4`, and unset DISPLAY, WAYLAND_DISPLAY,
+JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS. Queue and execution intervals overlap;
+their sums are not elapsed delivery time. The commands/selections were:
+
+```bash
+python3 tools/testing/run_categories.py --base e9d8087aca13f8868c783a4fe001b39aa7015ca7 --preflight
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off test-compile dependency:build-classpath -Dmdep.outputFile=target/art-provider-classpath.txt -B
+API_ART='TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiJavadocTool,TestModApiSdkPackager,TestPurposeStarters,TestSampleModsPackage,TestSampleFlappyLevelSource,TestSamplePlatformerLevelSource,TestSampleRomArtRemixLevelSource'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off "-Dtest=$API_ART" test -B
+BEHAVIOR_ART='TestCrossGameFeatureProviderRefactor,TestDonorCapabilities,TestLevelPlayableArtInitializerModArt,TestNativeCarriedPlayerArtBinding,TestS3kCanonicalEntryLifecycle,TestS3kHpzSanctuaryLifecycleProduction,TestCrossGameRuleComposer,TestPlayerHeadMaskReview,TestKis2EndingContinue,TestKis2HeadlessBoot,TestDonatedTeamPalettes,TestDonorTailsTailBanks,TestPlayerHeadPresentation,TestSampleFlappyIntegration,TestSampleRomArtRemixIntegration,TestCharacterLooks,TestDonorPaletteRewind,TestStockSceneArtRom,TestDetachedStockScenePictures,TestStageplayTailsRom,TestGhostRendererLayerSelection,TestLocalPlayerLook,TestDynamicArtGhostIsolation,TestSceneRomLibrary,TestSceneArtHelpers,TestStageplayNativeBinding'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$BEHAVIOR_ART" "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=$ROM_ROOT/kis2.gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off exec:exec -Dexec.executable=/usr/lib/jvm/java-25-openjdk/bin/java -Dexec.classpathScope=runtime '-Dexec.args=-cp %classpath com.openggf.tools.modsdk.ModApiJavadocTool src/main/java target/art-provider-canonical-javadocs' -B
+```
+
+Here MAIN_CHECKOUT denotes the existing absolute main checkout, and ROM_ROOT
+denotes its root containing the supplied ROMs.
+The snapshot was generated by the compiled ModApiSignatureSurface `--snapshot`
+entry point with target/classes and the dependency classpath, then compared
+against the exact baseline substitution. Remaining full/composed guard and
+global-count obligations, the four required S3K controls, independent review,
+integration and push belong to the parent. No live command handles remain.
+
+
+### Review correction: preserve the consumer's mixed line endings
+
+Independent code review found a P3 exactness issue in `40980eb496a39115e416e5ccd4060968bef453fb`:
+TestCrossGameFeatureProviderRefactor's baseline lines 2 and 3 ended in CRLF,
+and the implementation's text-mode rewrite changed both to LF. The parent
+independently reproduced these two byte differences after the intended FQN
+substitutions. This was an implementation/comparison error; the original 30/30
+claim was too strong, and the original commit remains a 29/30 raw-byte match.
+
+The bounded correction reconstructs only that file from the raw bytes at
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7`, applying only the two literal provider
+FQN byte substitutions. Relative to `40980eb49`, this adds exactly two `0D`
+bytes at the ends of lines 2 and 3 (corrected-file offsets 26 and 68, zero-based),
+restoring the existing mixed endings without normalizing the rest of the file.
+All 30 consumer files then match baseline raw bytes under only the two intended
+FQN byte substitutions. Both moved definitions also pass raw-byte comparison
+under their exact package/import replacements. The 14-line pin rewrite and
+three-record frozen removal are unchanged, as are the release descriptor,
+provider policy and all production logic/test bodies.
+
+Validation for this correction is raw-byte comparison of all 30 consumers and
+both definitions, exact pin/frozen-store comparisons, protected-file checks and
+Git diff/policy checks. The completed Maven, canonical Javadoc, behavior and
+fresh guard runs above are reused; none was repeated for this newline/prose-only
+correction. No push, integration, delegation or worktree cleanup is included.
