@@ -60,6 +60,21 @@ public class FoundationTest {
         }
         @Override public void close() { if (base != null) base.dispose(); }
     }
+    @Test public void longSessionKeepsPerFrameWrappersStable() throws Exception {
+        try (var v = new Visit()) {
+            var module = GameServices.module();
+            var events = module.getLevelEventProvider();
+            var zones = module.getZoneRegistry();
+            var gameOver = module.getGameOverFlowProvider();
+            // Seven timed-out 600-frame loops: past the ~3400 frames that exhausted owner callback
+            // identities when these were rebuilt on every call.
+            v.rows(4200, false, true);
+            assertTrue(v.session.loopCount() >= 6, "loops=" + v.session.loopCount());
+            assertSame(events, module.getLevelEventProvider());
+            assertSame(zones, module.getZoneRegistry());
+            assertSame(gameOver, module.getGameOverFlowProvider());
+        }
+    }
     @Test public void zeroDriftAcrossThreeLoops() throws Exception {
         try (var v = new Visit()) {
             v.rows(20,true,false);

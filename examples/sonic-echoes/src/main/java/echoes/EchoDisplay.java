@@ -17,7 +17,16 @@ public final class EchoDisplay extends AbstractObjectInstance implements ModRewi
     @Override public int getY() { return spawn.y(); }
     @Override public boolean isPersistent() { return !isDestroyed(); }
     @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) { return new EchoDisplay(context.spawn()); }
+    // The room's frame controller hides the stock HUD once play starts, but the act's entry
+    // (title-card phase) draws before that, so the stock SCORE/TIME/RINGS overlapped the room
+    // HUD for about a second. This object exists from the level's first frame; during the entry
+    // it is drawn but not updated, so the presentation-only flag is also set as it draws, before
+    // the HUD pass reads it.
+    @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
+        services().levelManager().setForceHudSuppressed(true);
+    }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        services().levelManager().setForceHudSuppressed(true);
         var session = services().gameService(RoomSession.class);
         var camera = services().camera();
         var canvas = new LevelOverlayCanvas(services().graphicsManager(), camera.getWidth(), camera.getHeight());

@@ -62,4 +62,5 @@ class TestSonicEchoesFoundation {
     @Test void tutorialReferenceSolution() throws Exception { run("tutorialReferenceSolution"); }
     @Test void disturbedEchoFractures() throws Exception { run("disturbedEchoFractures"); }
     @Test void historySurvivesWorldRestore() throws Exception { run("historySurvivesWorldRestore"); }
+    @Test void longSessionKeepsPerFrameWrappersStable() throws Exception { run("longSessionKeepsPerFrameWrappersStable"); }
 }

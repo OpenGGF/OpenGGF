@@ -49,6 +49,12 @@ public final class EchoesMod implements GgfMod {
         private final RoomSession session;
         private final RoomActions actions;
         private EchoHub title;
+        // The engine asks for these every frame. Each wrapper is built once per stock object it
+        // decorates, so a long room session does not mint a new owner callback identity per frame
+        // (the fault boundary caps live callback identities; ~3400 frames exhausted it).
+        private ZoneRegistry stockZones, zones;
+        private LevelEventProvider stockEvents, roomEvents;
+        private final GameOverFlowProvider roomGameOver = (services, timeOver) -> { };
         public Module(GameModule base) {
             super(base, ID + ":rooms");
             session = Objects.requireNonNull(base.getGameService(RoomSession.class));
@@ -91,7 +97,12 @@ public final class EchoesMod implements GgfMod {
             });
         }
         @Override public ZoneRegistry getZoneRegistry() {
-            return new DelegatingZoneRegistry(super.getZoneRegistry()) {
+            var stock = super.getZoneRegistry();
+            if (zones == null || stockZones != stock) { stockZones = stock; zones = roomZones(stock); }
+            return zones;
+        }
+        private ZoneRegistry roomZones(ZoneRegistry stockRegistry) {
+            return new DelegatingZoneRegistry(stockRegistry) {
                 @Override public int[] getStartPosition(int zone, int act) {
                     var r = session.room();
                     return zone == r.zone() && act == r.act() ? new int[]{r.spawnX(), r.spawnY()} : super.getStartPosition(zone, act);
@@ -113,13 +124,17 @@ public final class EchoesMod implements GgfMod {
         @Override public LevelEventProvider getLevelEventProvider() {
             var stock = super.getLevelEventProvider();
             if (!active || stock == null) return stock;
-            return new LevelEventProvider() {
-                @Override public void initLevel(int zone, int act) { stock.initLevel(zone, act); }
-                @Override public void update() { }
-            };
+            if (roomEvents == null || stockEvents != stock) {
+                stockEvents = stock;
+                roomEvents = new LevelEventProvider() {
+                    @Override public void initLevel(int zone, int act) { stock.initLevel(zone, act); }
+                    @Override public void update() { }
+                };
+            }
+            return roomEvents;
         }
         @Override public GameOverFlowProvider getGameOverFlowProvider() {
-            return active ? (services, timeOver) -> { } : super.getGameOverFlowProvider();
+            return active ? roomGameOver : super.getGameOverFlowProvider();
         }
         @Override public <T> T getGameService(Class<T> type) {
             if (type == LevelInputOverlay.class) return active ? type.cast(actions) : null;

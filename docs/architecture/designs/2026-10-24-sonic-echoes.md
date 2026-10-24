@@ -485,3 +485,31 @@ supply the complete room-solvability and shard evidence. Capture input files are
   production engine code, Mod API surface or build policy; the only shared edit is one test
   helper import. Focused validation therefore replaces the broad run: the three Echoes
   adapters plus the four test classes that consume `DecodedLevelTransformAssertions`.
+
+### Promo capture and fixes found while filming (2026-10-24)
+
+A promo was cut from display-free captures of the delivered mod (two Codex `gpt-6.1-sol` capture
+workers; lead edit with `tools/media/promo_kit.py`). Filming exposed two player-visible defects in
+the committed mod at `5fca08819f`, both fixed here:
+
+- **Owner callback identity exhaustion.** `EchoesMod.Module` built a new `LevelEventProvider`,
+  `ZoneRegistry` wrapper and game-over lambda on every call. The engine asks for these every frame,
+  and the fault boundary caps live owner callback identities, so a long room session (~3400 frames,
+  under a minute) aborted. Each wrapper is now built once per stock object it decorates.
+  `FoundationTest.longSessionKeepsPerFrameWrappersStable` holds 1-1 through seven timed-out loops
+  (4200 frames) and asserts identity; it fails on the previous code (`Module$3` differs per call).
+- **Stock HUD over the room HUD on entry.** The frame controller suppressed the stock
+  SCORE/TIME/RINGS only once play began, so for about a second of every room entry (the title-card
+  phase) both HUDs drew. `EchoDisplay`, present from the level's first frame, now sets the
+  presentation-only suppression flag in `update` and as it draws (objects are drawn but not updated
+  during entry). Verified by a display-free title → hub → room capture; no automated assertion,
+  because headless HUD drawing is not exercised by the room harness.
+- Rejected for the HUD fix: a forwarding `ZoneFeatureProvider` wrapper overriding
+  `shouldSuppressHud` (33 methods; any later default method would silently stop forwarding).
+
+Capture helpers are retained as test-only sources: `PromoCaptureMod` (per-frame session sidecar,
+optional pre-boot room selection) and `PromoActionCaptureMod` (Echo/Undo/Reset presses scheduled at
+authored loop frames through `RoomSession.command`, the route `RoomActions` uses), built into a
+temporary jar by `examples/sonic-echoes/tools/build_capture_jar.py`. Neither enters the distributed
+jar. Validation after the fixes: `TestSonicEchoesFoundation` 5, `TestSonicEchoesPresentation` 7,
+`TestSonicEchoesRooms` 12 — 24 tests, 0 failures, 0 skips.

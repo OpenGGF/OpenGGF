@@ -229,6 +229,11 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
   `GameplayCaptureTool --mod` can film any puzzle room from stock boot; package it in a temporary
   capture jar, never the distributed one. Each room's reference solution doubles as the input
   script. Origin: Sonic Echoes content, 2026-10-24.
+- [Sonic Echoes promo capture jar](../../examples/sonic-echoes/tools/build_capture_jar.py) builds a
+  temporary `--mod` jar around test-only `PromoCaptureMod` (per-frame `session.csv`: loop, phase,
+  live/echo positions and states, channels, shards and named events) and, with `--actions`,
+  `PromoActionCaptureMod` (Echo/Undo/Reset presses at authored loop frames). Use it to film rooms with
+  event frames to sync edits against. Origin: Sonic Echoes promo, 2026-10-24.
 - `ObjectArtContactSheetProbe` (test scope, opt-in `-Dopenggf.artsheets.out=<dir>` plus
   `openggf.artsheets.game/acts/keys`) renders every frame of the object art sheets a zone
   registers to labelled PNG contact sheets with the level palette, so mapping frames (walk,
