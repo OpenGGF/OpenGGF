@@ -7401,3 +7401,152 @@ This launch is required by the materially changed 723-file upstream state and
 combined owner interactions. It is neither a repeated unchanged baseline run
 nor release-only full-suite validation. Its actual completion, failure/skip
 identity attribution and guard results remain pending.
+
+
+### Held reverse-target policy: unchanged-production characterization handoff
+
+This phase qualifies preservation evidence only. T3 attached the owned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-ab2829cb` on `reverse-target-policy` at
+`81f25c89f04d402c68998106cab17c0ddd79d928`. Only that task branch was renamed to
+`bugfix/ai-reverse-target-owner-20261024` and fast-forwarded, without fetching, to
+exact accepted frozen base `07bee64020b0ec8c218278a8555d271630985ab6`. Hooks were
+installed once. Main, the parent integration worktree, its active smoke/target/jobs,
+other branches, dirty submodules and user files were outside this work. No
+subdelegation, broad selection, release suite, integration, push or removal ran.
+
+The revised preservation scope is the complete finite target policy, should the
+parent hand it back: begin; eager/deferred routing; detached reconstruction and
+cursor refresh; preparation and boundary supersession; release, retry, injection
+consumption and retirement; `afterRewindRestore`'s entry-local boundary decision,
+release-before-drain and cleanup selection; selected/live ring and held-state
+admission reads; acknowledgment invalidation and full reset. Five held-policy
+fields belong together. Public compatibility entry points and their virtual calls
+through AudioManager must survive. A narrow root publication effect may retain
+counter/ring/timeline/donor writes in order, but must choose no target or retry.
+The shared eager/held counter, eager rollback/forward-service restore, live source
+composition, replay suppression, bookkeeping and ledger storage remain root
+responsibilities. Producer tokens/session algorithms/cursors/history/clocks/output
+remain below. No new lock, host interface, captured producer, API terminal or
+permission is justified. This is a revised preservation plan, not extraction.
+
+Observed on **unchanged production**, the 25 new cases discriminate:
+
+- Preparing A then selecting B retains the manager acknowledgment and producer
+  token; release commits A's presentation while publishing B's ring, timeline and
+  donor bindings. Detached command reconstruction likewise replaces selected
+  metadata, rolls back live deep snapshots/fingerprints, and retains A's token.
+  Cursor refresh replaces frame/order while retaining presentation identity and
+  selected entry count. Live capture continues to describe live state.
+- `clearPcmHistory()` removes producer selection/preparation while retaining the
+  manager target/acknowledgment and reverse gesture. A subsequent acknowledged
+  prepare does nothing; release publishes the target ledger with the live
+  presentation. Acknowledgment is not proof of a matching producer target.
+- Backend, launch, profile, ROM and destroy paths retain selected identity,
+  post-boundary provenance, active gesture and armed injection, while clearing
+  acknowledgment. All five also clear acknowledgment before a supported throwing
+  sink close. A throwing pre-reset backend stop leaves the remaining ledger and
+  producer token intact; reaching the later full-reset clear retires everything.
+- Direct `spy(AudioManager.class)` controls observe virtual end/prepare/capture
+  calls without copying an existing manager. A preparation callback replaces the
+  producer; release uses the current replacement, and after-restore continues on
+  it. Callbacks observe no manager monitor on these paths. Off-owner null/no-op
+  entries return before producer access; begin rejects without changing the
+  ledger. Held selection and acknowledged preparation remain allowed off-owner;
+  producer release rejects and the manager returns false with unchanged state.
+- Boundary capture happens once. A distinct speed command queued after capture
+  neither changes target identity nor replaces its token on a failed release and
+  preparation retry. After release, the command drains, fresh raw PCM survives,
+  and the entry-local boundary decision bypasses STOP_ALL cleanup.
+- A sink exception armed after begin occurs after restore and reverse-cursor
+  consumption, with no manager publication. Both attempt-owned and pre-existing
+  preparation cases were observed, with ordinary and suppressed-diagnostic
+  failures. Suppressed diagnostic identity takes precedence. One retry publishes
+  the ledger; retrying attempt-owned preparation leaves a nonzero prepared token
+  on the already inactive producer, while the previously acknowledged case does
+  not. This is an existing partial effect, not a repair or atomicity guarantee.
+- An otherwise valid negative-order logical snapshot commits producer restoration,
+  increments the shared counter and assigns ring state, then throws exactly
+  `nextOrder must be non-negative`. Timeline/donor bindings stay at their prior
+  values; held selection, acknowledgment and active gesture remain. No retry was
+  attempted for this malformed ledger.
+- The session-backed lower fixture uses the existing resolver
+  `DiagnosticTransaction.endPreparation()` seam: restore commits, transient
+  cleanup then fails. Rollback retains restored sample contents/control values,
+  selected/prepared identities and reverse cursor, rather than the pre-release
+  state. Diagnostic order is prepare 1, committed restore 2, failed cleanup 3 with
+  discard 3; the release sink boundary was not reached. Cleanup-failure retry was
+  not tested. No new production hook or injection framework was introduced.
+- One eager and one held restore share the publication counter, but only eager
+  restore invokes the optional forward-service restore. That optional participant
+  is a typed mock; this is not a ROM-backed request-service integration claim.
+
+The existing three release-injection controls, three detached/quarantined
+observer controls, two producer restore/release controls, two real fresh-boundary
+host controls, recorded replay ownership and two prepare-failure controls remained
+unchanged and passed. The cleanup test's two selected-field reads now use a bridge
+around the existing typed diagnostic accessor. New acknowledgment/provenance/
+injection reads stay test-side reflection; no production accessor was added.
+Existing assertions were not weakened, and no named test/framework type was added.
+
+The build-only command, from the owned worktree, was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+```
+
+Session `40527` exited 1 after Maven 1:20: the new fixture initially used
+try-with-resources for AudioPresentationProducer, which has close() but is not
+AutoCloseable. No tests executed. Replacing only that fixture resource syntax
+with explicit finally/close produced session `31489`, exit 0, Maven 25.663s.
+These builds took only the own-tree build lock, with no test-admission wait.
+They are compile checks, not failed production behavior or test baselines.
+
+After source/tag/selector inspection, the one bounded baseline selected 27 exact
+methods / **38 unique cases** (25 new, 13 unchanged controls) across five classes.
+Expected execution was under two minutes plus queue wait; stop after this command
+and hand off any unexpected failure/skip without production repair. The exact
+command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  '-Dtest=TestAudioPresentationSnapshotParity#preparedAThenSelectedBPublishesBLedgerWithAPresentation+replayAfterPreparationReplacesMetadataButRetainsAPreparation+cursorRefreshRetainsPresentationEntryCountAndAcknowledgment+clearHistoryClearsProducerTokenButRetainsManagerTargetAndAcknowledgment+negativeTimelineOrderPartiallyPublishesAfterSuccessfulProducerReturn+eagerAndHeldShareCounterButOnlyEagerRestoresOptionalForwardService+reverseReleasePublicationFailureLeavesReleaseExactlyRetryable+reverseReleaseFailureAfterPreparingDuringTheAttemptRollsBackExactly+reverseReleaseFailureAfterTheProducerCommitCompletesTheRelease,TestAudioManagerPresentationModes#rebuildRetainsHeldTargetProvenanceAndInjectionButInvalidatesAcknowledgment+lifecycleInvalidatesAcknowledgmentBeforeFallibleProducerClose+failedPreResetStopRetainsHeldLedgerUntilFullResetReachesItsClear+sinkReleaseFailureConsumesProducerCursorBeforeManagerPublication+virtualBoundaryCaptureIsSingleAndRetryProtectsFreshSourcesAfterQueuedCommand+virtualReleasePreparationRereadsCallbackReplacedProducer+offThreadNoOpPathsPrecedeProducerChecksAndActiveBeginRejectsBeforeLedgerMutation+recordedReverseOwnsOuterPresentationWithoutTakingLogicalRewindOwnership+reverseReleaseReportsPrepareFailureWithoutMutatingFullStateAndRetries+producerPrepareFailurePreservesPriorSelectionForRetry,TestAudioPresentationProducerRewind#transientCleanupFailureRollsBackToAlreadyCommittedRestore+failedReleaseRestoreKeepsCompleteRegistryAndReverseStateForRetry+releaseCommitsSelectedLogicalSnapshotAndCrossfadesExactlyOnce,TestAudioDiagnosticObservers#detachedReverseStagingDiscardsDiagnosticsAndDriverOrdinals+failedDetachedReverseStagingLeaksNoDiagnosticsOrOrdinalGap+observerFailuresAreQuarantinedAcrossPresentationBoundaries,TestLiveRewindManagerAudioCleanup#levelLoadBoundaryRetriesFreshSourceBearingAudioBeforeFrameZeroReroot+seamlessBoundaryRetriesFreshSourceBearingAudioBeforeCurrentFrameReroot' test -B
+```
+
+Session `57193` completed exit 0, queue wait **0s**, Maven execution **26.506s**
+(including compilation). Admission was resource-aware normal, 7 GiB / 8 cores.
+Five XML reports contained the exact selector, Java `25.0.5.0.2` and JDK
+`/usr/lib/jvm/java-25-openjdk`; all 38 case identities were matched to the 27
+requested methods, including all parameter invocations. Totals: **38 / 0 / 0 / 0**
+(T/F/E/S). Per class: diagnostics 3, manager modes 21, snapshot parity 9, producer
+rewind 3, live cleanup 2. No unexpected failure or skip occurred. No selected case
+requires a ROM, EGL, engine launch, performance measurement or finite route matrix;
+ROM and EGL properties were absent in every report. The existing runtime warning
+about FAST load-time simulation is the data-free fixture's existing mode, not
+agent fast mode. Other unmeasured wall-clock work is unknown, not test execution.
+
+The tested input SHA-256 is
+`7373c236b2514c35f0a52c720c5adeba6afcdc8054ac830fc3b9de0f679ac5b7`:
+sort tracked paths under src/main, src/test, racing and pom.xml; hash each
+`path + NUL + binary SHA256(file bytes)` into SHA256. The same fingerprint was
+verified after execution. Tested HEAD is the frozen base with the five test-only
+edits in this commit. Production src/main tree is
+`2e6ca755c4b741a5b548e119dcf26c90f273b6de`; AudioManager Git blob is
+`7786470ae94e0c1e821b67f600ee5f521698995a`, both identical to the frozen base.
+The producer, guards, policy files, API/terminal pins and frozen stores are also
+unchanged. Counts 22,541 API rows / 1,250 types, 119 frozen records, 6 ambient
+methods / 5 files and 151 package-pair permissions are inherited source inventory,
+not newly executed guard/API certification. No repin or exemption was made.
+
+All five XML and five text reports were inspected for exact identities/counts,
+F/E/S, Java/fixture properties and then consumed; owned diagnostics are empty.
+The generated exact-selector file was discarded after recording this command.
+No category run directory, raw-log archive, pass cache or receipt was created.
+All three owned command handles are terminal. The clean local task worktree and
+branch are retained for parent review and scope handoff. Extraction has not begun;
+combined delivery gates and any later implementation remain parent-owned.

@@ -5,6 +5,7 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.DacData;
 
@@ -45,6 +46,23 @@ public final class AudioManagerTestDiagnostics {
 
     public static void resetLogicalRestorePublications(AudioManager audio) {
         audio.resetLogicalRestorePublicationsForTesting();
+    }
+
+    public static AudioLogicalSnapshot selectedReverseSnapshot(AudioManager audio) {
+        return audio.deferredReverseLogicalSnapshotForTesting();
+    }
+
+    // No production accessor is added for the baseline's private lifetime ledger.
+    public static boolean reversePreparationAcknowledged(AudioManager audio) {
+        return field(audio, "deferredReverseLogicalPrepared", Boolean.class);
+    }
+
+    public static boolean postBoundaryReverseTarget(AudioManager audio) {
+        return field(audio, "postBoundaryReverseTarget", Boolean.class);
+    }
+
+    public static boolean reverseReleaseFailureArmed(AudioManager audio) {
+        return field(audio, "failNextReverseRelease", Object.class) != null;
     }
 
     /**
