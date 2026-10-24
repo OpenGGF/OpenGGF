@@ -1,8 +1,6 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.SessionManager;
@@ -37,10 +35,10 @@ class TestLogicalInputControlLockLatch {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         module = new Sonic2GameModule();
         GameModuleRegistry.setCurrent(module);
-        TestEnvironment.activeGameplayMode();
+        // Preserve the live world's module before fixture teardown.
+        TestEnvironment.configureGameModuleFixture(GameModuleRegistry.getCurrent());
     }
 
     @AfterEach
