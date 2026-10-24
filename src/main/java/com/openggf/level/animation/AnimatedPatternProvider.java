@@ -1,7 +1,6 @@
-package com.openggf.data;
+package com.openggf.level.animation;
 
 import com.openggf.level.Level;
-import com.openggf.level.animation.AnimatedPatternManager;
 
 import java.io.IOException;
 

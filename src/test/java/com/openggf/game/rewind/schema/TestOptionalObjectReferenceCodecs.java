@@ -4,6 +4,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance;
 import com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.tests.OwnedMocks;
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +29,8 @@ class TestOptionalObjectReferenceCodecs {
     static Stream<Field> optionalLinks() throws ReflectiveOperationException {
         return Stream.of(RexonHeadObjectInstance.class.getDeclaredField("parent"),
                 RexonHeadObjectInstance.class.getDeclaredField("linkedHead"),
-                SolFireballObjectInstance.class.getDeclaredField("parent"));
+                SolFireballObjectInstance.class.getDeclaredField("parent"),
+                CutsceneKnucklesLbz2Instance.SwingChild.class.getDeclaredField("parent"));
     }
 
     @ParameterizedTest
@@ -110,6 +112,20 @@ class TestOptionalObjectReferenceCodecs {
         Saved saved = capture(fixture, context(fixture.reference()));
         ObjectInstance wrongType = mocks.mock(ObjectInstance.class);
         assertThrows(IllegalStateException.class, () -> restore(fixture, saved, context(wrongType)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("optionalLinks")
+    void optionalNativeWireKeepsItsExistingCapturedAndNullMarkers(Field field) throws Exception {
+        Fixture fixture = fixture(field);
+        assertArrayEquals(new byte[]{0}, capture(fixture, RewindCaptureContext.none()).data());
+        assertArrayEquals(new byte[]{1, 0}, capture(fixture, emptyContext()).data());
+        // The original optional encoding: captured marker, present marker, then five identity ints.
+        var expected = java.nio.ByteBuffer.allocate(22).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .put((byte) 1).put((byte) 1)
+                .putInt(ID.kind().ordinal()).putInt(ID.slotIndex()).putInt(ID.generation())
+                .putInt(ID.spawnId()).putInt(ID.dynamicId()).array();
+        assertArrayEquals(expected, capture(fixture, context(fixture.reference())).data());
     }
 
     private Fixture fixture(Field field) throws Exception {

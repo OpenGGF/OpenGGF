@@ -2,7 +2,7 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.smps.AbstractSmpsData;
-import com.openggf.audio.smps.Sonic1SmpsData;
+import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

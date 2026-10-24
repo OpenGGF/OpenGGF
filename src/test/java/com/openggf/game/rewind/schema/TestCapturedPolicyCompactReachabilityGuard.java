@@ -42,7 +42,8 @@ class TestCapturedPolicyCompactReachabilityGuard {
         var expected = java.util.Set.of(
                 new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent"),
                 new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead"),
-                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"));
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"),
+                new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance$SwingChild", "parent"));
         var actual = new java.util.HashSet<FieldKey>();
         for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
             for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
@@ -53,6 +54,33 @@ class TestCapturedPolicyCompactReachabilityGuard {
                     assertEquals(RewindFieldPolicy.CAPTURED,
                             DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(key));
                     assertTrue(RewindCodecs.requiresIdentityTable(field), "closure diagnostics still inspect optional links");
+                    assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(type));
+                    assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type));
+                    assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type).capturedFields().stream()
+                            .anyMatch(plan -> plan.field().equals(field)), field.toString());
+                }
+            }
+        }
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    void contextCompatibleCollectorsHaveClosedExactCapturedMetadata() throws Exception {
+        var expected = java.util.Set.of(
+                new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "knuckles"),
+                new FieldKey("com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance", "knuckles"));
+        var actual = new java.util.HashSet<FieldKey>();
+        for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
+            for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
+                for (var field : type.getDeclaredFields()) {
+                    if (!DefaultObjectRewindPolicies.isContextCompatibleCollectorReference(field)) continue;
+                    var key = FieldKey.of(field);
+                    actual.add(key);
+                    assertFalse(DefaultObjectRewindPolicies.isOptionalObjectReference(field),
+                            "AIZ managed references must not inherit optional-target semantics");
+                    assertEquals(RewindFieldPolicy.CAPTURED,
+                            DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(key));
+                    assertTrue(RewindCodecs.requiresIdentityTable(field));
                     assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(type));
                     assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type));
                     assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type).capturedFields().stream()

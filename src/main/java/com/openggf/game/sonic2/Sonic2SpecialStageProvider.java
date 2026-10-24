@@ -15,7 +15,7 @@ import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
-import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
@@ -352,7 +352,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.ope
         int countdown1 = ringsLatched ? bonusCountdown1 : ringsCollected;
         int countdown2 = ringsLatched ? bonusCountdown2 : 0;
         return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
-                () -> new SpecialStageResultsScreenObjectInstance(
+                () -> new Sonic2SpecialStageResultsScreen(
                         countdown1, countdown2, gotEmerald, stageIndex, totalEmeraldCount, services)),
                 this::onEnterResults);
     }

@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 151 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 until the projected 143-record cut is verified | Move pooled GPU commands to scalars; retain supported typed ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -80,6 +80,8 @@ continues those cuts rather than treating the inventory as untouched.
 | Title-card sprite rendering / `game.titlecard` | Remove the helper's 14 low-level reverse dependencies | Exact tile submissions, asymmetric flipped-art pixels and manager draw order at 320/424 pixels, unchanged API pins and strict frozen rules | Completed; low-level records 181 → 167; focused behavior/API checks and strict frozen rules passed |
 | Standalone audio composition / `tools.audio`, reusable presentation host | Remove the desktop app's eleven low-level records and the host's app callback | Parser/catalog characterization, actual supplied-profile use, independent host state, WAV export, ROM hub themes, launcher and strict guards | Completed; low-level records 167 → 156; behavior, CLI, API and complete guards passed; see the [second-loop plan](plans/2026-10-24-architecture-loop-two.md) |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Investigation complete; retain the graphics/context owner and all five records. Native resource checks passed; see the [follow-through plan](plans/2026-10-24-architecture-followthrough.md) |
+| S2 special-stage results / `game.sonic2.specialstage` | Object-base naming record 1 → 0; low-level records unchanged | Three unchanged implementation bodies, existing results/message behavior, API pins and strict naming rule | Completed; the standalone overlay keeps its ResultsScreen contract |
+| Mutable donor colors / team initialization and gameplay palette owner | No frozen-identity reduction | Completed ROM teams, compatible normal/water policy, immediate RGB/pixel rewind, bank replacement isolation and complete guards | Completed within the bounded cases in the [continuation plan](plans/2026-10-24-architecture-continuation.md); shared GPU allocation remains unchanged |
 
 The October 23 combined guard run recorded one independently reproduced
 pre-existing build-tooling assertion failure; that
@@ -92,7 +94,7 @@ new validation separately.
 Lifecycle calls are a separate migration inventory, not hundreds of automatically
 safe replacements. Preserve the intentional slot/reconstruction bridges and move
 callers only with focused lifecycle behavior evidence. Ambient test setup and
-remaining low-level audio/data allowances stay outside this campaign.
+remaining low-level audio/data allowances need their own caller-complete evidence.
 
 2026-10-23: the subsequent [title-preview migration](plans/2026-10-23-title-preview-providers.md)
 removed all nine shared-to-concrete mapping calls (S1: two, S2: one, S3K: six).
@@ -116,7 +118,7 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 3307 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+and 3305 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
 share these identities, and ambiguous dispatcher names fail. Exchanging one
 large method for another no longer
@@ -124,7 +126,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 
 | Rule | Enforced budget | Target | Trigger |
 |------|----------|--------|---------|
-| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 2, `GameLoop.java`: 4 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
 | Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
@@ -149,25 +151,46 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 98 methods across 97 files,
+The ambient singleton-setup inventory now contains 95 methods across 94 files,
 down from 102/100 after direct manager construction and named module fixtures
-replaced four methods in three test classes. These count setup obligations,
-not demonstrated leaks. Four unused GameLoop imports are gone; the reduced
-four-reference budget still covers real bonus bootstrap/debug coupling and does
-not claim that ownership migration is complete.
+replaced seven methods in six test classes. The four FadeManager unit cases
+construct their own manager and need no gameplay fixture. Gargoyle render checks
+inject their render service and graphics owner; Geyser checks name the S1 fixture.
+These count setup obligations, not demonstrated leaks. Removing four unused GameLoop imports first tightened
+stale accounting. The later registry metadata and bonus-stage capability migration
+removes the remaining root coupling; both concrete-reference caps are now zero.
+Sonic 1 music parsing now lives beside its game-owned loader, with its class body
+unchanged and the sole naming allowance removed. The naming store is empty.
+The S2 special-stage overlay, mappings and split-name messages now live together
+in `game.sonic2.specialstage`. `Sonic2SpecialStageResultsScreen` implements the
+existing ResultsScreen interface; it is not a managed level object. The sole
+object-base naming allowance is removed, without adding object inheritance.
+Its state machine and both public constructors remain unchanged.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
 records eight proven reconstruction policies, two captured fragment-art recipes,
-the ride ship's captured live inventory and codec-compatible ICZ helper state,
-leaving 11 exact obligations. False-floor surviving children dispatch by
+the ride ship's captured live inventory and codec-compatible ICZ helper state.
+Owner-bound LBZ panels and ordered wall-controller snapshots preserve progressed
+values and current shared RNG binding. Two unused AIZ histories are removed;
+exact captured actor links preserve finale triggering and emerald collection.
+Ordered S1 ring recipes now preserve caller values and canonical placement indices,
+including accepted null entries. Freezer and LBZ cameo histories are replaced by
+live managed observations; exact cameo links and saved anchors survive restoration.
+Initialized LBZ box rigs preserve absent/present helpers. Lightning sparks retain
+independent pixels and scripts while reacquiring atlas residency. The
+field-disposition baseline is now empty; the two LBZ boss histories have no
+gameplay consumer and their unmanaged bootstrap behavior remains explicit.
+False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
 occurrences. Initialized provider registration, restore and retirement checks
 establish the S2/S3K special-stage adapter coverage; static-state coverage now
-retains only the module-selection exclusion. These classification changes do not
-implement missing capture state for the remaining obligations.
+retains only the module-selection exclusion. An empty census means no currently
+detected disposition gaps remain in this audit's default-capture population.
+It does not replace destructive graph/replay evidence or certify arbitrary routes
+and handwritten capture paths.
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a
@@ -248,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 151
+- `low_level_layers_do_not_depend_on_runtime_layers`: 147
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -553,3 +576,38 @@ When a frozen violation is removed:
 4. Update record counts, member-dependency counts, and affected exception prose
    in this document. Keep committed allowances separate from measured live
    violations and package-pair permissions.
+
+
+The level-animation provider contracts now live beside their managers in
+`level.animation`. All three game loaders and LevelManager keep the same method
+bodies and runtime selection; exactly four parameter/return records are removed,
+151 → 147 in this composition. The API pins and historical frozen-rule key are
+unchanged. This meets the prior <=150 target.
+
+The subsequent SAT boundary study retains all four descriptor-adapter records.
+The supplied preparation decoder observes the persistent descriptor synchronously,
+including its distinct raw and cached palette values, and may change attributes,
+mutate subsequently sampled state or throw. Primitive GPU replay alone cannot
+remove that callback obligation. Relocating the adapter would replace identities
+without improving ownership. Removing it requires a separately scoped decision
+about the callback used for expanded SAT tiles; this campaign preserves the
+existing behavior and claims zero removals from that study.
+
+RenderContext's shared registry also provides process-wide GPU bank uniqueness,
+standalone typed access and retained CPU sources across texture resets. Source
+inspection does not justify moving the entire registry into gameplay sessions.
+Completed team initialization now restores the main donor binding before upload;
+sharing also respects native versus derived water policy. The existing gameplay
+palette owner captures donor RGB values and bank lifetime tokens, restores current
+cells without replacing aliases, and uploads restored colors immediately. These
+close demonstrated palette defects without moving the registry or reducing its
+typed allowances. Separate shader-capacity work has component evidence and review
+but awaits composition; this delivery does not claim it fixed.
+
+The next bounded allowance cut gives PatternRenderCommand a scalar GPU boundary
+while keeping GraphicsManager's typed ingress and the SAT decoder adapter.
+Its reviewed projection is nine removals plus five explicit adapter identities,
+147 → 143. That component now has focused results and source-review acceptance;
+this delivery still contains 147 records and does not claim its composed gates. The
+[continuation plan](plans/2026-10-24-architecture-continuation.md) records the
+qualified boundaries, exact replacement accounting and required behavior gates.

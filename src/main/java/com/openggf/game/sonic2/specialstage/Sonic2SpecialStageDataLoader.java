@@ -72,14 +72,14 @@ public class Sonic2SpecialStageDataLoader {
         return Sonic2SpecialStageSpriteMappings.getSonicFrame(frame);
     }
 
-    public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsFrame(int frame) {
-        return com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.getFrame(frame);
+    public com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsFrame(int frame) {
+        return com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsMappings.getFrame(frame);
     }
 
-    public com.openggf.game.sonic2.objects.SplitNameResultsMessages createResultsMessages(
+    public com.openggf.game.sonic2.specialstage.SplitNameResultsMessages createResultsMessages(
             boolean gotEmerald, boolean allEmeralds) { return null; }
 
-    public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsObjectFrame(int frame) {
+    public com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsObjectFrame(int frame) {
         return getResultsFrame(frame);
     }
 

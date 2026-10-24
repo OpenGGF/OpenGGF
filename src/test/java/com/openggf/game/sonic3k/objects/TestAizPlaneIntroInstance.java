@@ -8,10 +8,10 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -185,42 +185,44 @@ public class TestAizPlaneIntroInstance {
     }
 
     @Test
-    public void waveSpawnsContinueThroughFinalWaitAndKnucklesMonitor() throws Exception {
-        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
-        player.setCentreX((short) 0x40);
-        player.setCentreY((short) 0x420);
-        camera.setFocusedSprite(player);
+    public void waveSpawnsContinueThroughFinalWaitAndKnucklesMonitor() {
+        GameServices.configuration().setConfigValue(
+                com.openggf.configuration.SonicConfiguration.S3K_SKIP_INTROS, false);
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        fixture.stepFrame(false, false, false, false, false);
+        intro = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(AizPlaneIntroInstance.class::isInstance).map(AizPlaneIntroInstance.class::cast)
+                .findFirst().orElseThrow();
 
         int frame = 0;
-        while (frame < 1500 && intro.getRoutine() < 20) {
-            intro.update(frame++, player);
+        while (frame++ < 1500 && intro.getRoutine() < 20) {
+            fixture.stepFrame(false, false, false, false, false);
         }
         assertEquals(20, intro.getRoutine(), "setup should reach the final pre-Knuckles wait");
-
-        int beforeFinalWait = activeWaveCount(intro);
+        List<AizIntroWaveChild> beforeFinalWait = liveManagedWaves();
         for (int i = 0; i < AizPlaneIntroInstance.WAVE_SPAWN_INTERVAL + 1; i++) {
-            intro.update(frame++, player);
+            fixture.stepFrame(false, false, false, false, false);
         }
-        assertTrue(activeWaveCount(intro) > beforeFinalWait,
+        assertTrue(liveManagedWaves().stream().anyMatch(wave -> !beforeFinalWait.contains(wave)),
                 "ROM Obj_Wait keeps firing the wave callback during routine $14");
 
-        while (frame < 1600 && intro.getRoutine() < 22) {
-            intro.update(frame++, player);
+        while (frame++ < 1600 && intro.getRoutine() < 22) {
+            fixture.stepFrame(false, false, false, false, false);
         }
         assertEquals(22, intro.getRoutine(), "setup should reach the Knuckles monitor wait");
-
-        int beforeMonitor = activeWaveCount(intro);
+        List<AizIntroWaveChild> beforeMonitor = liveManagedWaves();
         for (int i = 0; i < AizPlaneIntroInstance.WAVE_SPAWN_INTERVAL + 1; i++) {
-            player.setCentreX((short) 0x800);
-            intro.update(frame++, player);
+            fixture.sprite().setCentreX((short) 0x800);
+            fixture.stepFrame(false, false, false, false, false);
         }
-        assertTrue(activeWaveCount(intro) > beforeMonitor,
+        assertTrue(liveManagedWaves().stream().anyMatch(wave -> !beforeMonitor.contains(wave)),
                 "ROM Obj_Wait keeps firing the wave callback while waiting for the Knuckles trigger");
     }
 
-    private static int activeWaveCount(AizPlaneIntroInstance intro) throws Exception {
-        Field field = AizPlaneIntroInstance.class.getDeclaredField("activeWaves");
-        field.setAccessible(true);
-        return ((List<?>) field.get(intro)).size();
+    /** Current managed, non-destroyed children; this observation deliberately has no spawn history. */
+    private static List<AizIntroWaveChild> liveManagedWaves() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(object -> !object.isDestroyed()).filter(AizIntroWaveChild.class::isInstance)
+                .map(AizIntroWaveChild.class::cast).toList();
     }
 }

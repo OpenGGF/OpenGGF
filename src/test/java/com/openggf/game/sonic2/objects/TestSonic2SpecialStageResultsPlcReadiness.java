@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.level.objects.TestObjectServices;
@@ -16,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2SpecialStageResultsPlcReadiness {
     private Sonic2PlcService plc;
-    private SpecialStageResultsScreenObjectInstance results;
+    private Sonic2SpecialStageResultsScreen results;
 
     @BeforeEach
     void setUp() {
@@ -28,7 +29,7 @@ class TestSonic2SpecialStageResultsPlcReadiness {
                 return GameServices.module().getGameService(type);
             }
         }.withGameModule(GameServices.module());
-        results = new SpecialStageResultsScreenObjectInstance(5, false, 0, 0, services);
+        results = new Sonic2SpecialStageResultsScreen(5, false, 0, 0, services);
     }
 
     @Test
@@ -66,13 +67,13 @@ class TestSonic2SpecialStageResultsPlcReadiness {
     }
 
     private int totalFrames() throws Exception {
-        Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("totalFrames");
+        Field field = Sonic2SpecialStageResultsScreen.class.getDeclaredField("totalFrames");
         field.setAccessible(true);
         return field.getInt(results);
     }
 
     private void markObjectComplete() throws Exception {
-        Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("complete");
+        Field field = Sonic2SpecialStageResultsScreen.class.getDeclaredField("complete");
         field.setAccessible(true);
         field.setBoolean(results, true);
     }

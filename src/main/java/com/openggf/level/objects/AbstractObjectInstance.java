@@ -1417,26 +1417,27 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * pre-update position cache, touch/solid-contact gating flags, slot index,
      * and respawn state index.
      *
-     * <p><strong>Subclass contract:</strong> Subclasses that hold private
-     * gameplay-relevant state (boss phase counters, badnik AI timers, sub-state
-     * machine indices, etc.) <em>must</em> override this method (and the matching
-     * {@link #restoreRewindState}) to include their own fields — otherwise that
-     * state will silently fail to round-trip across a rewind.
+     * <p><strong>Subclass contract:</strong> Keep gameplay state on the actual
+     * centrally gated default path whenever possible. Supported fields use the
+     * compact schema; classes that cannot use it retain the generic scalar
+     * fallback. Constructor recipes, mutable helpers and identity links need
+     * appropriate codecs or explicit field dispositions, plus fresh-instance
+     * restore and forward-replay evidence. Merely having scalar fields does not
+     * establish that the rest of a class is captured.
      *
-     * <p>Known subclasses likely to require overrides (non-exhaustive):
-     * <ul>
-     *   <li>Any boss instance — phase counters, arena/boundary flags, hit counters</li>
-     *   <li>{@code AbstractBadnikInstance} subclasses with multi-phase AI — per-frame
-     *       timers beyond {@code animTimer}, direction change state</li>
-     *   <li>CNZ bumper — reload timer</li>
-     *   <li>HTZ earthquake object — oscillation accumulator</li>
-     *   <li>Any object that uses {@code objoff_*} scratch fields for state machines</li>
-     * </ul>
-     *
-     * <p>The current default path is centrally gated by
+     * <p>The default path is selected by
      * {@link GenericRewindEligibility#usesDefaultObjectSubclassCapture(Class)}:
-     * subclasses without a concrete rewind override automatically capture fields
-     * accepted by {@link GenericFieldCapturer#captureObjectSubclassScalars(AbstractObjectInstance)}.
+     * subclasses without a concrete rewind override use compact capture when
+     * eligible, otherwise fields accepted by
+     * {@link GenericFieldCapturer#captureObjectSubclassScalars(AbstractObjectInstance)}.
+     * Existing approved manual paths remain responsible for their own extras.
+     * Adding an override can remove a class from default field auditing and must
+     * pass the exact architecture inventory; it is not the default way to add state.
+     *
+     * <p>This overload supplies {@link RewindCaptureContext#none()}. Managed
+     * identity fields require a table unless their exact codec explicitly supports
+     * context-free capture. Preserve that codec's distinction between uncaptured
+     * links and authoritative captured nulls when changing a field's disposition.
      *
      * @return immutable snapshot of this object's standard mutable field surface
      */

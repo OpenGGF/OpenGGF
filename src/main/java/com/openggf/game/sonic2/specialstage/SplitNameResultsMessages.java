@@ -1,4 +1,4 @@
-package com.openggf.game.sonic2.objects;
+package com.openggf.game.sonic2.specialstage;
 
 import java.util.ArrayList;
 import java.util.List;

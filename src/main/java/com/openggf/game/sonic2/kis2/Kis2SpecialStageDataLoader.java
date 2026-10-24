@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2.kis2;
 
-import com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings;
-import com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsMappings;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsMappings.ResultsPiece;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.compression.NemesisReader;
@@ -190,9 +190,9 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
     }
 
     @Override
-    public com.openggf.game.sonic2.objects.SplitNameResultsMessages createResultsMessages(
+    public com.openggf.game.sonic2.specialstage.SplitNameResultsMessages createResultsMessages(
             boolean gotEmerald, boolean allEmeralds) {
-        return new com.openggf.game.sonic2.objects.SplitNameResultsMessages(gotEmerald, allEmeralds);
+        return new com.openggf.game.sonic2.specialstage.SplitNameResultsMessages(gotEmerald, allEmeralds);
     }
 
     @Override
