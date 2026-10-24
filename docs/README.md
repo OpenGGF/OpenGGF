@@ -8,7 +8,10 @@ release records describe their recorded commits, not current verification.
 Level authors can start with the [level editor guide](guide/creating/level-editor.md)
 for project creation, safe saves, playtesting, and all-game exports.
 Film and cutscene authors can use [OpenGGF Stageplay](guide/creating/stageplay.md)
-in the engine or the external editor.
+in the engine or the external editor: start with
+[your first film](guide/creating/stageplay-first-film.md), then the
+[directing guide](guide/creating/stageplay-directing.md) and
+[reference](guide/creating/stageplay-reference.md).
 
 Level implementation and validation: [zone and act test standard](guide/contributing/level-test-standard.md),
 [coverage backlog](status/level-test-coverage.md), and
