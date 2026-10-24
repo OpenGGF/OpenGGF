@@ -95,7 +95,7 @@ class TestLightningSparkArtRewind {
         h.produce();
         assertEquals(4, h.live().size());
         for (LightningSparkObjectInstance spark : h.live()) {
-            assertSame(art.artTiles(), field(spark, "sparkTiles"));
+            assertSame(art.artTiles(), artField(spark, "sparkTiles"));
             assertEquals(1, spark.getPriorityBucket());
             assertTrue(spark.isHighPriority());
         }
@@ -115,14 +115,14 @@ class TestLightningSparkArtRewind {
         assertNotSame(art.artTiles(), replacement.artTiles());
         assertEquals(expectedArt, pixels(replacement.artTiles()), "current provider has the same ROM recipe");
         var directRecipe = LightningSparkObjectInstance.forRewindRecreate(originals.getFirst().getSpawn(), h.services);
-        assertSame(replacement.artTiles(), field(directRecipe, "sparkTiles"));
-        assertEquals(expectedArt, pixels((Pattern[]) field(directRecipe, "sparkTiles")),
+        assertSame(replacement.artTiles(), artField(directRecipe, "sparkTiles"));
+        assertEquals(expectedArt, pixels((Pattern[]) artField(directRecipe, "sparkTiles")),
                 "the uncaptured provider-key candidate is valid for this stock art boundary only");
         retireAtlasEntries();
         h.rewind.restore(snapshot);
         for (LightningSparkObjectInstance spark : h.live()) {
             assertFalse(originals.contains(spark), "managed reconstruction must be destructive");
-            assertEquals(expectedArt, pixels((Pattern[]) field(spark, "sparkTiles")));
+            assertEquals(expectedArt, pixels((Pattern[]) artField(spark, "sparkTiles")));
         }
         assertEquals(boundary, h.frame(), "first draw must republish art in the current atlas");
         assertEquals(forward, h.advance(22), "pixels, animation, raw clocks, slots and retirement replay");
@@ -142,6 +142,8 @@ class TestLightningSparkArtRewind {
         animation.addScript(7, extraScript);
         LightningSparkObjectInstance source = h.manager.createDynamicObject(() ->
                 new LightningSparkObjectInstance(160, 100, 0x100, -0x180, animation, tiles, true));
+        assertSame(tiles, artField(source, "sparkTiles"), "constructor retains the supplied array alias");
+        assertSame(animation, artField(source, "animSet"), "constructor retains the supplied animation alias");
         h.tick();
         Frame boundary = h.frame();
         List<List<Integer>> expected = pixels(tiles);
@@ -155,17 +157,17 @@ class TestLightningSparkArtRewind {
         h.rewind.restore(snapshot);
         LightningSparkObjectInstance restored = h.live().getFirst();
         assertNotSame(source, restored);
-        assertEquals(expected, pixels((Pattern[]) field(restored, "sparkTiles")));
-        assertEquals(extraScript, ((SpriteAnimationSet) field(restored, "animSet")).getScript(7));
+        assertEquals(expected, pixels((Pattern[]) artField(restored, "sparkTiles")));
+        assertEquals(extraScript, ((SpriteAnimationSet) artField(restored, "animSet")).getScript(7));
         assertEquals(boundary, h.frame());
         assertEquals(forward, h.advance(23));
         // Reuse the same snapshot after mutating a previously restored recipe.
-        ((Pattern[]) field(restored, "sparkTiles"))[0].clear();
-        ((SpriteAnimationSet) field(restored, "animSet")).addScript(0,
+        ((Pattern[]) artField(restored, "sparkTiles"))[0].clear();
+        ((SpriteAnimationSet) artField(restored, "animSet")).addScript(0,
                 new SpriteAnimationScript(0, List.of(2), SpriteAnimationEndAction.LOOP, 0));
         h.rewind.restore(snapshot);
         retireAtlasEntries();
-        assertEquals(expected, pixels((Pattern[]) field(h.live().getFirst(), "sparkTiles")));
+        assertEquals(expected, pixels((Pattern[]) artField(h.live().getFirst(), "sparkTiles")));
         assertEquals(boundary, h.frame());
     }
 
@@ -183,7 +185,7 @@ class TestLightningSparkArtRewind {
         shield.triggerSparks();
         h.manager.removeDynamicObject(shield); // isolate spark recreation from the player-bound shield lifecycle
         assertEquals(4, h.live().size());
-        assertTrue(h.live().stream().allMatch(s -> field(s, "sparkTiles") == null));
+        assertTrue(h.live().stream().allMatch(s -> artField(s, "sparkTiles") == null));
         Frame boundary = h.frame();
         assertEquals(0, boundary.litPixels());
         CompositeSnapshot snapshot = h.rewind.capture();
@@ -205,12 +207,12 @@ class TestLightningSparkArtRewind {
         SpriteArtSet art = loadArt(new Sonic3kGameModule());
         var source = new LightningSparkObjectInstance(12, 14, 0, 0, art.animationSet(), art.artTiles());
         supplied.restoreRewindState(source.captureRewindState());
-        assertEquals(pixels(art.artTiles()), pixels((Pattern[]) field(supplied, "sparkTiles")),
+        assertEquals(pixels(art.artTiles()), pixels((Pattern[]) artField(supplied, "sparkTiles")),
                 "populated public restore needs neither services nor an identity context");
         var empty = new LightningSparkObjectInstance(12, 14, 0, 0, new SpriteAnimationSet(), new Pattern[0]);
         supplied.restoreRewindState(empty.captureRewindState());
-        assertEquals(0, ((Pattern[]) field(supplied, "sparkTiles")).length);
-        assertEquals(0, ((SpriteAnimationSet) field(supplied, "animSet")).getScriptCount());
+        assertEquals(0, ((Pattern[]) artField(supplied, "sparkTiles")).length);
+        assertEquals(0, ((SpriteAnimationSet) artField(supplied, "animSet")).getScriptCount());
         var spark = LightningSparkObjectInstance.forRewindRecreate(new ObjectSpawn(8, 9, 0, 0, 0, false, 0), null);
         spark.appendRenderCommands(new ArrayList<>());
         for (int i = 0; i < 21; i++) spark.update(0xFC + i, null);
@@ -249,6 +251,10 @@ class TestLightningSparkArtRewind {
             result.add(List.copyOf(data));
         }
         return List.copyOf(result);
+    }
+
+    private static Object artField(Object owner, String name) {
+        return field(field(owner, "sparkArtState"), name);
     }
 
     private static Object field(Object owner, String name) {

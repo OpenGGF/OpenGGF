@@ -15,7 +15,6 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.level.objects.ObjectServices;
@@ -54,17 +53,36 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
     /** Shared descriptor for spark tiles: palette 0, no flip, no priority. */
     private static final PatternDesc SPARK_DESC = new PatternDesc(0);
 
-    @RewindTransient(reason = "Animation scripts are captured by sparkArtState as immutable values")
-    private SpriteAnimationSet animSet;
-    @RewindTransient(reason = "Pattern pixels are captured by sparkArtState, including independent constructor art")
-    private Pattern[] sparkTiles;
-    @RewindTransient(reason = "Atlas residency is republished after sparkArtState restores; never snapshot GPU state")
-    private boolean tilesCached;
-
     // The public constructors accept art independent of the current provider. A
     // provider-key recipe alone would replace it (or turn a null recipe into art).
     // Keep the default owner/scalar capture and snapshot only pixels and scripts.
-    private final RewindStateful<SparkArtSnapshot> sparkArtState = new RewindStateful<>() {
+    private final SparkArtState sparkArtState;
+
+    private static final class SparkArtState implements RewindStateful<SparkArtSnapshot> {
+        private SpriteAnimationSet animSet;
+        private Pattern[] sparkTiles;
+        private boolean tilesCached;
+
+        private SparkArtState(SpriteAnimationSet animSet, Pattern[] sparkTiles) {
+            this.animSet = animSet;
+            this.sparkTiles = sparkTiles;
+        }
+
+        private boolean hasTiles() { return sparkTiles != null; }
+
+        private SpriteAnimationScript script() {
+            return animSet == null ? null : animSet.getScript(SPARK_ANIM_SCRIPT);
+        }
+
+        /** Cache in the current atlas once; restoration resets this upload scratch. */
+        private void ensureTilesCached(GraphicsManager gfx) {
+            if (tilesCached) return;
+            for (int i = 0; i < sparkTiles.length; i++) {
+                gfx.cachePatternTexture(sparkTiles[i], SPARK_PATTERN_BASE + i);
+            }
+            tilesCached = true;
+        }
+
         @Override
         public SparkArtSnapshot captureRewindStateValue() {
             byte[][] pixels = sparkTiles == null ? null : new byte[sparkTiles.length][];
@@ -105,7 +123,7 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
             }
             tilesCached = false;
         }
-    };
+    }
 
     private record SparkArtSnapshot(byte[][] pixels, ScriptSnapshot[] scripts) {
         private SparkArtSnapshot {
@@ -193,8 +211,7 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
         this.ySub = 0;
         this.xVel = xVel;
         this.yVel = yVel;
-        this.animSet = animSet;
-        this.sparkTiles = sparkTiles;
+        this.sparkArtState = new SparkArtState(animSet, sparkTiles);
         this.life = 0;
         this.frameIndex = 0;
         this.currentMappingFrame = 0;
@@ -286,12 +303,12 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed() || sparkTiles == null) return;
+        if (isDestroyed() || !sparkArtState.hasTiles()) return;
         // Frame 2 = empty (invisible flash frame)
         if (currentMappingFrame >= 2) return;
 
         GraphicsManager gfx = services().graphicsManager();
-        ensureSparkTilesCached(gfx);
+        sparkArtState.ensureTilesCached(gfx);
 
         if (currentMappingFrame == 0) {
             // 1×1 tile at (-4, -4) — ROM Map_LightningShield frame $C
@@ -306,31 +323,19 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
         }
     }
 
-    /** Cache spark tiles in the pattern atlas once (static art, never changes). */
-    private void ensureSparkTilesCached(GraphicsManager gfx) {
-        if (tilesCached) return;
-        for (int i = 0; i < sparkTiles.length; i++) {
-            gfx.cachePatternTexture(sparkTiles[i], SPARK_PATTERN_BASE + i);
-        }
-        tilesCached = true;
-    }
-
     private void initAnimation() {
         frameIndex = 0;
-        if (animSet != null) {
-            SpriteAnimationScript script = animSet.getScript(SPARK_ANIM_SCRIPT);
-            if (script != null) {
-                delayCounter = script.delay();
-                if (!script.frames().isEmpty()) {
-                    currentMappingFrame = script.frames().get(0);
-                }
+        SpriteAnimationScript script = sparkArtState.script();
+        if (script != null) {
+            delayCounter = script.delay();
+            if (!script.frames().isEmpty()) {
+                currentMappingFrame = script.frames().get(0);
             }
         }
     }
 
     private void stepAnimation() {
-        if (animSet == null) return;
-        SpriteAnimationScript script = animSet.getScript(SPARK_ANIM_SCRIPT);
+        SpriteAnimationScript script = sparkArtState.script();
         if (script == null || script.frames().isEmpty()) return;
 
         if (delayCounter > 0) {

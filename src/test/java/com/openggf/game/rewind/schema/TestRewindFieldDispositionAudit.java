@@ -10,12 +10,15 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -23,13 +26,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
     @Test
-    void lightningSparkArtValuesRideTheActualDefaultCapturePath() {
+    void lightningSparkArtValuesRideTheActualDefaultCapturePath() throws ReflectiveOperationException {
         Class<?> owner = com.openggf.game.sonic3k.objects.LightningSparkObjectInstance.class;
         assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
         assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(owner));
         assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(owner).capturedFields().stream()
                 .anyMatch(plan -> plan.field().getName().equals("sparkArtState")),
                 "pixels/scripts must be captured by the owner-local holder, without excluding the owner");
+        Class<?> helper = owner.getDeclaredField("sparkArtState").getType();
+        assertTrue(com.openggf.game.rewind.RewindStateful.class.isAssignableFrom(helper));
+        assertTrue(Modifier.isPrivate(helper.getModifiers()) && Modifier.isStatic(helper.getModifiers())
+                && Modifier.isFinal(helper.getModifiers()) && !helper.isAnonymousClass(),
+                "the named helper must own its values without an enclosing-object reference");
+        Set<String> artFields = Set.of("animSet", "sparkTiles", "tilesCached");
+        assertEquals(artFields, Arrays.stream(helper.getDeclaredFields()).map(field -> field.getName())
+                .collect(Collectors.toSet()));
+        assertTrue(Arrays.stream(owner.getDeclaredFields()).noneMatch(field -> artFields.contains(field.getName())),
+                "the owner must not retain art sideband fields");
+        assertTrue(Arrays.stream(helper.getDeclaredFields()).allMatch(field ->
+                !Modifier.isTransient(field.getModifiers()) && field.getDeclaredAnnotations().length == 0),
+                "the helper captures values directly, without replacement exclusions");
+        assertTrue(Arrays.stream(owner.getDeclaredFields()).allMatch(field -> field.getDeclaredAnnotations().length == 0));
         List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
         RewindFieldDispositionAudit.auditClass(owner, gaps);
         assertEquals(List.of(), gaps);
