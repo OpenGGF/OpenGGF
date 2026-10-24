@@ -3616,3 +3616,25 @@ input/CSV and provenance are external under native/engine-restart-world-r2.
 This is a DEV restart: no native fade/loading/title/HUD/audio/PLC timing,
 explicit clock seed0 and raw-held/tap policy, and no timing/pixel/full-game or
 regional parity claim. The complete USA game remains the goal before regions.
+
+### Pure native SolidObject owner — 24 October 2026
+
+CdSolidObject ports every Object Solid.asm entry at the existing pin, including
+GetOff/StandOn, top/bottom/plain solidity, pushes and all four shared KillPlayer
+sites. It returns final player/object/global values, native write sets, d0 and
+ordered calls. It reads an ephemeral call-cut capture only for actual a2
+dereferences and commits no pool, player, angle buffer or sound. Existing
+movement probes and KillPlayer are reused; no physics is copied. Reserved
+and out-of-pool stand/push bytes stop at actual dereference, while byte0's
+player-slot alias and compare-only paths preserve native behavior.
+
+Root57948 executed all88cases, including the supplied-USA binding, without
+failure/error/skip. The independent source review found noP1/P2, re-derived
+all13probe distances, all22get-off reasons and the four kill sites. Before
+commit, documentation clarifies three reviewed details without changing code:
+bytes192..255 wrap on the24-bit bus; stick clearing depends on GetOff guards;
+and SOLID_TYPE/ROUTINE_2 are one storage byte at$25, not separate writes. The
+open-air prediction test does not distinguish the killed Y velocity; stronger
+row-terrain coverage remains advisory. S4 must validate pool ownership before
+committing the returned object/other-slot images. World integration, the
+player's support continuation and Floating Block dispatch remain separate.
