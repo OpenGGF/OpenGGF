@@ -2093,3 +2093,71 @@ Hooks are installed; this worker stops at its local review commit. Combined
 guards/API/S3K validation, aggregate documentation reconciliation, integration,
 push and worktree cleanup remain parent-owned; this worker neither pushes nor
 removes its branch/worktree.
+
+### Sonic 1 moving-block and badnik fixture slice
+
+This test-only slice starts at `591c679b39c61f162a839cde6baaedd387135bc4` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5744aa69`, local branch
+`bugfix/ai-s1-badnik-test-fixtures-20261024`. It removes only these three ambient
+setup allowance keys; the scanner and all other allowances remain unchanged:
+
+```text
+src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
+src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
+src/test/java/com/openggf/game/sonic1/objects/badniks/TestSonic1CaterkillerBodyChaining.java#setUp
+```
+
+Direct construction and the existing named module fixture were compared against
+each subject's dependencies. Moving block already injects its object services
+and real solid-execution registry, but `TestPlayableSprite` inherits engine
+services from `AbstractSprite` and resolves its physics profile and collision
+rules from the current module in `AbstractPlayableSprite`. Its two real-player
+checkpoint/carry cases therefore use
+`TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1)`, retaining the
+real object manager and S1 oscillator reset. Teardown clears the session,
+bootstrap module, oscillation table and static camera bounds.
+
+Buzz Bomber's existing synthetic flying/static objects exercise the real object
+manager's placement and persistence boundary, without player/module state.
+Caterkiller's body-state cases likewise need no session; its head-destruction
+case still uses the real manager's VBlank counter and production S1 destruction
+path, including replacement-explosion slot inheritance. Both classes now create
+an independent default configuration and real camera, inject `StubObjectServices`,
+and use the explicit eight-argument manager constructor. This avoids both the
+no-argument camera's `GameServices.configuration()` lookup and the convenience
+manager constructor's ambient service selection. Caterkiller's five unused
+`GameServices.level()` lookups are removed. Both classes reset static camera
+bounds, including vertical wrapping, before and after each case. A named fixture
+for these two classes would add session/module ownership their subjects do not
+consume; a mocked manager would remove the boundary being tested.
+
+Source comparison preserved all 11 existing test identities, all 39 assertion
+statements verbatim, and the test-body tokens/timing after accounting for the
+exact fixture substitutions. No production code, helper framework, new tests,
+expected behavior or other guard key changed. No other-game dependency required
+retaining one of the three allowances. The parent's separate Geyser/Gargoyle
+removals are absent from this base and are not restored or edited here; this
+slice's composition delta is exactly three keys.
+
+The queued version probe reported Java 25.0.5.0.2. The following focused command
+passed **19 distinct cases in four XML reports**, with zero failures, errors or
+skips: moving block 2, Buzz Bomber 3, Caterkiller 6, exact lifecycle guard 8.
+Admission took seven seconds; Maven reported 92 seconds including compilation.
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=TestSonic1MovingBlockObjectInstance,TestBuzzBomberLifecycle,TestSonic1CaterkillerBodyChaining,TestSingletonLifecycleGuard' \
+  test -B
+```
+
+The Java sources stayed unchanged from queue submission through completion.
+Every XML class/method identity was matched to its source; all eight consumed
+XML/text reports were removed, and diagnostics/trace-report directories were
+empty. These checks require neither ROMs nor GL and establish only the existing
+object/manager cases and exact guard, not native Buzz Bomber flight, full-route
+coverage, API/S3K checks or the combined guards run. Combined validation,
+integration and push remain parent-owned; this slice stops at a local commit.
