@@ -66,6 +66,8 @@ class DashboardTests(unittest.TestCase):
             (waiting['waitSeconds'], waiting['schedulingAgeSeconds'], waiting['aged'], waiting['position']))
         self.assertEqual(dict(revision=dashboard.TOOLING_REVISION, status='current'), running['tooling'])
         self.assertEqual(running['tooling'], waiting['tooling'])
+        self.assertEqual((4 * 1024 ** 3, 4),
+                         (waiting['budgetMemoryBytes'], waiting['budgetCpuCores']))
         self.assertEqual(before, {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()})
 
     @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
@@ -81,6 +83,8 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(10, view['waiting'][0]['schedulingAgeSeconds'])
         self.assertEqual(dict(revision=None, status='unknown'), view['waiting'][0]['tooling'])
         self.assertEqual(view['waiting'][0]['tooling'], view['running'][0]['tooling'])
+        self.assertIsNone(view['waiting'][0]['budgetMemoryBytes'])
+        self.assertIsNone(view['waiting'][0]['budgetCpuCores'])
         self.assertTrue(any('Older clients' in item for item in view['warnings']))
         self.assertTrue(any('usable queue tooling revision' in item for item in view['warnings']))
 
@@ -105,7 +109,19 @@ class DashboardTests(unittest.TestCase):
             self.assertEqual({'unknown', 'older', 'current', 'newer'},
                              {job['tooling']['status'] for job in view['waiting']})
             self.assertTrue(any('older queue tooling' in item for item in view['warnings']))
+            self.assertTrue(any('newer queue tooling than this dashboard' in item for item in view['warnings']))
             self.assertEqual(before, {p: p.read_bytes() for p in self.common.rglob('*') if p.is_file()})
+
+    def test_budget_summary_uses_loaded_registry_and_keeps_configured_policy_separate(self):
+        configured = dict(maxRuns=2, memoryGiB=6.5, cpuCores=6, headroomGiB=1)
+        with patch.object(dashboard, 'QUALIFIED_CLASSES', frozenset({'example.One', 'example.Two'})), \
+                patch.object(dashboard, 'MAX_SMALL_CLASSES', 12), \
+                patch.object(dashboard, 'SMALL_RESERVATION', (3 * 1024 ** 3, 2)):
+            view = self.collect(policy_config=configured)
+        self.assertEqual(configured, view['policy'])
+        self.assertEqual(dict(registeredClasses=2, maxClasses=12,
+                              memoryBytes=3 * 1024 ** 3, cpuCores=2), view['smallJobs'])
+        self.assertIsNone(self.collect(policy_config=None)['policy'])
 
     @unittest.skipUnless(sys.platform == 'linux', 'Requires Linux lease observation')
     def test_fresh_authored_reasons_preserve_provenance_and_validated_details(self):

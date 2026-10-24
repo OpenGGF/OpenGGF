@@ -18,7 +18,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
-import com.openggf.graphics.TitleCardSpriteRenderer;
+import com.openggf.game.titlecard.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.FreshLevelTitleOwnerReplacement;
 

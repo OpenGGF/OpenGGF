@@ -1481,6 +1481,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   refreshing automatically without changing queue state and explaining admission
   blockers when known. It names blocking requests, shows reported tooling revisions
   across worktrees and labels scheduling estimates as coarse ordering hints.
+  A compact layout shows slot occupancy, per-job memory/CPU meters, colour-coded
+  admission reasons and mean CPU per completion, following the system light/dark theme.
   Waiting requests favour short checks, with aging and one
   qualified small backfill before an older capacity-blocked request drains the queue.
   Reviewed small focused checks and ordinary batches automatically use 1 GiB JVM

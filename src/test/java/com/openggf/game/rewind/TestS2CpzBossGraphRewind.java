@@ -165,6 +165,8 @@ class TestS2CpzBossGraphRewind {
         assertSame(graph.pipe(), readObjectField(graph.pipePump(), "parentPipe"));
         assertSame(graph.boss(), readObjectField(graph.pipeSegment(), "mainBoss"));
         assertSame(graph.pipe(), readObjectField(graph.pipeSegment(), "parentPipe"));
+        assertEquals(List.of(graph.pipeSegment()), readObjectField(graph.pipe(), "segments"),
+                "the recreated pipe must retain its exact live segment for the retract sequence");
     }
 
     private static void assertRestoredObjectsAreFresh(CpzGraph before, CpzGraph restored) {

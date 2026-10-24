@@ -4,15 +4,11 @@
 # giving fields dispositions (central policy entries preferred); never grow this.
 # Resolved keys fail the guard too: remove them so a recurrence cannot reuse debt.
 com.openggf.game.sonic1.objects.Sonic1RingInstance#childRingSpawns
-com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher#activeBalls
 com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks
-com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance#seesaws
 com.openggf.game.sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList
 com.openggf.game.sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList
-com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#pieceList
 com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance#heads
 com.openggf.game.sonic2.objects.badniks.SolBadnikInstance#fireballs
-com.openggf.game.sonic2.objects.bosses.CPZBossPipe#segments
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#activeWaves
 com.openggf.game.sonic3k.objects.AizPlaneIntroInstance#emeralds
 com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars
@@ -23,6 +19,5 @@ com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance#spawnedChildren
 com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#wallExplosions
 com.openggf.game.sonic3k.objects.LbzMinibossInstance#panels
 com.openggf.game.sonic3k.objects.LightningSparkObjectInstance#sparkTiles
-com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance#bodySegments
 com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes
 com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned

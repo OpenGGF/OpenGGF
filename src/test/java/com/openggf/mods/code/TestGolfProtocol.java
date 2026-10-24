@@ -22,6 +22,11 @@ class TestGolfProtocol {
     }
 
     static void runProbe(Path temp, String probe, String method) throws Exception {
+        runCompiledProbe(compileProbes(temp), probe, method);
+    }
+
+    /** Immutable bytecode may be shared; runtime classes and probe state must stay isolated. */
+    static Path compileProbes(Path temp) throws Exception {
         Path project = Path.of("examples/putt-putt-paradise");
         Path sources = project.resolve("src/main/java/paradise/net");
         assertTrue(Files.isDirectory(sources), "the external golf transport has not been implemented");
@@ -34,6 +39,10 @@ class TestGolfProtocol {
         }
         assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)),
                 "external engine-free networking sources must compile on Java 25");
+        return classes;
+    }
+
+    static void runCompiledProbe(Path classes, String probe, String method) throws Exception {
         try (var loader = new URLClassLoader(new java.net.URL[]{classes.toUri().toURL()}, null)) {
             try {
                 loader.loadClass("paradise.net." + probe).getMethod(method).invoke(null);
