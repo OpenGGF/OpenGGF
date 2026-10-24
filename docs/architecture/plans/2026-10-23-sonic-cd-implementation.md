@@ -3086,3 +3086,26 @@ Root87184 passed336affected cases (99response,100Body,93Frame,33Runtime,11API),
 Java25/media verified. Independent Opus review found noP1/P2 and confirmed
 all9newliteral invocations. The report's LevelBound citation is1705, not1704;
 the bored2B branch remains a distinct typed boundary in the collision port.
+
+
+### Lost-ring body and spill globals, 24 October 2026
+
+ObjLostRing11 owns all five routine entries and preserves native live allocation,
+dirty routine addition, the zero-ring96-slot quirk, signed velocity word carry,
+old-coordinate integration and the conditional floor/bounce/global-angle order.
+It consumes explicit raw native V-int bits plus the physical RunObjectsD7,
+never an engine counter or comparison row. Collect binds the unchanged existing
+CdRing.collectRing through a package-only modifier seam; no duplicate reward
+algorithm or saved-bank owner is introduced. Call/child/delete metadata is not
+replayed by the caller. The separate immutable spill record owns only timer,
+accumulator and frame; its native tail wraps as byte/word operations.
+
+Root39416 executed79lost-ring cases (including bothactualUSAmedia methods and
+2production reward bindings),21spill and26existingRing, all0failures/errors/
+skips. Its one unrelated new clock-test wrapper-equality assertion failed and
+was fixed separately; the233-case selection is not described as a233pass.
+AllfreshXMLJava25/media confirmed. Independent Opus source review re-derived
+all48velocity rows and actual floor probes, found noP1/P2 in these bodies/tests,
+and confirmed d7 survives the native callees. MMZ and the dirty standing-object
+branch remain explicit finite boundaries, and native phase is uncertified.
+These device cases are not yet a normal-input hurt/landing gameplay claim.

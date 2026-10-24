@@ -251,7 +251,7 @@ public final class CdRing {
     }
 
     /** CollectRing:290-312. BSET uses the old bit; thresholds compare unsigned after word wrap. */
-    private static void collectRing(GlobalsPort globals, SourceCalls calls) {
+    static void collectRing(GlobalsPort globals, SourceCalls calls) {
         var g = Objects.requireNonNull(globals.read(), "globals state");
         int rings = word(g.rings() + 1); int flags = g.livesFlags();
         boolean life = false;
