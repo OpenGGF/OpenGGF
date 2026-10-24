@@ -38,6 +38,32 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 class TestCapturedPolicyCompactReachabilityGuard {
 
     @Test
+    void optionalNativeLinksHaveClosedExactCapturedMetadata() throws Exception {
+        var expected = java.util.Set.of(
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent"),
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead"),
+                new FieldKey("com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent"));
+        var actual = new java.util.HashSet<FieldKey>();
+        for (var root : RewindScanSupport.discoverRuntimeOwnerClasses()) {
+            for (var type : RewindScanSupport.withNestedRuntimeOwnerClasses(root)) {
+                for (var field : type.getDeclaredFields()) {
+                    if (!DefaultObjectRewindPolicies.isOptionalObjectReference(field)) continue;
+                    var key = FieldKey.of(field);
+                    actual.add(key);
+                    assertEquals(RewindFieldPolicy.CAPTURED,
+                            DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().get(key));
+                    assertTrue(RewindCodecs.requiresIdentityTable(field), "closure diagnostics still inspect optional links");
+                    assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(type));
+                    assertTrue(CompactFieldCapturer.supportsDefaultObjectSubclassScalars(type));
+                    assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(type).capturedFields().stream()
+                            .anyMatch(plan -> plan.field().equals(field)), field.toString());
+                }
+            }
+        }
+        assertEquals(expected, actual);
+    }
+
+    @Test
     void acquiredPlayerFieldsAlwaysReachTheCentralIdentityCodec() throws Exception {
         var failures = new ArrayList<String>();
         int audited = 0;

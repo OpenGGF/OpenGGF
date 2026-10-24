@@ -439,3 +439,95 @@ Debug controls can use an internal stage-owned capability analogous to
 key/modifier handling and account explicitly for gumball filter effects while
 other bonus types are active. These are proposed bounded cuts, not completed
 ownership or measured guard reductions.
+
+### Loop 4 optional native-reference schema blocker
+
+The isolated schema worker starts from exact parent candidate
+`2de8b23d7a8f11bd1316f8b5cdcde2573bc41e53`; the reviewed water, LBZ ship and
+ICZ changes are untouched. The parent supplied the fresh 753-case guard result:
+752 passed and `TestRewindArchitectureGuard#objectRewindOverridesDoNotGrowWithoutExplicitBaselineTriage`
+rejected RexonHead/SolFireball capture/restore (four new methods). No guard
+baseline or architectural allowance changes here.
+
+Only `RexonHeadObjectInstance.parent`, `.linkedHead` and
+`SolFireballObjectInstance.parent` select a private optional mode of the existing
+object-reference codec. Their shared exact-policy keys are explicitly CAPTURED
+and participate in the existing reachability audit. Class-only lookup and all
+other reference fields retain strict encoding/resolution. No table writes an
+uncaptured marker whose restore preserves the current link even when a restore
+table exists. A supplied table writes authoritative null for null/retired targets
+or a stable ID for a registered target; missing restore targets resolve to null,
+with resolved-type validation retained. Identity metadata remains true for closure
+diagnostics. Snapshots contain reference bytes, not live object pointers. The two
+actors lose their public manual hooks and private extras; parent inventories and
+null-safe recreation remain unchanged. API pins and public schema contracts do
+not change.
+
+The parent's untracked optional-codec source was copied alone and acknowledged
+before editing, with matching SHA256
+`e29e89b26afba5866753264274fbbfc08c0f1c274f142938987eaa3bfe258e3e`.
+Its supplied baseline on unchanged `2de8b23d7` ran 18 cases: nine failures
+(three each for absent capture table, unregistered retired target and missing
+restore target), nine replacement/null/type controls passing, zero errors/skips.
+That matching baseline was reused, not rerun. Locally the original 18 plus four
+existing strict controls passed; after six additional uncaptured-link and
+class-only strict controls, the final codec selection passed 28 cases with zero
+failures/errors/skips. Opaque snapshot values are asserted empty.
+
+An attempted reuse test was rejected by actual manager evidence: the exploratory
+18-case domain run had seven failures, zero errors/skips. Three were the proposed
+eligibility/reused-child assertions: `ObjectRewindTypeSafety` still uses
+`GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit`, which excludes
+reference fields even when the compact schema captures them. Both children
+therefore remain recreation fallbacks; no dummy state or safety-policy change was
+added. The two proposed reuse tests were removed and the original fallback
+assertions retained. The other four failures asserted the deleted private extra's
+presence; these now assert compact state plus no subclass extra and retain all
+authoritative-null/link-clearing behavior checks. The existing three-case
+`TestRewindInPlaceObjectRestore` passed in that run and is not repeated. Admission
+took 17 seconds and Maven execution 28.491 seconds.
+
+Source/test review tree `6fdac3b4c689acaa7819df890254634d31262e9a` has seven
+changed files relative to the parent and diff SHA256
+`4291863f46b0c79ae010b45ec6c4ab8f369db57b09bc25aa96bd59e7c4773099`.
+All local commands use the worker's own `target/`, Java 25 at
+`/usr/lib/jvm/java-25-openjdk`, `LUA_BIN=/usr/bin/lua5.4`, and unset DISPLAY,
+WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS. `MAIN_CHECKOUT` denotes
+the existing main checkout and `ROM_ROOT` its existing ROM directory; the three
+ROM files below were verified against the documented CRC32/SHA-1 identities.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --lean -Dmse=off \
+  '-Dtest=TestOptionalObjectReferenceCodecs,TestRewindObjectReferenceCodecs' test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --normal -Dmse=off \
+  '-Dtest=TestS2RexonSolOwnershipRewind,TestS2BadnikChildGraphRewind,TestRewindFixS2Batch3Codecs,TestRewindFixS2Batch5Codecs' \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards \
+  '-Dtest=TestRewindPolicyRegistry,TestRewindSchemaRegistry,TestRewindFieldDispositionGuard,TestRewindFieldDispositionAudit,TestCapturedPolicyCompactReachabilityGuard,TestRewindReferenceClosureValidation,TestRewindArchitectureGuard,TestModApiSignatureSurface' test -B
+```
+
+The exploratory command used the same domain flags with selector
+`TestS2RexonSolOwnershipRewind,TestRewindInPlaceObjectRestore`. The corrected
+19-case domain command above passed with zero failures/errors/skips, after 24
+seconds of admission and 29.039 seconds of Maven execution. The scoped guard/API
+command ran 78 cases: 77 passed, one new metadata-test error, zero failures/skips.
+The error was an overbroad test lookup of the unrelated stale transient policy
+`defeatExplosionController`. No unrelated policy changed: the new test instead
+discovers actual runtime fields, then checks the exact closed optional set, its
+CAPTURED dispositions, identity metadata and compact-path reachability. Existing
+CAPTURED-policy auditing still rejects stale keys. Architecture's four checks,
+including the original blocker, and all 11 API signature checks passed. This run
+had zero admission wait and 30.775 seconds of Maven execution.
+
+Only `TestCapturedPolicyCompactReachabilityGuard` was repeated, using the last
+command with that exact selector. All seven cases passed, zero failures/errors/
+skips, with no admission wait and 26.500 seconds of Maven execution. The other
+71 unchanged cases were not repeated; there was no single all-green 78-case
+invocation. XML identities/skips were inspected and consumed reports removed.
+These are bounded schema, object-graph and manager checks, not route/viewport/
+donor/team certification or a full-suite pass. Complete composed guards,
+change-based smoke, integration and delivery belong to the parent; no full-suite
+or duplicate complete-guards run was submitted. No live job remains.
