@@ -62,6 +62,18 @@ class TestNativePlayableSlotDispatch {
 
     @AfterEach void close() { SessionManager.clear(); }
 
+    @Test void nativeControlledInputCanObserveGenericSuppressionWithoutConsumingAnyState() {
+        assertFalse(SpriteManagerInternalAccess.inputSuppressed(sprites));
+        sprites.setInputSuppressed(true);
+        assertTrue(SpriteManagerInternalAccess.inputSuppressed(sprites));
+        assertTrue(SpriteManagerInternalAccess.inputSuppressed(sprites));
+        sprites.setInputSuppressed(false);
+        sprites.setPlaybackInputSuppressed(true);
+        assertFalse(SpriteManagerInternalAccess.inputSuppressed(sprites),
+                "controlled logical overrides retain the existing playback-only bypass");
+        assertTrue(events.isEmpty());
+    }
+
     @Test void nativeInitAndLaterSlotsOwnTheWholeReturnAndUseTheLevelLowWord() {
         NativePlayer player = new NativePlayer("main");
         player.setInvulnerableFrames(20);

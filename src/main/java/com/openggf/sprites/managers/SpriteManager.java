@@ -1929,6 +1929,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		this.inputSuppressed = suppressed;
 	}
 
+    boolean inputSuppressed() { return inputSuppressed; }
+
 	/**
 	 * Suppresses keyboard-driven gameplay input specifically for playback mode.
 	 * This is separate from generic suppression used by title cards/credits.

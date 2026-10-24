@@ -5,11 +5,13 @@ The development stock registry admits zone 0 / act 0 / level index 0 only.
 The native catalogue retains all seventy stage payloads per release; registration
 of this static entry does not certify another stage or a native entry/exit edge.
 
-Implementation is **partial static terrain presentation**. No character route is
-implemented yet. Native Sonic movement and integrated collision, objects, time travel, checkpoint,
-completion, incoming/outgoing transitions, music and animated gameplay remain missing.
-Finite collision, charge, animation and art-transfer components are tested separately;
-they do not create a character route.
+Implementation is **partial terrain-only development gameplay**. The default
+stock entry retains static terrain/HOLD. A separately selected player entry
+executes source-owned Sonic Init/Main/MODE, actual terrain collision, animation,
+V-int art, input/pause and foreground camera through the normal world/loop.
+Objects, rings, time travel, native checkpoint/death/completion, incoming/outgoing
+transitions, music and animated scenery remain missing. The bounded USA route
+below does not complete the act or the USA MVP.
 This matrix applies the [level standard](../../../guide/contributing/level-test-standard.md)
 as an obligation inventory, not an act certification.
 
@@ -25,12 +27,20 @@ explicitly rejects native title/art/restart/checkpoint assembly requests. Those
 development restrictions do not establish the final game's supported character,
 donor or roster policy. Required native and cross-game breadth remains unassessed.
 
+The explicit player authorities additionally include
+`SonicCdPlayerInitProfile.terrainPlayerContext()`,
+`SonicCdGameModule.terrainOnlyDevelopmentPlayer()` and
+`HeadlessGameBoot.bootSonicCdTerrainPlayer(source)`. They admit only Sonic alone,
+320×224, no donor, policies, title, carried state or native objects. Shared frame
+state, actor/history, source scroll and resident graphics have separate owners;
+same-world restore projects their completed state without a cold initialization.
+
 | Configuration dimension | Observed coverage | Remaining obligation |
 | --- | --- | --- |
 | Viewport | Production 320×224 capture on all three supplied releases | 352, 400, 528 and 800 presets; gameplay, edge/culling and restore products |
-| Movement donation | Off for static presentation; no movement executes | Actual supported donor policy and every supported donor through gameplay/lifecycle |
-| Character/roster | Empty actor registry in the static entry | Native Sonic, additional admitted characters, solo/pair/mixed/duplicate followers and actual participant contract |
-| Lifecycle | Explicit fresh static assembly, same-source reload, same-world restore | Cold title/new game, native restart/death/checkpoint, completion, transitions and time travel |
+| Movement donation | Off; explicit player entry rejects donors before state changes | Final supported donor policy and every supported donor through gameplay/lifecycle |
+| Character/roster | Default empty; explicit player entry retains exactly one native Sonic | Additional admitted characters, solo/pair/mixed/duplicate followers and final participant contract |
+| Lifecycle | Fresh assembly, retained-level cold reset, reload, cancellation, close, same-world full/course registry restore | Cold title/new game, native restart/death/checkpoint, completion, transitions and time travel |
 
 | Obligation and spot | Contract / setup authority | Test and observed execution | Status / gap |
 | --- | --- | --- | --- |
@@ -43,6 +53,31 @@ donor or roster policy. Required native and cross-game breadth remains unassesse
 | SONIC VISUAL COMPONENT: selected poses | Authenticated visual views, explicit V-int art state, existing PlayerSpriteRenderer | Three supplied-disc GL cases, visible mapping-mask pixels, transparent unserviced bank and exact restored image; six external PNGs queued for visual QA | Partial: detached fixed poses, no actor, native SAT/culling/occlusion, animation scheduling or gameplay |
 | OBJECT / EVENT / LIFE / ROUTE | Native source owners must be implemented and exercised | No executed native route | Missing, including placements, interactions, events, death/checkpoint and complete outgoing route |
 | BOSS | `R11A` is a traversal payload; boss programs are native act-3 payloads in `CdStageKey` | No act-1 boss product claimed | Not applicable to this payload; act-3 coverage remains separate and missing |
+
+## Terrain-only player checkpoint, 24 October 2026
+
+The earlier table records historical static/component evidence. The following
+rows extend it with the explicit player entry; missing object/native lifecycle
+products above remain open. Parent `a8cb4675a` plus the pending player integration
+passed 192 focused cases, zero failures/errors/skips, Java 25, supplied regional
+media and actual Sonic 2 ROM. EGL used no display connection and a NoDevice audio
+owner. The recorded run is bounded, not complete smoke or full-game validation.
+
+| Route / rewind spot | Region, viewport, participant | Actual check and result | Remaining limit |
+| --- | --- | --- | --- |
+| Cold admitted cut → Init-only → first Main/contact/art | USA, Japan, Europe; 320×224; Sonic alone | `TestSonicCdTerrainPlayerLoad` and `TestSonicCdTerrainPlayerBoot`: real source/world/loop, initial zero residency, later visible actual Sonic | Title/fades/control-release are omitted DEV policy, not a native cold boot |
+| Input/Start pause → held service → release/resume | All three releases; fixed roster | Native sampled-held edges, continued V-int/art service, unchanged Body/camera/level during pause | Native pause audio requests/latch omitted; absolute V-int seed unknown |
+| Full/course registry capture → changed input → restore/replay | All three releases | Complete actor/history, Environment, CPU/resident art, clocks, camera and sounds; exact visible restore | No cross-visit restore, invalid roster recreation or transactional adapter-failure guarantee |
+| Retained-level reset and fresh reload/cancellation | All three releases | Real `TestEnvironment.resetPerTest()`, old frame closed, new routine-0 actor, then Init-only; owned identity cleanup | Partial constructor bank allocations retire only with full graphics teardown |
+| Ordinary walk/reverse/B-jump/land/Down/pause/resume | USA; 320×224; Sonic alone | `usaNormalInputMovementJumpPauseAndRenderedReplay`: 132 inputs rendered, then all 132 restored frames rendered; complete source state/art/sounds/camera and final pixels equal | Empty dynamic slots, static BG, absent rings/HUD/music; no retail route or frame-phase parity |
+| Unsupported death continuation after V-int | All three releases, constructed death bound | Three regression cases reject `KILL_PLAYER`, preserve pure Body state and close engine admission; subsequent input/draw rejects | Native death/respawn owner remains unimplemented |
+
+Six USA route images and three regional idle-player images are queued in the
+external task bundle. They were not manually viewed before the user's 07:00
+visual-update boundary. Capture labels come from the route CSV. A gameplay
+rewind comparison is not evidence of native instruction timing or matching
+retail pixels. Source reviews and the distinguishing negative controls are
+recorded in the [implementation plan](../../plans/2026-10-23-sonic-cd-implementation.md).
 
 Execution checkpoint: `56beba899` plus the pending admission changes, 24 October
 2026. Ten frozen module/test files had aggregate source hash

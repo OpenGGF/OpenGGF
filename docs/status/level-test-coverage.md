@@ -1,11 +1,14 @@
 # Level test coverage backlog
 
-Sonic CD local static-entry work (2026-10-24): the
+Sonic CD local development entry (2026-10-24): the
 [Palmtree Panic Act 1 Present matrix](../architecture/validation/levels/scd-palmtree-panic-act1-present.md)
 records authenticated regional data, existing-engine terrain presentation and
-same-world camera/level restoration. Native player/object execution and complete
-gameplay, lifecycle, viewport, donor and roster products remain missing. Static
-loading and three visible images do not certify the act or USA MVP.
+an explicitly selected terrain-only Sonic player through normal input, source
+movement/camera, pause, rendering and same-world restoration. A USA 132-input
+rendered route has an identical restored replay; all three discs have bounded
+player lifecycle and render checks. Dynamic objects, time travel, complete
+gameplay/lifecycle and broader viewport/donor/roster products remain missing.
+The default entry stays static. These checks certify neither the act nor USA MVP.
 
 Object-pipeline performance follow-up (2026-10-22, local candidate): the
 [query/allocation audit](../architecture/audits/performance/2026-10-22-native-object-query-performance.md)

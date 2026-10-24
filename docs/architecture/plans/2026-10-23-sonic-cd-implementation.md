@@ -1946,3 +1946,113 @@ The normal stock CD entry remains static while frame/actor/camera integration
 continues. Remaining exceptional held-tail/comparison-window combinations are
 source-reviewed but lack direct injected-failure fixtures. No public signature
 pin, version, shared GameLoop switch or game-name carve-out was added.
+
+## Explicit terrain-player world, 24 October 2026
+
+The named `terrainOnlyDevelopmentPlayer()` module and
+`bootSonicCdTerrainPlayer(source)` host now join the authenticated R11A source
+to the normal WorldSession/load/GameLoop, one registered native Sonic slot,
+source V-int input/art service, MODE/Main and exact foreground arithmetic.
+Default construction remains STATIC/HOLD with no actors. No title entry,
+objects, rings, HUD, native music driver or full-act completion is implied.
+The supported route and remaining products are in the
+[act matrix](../validation/levels/scd-palmtree-panic-act1-present.md).
+
+Frame state has disjoint capture owners: actor Body/history/display/packet,
+module Environment/art/pause/clock and the existing parallax handler's source
+camera. Engine snapshots retain their world scope; a restored source owner
+reprojects camera/actor and all 24 resident tiles without servicing a cue.
+Only the existing controlled-frame/PLC/native-slot boundaries execute gameplay;
+drawing never samples input, advances animation or services DPLCs. The internal
+suppression bridge supplies actual neutral held input when the host suppresses
+input; native taps still derive from the last controller read.
+
+Native input after the omitted fade is not proved zero by LevelStart's earlier
+clear: fade V-ints read it again. Raw-zero ingress is explicitly DEV policy
+(no buttons held at the last represented fade read); logical input is cleared
+by the source. Controls are unlocked because title is omitted. PauseMusic and
+UnpauseMusic requests/latch are omitted DEV audio; retained Body sounds are
+not a complete service/frame audio ledger. Absolute native V-int seed remains
+unknown; the runtime exposes a delta from this admitted cut separately.
+
+### Reviews, distinguishing failures and repairs
+
+Astra's foreground review found no P1/P2. Opus's frame review found no P1 and
+identified an invalid zero arctangent fixture plus the input/audio declarations
+above. The corrected real-decoder fixture passed 74 frame cases; production
+arithmetic was unchanged. Fable's actor review and Astra's admission review
+each found one P2. Their frozen source mirrors and reports remain externally
+preserved, with no repeated unchanged review round.
+
+- A serviced Body failure left the engine owner open even though V-int/input/
+  art/timers had advanced. The original actor failed all three regional death-
+  boundary regressions (parent 31241: three expected assertion failures, no
+  errors/skips). A package-private entitlement preflight now distinguishes an
+  unserviced protocol call from a failed serviced slot. The latter closes
+  admission and clears pending sprite publication; constructor/rebind bank
+  failures also close rather than retry a potentially partial upload. No GPU
+  rollback or complete fault-injection coverage is claimed.
+- Retained-level reset unbound the presentation before background dimensions
+  were read. The real reset consumer failed all three regional regressions
+  with `CD background has no bound assets`. Presentation binding now precedes
+  the terrain reset, while new actor construction stays after it.
+- `CourseControl.restore()` sent undefined negative song IDs into audio;
+  `-1` collided with the silent profile's speed-shoes command. Original code
+  failed the `-1` and `-2` cases while five positive/publication controls passed.
+  The existing restore owner now requests only nonnegative music IDs. This is
+  a generic absence guard, without a game-name condition or audio fallback.
+
+The reset/music negative selection completed ten cases: five expected failures,
+zero errors/skips, Java 25. Its command-session handle was lost from the root's
+printed tool result; completion was established from the ended owned wrapper
+process and both complete XML reports. No command exit code is asserted for
+that invocation, and no duplicate run was submitted to recover the handle.
+
+Additional actor corrections preserve the native priority mask, reproject the
+native mirror on a rejected foreign actor capture and use precise source
+citations. Normal module admission supplies the CD rules provider; the older
+direct actor fixture's static-module provider is not the production player
+entry. Generic movement remains bypassed by the native slot.
+
+### Observed normal-world and render checks
+
+Parent 55641 passed 51 cases with no failures/errors/skips, all three actual
+regional discs, actual Sonic 2 ROM, Java 25.0.5.0.2 and surfaceless EGL, with
+DISPLAY/WAYLAND_DISPLAY absent. Queue wait was zero, Maven execution 1m46s.
+It covers player admission, registry restore, default STATIC, API and audio
+replacement, including actual visible native-player residency.
+
+Parent 43898 passed the USA route with no skips: 132 ordinary inputs for
+walk/reverse/B-jump/land/Down/pause/resume, every frame rendered, followed by
+132 restored inputs rendered again. Complete actor/history, Environment,
+CPU/resident art, pause/V-int clocks, sounds and camera match at every step;
+final pixels match. Queue wait was 34s, Maven execution 26.317s. Positions in
+the retained CSV span centre X64–169 and Y1843–1902; these are observations,
+never runtime tuning targets. Six route screenshots and three regional
+idle-player screenshots are queued externally, unviewed before 07:00.
+
+After all three repairs, parent 4226 passed **192 cases, zero failures, errors
+or skips**, on `a8cb4675a` plus the exact pending integration, completed
+05:48:37 BST. Queue wait was zero; Maven execution 2m01s. All 13 XML class
+identities and Java/media/EGL properties were inspected. Exact selection:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestCourseControlMusicRestore,TestModApiSignatureSurface,TestHeadlessAudioOwnership,TestSonicCdModuleContracts,TestSonicCdStaticStageLoad,TestSonicCdPlayerPresentation,TestNativePlayableSlotDispatch,TestControlledFrameRuntime,TestControlledVBlankOnlyOwner' \
+  "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" test -B
+```
+
+Counts are 74 frame, 12 actor, 24 regional load/reset, 8 boot/render/route,
+7 music restore, 11 API, 2 audio owner, 4 module, 6 static, 10 held-byte,
+9 native-slot/suppression, 6 controlled-frame and 19 serviced-HOLD. Earlier
+overlapping selections are not additional unique coverage. Comment-only
+cleanup afterward removes obsolete UNRUN labels; no executable changes follow
+this focused result.
+
+Shared changes still require the change-based smoke selection and guards.
+The earlier timed-out broad invocation remains incomplete. These finite checks
+do not establish whole-act, complete USA game, native audiovisual, instruction-
+phase, physical timing or complete hardware-device parity. All source remains
+on the local private branch; no develop merge, push or public announcement.

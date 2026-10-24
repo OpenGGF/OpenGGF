@@ -95,6 +95,16 @@ public final class SpriteManagerInternalAccess {
         manager.clearPreparedMotionInput();
     }
 
+    /**
+     * Generic title/credits suppression for an engine-owned controlled input
+     * reader. Controlled rows supply a logical override, so playback-only
+     * suppression retains its existing bypass. This reads no input or actor.
+     */
+    public static boolean inputSuppressed(SpriteManager manager) {
+        requireEngineCaller();
+        return manager.inputSuppressed();
+    }
+
     private static void requireEngineCaller() {
         if (com.openggf.util.EngineCallerAccess.callerOutside(SpriteManagerInternalAccess.class).getClassLoader()
                 != SpriteManagerInternalAccess.class.getClassLoader()) throw new SecurityException("Engine motion access only");
