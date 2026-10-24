@@ -1313,3 +1313,115 @@ setup; no complete ICZ route, character/donor/viewport matrix, terrain carry,
 GPU pixels or ROM parity expansion is certified. No broad smoke selection,
 complete guard profile, API check, required S3K combination or release-only full
 suite belongs to this worker. The checkout and local branch remain for the parent.
+
+
+## LBZ Knuckles optional box rigs follow-up
+
+This dependent slice starts at local loop-five candidate `e143088fa` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-6a06ac03`, branch
+`bugfix/ai-lbz-box-rig-rewind-20261024`. The clean T3-prepared branch was
+fast-forwarded from delivered `a236a1276`; ancestry includes both wall repairs
+`6cf7d4bbe` and `028cf0916`. No nested checkout or integration is part of this
+slice. The initial grounding was **source prediction**, not an observed failure:
+the owner constructor leaves both rigs absent until the native camera gate,
+while generic stateful restoration requires an existing target when a snapshot
+is present. The earlier wall tests seed FIGHT/DONE with absent rigs and cannot
+establish initialized encounter restoration.
+
+The bounded oracle uses actual ObjectManager camera-range/arm dispatch to
+initialize the two boxes and spawn the miniboss pair. It requires live progressed
+piece draw calls, miniboss arm collision publication and managed wall explosion
+children before capture. Rendering observations are CPU renderer arguments, not
+GPU pixels or a native-image comparison. Defeat notifications use the existing
+public parent callback; this is not a new player-damage or full-route oracle.
+The inherited [act matrix](../validation/levels/s3k-lbz-act1.md) still has open
+complete-route, supported viewport/donor/roster, load/death and presentation
+obligations. Parent delivery owns broad guards/API/S3K checks and integration.
+
+
+On unmodified runtime `e143088fa`, the completed initialized control reproduced
+`IllegalStateException: Cannot restore stateful rewind field
+com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance#leftRig because one
+side is null`, through `GenericFieldCapturer.restoreStatefulValue` and the
+ObjectManager/registry recreation path. That run executed one test, zero assertion
+failures, one error, zero skips. Before reaching this discriminating run, test
+compilation needed private-enum formatting corrected; two fixture attempts then
+stopped before restore on absent audio/game-state services. Those are harness
+errors, not evidence of a runtime rewind regression. The final fixture owns an
+audio mock and a real registered GameStateManager; the sign handoff is delayed
+until its results work is outside the bounded replay.
+
+The selected shape is a final private typed holder for each optional rig, using
+the existing nullable `LbzMinibossBoxRig.Snapshot`. The rig itself remains absent
+until camera initialization. Empty restore clears divergent presence without
+services. Present restore constructs a fresh rig and fresh nonstatic pieces,
+then reapplies the captured values. The unchanged snapshot stores release state
+and, in fixed ten-piece table order, phase, integer/fractional position,
+velocity, frame, timer, animation cursor and deletion. Each fixed array position
+supplies the final piece index; construction binds the piece to its new enclosing
+rig. Priority is derived from phase by the existing restore contract. There is
+no persistent separate anchor or renderer to recreate, and no live helper,
+renderer or outer-owner reference is stored in the snapshot. No change to the
+shared rig class was needed.
+
+Explicit restore-time creation from these same snapshots was considered and
+rejected before implementation: an owner override would need to extract optional
+helper values before default restoration, compose the base/extra state and
+repeat or bypass the existing nine-field owner contract. That would obscure
+default-audit coverage for a local presence problem. The holders leave every
+existing field captured and enable the actual compact default route; the new
+route check verifies both eligibility and all nine captured field names, while
+the existing wall-holder audit still checks the owner for gaps. No allowances,
+baseline keys, default-audit opt-outs, eager rig construction, native camera/
+init/timer/piece/retirement changes, or per-controller RNG rebinding changes
+are introduced.
+
+The new behavior checks cover pre-gate empty capture, boundary initialization,
+closed-state fresh reconstruction, repeated empty clearing and reinitialization,
+all four left/right presence combinations through implicit and explicit
+context-free public forms, same-instance restoration after divergence,
+independently progressed rigs (182 versus 83 updates), and repeated forward
+piece movement/bucket/retirement replay. Partial presence combinations are codec
+boundary cases, not claimed native encounter phases. The initialized managed
+case captures after normal release and 80 progressing updates plus live wall
+effects, destructively recreates the graph, compares immediate draw/collision/
+effects and identities, then compares every forward draw, collision region,
+effect slot/coordinate/raw clock, SFX, shared RNG cursor, owner scalar, camera
+max-Y, object-manager clock and no-respawn retirement result.
+
+
+Commands ran from the task checkout, with verified canonical S3K ROM
+(`$HOME` expands to the original absolute paths in the recorded commands),
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -v
+# Java 25.0.5.0.2; separately, lua5.4 -v reported Lua 5.4.9.
+
+# Red: e143088fa + completed initialized test fixture, before runtime edits.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestLbzBoxRigsRewind' test
+
+# Green: e143088fa + final holder and focused tests recorded by this commit.
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=lua5.4 python3 "$HOME/code/projects/OpenGGF/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$HOME/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestLbzBoxRigsRewind,TestLbzWallExplosionsEmptyRewind,TestLbzWallExplosionsRewind,TestS3kLbzMinibossGraphRewind,TestLbzMinibossPartBuckets,TestRewindFieldDispositionAudit#wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath' test
+```
+
+The exact red identity was
+`TestLbzBoxRigsRewind.initializedEncounterRestoresProgressedRigsAndReplaysThroughRetirement`.
+The green selection completed **36 tests, zero failures, zero errors, zero
+skips**, including that same identity: rig cases 11, empty wall cases 3,
+populated wall cases 5, LBZ graph cases 13, piece buckets 3 and the exact
+wall-holder disposition method 1. The first expanded selection stopped at test
+compilation on a package-private schema query; the final route test uses public
+capture/blob and audit-field APIs. No runtime change followed the green run.
+The shared rig file, policy table, baselines and previously reviewed wall code
+are unchanged. Service-free empty wall restoration and current shared-RNG
+binding are observed passing on the newly compact owner path.
+
+This is focused validation, not a broad smoke, full suite, full act route,
+viewport/donor/team certification or GPU rendering result. All Maven invocations
+used the absolute main-workspace queue wrapper with this checkout's own target;
+queued jobs were retained without duplication or lock changes. Version-probe
+queue waiting was 312 seconds; the discriminating red and final green had zero
+queue wait, with Maven execution totals 26.574 and 28.073 seconds respectively.
+The earlier fixture rerun waited 67 seconds. These intervals overlap other work
+and are not an elapsed-delivery-time claim. No jobs remain live.
