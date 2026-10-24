@@ -7,6 +7,7 @@ import com.openggf.level.rings.RingSpawn;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -57,7 +58,8 @@ final class Sonic1RingSpawnList extends AbstractList<RingSpawn>
             restored.add(manager == null ? values[i]
                     : RingManagerInternalAccess.resolveSpawnForRewind(manager, values[i], indices[i]));
         }
-        spawns = List.copyOf(restored);
+        // Keep accepted null entries; this fresh list has no mutable aliases.
+        spawns = Collections.unmodifiableList(restored);
     }
 
     // Record values are deep-copied by the default codec. Indices, not their Java

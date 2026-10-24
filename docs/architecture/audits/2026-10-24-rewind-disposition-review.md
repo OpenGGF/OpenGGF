@@ -1023,6 +1023,12 @@ that invoke recreation without applying captured state; default state restoratio
 replaces it before forward dispatch. RingManager's annotated public/protected
 surface and signature pins are unchanged.
 
+This identity guarantee is bounded to the same logical placement table. Without
+a RingManager, capture preserves ordered values, not original Java record
+references. Unrelated or reordered placement tables containing equal legacy
+records (placement ID `-1`) have no all-context identity guarantee; the saved
+index cannot establish historical identity across those different tables.
+
 An explicit placed-only creation contract was rejected: public constructor and
 ObjectRegistry/dynamic registration consumers already expose pre-INIT recipes,
 and restricting them would change supported behavior. Subtype/coordinate
@@ -1127,6 +1133,78 @@ certification. No broad smoke, full guard profile or release-only full suite is
 submitted. The allocator, native child-index geometry, collection, respawn and
 retirement algorithms themselves are unchanged. The parent owns combined
 validation and later composition.
+
+## S1 nullable recipe review correction, 2026-10-24
+
+Independent review of `60f4d832f971fbef612e3d173fe50a897a825b66` found a P2
+compatibility defect: the public parent constructor and default snapshot capture
+accept nullable placement entries, but `Sonic1RingSpawnList.restoreRewindStateValue`
+ended with `List.copyOf(restored)`, which rejects those entries. The earlier
+constructor-only null-check correction did not exercise nullable restoration.
+This follow-up stays in the same T3 checkout and
+`bugfix/ai-s1-ring-recipe-rewind-20261024`, directly atop that local commit.
+
+[`TestS1RingNullRecipeRewind`](../../../src/test/java/com/openggf/game/rewind/TestS1RingNullRecipeRewind.java)
+uses unmanaged public construction with `StubObjectServices`, without a
+RingManager or identity table. It covers `Collections.singletonList(null)` and a
+parent recipe with two null children around a non-null child. Each shape runs
+through both public capture/restore forms: no-argument methods and explicit
+`RewindCaptureContext.none()`. Each form is checked on the same object and on a
+fresh generic recreation, giving eight independent cases. The tests retain the
+caller's live child view before and after capture, then check detached restored
+values/order, INIT progression, an unmodifiable restored view, and reuse of the
+same snapshot after further caller edits and forward dispatch. No original Java
+reference identity is asserted for no-manager values.
+
+The correction wraps the already-fresh local `ArrayList` with
+`Collections.unmodifiableList(restored)`. Its backing list has no escaped mutable
+alias, so another defensive copy is unnecessary. Nulls remain in their exact
+positions. Snapshot array copies, canonical indices and rebinding, default owner
+capture and native update/allocation/collection semantics are unchanged. There
+are no new exclusions, annotations, manual owner overrides, baseline edits or API
+pins. The same-logical-table identity bound above remains in force.
+
+The requests use the environment and `MAIN_CHECKOUT` binding defined in the
+preceding follow-up: Java 25, Lua 5.4.9, surfaceless EGL, this checkout's own
+`target/`, and the same existing absolute S1 World REV01 ROM, reverified as CRC32
+`AFE05EEE` / SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`. Expanding the
+binding yields the absolute queue and ROM arguments actually used; the audit
+avoids machine-local home paths to satisfy its resource-policy hook.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingNullRecipeRewind' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingNullRecipeRewind,TestS1RingGroupGraphRewind,com.openggf.tests.TestSonic1RingInstance,com.openggf.game.sonic1.objects.TestSonic1RingInstance,TestSonic1RingPlacement' "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+On unchanged runtime at `60f4d832f`, the first request completed eight tests,
+zero assertion failures, eight errors and zero skips. Every error was
+`NullPointerException`, with `java.util.List.copyOf` and
+`Sonic1RingSpawnList.restoreRewindStateValue` in its stack. Exact XML identities
+were `nullableRecipeSurvivesBothPublicNoTableForms(boolean, boolean, boolean)[1]`
+through `[8]`: nullable singleton parent with implicit capture/restore on the same
+instance and fresh instance (1–2), singleton parent with explicit `none()` on those
+two instances (3–4), nullable children with implicit methods (5–6), and nullable
+children with explicit `none()` (7–8). Capture and initial forward dispatch had
+already succeeded in every case; the first restoration rejected the nulls. These
+are observed same-instance and recreation errors in both public no-table forms.
+The request waited 92 seconds for admission; Maven reported 25.648 seconds of
+execution including compilation. No request was cancelled, restarted or duplicated.
+The second request completed 37 tests with zero failures, errors or skips:
+eight nullable controls, 14 graph cases and 15 existing constructor/placement
+controls. Exact XML testcase identities and skip elements were inspected. All
+six stock cases remain: `placedPreInitRebuildsCanonicalRecipeAndReplaysExactAllocation(int)[1–4]`
+and `progressedDynamicChildrenRestoreFreshWithoutDuplicatingAndReplaySparkleRetirement(int)[1–2]`.
+Each of the eight new null identities `[1–8]` passed after the restore-wrapper
+change, through a forward INIT dispatch and a second restore of the same capture.
+The green request waited 0 seconds; Maven reported about 85 seconds including
+compilation. XML properties confirm Java `25.0.5.0.2`, surfaceless EGL and the
+absolute verified S1 ROM property. These are bounded completed-run results on
+`60f4d832f` plus this source/test delta, not a broad or parent validation claim.
+No running or queued requests remain. No source edits followed the green run.
+The parent retains combined validation and review. Loop 6 has not yet been tested
+and remains ready to compose this correction after review; this local slice does
+not claim parent guard/API, S3K, broad smoke, route or release validation. No push,
+integration, worktree cleanup or delegation is part of this correction.
 
 ## AIZ intro inventories follow-up
 
