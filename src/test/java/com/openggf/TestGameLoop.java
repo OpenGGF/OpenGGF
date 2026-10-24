@@ -142,8 +142,8 @@ public class TestGameLoop {
                     new Class<?>[]{BonusStageProvider.class, BonusStageType.class, BonusStageState.class},
                     mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
         } else {
-            setPrivateField(gameLoop, "endingProvider", mock(EndingProvider.class));
-            invokePrivateMethod(gameLoop, "loadEndingDemoZone");
+            setPrivateField(getPrivateField(gameLoop, "endingSession"), "endingProvider", mock(EndingProvider.class));
+            invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "loadEndingDemoZone");
         }
     }
 
@@ -785,45 +785,33 @@ public class TestGameLoop {
 
     @Test
     public void endingFadeFreezesGameplayUntilEndingModeEnters() throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-
-        assertTrue(source.contains("private boolean endingTransitionPending"),
-                "Ending fade must have a pending flag so LEVEL mode does not keep simulating under the white fade");
-
-        int nonRewindablePredicate = source.indexOf("private boolean isNonRewindableTransitionPending()");
-        int nonRewindablePredicateEnd = source.indexOf("private void stepInternal(", nonRewindablePredicate);
-        assertTrue(nonRewindablePredicate >= 0 && nonRewindablePredicateEnd > nonRewindablePredicate,
-                "isNonRewindableTransitionPending() shared predicate must exist");
-        String nonRewindablePredicateBody =
-                source.substring(nonRewindablePredicate, nonRewindablePredicateEnd);
-        assertTrue(nonRewindablePredicateBody.contains("|| endingTransitionPending"),
-                "the shared transition-freeze predicate (also consulted by LiveRewindManager) must "
-                        + "fold in the ending fade's pending flag");
-
-        int updateLevel = source.indexOf("private boolean updateLevelMode(");
-        int updateLevelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
-        assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
-        String levelBody = source.substring(updateLevel, updateLevelEnd);
-        assertTrue(levelBody.contains(
-                        "boolean freezeForNonRewindableTransition = isNonRewindableTransitionPending();"),
-                "LEVEL mode should include ending fade (via the shared transition-freeze predicate) "
-                        + "in its gameplay-freeze flags");
-        assertTrue(levelBody.contains("&& !freezeForNonRewindableTransition"),
-                "LEVEL mode must skip LevelFrameStep while the ending fade callback is pending");
-
-        int startEnding = source.indexOf("private void startEndingFade()");
-        int startEndingEnd = source.indexOf("private void doEnterEnding()", startEnding);
-        assertTrue(startEnding >= 0 && startEndingEnd > startEnding, "startEndingFade method must exist");
-        String startEndingBody = source.substring(startEnding, startEndingEnd);
-        assertTrue(startEndingBody.contains("endingTransitionPending = true;"),
-                "Starting the ending fade should freeze gameplay until doEnterEnding runs");
-
-        int doEnterEnding = startEndingEnd;
-        int doEnterEndingEnd = source.indexOf("private void updateEnding()", doEnterEnding);
-        assertTrue(doEnterEndingEnd > doEnterEnding, "doEnterEnding method must precede updateEnding");
-        String doEnterEndingBody = source.substring(doEnterEnding, doEnterEndingEnd);
-        assertTrue(doEnterEndingBody.contains("endingTransitionPending = false;"),
-                "Entering ending mode should clear the pending freeze");
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
+        GameModule module = neutralGameModule();
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        var ending = mock(EndingProvider.class);
+        when(ending.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
+        when(module.getEndingProvider()).thenReturn(ending);
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+        var levels = mock(com.openggf.level.LevelManager.class);
+        var sprites = mock(com.openggf.sprites.managers.SpriteManager.class,
+                org.mockito.Mockito.withSettings().useConstructor());
+        var fade = mock(FadeManager.class);
+        bindMockGameplay(levels, sprites, fade);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
+        var completion = new AtomicReference<Runnable>();
+        doAnswer(call -> { completion.set(call.getArgument(0)); return null; })
+                .when(fade).startFadeToWhite(any());
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "startEndingFade");
+        assertTrue((Boolean) invokePrivateResult(gameLoop, "isNonRewindableTransitionPending"));
+        assertTrue((Boolean) invokePrivateResult(gameLoop, "isRewindBlocked"));
+        gameLoop.step();
+        verify(sprites, never()).update(any());
+        verify(levels, never()).updateZoneFeaturesPrePhysics();
+        completion.get().run();
+        assertFalse((Boolean) invokePrivateResult(gameLoop, "isNonRewindableTransitionPending"));
+        assertFalse((Boolean) invokePrivateResult(gameLoop, "isRewindBlocked"));
     }
 
     @Test
@@ -2086,10 +2074,15 @@ public class TestGameLoop {
         when(levelManager.consumeCreditsRequest()).thenReturn(true);
         when(fadeManager.isActive()).thenReturn(false);
 
+        EngineContext existing = EngineServices.current();
+        EngineContext injected = new EngineContext(existing.configuration(), existing.graphics(),
+                mock(com.openggf.audio.AudioManager.class), existing.roms(), existing.profiler(),
+                existing.debugOverlay(), existing.playbackDebug(), existing.romDetection(),
+                existing.crossGameFeatures(), existing.moduleResolutionService());
+        gameLoop = new GameLoop(injected, mockInputHandler);
         bindMockGameplay(levelManager, spriteManager, fadeManager);
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
-        setPrivateField(gameLoop, "audioManager", mock(com.openggf.audio.AudioManager.class));
 
         gameLoop.step();
 
@@ -2120,7 +2113,7 @@ public class TestGameLoop {
         SessionManager.openGameplaySession(module, saveContext);
         gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
-        invokePrivateMethod(gameLoop, "doEnterEnding");
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "doEnterEnding");
 
         Path slotFile = saveDir.resolve("slot1.json");
         assertTrue(Files.notExists(slotFile));
@@ -2150,7 +2143,7 @@ public class TestGameLoop {
         when(fadeManager.getState()).thenReturn(FadeManager.FadeState.HOLD_WHITE);
         setPrivateField(gameLoop, "fadeManager", fadeManager);
 
-        invokePrivateMethod(gameLoop, "doEnterEnding");
+        invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "doEnterEnding");
 
         verify(endingProvider).initialize();
         verify(fadeManager).startFadeFromWhite(any());
@@ -2928,6 +2921,12 @@ public class TestGameLoop {
                 config, store, new LaunchProfileApplier(config));
         setPrivateField(gameLoop, "masterTitleLaunchCoordinator", coordinator);
         return coordinator;
+    }
+
+    private static Object invokePrivateResult(Object target, String methodName) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        return method.invoke(target);
     }
 
     private static void invokePrivateMethod(Object target, String methodName) throws Exception {

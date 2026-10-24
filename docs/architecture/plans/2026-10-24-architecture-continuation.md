@@ -4690,3 +4690,158 @@ drive HeadlessTestFixture directly, so they are supporting physics evidence, not
 proof of the new controller path. S3K's native ending remains a LEVEL route;
 keep its transition and the four required S3K stability selectors as shared-loop
 regressions. No broad/full-suite or successful extraction claim is made yet.
+
+### Ending session implementation — isolated child delivery
+
+The ending child fast-forwarded its T3-owned checkout
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-678685ef` from97eb86f18 to the parent plan
+commit1e5ff35c1836aad35cacef2c09f7acd16164c649 before product edits, on local
+`bugfix/ai-ending-session-owner-20261024`. It neither switched nor wrote main,
+and did not access/copy the parent's target. Parent's original103-case GameLoop
+baseline is reused, rather than repeated before implementation. No delegation,
+push, integration or worktree cleanup belongs to this child slice.
+
+`GameLoopEndingSession` now owns the provider and single pending bit, all12
+ending methods, phase/PLC routing and ending-only return cleanup. The root owns
+admission, frame/input/audio/timer/trace orchestration and supplies the existing
+PLC frame. Its private adapter reads the original cached manager/input/mode
+slots at their original expression boundaries; module resolution remains at
+root composition. Native-fade binding uses the bound gameplay context, while
+fade wrapping uses the resolved context. Audio is a stable constructor input.
+Initialization and virtual mode notification precede the local reveal-fade
+snapshot. Return cleanup retains the original all-arguments-captured boundary;
+the later shared title handoff still reads live bindings. The pending consumer
+is wired directly after owner construction to the existing standalone exit
+coordinator. Refresh, generic mode changes, provider reset and park/resume do
+not reset ending state.
+
+The accepted review corrections supersede the original direct-owner rendering
+proposal: all six Engine calls remain through the existing public virtual
+`GameLoop.getEndingProvider()`, and the viewport tests are unchanged. GameLoop
+is absent from the0.7 pin; pin stability is additional API evidence rather than
+proof of this facade's dispatch compatibility. Bonus, native S3K ending, palette
+publication, audio, Stageplay, physics, public signatures, pins and descriptors
+are outside this cut. Neither the rejected gameplay-context owner nor a new
+transition framework was introduced.
+
+Before product edits,30 new temporal controls plus the existing freeze test's
+behavioral replacement passed against the original implementation:31 cases,
+zero failures/errors/skips. The Java source aggregate was
+`e54c8fd7d079ca69a29d665c230dcf445a4e0072c2d07f5e4116b4eed1968bbe`.
+The aggregate is SHA256 over sorted `src/main/java` and `src/test/java` Java
+paths, each encoded as path + NUL + bytes + NUL. The initial21-case attempt
+exposed one incomplete replacement-module fixture (missing RNG flavour).
+Completing a real S2 provider in the new freeze control also aborted the JVM
+at its native GPU palette upload with no context. A supplied mock provider
+removed that unintended rendering obligation; no production change was used
+to make these fixture failures pass. Source was stable through the successful
+characterization run. The structural ownership control then failed on the
+original root's two fields, all12 methods and nondelegating facade; its positive
+and negative samples passed. This was an ownership red control, not a fabricated
+behavior regression.
+
+The first transferred selection passed170 cases (103 GameLoop,30 temporal,
+27 outer-audio,8 unchanged viewport,2 ownership controls), zero failures/errors/
+skips. The final runtime selection below passed262 cases across18 classes,
+zero failures/errors/skips:103 GameLoop,36 ending-owner,27 audio,8 viewport,
+7 rewind-boundary,7 suspension,3 S3K ending presentation,7 provider contract,
+3 master-title exit,30 PLC-frame lifecycle,1+1 provider-owned-fade,5 S1 credits,
+1 S1 credits PLC owner,2 S1 ending-headless,3 KiS2 ending/continue,9 SBZ credits.
+The36 owner cases include fresh factory and module lookup, initialization
+partial failure, bound/resolved distinction, active reveal versus HOLD_WHITE,
+actual reveal callback survival, post-mode fade capture, live load/provider/
+manager/input rebinding, exact frozen/request query counts, water/player/object/
+camera/event/counter order, load/request acknowledgements, lamppost restoration,
+both captured-dependency exit branches, actual standalone freeze/rewind wiring,
+state retention across park/resume and a constructor with no runtime queries.
+Existing IO fallback and deferred-abort identity assertions remain intact.
+Private fixture locators alone moved to the new owner, except the requested
+actual freeze replacement and constructor audio injection in the save fixture.
+
+Both successful post-transfer selections used Java25.0.5.0.2 and explicit
+surfaceless EGL; every XML identity, environment and skip was inspected and the
+reports consumed. The runtime-selection Java source aggregate is
+`8360ce09c8ff87dd65b96b2ddcfef7bd5b85d82873984270ba8d97f9ea3016e8`.
+The category runner's pre-documentation whole-tree fingerprint at this state
+was51680aaec7a33d2d20372d528bb0f356104a88ca8f460b74854bc6f355030c70.
+Parent baseline timing is the parent's observation:0s queue,1:29 execution.
+The first transfer run waited8s and executed1:19; final runtime admission
+waited0s and Maven executed1:27. These are individual job intervals, not summed
+delivery elapsed time; other time is unmeasured, with no user-response wait.
+
+The existing source parser measured GameLoop at3085 effective lines (3305→3085),
+the complete new session at320, stepInternalBody at276 physical lines (277→276),
+and moved loadEndingDemoZone at its unchanged84. Root and owner caps are
+ratcheted to those measured values; the loader budget is retargeted rather than
+deleted. Ownership samples reject root state/private choreography and owner
+root/context/erased locator access, while explicitly permitting the virtual
+getter. No frozen records or ambient allowances were changed. API/source/
+architecture guard results are pending at this checkpoint.
+
+Reproducible command definitions (run in the child checkout, with
+`MAIN_CHECKOUT` set to the existing absolute main root):
+
+```bash
+QUEUE="${MAIN_CHECKOUT}/tools/testing/maven_queue.py"
+# All queued Maven invocations used this environment and common properties:
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$QUEUE" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dtest=$SELECTION" test -B
+```
+
+The pre-transfer selection was
+`TestGameLoopEndingSession,TestGameLoop#endingFadeFreezesGameplayUntilEndingModeEnters`.
+The ownership red used
+`TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers`.
+The first transfer used
+`TestGameLoop,TestGameLoopEndingSession,TestGameLoopAudioPresentationModes,TestViewportLifecycleContract,TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers`.
+The final runtime used
+`TestGameLoop,TestGameLoopEndingSession,TestGameLoopAudioPresentationModes,TestViewportLifecycleContract,TestSbz1CreditsDemoBug,TestSonic1EndingSequenceHeadless,TestKis2EndingContinue,TestMasterTitleExitCoordinator,TestEndingProviderContract,TestSonic1CreditsManager,TestSonic2EndingProvider,TestSonic1CreditsPlcLifecycleOwner,com.openggf.game.sonic1.credits.TestPlcProviderOwnedFadeLifecycle,com.openggf.game.sonic2.credits.TestPlcProviderOwnedFadeLifecycle,TestPlcFrameLifecycleCoordinator,TestGameLoopRewindBoundaryPolicy,TestGameLoopSuspension,TestS3kEndingTransitionPresentation`.
+That invocation additionally supplied these exact absolute ROM properties:
+
+```bash
+"-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen"
+```
+
+Discovered existing main-root images were hash-verified without copying them:
+S1 CRC32 AFE05EEE / SHA1 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B;
+S2 7B905383 / 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9;
+S3K 63522553 / CFBF98C36C776677290A872547AC47C53D2761D6;
+KiS2 2AC1E7C6 / 6CD0537A3AEE0E012BB86D5837DDFF9342595004.
+Native headless fixture controls support behavior preservation; the eight SBZ
+load/frozen-scene cases exercise the moved controller implementation. Direct
+HeadlessTestFixture ending/credits stepping is not claimed as new controller
+proof. No exhaustive credits trace sweep, visual/pixel certification, broad
+smoke or full-suite run was performed. Parent owns independent review, combined
+validation including the four required S3K selectors, integration/push/cleanup.
+
+Final child verification: all138 selected API/architecture cases passed with no
+failures/errors/skips (11 signature surface,4 pin policy,34 runtime ArchUnit,
+1 test ArchUnit,9 review guards,79 source guards); admission waited41s and Maven
+executed48.518s. The separate8-case singleton-lifecycle scanner passed with no
+failures/errors/skips, preserving the6 methods/5 files inventory; admission0s,
+execution29.995s. Both used the common environment above; the scanner additionally
+used `--lean`. The guard selection was
+`TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestArchUnitRules,TestArchUnitTestRules,TestModApiSignatureSurface,TestModApiPinPolicy`;
+the lifecycle selection was `TestSingletonLifecycleGuard`.
+
+A final guard-only tightening requires the session itself to contain both state
+fields and all12 methods; its negative samples remove each field/method in turn.
+The four affected ownership/budget controls then passed with no failures/errors/
+skips using `--lean`,0s admission and29.515s Maven execution, selection
+`TestArchitecturalSourceGuard#endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade+endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets`.
+No runtime source or behavior test changed after the262-case run. The final
+main-and-test Java aggregate is
+`9c43b671cb049680c8b93cd5490ad5ee29dace809e28aaacf5c7e30979aa1681`;
+the stable production-only Java aggregate is
+`d63e112576fe7e933954e6fd810dac0d7ee24476204b2f187d1babc41249ea9d`.
+The existing parser independently reconfirmed3085/320 effective lines,
+276-line root step body and84-line owned loader. Exact XML identities and
+skips were inspected and consumed for every completed run. No raw diagnostic
+archive, validation receipt or pass cache is retained. All child jobs have
+finished; parent independent review and combined delivery remain outstanding.

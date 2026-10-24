@@ -42,6 +42,83 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
+    private static final String ENDING_SESSION_PATH = "com/openggf/GameLoopEndingSession.java";
+    private static final Set<String> ENDING_METHODS = Set.of("startEndingFade", "doEnterEnding", "updateEnding",
+            "updateEndingCreditsText", "updateEndingCreditsDemo", "updateEndingPostCredits", "updateEndingCutscene",
+            "loadEndingDemoZone", "returnFromEndingDemo", "exitEndingToTitleScreen", "doExitEndingToTitleScreen",
+            "gameModeForPhase");
+    private static final String ENDING_HOST_CONTRACT = """
+            LevelManager level(); SpriteManager sprites(); Camera camera(); WaterSystem water(); FadeManager fade();
+            GameModule module(); InputHandler input(); String mainCharacterCode(); GameMode currentMode();
+            GameplayModeContext boundGameplayContext(); GameplayModeContext resolvedGameplayContext();
+            void setGameMode(GameMode mode); void requestSessionSave(SaveReason reason);
+            TitleScreenProvider titleScreen(); void returnToTitleScreen();
+            """;
+
+    @Test
+    void endingSessionOwnsStateAndChoreographyBehindTheVirtualFacade() throws IOException {
+        Path owner = SRC_MAIN.resolve(ENDING_SESSION_PATH);
+        assertNoViolations("Ending session ownership boundary failed", endingOwnershipViolations(
+                Files.readString(SRC_MAIN.resolve(GAME_LOOP_PATH)), Files.exists(owner) ? Files.readString(owner) : ""));
+    }
+
+    @Test
+    void endingOwnershipSamplesAllowTheGetterAndRejectBackreferencesMirrorsAndWrappers() {
+        String root = "class GameLoop { private final GameLoopEndingSession endingSession = null; "
+                + "public EndingProvider getEndingProvider() { return endingSession.provider(); } }";
+        String owner = "class GameLoopEndingSession { private EndingProvider endingProvider; "
+                + "private boolean endingTransitionPending; interface Host { " + ENDING_HOST_CONTRACT + " } "
+                + ENDING_METHODS.stream().sorted().map(name -> "void " + name + "() {}")
+                        .collect(java.util.stream.Collectors.joining(" ")) + " }";
+        assertTrue(endingOwnershipViolations(root, owner).isEmpty(), "the virtual facade remains permitted");
+        assertFalse(endingOwnershipViolations(root.replace("return endingSession.provider();", "return null;"), owner).isEmpty());
+        for (String retained : List.of("private EndingProvider endingProvider;", "private boolean endingTransitionPending;",
+                "private void updateEnding() {}", "private void loadEndingDemoZone() {}")) {
+            assertFalse(endingOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { " + retained), owner).isEmpty(), retained);
+        }
+        for (String forbidden : List.of("GameLoop loop;", "EngineContext context;", "Object locate(Class type) { return null; }",
+                "void frame() { GameServices.module(); }")) {
+            assertFalse(endingOwnershipViolations(root, owner.replace("class GameLoopEndingSession {",
+                    "class GameLoopEndingSession { " + forbidden)).isEmpty(), forbidden);
+        }
+        assertFalse(endingOwnershipViolations(root, owner.replace("private EndingProvider endingProvider;", "")).isEmpty());
+        assertFalse(endingOwnershipViolations(root, owner.replace("private boolean endingTransitionPending;", "")).isEmpty());
+        for (String method : ENDING_METHODS) {
+            assertFalse(endingOwnershipViolations(root, owner.replace("void " + method + "() {}", "")).isEmpty(), method);
+        }
+        assertFalse(endingOwnershipViolations(root, owner.replace("void returnToTitleScreen();",
+                "void runWholeFrame();")).isEmpty(), "the host cannot conceal whole-frame work");
+    }
+
+    private static List<String> endingOwnershipViolations(String root, String owner) {
+        List<String> violations = new ArrayList<>();
+        String rootCode = stripCommentsAndStrings(root);
+        String ownerCode = stripCommentsAndStrings(owner);
+        if (Pattern.compile("\\bEndingProvider\\s+\\w+\\s*[;=]|\\bboolean\\s+endingTransitionPending\\b")
+                .matcher(rootCode).find()) violations.add("ending state remains in GameLoop");
+        for (MethodSpan method : SourceFile.fromText(root).methods()) {
+            if (ENDING_METHODS.contains(method.name())) violations.add("root ending choreography: " + method.identity());
+        }
+        if (!Pattern.compile("public\\s+EndingProvider\\s+getEndingProvider\\s*\\(\\s*\\)\\s*\\{\\s*return\\s+endingSession\\.provider\\(\\);\\s*}")
+                .matcher(rootCode).find()) violations.add("retain the public virtual delegating getter");
+        if (Pattern.compile("\\b(?:GameLoop|EngineContext|GameServices|Object)\\b").matcher(ownerCode).find()) {
+            violations.add("ending owner has a root/context/service backreference or erased locator");
+        }
+        if (!Pattern.compile("private\\s+EndingProvider\\s+endingProvider\\s*;").matcher(ownerCode).find()
+                || !Pattern.compile("private\\s+boolean\\s+endingTransitionPending\\s*;").matcher(ownerCode).find()) {
+            violations.add("the session must own its provider and single pending bit");
+        }
+        Set<String> ownedMethods = SourceFile.fromText(owner).methods().stream()
+                .filter(method -> method.identity().startsWith("GameLoopEndingSession#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        if (!ownedMethods.containsAll(ENDING_METHODS)) violations.add("ending choreography must remain in the session");
+        Matcher host = Pattern.compile("interface\\s+Host\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!host.find() || !host.group(1).replaceAll("\\s+", "").equals(ENDING_HOST_CONTRACT.replaceAll("\\s+", ""))) {
+            violations.add("ending host must retain only its explicit typed live capabilities");
+        }
+        return violations;
+    }
+
     @Test
     void titlePreviewOrchestrationDoesNotHideConcreteGameDependenciesInConstants() throws IOException {
         List<Path> paths = new ArrayList<>();
@@ -161,7 +238,9 @@ class TestArchitecturalSourceGuard {
             // special-stage return boundary. State machines remain collaborator-owned.
             // 2026-10-09: 3381 -> 3313 after Time Attack and multiplayer moved into the
             // bundled mod; the loop keeps only generic hosted-run hooks (HostedRunController).
-            GAME_LOOP_PATH, 3305
+            // 2026-10-24: ending state, phase execution and cleanup move as one session.
+            ENDING_SESSION_PATH, 320,
+            GAME_LOOP_PATH, 3085
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -191,10 +270,10 @@ class TestArchitecturalSourceGuard {
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
-            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 277),
+            new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 276),
             new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 113),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 9),
-            new MethodBudget(GAME_LOOP_PATH, "loadEndingDemoZone", 84),
+            new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
             new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 62),

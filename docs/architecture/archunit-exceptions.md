@@ -118,7 +118,9 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 3305 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+and 3085 (`GameLoop`). The complete ending session is capped at320 effective
+lines, including its typed live host, provider/pending ownership, phase selection
+and ending-only cleanup. The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
 share these identities, and ambiguous dispatcher names fail. Exchanging one
 large method for another no longer
@@ -129,7 +131,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 | Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
 `TestObjectPhysicsStandardizationGuard` now compares parsed lifecycle calls with
@@ -732,3 +734,9 @@ tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
 green or complete smoke result. Exact commands, source states and limits are
 in the continuation plan. Remaining allowances have qualified retention reasons,
 not an assertion that every native lifecycle or external caller is certified.
+
+The ending transfer preserves the public virtual GameLoop ending-provider getter;
+all six Engine samples still use it. Source controls reject retained root ending
+state/choreography and root/context/erased-service access in the new owner, with
+positive and negative samples. The low-level121 and ambient6/5 inventories are
+unchanged; this is a responsibility transfer, not a frozen-count reduction.

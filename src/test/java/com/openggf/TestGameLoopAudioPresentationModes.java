@@ -88,7 +88,9 @@ class TestGameLoopAudioPresentationModes {
             // Any of isNonRewindableTransitionPending()'s flags will do: this
             // only needs the gameplay tick frozen so the fixture never reaches
             // Camera.updatePosition() with no level loaded.
-            replaceField(loop, "endingTransitionPending", true);
+            Field ending = GameLoop.class.getDeclaredField("endingSession");
+            ending.setAccessible(true);
+            replaceField(ending.get(loop), "endingTransitionPending", true);
         } else if (mode == GameMode.BONUS_STAGE) {
             replaceField(loop, "bonusStageTransitionPending", true);
         }
