@@ -33,7 +33,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
-            src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
@@ -47,7 +46,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
             src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
-            src/test/java/com/openggf/physics/TestGroundSensor.java#setUp
             src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
             src/test/java/com/openggf/sprites/playable/TestPlayableSubclassRewind.java#setUp
