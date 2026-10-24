@@ -215,6 +215,9 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        if (context.identityTable().isEmpty()) {
+            return super.captureRewindState(context);
+        }
         // Deleted SST slots may remain in the native chain. Capture only managed targets.
         ObjectRefId parentId = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
         ObjectRefId nextId = context.identityTable().map(table -> table.encodeObject(linkedHead)).orElse(null);

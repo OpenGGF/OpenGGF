@@ -2,6 +2,8 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindFieldPolicy;
 import com.openggf.game.rewind.schema.RewindPolicyRegistry;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -21,6 +23,8 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -213,6 +217,105 @@ class TestS2RexonSolOwnershipRewind {
                 SolBadnikInstance.class, SolFireballObjectInstance.class)) {
             assertFalse(ObjectManager.isRewindInPlaceReuseSafeClass(type), type.getSimpleName());
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void contextFreeRexonRoundTripKeepsOwnerAndNextHead(boolean explicitContext) throws Exception {
+        ObjectManager manager = manager();
+        RexonBadnikInstance owner = rexon(manager, 160);
+        invoke(owner, "createHeads");
+        tickHeads(manager, 0, 44);
+        List<RexonHeadObjectInstance> heads = inventory(owner, "heads");
+        RexonHeadObjectInstance head = heads.getFirst();
+        RexonHeadObjectInstance nextHead = heads.get(1);
+        int phase = (int) field(head, "oscillationPhase");
+        var snapshot = explicitContext ? head.captureRewindState(RewindCaptureContext.none())
+                : head.captureRewindState();
+        assertNotNull(snapshot.compactGenericState(), "context-free capture still includes scalar state");
+        for (int frame = 44; frame < 48; frame++) head.update(frame, null);
+        assertNotEquals(phase, field(head, "oscillationPhase"));
+
+        if (explicitContext) head.restoreRewindState(snapshot, RewindCaptureContext.none());
+        else head.restoreRewindState(snapshot);
+
+        assertAll(
+                () -> assertEquals(phase, field(head, "oscillationPhase")),
+                () -> assertSame(owner, field(head, "parent")),
+                () -> assertSame(nextHead, field(head, "linkedHead")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void contextFreeSolRoundTripKeepsOrbitingOwnerAndNextTick(boolean explicitContext) throws Exception {
+        ObjectManager manager = manager();
+        SolBadnikInstance owner = sol(manager, 160);
+        invoke(owner, "ensureFireballsSpawned");
+        SolFireballObjectInstance ball = TestS2RexonSolOwnershipRewind.<SolFireballObjectInstance>inventory(owner, "fireballs").getFirst();
+        ball.update(0, null);
+        int capturedAngle = (int) field(ball, "angle");
+        var snapshot = explicitContext ? ball.captureRewindState(RewindCaptureContext.none())
+                : ball.captureRewindState();
+        assertNotNull(snapshot.compactGenericState(), "context-free capture still includes scalar state");
+        ball.update(1, null);
+        int nextX = ball.getX();
+        int nextY = ball.getY();
+        int nextAngle = (int) field(ball, "angle");
+        assertNotEquals(capturedAngle, nextAngle);
+
+        if (explicitContext) ball.restoreRewindState(snapshot, RewindCaptureContext.none());
+        else ball.restoreRewindState(snapshot);
+
+        assertEquals(capturedAngle, field(ball, "angle"));
+        assertAll(
+                () -> assertSame(owner, field(ball, "parent")),
+                () -> {
+                    ball.update(1, null);
+                    assertFalse(ball.isDestroyed(), "a context-free round trip must preserve the orbiting fireball");
+                    assertEquals(nextX, ball.getX());
+                    assertEquals(nextY, ball.getY());
+                    assertEquals(nextAngle, field(ball, "angle"));
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void tableBackedNullRexonIdsClearExistingLinks(boolean explicitContext) throws Exception {
+        ObjectManager manager = manager();
+        RexonBadnikInstance owner = rexon(manager, 160);
+        invoke(owner, "createHeads");
+        RexonHeadObjectInstance head = TestS2RexonSolOwnershipRewind.<RexonHeadObjectInstance>inventory(owner, "heads").getFirst();
+        assertSame(owner, field(head, "parent"));
+        assertNotNull(field(head, "linkedHead"));
+        RewindCaptureContext context = RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        var snapshot = head.captureRewindState(context);
+        assertNotNull(snapshot.objectSubclassExtra(), "a supplied table authoritatively captures absent identities");
+
+        if (explicitContext) head.restoreRewindState(snapshot, context);
+        else head.restoreRewindState(snapshot);
+
+        assertNull(field(head, "parent"));
+        assertNull(field(head, "linkedHead"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void tableBackedNullSolIdClearsExistingOwner(boolean explicitContext) throws Exception {
+        ObjectManager manager = manager();
+        SolBadnikInstance owner = sol(manager, 160);
+        invoke(owner, "ensureFireballsSpawned");
+        SolFireballObjectInstance ball = TestS2RexonSolOwnershipRewind.<SolFireballObjectInstance>inventory(owner, "fireballs").getFirst();
+        assertSame(owner, field(ball, "parent"));
+        RewindCaptureContext context = RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
+        var snapshot = ball.captureRewindState(context);
+        assertNotNull(snapshot.objectSubclassExtra(), "a supplied table authoritatively captures absent identities");
+
+        if (explicitContext) ball.restoreRewindState(snapshot, context);
+        else ball.restoreRewindState(snapshot, RewindCaptureContext.none());
+
+        assertNull(field(ball, "parent"));
+        ball.update(0, null);
+        assertTrue(ball.isDestroyed(), "an orbiting fireball still expires when its captured owner is absent");
     }
 
     private ObjectManager manager() {

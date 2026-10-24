@@ -69,6 +69,9 @@ public class SolFireballObjectInstance extends AbstractObjectInstance
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        if (context.identityTable().isEmpty()) {
+            return super.captureRewindState(context);
+        }
         // Flying fireballs retain their owner until onUnload detaches them.
         ObjectRefId parentId = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindOwner(parentId));

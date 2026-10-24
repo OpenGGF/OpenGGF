@@ -319,3 +319,69 @@ python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestRewi
 The XML method identities and skips, Java 25.0.5.0.2 and surfaceless flag, and the
 generated disposition report were inspected. Consumed reports and diagnostics
 were removed. No validation receipt or retained log archive was created.
+
+## Rexon and Sol context-free compatibility correction
+
+Independent review of `db2afc6619a49e3a30a562e3d3ff497fc832cbd0` against
+`624e95b4892533d23ae898d8127f277038777f70` identified a bounded public API
+compatibility regression. The parent supplied review hash
+`3abbce1bf230304f96620bacf58f5caeb1fa35d53f39de04d5ec7b9791310f8f`, excluding
+the inherited dirty submodules. The original implementation conflated an absent
+identity table with a supplied table that authoritatively encoded absent links.
+`AbstractObjectInstance` delegates its public no-argument capture and restore
+methods through `RewindCaptureContext.none()`. The new child extras therefore
+cleared existing structural links on a same-instance context-free round trip.
+An orbiting Sol fireball then destroyed itself on its next update. The parent
+found no current production caller for this combination. This correction does
+not reclassify the managed registry checks as failing.
+
+The rejected `db2afc661` approach always emitted a custom link extra, even when
+capture had no identity table. The accepted correction adds an absent-table
+return to each child capture method. It returns the superclass snapshot intact,
+including its generic/scalar state and any existing extra. Table-backed capture
+and all restore code remain unchanged. A captured null ID remains authoritative.
+Rejecting the public no-argument API or skipping link restore whenever the
+receiving context lacks a table would change that contract. The expanded null-ID
+controls specifically cover table-backed snapshots consumed through context-free
+restore, so a restore-side guard would fail those controls.
+
+On unchanged runtime `db2afc661`, the new six-case selection ran with four
+failures, zero errors and zero skips. Both the no-argument and explicit
+`RewindCaptureContext.none()` cases lost Rexon's owner and next-head links.
+Both Sol cases lost their owner and destroyed the orbiting fireball on its next
+tick. Scalar capture and restoration succeeded, distinguishing lost links from
+an omitted entire snapshot. The two supplied-table null-ID controls passed.
+
+With only the two capture guards added, the affected graph/object selection
+passed all 17 tests across four classes with zero failures, errors or skips.
+That selection includes the existing exact managed owner, sparse retirement,
+chain/death-drop, native Sol launch, unload and forward-replay checks. The two
+null-ID controls were then expanded to cover both table-backed and context-free
+restore forms. Only those four parameter cases were run afterward; all passed
+with zero failures, errors or skips. The XML identities and skips were inspected,
+and consumed XML/text diagnostics were removed. No source was changed while a
+request was queued or running. No request was restarted or duplicated.
+
+All three commands below used Java 25.0.5.0.2, `LUA_BIN=/usr/bin/lua5.4`, the
+existing absolute ROM paths and the updated main-checkout wrapper from this
+worktree. Repository resource policy requires checkout locations to use
+variables. `MAIN_CHECKOUT` and `ROM_ROOT` stand for the existing main checkout
+and ROM directory used above; all other arguments are exact. `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and its `bin` directory led
+`PATH`. The baseline acquired admission immediately and Maven reported
+24.839 seconds. The affected graph request waited 43 seconds and Maven reported
+1 minute 20 seconds. The expanded controls waited 34 seconds and Maven reported
+23.757 seconds. Queue and execution intervals are separate observations.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind#contextFreeRexonRoundTripKeepsOwnerAndNextHead+contextFreeSolRoundTripKeepsOrbitingOwnerAndNextTick+tableBackedNullRexonIdsClearExistingLinks+tableBackedNullSolIdClearsExistingOwner' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind,TestS2BadnikChildGraphRewind,TestRewindFixS2Batch3Codecs,TestRewindFixS2Batch5Codecs' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind#tableBackedNullRexonIdsClearExistingLinks+tableBackedNullSolIdClearsExistingOwner' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+This follow-up changes no central policy, baseline key or audit row. Its field
+obligation delta is zero; the two managed inventory closures remain intact.
+No native movement, lifecycle, allocation or manager in-place reuse rule changed.
+The 21 policy-registry checks were not rerun. No broad suite or release-only full
+suite was submitted. Complete guards, Mod API, S3K, upstream reconciliation,
+integration and delivery remain with the parent. These direct API and headless
+graph checks do not certify rendered output or a complete HTZ route.
