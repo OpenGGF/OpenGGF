@@ -94,7 +94,7 @@ final class RootTitleCardPilot {
             super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "RootTitlePilot");
             this.passes = passes; this.loop = loop; setRomWorldPositioned(false);
         }
-        @Override public void update(int vInt, PlayableEntity player) {
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
             var context = SessionManager.getCurrentGameplayMode();
             passes.add(new Pass(loop.getCurrentGameMode(), context.getLevelManager().getFrameCounter(),
                     context.getSpriteManager().getFrameCounter(), ((AbstractPlayableSprite)player).getLogicalInputState()));

@@ -52,6 +52,29 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
 5. [S2 EHZ Boss Animation Tables Contain Three Extra Frames](#s2-ehz-boss-animation-tables-contain-three-extra-frames)
 6. [S2 Sideways Platform Allocation and Strict Rewind Gap](#s2-sideways-platform-allocation-and-strict-rewind-gap)
+7. [Shared-JVM Offscreen Property Is Cleared Before Boot Tests](#shared-jvm-offscreen-property-is-cleared-before-boot-tests)
+
+---
+
+## Shared-JVM Offscreen Property Is Cleared Before Boot Tests
+
+**Location:** `TestSurfacelessEglContext` teardown and later
+`TraceCaptureBootDimensionsTest` execution in the same Surefire JVM.
+
+**Symptom and cause:** The former unconditionally clears `openggf.headless.gl`,
+including an incoming `surfaceless-egl` selection. The two later boot cases then
+try GLFW and fail with `Unable to initialize GLFW` on a display-free host.
+The ordered five-case pair reproduces both errors on unchanged baseline
+`97eb86f18` and architecture composition `07bee640`; both isolated boot cases
+pass with the original property intact. This is an inherited test-isolation
+defect, not an attributed gameplay regression.
+
+**Removal condition:** Preserve the caller's graphics property through the
+polluting test's lifecycle, and verify the ordered pair and isolated controls
+on an owned offscreen environment without weakening boot assertions. The
+[composed evidence](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
+records exact identities, commands, source equality and limits. This architecture
+slice records the gap; it does not change the unrelated graphics fixture.
 
 ---
 

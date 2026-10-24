@@ -7724,3 +7724,201 @@ because this evidence initially spelled out the machine-local user-home ROM root
 Only prose was corrected to the repository's existing MAIN_CHECKOUT notation;
 recorded commands expand to the same checked absolute arguments. No executable
 input changed, so completed runtime checks were not repeated for this correction.
+
+### Completed composed smoke and baseline attribution
+
+The parent completed the unmodified change-based plan launched above at
+`07bee64020b0ec8c218278a8555d271630985ab6`, against pre-task destination
+`81f25c89f04d402c68998106cab17c0ddd79d928`. Tree
+`1a4096b81110a6b5a946fc2f7b491c1eeea523ec` and runtime/test input fingerprint
+`9d7e26c1259c3fc267c7c6c0c5b5a2bb4da0893d884125e47706387569318f1a`
+remained frozen. Run `20261024T170114Z-d7de7fd6`, session 53974, exited 1.
+
+| Completed phase | Tests / failures / errors / skips | Active execution |
+| --- | --- | --- |
+| Preparation | passed | 30.46s |
+| All 76 ordinary batches, 3,768 candidates | 39,346 / 1 / 2 / 100 | 6,497.92s |
+| Separate fresh guards | 786 / 1 / 0 / 0 | 311.16s |
+
+These are completed selections, not a green smoke or full-suite claim. Active
+times exclude queue waiting; overlapping worker intervals must not be added as
+delivery elapsed time. All ordinary 3,745 and guard 94 XML report identities,
+failure stacks and all 100 skip identities/reasons were inspected, with zero
+omitted records. Skips include opt-in visual/measurement/soak/tool prerequisites,
+32 absent act-geometry fixtures, legacy GLFW/EGL assumptions and the existing
+CPZ spin-tube assumption. None was a missing supplied-ROM-path skip. The runner
+acknowledgment deleted the complete consumed run directory. No raw-log archive,
+pass cache or validation receipt was retained.
+
+The three runtime negatives are inherited, attributed by exact identity:
+
+- `TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`
+  fails its prerequisite assertion, `GLFW must initialize for pixel verification`,
+  at line 53. The unchanged fixture blob is
+  `a50b3625683284ded48f5cbbda96fa9c6845c66d`. The exact isolated method at baseline
+  `97eb86f186b432722024ca419a00b901b38f5ec2` reproduced 1/1/0/0 with the same
+  Java 25/EGL/four-ROM environment: session 80669, 396s queue, Maven 1:26.
+  This establishes the inherited prerequisite failure, not successful HCZ pixels.
+- Both parameter invocations of
+  `TraceCaptureBootDimensionsTest#realBootKeepsNativeGameplayCameraAndWidePresentationCaches`
+  fail with `IllegalStateException: Unable to initialize GLFW` at
+  `HeadlessGameBoot.initGl:329` before gameplay boot. Isolated baseline and
+  candidate controls both passed 2/0/0/0. The discriminating ordered pair below
+  reproduced 5/0/2/0 on both commits: the preceding three
+  `TestSurfacelessEglContext` methods pass but its teardown clears the caller's
+  `openggf.headless.gl`, so the two later boot tests fall back to GLFW.
+  The property is absent in both pair reports and present in isolated reports.
+  Polluter blob `676e7d00fce1a67b23a0be30c0986b62bf00b01c` and victim blob
+  `9baa07a4eb58baf9a73cee9647ebbf66cc15636e` are identical at baseline, destination
+  and candidate. The actual original batch 71 includes that order.
+
+With MAIN_CHECKOUT denoting the existing absolute main-checkout ROM root, the
+ordered attribution command was identical in both worktrees:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" -Dmse=off -Psmoke \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
+  '-Dtest=TestSurfacelessEglContext,TraceCaptureBootDimensionsTest' test -B
+```
+
+Baseline session 68385 waited 30s and executed in 28.312s; candidate session
+66837 waited 0s and executed in 29.116s. Isolated baseline session 74354 waited
+0s/Maven 29.363s; isolated candidate session 35279 used `surefire:test -Psmoke`,
+waited 0s/Maven 1.957s. Java 25.0.5.0.2 and all four absolute ROM properties were
+verified; all inspected reports were consumed. The canonical known-bug ledger
+now records this inherited isolation defect. No unrelated graphics fixture,
+backend selection, assertion or smoke selection was changed to turn it green.
+
+The sole new guard failure was
+`TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`.
+It found unused first-parameter names `vInt` in `RootTitleCardPilot.update` and
+`count` in the pressure fixture's `PressureOccupant.update`. Both now use
+`vIntRunCount`; no executable body, assertion, clock algorithm or guard policy
+changes. A fresh complete composed guard invocation qualifies that correction.
+
+### Final accepted composition and bounded supplement
+
+The main branch fast-forwarded to `633d0e80796da07d66561ad7fba98c35a2711ea6`.
+Since 81f25c89, the two upstream commits add Stageplay guides, screenshots,
+examples and matching example-count expectations. The Python implementation
+change is a docstring version correction; no production Java, API, timing or
+guard algorithm changes. Merge `94082f426f7edcc3fd6d36585a7b2f707353e3ef`
+preserves those updates. Merge `2b4845bffaac0291d02439464a4c5a223a808497`
+adds the accepted six-case native evidence and final launcher 10117e9. Its only
+conflict keeps the upstream Stageplay workflow paragraph and adds the native
+probe entry beside it. Merge `68642196844cd15db11306655ace91e7a0b70900`
+adds accepted baseline 23487d973 and extraction 86cd50e4.
+
+The composed `src/main` tree is
+`a1f5c13d1cc586a138a32d41067418c772a112a8`, exactly the reviewed 86cd50e4 tree.
+All six changed source/test blobs from 07bee640 to 86cd50e4 map exactly; all
+three native code blobs map to 10117e9. All 13 frozen-store blobs remain exact.
+The final runtime/test/example fingerprint is
+`1560dc765cb046df05237e46f8caa97d7f99679f771b4280cbe38848c6cd826a`
+over 11,348 sorted tracked paths under `src/main/`, `src/test/`, `racing/`,
+`examples/stageplay-demo/`, and `pom.xml`: SHA-256 of each UTF-8 relative path,
+NUL, then binary SHA-256 of its bytes. It includes the two unused-parameter
+corrections; subsequent evidence prose does not alter those inputs.
+
+The current change-based plan was inspected again against the pinned 81f25c89:
+it still selects 3,768 candidates and complete guards. The parent completed that
+selection above before this supplement. Repeating it on unchanged owners would
+be disproportionate: the only subsequent runtime change is the independently
+reviewed AudioManager owner with 12 token-equivalent moved bodies and 334 worker
+cases; the native launcher has separate safety/native evidence; upstream changes
+add examples/docs. Parent verification therefore adds the coupled capture/speech
+consumers, expanded example round trips, isolated boot cases, Python safety and
+complete fresh guards. This is an explicit proportionate-validation judgment,
+not manual narrowing of a category run or a full-suite claim.
+
+The final focused selector is:
+
+```text
+-Dtest=AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestTraceCaptureUnifiedAudio,TestStageplaySpeechAudio,TestStageplayScriptRoundTrip#everyShippedCanonicalAndScreenplaySurvivesTwoStableRounds,TraceCaptureBootDimensionsTest#realBootKeepsNativeGameplayCameraAndWidePresentationCaches
+```
+
+Session 67285 passed **73/0/0/0**: 49 capture/trace, four speech, 18 dynamic
+canonical/screenplay round trips and two isolated boot cases, seven physical XML
+reports. Queue wait 6s; Maven 1:27. Every XML had Java 25.0.5.0.2, explicit EGL and
+all four absolute ROM properties; every identity and F/E/S was inspected and the
+reports consumed. The command used the preceding four ROM arguments and
+`env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u JAVA_TOOL_OPTIONS
+-u JDK_JAVA_OPTIONS -u MAVEN_ARGS JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --normal -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl <selector> test -B`.
+
+The composed native launcher safety command,
+`env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/bizhawk -p test_s2_fixed_tail_pressure.py -v`,
+passed **14 cases, no failures/errors/skips, 1.396s**. The preceding process's
+terminal output was lost at a context boundary; this bounded repeat resolved
+that result uncertainty. No additional native ROM run was warranted: the three
+probe/launcher/test blobs are exactly the accepted 10117e9 code, whose positive
+prepare/run is already recorded in the audit.
+
+### Retained boundaries and next finite question
+
+CPU palette binding remains with RenderContext; donor capture adoption remains
+with PaletteColorStateAdapter. Its authority is adapter instance × context
+object × uninterrupted observed membership, not bank identity. Row replacement
+preserves authority; another adapter or observed absence/reentry does not. No
+independent bank CPU retirement/rebinding operation currently earns a combined
+owner. This is an authority/lifetime decision, not a rejection based on potential
+frozen-record growth or supported aliases.
+
+LevelManager retains current loaded-world scene-cache eligibility and sampling;
+LoadedLevelScene retains art residency/projection and callers own presenter
+resources. There is no separate cache execution or disposal lifecycle requiring
+another composition owner. The fixed-tail audit likewise retains the open gap:
+native observations close specific memory effects, while supported Java generic
+retirement/slot reuse and snapshot precedence remain unqualified.
+
+One next candidate is a complete suspended-game visit in the existing
+GameLoopSuspension. Its source-only design review requires admission, pending
+capture, parking/payload, resume and retirement decisions to move together, with
+typed narrow Engine effects and preserved partial-failure ordering. Existing
+Loop virtual seams and renderer card/zoom ownership remain. Characterize the
+unchanged integrated base, including one actual offscreen phase/pixel control,
+before any transfer. Do not start that implementation before delivery and
+accounted cleanup of this accepted batch. No claim of global architectural
+exhaustion follows from these deliberate retentions.
+
+### Final composed guard closure
+
+The fresh complete guard invocation, session 32531, passed **786/0/0/0**, 94
+physical XML reports. Queue wait was 0s; Maven execution 5:27. It used the final
+focused command's environment and four ROM arguments above, replacing the exact
+selector and `--normal` with `-Pguards`, retaining `-Dmse=off`, explicit EGL and
+`test -B`. All 786 testcase identities and every report's Java 25.0.5.0.2,
+EGL/four absolute ROM properties and F/E/S were checked. The formerly failing
+clock-terminology guard passed. Reports were then consumed; owned Maven handles
+are terminal. Evidence-only edits after the run leave the recorded source/test/
+example fingerprint unchanged.
+
+`git diff --check`, root AGENTS/CLAUDE equality and all 47 mirrored skill-file
+bytes pass. All five newly added local links/anchors resolve. Pinned citation
+checking of the existing continuation/audit reports 35 valid and 16 unverifiable
+historical references, with no new citation failure. It deliberately reads the
+pinned disassembly Git objects: main's differing checkout revisions were reported
+and left untouched. No new disassembly pin, signature, terminal, permission,
+ambient allowance or frozen identity is introduced. API remains 22,541 rows /
+1,250 types, frozen low-level records 119, ambient methods/files 6/5, package-pair
+permissions 151. The current source/header and compiled controls establish the
+bounded preservation claims above; they do not establish universal audio release
+atomicity, skipped pixel coverage or a new fixed-tail storage authority.
+
+An independent read-only cleanup audit accounts for all 15 owned worktrees and
+their branches, each an ancestor of the final composition. It found no unknown
+nonignored files. The three retained valley saves equal main byte-for-byte;
+configuration/ROM/disassembly symlinks target main, and the T3 submodule clones
+are clean and confined to their own worktree metadata. Main remains on develop
+with its four pre-existing dirty submodules and five user files preserved.
+Delivery proceeds by fast-forward integration of these tested inputs and a
+develop-only push after committed-range policy; accounted task worktrees and
+fully merged local branches are removed only after that succeeds.

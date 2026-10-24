@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+ArchUnit field rules can ignore Surefire's method filter (2026-10-24, held
+reverse-target extraction). A selector naming two `TestArchUnitRules` members
+executed all 27 field rules and the selected cycle method: the intended 48-case
+guard selection actually executed 74 cases. Inspect physical XML identities and
+counts before reporting coverage or adding totals; a `Class#method` argument
+alone does not establish the executed set. The [ownership evidence](../architecture/plans/2026-10-24-architecture-continuation.md#held-reverse-target-owner-reviewed-extraction)
+records the unchanged selection and its actual expansion.
+
 A Stageplay pixel oracle can compare two black S3K pictures while object art is
 still dormant or the native initial palette reveal is black (2026-10-24, facing
 correction, base `ac46111bc`). Require nonempty native sprite pixels and their
@@ -180,6 +188,10 @@ errors on the pinned baseline, while the isolated dimension check with explicit
 launcher notice to child stderr and breaks exact CLI-output assertions. Attribute
 these cases with bounded matched tests and preserve their coverage limits; a
 launch setting alone does not prove which backend a later test used.
+The 2026-10-24 architecture composition reproduced the same two errors with the
+ordered five-case baseline/current pair; both isolated two-case checks passed.
+See the [current attribution](../architecture/plans/2026-10-24-architecture-continuation.md#completed-composed-smoke-and-baseline-attribution)
+and [open test-isolation bug](../status/known-bugs.md#shared-jvm-offscreen-property-is-cleared-before-boot-tests).
 
 A mock-only OpenGL test can terminate the JVM when a helper adds an unmocked
 GL owner (2026-10-22, Stageplay smoke). `FboHelper` began preserving unpack-PBO

@@ -3517,3 +3517,55 @@ even when explosion allocation fails; native `loc_1E61A`
 (sonic3k.asm:42224-42227) instead requests it in the admitted explosion's dispatch.
 That inherited timing difference is outside this correction. No creator semantic
 was narrowed to conceal a disagreement with native behavior.
+
+### Fixed-tail Java lifetime qualification after native pressure evidence
+
+Source-only reassessment used engine composition `07bee64020b0ec8c218278a8555d271630985ab6`
+and the accepted final probe/launcher `10117e9fc9034048682441c43b7640e85c1716f2`.
+The preceding six-case native observations remain accepted within their recorded
+setup and comparison limits. They establish a **64-byte** fixed cell at slot
+`$80` / address `$FFFFD000`; no 80-byte storage model is proposed.
+
+Qualified retention remains the result. A fixed-tail cell is finite for the
+ordinary stock 1P Obj7A endpoint lifecycle, which clears the linked current cell
+before deleting its parent. Supported Java removal is broader:
+`ObjectLifetimeOps.deleteNoRespawn` and Stageplay structural retirement can free
+the parent's SST without executing Obj7A's linked-target cleanup. Sideways has no
+unload override supplying that cleanup. Automatically cascading these removals
+would invent a lifecycle rule. Preserving physical storage instead allows the
+retained parent address to denote a later stock or creator occupant.
+
+Obj05's actual parent read set is 13 bytes across eight fields: X/Y words at
+`$08/$0C`, directional X/Y velocity words at `$10/$12`, the art word's priority
+bit at `$02`, animation byte `$1C`, status byte `$22`, and angle byte `$26`.
+It checks neither parent ID nor routine. The existing NativeSstState projection
+does not supply this domain for every possible replacement occupant, and
+NativeSstSlotAccess resolves live objects rather than dormant storage. Missing
+bytes cannot be filled with zero, inferred from class identity or replaced by an
+incarnation ObjectRefId. The native source citations and direct consumer analysis
+are retained in the earlier fixed-tail grounding and pressure sections.
+
+Manager replacement, WorldSession identity and a verified native RAM clear are
+different boundaries. Full/preview/art initialization, parking, editor teardown,
+Stageplay world/team changes and seamless carry cannot all imply the same cell
+reset. A live storage capability from a retired owner must also differ from a
+captured physical coordinate resolved inside the explicitly selected restoration
+owner, even when two worlds share a module and equal addresses.
+
+Current snapshots have multiple writers: player/controller seven-value tail
+state, delayed native art rebinding, ending art binding and occupied object
+reconstruction. The separate DynamicArtLifecycleService DPLC cache already has
+its own state owner. A future cell must define one canonical restore authority
+and the precedence of those projections; adding another last-writer copy does
+not establish it. Standalone/donor tail constructors and their public restore
+behavior remain compatibility obligations.
+
+The next foundational question is therefore physical parent-header authority
+across generic deletion, reused slots and authored retirement, together with
+explicit storage lifetime and snapshot precedence. Another empty/live native
+pressure repeat would not answer it. Natural placement/respawn, arbitrary
+dormant residue, nonzero-cache retirement, Java rewind and published VRAM/pixels
+remain outside the current observations. No bounded storage owner is qualified
+or authorized. All ten count-one bridge allowances and the 119-record store
+remain unchanged; the canonical Sideways bug and strict missing-reference
+qualification remain open.

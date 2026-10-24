@@ -276,7 +276,7 @@ class TestS2SidewaysPformAdmissionQualification {
         @Override public PressureOccupant recreateForRewind(RewindRecreateContext ctx) {
             return new PressureOccupant(ctx.spawn());
         }
-        @Override public void update(int count, PlayableEntity player) {}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {}
         @Override public boolean isPersistent() { return true; }
         @Override public void appendRenderCommands(List<GLCommand> commands) {}
     }
