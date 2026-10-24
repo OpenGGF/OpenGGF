@@ -3660,3 +3660,26 @@ render, actor and signature-pin consumers also executed. Independent Codex
 review accounts for all21calls/ninefiles and finds no remainingP1/P2 after R2.
 This owns the storage; solid-result application and the next supported-object
 MODE continuation remain separate. No new World support or parity is claimed.
+
+### Native Floating Block body — 24 October 2026
+
+CdFloatBlock now owns the seven source routines, using the authenticated lazy
+USA mappings/scripts and selector5 art. Each TopSolid pair publishes its working
+object, captures one cut, invokes the pure SolidObject owner and synchronously
+requires the commit port to publish the returned pool images. Player/globals
+thread into the next call; the Future Main-to-Fall continuation makes four calls.
+Visible writes animation0 before solidity, Reset makes no Solid/Draw call, and
+Fall preserves the native delete-and-return wrapper behavior. Source boundaries
+reject before their first write; failures after published source writes do not
+roll back. There is no new player, pool or snapshot retained in its result.
+
+Root79585 at48562c827 plus this exact two-file owner and the separate S3 Frame
+port passed311/0/0/0, exit0 at20:43:50BST (0s queue,86s Maven). The selected
+Frame126, Solid88, Float42 and Runtime55 reports all show Java25, actual supplied
+USA media and zero skips. All42Float invocations executed, including the media
+binding. The independent Codex review read every method and caller contract,
+found noP1/P2 or actionableP3, and retained matching frozen fingerprints. Its
+source-only verdict is separate from Root's execution. The Draw test stand-in
+fuses enqueue and later culling; the real queue/live-slot path remains S4 work.
+No live World dispatch, mapping/art-bank admission, supported-object MODE,
+route reachability, act completion or native timing/pixel parity is claimed.
