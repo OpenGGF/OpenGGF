@@ -76,7 +76,7 @@ public final class CdR11aForegroundScroll {
         }
     }
 
-    public enum Boundary { SCROLL_LOCKED, FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT }
+    public enum Boundary { SCROLL_LOCKED, FOREGROUND_COMPLETE_STATIC_BACKGROUND_DEVELOPMENT, DEAD_CAMERA_FREEZE }
 
     /** Feed bounds/Y centre back to their existing shared owner; do not retain another shadow. */
     public record Result(State state, CdPlayerMovement.Bounds bounds, int cameraYCentre, Boundary boundary) {
@@ -116,6 +116,24 @@ public final class CdR11aForegroundScroll {
         if (sw(y) >= sw(bounds.bottom())) y = bounds.bottom(); // SetupCamera's signed BLT.
         return new State(x, y << 16, 0x10, 0x10, 0, 0, 0,
                 bounds.bottom(), bounds.left(), 0, 0);
+    }
+
+    /**
+     * Level_MainLoop's dead-camera branch (Level/Main.asm:405-418), after ALL object slots and
+     * before LevelScroll. The caller owns levelRestart/debug/routine admission. Native skips
+     * LevelScroll entirely: only bottomBound and destBottomBound take cameraY's high word.
+     * Keep camera fractions, flags, event/shift state and centres; sprite build and loop tail
+     * still belong to their existing owners. This method executes no scroll/event service.
+     */
+    public static Result deadCameraFreeze(State state, CdPlayerMovement.Bounds bounds, int cameraYCentre) {
+        Objects.requireNonNull(state, "state"); Objects.requireNonNull(bounds, "bounds");
+        wordValue(cameraYCentre);
+        int bottom = state.cameraYWord();
+        var frozen = new State(state.cameraX(), state.cameraY16_16(), state.horizontalCrossed(),
+                state.verticalCrossed(), state.scrollXDiff(), state.scrollYDiff(), state.scrollFlags(),
+                bottom, state.destLeftBound(), state.bottomBoundShift(), state.scrollLock());
+        return new Result(frozen, new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), bottom,
+                bounds.bossFight()), cameraYCentre, Boundary.DEAD_CAMERA_FREEZE);
     }
 
     /** One admitted foreground step. All writes remain detached until the complete Result exists. */

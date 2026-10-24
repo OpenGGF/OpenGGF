@@ -20,12 +20,45 @@ import static com.openggf.game.soniccd.scroll.CdR11aForegroundScroll.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Source-authored before the implementation; ALL UNRUN by task instruction.
+ * Source-authored before the implementation; bounded runs are recorded in the dated CD plan.
  * Constructed RAM-width cases, not a native execution oracle or retail-route certificate.
  * Source pin 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
  */
 class TestCdR11aForegroundScroll {
     private static final CdPlayerMovement.Bounds DEFAULT_BOUNDS = bounds(0, 0x2897, 0x710);
+
+    @Test
+    void deadCameraWritesOnlyBothBottomWordsAndKeepsEveryScrollFractionAndFlag() {
+        var before = new State(0x234, 0x07008000, 0x43, 0x54, 0x1234, 0xFEDC,
+                0xF5A5, 0x710, 0x80, 0xA55A, 0xB612);
+        var shared = new CdPlayerMovement.Bounds(0x123, 0x456, 0x710, 0xFE);
+        var result = deadCameraFreeze(before, shared, 0x88);
+        assertEquals(new State(0x234, 0x07008000, 0x43, 0x54, 0x1234, 0xFEDC,
+                0xF5A5, 0x700, 0x80, 0xA55A, 0xB612), result.state());
+        assertEquals(new CdPlayerMovement.Bounds(0x123, 0x456, 0x700, 0xFE), result.bounds());
+        assertEquals(0x88, result.cameraYCentre());
+        assertEquals(Boundary.DEAD_CAMERA_FREEZE, result.boundary());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,0", "32768,32768", "65535,65535"})
+    void deadCameraCopiesRawYWordAcrossTheSignedBoundaryWithoutClamping(int word, int expected) {
+        var before = new State(0, (word << 16) | 0xABCD, 0x10, 0x10,
+                0, 0, 0, 0x710, 0, 0, 0);
+        var result = deadCameraFreeze(before, DEFAULT_BOUNDS, 0x60);
+        assertEquals(expected, result.bounds().bottom());
+        assertEquals(expected, result.state().destBottomBound());
+        assertEquals(before.cameraY16_16(), result.state().cameraY16_16());
+    }
+
+    @Test
+    void deadCameraRequiresItsActualSharedOwnersAndWordCentre() {
+        var before = state(0x200, 0x07008000);
+        assertThrows(NullPointerException.class, () -> deadCameraFreeze(null, DEFAULT_BOUNDS, 0x60));
+        assertThrows(NullPointerException.class, () -> deadCameraFreeze(before, null, 0x60));
+        assertThrows(IllegalArgumentException.class, () -> deadCameraFreeze(before, DEFAULT_BOUNDS, -1));
+        assertThrows(IllegalArgumentException.class, () -> deadCameraFreeze(before, DEFAULT_BOUNDS, 0x10000));
+    }
 
     @Test
     void coldLoadPlanCutAndStationarySourceStartDoNoFollowingWork() throws IOException {

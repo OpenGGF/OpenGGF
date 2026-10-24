@@ -3239,3 +3239,21 @@ differs onall54rows by61(native higher):54mismatches out of1296comparisons,
 explicitly reported and not applied to gameplay. This verifies only these short
 observed fields, not all actor state, device timing, native pixels/audio, later
 bounces, whole-game or regional parity. DEVseed0 remains declared policy.
+
+
+### Pure dead-camera bound write, 24 October 2026
+
+CdR11aForegroundScroll.deadCameraFreeze models only Level_MainLoop's two word
+writes after all object slots (Level/Main.asm:405-418). Both bottom bounds take
+the current cameraY high word. All camera fractions, cross bytes, differences,
+flags, shift/lock/left state, bounds left/right/bossFight and Y-centre remain
+unchanged. It runs no LevelScroll/event path and does not select the branch;
+levelRestart/debug/routine admission and SAT/tail completion remain caller-owned.
+The helper is not yet wired into the World. The audited current early post-Body
+death stop is still present until that integration unit lands.
+
+Root56397 atf03955e65 plus ONLY the two camera files passed61/0/0/0 at16:29:52BST,
+0queue/1m29execution, freshXMLJava25 confirmed. Five new invocations cover every
+unchanged field, the fractional camera high word, signed-boundary raw words,
+null owners and word-centre validation. Existing56foreground cases also pass.
+This pure value unit does not prove a completed death frame or restart route.
