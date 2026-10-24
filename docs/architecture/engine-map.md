@@ -58,6 +58,18 @@ choreography requires; GameLoop keeps frame admission and shared frame work.
 Engine presentation continues through the virtual `GameLoop.getEndingProvider()`
 boundary. Runtime rebinding and suspension retain the ending session.
 
+`GameLoopSuspension` owns the complete suspended-game visit: admission, pending
+capture readiness, saved payload, parked gameplay identity/pause, resume and
+retirement. Engine retains a final alias to that same loop owner, not visit state.
+Its three narrow effect groups read the current application fields at each
+operation boundary. A selected effect bundle stays fixed for that operation;
+loop completion/resume selects the current binding at its original handoff.
+Engine keeps screen construction, framebuffer access, dimensions, common teardown
+and general frame execution. MasterTitleScreen retains card/image textures, zoom
+publication and input/confirmation state; SuspendedSettings retains settings policy.
+The reset hook clears a saved visit before parked-state retirement, then Engine
+finishes shared teardown. Application exit adds no separate suspension discard.
+
 Running the engine needs LWJGL (OpenGL/OpenAL/GLFW bindings) and JOML, both already in `pom.xml`.
 
 Package names under `src/main/java/com/openggf` are mostly self-describing. The

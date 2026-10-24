@@ -416,9 +416,9 @@ class TestEngine {
         var card = new com.openggf.game.MasterTitleEntry.Suspended(
                 new com.openggf.game.MasterTitleEntry.Stock(
                         com.openggf.game.MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill", true);
-        setPrivateField(engine, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+        SuspensionTestAccess.set(SuspensionTestAccess.visit(engine), "suspendedGame", new SuspendedGame(GameMode.LEVEL,
                 new SuspendedGame.Pending(null, card), null, pausedSettings, null));
-        invokePrivateMethod(engine, "resumeSuspendedGame", new Class<?>[]{});
+        SuspensionTestAccess.resumeSuspendedGame(engine);
         assertEquals(400, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         assertEquals(400.0, getPrivateField(engine, "projectionWidth"));
         assertEquals(400, graphics.getProjectionWidth());
@@ -446,7 +446,7 @@ class TestEngine {
         screen.setStateForTest(com.openggf.game.MasterTitleScreen.State.ACTIVE);
         screen.setSuspendedGame(card, 320, 224, new byte[320 * 224 * 4]);
         setPrivateField(engine, "masterTitleScreen", screen);
-        setPrivateField(engine, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+        SuspensionTestAccess.set(SuspensionTestAccess.visit(engine), "suspendedGame", new SuspendedGame(GameMode.LEVEL,
                 new SuspendedGame.Pending(null, card), null, settings, null));
         var input = new com.openggf.control.InputHandler();
         for (int key : new int[] {org.lwjgl.glfw.GLFW.GLFW_KEY_TAB,

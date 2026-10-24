@@ -7922,3 +7922,550 @@ with its four pre-existing dirty submodules and five user files preserved.
 Delivery proceeds by fast-forward integration of these tested inputs and a
 develop-only push after committed-range policy; accounted task worktrees and
 fully merged local branches are removed only after that succeeds.
+
+### Suspended visit: original-production characterization (test sub-agent)
+
+This finite loop starts exactly at accepted develop
+`a9d88d2c980c6562008e21c916d2b4d28362fd6f` in the T3-owned
+`t3-55b1a7b4` checkout, renamed locally to
+`bugfix/ai-suspension-visit-owner-20261024`, with installed hooks. No fetch,
+main-workspace mutation, integration, push, worktree removal or subdelegation is
+part of this phase. The temporary-agents guidance was read; no native worker
+session or fallback registry was created. Existing main ROMs were read by absolute
+path only. Main's optional submodules, user files and target/jobs were not used as
+writable workspaces.
+
+Production scope is **zero**. The complete `src/main` tree remains
+`a1f5c13d1cc586a138a32d41067418c772a112a8`; Engine, GameLoopSuspension,
+GameLoop, MasterTitleScreen, SuspendedGame and SuspendedSettings retain their
+original bytes. APIs, guards, policies, frozen stores, fixtures, build and
+selection definitions are untouched. In particular the existing displayFrame
+229 / GameLoop 2367 source budgets are not ratcheted. The two existing Engine
+resume tests and both constructor-bypassed loop viewport fixtures remain intact.
+No release behavior entry is appropriate for baseline tests alone.
+
+The only executable edits are new test-scope
+`com.openggf.TestGameLoopSuspensionOwnership` (55 ROM-free cases),
+`TestEngineSuspensionRendering` (one named native case), and package-local
+`SuspensionTestAccess`. The bridge only invokes existing private Engine methods
+and reads/writes temporary fixture state; it neither reproduces frame sequencing
+nor adds a production hook. No existing test file needed an edit. Layout access
+is a source-era fixture dependency to migrate explicitly if a future transfer
+moves payload storage, not an architectural demand for those private fields.
+
+The discriminators preserve these decisions:
+
+- Construction and Host binding perform no collaborator reads. Empty-visit
+  factory/reset works with the maintained constructor-bypassed loop mock.
+- Admission short-circuits at missing Host/runtime, unready runtime,
+  preparing/parked state, declined preparation, test mode and mod scene. Resolving
+  gameplay still precedes parked/preparing guards. Existing recording exclusion
+  and actual stock-level freezing remain in the separate S2 class.
+- Host selection precedes evaluation of the virtual mode argument in
+  `host.prepareSuspend(loop.getCurrentGameMode())`. Rebinding Host on the second
+  mode read cannot redirect that already-selected preparation receiver.
+  Completion clears preparation and uses the current Host; resume selects Host
+  after consuming the screen request. Rebinding Host during Engine A's resume
+  does not redirect remaining effects to Engine B. A's later camera read remains
+  live, and cached configuration precedes unpark notification.
+- Engine admission samples the globally published WorldSession. Parking later
+  resolves the loop's distinct bound gameplay identity. The card can describe
+  S2/LEVEL admission while the retained parking owner belongs to another world
+  and raw parking mode is BONUS_STAGE. Neither identity nor mode observation is
+  collapsed. A live park callback can change the thumbnail before the constructor
+  reads that argument; saved payload publication follows successful construction.
+- Engine audio capture precedes music fade. Audio/zone RuntimeExceptions share
+  the original catch; audio failure omits zone lookup, while zone failure keeps
+  captured audio. An Error propagates. Pending/request publication precedes a
+  throwing fade, without marking preparation complete or adding recovery.
+- Capture consumes the request before readback/resampling and reads logical
+  dimensions afterward. Successful capture and either tolerated RuntimeException
+  release the between-frame handoff; Error propagates. Capture and a later loop
+  step do not park. The four-state preparing/request matrix invokes the real
+  display entry and stops at the existing profiler effect before GL.
+- Park/unpark retain source virtual dispatch, raw returned mode, live listener,
+  pause and identity ordering. Their partial failure states are asserted without
+  rollback, retries or finally retirement. Discard clears identity before its
+  retirement effect; a failed retirement does not make a second discard retry it.
+- Parking failure boundaries are settings, camera, binding refresh, notification,
+  old-screen cleanup, factory and initialization. Resume boundaries are cleanup,
+  settings, unpark notification, dimensions, camera and audio. Exact thrown
+  instances, consumed state and omitted later effects distinguish them; only
+  audio restoration tolerates RuntimeException. Error controls remain uncaught.
+- Engine capture/restoration uses its own AudioManager while loop pause uses a
+  distinct manager. Null camera/picture/audio remain supported. Saved mode,
+  rather than card metadata, selects resume's in-level settings policy.
+- Shared retirement is entered from direct reset, gameplay-from-title reset,
+  explicit End, mod reload, normal return and replacement launch. A module-reset
+  failure observes cleared payload/parked identity and prevents subsequent shared
+  effects. Existing screen consumers cover successful End/replacement, Mods
+  cancellation, Settings and Game Setup. The new end-handler failure control also
+  cancels Quit first, then verifies that a throwing End handler has already
+  cleared prompt/continuation state but retains the card and omits launch.
+- Application cleanup has no explicit suspension discard: its original saved
+  payload and parked flag remain after cleanup. This is characterization, not a
+  proposed extra disposal or retry contract.
+
+The native evidence is an **EGL Engine-phase qualification with a synthetic
+LevelSelectProvider scene**, not ROM gameplay/pixel parity. Its method is exactly
+`TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom`.
+It opens `PresentationOffscreenTestContext` with explicit surfaceless EGL and
+requires no DISPLAY/WAYLAND_DISPLAY. AudioManager.createSilent installs
+NullAudioBackend before Engine construction. Engine's existing private
+`displayFrame` drives its real update, draw, flush, SCENE shader, capture,
+later-pass boundary, next-frame parking, real MasterTitleScreen initialization,
+drawing/zoom and resume. A mocked external level-select provider paints four
+asymmetric quadrants into a 640x448 viewport at (32,24) in a 704x512 pbuffer.
+The real SCENE shader rotates channels; four interior thumbnail samples establish
+crop, scale, orientation and the transformed result. A white external fade-pass
+paint visibly contaminates the final framebuffer while the saved frame retains
+its four colors. The real title subsequently publishes those same colors at full
+size while still parked; only the later display entry resumes and redraws the
+provider. The external runtime supplies its normal world, stock run policy,
+camera/fade bindings and a real PlcFrameLifecycleCoordinator. It is not an
+unready level-select simulation or a manually reproduced phase sequence. Renderer,
+title, audio and graphics resources close while the owned context is current.
+No context skip or desktop fallback is accepted.
+
+Rejected fixture attempts were bounded and retained no production changes:
+package-private zoom/prompt helpers initially failed compilation (corrected only
+in test access); generic reflection values selected JUnit's BooleanSupplier
+overload; nested Mockito setup caused unfinished stubs. The first native fixture
+omitted its world's relationship, then its stock run policy. Marking a resumed
+level-select context unready was rejected by the real PLC phase requirement;
+normal bindings and the real coordinator replace that invalid fixture. A nested
+coordinator-construction stub was separated from Mockito setup. These are test
+construction errors, not observed runtime regressions or reasons to weaken the
+pixel assertions. No whole-frame facade, failure hook, new production cleanup, retry,
+atomicity repair, owner transfer, API pin or permission change was attempted.
+
+The final runtime/test/example fingerprint is
+`1f662910b07e8e6bdbcb41f20879aa56c28c5a58be737cfd57911ccd30cac4a2`
+over 11,351 sorted paths under `src/main/`, `src/test/`, `racing/`,
+`examples/stageplay-demo/`, and `pom.xml`, including the three new files. The
+algorithm is SHA-256 of each UTF-8 relative path, NUL, then binary SHA-256 of its
+bytes. New-file SHA-256 values are:
+
+- SuspensionTestAccess.java: `b567a8c9a0e5411d3cff238a43f578514da3f0038f5fed744314550d3fb04e25`.
+- TestGameLoopSuspensionOwnership.java: `715f713168c935fca3c3ba19b2f9e2452573c641a9d7276c0a653a5897fc8735`.
+- TestEngineSuspensionRendering.java: `24f44956f0e261d4c73d847b1f4f8287df5b63f1b7198abdda86cc2ac9801a03`.
+
+The initial successful 50-case run used input fingerprint
+`ea1c7dad22be70e49a4dfa476d19c1cc6069836ba6c11b9458638401d1ab8d55`.
+Forty-four final method/case bodies and their fixture setup remain unchanged;
+the five revised obligations are checked with an exact ten-case selector,
+including all six retirement entry parameters. The final absent-world correction
+is checked separately as one case. This avoids rerunning unchanged
+controls merely because evidence or a separate native fixture changed.
+
+The queued commands use the current checkout's own wrapper. With
+MAIN_CHECKOUT denoting the existing absolute main-checkout ROM root, the common
+launch shape is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u MAVEN_ARGS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=${selector}" test -B
+```
+
+ROM-free invocations have no ROM-path arguments. The isolated EGL invocation
+and the separate S2 class add these arguments before the selector:
+
+```bash
+"-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen"
+```
+
+S1/S2/S3&K CRC32 and SHA-1 matched the repository identities; kis2.gen matched
+CRC32 2AC1E7C6 / SHA-1 6cd0537a3aee0e012bb86d5837ddff9342595004.
+Lua reported 5.4.9. XML reports establish Java 25.0.5.0.2, the explicit EGL
+property, actual selected identities, zero skipped cases on successful checks
+and the four absolute ROM properties where supplied. TestSurfacelessEglContext
+was never combined with these selections. The measurement-hazard table was read;
+source was held stable from submission through terminal completion, one command
+session/observer per request. Queue waiting was never treated as failure, and no
+matching active request was duplicated or foreign output/lock inspected.
+
+Selectors, including the exact bounded consumer closure:
+
+```text
+# Initial new ROM-free controls (50 at that revision):
+TestGameLoopSuspensionOwnership
+
+# Revised controls and maintained ROM-free consumers (66 actual):
+TestGameLoopSuspensionOwnership#completionUsesTheThenCurrentHostAndConsumesPreparationBeforeCallingIt+parkingConsumesPendingBeforeSettingsAndPublishesOnlyAfterLiveCallbacks+resumeReadsReboundCameraAfterCleanupAndModeNotification+failedEndHandlerConsumesPromptButRetainsCardAndOmitsReplacementLaunch+sharedRetirementClearsPayloadBeforeDiscardAndFailureSkipsSharedTeardown,TestSuspendedGame,TestMasterTitleSuspendedGame,TestSuspendedSettings,TestEngine#firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit+pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu+titleAudioBackendReinstallHonorsAudioEnabledLifecycle+failedMasterTitleLaunchRollsBackHostLaunchCachesAfterSessionOverridesClear,TestViewportLifecycleContract,TestSpecialStageViewportContract,TestMasterTitleQuitFlow,TestLiveRewindOwnerLifetime#parkingReleasesPresentationAndResumesTheSameHistoryWithoutAdvancingIt,TestGameLoopBonusStageSession#parkingRetainsVisitAndDeferredOrFadeObligationsWithoutSteppingWorld,TestGameLoopEndingSession#refreshProviderResetGenericModesAndParkResumeRetainEndingState,TestGameLoopTitleCardOwnership#cacheAndDestinationSurviveRealParkResumeAndTeardown,TestGameLoopSpecialStageLifecycle#modeChangesClearPresentationButRetainResultsAndTransitionLatches
+
+# Native EGL Engine-phase qualification, synthetic LevelSelectProvider scene:
+TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom
+
+# Final explicit absent-world fixture correction, ROM-free:
+TestGameLoopSuspensionOwnership#engineAdmissionExclusionsAndMissingPendingHaveNoInventedRecovery
+
+# Separate ROM-backed class:
+TestGameLoopSuspension
+```
+
+The 56 maintained ROM-free cases comprise TestEngine 4 (only the four named
+methods), BonusStageSession 3, EndingSession 1, SpecialStageLifecycle 1,
+TitleCardOwnership 1, MasterTitleQuitFlow 4, SpecialStageViewportContract 7,
+SuspendedGame 3, ViewportLifecycleContract 8, MasterTitleSuspendedGame 12,
+SuspendedSettings 11 and LiveRewindOwnerLifetime 1. The selected special-stage
+case protects the existing no-rewind-boundary primitive, not an end-to-end
+park route. No opt-in tags or narrowed assertions were added.
+
+Earlier diagnostic invocations are terminal and do not certify the final code:
+
+| Session | Selection / result | Queue wait | Maven execution |
+| --- | --- | --- | --- |
+| 31282 | build-only test-compile, inaccessible zoom constant; no tests | build admission only | 1:28 |
+| 66501 | initial class request, inaccessible prompt helper; no tests | 12s | 23.797s |
+| 66554 | 50 / 4 failures / 8 errors / 0 skips, reflection and Mockito fixture errors | 0s | 28.860s |
+| 13584 | native 1 / 0 / 1 / 0, missing mocked world relationship | 0s | 28.572s |
+| 89616 | native 1 / 0 / 1 / 0, missing stock run policy | 38s | 30.640s |
+| 60073 | native 1 / 0 / 1 / 0, invalid unready level-select PLC frame | 20s | 30.531s |
+| 60055 | native 1 / 0 / 1 / 0, nested coordinator stub | 15s | 28.946s |
+
+The build-only command was the common environment above with
+`python3 tools/testing/maven_queue.py -Dmse=off test-compile -DskipTests -B`,
+without the test selector/graphics argument. Diagnostic source inputs are not
+retained as runnable revisions; their unrecorded fingerprints are unknown.
+The measured intermediate request fingerprints were
+f746ee31eb6b671ce385842bdbe7fe34e7f8037db770807ef40f146e76952608
+(66501) and 92524abf53e35001603d9eeca397507c0277713633cf594322aabe2796f819bd
+(66554). Production tree identity stayed fixed in every invocation.
+
+The initial passing native qualification and the revised 66-case selection used
+2536f5191f1f07471fd3e0290327a5600670a4be9d3c53765e8133291de74808.
+After the parent read the fixture, its cleanup was corrected to save and restore
+the exact incoming EngineServices root, with an identity assertion. This is a
+test-fixture correction, not a production cleanup change. It was applied only
+after session 40989 was terminal, then only the changed EGL method was rerun, at input fingerprint
+84bd56332bd9174dede1c8f15a4adfcd57f8c913703daace082430fc979aa946.
+The parent also identified the no-world prepare assertion's ambient assumption:
+the test now arranges absence inside its existing SessionManager mock scope before
+publishing its mocked world. That affected method received the final additional
+ROM-free check. No passing unrelated selection is repeated for either correction.
+
+Completed passing invocations (tests / failures / errors / skips):
+
+| Session | Actual selection / outcome | Queue wait | Maven execution | JUnit time |
+| --- | --- | --- | --- | --- |
+| 63412 | initial new ROM-free class, 50/0/0/0 | 6s | 29.380s | 1.497s |
+| 40228 | first complete synthetic EGL Engine-phase control, 1/0/0/0 | 3s | 29.809s | 1.608s |
+| 40989 | 10 revised controls + 56 maintained ROM-free consumers, 66/0/0/0 | 2s | 30.370s | 1.890s summed class times |
+| 31768 | exact incoming-root restoration correction, EGL method only, 1/0/0/0 | 61s | 28.866s | 1.358s |
+| 1763 | explicit absent-world correction, affected method only, 1/0/0/0 | 43s | 28.604s | 0.909s |
+| 79928 | unchanged S2 ROM-backed class, 7/0/0/0 | 18s | 30.559s | 1.458s |
+
+Sessions 1763 and 79928 used the final recorded input fingerprint. The passing
+sets qualify 55 final new ROM-free cases (44 unchanged controls + ten revised
+cases + one final fixture correction), one final native case and 63 maintained
+consumers: **119 unique final case identities**. This is deliberately not a
+claim that the final 55-case class was run monolithically. The observed 50-case
+and later exact selectors account for every final method/parameter identity;
+unchanged independent bodies/fixtures were not rerun ceremonially.
+
+For passing selections, all 13 physical reports in 40989, each other run's
+physical report, all actual
+case identities, failure/error nodes, skip nodes, Java/EGL properties and supplied
+ROM paths were inspected before consumption. S2's seven identities were
+aspectChangedMidLevelResizesTheCameraLevelAndParallax,
+musicCapturedBeforeTheFadeComesBackOnResume,
+rewindSwitchedOnMidLevelRecordsFromThenAndRewinds,
+waitingForTheFinalPictureFreezesGameplayWithoutAFade,
+discardEndsTheParkedRunsStateSoTheNormalTeardownCanClose,
+escapeHeldDuringAnActiveRecordingKeepsTheFullReturn, and
+parkedLevelIsUntouchedByHubFramesAndResumesWhereItStopped. It executed all seven
+with the verified S2 ROM path, rather than silently skipping them. Its existing
+SFX preload emitted 82 logged NullPointerExceptions for a null Rom FileChannel,
+alongside Failed-to-load-SFX messages; no JUnit case failed. This records an
+observed fixture/audio-preload limitation, not proof of all SFX synthesis or an
+unrelated repair. The logical music snapshot assertion does not prove Engine's
+pre-fade ordering; that has its own mocked-effect temporal control above.
+
+Native runtime identity was AMD / AMD Ryzen 9 9950X 16-Core Processor
+(radeonsi, raphael_mendocino, ACO, DRM 3.64, 7.3.0-5-cachyos), OpenGL 4.6 Core
+Profile, Mesa 26.2.5-arch3.1. The EGL case is an Engine-phase qualification using
+a synthetic LevelSelectProvider scene, not ROM gameplay/pixel parity. It checks
+one offset/scaled viewport; existing data/layout consumers retain width breadth.
+No release-only full suite, broad smoke, guard fleet, trace sweep, performance
+measurement, emulator comparison, or additional candidate was requested or run.
+Prior core39346/final786 results are not reused as certification for these new
+controls. Future ownership transfer and its dependency/API guards remain separate
+work requiring a parent decision; this baseline authorizes none of that change.
+
+Queue waits above are separate from Maven execution (which includes compilation
+and test setup). Summed JUnit class time is not elapsed delivery time. Other
+unmeasured intervals remain unknown. Every owned command handle listed in this
+section is terminal; reports were inspected and consumed, with no raw-log archive,
+pass cache, receipt, retained category-run directory or idle worker. The local
+branch and clean committed checkout remain for parent review, without integration,
+push, branch deletion or worktree cleanup.
+
+### Complete suspended visit: authorized implementation follow-up
+
+The original-production baseline is immutable commit
+`fac319355b77f205f2646e0cd82743ad8a16d415`, tree
+`8516dd6c858fb778a3e5a17bbb3ab77ddce39670`. It is the direct parent of this
+implementation slice, based on accepted develop a9d88d2c9. The parent authorized
+implementation only after the clean baseline handoff and committed-range policy
+check. This work stays in the retained bugfix/ai-suspension-visit-owner-20261024
+checkout. No fetch, rebase, subdelegation, integration, push, foreign output/lock
+access or worktree cleanup is part of this phase. Parent owns composed smoke and
+fresh complete guards after integration/review input is reconciled.
+
+The complete visit moves into the existing GameLoopSuspension. It now holds
+Engine's four visit values alongside the original parked/preparing/identity/pause
+state. Distinct fields intentionally retain the source's partial failures; saved
+payload existence is not a replacement for parked or preparing state. GameLoop
+remains the established backreference and its shared frame, admission, mode and
+rewind driving do not move. SuspendedGame stays data with no second owner
+reference. MasterTitleScreen's image/texture/zoom/confirmation algorithms and
+SuspendedSettings policy remain unchanged.
+
+Engine has only two final wiring aliases: its loop's exact suspension instance
+and its own fixed Effects bundle. The owner has the replaceable Effects binding.
+This is necessary receiver lifetime, not mirrored visit state. A loop admission
+selects the binding after admission guards but before the virtual mode argument;
+completion selects after clearing preparation, and resume selects after request
+consumption. Once an operation has entered a selected bundle it cannot switch to
+another Engine's ports halfway through. Each adapter still reads its Engine's
+current raw fields when called. The fixed Engine bundle also preserves the
+original receiver of Engine's direct capture event and its screen factory/end
+handler when loop bindings are replaced. It does not snapshot managers, camera,
+screen, listener or dimensions during construction/installation.
+
+The three typed groups are capture/restoration, hub/display and retirement.
+There is no whole-operation Host compatibility implementation. The only additions
+to the reviewed capability inventory are individually justified reads:
+
+- publishedWorld returns SessionManager's published WorldSession at the exact
+  original admission expression, independently of the loop's later parked
+  gameplay identity. Caching the loop's context or deriving card metadata from
+  the parked owner would fail the matched discriminator.
+- captureViewportThumbnail performs only the framebuffer read and evaluates its
+  raw viewport arguments there. thumbnailWidth/thumbnailHeight read the logical
+  dimensions afterward. Returning an already-resampled thumbnail from Engine
+  would leave part of the visit choreography there; capturing all dimensions
+  before readback would change callback evaluation order.
+
+CameraPosition.of(camera) and position.restore(camera) stay narrow adapter
+expressions, selecting the camera receiver once for all their reads/writes.
+Engine's audio dependency remains distinct from the loop's pause/fallback audio.
+No operation falls back to an ambient EngineServices root. The owner's logger
+uses the existing com.openggf.Engine category string and messages, avoiding a new
+Engine class dependency solely for logging.
+
+Engine's factory remains authoritative and calls installCard at the original
+location after the editor-project handler and before the remaining title bindings.
+Its display path emits betweenFrames at entry and afterScene after draw/flush/
+SCENE and before later overlays. The owner performs readiness, payload publication
+and handoff decisions internally. The reset hook follows nativeEditorSession=null,
+conditionally clears saved payload, then discards parked run state; Engine
+finishes its existing common teardown. The End path resumes its original final
+loop-binding clear, Engine gameplay-reference clear and title-audio effect after
+that reset returns. Repeated original retirement/virtual calls remain repeated.
+The reset hook cannot call application reset. Application cleanup has no new
+suspension discard.
+
+Rejected alternatives remain the reviewed method shuffle with three whole-operation
+Host callbacks, a state bag whose decisions remain in Engine, a generic LoopHost,
+a cached world/camera/screen/manager projection, and an atomic phase enum that
+repairs partial failures. None meets the complete responsibility/temporal contract.
+No general effect executor, context/Engine locator, hot-loop-replacement protocol,
+new retry, finally retirement, disposal or permission is introduced.
+
+Maintained private-layout fixtures now address the owner through a package-local
+test bridge and invoke its typed entry points, with no new root reflection
+wrappers. The S2 custom Host fixture is replaced by narrow mocked effects; the
+production owner runs the choreography. The original 55 behavioral case identities
+remain, with whole-operation mock assertions migrated to the corresponding narrow
+external consumption effect. The two Engine aspect controls migrate their payload
+access only. Both viewport contract fixtures remain unchanged.
+
+Two bounded source controls in the existing TestArchitecturalSourceGuard check
+complete state/method ownership, the deliberate Loop reference, cold constructor/
+binding, exact typed groups and absence of Engine mirrors, whole-operation root
+callbacks or erased/global/context locators. Their negative samples reject those
+specific regressions rather than granting a blanket allowance. The measured
+Engine displayFrame span decreases 229 to 224. GameLoop 2367, special-stage 571,
+bonus 357, ending 320 and title 253 envelopes remain unchanged. Pin/store/ambient/
+permission accounting and compiled dependency results are separate checks below;
+package-private visibility is not treated as evidence of a zero delta.
+
+The initial focused implementation request selects the matched 55 ROM-free
+controls, at source/test/example fingerprint
+`d531c6c63cc653798fb2cf6db2d0c2c5a9edf4ecd66a11feab4cccb2cb1dc223`.
+It uses the prior section's normal queued Java 25/EGL/unset-environment launch,
+selector TestGameLoopSuspensionOwnership, without ROM arguments. Owned session
+41929 is pending admission at this checkpoint; no passing result is inferred.
+
+#### Frozen implementation review input and focused progress
+
+The parent received review input
+`d531c6c63cc653798fb2cf6db2d0c2c5a9edf4ecd66a11feab4cccb2cb1dc223`
+and the exact eight-file Java scope. Production SHA-256 values are Engine.java
+`6b9741c3699c61a1f2e22bdab905f7d31b6379d1c7dfd838f1645de8e52350fe`
+and GameLoopSuspension.java
+`8d867c3480f22fc955f344c9f860dcffa6385f036f25ff31389d09575e91a1af`.
+The six test files are SuspensionTestAccess, TestEngine,
+TestEngineSuspensionRendering, TestGameLoopSuspension,
+TestGameLoopSuspensionOwnership and tests/TestArchitecturalSourceGuard.
+GameLoop, SuspendedGame, MasterTitleScreen, SuspendedSettings and both viewport
+fixtures were compared byte-for-byte with the immutable baseline and are unchanged.
+Tooling, policies, pins, stores and guard-accounting prose are unchanged.
+
+Source review found one fixture issue before the S2 class was submitted: its
+new hub refresh callback sampled saved payload to copy parkedFrom, but that
+same narrow effect runs after resume has consumed the payload. The observation
+slot/callback was removed and the original mode assertion now reads the owner's
+actual saved mode directly. This retains the behavioral assertion without a
+fixture mirror or conditional skip. No red runtime or unrelated source fix was
+needed. Only TestGameLoopSuspension.java changed; the parent was told to supersede
+the review hash with
+`f68d4112dad7b7832dbb697b43b72d548579f483f59c04abcf7ff7a588fb52ee`.
+All other Java/test/tooling/guard inputs remained frozen. The already-completed
+55 controls, EGL case and 87 consumer/API cases were not repeated for this one
+independent fixture correction.
+
+| Session | Completed selection (tests/failures/errors/skips) | Queue wait | Maven execution | JUnit time |
+| --- | --- | --- | --- | --- |
+| 41929 | matched original 55 ROM-free controls, 55/0/0/0 | 99s | 1:29 | 1.687s |
+| 75979 | actual synthetic EGL Engine-phase case, 1/0/0/0 | 65s | 29.200s | 1.566s |
+| 26790 | 56 maintained ROM-free consumers + 31 API controls, 87/0/0/0 | 9s | 33.853s | recorded by per-class XML |
+| 46097 | separate matched S2 ROM class, 7/0/0/0 | 43s | 29.836s | 1.581s |
+
+The first three selections used d531c6c6 inputs; 46097 used f68d4112 inputs.
+All actual identities/skips/Java/EGL properties and supplied absolute ROM paths
+were inspected before reports were consumed. Native identity remains AMD/Mesa
+4.6 Core Profile, with the exact incoming service root restored by the fixture.
+This is the same synthetic LevelSelectProvider scene and actual Engine/GL/title
+phase oracle as baseline, not ROM gameplay/pixel parity.
+
+S2 emitted the same 82 NullPointerException preload headlines: 81 failed SFX IDs
+and one DAC-data load failure, with no failing/skipped JUnit cases. Fast-throw
+stack omission shortened the raw diagnostic text, not the count or test identity.
+This limitation remains explicit; no unrelated audio repair or synthesis-parity
+claim follows from the logical snapshot assertions.
+
+The fresh focused guard invocation is session 55499, pending at this checkpoint.
+It selects five SourceGuard cases (two ownership/negative controls plus dispatcher,
+large-class and low-level-lookup ratchets), eight singleton controls, five
+architecture accounting controls and the two named ArchUnit targets. Known
+Surefire behavior expands the field-based ArchUnit part to 27 field rules plus
+the selected cycle method: 46 total cases are expected, with actual identities
+and skips inspected on completion. Expected execution is 2–4 minutes; queue
+waiting remains separate. Source/store updating is disabled, and any unexplained
+new/worsened failure or dependency/accounting delta stops this slice. No combined
+smoke or complete guard fleet is launched by this worker.
+
+#### Compiled contracts and bounded dependency accounting
+
+Session 55499 completed **46/0/0/0**: SourceGuard 5, SingletonLifecycleGuard 8,
+ArchitecturalReviewGuard 5, and ArchUnit 28. Queue wait was 212s; Maven execution
+35.723s. The actual 28 ArchUnit identities are the expected 27 field rules plus
+core_runtime_cycle_cluster_does_not_gain_top_level_edges, including the requested
+low-level rule. There was no hidden second guard fleet or incomplete/tag-excluded
+selection. Every testcase identity, failure/error/skip node and each report's
+Java 25.0.5.0.2, explicit EGL and four ROM properties was inspected; reports were
+consumed. Store updating remained disabled by the unchanged archunit.properties.
+
+The new source matcher was then strengthened after that invocation became
+terminal: declared Engine fields/global services were already rejected, but a
+direct Engine.currentGameLoop() lookup and an EngineContext-returning lookup also
+need explicit negative coverage. The matcher now rejects Engine/EngineContext
+references themselves, with comments/string literals removed. This adds no
+allowance and changes only TestArchitecturalSourceGuard.java. Parent review was
+told to supersede f68d4112 with final input
+`3ec8ac0b4cdabb4be0564a397e8e731024728cb2a290bd043756a6c70b5bec67`.
+Only the two affected positive/negative ownership controls are submitted again in
+a fresh guard JVM, session 50453. Runtime, fixture, API and other passed guards
+are unchanged, so those selections are not repeated.
+
+A read-only inventory of actual compiled constant-pool class references and typed
+descriptors explains the expanded boundary below. This inventory conservatively
+includes nest/type metadata; the executed ArchUnit rules, not text matching or
+package-private visibility, establish the dependency-rule result. Maven's current
+created-file list and target contain no obsolete GameLoopSuspension$Host.class;
+no stale-class deletion or alternate output tree was needed.
+
+| Emitted origin | References and purpose |
+| --- | --- |
+| GameLoopSuspension | Existing Loop, Escape controller, listener, mod-act/hosted/trace/recording eligibility, config and gameplay context/fade references remain. Saved payload/Pending/Thumbnail/CameraPosition, AudioLogicalSnapshot, SuspendedSettings, WorldSession, GameId/GameModule/ZoneRegistry, stock/suspended card types and RgbaImage now implement the complete visit sequence. The SonicConfigurationService reference is the existing loop.configService eligibility call, not a new retained manager. There is no Engine, EngineContext, EngineServices or GameServices class dependency. |
+| CaptureEffects | Only WorldSession, AudioLogicalSnapshot, RgbaImage, SuspendedSettings, CameraPosition and GameEntry payload types, plus owner/nest metadata. This admits no manager/context/registry return. |
+| HubEffects | MasterTitleScreen plus owner/nest metadata; no general application lookup or frame callback. |
+| RetirementEffects | No external engine type; only owner/nest metadata. The existing shared-reset boundary and two final retirement effects are explicit operations. |
+| Effects record | The three typed interfaces and owner/nest metadata. It stores references only, without sampled visit or application state. |
+| Engine.SuspensionCaptureEffects | Engine plus its existing AudioManager, Camera, configuration, SessionManager/WorldSession, screenshot/RgbaImage and settings/snapshot/position/card payload types. These are the original raw-field owners and the explicitly justified published-world read. |
+| Engine.SuspensionHubEffects | Engine, screen, GraphicsManager and FadeManager, forwarding the existing factory, current screen, dimensions/cache and bootstrap fade effects. |
+| Engine.SuspensionRetirementEffects | Engine and the GameplayModeContext field descriptor for its existing gameplay-reference clear, with no broader application capability. |
+
+The executed signature/policy controls establish exact recursive API equality:
+**22,541 rows / 1,250 TYPE rows**. All 13 frozen-store blobs, signature pins,
+engine-internal terminals, release descriptor and update-disabled properties
+were byte-compared with fac319355 and remain unchanged. Executed accounting and
+singleton controls retain **119 low-level frozen records**, **6 ambient methods
+across 5 files**, and **151 package-pair permissions**. The core-runtime edge
+ratchet and all emitted field rules pass without repinning, store updates,
+terminal additions, permission expansion or exemptions. Public/protected roots
+and LevelManager's pinned surface remain protected by the same API controls.
+
+#### Final focused closure and handoff
+
+The final two source controls passed **2/0/0/0**, session 50453: queue wait
+46s, Maven 28.056s, JUnit 1.282s. Both exact identities executed in a fresh
+guard JVM, with Java 25.0.5.0.2, explicit EGL, all four absolute ROM properties
+and no skips. Its reports were inspected and consumed. Final Java/test inputs
+remain 3ec8ac0b4cdabb4be0564a397e8e731024728cb2a290bd043756a6c70b5bec67.
+The runtime pair's SHA-256 values above remain unchanged across d531c6c6,
+f68d4112 and this final review input; only the documented S2 fixture and guard
+negative-control corrections changed between those fingerprints.
+
+The exact final selectors are recorded here, using the original-production
+section's common normal queued environment. The 55-control selection and 87-case
+selection carry no ROM arguments. EGL, S2 and guard selections carry all four
+verified absolute ROM properties. Guard invocations additionally use -Pguards.
+
+```text
+# Matched final original-production controls, 55:
+TestGameLoopSuspensionOwnership
+
+# Actual Engine-phase EGL control, synthetic scene, 1:
+TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom
+
+# Maintained ROM-free closure plus API/policy, 87:
+TestSuspendedGame,TestMasterTitleSuspendedGame,TestSuspendedSettings,TestEngine#firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit+pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu+titleAudioBackendReinstallHonorsAudioEnabledLifecycle+failedMasterTitleLaunchRollsBackHostLaunchCachesAfterSessionOverridesClear,TestViewportLifecycleContract,TestSpecialStageViewportContract,TestMasterTitleQuitFlow,TestLiveRewindOwnerLifetime#parkingReleasesPresentationAndResumesTheSameHistoryWithoutAdvancingIt,TestGameLoopBonusStageSession#parkingRetainsVisitAndDeferredOrFadeObligationsWithoutSteppingWorld,TestGameLoopEndingSession#refreshProviderResetGenericModesAndParkResumeRetainEndingState,TestGameLoopTitleCardOwnership#cacheAndDestinationSurviveRealParkResumeAndTeardown,TestGameLoopSpecialStageLifecycle#modeChangesClearPresentationButRetainResultsAndTransitionLatches,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiRuntimePolicy,TestModApiReleasePolicy
+
+# Separate S2 ROM class, 7:
+TestGameLoopSuspension
+
+# Separate fresh focused architecture JVM, 46 actual:
+TestArchitecturalSourceGuard#suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects+suspendedVisitSamplesPermitTheKnownLoopButRejectMirrorsFacadesAndEagerBinding+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups,TestSingletonLifecycleGuard,TestArchitecturalReviewGuard#archUnitFrozenRulesDoNotAutoUpdateDuringNormalRuns+archUnitPublishedBaselineCountsMatchFrozenStore+archUnitDocumentedCrossGameMemberCountMatchesGroupedRecords+archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances+archUnitCycleClusterDocumentationHasMatchingRatchets,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers+core_runtime_cycle_cluster_does_not_gain_top_level_edges
+
+# Only the subsequently strengthened source controls, fresh JVM, 2:
+TestArchitecturalSourceGuard#suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects+suspendedVisitSamplesPermitTheKnownLoopButRejectMirrorsFacadesAndEagerBinding
+```
+
+Across the disjoint selections **196 unique final case identities passed,
+zero failures/errors/skips**: 55 matched temporal controls, one EGL phase case,
+63 maintained consumers, 31 API/policy controls and 46 architecture controls.
+The final two cases are affected replacements within the 46, not two additional
+unique cases. No red implementation run, weakened assertion, retry, exclusion,
+opt-in bypass or unchanged broad repetition was used. Queue waits are separate
+from Maven execution; other unmeasured intervals remain unknown. Prior
+39346/786/119 results do not certify this implementation.
+
+All owned Maven sessions (41929, 75979, 26790, 46097, 55499, 50453) are terminal
+exit 0. All consumed reports/diagnostics are removed; no raw archive, pass cache,
+receipt, category-run directory or idle worker is retained. Source scope is the
+two production files and six maintained test/guard files above; only the existing
+continuation record, engine map and folded 0.7 Runtime ownership prose accompany
+them. Public/protected surfaces and every protected accepted owner remain
+unchanged. Parent still owns content-matched independent review, composed
+upstream reconciliation, change-based smoke against a9d88d2c9, complete fresh
+composed guards and integration. This local commit claims none of those later
+gates and is not pushed or integrated. The worktree/branch remain for handoff.
