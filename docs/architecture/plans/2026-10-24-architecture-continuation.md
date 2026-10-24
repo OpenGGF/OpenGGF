@@ -4600,3 +4600,93 @@ owned-worktree cleanup are reported in the final task handoff, not assumed here.
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B' "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
 ```
+
+### Broader ownership loop: ending session and palette publication
+
+The user explicitly renewed the looping goal beyond small already-qualified
+guard reductions. Retained allowances, migration size and lack of a runtime
+defect are not architectural exhaustion or automatic blockers. This loop seeks
+complete responsibility/lifetime transfers, followed by the normal reviewed
+verification, develop integration/push and owned-worktree cleanup.
+
+The new pre-task destination is97eb86f186b432722024ca419a00b901b38f5ec2. Main
+fast-forwarded from81bc16e2c, preserving the upstream Stageplay ground-placement
+and shared native-terrain scanning changes (42 files). The ending source is
+unchanged across that update. Main stays on develop with its four inherited
+dirty submodules and five unrelated user files. The coordinator uses isolated
+branch `bugfix/ai-architecture-ownership-loop12-20261024`; cowtree completed a
+normal checkout with `fallback=yes`, because copy-on-write was unavailable.
+Hooks are installed. Actual preflight passed Java25/Lua5.4/PowerShell.
+
+Before product edits, the queued lean `com.openggf.TestGameLoop` selector passed
+all103 invocations, zero failures/errors/skips, at97eb86f18: both existing
+parameter pairs and all ordinary identities inspected. Java25/EGL and exact
+selector verified. Fresh compile covered4344 production and4452 test/maintained
+consumer sources. Queue wait0s; Maven execution1:29. The two XML/text reports
+were consumed. No ROM/display prerequisite was needed by this selection.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestGameLoop' test -B
+```
+
+Ending design alternatives were source-grounded independently: consolidating
+the existing root keeps the ownership problem; a GameplayModeContext owner
+broadens parked-session, rendering and standalone routing; a package-private
+GameLoopEndingSession owned by GameLoop is the bounded choice. It will own both
+mutable fields, all12 ending methods, ending phase/PLC selection and ending-only
+exit cleanup. Bonus choreography stays outside this first slice. GameLoop keeps
+shared admission, input advancement, timer/audio/profiling/trace orchestration.
+
+Independent design review accepts that ownership with three corrections. Keep
+all six Engine calls through the existing virtual GameLoop.getEndingProvider
+boundary, whose body delegates to the session. GameLoop itself is absent from
+the normalized API pin; the existing viewport getter mocks still demonstrate
+observable dispatch. No guard may ban that boundary merely for owner purity.
+The new private host adapter must preserve cached-slot reads separately from
+module/public-mode dispatch, and bound gameplay context separately from resolved
+context. Re-read after callbacks where the source did; retain local snapshots
+where it did, especially the ending-return argument-evaluation boundary.
+
+The pending bit also gates standalone completion. It remains one boolean in
+the new owner, wired directly to MasterTitleExitCoordinator's existing consumer;
+its raw black fade and save/pending/music order remain unchanged. Do not derive
+pending from provider presence or add a transition framework. Initialize the
+owner before that consumer is constructed. Generic mode changes, runtime refresh
+and park/resume retain existing ending state; no new teardown-on-rebind policy.
+
+Characterization must cover fresh provider lookup at fade completion (S1/S2/
+KiS2 factories return fresh providers), initialization partial failures, native
+fade binding/reveal order, consumed request counts, short-circuit frozen-scene
+sampling, water/player/object/camera ordering, load/rebind effects, both exit
+branches, original deferred-abort identity, and actual shared freeze/rewind gate
+wiring. Retarget moved private test locators without weakening assertions or
+keeping root private wrappers solely for tests. One existing final-audio-field
+reflection fixture must construct through the existing injected EngineContext
+instead, retaining its assertions for the constructor-owned audio dependency.
+
+After extraction, enforce real ownership and measure GameLoop's effective cap,
+stepInternalBody and the moved84-line demo-load method with the existing parser;
+retain zero concrete-game references and unchanged supported pins. Low-level121
+and ambient6/5 are expected unchanged, not the success criterion.
+
+The independent next-candidate grounding recommends a concrete graphics palette
+texture/publication/residency owner rather than changing CPU donor identity or
+shared bank allocation. That state machine is independent enough to implement
+in a separate worktree while ending ownership is reviewed. Its public virtual
+call timing, aliases, requested/displayed fades, pending versus detached water
+inputs, scoped generations and selective disposal must survive. Its expected
+frozen delta is zero; any required identity changes need explicit parent review,
+never automatic refreezing or type erasure. CPU bank lifetime and all closed
+SAT/PreparedPiece/background/water-math decisions stay intact in that slice.
+
+Parent owns the combined change-based validation plan, affected ROM/GPU/domain
+checks and fresh guards after stable composition. Existing credits traces often
+drive HeadlessTestFixture directly, so they are supporting physics evidence, not
+proof of the new controller path. S3K's native ending remains a LEVEL route;
+keep its transition and the four required S3K stability selectors as shared-loop
+regressions. No broad/full-suite or successful extraction claim is made yet.
