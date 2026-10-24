@@ -1798,3 +1798,47 @@ constructed admitted asset/terrain bytes, with no runtime disassembly, media,
 emulator or reference-state input. No exhaustive4billion-input or native timing
 claim is made. Normal locomotion, actual actor/render binding and complete-game
 parity remain open; these components leave the stock entry held and static.
+
+## Disc-backed Sonic visual conversion and render acceptance — 24 October 2026
+
+The immutable CD mapping/art views now convert to existing renderer data.
+Five-byte piece order, signed X/Y bytes, dimensions and tile attributes remain
+native. All 2171 source patterns include the actual alignment byte; all 24
+resident tiles come from explicit resident state. Mutable engine patterns are
+fresh per call/world. The data bundle uses a caller-provided virtual atlas base,
+not hardware VRAM F000, and deliberately supplies no Draw-time DPLC metadata.
+The existing CD art owner remains the sole cue/dirty/fixed-DMA producer.
+
+At parent `15bea2cf8` plus four new files, session 15197 compiled and passed
+37 tests, zero failures/errors/skips, with Java 25, actual media for all three
+releases and display-free EGL. The completed XML reports and media/GL properties
+were inspected. Queue wait was 11 seconds; Maven execution was 1m27s. From the
+private cwd, with DISPLAY/WAYLAND_DISPLAY unset and LUA_BIN=/usr/bin/lua5.4:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerVisualAdapter,TestCdPlayerArtRuntime,TestCdSonicVisualAssets,TestCdPlayerRetailComponents,TestCdPlayerVisualRendering' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.playerVisual.capture=true test -B
+```
+
+The 15 adapter tests cover format and mutable-storage ownership; 16 existing
+art/asset regressions cover its dependencies. Three retail cases join the
+actual data to contact, math and art consumers: start (64,1899) resolves to
+(64,1898), angle FC and buffers FC/0; real trig preserves its signed asymmetry
+and angle word 0100. These are explicit component calls, not a native frame.
+Three GL cases boot the normal static world, then draw selected poses through
+PlayerSpriteRenderer. Claim/restore all 24 tiles before drawing. A nonempty
+frame on zero residency stays transparent; only explicit service makes pixels
+appear. Changes stay inside the CPU opaque mapping footprint. Repeated draws
+preserve art state, and restoring both logical state and the GPU bank restores
+the exact image without issuing a cue. Renderer cache -1 stays distinct from
+native last-frame 1.
+
+Six 320x224 PNGs were exported byte-for-byte to the private external task bundle,
+`native/engine-player-visuals-r1`, then their consumed target folder was removed.
+Poses 1/2 have identical pixels/PNG bytes across the three supplied releases.
+They remain queued for morning visual QA; no image was emitted overnight.
+
+This is fixed-pose visual-component evidence over a static stage. No actor is
+registered, camera focus stays null, and the stock profile still holds. There
+is no claim of live player movement, source-native SAT/occlusion/culling,
+physical DMA timing, complete opening-route or whole-game parity. The ongoing
+mode/body/frame work must supply those consumers through the existing loop.

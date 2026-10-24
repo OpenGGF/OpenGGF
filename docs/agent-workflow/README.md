@@ -103,6 +103,12 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   preflight protects all registered checkouts of the producer repository. Exact
   player/V-int instruction phase remains unknown; rows never drive engine state.
   Origin: 2026-10-24 CD-08.
+- [CD Sonic visual conversion](../../src/main/java/com/openggf/game/soniccd/resources/CdPlayerVisualAdapter.java)
+  binds five-byte native mappings, source tiles and complete explicit residency to
+  existing renderer data. `TestCdPlayerVisualRendering` checks selected poses over
+  the static production stage, no implicit cue, repeated drawing and pixel-exact
+  bank restore through EGL. This is component rendering, not a playable actor.
+  Origin: 2026-10-24 CD-08.
 - `HeadlessGameBoot.bootSonicCdStatic` and `GameplayCaptureSession.bootSonicCdStatic`
   join authenticated detached disc data to the existing world, load and rendering
   owners. `TestSonicCdDirectStageBoot` checks three regional static views and
