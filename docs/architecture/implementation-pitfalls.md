@@ -2229,3 +2229,13 @@ ordinary state, legacy-only overrides and explicit context wrappers. The full HP
 ceremony, LRZ2 gateway, sanctuary origin-return and pedestal matrices reproduced
 2,293 errors through that missed route, then passed all 2,295 cases after sharing
 the resolver. The two additional cases already passed in the broad snapshot.
+
+**Preserve missing-context semantics when adding identity extras.** For an object
+that supports context-free same-instance round trips, return its superclass
+snapshot unchanged when no identity table exists. Encoding a missing table as
+null owner IDs makes restore erase live constructor links; an orbiting Sol
+fireball then destroys itself. Table-backed null IDs remain authoritative,
+including when restored through the context-free overload. Guard capture rather
+than suppressing those restore values. Exercise both public capture forms and
+explicit-null controls; the [Rexon/Sol evidence](audits/2026-10-24-rewind-disposition-review.md#rexon-and-sol-owner-follow-up)
+records the reproduced compatibility regression and bounded correction.

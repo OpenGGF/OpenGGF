@@ -158,8 +158,9 @@ not claim that ownership migration is complete.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
-records six proven reconstruction policies and two captured fragment-art recipes,
-leaving 15 exact obligations. False-floor surviving children dispatch by
+records eight proven reconstruction policies, two captured fragment-art recipes,
+the ride ship's captured live inventory and codec-compatible ICZ helper state,
+leaving 11 exact obligations. False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14

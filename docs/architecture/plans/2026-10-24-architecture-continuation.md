@@ -302,3 +302,105 @@ commands, outcomes, open obligations and live job handles here at checkpoints.
 Hard or lengthy work is not a blocker. Reclassifying an exception requires
 positive ownership and compatibility evidence. A justified supported boundary
 can remain when no architectural improvement follows from removing its count.
+
+## Second continuing loop
+
+The integration base is now delivered `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`.
+The clean coordinator is `bugfix/ai-architecture-loop4-20261024` in
+`.worktrees/ai-architecture-loop4-20261024`. Water merge `05b41c4a8` includes
+`d480283a4` and test correction `3e1ccf985`, preserving the intervening Stageplay
+graphics changes without textual conflicts. Both published counts now say 151.
+
+Independent static review accepted the numerical policy, sampling/alias/failure
+semantics and exact nine-removal/four-addition inventory. It found that the six
+new EGL cases unconditionally loaded Linux's `libEGL.so.1` on other platforms.
+The coordinator verified that path. The follow-up adds exactly two imports and
+method-level `@EnabledOnOs(OS.LINUX)`; all six cases executed on Linux, passing
+with zero skips. The original 89-case before/after and 33-check ArchUnit evidence
+remains scoped to the worker's original base. The post-Stageplay graphics selection
+subsequently passed all 89 cases at
+`05b41c4a8` plus this continuation prose: eight reports, zero failures/errors/skips,
+including all six Linux EGL cases. Admission took 59 seconds and Maven 81 seconds.
+The 16 consumed XML/text reports were inspected and removed. Graphics source and
+these tests remain unchanged by the later LBZ merge; composed graph/API/S3K and
+complete guard checks are still pending.
+
+The water-only change-based plan selected 3,723 smoke classes across all categories;
+the final four-family composition selects 3,727. This is
+primarily because the frozen resource is shared. Actual-environment preflight
+passed for Java 25 and Lua 5.4. The mathematical operations are unchanged,
+representation traversals and allocation sites remain local, and literal GPU
+expectations exercise the affected upload and appearance paths. This supports
+focused rendering, affected graph replay, API/S3K stability and complete fresh
+guards for the bounded composition; it does not certify every smoke category.
+Reassess this scope if new cross-cutting behavior enters the loop.
+
+Rexon/Sol commit `db2afc661` received independent review. Five corrected
+baseline controls failed before the fix; graph/object 11, policy registry 21 and
+disposition/metadata seven passed separately afterward, all without skips.
+The nearest-parent helper is removed for these two families. Optional captured
+child identities preserve sparse Rexon links and flying Sol ownership, with
+inventories rebuilt only after all fields settle. Review found that no-table
+same-instance capture/restore erased existing structural links, because absent
+identity context was encoded as authoritative null IDs. The inherited public
+no-argument contract does not exclude this mode. The coordinator verified that
+path and requested a narrow correction: omit link extras only without a table,
+while preserving authoritative table-backed nulls. Managed ownership and policy
+findings otherwise had no blockers. Follow-up `48119fc3d` reproduced four failures
+across the two public capture forms, then passed 17 affected graph/object cases
+and four expanded authoritative-null controls, all with zero skips. Its six-line
+capture-only guard returns the superclass snapshot without extras when a table
+is absent. Restore behavior and central policies remain unchanged. The coordinator
+inspected that exact correction; merge `4b420e402` preserves every audit section
+and removes precisely these two keys, leaving 11. The 21 policy checks were not
+repeated. Source/tests match the corrected worker commit.
+
+LBZ ship commit `098ed5633` reproduced and corrected flame removal ordering, with
+18 distinct passing cases across two selections. Independent review found a
+missing constrained-capacity boundary: failed camera/flame allocation marks an
+unregistered child destroyed without calling unload, leaving it in the newly
+captured list. The coordinator verified the source path and requested a focused
+reproduction/correction. Inspect the analogous boss addition as well. Preserve
+native allocation attempts, deletion flags and retry behavior; do not weaken the
+identity codec or conceal arbitrary unresolved references. Follow-up `e504754e6`
+reproduced all three rejected-allocation cases, including the boss append, then
+passed all 21 graph/cameo cases with zero skips. The coordinator inspected its
+three admission checks and new capacity assertions: allocation calls, initialization,
+destruction flags and retry behavior are unchanged. This bounded correction
+resolves the review finding; no repeated delegated review was needed. Merge
+`0c5cae80c` preserves the upstream player-control owner and both independently
+appended audit sections. The combined field baseline is now 14 keys.
+
+ICZ miniboss commit `1478f794e` starts from upstream `0ffa7f3c7`. The corrected
+baseline produced one pass before creation and six null-orb restore errors at
+progressed/defeat boundaries, with zero skips. Existing array codecs can restore
+all fields, including final recipe values and indices, after private reconstruction
+constructors make those helpers eligible. A permanently owned camera gate retains
+fresh defaults and captured mutable state. Actual compact capture now includes
+inherited `childComponents`; no exclusion or generic-framework change was needed.
+The final 34 focused cases passed, including seven graph cases, one disposition,
+three render-bucket and 23 existing encounter cases, all without skips.
+Independent review found no blockers, confirming full reflected helper capture
+and constructor ordering. Merge `d1df1f45c` retains every audit section and removes
+only ICZ's key from the current 14, leaving 13. Its source/tests match the reviewed
+commit. GPU output, player contact and full-route certification remain outside
+the focused evidence. Composed checks are still pending.
+
+### Root orchestration queued behind this composition
+
+The remaining six concrete root references encode two responsibilities. A
+registry-owned optional table-name capability is preferable to moving the
+special case into another shared helper: the native registry interprets the
+existing `ModObjectZoneSet`, while Engine retains decorated-registry fallback
+when metadata or the native capability is absent. Keep `ObjectRegistry` and
+`GameModule` pins unchanged, following the existing internal property/preview
+capabilities. Verify explicit S3KL/SKL names independently of the active level.
+
+Bonus startup already has provider-owned type, zone and bootstrap information.
+Compare semantic active-type selection with provider zone mapping, pinning the
+existing startup/repair boundaries before removing the concrete zone import.
+Debug controls can use an internal stage-owned capability analogous to
+`BonusStagePlayerPriorityPolicy`; do not add pinned provider methods. Preserve
+key/modifier handling and account explicitly for gumball filter effects while
+other bonus types are active. These are proposed bounded cuts, not completed
+ownership or measured guard reductions.

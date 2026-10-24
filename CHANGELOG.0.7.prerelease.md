@@ -239,7 +239,8 @@ Unreleased. The earlier development themes remain in
   independently of the existing colour profile. Full keeps current output;
   Limited caps palette RGB at 238 after fades and profile conversion, including
   creator colours, with live normal and underwater palette refresh. The palette
-  backdrop and headless gameplay captures use the same saved setting.
+  backdrop and headless gameplay captures use the same saved setting. Underwater
+  donor, appearance and texture colours share one tint policy.
 
 - **Main menu:** Compact and bold lettering now share one pixel-font family,
   with clear navy lettering on gold launch buttons. Holding Escape freezes a
@@ -619,7 +620,12 @@ Unreleased. The earlier development themes remain in
   desktop sound-test composition lives with the developer tools. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence
   and cleanup. Sonic 2 falling fragments retain their mapping pieces and resolve
-  current renderers after rewind. Object-service guards also recognize forbidden
+  current renderers after rewind. ICZ miniboss snapshots restore progressed helpers;
+  LBZ's ride ship restores its exact child inventory while preserving flame
+  retirement before boss allocation, including full-slot conditions.
+  Rexon necks and Sol fireballs restore their exact owners and sparse links while
+  preserving context-free object round trips.
+  Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the
   [exception guide](docs/architecture/archunit-exceptions.md).
