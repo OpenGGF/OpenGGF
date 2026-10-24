@@ -8,6 +8,17 @@ import java.util.Map;
 import java.util.Set;
 
 final class DefaultObjectRewindPolicies {
+    private static final FieldKey REXON_PARENT = new FieldKey(
+            "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "parent");
+    private static final FieldKey REXON_NEXT_HEAD = new FieldKey(
+            "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead");
+    private static final FieldKey SOL_PARENT = new FieldKey(
+            "com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent");
+    // These native links may outlive a retired SST target. Reuse the exact-policy
+    // keys so the existing field audit also rejects stale optional metadata.
+    private static final Set<FieldKey> OPTIONAL_OBJECT_REFERENCES = Set.of(
+            REXON_PARENT, REXON_NEXT_HEAD, SOL_PARENT);
+
     private static final Set<String> STRUCTURAL_OBJECT_FIELD_NAMES = Set.of(
             "anchor",
             "arm",
@@ -103,6 +114,9 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            Map.entry(REXON_PARENT, RewindFieldPolicy.CAPTURED),
+            Map.entry(REXON_NEXT_HEAD, RewindFieldPolicy.CAPTURED),
+            Map.entry(SOL_PARENT, RewindFieldPolicy.CAPTURED),
             // Actual native control owners must survive recreation by stable team identity.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
@@ -114,6 +128,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.CPZBossPipe", "segments"), RewindFieldPolicy.TRANSIENT),
+            // Settled child identities rebuild these inventories, including flying Sol fireballs.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", "heads"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", "fireballs"), RewindFieldPolicy.TRANSIENT),
             // The captured spawn selects the mapping frame/piece from the current art owner.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance", "pieceList"), RewindFieldPolicy.TRANSIENT),
             // The SLZ cache re-scans the restored seesaws before its next gameplay dispatch.
@@ -707,6 +724,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.IczMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "attachedKnuckles"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "carriedPlayer"), RewindFieldPolicy.CAPTURED),
+            // Keep only registered children; their unload hooks remove retired identities.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", "spawnedChildren"), RewindFieldPolicy.CAPTURED),
             // OpenGGF extension: launch progress belongs to player identity so roster changes
             // cannot transfer or discard another sidekick's native launcher sequence.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.LbzPlayerLauncherInstance", "countersByPlayer"), RewindFieldPolicy.CAPTURED),
@@ -928,6 +947,10 @@ final class DefaultObjectRewindPolicies {
     /** Read-only view of the exact-field policy table for guard tests. */
     static Map<FieldKey, RewindFieldPolicy> exactFieldPoliciesForAudit() {
         return EXACT_FIELD_POLICIES;
+    }
+
+    static boolean isOptionalObjectReference(Field field) {
+        return OPTIONAL_OBJECT_REFERENCES.contains(FieldKey.of(field));
     }
 
     static RewindFieldPolicy policyFor(Field field) {

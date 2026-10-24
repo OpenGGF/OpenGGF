@@ -2229,3 +2229,18 @@ ordinary state, legacy-only overrides and explicit context wrappers. The full HP
 ceremony, LRZ2 gateway, sanctuary origin-return and pedestal matrices reproduced
 2,293 errors through that missed route, then passed all 2,295 cases after sharing
 the resolver. The two additional cases already passed in the broad snapshot.
+
+**Distinguish missing context from captured absence.** For an object that supports
+context-free same-instance round trips, an absent identity table must leave its
+links uncaptured. Encoding that absence as null owner IDs makes restore erase
+live constructor links; an orbiting Sol fireball then destroys itself. Table-backed
+null IDs remain authoritative, including through the context-free restore overload.
+The three Rexon/Sol native links now use exact CAPTURED field metadata and a private
+optional mode of the existing reference codec: an uncaptured marker preserves the
+current field, while a captured null clears it. Other reference codecs stay strict.
+For existing handwritten extras, omit the link extra when its capture table is
+absent; do not suppress authoritative restore values. Exercise both public capture
+forms, explicit nulls, missing targets and wrong types. The [schema evidence](plans/2026-10-24-architecture-continuation.md#loop-4-optional-native-reference-schema-blocker)
+records why four new handwritten overrides were rejected and removed without
+growing the architecture baseline. In-place eligibility is a separate proof;
+compact reference capture alone does not satisfy the scalar-only safety audit.

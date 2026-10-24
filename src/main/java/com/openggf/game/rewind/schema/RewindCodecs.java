@@ -75,6 +75,10 @@ public final class RewindCodecs {
     }
 
     private static Optional<RewindCodec> buildCodecFor(Field field) {
+        if (DefaultObjectRewindPolicies.isOptionalObjectReference(field)) {
+            field.setAccessible(true);
+            return Optional.of(new ObjectReferenceCodec(field.getType(), true));
+        }
         Optional<RewindCodec> collectionCodec = collectionCodecFor(field);
         Optional<RewindCodec> codec = collectionCodec.isPresent() ? collectionCodec : codecFor(field.getType());
         if (codec.isPresent()) {
@@ -770,9 +774,15 @@ public final class RewindCodecs {
 
     private static final class ObjectReferenceCodec implements RewindCodec {
         private final Class<?> declaredType;
+        private final boolean optional;
 
         private ObjectReferenceCodec(Class<?> declaredType) {
+            this(declaredType, false);
+        }
+
+        private ObjectReferenceCodec(Class<?> declaredType, boolean optional) {
             this.declaredType = declaredType;
+            this.optional = optional;
         }
 
         @Override
@@ -788,6 +798,20 @@ public final class RewindCodecs {
                 List<Object> opaqueValues,
                 RewindCaptureContext context) {
 
+            if (optional) {
+                // No table means uncaptured, rather than authoritative null. This
+                // preserves public context-free round trips on existing objects.
+                RewindIdentityTable table = context.identityTable().orElse(null);
+                scalarData.writeBoolean(table != null);
+                if (table != null) {
+                    ObjectRefId id = table.encodeObject((ObjectInstance) get(field, target));
+                    scalarData.writeBoolean(id != null);
+                    if (id != null) {
+                        writeObjectRefBody(id, scalarData);
+                    }
+                }
+                return;
+            }
             writeObjectRef((ObjectInstance) get(field, target), scalarData, context);
         }
 
@@ -811,6 +835,15 @@ public final class RewindCodecs {
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
+            if (optional) {
+                if (!scalarData.readBoolean()) {
+                    return;
+                }
+                set(field, target, scalarData.readBoolean()
+                        ? resolveObjectRef(readObjectRefBody(scalarData), context, declaredType, false)
+                        : null);
+                return;
+            }
             set(field, target, readObjectRef(scalarData, context, declaredType));
         }
 
@@ -1814,7 +1847,12 @@ public final class RewindCodecs {
     }
 
     private static Object resolveObjectRef(ObjectRefId id, RewindCaptureContext context, Class<?> declaredType) {
-        ObjectInstance object = context.requireIdentityTable().resolveObject(id, true);
+        return resolveObjectRef(id, context, declaredType, true);
+    }
+
+    private static Object resolveObjectRef(ObjectRefId id, RewindCaptureContext context,
+            Class<?> declaredType, boolean required) {
+        ObjectInstance object = context.requireIdentityTable().resolveObject(id, required);
         if (object != null && !declaredType.isInstance(object)) {
             throw new IllegalStateException("Resolved object reference " + id + " to "
                     + object.getClass().getName() + " but field requires " + declaredType.getName() + ".");
