@@ -1993,27 +1993,23 @@ public class GraphicsManager {
 			long sumUR = 0;
 			long sumUG = 0;
 			long sumUB = 0;
-			int count = 0;
 			for (int colorIndex = 1; colorIndex < 16; colorIndex++) {
 				int colorOffset = colorIndex * 3;
 				int nr = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset]);
 				int ng = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 1]);
 				int nb = Byte.toUnsignedInt(underwaterPaletteSourceRgb[normalOffset + colorOffset + 2]);
-				if (nr + ng + nb > 0) {
+				if (UnderwaterPaletteTransform.eligible(nr, ng, nb)) {
 					sumNR += nr;
 					sumNG += ng;
 					sumNB += nb;
 					sumUR += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset]);
 					sumUG += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 1]);
 					sumUB += Byte.toUnsignedInt(underwaterPaletteSourceRgb[shiftedOffset + colorOffset + 2]);
-					count++;
 				}
 			}
-			if (count > 0) {
-				if (sumNR > 0) ratioR = (int) (sumUR * 256 / sumNR);
-				if (sumNG > 0) ratioG = (int) (sumUG * 256 / sumNG);
-				if (sumNB > 0) ratioB = (int) (sumUB * 256 / sumNB);
-			}
+			ratioR = UnderwaterPaletteTransform.ratioX256(sumNR, sumUR);
+			ratioG = UnderwaterPaletteTransform.ratioX256(sumNG, sumUG);
+			ratioB = UnderwaterPaletteTransform.ratioX256(sumNB, sumUB);
 		}
 
 		int bufferSize = 16 * totalLines * 4;
@@ -2146,9 +2142,9 @@ public class GraphicsManager {
 		int[] rgba = underwaterDerivedRowRgba[row];
 		for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 			int colorOffset = donorOffset + colorIndex * 3;
-			int r = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]) * ratioR / 256);
-			int g = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]) * ratioG / 256);
-			int b = Math.min(255, Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]) * ratioB / 256);
+			int r = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset]), ratioR);
+			int g = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 1]), ratioG);
+			int b = UnderwaterPaletteTransform.scale(Byte.toUnsignedInt(underwaterPaletteSourceRgb[colorOffset + 2]), ratioB);
             if (whiteMode != PaletteFadePresentation.Mode.NONE) {
                 int faded = PaletteFadePresentation.fadeRgb(r, g, b, whiteMode, whiteSteps);
                 r = (faded >>> 16) & 255;

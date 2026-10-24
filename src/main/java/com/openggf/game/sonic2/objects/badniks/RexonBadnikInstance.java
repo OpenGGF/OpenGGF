@@ -7,6 +7,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -60,7 +61,7 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     private int patrolTimer;
     private final SubpixelMotion.State motionState;
     private boolean xFlipFlag;
-    private final List<RexonHeadObjectInstance> heads = new RewindRelinkingHeadList();
+    private final List<RexonHeadObjectInstance> heads = new ArrayList<>();
     private int lastTargetX;
     private int lastTargetDistance;
 
@@ -251,42 +252,15 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         }
     }
 
-    void attachHeadForRewind(RexonHeadObjectInstance head) {
-        if (head != null && !heads.contains(head)) {
-            heads.add(head);
-        }
-    }
-
-    void relinkHeadsForRewind() {
-        heads.removeIf(head -> head == null || head.isDestroyed());
-        heads.sort(Comparator.comparingInt(RexonHeadObjectInstance::rewindHeadIndex));
-        relinkHeadsInListOrder(heads);
-    }
-
-    private static void relinkHeadsInListOrder(List<RexonHeadObjectInstance> heads) {
-        for (int i = 0; i < heads.size(); i++) {
-            RexonHeadObjectInstance current = heads.get(i);
-            if (current == null) {
-                continue;
+    @Override
+    protected void afterRewindRestoreSettled() {
+        heads.clear();
+        for (ObjectInstance object : services().objectManager().getActiveObjects()) {
+            if (object instanceof RexonHeadObjectInstance head && head.belongsTo(this) && !head.isDestroyed()) {
+                heads.add(head);
             }
-            RexonHeadObjectInstance next = i + 1 < heads.size() ? heads.get(i + 1) : null;
-            current.setLinkedHead(next);
         }
-    }
-
-    private static final class RewindRelinkingHeadList extends ArrayList<RexonHeadObjectInstance> {
-        @Override
-        public boolean add(RexonHeadObjectInstance head) {
-            boolean added = super.add(head);
-            relinkHeadsInListOrder(this);
-            return added;
-        }
-
-        @Override
-        public void add(int index, RexonHeadObjectInstance element) {
-            super.add(index, element);
-            relinkHeadsInListOrder(this);
-        }
+        heads.sort(Comparator.comparingInt(RexonHeadObjectInstance::rewindHeadIndex));
     }
 
     @Override
