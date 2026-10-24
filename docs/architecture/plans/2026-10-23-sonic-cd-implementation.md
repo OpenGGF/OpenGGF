@@ -3418,3 +3418,25 @@ errors or skips. Java25.0.5.0.2 and supplied-media properties were inspected in
 both fresh XML reports. Queue366s, execution86s; finished18:03:49BST. Independent
 source review is pending. The later live $3B dispatch and actual LevelStart
 reconstruction remain separate; this does not claim a completed death route.
+
+
+### GAME/TIME OVER mapping and resident pixels — 24 October 2026
+
+The immutable resolver now registers two two-frame roots over the unchanged
+authenticated56-byte include. A separate nine-span DEV pixel policy consumes
+the complete now-serviced36-tile powerup resident window, including explicit
+RAM tail, alongside the prior eight sources. No service or default RAM is
+hidden in the converter; the Runtime's shared byte/state binding is next.
+
+Root23905 at1dca98b36 plus the four exact picture files passed83cases:
+Mappings9, Presentation14, Runtime43 and WorldLoad17, zero failures/errors/skips.
+Java25.0.5.0.2/media were verified in all four fresh XML, including execution of
+actualUsaGameOverRootsAndNowServicedPowerupWindowDrawOnlyTheirRetailPieces.
+Queue16s, execution88s; finished18:09:59BST. The independent source review
+found no P1/P2. This proves bounded mappings/pixel-source behavior, not actual
+Game Over world rendering, lifecycle restart, native DMA or hardware pixels.
+
+Subsequent independent Body and world-summary/level-art reviews also found no
+P1/P2. Their supplied execution results remain Root's observations; their
+static source reasoning does not count as another run. The unreachable killed
+ceiling/tunnel stop remains an advisory for the later roll-tunnel owner.

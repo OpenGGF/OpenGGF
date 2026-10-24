@@ -1,23 +1,48 @@
 package com.openggf.game.soniccd.resources;
 
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.level.CdAssetBytes;
+import com.openggf.game.soniccd.level.CdR11aAsset;
+import com.openggf.game.soniccd.level.CdR11aProfile;
+import com.openggf.game.soniccd.level.CdShieldArt;
+import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
+import com.openggf.game.soniccd.objects.CdObjectMappings;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpritePresentationRenderer;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** All CPU SATs come from the actual queue; no private constructor, reflection, graphics or native calls. */
 class TestCdObjectPresentation {
+    /**
+     * Game Over/Data/Mappings.asm:1-58 at scddisasm 1ecc5f3af, hand-assembled: a constructed declared input, not
+     * media. GAME's two signed words are relative to MapSpr_GameOver (+0), TIME's to MapSpr_TimeOver (+4).
+     */
+    private static final byte[] GAME_OVER_MAPPINGS = bytes(
+            0x00, 0x08, 0x00, 0x14, 0x00, 0x1C, 0x00, 0x28,
+            0x02, 0xF8, 0x0D, 0x00, 0x00, 0xB8, 0xF8, 0x0D, 0x00, 0x08, 0xD8, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x10, 0x08, 0xF8, 0x0D, 0x00, 0x18, 0x28, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x00, 0xBC, 0xF8, 0x09, 0x00, 0x08, 0xDC, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x0E, 0x04, 0xF8, 0x0D, 0x00, 0x16, 0x24, 0x00);
+    /** The USA R11A oMap longs (Game Over/Main.asm:36,43); the retail mapping test re-proves them from media. */
+    private static final int GAME_MAP = 0x20F03E, TIME_MAP = 0x20F042;
+    /** MOVE.W #$8544,oTile (:35) selects tile $544: the LVLDMA destination $A880 / 32 (Powerup/Main.asm:173). */
+    private static final int WINDOW_TILE = 0x544;
+    private static final int LOGICAL = 500;
+
     @Test void finalAttributeWordIsNotAddedOrPaletteCombinedAgain() {
         var f = new Fixture();
         f.add(32, 2, 0, 128, 128, 0x0800, List.of(new RawPiece(0, 0, 0xF810, 0)));
@@ -179,6 +204,158 @@ class TestCdObjectPresentation {
         assertThrows(IllegalArgumentException.class, () -> new CdObjectPresentation.PixelSpan(0, 0, CdAssetBytes.copyOf(new byte[33])));
     }
 
+    @Test void nowServicedPowerupWindowRefreshesGameOverPixelsWhileEarlierPicturesKeepTheirVersions() throws Exception {
+        var art = componentShieldArt();
+        var service = new CdPowerupArtRuntime(art);
+        var ingress = new CdPowerupArtRuntime.State(filled(0x480, 0xA5), filled(0x480, 0xCC));
+        var shield = service.service(ingress, 0x82).state();
+        var game = service.service(shield, 0x88).state();
+        var sat = new GameOverSlots(GAME_MAP, 0, 1).draw();
+        var stale = CdObjectPresentation.convert(sat, powerupBank(ingress));
+        var shieldPicture = CdObjectPresentation.convert(sat, powerupBank(shield));
+        var gamePicture = CdObjectPresentation.convert(sat, powerupBank(game));
+        for (int tile = 0; tile < 32; tile++) {
+            assertEquals(solid(0xC), stale.patternVersions().get(LOGICAL + tile), "an unserviced window is not file art");
+            assertEquals(version(art.copy(0).bytes(), tile), shieldPicture.patternVersions().get(LOGICAL + tile));
+            assertEquals(version(art.copy(3).bytes(), tile), gamePicture.patternVersions().get(LOGICAL + tile));
+            assertNotEquals(shieldPicture.patternVersions().get(LOGICAL + tile), gamePicture.patternVersions().get(LOGICAL + tile));
+        }
+        assertEquals(32, gamePicture.patternVersions().size(), "no window tail pattern is part of the picture");
+        assertEquals(shieldPicture.tiles(), gamePicture.tiles(), "only the versions move with the serviced state");
+        // A later service and its bank cannot reach either earlier immutable picture.
+        var time = service.service(game, 0x8A).state();
+        assertEquals(version(art.copy(4).bytes(), 0), powerupBank(time).resolve(WINDOW_TILE).version());
+        for (int tile = 0; tile < 32; tile++) {
+            assertEquals(version(art.copy(0).bytes(), tile), shieldPicture.patternVersions().get(LOGICAL + tile));
+            assertEquals(version(art.copy(3).bytes(), tile), gamePicture.patternVersions().get(LOGICAL + tile));
+        }
+        assertEquals(gamePicture, CdObjectPresentation.convert(sat, powerupBank(game)));
+        assertThrows(UnsupportedOperationException.class, () -> gamePicture.patternVersions().clear());
+    }
+
+    @Test void gameAndTimeRootsDrawOnlyTheirOwnWindowTilesAndADirtyFrameFailsClosedBeforePublication() throws Exception {
+        var art = componentShieldArt();
+        var service = new CdPowerupArtRuntime(art);
+        var ingress = new CdPowerupArtRuntime.State(filled(0x480, 0xA5), filled(0x480, 0xCC));
+        var gameBank = powerupBank(service.service(ingress, 0x88).state());
+        var timeBank = powerupBank(service.service(ingress, 0x8A).state());
+        var gameRequests = new TreeSet<Integer>();
+        var game = CdObjectPresentation.convert(new GameOverSlots(GAME_MAP, 0, 1).draw(),
+                id -> { gameRequests.add(id); return gameBank.resolve(id); });
+        assertEquals(nativeRange(0x544, 0x564), gameRequests, "GAME OVER pieces reach window tiles 0..31 only");
+        assertEquals(32, game.tiles().size());
+        // Reverse SAT order: OVER's second piece first. A piece visits rows, then columns (offset col*height+row).
+        assertTile(game.tiles().get(0), LOGICAL + 24, 200, 88);
+        assertTile(game.tiles().get(4), LOGICAL + 25, 200, 96);
+        assertTile(game.tiles().get(8), LOGICAL + 16, 168, 88);
+        assertTile(game.tiles().get(16), LOGICAL + 8, 120, 88);
+        assertTile(game.tiles().get(24), LOGICAL, 88, 88);
+        var timeRequests = new TreeSet<Integer>();
+        var time = CdObjectPresentation.convert(new GameOverSlots(TIME_MAP, 0, 1).draw(),
+                id -> { timeRequests.add(id); return timeBank.resolve(id); });
+        assertEquals(nativeRange(0x544, 0x562), timeRequests, "TIME OVER pieces reach window tiles 0..29 only");
+        assertEquals(30, time.tiles().size());
+        assertTile(time.tiles().get(0), LOGICAL + 22, 196, 88);
+        assertTile(time.tiles().get(8), LOGICAL + 14, 164, 88);
+        assertTile(time.tiles().get(16), LOGICAL + 8, 124, 88);
+        assertTile(time.tiles().get(19), LOGICAL + 9, 124, 96); // TimeText's 3x2 piece has three columns.
+        assertTile(time.tiles().get(22), LOGICAL, 92, 88);
+        for (var picture : List.of(game, time)) {
+            for (var tile : picture.tiles()) {
+                assertTrue(tile.priority()); assertEquals(0, tile.palette());
+                assertFalse(tile.hFlip()); assertFalse(tile.vFlip());
+            }
+        }
+        // Window tiles 30..35 stay bound but undrawn: Art_GameOver's first two tiles, then the RAM tail.
+        assertEquals(version(art.copy(3).bytes(), 0), timeBank.resolve(WINDOW_TILE + 30).version());
+        assertEquals(version(art.copy(3).bytes(), 1), timeBank.resolve(WINDOW_TILE + 31).version());
+        for (int tile = 32; tile < 36; tile++) {
+            assertEquals(version(CdAssetBytes.copyOf(filled(32, 0xA5)), 0), timeBank.resolve(WINDOW_TILE + tile).version());
+        }
+        // A dirty oMapFrame 2 resolves no invented body: the drain fails and publishes no SAT.
+        var dirty = new GameOverSlots(GAME_MAP, 2, 1);
+        var failure = assertThrows(UnsupportedOperationException.class, dirty::draw);
+        assertTrue(failure.getCause().getMessage().contains("frame outside the registered source table"));
+        assertEquals(Phase.FAILED, dirty.queue.phase());
+        assertThrows(IllegalStateException.class, dirty.queue::cpuSat);
+    }
+
+    @Test void completeResidentWindowBindsThirtySixTilesAndOverlapsRejectWhileTheBankIsBuilt() throws Exception {
+        var game = new CdPowerupArtRuntime(componentShieldArt())
+                .service(new CdPowerupArtRuntime.State(filled(0x480, 0xA5), filled(0x480, 0xCC)), 0x88).state();
+        var span = CdObjectPresentation.powerupResidentSpan(game, LOGICAL);
+        assertEquals(CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, span.nativeFirstTileId());
+        assertEquals(WINDOW_TILE, span.nativeFirstTileId());
+        assertEquals(LOGICAL, span.logicalFirstPatternId());
+        assertArrayEquals(game.residentBank().copy(), span.bytes().copy(), "the whole $480-byte DMA window, RAM tail included");
+        byte[] one = new byte[32];
+        var bank = CdObjectPresentation.declaredPixelBank(List.of(
+                new CdObjectPresentation.PixelSpan(0x543, LOGICAL - 1, CdAssetBytes.copyOf(one)), span,
+                new CdObjectPresentation.PixelSpan(0x568, LOGICAL + 36, CdAssetBytes.copyOf(one))));
+        assertEquals(LOGICAL - 1, bank.resolve(0x543).logicalPatternId());
+        assertEquals(LOGICAL + 35, bank.resolve(0x567).logicalPatternId());
+        assertEquals(LOGICAL + 36, bank.resolve(0x568).logicalPatternId());
+        // Physical claims on the first window tile or the RAM tail, and a logical claim on the tail, reject while
+        // the bank is built, in either order: no PatternSource exists for any conversion to publish.
+        for (var conflict : List.of(new CdObjectPresentation.PixelSpan(0x567, 900, CdAssetBytes.copyOf(one)),
+                new CdObjectPresentation.PixelSpan(0x520, 900, CdAssetBytes.copyOf(new byte[37 * 32])),
+                new CdObjectPresentation.PixelSpan(0x600, LOGICAL + 35, CdAssetBytes.copyOf(one)))) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(span, conflict)));
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(conflict, span)));
+        }
+        assertThrows(NullPointerException.class, () -> CdObjectPresentation.powerupResidentSpan(null, LOGICAL));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.powerupResidentSpan(game, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectPresentation.powerupResidentSpan(game, Integer.MAX_VALUE - 34));
+    }
+
+    private static CdObjectPresentation.PatternSource powerupBank(CdPowerupArtRuntime.State state) {
+        return CdObjectPresentation.declaredPixelBank(List.of(CdObjectPresentation.powerupResidentSpan(state, LOGICAL)));
+    }
+    private static SpritePresentation.PatternVersion version(CdAssetBytes bytes, int tile) {
+        return CdObjectPresentation.patternVersion(bytes.slice(tile * 32, 32));
+    }
+    private static void assertTile(SpritePresentation.Tile tile, int logical, int x, int y) {
+        assertEquals(logical, tile.patternId()); assertEquals(x, tile.x()); assertEquals(y, tile.y());
+    }
+    private static TreeSet<Integer> nativeRange(int from, int to) {
+        var range = new TreeSet<Integer>();
+        for (int id = from; id < to; id++) range.add(id);
+        return range;
+    }
+    private static byte[] filled(int length, int value) { byte[] b = new byte[length]; Arrays.fill(b, (byte) value); return b; }
+    private static byte[] bytes(int... values) {
+        byte[] b = new byte[values.length];
+        for (int i = 0; i < values.length; i++) b[i] = (byte) values[i];
+        return b;
+    }
+
+    /**
+     * Component-only LoadShieldArt input for the existing decoder, NOT an authenticated program (precedent:
+     * TestCdPowerupArtRuntime): five distinct byte ramps at the profile's raw-copy ranges plus the five pointer longs.
+     */
+    private static CdShieldArt componentShieldArt() throws Exception {
+        var profile = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        byte[] file = new byte[0x40000];
+        var data = ByteBuffer.wrap(file);
+        int table = profile.range(CdR11aAsset.SHIELD_ART_INDEX).fileOffset();
+        CdR11aAsset[] order = {CdR11aAsset.ART_SHIELD, CdR11aAsset.ART_INV_STARS, CdR11aAsset.ART_TIME_STARS,
+                CdR11aAsset.ART_GAME_OVER, CdR11aAsset.ART_TIME_OVER};
+        for (int slot = 0; slot < order.length; slot++) {
+            var range = profile.range(order[slot]);
+            for (int i = 0; i < range.length(); i++) file[range.fileOffset() + i] = (byte) (17 * slot + i);
+            data.putInt(table + 4 * slot, range.nativeAddress());
+        }
+        return CdShieldArt.decode(profile, CdMmdImage.parse(file));
+    }
+
+    /** Two counted roots over one raw declared include, exactly as the production factory registers them. */
+    private static CdObjectMappings gameOverResolver() {
+        var raw = CdAssetBytes.copyOf(GAME_OVER_MAPPINGS);
+        return CdObjectMappings.declaredSourceViews(List.of(new CdObjectMappings.DeclaredTable(GAME_MAP, raw, 0, 2),
+                new CdObjectMappings.DeclaredTable(GAME_MAP, raw, 4, 2)), List.of());
+    }
+
     private static SpritePresentation.PatternVersion solid(int value) {
         long word = 0; for (int pixel = 0; pixel < 16; pixel++) word |= (long) (value & 15) << (pixel * 4);
         return new SpritePresentation.PatternVersion(word, word, word, word);
@@ -223,6 +400,32 @@ class TestCdObjectPresentation {
         @Override public void writeOnScreenBit(CdSlotRef ref, boolean on) {
             writes++; var s = slots.get(ref.wholeIndex());
             slots.put(ref.wholeIndex(), new LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                    s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord()));
+        }
+    }
+
+    /** Live $3B parent (slot 32) and OVER child (slot 33) at rest: X $120, oYScr $E0, base $8544, clean flags. */
+    private static final class GameOverSlots implements CdDrawSlots {
+        final Map<Integer, LiveDrawSlot> live = new HashMap<>();
+        final CdObjectDrawQueue queue = new CdObjectDrawQueue(this, gameOverResolver(), new byte[SAT_BYTE_SIZE]);
+        GameOverSlots(int pointer, int parentFrame, int childFrame) {
+            // Dirty world Y $9999 never reaches an absolute-mode SAT entry; the $0A word is oYScr.
+            live.put(32, new LiveDrawSlot(0x3B, 0, 0x120, 0x9999, 0xE0, pointer, parentFrame, 0x8544));
+            live.put(33, new LiveDrawSlot(0x3B, 0, 0x120, 0x9999, 0xE0, pointer, childFrame, 0x8544));
+        }
+        CpuSat draw() {
+            var camera = new CameraWords(0, 0);
+            queue.beginPass();
+            for (int slot = 32; slot < 34; slot++) {
+                assertEquals(EnqueueResult.QUEUED, queue.drawObject(
+                        new DrawCallCut(new CdSlotRef(slot), 0, 0x120, 0x9999, 0, 0, 0), camera));
+            }
+            return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
+        }
+        @Override public LiveDrawSlot read(CdSlotRef ref) { return live.get(ref.wholeIndex()); }
+        @Override public void writeOnScreenBit(CdSlotRef ref, boolean on) {
+            var s = live.get(ref.wholeIndex());
+            live.put(ref.wholeIndex(), new LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
                     s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord()));
         }
     }

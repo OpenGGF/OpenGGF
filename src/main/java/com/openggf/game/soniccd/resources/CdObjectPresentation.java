@@ -180,6 +180,60 @@ public final class CdObjectPresentation {
     }
 
     /**
+     * Explicit USA_R11A_GAME_OVER_DEV_PRELOADED_ART policy: the eight contact spans above plus the complete NOW-serviced
+     * LoadShieldArt window, ObjGameOver's tile $544 (MOVE.W #$8544,oTile, Game Over/Main.asm:35). LVLDMA
+     * aniArtBuffer,$A880,$480 (Powerup/Main.asm:173) makes the whole CPU buffer resident, so 36 tiles from $A880/32 are
+     * bound, including the four tiles of the caller's explicit 128-byte RAM tail. No Game/Time Over piece reaches
+     * them (Mappings.asm:1-58 uses tiles 0..31 and 0..29). The window is the supplied resident State, never an art
+     * file alone: its copy changes with each serviced selector and its tail is RAM history. This method services
+     * nothing and creates no default RAM, cold seed, clock, residency, renderer or global write. The runtime root
+     * services LoadShieldArt in each selector-8 VInt_Level (UpdateAnimTiles, Level/Main.asm:837) before converting,
+     * and owns powerup, the State, its capture and the 349-pattern bank.
+     */
+    public static PatternSource usaR11aGameOverDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                               CdPowerupArtRuntime.State nowServicedPowerup,
+                                                               CdR11aObjectAssets objects,
+                                                               CdR11aObjectAssets.FrontierArtBank frontier,
+                                                               CdR11aObjectAssets.ContactArtBank contact,
+                                                               int playerLogicalBase, int ringLogicalBase,
+                                                               int mosquiLogicalBase, int plantLogicalBase,
+                                                               int rampLogicalBase, int explosionLogicalBase,
+                                                               int pointsLogicalBase, int flowerLogicalBase,
+                                                               int powerupLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        Objects.requireNonNull(contact, "the owner's decoded contact art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var explosion = contact.binding(CdR11aAsset.ART_EXPLOSIONS);
+        var points = contact.binding(CdR11aAsset.ART_POINTS);
+        var flower = contact.binding(CdR11aAsset.ART_FLOWER);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, nowServicedPlayer.residentBank()),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes()),
+                new PixelSpan(explosion.firstTileId(), explosionLogicalBase, explosion.bytes()),
+                new PixelSpan(points.firstTileId(), pointsLogicalBase, points.bytes()),
+                new PixelSpan(flower.firstTileId(), flowerLogicalBase, flower.bytes()),
+                powerupResidentSpan(nowServicedPowerup, powerupLogicalBase)));
+    }
+
+    /** The complete $480-byte resident window as 36 tiles from $544; package-private for the pure test. */
+    static PixelSpan powerupResidentSpan(CdPowerupArtRuntime.State nowServicedPowerup, int logicalBase) {
+        Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");
+        return new PixelSpan(CdPowerupArtRuntime.VRAM_BYTE_ADDRESS / 32, logicalBase, nowServicedPowerup.residentBank());
+    }
+
+    /**
      * Active SAT prefix only. Reverse complete native entry order for painter overlap; no ID,
      * player/object, bucket, priority, position or provenance sort. One 4x4 native piece expands
      * to sixteen tiles here AFTER queue capacity was decided. No second cull or admission pass.

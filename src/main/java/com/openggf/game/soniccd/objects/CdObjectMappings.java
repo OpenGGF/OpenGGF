@@ -54,6 +54,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         }
     }
 
+    /** Each Game/Time Over table holds two words (Mappings.asm:2-3,5-6). */
+    private static final int GAME_OVER_FRAMES = 2;
+
     private final Map<Integer, DeclaredTable> tables;
     private final Map<Integer, DeclaredStaticPiece> staticPieces;
 
@@ -86,6 +89,7 @@ public final class CdObjectMappings implements CdDrawMappings {
      * identify the same USA R11A source, including observed disc identity; decoded tables must equal
      * their actual source views. A declared view/identity record alone cannot create either owner.
      * No static opening source has been admitted: production bit-5 requests explicitly reject.
+     * The Game/Time Over include registers two counted roots from its validated CdGameOver.Assets record.
      */
     public static CdObjectMappings fromOpeningAssets(CdR11aAssets assets, CdR11aObjectAssets objects) {
         Objects.requireNonNull(assets, "loaded R11A assets");
@@ -123,6 +127,7 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.EXPLOSION_MAPPINGS, objects.explosion());
         addObject(tables, objects, CdR11aObjectAssets.Table.POINTS_MAPPINGS, objects.points());
         addObject(tables, objects, CdR11aObjectAssets.Table.FLOWER_MAPPINGS, objects.flower());
+        addGameOver(tables, objects);
         return new CdObjectMappings(tables, List.of());
     }
 
@@ -177,6 +182,28 @@ public final class CdObjectMappings implements CdDrawMappings {
             requireEqualBytes(frame.bytes(), view.bytes().slice(frame.relativeOffset(), 1 + frame.pieces().size() * 5));
         }
         tables.add(new DeclaredTable(view.range().nativeAddress(), view.bytes(), 0, visual.mappingFrames().size()));
+    }
+
+    /**
+     * ObjGameOver_Init stores MOVE.L #MapSpr_GameOver ($20F03E) or #MapSpr_TimeOver ($20F042) in oMap
+     * (Game Over/Main.asm:36,43). One raw include holds both two-word tables, each relative to its own label
+     * (Mappings.asm:1-6), so the same validated 56 bytes register two counted roots at offsets 0 and 4: no uniform
+     * header, rebasing or compaction. oMapFrame is 0 or the OVER child's 1 (:80); frames 2..255 stay unregistered.
+     */
+    private static void addGameOver(List<DeclaredTable> tables, CdR11aObjectAssets owner) {
+        var table = CdR11aObjectAssets.Table.GAME_OVER_MAPPINGS;
+        var view = owner.view(table);
+        if (view.table() != table || !view.range().equals(table.range())) {
+            throw new IllegalArgumentException("Object mapping source range mismatch");
+        }
+        var gameOver = CdGameOver.Assets.fromObjectAssets(owner); // Raw extent, both tables, bodies, USA identity.
+        requireEqualBytes(view.bytes(), gameOver.mappings());
+        if (gameOver.gameOverMappingsAddress() != view.range().nativeAddress()) {
+            throw new IllegalArgumentException("Game Over oMap long differs from its loaded source view");
+        }
+        tables.add(new DeclaredTable(gameOver.gameOverMappingsAddress(), gameOver.mappings(), 0, GAME_OVER_FRAMES));
+        tables.add(new DeclaredTable(gameOver.gameOverMappingsAddress(), gameOver.mappings(),
+                CdGameOver.Assets.TIME_OVER_TABLE_OFFSET, GAME_OVER_FRAMES));
     }
 
     private static void requireEqualBytes(CdAssetBytes source, CdAssetBytes decoded) {
