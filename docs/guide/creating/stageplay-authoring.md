@@ -280,13 +280,38 @@ The same definitions work in both editors and offline rendering without mod code
 
 ### Character speech noises
 
-Every speaker has a deterministic Genesis PSG voice. Sonic uses bright square-word
-beeps, Tails high octave chimes on letters, and Knuckles low hollow-word tones.
-Object defaults derive from their ROM object identity: S1 Motobug uses mid-register
-word buzzes; S1 Buzz Bomber uses higher letter chimes. Boss roles use low, deliberate
-hollow tones. Offscreen names use a neutral square-word voice. A name override does
-not change the cast member's sound. Object pointers follow resolved native cast
-positions, including Free movement, and disappear when the object is absent.
+Every speaker has a deterministic Genesis PSG voice. The audition-selected defaults
+are **Sonic: Soft Cool**, **Tails: Workshop**, **Knuckles: Red Rattle**,
+**S1 Motobug: Patrol Buzz**, and **S1 Buzz Bomber: Wing Chime**. Motobug and Buzz Bomber
+use their canonical ROM object identity, including subtypes; renaming a cast role
+does not change its voice. Boss roles retain low, deliberate hollow tones, other
+objects retain their identity-derived register, and offscreen names use neutral
+square words. Object pointers follow resolved native cast positions, including
+Free movement, and disappear when the object is absent.
+
+| Character | Default preset | Tone / rhythm | Pitch | Variation | Max frames | Level |
+| --- | --- | --- | --- | --- | --- | --- |
+| Sonic | Soft Cool | HOLLOW / WORD | 67 | 2 | 7 | 80% |
+| Tails | Workshop | BUZZ / LETTER | 79 | 2 | 2 | 70% |
+| Knuckles | Red Rattle | BUZZ / LETTER | 62 | 2 | 3 | 78% |
+| S1 Motobug | Patrol Buzz | BUZZ / WORD | 69 | 4 | 8 | 80% |
+| S1 Buzz Bomber | Wing Chime | CHIME / LETTER | 75 | 4 | 3 | 80% |
+
+All fifteen audition voices remain named presets, available for any cast or
+offscreen speaker. In **Speaker voice**, choose `PRESETS` in the Tone field, pick a
+name, then adjust any of the six controls and Apply. This copies explicit settings
+into the scene; existing explicit overrides keep their saved sound when defaults
+change. `DEFAULT` removes the override and returns to the character's current
+selection. Presets are authoring conveniences; canonical scenes and exported
+screenplays store their actual values, without a new preset-reference field.
+
+| Origin | Presets |
+| --- | --- |
+| Sonic | Blue Spark, Soft Cool, Speed Talk |
+| Tails | Twin Chime, Warm Pips, Workshop |
+| Knuckles | Stone Hollow, Blunt Square, Red Rattle |
+| Motobug | Patrol Buzz, Little Square, Rusty Low |
+| Buzz Bomber | Wing Chime, Radio Buzz, Deadpan |
 
 Add `voices` at screenplay root to override a speaker for the entire scene:
 
@@ -315,8 +340,8 @@ directly and older shapes are not migrated.
 An explicit override uses these compiler defaults for omitted controls; it does not
 partially inherit the character default. Omitting the override restores that default.
 Both editors expose **Speaker voice** for the selected cast member and in each
-line's dialogue menu. The six-field form has tone/rhythm choices; `DEFAULT` removes
-the override and `OFF` silences the speaker. Edits share save, screenplay export and
+line's dialogue menu. The six-field form has a named preset picker and tone/rhythm
+choices; `DEFAULT` removes the override and `OFF` silences the speaker. Edits share save, screenplay export and
 Undo/Redo. Removing an object role also removes its dialogue/voice; detaching a player
 as offscreen speech retains its sound.
 

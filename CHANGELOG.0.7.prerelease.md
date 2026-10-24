@@ -55,9 +55,9 @@ Unreleased. The earlier development themes remain in
   Named dialogue, reusable typing profiles and creator PNG skins give mod scenes
   clear speakers and deterministic text reveal in playback, both editors and exports.
   Player and object speakers have distinct Genesis PSG speech noises synchronized to
-  that reveal, with compact per-speaker tone, rhythm, pitch, variation, length and
-  level controls, including silence. Object dialogue pointers follow native cast
-  positions; screenplay import/export preserves voice settings.
+  that reveal, with named voice presets and compact per-speaker tone, rhythm, pitch,
+  variation, length and level controls, including silence. Object dialogue pointers
+  follow native cast positions; screenplay import/export preserves voice settings.
   Mods play the same scenes with held native gameplay and optional explicit
   main-player handover. ROM object roles add Free native behavior and visual Puppet/Pose
   direction with child-part frames, portable placed identities and timed clear/removal

@@ -25,14 +25,31 @@ class TestStageplaySpeech {
         var doc=cast();
         var defaults=List.of("sonic","tails","knuckles","moto","buzz").stream()
                 .map(id->StageplaySpeech.defaultVoice(doc,id,"")).toList();
-        assertEquals(List.of(VoiceTone.SQUARE,VoiceTone.CHIME,VoiceTone.HOLLOW,VoiceTone.BUZZ,VoiceTone.CHIME),
-                defaults.stream().map(SpeakerVoice::tone).toList());
-        assertEquals(List.of(72,84,55,69,75), defaults.stream().map(SpeakerVoice::pitch).toList());
+        assertEquals(List.of(
+                new SpeakerVoice("sonic","",VoiceTone.HOLLOW,VoiceRhythm.WORD,67,2,7,80),
+                new SpeakerVoice("tails","",VoiceTone.BUZZ,VoiceRhythm.LETTER,79,2,2,70),
+                new SpeakerVoice("knuckles","",VoiceTone.BUZZ,VoiceRhythm.LETTER,62,2,3,78),
+                new SpeakerVoice("moto","",VoiceTone.BUZZ,VoiceRhythm.WORD,69,4,8,80),
+                new SpeakerVoice("buzz","",VoiceTone.CHIME,VoiceRhythm.LETTER,75,4,3,80)), defaults);
         assertEquals(5,defaults.stream().map(v->v.tone()+":"+v.pitch()+":"+v.rhythm()).distinct().count());
         var renamed=doc.withActors(doc.actors().stream().map(a->new Actor(a.id(),"Other",a.gameId(),a.character(),a.keys())).toList());
         assertEquals(defaults.getFirst(),StageplaySpeech.defaultVoice(renamed,"sonic",""));
         assertThrows(IllegalArgumentException.class,()->StageplaySpeech.defaultVoice(doc,"missing",""));
     }
+    @Test void chosenObjectVoicesFollowNativeCharacterIdentityAcrossSubtypesAndRoleRenames() {
+        var doc=cast();
+        var objects=doc.objectActors().stream().map(a->new ObjectActor(a.id(),"Other",a.gameId(),a.zone(),a.act(),
+                a.objectId(),7,a.layoutIndex(),a.keys(),a.commands(),a.sourceKind())).toList();
+        var renamed=doc.withObjectActors(objects);
+        assertEquals(StageplaySpeech.Preset.PATROL_BUZZ.voice("moto",""),StageplaySpeech.defaultVoice(renamed,"moto",""));
+        assertEquals(StageplaySpeech.Preset.WING_CHIME.voice("buzz",""),StageplaySpeech.defaultVoice(renamed,"buzz",""));
+        for(String game:List.of("s1","s2","s3k")) {
+            var actor=doc.actors().getFirst();
+            var donor=doc.withActors(List.of(new Actor(actor.id(),"Other",game,"sonic",actor.keys())));
+            assertEquals(StageplaySpeech.Preset.SOFT_COOL.voice("sonic",""),StageplaySpeech.defaultVoice(donor,"sonic",""));
+        }
+    }
+
     @Test void wordsLettersPunctuationAndGroupedUnicodeFollowTheActualRevealOffsets() {
         var cue=line("Hi, e\u0301! 42",List.of(0,0,1,2,5,6,7,8,8));
         var doc=cast().withDialogue(List.of(cue));
@@ -53,6 +70,42 @@ class TestStageplaySpeech {
         var q=new DialogueCue("instant",0,10,"tails","","Many letters at once","","instant",0,0,304,72,"",List.of());
         assertEquals(1,StageplaySpeech.plan(instant.withDialogue(List.of(q))).size());
     }
+    @Test void allAuditionPresetsKeepTheirExactSettingsAndRoundTripAsEditableOverrides() throws Exception {
+        // User-auditioned values are the contract, including the three superseded player defaults.
+        var expected=List.of(
+                new SpeakerVoice("sonic","",VoiceTone.SQUARE,VoiceRhythm.WORD,72,5,5,80),
+                new SpeakerVoice("sonic","",VoiceTone.HOLLOW,VoiceRhythm.WORD,67,2,7,80),
+                new SpeakerVoice("sonic","",VoiceTone.SQUARE,VoiceRhythm.LETTER,76,4,2,74),
+                new SpeakerVoice("sonic","",VoiceTone.CHIME,VoiceRhythm.LETTER,84,3,2,72),
+                new SpeakerVoice("sonic","",VoiceTone.SQUARE,VoiceRhythm.WORD,77,3,6,80),
+                new SpeakerVoice("sonic","",VoiceTone.BUZZ,VoiceRhythm.LETTER,79,2,2,70),
+                new SpeakerVoice("sonic","",VoiceTone.HOLLOW,VoiceRhythm.WORD,55,2,8,88),
+                new SpeakerVoice("sonic","",VoiceTone.SQUARE,VoiceRhythm.WORD,57,1,9,88),
+                new SpeakerVoice("sonic","",VoiceTone.BUZZ,VoiceRhythm.LETTER,62,2,3,78),
+                new SpeakerVoice("sonic","",VoiceTone.BUZZ,VoiceRhythm.WORD,69,4,8,80),
+                new SpeakerVoice("sonic","",VoiceTone.SQUARE,VoiceRhythm.WORD,69,4,8,80),
+                new SpeakerVoice("sonic","",VoiceTone.HOLLOW,VoiceRhythm.WORD,57,3,10,84),
+                new SpeakerVoice("sonic","",VoiceTone.CHIME,VoiceRhythm.LETTER,75,4,3,80),
+                new SpeakerVoice("sonic","",VoiceTone.BUZZ,VoiceRhythm.WORD,78,5,5,80),
+                new SpeakerVoice("sonic","",VoiceTone.HOLLOW,VoiceRhythm.WORD,62,1,8,84));
+        var presets=StageplaySpeech.Preset.values();
+        assertEquals(15,presets.length);
+        assertEquals(List.of("Sonic / Blue Spark", "Sonic / Soft Cool", "Sonic / Speed Talk", "Tails / Twin Chime", "Tails / Warm Pips", "Tails / Workshop", "Knuckles / Stone Hollow", "Knuckles / Blunt Square", "Knuckles / Red Rattle", "Motobug / Patrol Buzz", "Motobug / Little Square", "Motobug / Rusty Low", "Buzz Bomber / Wing Chime", "Buzz Bomber / Radio Buzz", "Buzz Bomber / Deadpan"),
+                java.util.Arrays.stream(presets).map(StageplaySpeech.Preset::label).toList());
+        for(int i=0;i<presets.length;i++) {
+            var voice=presets[i].voice("sonic","");
+            assertEquals(expected.get(i),voice,presets[i].label());
+            var doc=cast().withVoices(List.of(voice));
+            assertEquals(voice,StageplaySpeech.voice(doc,"sonic",""));
+            assertEquals(doc,StageplayStore.decode(StageplayStore.encode(doc)));
+            assertEquals(doc,StageplayScriptCompiler.compile(StageplayScriptDecompiler.decompile(doc)));
+            var offscreen=presets[i].voice("","Radio");
+            assertEquals("",offscreen.speakerActor());assertEquals("Radio",offscreen.speakerName());
+            var radio=cast().withVoices(List.of(offscreen));
+            assertEquals(offscreen,StageplaySpeech.voice(radio,"","Radio"));
+        }
+    }
+
     @Test void explicitVoicesAndOffscreenVoicesRoundTripAndEveryCopyHelperPreservesThem() throws Exception {
         var doc=cast().withVoices(List.of(new SpeakerVoice("moto","",VoiceTone.HOLLOW,VoiceRhythm.WORD,60,3,8,55),
                 new SpeakerVoice("","Radio",VoiceTone.OFF,VoiceRhythm.LETTER,80,0,2,100)))

@@ -73,7 +73,9 @@ the override; `OFF` silences it. A line's menu also reaches its speaker's voice.
 Object roles appear in the speaker chooser. Deleting an object removes its dialogue
 and voice atomically; detaching a player as offscreen speech preserves its sound.
 
-| Speaker | Default |
+Initial audition defaults, before the user listening selection below:
+
+| Speaker | Initial default |
 | --- | --- |
 | Sonic | Square, words, note 72, variation 5, 5 frames, 80% |
 | Tails | Chime, letters, note 84, variation 3, 2 frames, 72% |
@@ -196,3 +198,38 @@ and measurements therefore remain exact; the retained lossless master is the fin
 export. This also establishes full-reel export reproducibility, in addition to the
 short independent probes. All task-owned review servers/tabs and consumed raw
 probe captures are retired; the two requested worktrees are retained for the lead.
+
+## Listening selection follow-up
+
+The user chose Soft Cool for Sonic, Workshop for Tails, Red Rattle for Knuckles,
+Patrol Buzz for Motobug and Wing Chime for Buzz Bomber. These supersede the initial
+player defaults above. The fifteen original performances are preserved in
+`StageplaySpeech.Preset` with their exact audition parameters. Both editors expose
+that library through Tone -> PRESETS in the existing six-control form. Choosing a
+preset copies editable values; no wire-format or candidate API change is needed.
+Explicit scene overrides remain unchanged. Object defaults use canonical registry
+character identity rather than an editable cast name or subtype-derived register.
+No film or audition is re-rendered for this follow-up. Focused checks cover all
+fifteen values, all preset selections, undo/default reset, offscreen binding,
+serialization/screenplay round trips and the existing architecture boundary.
+
+The follow-up engine selection passed 104 tests with no failures, errors or skips.
+`scripts/install-engine.sh $ENGINE_ROOT` rebuilt and installed the updated engine;
+the Editor then passed its package and 18 focused checks with no skips. Commands,
+from the engine and Editor task worktrees respectively:
+
+```bash
+python3 $ENGINE_MAIN/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplaySpeech,TestStageplaySpeechAudio,TestStageplayDialogueWorkspace,TestStageplayScriptRoundTrip,TestModApiSignatureSurface,TestArchUnitRules' test -B
+scripts/install-engine.sh $ENGINE_ROOT
+env -u DISPLAY -u WAYLAND_DISPLAY python3 $ENGINE_MAIN/tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayChrome' package -B
+```
+
+The separate structural guard profile passed all 770 tests with no failures, errors
+or skips on the same follow-up code. No broad smoke, film export or audition export
+was run. The guide's local links, selected-default/preset names and identical skill
+mirrors also passed their checks. The delivery remains on the two local feature
+branches, without push or merge.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 $ENGINE_MAIN/tools/testing/maven_queue.py -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl test -B
+```

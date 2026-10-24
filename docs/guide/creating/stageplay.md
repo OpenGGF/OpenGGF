@@ -198,9 +198,12 @@ limited to 64 MiB. Missing or invalid resources fail playback before it starts.
 Player and ROM object cast members can speak through the dialogue track. Select a
 cast member and choose **Speaker voice**, or use that action in a dialogue line's
 menu. Six controls set tone/off, word/letter rhythm, pitch, variation, blip length
-and level. `DEFAULT` restores the character's voice. Sonic, Tails, Knuckles and ROM
-object roles have distinct defaults. These noises come from the engine's PSG and
-follow the actual text reveal in preview and export. They require no audio files.
+and level. Choose `PRESETS` in Tone to copy any of the fifteen audition voices, then
+adjust and Apply. `DEFAULT` restores the character's voice: Sonic **Soft Cool**,
+Tails **Workshop**, Knuckles **Red Rattle**, S1 Motobug **Patrol Buzz**, and S1 Buzz
+Bomber **Wing Chime**. Previously saved explicit overrides retain their values.
+These noises come from the engine's PSG and follow the actual text reveal in
+preview and export. They require no audio files.
 Imported recordings remain separate audio cues; use voice tone `OFF` when a recording
 should be the only performance. See the [speech settings and screenplay fields](stageplay-authoring.md#character-speech-noises).
 

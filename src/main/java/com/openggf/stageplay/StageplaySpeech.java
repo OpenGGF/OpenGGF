@@ -12,6 +12,39 @@ public final class StageplaySpeech {
     private static final Pattern GRAPHEME = Pattern.compile("\\X");
     private StageplaySpeech() { }
 
+    /** The fifteen audition performances remain available independently of character defaults. */
+    public enum Preset {
+        BLUE_SPARK("Sonic / Blue Spark", VoiceTone.SQUARE, VoiceRhythm.WORD, 72, 5, 5, 80),
+        SOFT_COOL("Sonic / Soft Cool", VoiceTone.HOLLOW, VoiceRhythm.WORD, 67, 2, 7, 80),
+        SPEED_TALK("Sonic / Speed Talk", VoiceTone.SQUARE, VoiceRhythm.LETTER, 76, 4, 2, 74),
+        TWIN_CHIME("Tails / Twin Chime", VoiceTone.CHIME, VoiceRhythm.LETTER, 84, 3, 2, 72),
+        WARM_PIPS("Tails / Warm Pips", VoiceTone.SQUARE, VoiceRhythm.WORD, 77, 3, 6, 80),
+        WORKSHOP("Tails / Workshop", VoiceTone.BUZZ, VoiceRhythm.LETTER, 79, 2, 2, 70),
+        STONE_HOLLOW("Knuckles / Stone Hollow", VoiceTone.HOLLOW, VoiceRhythm.WORD, 55, 2, 8, 88),
+        BLUNT_SQUARE("Knuckles / Blunt Square", VoiceTone.SQUARE, VoiceRhythm.WORD, 57, 1, 9, 88),
+        RED_RATTLE("Knuckles / Red Rattle", VoiceTone.BUZZ, VoiceRhythm.LETTER, 62, 2, 3, 78),
+        PATROL_BUZZ("Motobug / Patrol Buzz", VoiceTone.BUZZ, VoiceRhythm.WORD, 69, 4, 8, 80),
+        LITTLE_SQUARE("Motobug / Little Square", VoiceTone.SQUARE, VoiceRhythm.WORD, 69, 4, 8, 80),
+        RUSTY_LOW("Motobug / Rusty Low", VoiceTone.HOLLOW, VoiceRhythm.WORD, 57, 3, 10, 84),
+        WING_CHIME("Buzz Bomber / Wing Chime", VoiceTone.CHIME, VoiceRhythm.LETTER, 75, 4, 3, 80),
+        RADIO_BUZZ("Buzz Bomber / Radio Buzz", VoiceTone.BUZZ, VoiceRhythm.WORD, 78, 5, 5, 80),
+        DEADPAN("Buzz Bomber / Deadpan", VoiceTone.HOLLOW, VoiceRhythm.WORD, 62, 1, 8, 84);
+
+        private final String label;
+        private final VoiceTone tone;
+        private final VoiceRhythm rhythm;
+        private final int pitch, variation, lengthFrames, level;
+
+        Preset(String label, VoiceTone tone, VoiceRhythm rhythm, int pitch, int variation, int lengthFrames, int level) {
+            this.label = label; this.tone = tone; this.rhythm = rhythm; this.pitch = pitch;
+            this.variation = variation; this.lengthFrames = lengthFrames; this.level = level;
+        }
+        public String label() { return label; }
+        public SpeakerVoice voice(String actorId, String offscreenName) {
+            return settings(actorId, offscreenName, tone, rhythm, pitch, variation, lengthFrames, level);
+        }
+    }
+
     public record Blip(String dialogueId, int frame, int grapheme, int pitch, int lengthFrames, SpeakerVoice voice) { }
 
     public static SpeakerVoice voice(StageplayDocument document, String actorId, String offscreenName) {
@@ -24,13 +57,19 @@ public final class StageplaySpeech {
     public static SpeakerVoice defaultVoice(StageplayDocument document, String actorId, String offscreenName) {
         var actor = document.actors().stream().filter(a -> a.id().equals(actorId)).findFirst().orElse(null);
         if (actor != null) return switch (actor.character()) {
-            case "tails" -> settings(actorId, "", VoiceTone.CHIME, VoiceRhythm.LETTER, 84, 3, 2, 72);
-            case "knuckles" -> settings(actorId, "", VoiceTone.HOLLOW, VoiceRhythm.WORD, 55, 2, 8, 88);
-            default -> settings(actorId, "", VoiceTone.SQUARE, VoiceRhythm.WORD, 72, 5, 5, 80);
+            case "tails" -> Preset.WORKSHOP.voice(actorId, "");
+            case "knuckles" -> Preset.RED_RATTLE.voice(actorId, "");
+            default -> Preset.SOFT_COOL.voice(actorId, "");
         };
         var object = document.objectActors().stream().filter(a -> a.id().equals(actorId)).findFirst().orElse(null);
         if (object != null) {
             var entry = StageplayObjectCatalog.entry(object.gameId(), object.zone(), object.act(), object.objectId());
+            // Canonical registry identity, not the editable cast name, selects the chosen object voices.
+            switch (entry.name()) {
+                case "Motobug": return Preset.PATROL_BUZZ.voice(actorId, "");
+                case "BuzzBomber": return Preset.WING_CHIME.voice(actorId, "");
+                default: break;
+            }
             if (entry.role() == com.openggf.level.objects.ObjectRegistryCatalog.Role.BOSS)
                 return settings(actorId, "", VoiceTone.HOLLOW, VoiceRhythm.WORD, 48, 3, 11, 90);
             // Source identity, never editable role/display names, gives ordinary objects a repeatable register.

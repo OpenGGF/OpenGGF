@@ -1177,13 +1177,28 @@ public final class StageplayWorkspace {
     }
 
     private void voiceForm(String actorId, String offscreenName) {
+        voiceForm(actorId, offscreenName, com.openggf.stageplay.StageplaySpeech.voice(controller.document(), actorId, offscreenName));
+    }
+
+    private void voicePresetMenu(String actorId, String offscreenName) {
+        var actions = new ArrayList<EditorProjectMenu.Action>();
+        var defaults = com.openggf.stageplay.StageplaySpeech.defaultVoice(controller.document(), actorId, offscreenName);
+        for (var preset : com.openggf.stageplay.StageplaySpeech.Preset.values()) {
+            var voice = preset.voice(actorId, offscreenName);
+            actions.add(action(preset.label() + (voice.equals(defaults) ? " (default)" : ""),
+                    () -> voiceForm(actorId, offscreenName, voice)));
+        }
+        menu.showActions("Voice presets", actions);
+        menu.setSubtitle("Choose, then adjust or apply.");
+    }
+
+    private void voiceForm(String actorId, String offscreenName, SpeakerVoice voice) {
         var doc = controller.document();
-        var voice = com.openggf.stageplay.StageplaySpeech.voice(doc, actorId, offscreenName);
         String name = actorId.isEmpty() ? offscreenName : doc.actors().stream().filter(a -> a.id().equals(actorId))
                 .map(Actor::name).findFirst().orElseGet(() -> doc.objectActors().stream().filter(a -> a.id().equals(actorId))
                         .map(ObjectActor::name).findFirst().orElseThrow());
         menu.showForm(name + " / voice", List.of(
-                new EditorProjectMenu.Field("tone", "Tone", voice.tone().name(), List.of("DEFAULT", "OFF", "SQUARE", "CHIME", "HOLLOW", "BUZZ")),
+                new EditorProjectMenu.Field("tone", "Tone", voice.tone().name(), List.of("PRESETS", "DEFAULT", "OFF", "SQUARE", "CHIME", "HOLLOW", "BUZZ")),
                 new EditorProjectMenu.Field("rhythm", "Blip on each", voice.rhythm().name(), List.of("WORD", "LETTER")),
                 number("pitch", "Pitch (48=C3, 72=C5, 96=C7)", voice.pitch()),
                 number("variation", "Pitch variation (0-12 semitones)", voice.variation()),
@@ -1197,7 +1212,10 @@ public final class StageplayWorkspace {
                     integer(values,"pitch"), integer(values,"variation"), integer(values,"length"), integer(values,"level")));
             return d.withVoices(voices);
         }));
-        menu.setSubtitle("DEFAULT resets. OFF silences.");
+        menu.onValueChanged((key, value) -> {
+            if (key.equals("tone") && value.equals("PRESETS")) voicePresetMenu(actorId, offscreenName);
+        });
+        menu.setSubtitle("PRESETS chooses. DEFAULT resets.");
     }
 
     private DialogueCue newDialogue(String actor, String name) {

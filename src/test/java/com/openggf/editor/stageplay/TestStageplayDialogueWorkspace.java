@@ -65,7 +65,7 @@ class TestStageplayDialogueWorkspace {
         var workspace=workspace(); var cue=addLine(workspace); var original=workspace.controller().document();
         workspace.invoke(SPEAKER_VOICE);
         assertEquals(6,workspace.menu().values().size());
-        assertEquals("SQUARE",workspace.menu().values().get("tone"));
+        assertEquals("HOLLOW",workspace.menu().values().get("tone"));
         workspace.menu().setValue("tone","BUZZ");workspace.menu().setValue("pitch","65");workspace.menu().submit();
         assertNull(workspace.menu().error());
         var voiced=workspace.controller().document();assertEquals(VoiceTone.BUZZ,voiced.voices().getFirst().tone());
@@ -118,6 +118,28 @@ class TestStageplayDialogueWorkspace {
         assertTrue(workspace.controller().document().dialogueSkins().isEmpty());
         assertEquals("",workspace.controller().document().dialogue().getFirst().skinId());
         workspace.invoke(UNDO); assertEquals(before,workspace.controller().document());
+    }
+
+    @Test void everyNamedPresetIsSelectableEditableUndoableAndDefaultResetUsesTheApprovedVoice() {
+        var workspace=workspace();String actor=workspace.controller().selectedActorId();
+        var before=workspace.controller().document();
+        var presets=com.openggf.stageplay.StageplaySpeech.Preset.values();
+        for(int i=0;i<presets.length;i++) {
+            workspace.invoke(SPEAKER_VOICE);workspace.menu().setValue("tone","PRESETS");
+            assertEquals("Voice presets",workspace.menu().title());choose(workspace.menu(),i);
+            assertEquals(6,workspace.menu().values().size());workspace.menu().submit();
+            assertNull(workspace.menu().error());
+            assertEquals(List.of(presets[i].voice(actor,"")),workspace.controller().document().voices());
+            workspace.invoke(UNDO);assertEquals(before,workspace.controller().document());
+        }
+        workspace.invoke(SPEAKER_VOICE);workspace.menu().setValue("tone","PRESETS");choose(workspace.menu(),0);
+        workspace.menu().setValue("pitch","73");workspace.menu().submit();assertNull(workspace.menu().error());
+        assertEquals(VoiceTone.SQUARE,workspace.controller().document().voices().getFirst().tone());
+        assertEquals(73,workspace.controller().document().voices().getFirst().pitch());
+        workspace.invoke(SPEAKER_VOICE);workspace.menu().setValue("tone","DEFAULT");workspace.menu().submit();
+        assertNull(workspace.menu().error());assertTrue(workspace.controller().document().voices().isEmpty());
+        assertEquals(com.openggf.stageplay.StageplaySpeech.Preset.SOFT_COOL.voice(actor,""),
+                com.openggf.stageplay.StageplaySpeech.voice(workspace.controller().document(),actor,""));
     }
 
     @Test void longCustomTimingSurvivesUnrelatedEditsAndEveryOffsetRemainsEditable() {
