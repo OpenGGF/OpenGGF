@@ -51,7 +51,9 @@ public final class CdObjectState {
         ANIMATION_WORD(0x1C),
         // oExplodePoints EQU oVar3E (Explosion/Main.asm:8,19); Player_TouchEnemy .KillEnemy writes it
         // (Player Object Collision.asm:165,170). Its low byte selects the points frame. Storage only.
-        EXPLOSION_POINTS_FRAME(0x3E);
+        EXPLOSION_POINTS_FRAME(0x3E),
+        // oGmOverDestX EQU oVar2A (Game Over/Main.asm:7,34,83,94): the text's destination X word. Overlapping storage only.
+        GAME_OVER_DEST_X(0x2A);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }

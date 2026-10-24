@@ -45,7 +45,10 @@ public final class CdR11aObjectAssets {
         EXPLOSION_MAPPINGS("MapSpr_Explosion", 0x3F088, 146),
         POINTS_MAPPINGS("MapSpr_Points", 0xAC64, 82),
         FLOWER_ANIMATIONS("Ani_Flower", 0x35ED8, 28),
-        FLOWER_MAPPINGS("MapSpr_Flower", 0x35EF4, 90);
+        FLOWER_MAPPINGS("MapSpr_Flower", 0x35EF4, 90),
+        // Game Over/Main.asm:36,43,118: one include holding BOTH two-word tables (TIME is +4, with its own base).
+        // Read lazily through view(); never decoded here as uniform visual frames.
+        GAME_OVER_MAPPINGS("MapSpr_GameOver/MapSpr_TimeOver", 0xF03E, 56);
 
         private final String nativeLabel;
         private final int offset;

@@ -3322,3 +3322,21 @@ terrain coverage is not a World/native timing or pixel-parity claim.
 The frozen handoff's air-resume prose should read Y $07EA.8000; its tests
 already preserve that fraction. Some selected global angle buffers remain
 unchanged, as the assertions record.
+
+
+### Pure Game/Time Over owner — 24 October 2026
+
+`CdGameOver` now ports the source-owned $3B Init/Main stores, live allocation,
+child ordering and typed sub-CPU requests. The separate authenticated lazy
+56-byte mapping view retains its two relative table bases. No World dispatch,
+resident powerup service, text renderer, audio or restart is claimed here.
+
+Root44257 at382ef3e6e plus the six exact candidate files and a tests-only
+World regression executed29 GameOver,14 constructed asset and3 regional
+retail cases successfully, zero skips. Both new World rows independently
+rejected at the old DEAD_CAMERA_FREEZE, the intended negative control.
+The complete request was48/0 failures/2 errors/0 skips, not a green48 run.
+Java25.0.5.0.2/media and all four fresh XML were inspected. Independent
+Opus source review found no P1/P2. Only the view is observed while media is
+open; the new fromObjectAssets calls run after close. JP's identical blob
+is elsewhere; no regional GameOver owner or offset inference is admitted.

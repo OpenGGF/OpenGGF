@@ -164,7 +164,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(24, CdR11aObjectAssets.Table.values().length);
+        assertEquals(25, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -228,6 +228,34 @@ class TestCdR11aObjectAssets {
     }
 
     @Test
+    void gameOverMetadataIsOneSharedUsaRangeThatTheUniformVisualDecoderCannotRepresent() {
+        var table = CdR11aObjectAssets.Table.GAME_OVER_MAPPINGS;
+        // Game Over/Main.asm:36,43 store both labels; Mappings.asm:1-58 is one 8-byte header plus four 12-byte bodies.
+        assertEquals("MapSpr_GameOver/MapSpr_TimeOver", table.nativeLabel());
+        assertEquals(0xF03E, table.range().fileOffset());
+        assertEquals(56, table.range().length());
+        assertEquals(0xF076, table.range().endExclusive());
+        assertEquals(0x20F03E, table.range().nativeAddress());
+        assertEquals(CdNativeFile.R11A, table.range().file());
+        assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
+        for (var other : CdR11aObjectAssets.Table.values()) {
+            if (other == table) { continue; }
+            assertTrue(table.range().endExclusive() <= other.range().fileOffset()
+                    || other.range().endExclusive() <= table.range().fileOffset(), other.name());
+        }
+        // MapSpr_TimeOver's words are relative to ITS label, four bytes in. Read as one uniform four-entry table,
+        // TIME frame 0 lands at $1C inside GameOverText; as a two-entry table, a gap follows the index. The
+        // existing bounded decoder rejects both readings, so the blob is kept raw rather than rebased.
+        byte[] blob = gameOverMappings();
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(blob, 4, 36));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(blob, 2, 36));
+        assertEquals(List.of(8, 20), List.of((int) (short) ((blob[0] << 8) | (blob[1] & 0xFF)),
+                (int) (short) ((blob[2] << 8) | (blob[3] & 0xFF))));
+        assertEquals(List.of(32, 44), List.of(4 + (short) ((blob[4] << 8) | (blob[5] & 0xFF)),
+                4 + (short) ((blob[6] << 8) | (blob[7] & 0xFF))));
+    }
+
+    @Test
     void constructedPointsFormatIsStaticDetachedAndBoundedByFiveTiles() {
         byte[] maps = constructedMappings(6, 4);
         var visual = CdObjectVisualAssets.decodeStatic(maps, 6, 5);
@@ -283,6 +311,22 @@ class TestCdR11aObjectAssets {
             bytes.put((byte) 1).put((byte) -8).put((byte) 0).putShort((short) (0x1800 | lastTile)).put((byte) -8);
         }
         return bytes.array();
+    }
+
+    /**
+     * Game Over/Data/Mappings.asm:1-58 hand-assembled (GameText 8 and GameOverText $14 from +0; TimeText $1C and
+     * TimeOverText $28 from +4; two five-byte pieces and a real zero byte per body). Format fixture only.
+     */
+    private static byte[] gameOverMappings() {
+        int[] values = {
+                0x00, 0x08, 0x00, 0x14, 0x00, 0x1C, 0x00, 0x28,
+                0x02, 0xF8, 0x0D, 0x00, 0x00, 0xB8, 0xF8, 0x0D, 0x00, 0x08, 0xD8, 0x00,
+                0x02, 0xF8, 0x0D, 0x00, 0x10, 0x08, 0xF8, 0x0D, 0x00, 0x18, 0x28, 0x00,
+                0x02, 0xF8, 0x0D, 0x00, 0x00, 0xBC, 0xF8, 0x09, 0x00, 0x08, 0xDC, 0x00,
+                0x02, 0xF8, 0x0D, 0x00, 0x0E, 0x04, 0xF8, 0x0D, 0x00, 0x16, 0x24, 0x00};
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
     }
 
     private static byte[] tileIds() {

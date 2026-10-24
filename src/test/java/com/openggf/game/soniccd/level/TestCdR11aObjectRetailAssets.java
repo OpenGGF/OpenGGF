@@ -5,6 +5,7 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.media.CdProgramAssets;
+import com.openggf.game.soniccd.objects.CdGameOver;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
@@ -17,6 +18,7 @@ import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -36,6 +38,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Opt-in production media ownership; no source checkout, research JSON or extracted payload fixture. */
 class TestCdR11aObjectRetailAssets {
+    /**
+     * Game Over/Data/Mappings.asm:1-58 hand-assembled from the pinned source (1ecc5f3a), independent of media:
+     * MapSpr_GameOver's words are relative to +0 (8, $14), MapSpr_TimeOver's to +4 ($1C, $28).
+     */
+    private static final byte[] GAME_OVER_SOURCE_BYTES = sourceBytes(
+            0x00, 0x08, 0x00, 0x14, 0x00, 0x1C, 0x00, 0x28,
+            0x02, 0xF8, 0x0D, 0x00, 0x00, 0xB8, 0xF8, 0x0D, 0x00, 0x08, 0xD8, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x10, 0x08, 0xF8, 0x0D, 0x00, 0x18, 0x28, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x00, 0xBC, 0xF8, 0x09, 0x00, 0x08, 0xDC, 0x00,
+            0x02, 0xF8, 0x0D, 0x00, 0x0E, 0x04, 0xF8, 0x0D, 0x00, 0x16, 0x24, 0x00);
+
     @ParameterizedTest(name = "{0} terrain and optional USA opening-object assets")
     @EnumSource(CdReleaseVariant.class)
     void actualOpenedMediaAuthenticatesBeforeDecodeAndKeepsThreeRegionalTerrainLoads(CdReleaseVariant variant)
@@ -62,12 +75,14 @@ class TestCdR11aObjectRetailAssets {
                         original, terrainOwner.loadPlan());
                 verifyFrontierNativeReferences(original, terrainOwner, objects);
                 verifyContactNativeReferences(original, terrainOwner);
+                verifyGameOverNativeReferences(original, objects);
                 for (int offset : List.of(0x9C96, 0xA0F2, 0xA0FA, 0xB6CA, 0xB6D8, 0xB6E6, 0xB722,
                         0xCF48, 0x70C6, 0x35626, 0x3702A, 0x30000,
                         0xD1AE, 0xD1F0, 0xD22C, 0xD240, 0xD264, 0xE020, 0xDDC8, 0x1FDBC, 0xE046,
                         0x381C0, 0x3AC7A, 0x3AE02,
                         0x6EDC, 0x3F074, 0x3F088, 0xAC64, 0x35ED8, 0x35EF4,
-                        0x3513E, 0x315C4, 0x31628, 0x35F4E)) {
+                        0x3513E, 0x315C4, 0x31628, 0x35F4E,
+                        0xEF94, 0xF03E, 0xF075)) {
                     byte[] altered = original.readFile(0, original.fileBytes());
                     altered[offset] ^= 1;
                     // A plausible/correct caller record cannot authenticate even an unrelated changed byte.
@@ -76,6 +91,12 @@ class TestCdR11aObjectRetailAssets {
                 }
             } else {
                 assertThrows(UnsupportedOperationException.class, terrainOwner::openingObjects);
+                // The Game Over view and its body assets are USA-only: no regional owner exists to bind them, and
+                // the USA range does not hold the source blob in this region's R11A (no offset fallback is inferred).
+                assertThrows(UnsupportedOperationException.class,
+                        () -> CdGameOver.Assets.fromObjectAssets(terrainOwner.openingObjects()));
+                assertFalse(Arrays.equals(GAME_OVER_SOURCE_BYTES, source.mmd(CdNativeFile.R11A)
+                        .readFile(GAME_OVER_MAPPINGS.range().fileOffset(), GAME_OVER_MAPPINGS.range().length())));
                 var usa = CdR11aProfile.forStage(CdReleaseVariant.USA, CdStageKey.parse("R11A"));
                 var assertedUsa = new CdR11aAssets.Identity(CdReleaseVariant.USA, usa.stage(), usa.file(), usa.domain(),
                         usa.expectedMmdSha256(), terrainOwner.identity().observedWholeDiscSha256());
@@ -99,6 +120,8 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(393, postCloseBank.binding(ART_3D_PLANT).decode().readerInputRange().length());
         // First contact visual/table/art reads occur after close, from the retained authenticated image.
         verifyContact(terrainOwner, untouchedFrontier);
+        // So does that owner's first, lazy Game Over view.
+        verifyGameOver(untouchedFrontier);
         verifyUsa(terrainOwner, objects);
     }
 
@@ -130,7 +153,8 @@ class TestCdR11aObjectRetailAssets {
                 EXPLOSION_MAPPINGS, "0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44",
                 POINTS_MAPPINGS, "24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e",
                 FLOWER_ANIMATIONS, "74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9",
-                FLOWER_MAPPINGS, "48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41"));
+                FLOWER_MAPPINGS, "48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41",
+                GAME_OVER_MAPPINGS, "ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b"));
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -138,6 +162,7 @@ class TestCdR11aObjectRetailAssets {
             assertEquals(table.range().length(), view.bytes().length());
             assertEquals(hashes.get(table), CdR11aProfile.sha256(view.bytes().copy()));
         }
+        verifyGameOver(objects);
         assertEquals(new CdR11aObjectAssets.Delta(-0x20, 0x20), objects.ringDelta(11));
         assertEquals(new CdR11aObjectAssets.TouchSize(6, 6), objects.touchSize(0x47));
         assertEquals(new CdR11aObjectAssets.TouchSize(12, 12), objects.touchSize(0x2B));
@@ -560,5 +585,96 @@ class TestCdR11aObjectRetailAssets {
         assertEquals(compressedBytes, binding.decode().consumedInputBytes());
         assertEquals(tiles * 32, binding.bytes().length());
         assertEquals(hash, CdR11aProfile.sha256(binding.bytes().copy()));
+    }
+
+    /**
+     * ObjGameOver (Game Over/Main.asm:11-118) as assembled into the USA R11A program. Each operand Init and Main use is
+     * checked at its source instruction, and each helper call lands on the plain helper of the R43_LEGACY_DATA_PREFIX 0
+     * include (Palmtree Panic/Act 1 Present.asm:9; Level End/Main.asm:36-47), hand-assembled here from its source.
+     */
+    private static void verifyGameOverNativeReferences(CdMmdImage image, CdR11aObjectAssets objects) {
+        var range = objects.view(GAME_OVER_MAPPINGS).range();
+        assertEquals(0x20F03E, range.nativeAddress());
+        // .Index (:19-21): Init directly follows the table and Main's JMP DrawObject (:111) ends at the blob (:118).
+        var index = ByteBuffer.wrap(image.readFile(0xEF68, 4));
+        assertEquals(0xEF6C, 0xEF68 + index.getShort());
+        assertEquals(0xF024, 0xEF68 + index.getShort());
+        assertEquals(0xF038 + 6, range.fileOffset());
+        // MOVE.L #MapSpr_GameOver,oMap(a0) (:36) and MOVE.L #MapSpr_TimeOver,oMap(a0) (:43): one blob, two bases.
+        for (var reference : List.of(new int[]{0xEF92, range.nativeAddress()}, new int[]{0xEFB4, range.nativeAddress() + 4})) {
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 8));
+            assertEquals((short) 0x217C, instruction.getShort());
+            assertEquals(reference[1], instruction.getInt());
+            assertEquals(4, instruction.getShort()); // oMap
+        }
+        var tile = ByteBuffer.wrap(image.readFile(0xEF8C, 6)); // MOVE.W #$8544,oTile(a0) (:35)
+        assertEquals((short) 0x317C, tile.getShort());
+        assertEquals(CdGameOver.NATIVE_TILE_WORD, Short.toUnsignedInt(tile.getShort()));
+        assertEquals(2, tile.getShort()); // oTile
+        // MOVE.W #SCMD_FADEPCM,d0 (:28) and MOVE.W #SCMD_GMOVERMUS,d0 (:87).
+        for (var reference : List.of(new int[]{0xEF6C, CdGameOver.SubCpuCommand.SCMD_FADEPCM.commandWord()},
+                new int[]{0xF01A, CdGameOver.SubCpuCommand.SCMD_GMOVERMUS.commandWord()})) {
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 4));
+            assertEquals((short) 0x303C, instruction.getShort());
+            assertEquals(reference[1], Short.toUnsignedInt(instruction.getShort()));
+        }
+        // MOVE.B #$3B,oID(a1): .SpawnOverText (:76) and ObjSonic_DeadChkGone (Sonic/Main.asm:2437).
+        for (int at : new int[]{0xEFE2, 0x54D2}) {
+            assertArrayEquals(hexBytes("137C" + "003B" + "0000"), image.readFile(at, 6));
+        }
+        int subCpuCmd = absoluteTarget(image, 0xEF70, 0x4EB9);                    // :29 JSR SubCPUCmd
+        assertEquals(subCpuCmd, absoluteTarget(image, 0xF01E, 0x4EF9));            // :88 JMP SubCPUCmd
+        // Sub CPU.asm:21-22: CMPI.W #SCMD_BOSSMUS,d0, $67 when System.inc's unnamed :183 entry is counted.
+        assertArrayEquals(hexBytes("0C400067"), image.readFile(subCpuCmd - 0x200000, 4));
+        int findObjSlot = absoluteTarget(image, 0xEFD4, 0x4EB9);                  // :60 JSR FindObjSlot
+        assertEquals(findObjSlot, absoluteTarget(image, 0x54CC, 0x4EB9), "the routine DeadChkGone allocates with");
+        // Object Spawner.asm:329-340: LEA dynObjects.w ($FFD800),a1 / MOVE.W #95,d0 / TST.B (a1) / BEQ.S / LEA $40 / DBF.
+        assertArrayEquals(hexBytes("43F8D800" + "303C005F" + "4A116708" + "43E90040" + "51C8FFF6" + "4E75"),
+                image.readFile(findObjSlot - 0x200000, 22));
+        int deleteObject = absoluteTarget(image, 0xEFDC, 0x4EF9);                 // :72 JMP R43LegacyDeleteObject
+        // Object Functions.asm:228-237: MOVEA.L a0,a1 / MOVEQ #0,d1 / MOVEQ #15,d0 / MOVE.L d1,(a1)+ / DBF / RTS.
+        assertArrayEquals(hexBytes("2248" + "7200" + "700F" + "22C1" + "51C8FFFC" + "4E75"),
+                image.readFile(deleteObject - 0x200000, 14));
+        int drawObject = absoluteTarget(image, 0xF038, 0x4EF9);                   // :111 JMP R43LegacyDrawObject
+        // Object Functions.asm:137-138: DrawObject begins BCLR #7,oSprFlags(a0).
+        assertArrayEquals(hexBytes("08A800070001"), image.readFile(drawObject - 0x200000, 6));
+        assertArrayEquals(GAME_OVER_SOURCE_BYTES, image.readFile(range.fileOffset(), range.length()));
+    }
+
+    /** Lazy USA view plus the $3B body's assets, bound only through the authenticated owner. */
+    private static void verifyGameOver(CdR11aObjectAssets objects) {
+        var view = objects.view(GAME_OVER_MAPPINGS);
+        assertSame(view, objects.view(GAME_OVER_MAPPINGS));
+        assertEquals(GAME_OVER_MAPPINGS.range(), view.range());
+        assertArrayEquals(GAME_OVER_SOURCE_BYTES, view.bytes().copy(), "the authenticated view is the pinned include");
+        assertEquals("ab185aa60f83919e611dd47457d7fb9b5b87e99f2b9210d0dc0508c71dcea44b",
+                CdR11aProfile.sha256(view.bytes().copy()));
+        var bound = CdGameOver.Assets.fromObjectAssets(objects);
+        assertEquals(0x20F03E, bound.gameOverMappingsAddress());
+        assertEquals(0x20F042, bound.timeOverMappingsAddress());
+        assertArrayEquals(view.bytes().copy(), bound.mappings().copy());
+        assertThrows(ReadOnlyBufferException.class, () -> bound.mappings().buffer().put((byte) 0));
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), objects.initialArtBank().bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList(), "the Game Over view decodes no art");
+    }
+
+    private static int absoluteTarget(CdMmdImage image, int fileOffset, int opcode) {
+        var instruction = ByteBuffer.wrap(image.readFile(fileOffset, 6));
+        assertEquals((short) opcode, instruction.getShort(), "JSR/JMP (xxx).L");
+        int target = instruction.getInt();
+        assertTrue(target >= 0x200000 && target < 0x240000, "target inside the original Word RAM program");
+        return target;
+    }
+
+    private static byte[] hexBytes(String hex) {
+        byte[] out = new byte[hex.length() / 2];
+        for (int i = 0; i < out.length; i++) { out[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16); }
+        return out;
+    }
+
+    private static byte[] sourceBytes(int... values) {
+        byte[] out = new byte[values.length];
+        for (int i = 0; i < values.length; i++) { out[i] = (byte) values[i]; }
+        return out;
     }
 }
