@@ -155,7 +155,7 @@ class TestRomDetectionService {
         }
 
         @Override
-        public com.openggf.data.Game createGame(Rom rom) {
+        public com.openggf.game.Game createGame(Rom rom) {
             return null;
         }
 

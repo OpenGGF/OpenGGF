@@ -122,6 +122,10 @@ public final class ModApiVersion {
      * PlayerSpriteArtProvider and SpindashDustArtProvider now live in sprites.art;
      * this intentional unpublished candidate break requires recompiling mods, donor
      * implementations and callers even when their manifest still accepts 0.7.0.
+     * The complete Game abstraction now lives in game beside GameModule and ModGame;
+     * its class identity, ModGame superclass and factory/getter return descriptors change.
+     * Rebuild compiled mods, donors and callers against matching SDK/engine artifacts,
+     * including callers whose source infers the game type; the 0.7.0 range is unchanged.
      * Reusable dialogue typers and skins, grapheme-safe reveal schedules and
      * shared dialogue layout keep creator styling portable between both editors.
      */

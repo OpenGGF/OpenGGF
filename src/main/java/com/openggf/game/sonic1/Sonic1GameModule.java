@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.audio.GameAudioProfile;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameOverFlowProvider;

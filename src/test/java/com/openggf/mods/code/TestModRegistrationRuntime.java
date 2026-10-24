@@ -482,7 +482,7 @@ class TestModRegistrationRuntime {
         private final String owner;
         private StandaloneModule(String owner) { this.owner = owner; }
         @Override public String getIdentifier() { return owner; }
-        @Override public com.openggf.data.Game createGame(com.openggf.game.GameDataSource source) {
+        @Override public com.openggf.game.Game createGame(com.openggf.game.GameDataSource source) {
             return new com.openggf.game.ModGame(owner, source) {
                 @Override public com.openggf.level.Level loadLevel(int levelIdx) { return null; }
                 @Override public int getMusicId(int levelIdx) { return 0; }

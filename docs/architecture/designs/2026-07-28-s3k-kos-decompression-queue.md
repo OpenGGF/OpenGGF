@@ -309,7 +309,7 @@ adapter; zone event subclasses use protected accessors on
 `Sonic3kZoneEvents`, not direct `GameServices` calls. No shared API returns an
 S3K queue type.
 
-The base `com.openggf.data.Game` abstraction remains independent of level
+The base `com.openggf.game.Game` abstraction remains independent of level
 runtime resource trackers. Optional deferred loading lives behind a
 level-layer `DeferredLevelResourceLoader` provider implemented by `Sonic3k`;
 `LevelManager` selects that provider when an explicit tracker is present and

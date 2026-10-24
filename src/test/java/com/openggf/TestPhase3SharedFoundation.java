@@ -120,7 +120,7 @@ class TestPhase3SharedFoundation {
     void standaloneBaseRequiresOnlyDocumentedSourceProvidersAndNeverExposesARom() throws Exception {
         AbstractStandaloneGameModule module = new AbstractStandaloneGameModule() {
             @Override public String getIdentifier() { return "standalone-test"; }
-            @Override public com.openggf.data.Game createGame(GameDataSource source) {
+            @Override public com.openggf.game.Game createGame(GameDataSource source) {
                 return new ModGame("standalone-test", source) {
                     @Override public com.openggf.level.Level loadLevel(int levelIdx) { return null; }
                     @Override public int getMusicId(int levelIdx) { return 0; }

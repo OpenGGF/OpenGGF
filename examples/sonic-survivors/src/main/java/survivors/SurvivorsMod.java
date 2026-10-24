@@ -1,6 +1,6 @@
 package survivors;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.*;
 import com.openggf.game.patch.*;

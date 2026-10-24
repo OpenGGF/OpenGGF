@@ -645,6 +645,14 @@ Unreleased. The earlier development themes remain in
   old imports and binaries: mods, donor implementations and callers must rebuild
   against matching artifacts even when their manifest range still accepts `0.7.0`.
   See the [import migration](docs/modding/getting-started.md#player-art-provider-import-migration).
+  The complete annotated abstract `Game` moves from `com.openggf.data` to
+  `com.openggf.game`, beside its module and standalone composition contracts.
+  Its methods and behavior are preserved; imports, class identity, `ModGame`'s
+  superclass and factory/getter binary descriptors change. Rebuild compiled mods,
+  donors and callers, including inferred-type and declarative standalone users,
+  against matching SDK/engine artifacts. The unchanged candidate manifest range
+  cannot distinguish old binaries and does not automatically reject every one.
+  See the [Game migration](docs/modding/getting-started.md#game-contract-import-migration).
   Object-service guards also recognize forbidden
   method references. Remaining
   migrations and exact allowance accounting live in the

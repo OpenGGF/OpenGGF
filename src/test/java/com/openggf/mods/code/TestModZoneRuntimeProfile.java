@@ -8,7 +8,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameModule;
