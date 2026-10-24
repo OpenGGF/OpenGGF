@@ -115,11 +115,18 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         if (activeFrame != null && !activeFrame.finished) {
             throw new IllegalStateException("previous PLC lifecycle frame is still active");
         }
-        activeFrame = new PlcLifecycleFrame(serviceSupplier.get());
-        if (activeFade != null && !activeFade.closed && !nextVblankServicesDmaQueue) {
-            activeFrame.claim(PlcLifecyclePhase.PALETTE_FADE);
+        PlcLifecycleFrame frame = new PlcLifecycleFrame(serviceSupplier.get());
+        activeFrame = frame;
+        try {
+            if (activeFade != null && !activeFade.closed && !nextVblankServicesDmaQueue) {
+                frame.claim(PlcLifecyclePhase.PALETTE_FADE);
+            }
+            return frame;
+        } catch (RuntimeException | Error failure) {
+            // No caller received this token, so no outer finally can retire it.
+            frame.abort();
+            throw failure;
         }
-        return activeFrame;
     }
 
     /**
@@ -159,21 +166,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             frame.completionActions = null;
             throw failure;
         } finally {
-            try {
-                // A live rewind can replace the unclaimed outer frame with a
-                // replay frame while the iteration callback is running. The
-                // outer wrapper still owns the Java finally, but its token was
-                // deliberately finished before the replay token was latched.
-                if (!frame.finished) {
-                    frame.finish();
-                }
-            } catch (RuntimeException | Error validationFailure) {
-                if (primaryFailure != null) {
-                    primaryFailure.addSuppressed(validationFailure);
-                } else {
-                    throw validationFailure;
-                }
-            }
+            frame.finishOwnedIteration(primaryFailure);
         }
     }
 
@@ -234,17 +227,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             frame.completionActions = null;
             throw failure;
         } finally {
-            try {
-                if (!frame.finished) {
-                    frame.finish();
-                }
-            } catch (RuntimeException | Error validationFailure) {
-                if (primaryFailure != null) {
-                    primaryFailure.addSuppressed(validationFailure);
-                } else {
-                    throw validationFailure;
-                }
-            }
+            frame.finishOwnedIteration(primaryFailure);
         }
     }
 
@@ -642,11 +625,64 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             }
         }
 
-        private void finishPublication() {
+        /**
+         * An owned iteration cannot be corrected after it unwinds. Raw tokens
+         * keep their explicit finish/prepare/finish correction contract instead.
+         */
+        private void finishOwnedIteration(Throwable primaryFailure) {
+            if (primaryFailure != null) {
+                try {
+                    if (!finished) {
+                        // Keep validation diagnostics, without preparing missing
+                        // work or publishing a row whose body failed.
+                        validatePreparation();
+                    }
+                } catch (RuntimeException | Error validationFailure) {
+                    if (validationFailure != primaryFailure) {
+                        primaryFailure.addSuppressed(validationFailure);
+                    }
+                } finally {
+                    abort();
+                }
+            } else if (!finished) {
+                try {
+                    finish();
+                } catch (RuntimeException | Error failure) {
+                    abort();
+                    throw failure;
+                }
+            }
+        }
+
+        private void abort() {
+            failed = true;
+            completionActions = null;
+            if (activeFrame == this) {
+                if (!finished) {
+                    // Consume only this failed row's one-shot classifications.
+                    // A completed/replaced token may already have callbacks
+                    // preparing the next row, whose declarations must survive.
+                    representedIterationWithoutVblank = false;
+                    vblankOverrunCarry = false;
+                    nextVblankServicesDmaQueue = false;
+                    representedIterationDefersLoopTailPreparation = false;
+                }
+                activeFrame = null;
+            }
+            finished = true;
+            // This retires a token, not partially serviced native work: retained
+            // fades, held loop tails, queues and clocks remain with their owners.
+        }
+
+        private void validatePreparation() {
             if (service != null && owner != null
                     && service.hasPreparationBoundary(owner) && !prepared) {
                 throw new IllegalStateException("missing PLC preparation for " + owner);
             }
+        }
+
+        private void finishPublication() {
+            validatePreparation();
             // A dynamic-art edge publishes on the V-blank that closes the
             // iteration which produced it. Two shapes reach no such boundary:
             //   * a lag V-blank -- V_Int branched to Vint_Lag because

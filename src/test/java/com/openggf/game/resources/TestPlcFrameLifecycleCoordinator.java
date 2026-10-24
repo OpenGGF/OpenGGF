@@ -472,6 +472,7 @@ class TestPlcFrameLifecycleCoordinator {
         org.junit.jupiter.api.Assertions.assertEquals(1, thrown.getSuppressed().length);
         assertTrue(thrown.getSuppressed()[0].getMessage()
                 .contains("missing PLC preparation for ORDINARY_LEVEL"));
+        coordinator.runLogicalIteration(() -> { }, frame -> null);
     }
 
     /**
@@ -824,7 +825,6 @@ class TestPlcFrameLifecycleCoordinator {
                     failedPublication.afterConsumedIteration(() -> events.add("failed-publication"));
                     return null;
                 }));
-        failedPublication.reset();
         failedPublication.runLogicalIteration(() -> { }, frame -> null);
         assertFalse(events.contains("failed-publication"));
     }

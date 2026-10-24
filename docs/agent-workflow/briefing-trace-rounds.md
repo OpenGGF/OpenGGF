@@ -71,6 +71,16 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Preserved import timestamps can leave old bytecode under new source (2026-10-24,
+CD PLC cleanup). Copying a frozen source with its older mtime let Maven skip
+production compilation while compiling newer tests. Source hashes matched the
+candidate, but failures and the class constant pool showed the old owner ran.
+Copy source content with a fresh timestamp, or update that changed file's mtime
+before a normal build. Confirm compilation and the relevant executed class when
+this hazard is suspected. The stale-bytecode run is not evidence for the new
+implementation; rerun its affected selection after correcting the prerequisite.
+Never reuse or copy another worktree's target to solve it.
+
 Stored velocity is not proof of movement (2026-10-24, CD charge reference).
 Retail spindash can retain nonzero X/Y velocity while the complete 16:16 position
 stays fixed. Require observed displacement within the admitted release continuation

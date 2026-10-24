@@ -4,6 +4,7 @@ import com.openggf.*;
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.game.GameServices;
+import com.openggf.game.internal.ControlledVBlankOnlyOwner;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.EngineTiming;
 import com.openggf.game.session.GameplayModeContext;
@@ -36,11 +37,13 @@ public final class ControlledFrameRuntime {
         try {
             var controller = java.util.Objects.requireNonNull(controller(context));
             if (prepareSetup(context)) return LevelFrameResult.SETUP_ONLY;
-            if (!audioFrameOwned) {
-                var audio = GameServices.audio();
-                audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
-            }
+            // Preserve legacy callback/audio ordering. An opt-in owner validates its
+            // held phase before this runtime publishes even the audio frame.
+            boolean heldServiceOwner = controller instanceof ControlledVBlankOnlyOwner;
+            if (!audioFrameOwned && !heldServiceOwner) beginAudioFrame();
             var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
+            PlcLifecyclePhase heldPhase = heldVBlankPhase(controller, disposition);
+            if (!audioFrameOwned && heldServiceOwner) beginAudioFrame();
             boolean advance = disposition != GameplayFrameDisposition.HOLD;
             serviceTitleCardOverlay(context);
             boolean transition = serviceLevelTransition(context);
@@ -67,7 +70,10 @@ public final class ControlledFrameRuntime {
                             }
                         });
             }
-            if (!advance && !transition) serviceHeldLevelEntry(context);
+            if (!advance && !transition) {
+                if (heldPhase != null) serviceHeldVBlank(context, heldPhase);
+                else serviceHeldLevelEntry(context);
+            }
             controller.afterTick(course, advance);
             return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
         } catch (RuntimeException | Error failure) {
@@ -77,6 +83,42 @@ public final class ControlledFrameRuntime {
             }
             throw failure;
         } finally { course.closeFrame(); }
+    }
+
+    private static void beginAudioFrame() {
+        var audio = GameServices.audio();
+        audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
+    }
+
+    private static PlcLifecyclePhase heldVBlankPhase(
+            GameplayFrameController controller, GameplayFrameDisposition disposition) {
+        if (disposition != GameplayFrameDisposition.HOLD
+                || !(controller instanceof ControlledVBlankOnlyOwner owner)) return null;
+        PlcLifecyclePhase phase = owner.heldVBlankPhase();
+        // Match LevelFrameStep.serviceVBlankOnly's accepted phases. Reject before
+        // title/transition, fade, timing, lifecycle or held-entry service can mutate.
+        if (phase != null && phase != PlcLifecyclePhase.NORMAL_PAUSE
+                && phase != PlcLifecyclePhase.LAG && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
+            throw new IllegalArgumentException("not a VBlank-only PLC phase: " + phase);
+        }
+        return phase;
+    }
+
+    private static void serviceHeldVBlank(GameplayModeContext context, PlcLifecyclePhase phase) {
+        EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
+        context.plcFrameLifecycle().runLogicalIteration(frame -> {
+            // Dispatch the fade owner's game VBlank before completion callbacks;
+            // serviceVBlankOnly uses the same token's once guard afterwards.
+            if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE))
+                LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+        }, context.getFadeManager()::update, frame -> {
+            LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(context), frame, phase);
+            // EngineTiming delegates to this clock while ObjectManager is bound.
+            // Advance its VBlank only: no object pass or level-frame work runs.
+            var objects = context.getLevelManager().getObjectManager();
+            if (objects != null) objects.advanceVblaCounter();
+            return null;
+        });
     }
 
     /** Native destination requests remain presentation work while a creator holds the source world. */

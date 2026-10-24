@@ -1887,3 +1887,62 @@ at this checkpoint. All effects are staged until complete return; sounds stay
 typed observations with no driver playback. No player is yet registered in the
 normal stock world. Broad smoke remains incomplete, and these finite results
 establish neither a playable opening route nor USA/full-regional parity.
+
+## Complete player-slot and serviced-HOLD boundaries — 24 October 2026
+
+Internal NativePlayableSlot dispatch runs once before all generic player setup,
+input writes, physics and tails. Scripted, warm-up and movement-only helper
+entries reject native participants; nonparticipants keep their existing path.
+ControlledVBlankOnlyOwner allows NORMAL_PAUSE, LAG and SPECIAL_STAGE_PAUSE held
+rows through the existing PLC/game-VBlank/hardware timing boundary, without a
+player, timer or level tick. Non-opt-in and null-held owners retain unserviced
+HOLD. Runtime-owned audio starts only after the opt-in decision/phase validates.
+
+Source review exposed two inherited PLC token leaks made reachable by held
+service: failed fade preclaim before the wrapper's try/finally, and failed
+preparation/final publication before the token becomes finished. Acquisition
+and owned wrappers now retire only their failed token, drop success callbacks,
+consume its one-shot declarations and preserve primary/suppressed failures.
+They never retry service/preparation/publication, close a retained fade, reset
+queues/clocks, or detach a later replay token. Raw manually held tokens retain
+their existing missing-preparation -> prepare -> finish correction contract.
+This is coordinator cleanup, not rollback of partially serviced native work;
+device owners still need complete rollback or closed admission/rebuild.
+
+Parent63507 executed three regressions against the original coordinator:
+2 assertion failures and1 stranded-token error, zero skips, Java25. Parent60554
+initially repeated the combined selection with stale compiled coordinator bytes:
+177 tests,9 failures/11 errors,0 skips; source/class identity exposed preserved
+import mtime as the cause. That run does not validate the candidate. Updating
+only the changed source timestamp triggered normal recompilation. Parent39232
+then passed177 tests across16 actual classes, zero failures/errors/skips,
+Java25 with actual S1/S2/S3K paths and surfaceless EGL: queue13s/Maven1m29s.
+All16 XML identities/properties and the new compiled cleanup helper were checked.
+The selection covers held/slot/PLC behavior, existing input/dispatch ordering,
+API signatures and all four required S3K selectors (both level-loading classes).
+Astra independently found no remaining P1/P2 in the bounded cleanup source.
+
+Parent25620 added two missing runtime-owned audio ordering/invalid-phase cases
+and the typed Body Display cut. It passed19 held cases and60 Body cases:79 tests,
+zero failures/errors/skips, Java25, queue14s/Maven1m27s. DrawObject clears sprite
+bit7 inside Display; DrawObjects sets it later after the camera pass. Both writes
+belong to the queue owner. DisplayEligibility now retains the exact pre-tail
+centre words, Y radius and sprite flags, while DisplayPublication retains the
+completed pose. A constructed tunnel test distinguishes radius19/Y76 from
+radius14/Y81ABCD after SpecialChunks. Fable's independent Body review found no
+P1/code P2; its prose correction and suggested metadata cut are incorporated.
+
+Commands use the current main queue wrapper from the private worktree with
+DISPLAY/WAYLAND_DISPLAY unset and LUA_BIN selecting Lua5.4:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestPlcOwnedIterationFailureCleanup#failedFadePreclaimDiscardsCompletionAndRetainsFadeWithoutReset+failedBeforeFadeVblankKeepsPrimaryAndMissingPreparationDiagnostic+finalPublicationFailureIsNotRetriedAndDoesNotRequireReset' test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestNativePlayableSlotDispatch,TestControlledVBlankOnlyOwner,TestPlcOwnedIterationFailureCleanup,TestPlcFrameLifecycleCoordinator,TestPlcLifecycleDriverParity,TestControlledFrameRuntime,TestSpriteManagerGameplayInputFilter,TestSpriteManagerUpdateOrder,TestSpriteManagerCollisionOrder,TestSpriteManagerMainTailsTailsDispatch,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerBody,TestControlledVBlankOnlyOwner' test -B
+```
+
+These are bounded local checks, not a broad-smoke or native gameplay certificate.
+The normal stock CD entry remains static while frame/actor/camera integration
+continues. Remaining exceptional held-tail/comparison-window combinations are
+source-reviewed but lack direct injected-failure fixtures. No public signature
+pin, version, shared GameLoop switch or game-name carve-out was added.
