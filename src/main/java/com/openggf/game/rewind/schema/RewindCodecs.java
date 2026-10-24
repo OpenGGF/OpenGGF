@@ -77,7 +77,12 @@ public final class RewindCodecs {
     private static Optional<RewindCodec> buildCodecFor(Field field) {
         if (DefaultObjectRewindPolicies.isOptionalObjectReference(field)) {
             field.setAccessible(true);
-            return Optional.of(new ObjectReferenceCodec(field.getType(), true));
+            return Optional.of(new ObjectReferenceCodec(field.getType(), ObjectReferenceCodec.Mode.OPTIONAL_NATIVE));
+        }
+        if (DefaultObjectRewindPolicies.isContextCompatibleCollectorReference(field)) {
+            field.setAccessible(true);
+            return Optional.of(new ObjectReferenceCodec(
+                    field.getType(), ObjectReferenceCodec.Mode.CONTEXT_COMPATIBLE_MANAGED_STRICT));
         }
         Optional<RewindCodec> collectionCodec = collectionCodecFor(field);
         Optional<RewindCodec> codec = collectionCodec.isPresent() ? collectionCodec : codecFor(field.getType());
@@ -773,16 +778,18 @@ public final class RewindCodecs {
     }
 
     private static final class ObjectReferenceCodec implements RewindCodec {
+        private enum Mode { STRICT, OPTIONAL_NATIVE, CONTEXT_COMPATIBLE_MANAGED_STRICT }
+
         private final Class<?> declaredType;
-        private final boolean optional;
+        private final Mode mode;
 
         private ObjectReferenceCodec(Class<?> declaredType) {
-            this(declaredType, false);
+            this(declaredType, Mode.STRICT);
         }
 
-        private ObjectReferenceCodec(Class<?> declaredType, boolean optional) {
+        private ObjectReferenceCodec(Class<?> declaredType, Mode mode) {
             this.declaredType = declaredType;
-            this.optional = optional;
+            this.mode = mode;
         }
 
         @Override
@@ -798,19 +805,22 @@ public final class RewindCodecs {
                 List<Object> opaqueValues,
                 RewindCaptureContext context) {
 
-            if (optional) {
-                // No table means uncaptured, rather than authoritative null. This
-                // preserves public context-free round trips on existing objects.
+            if (mode != Mode.STRICT) {
+                // No table means uncaptured, including null: restore preserves
+                // the CURRENT link. A supplied table makes the captured value authoritative.
                 RewindIdentityTable table = context.identityTable().orElse(null);
                 scalarData.writeBoolean(table != null);
-                if (table != null) {
+                if (table == null) {
+                    return;
+                }
+                if (mode == Mode.OPTIONAL_NATIVE) {
                     ObjectRefId id = table.encodeObject((ObjectInstance) get(field, target));
                     scalarData.writeBoolean(id != null);
                     if (id != null) {
                         writeObjectRefBody(id, scalarData);
                     }
+                    return;
                 }
-                return;
             }
             writeObjectRef((ObjectInstance) get(field, target), scalarData, context);
         }
@@ -835,10 +845,10 @@ public final class RewindCodecs {
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
-            if (optional) {
-                if (!scalarData.readBoolean()) {
-                    return;
-                }
+            if (mode != Mode.STRICT && !scalarData.readBoolean()) {
+                return;
+            }
+            if (mode == Mode.OPTIONAL_NATIVE) {
                 set(field, target, scalarData.readBoolean()
                         ? resolveObjectRef(readObjectRefBody(scalarData), context, declaredType, false)
                         : null);
