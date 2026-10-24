@@ -98,6 +98,14 @@ assert an uncontrolled scene starts native music before trusting a stopped scene
 absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
 uses both the no-control case and actual presented requests.
 
+Final PCM capture belongs to the current presentation producer. A Stageplay native
+shot replacement retires that producer and its capture lease even when the audio
+manager survives (2026-10-24, Day Off corrections, base `81f25c89f`). Follow the
+exporter's close/reopen capture sequence at the boundary. Pair final-window PCM
+energy with the active source identity and both driver/sequencer fade state;
+nonzero samples alone can belong to the previous song. The audio lifecycle matrix
+checks the last second after entry cues at 0/8/40, rather than only request lists.
+
 A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
 native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
 so down input cannot establish the Duck animation that native spindash reads.

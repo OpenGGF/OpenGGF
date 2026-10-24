@@ -71,6 +71,20 @@ class TestStageplayScriptCompiler {
                 """);
     }
 
+    @Test void namedMusicAndNativeNumbersCompileToTheSameCue() throws Exception {
+        var named = recipe();
+        var cue = shot(named,0).putArray("audio").addObject().put("frame",0).put("kind","ROM_MUSIC")
+                .put("music","EMERALD_HILL");
+        var numeric = named.deepCopy();
+        ((ObjectNode)shot(numeric,0).path("audio").get(0)).remove("music");
+        ((ObjectNode)shot(numeric,0).path("audio").get(0)).put("soundId",130);
+        assertEquals(compile(numeric),assertDoesNotThrow(() -> compile(named)));
+        cue.put("soundId",131);
+        assertTrue(assertThrows(IOException.class,() -> compile(named)).getMessage().contains("either"));
+        cue.remove("soundId"); cue.put("music","NOT_A_SONG");
+        assertTrue(assertThrows(IOException.class,() -> compile(named)).getMessage().contains("Unknown"));
+    }
+
     @Test void rejectsRomCueGainDuringCompilation() throws Exception {
         for (String kind : List.of("ROM_MUSIC", "ROM_SFX")) {
             var script = recipe();

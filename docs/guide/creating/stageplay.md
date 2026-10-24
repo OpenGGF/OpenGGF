@@ -188,8 +188,9 @@ existing font; it does not execute custom glyph-effect code.
 
 ## Audio and files
 
-Audio cues use `ROM_MUSIC`, `ROM_SFX`, `VOICE` or `MUSIC_STOP`. ROM sound IDs are
-decimal native IDs; for example, Sonic 2 Emerald Hill music is 129 and Jump is
+Audio cues use `ROM_MUSIC`, `ROM_SFX`, `VOICE` or `MUSIC_STOP`. Choose music by
+name in either editor; F2 accepts the exact native number. ROM sound IDs are
+decimal native IDs; for example, Sonic 2 Emerald Hill music is 130 and Jump is
 160. ROM cues use gain 1. Voice cues support WAV and Ogg, relative to the scene's
 folder, with gain from 0 to 1. Copy the audio under that folder, then enter its
 relative path. Each encoded clip is bounded; the scene's decoded voice cache is

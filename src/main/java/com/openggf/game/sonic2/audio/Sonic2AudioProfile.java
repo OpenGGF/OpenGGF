@@ -5,6 +5,8 @@ import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
 import com.openggf.game.audio.SegaPcmRomReader;
+import com.openggf.game.audio.RomSoundCatalog;
+import com.openggf.game.audio.RomSoundCatalog.Entry;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.session.SmpsPhysicalPolicy;
@@ -13,6 +15,7 @@ import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -20,6 +23,15 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class Sonic2AudioProfile extends AbstractAudioProfile {
+    private static final RomSoundCatalog.Catalog NATIVE_SOUNDS = new RomSoundCatalog.Catalog(
+            Arrays.stream(Sonic2Music.values()).map(music ->
+                    new Entry(music.name(), music.displayName, music.nativeId, music.id)).toList(),
+            Arrays.stream(Sonic2Sfx.values()).map(sfx ->
+                    new Entry(sfx.name(), sfx.displayName, sfx.id, sfx.id)).toList());
+
+    /** Native request IDs and names, independent of ROM loading and live playback. */
+    public static RomSoundCatalog.Catalog nativeSounds() { return NATIVE_SOUNDS; }
+
 
     private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
 

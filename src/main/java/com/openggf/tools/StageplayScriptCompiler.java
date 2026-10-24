@@ -21,6 +21,8 @@ import java.util.Set;
  */
 public final class StageplayScriptCompiler {
     public static final int VERSION = 7;
+    /** Shared authoring default for new editor and screenplay dialogue lines. */
+    public static final int DEFAULT_DIALOGUE_Y = 12;
     public static final int MAX_BYTES = 32 * 1024 * 1024;
     private static final ObjectMapper JSON =
             new ObjectMapper(
@@ -686,7 +688,7 @@ public final class StageplayScriptCompiler {
             defaults(cue, "skinId", "");
             defaults(cue, "typerId", "");
             defaults(cue, "x", 12);
-            defaults(cue, "y", 12);
+            defaults(cue, "y", DEFAULT_DIALOGUE_Y);
             defaults(cue, "width", width - 24);
             defaults(cue, "height", Math.min(70, height - 24));
             defaults(cue, "portraitAsset", "");
@@ -775,7 +777,7 @@ public final class StageplayScriptCompiler {
                                                 };
                                         case "audio" ->
                                                 new String[] {
-                                                    "id", "frame", "kind", "gameId", "soundId",
+                                                    "id", "frame", "kind", "gameId", "soundId", "music",
                                                     "asset", "gain"
                                                 };
                                         default ->
@@ -801,6 +803,16 @@ public final class StageplayScriptCompiler {
                     throw new IOException("Audio cue lies outside its shot");
                 event.put("frame", offset + frame);
                 defaults(event, "gameId", gameId);
+                if (event.has("music")) {
+                    if (!text(event,"kind").equals("ROM_MUSIC"))
+                        throw new IOException("music is available only for ROM_MUSIC cues");
+                    if (event.has("soundId")) throw new IOException("Choose either music or soundId");
+                    try {
+                        event.put("soundId",com.openggf.game.audio.RomSoundCatalog.music(
+                                text(event,"gameId"),text(event,"music")).soundId());
+                    } catch (IllegalArgumentException failure) { throw new IOException(failure.getMessage(),failure); }
+                    event.remove("music");
+                }
                 defaults(event, "soundId", 0);
                 defaults(event, "asset", "");
                 defaults(event, "gain", 1);

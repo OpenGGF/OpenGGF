@@ -237,6 +237,27 @@ class TestStageplayRouteWorkspace {
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
 
+    @Test void planningStatusUsesTheCurrentPlanRouteCommandName() {
+        assertTrue(start(new Host()).status().contains("Reopen Plan route"));
+    }
+
+    @Test void routeDetailsShowsTheDiagnosisOnceAndRetainsWorkCounts() {
+        var host = new Host();
+        var workspace = start(host);
+        String diagnosis = "Walk cannot reach this goal; try Run.";
+        var result = StageplayRouteResult.failure(StageplayRouteResult.Status.BUDGET_EXCEEDED,
+                diagnosis, "0".repeat(64), host.request, 1024, 26686,
+                List.of(new StageplayRoutePoint(0, 100, 200, true)));
+        host.update = new StageplayRouteJob.Update(1, StageplayRouteJob.Phase.FAILED, diagnosis, result);
+        workspace.tick(new InputHandler());
+        workspace.invoke(ROUTE_HELPER);
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+        assertTrue(workspace.menu().detailsText().contains("1 samples, 1024 nodes, 26686 ticks"));
+        workspace.menu().close();
+        workspace.directionDetails();
+        assertEquals(1, workspace.menu().detailsText().split(java.util.regex.Pattern.quote(diagnosis), -1).length - 1);
+    }
+
     private static void choose(StageplayWorkspace workspace,int index){
         var input=new InputHandler();for(int i=0;i<index;i++)press(workspace,input,GLFW_KEY_DOWN);press(workspace,input,GLFW_KEY_ENTER);
     }

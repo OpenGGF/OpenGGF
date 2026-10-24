@@ -24,7 +24,11 @@ editors and can be registered by a mod.
   run of an older jar does not validate current sources. Java 25 and FFmpeg are required
   for a movie. `help` lists commands; `init --out PATH` produces a starter screenplay.
 - Discover existing ROM paths. `catalog --game s2 --rom PATH --character tails` reports
-  ROM SHA-1, zones, starting coordinates, music IDs and available animation scripts.
+  ROM SHA-1, zones, starting coordinates, native ROM music IDs, music names and
+  available animation scripts. Screenplay music uses a name such as
+  `"music":"EMERALD_HILL"` or an exact native `soundId` (S2 EHZ is 130 / `$82`),
+  rather than engine numbering. The S3K catalog uses the combined soundtrack,
+  with S&K credits at 220 / `$DC`.
   Use `--zone N --act N` to test a particular detached set and obtain its bounds.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
@@ -113,7 +117,8 @@ Level Position rows share a
 picker: HUD Enter opens it, arrows/d-pad move with held acceleration, Shift/right
 bumper moves one pixel, S/controller X toggles floor snap, Enter confirms fields,
 Esc cancels; F2 preserves numeric entry. Desktop Pick opens canvas pointing; click
-confirms and drag/scroll pans. Route snapping defaults on. A yellow floor line and
+confirms and drag/scroll pans. Placement pickers default to snap on; camera framing stays unsnapped. A yellow
+floor line and
 dashed vertical guide use the existing prepared preview ground query in both
 editors, never per-move worker/JVM launches.
 Confirming a pick writes only form values; Apply performs the normal undoable edit.
@@ -137,7 +142,9 @@ failures rather than hiding a terrain-forced speed violation. A simple walk uses
 one destination, with penalised jumps only for terrain that needs them. Failed
 direct steering enables penalised 64/128-pixel run-up detours; ordinary routes
 retain no stray goals. Speed advice names the observed stall X and requires a
-successful matched Run terrain probe; budget exhaustion alone supplies no advice. Walking
+successful matched Run terrain probe. Its bounded diagnostic horizon follows the
+continuous shot; when it needs longer than the attempted window, advice also asks
+for more Attempt frames. Budget exhaustion alone supplies no advice. Walking
 objects keep their visual mover. Multi-waypoint directing remains deferred.
 For basic player shot-entry planning, use `route --scene PATH --actor ID --frame N --x X
 --y Y --out NEW.stageplay` with supplied ROM flags. The bounded helper emits

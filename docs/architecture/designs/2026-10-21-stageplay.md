@@ -435,6 +435,11 @@ failures. Repeating stop cues at a fitted frame or filtering exported PCM was
 rejected: Sonic2LevelInitProfile's scheduled Level_PlayBgm publication is the owner,
 through LevelManager.publishPreparedLevelMusic. A counted audio-owned playlist
 scope gates that publisher while Stageplay owns ROM_MUSIC/MUSIC_STOP control.
+The [Day Off correction](../audits/2026-10-24-stageplay-dayoff-bugs.md) also
+establishes automatic-entry ownership before native loading: a deferred entry
+fade/stop must never be queued against the authored song. Entry bookkeeping and
+ordinary effects still execute. Cue numbers now use native ROM request IDs;
+game-owned audio metadata translates historical engine IDs and supplies names.
 Direct cues/SFX retain their existing routes; native scheduler timing is unchanged.
 The scope starts at forward playback or restored playback ownership, follows native
 producer changes, and is released on stop, close or abandonment, independently of

@@ -53,6 +53,18 @@ class TestStageplayTool {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"s1,sonic1.rom.path,129", "s2,sonic2.rom.path,130", "s3k,s3k.rom.path,1"})
+    void catalogReportsNativeMusicNumbers(String game, String property, int expected) throws Exception {
+        String rom = System.getProperty(property);
+        org.junit.jupiter.api.Assumptions.assumeTrue(rom != null,"Explicit catalog ROM path required");
+        var result = execute("catalog","--game",game,"--rom",rom);
+        assertEquals(0,result.status(),result.json().toString());
+        assertEquals(expected,result.json().path("result").path("sets").get(0).path("musicId").asInt());
+        assertTrue(java.util.stream.StreamSupport.stream(result.json().path("result").path("music").spliterator(),false)
+                .anyMatch(entry -> entry.path("soundId").asInt()==expected && !entry.path("name").asText().isBlank()));
+    }
+
     @Test void groundIsQueryOnlyAndUsesTypedContextFailures() throws Exception {
         Path queries = directory.resolve("ground.json");
         java.nio.file.Files.writeString(queries,"""

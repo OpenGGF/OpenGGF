@@ -220,7 +220,15 @@ public final class StageplayLiveWorld implements AutoCloseable {
             services.graphics().bindRuntimeManagedReferences(owned.getCamera(), owned.getFadeManager());
             var team = GameplayTeamBootstrap.registerActiveTeam(module, owned.getSpriteManager(), config);
             var nativeCast = new ArrayList<AbstractPlayableSprite>(); nativeCast.add(team.mainSprite()); nativeCast.addAll(team.sidekicks());
-            owned.getLevelManager().loadZoneAndAct(set.zone(), set.act());
+            // A soundtrack is authored for the whole scene. Native load presentation can
+            // queue fades before StageplayAudio starts, and dispatch them after its entry cue.
+            // Hold the shared entry policy before submission; all game-specific housekeeping
+            // and ordinary native effects still execute, and no frame or game is singled out.
+            boolean soundtrack = document.audio().stream().anyMatch(cue ->
+                    cue.kind() == AudioKind.ROM_MUSIC || cue.kind() == AudioKind.MUSIC_STOP);
+            try (var music = soundtrack ? com.openggf.audio.LevelMusicAccess.suppressAutomaticEntry(services.audio()) : null) {
+                owned.getLevelManager().loadZoneAndAct(set.zone(), set.act());
+            }
             originalObjects = module instanceof StageplayWorldModule stageplay ? stageplay.originalObjects()
                     : List.copyOf(owned.getLevelManager().getCurrentLevel().getObjects());
             owned.getLevelManager().skipPendingInitialTitleCardPresentation();
@@ -543,7 +551,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             var riding = owned.getLevelManager().getObjectManager().getRidingObject(sprite);
             actors.add(new LiveActor(p.actor.id(), p.rings, p.ringDelta, sprite.isHurt(), sprite.getDead(), sprite.isOnObject(),
                     riding == null || riding.getSpawn() == null ? -1 : riding.getSpawn().layoutIndex(),
-                    sprite.getSecondaryAbility().name(), sprite.getDoubleJumpFlag(), sprite.getDoubleJumpProperty() & 255,
+                    reportedAbility(sprite), sprite.getDoubleJumpFlag(), sprite.getDoubleJumpProperty() & 255,
                     sprite.getAnimationId(), sprite.getMappingFrame(), p.targetStatus));
         }
         var nativeObjects = owned.getLevelManager().getObjectManager().getActiveObjects().stream().filter(o -> o.getSpawn() != null)
@@ -577,6 +585,15 @@ public final class StageplayLiveWorld implements AutoCloseable {
         var camera = boundedCamera(new CameraPose(base.x() + shakeX, base.y() + shakeY, zoom));
         return new Frame(cursor, poses, camera, authored.captions(), source, authored.transition(), base, authored.dialogue(), samples,
                 new WorldSample(owned.getLevelManager().getFrameCounter(), owned.getLevelManager().getObjectManager().getVblaCounter(), actors, objects, rings, events));
+    }
+
+    private static String reportedAbility(AbstractPlayableSprite sprite) {
+        var capability = sprite.getGameRules().playerCapability();
+        return switch (sprite.getSecondaryAbility()) {
+            case INSTA_SHIELD -> capability.instaShieldEnabled() ? "INSTA_SHIELD" : "NONE";
+            case FLY -> capability.tailsFlightEnabled() ? "FLY" : "NONE";
+            default -> sprite.getSecondaryAbility().name();
+        };
     }
 
     /** Clamp evaluated framing to loaded level bounds, independently of gameplay-owned arena locks. */

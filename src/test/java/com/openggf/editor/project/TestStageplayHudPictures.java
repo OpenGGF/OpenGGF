@@ -48,6 +48,21 @@ import static org.lwjgl.opengl.GL11.*;
  */
 @Isolated
 class TestStageplayHudPictures {
+    @Test void captureDayoffAudioCue() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        try (var boot = new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true); boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try (var renderer = new EditorProjectMenuRenderer()) {
+                var scene = StageplayDocument.empty("s2",0,0,0,500,320,224).withAudio(List.of(
+                        new StageplayDocument.AudioCue("music",0,StageplayDocument.AudioKind.ROM_MUSIC,"s2",130,"",1)));
+                var workspace = new StageplayWorkspace(() -> scene); workspace.activate();
+                workspace.invoke(StageplayWorkspace.Action.AUDIO); workspace.menu().runAction(1); workspace.menu().runAction(0);
+                renderObjectMenu(renderer,workspace); capture("dayoff-audio",1280,720);
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
     @Test
     void captureReadabilityCheckpoint() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
@@ -128,7 +143,7 @@ class TestStageplayHudPictures {
                      "camera":[{"frame":0,"x":0,"y":500}],"actors":{"hero":[
                      {"frame":0,"x":128,"y":648,"animation":5},{"frame":30,"x":128,"y":648,"animation":5},
                      {"frame":90,"x":256,"y":648,"animation":5},{"frame":119,"x":256,"y":648,"animation":5}]},
-                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":129}]}]}
+                     "audio":[{"frame":0,"kind":"ROM_MUSIC","gameId":"s2","soundId":130}]}]}
                     """);
             var workspace = new StageplayWorkspace(() -> StageplayDocument.empty("s2",0,0,0,500,320,224));
             workspace.activate(); workspace.invoke(StageplayWorkspace.Action.IMPORT_SCREENPLAY);
@@ -243,7 +258,7 @@ class TestStageplayHudPictures {
                     .withSceneChanges(List.of(new StageplayDocument.SceneChange("next-shot",240,
                             new StageplayDocument.SetSource("s2",0,1,"",""),StageplayDocument.Transition.FADE_BLACK,30)))
                     .withCaptions(List.of(new StageplayDocument.Caption("greeting", 0, 180, "Ready for another adventure?", 12, 190, -1)))
-                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 129, "", 1)))
+                    .withAudio(List.of(new StageplayDocument.AudioCue("music", 0, StageplayDocument.AudioKind.ROM_MUSIC, "s2", 130, "", 1)))
                         .withDialogueTypers(List.of(new StageplayDocument.DialogueTyper("conversation",3,8,0)))
                         .withDialogueSkins(List.of(new StageplayDocument.DialogueSkin("warm",0xfff5f0df,0xffffcf66,
                                 0xff172338,0xffa8b8cf,6,"",0,true)))

@@ -55,7 +55,7 @@ class TestStageplayLivePlayback {
                 .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(
                         new ActorKey(0,144,640,5,-1, Facing.RIGHT,true,1,Interpolation.LINEAR),
                         new ActorKey(2,176,640,5,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
-                .withAudio(List.of(new AudioCue("music",0,AudioKind.ROM_MUSIC,"s2",129,"",1),
+                .withAudio(List.of(new AudioCue("music",0,AudioKind.ROM_MUSIC,"s2",130,"",1),
                         new AudioCue("ring",1,AudioKind.ROM_SFX,"s2",181,"",1)));
         var playback=new StageplayPlayback(scene,"hero",StageplayNativeBinding.FinishMode.RESTORE_ENTRY);
         try(var boot=new HeadlessGameBoot(320,224)) {

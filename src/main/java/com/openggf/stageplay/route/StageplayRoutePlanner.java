@@ -362,40 +362,58 @@ public final class StageplayRoutePlanner {
             return searchPass(document, request, probe, cancelled, deadline, false);
         var entry = probe.capture();
         boolean walk = request.motion().travelSpeed() == TravelSpeed.WALK;
-        int reserveNodes = walk ? request.maxNodes()/4 : 0;
-        int reserveTicks = walk ? request.maxTicks()/4 : 0;
+        int diagnosticEnd = Math.min(StageplayRouteContract.shotEnd(document, request.startFrame()),
+                request.startFrame() + 3600);
+        var actor = document.actors().stream().filter(a -> a.id().equals(request.actorId())).findFirst();
+        if (actor.isPresent()) for (var key : actor.get().keys())
+            if (key.frame() > request.startFrame()) diagnosticEnd = Math.min(diagnosticEnd, key.frame());
+        int diagnosticFrames = Math.max(request.maxFrames(), diagnosticEnd - request.startFrame());
+        boolean diagnose = walk || diagnosticFrames > request.maxFrames();
         var direct = searchPass(document, budget(request, request.maxNodes()/3, request.maxTicks()/3,
                 request.motion()), probe, cancelled, deadline, false);
         if (direct.found() || direct.status() == CANCELLED || direct.status() == UNSUPPORTED) return direct;
         if (cancelled.getAsBoolean() || System.nanoTime() >= deadline) return direct;
+        int nodes = direct.nodes(), ticks = direct.ticks();
+        String advice = "";
+        // Spend the diagnostic reservation before detours, under the same total work/deadline.
+        // Its horizon follows the continuous shot, not the attempted performance's frame limit.
+        // A successful longer rehearsal is evidence for advice only, never an applicable patch.
+        if (diagnose) {
+            probe.restore(entry);
+            var motion = new RouteMotion(request.motion().startingAction(), TravelSpeed.RUN,
+                    request.motion().endingAction(), request.motion().endingFacing());
+            var diagnostic = new StageplayRouteRequest(request.actorId(), request.startFrame(),
+                    request.targetX(), request.targetY(), diagnosticFrames, request.maxNodes()/4,
+                    request.maxTicks()/4, request.maxMillis(), request.urgency(), null, request.objectSpeed(), motion);
+            var run = searchPass(document, diagnostic, probe, cancelled, deadline, false);
+            nodes += run.nodes(); ticks += run.ticks();
+            if (run.found() && !direct.path().isEmpty()) {
+                boolean longer = run.commands().stream().anyMatch(c ->
+                        c.frame() >= request.startFrame() + request.maxFrames());
+                if (walk || longer) {
+                    var stall = direct.path().getLast();
+                    advice = "; terrain near x=" + Math.round(stall.x()) + ": needs "
+                            + (walk ? "Run" : "") + (walk && longer ? " and " : "")
+                            + (longer ? "more Attempt frames" : "")
+                            + " (matched native-terrain probe reaches and settles)";
+                }
+            }
+            if (run.status() == CANCELLED) return new StageplayRouteProposal(CANCELLED,
+                    "Route diagnosis cancelled", List.of(), direct.path(), nodes, ticks);
+        }
         probe.restore(entry);
-        var detour = searchPass(document, budget(request, request.maxNodes()-direct.nodes()-reserveNodes,
-                request.maxTicks()-direct.ticks()-reserveTicks, request.motion()), probe, cancelled, deadline, true);
-        int nodes = direct.nodes()+detour.nodes(), ticks = direct.ticks()+detour.ticks();
+        var detour = searchPass(document, budget(request, request.maxNodes()-nodes,
+                request.maxTicks()-ticks, request.motion()), probe, cancelled, deadline, true);
+        nodes += detour.nodes(); ticks += detour.ticks();
         if (detour.found()) return new StageplayRouteProposal(null, detour.message(), detour.commands(),
                 detour.path(), nodes, ticks);
         if (detour.status() == CANCELLED) return new StageplayRouteProposal(detour.status(), detour.message(),
                 List.of(), detour.path(), nodes, ticks);
-        String advice = "";
-        // Diagnose speed only with a successful matched native-terrain Run search.
-        // A wall, cancellation or tiny budget must never receive speculative speed advice.
-        if (walk && nodes < request.maxNodes() && ticks < request.maxTicks()
-                && !cancelled.getAsBoolean() && System.nanoTime() < deadline) {
-            probe.restore(entry);
-            var motion = new RouteMotion(request.motion().startingAction(), TravelSpeed.RUN,
-                    request.motion().endingAction(), request.motion().endingFacing());
-            var run = searchPass(document, budget(request, request.maxNodes()-nodes,
-                    request.maxTicks()-ticks, motion), probe, cancelled, deadline, false);
-            nodes += run.nodes(); ticks += run.ticks();
-            if (run.found() && !direct.path().isEmpty()) {
-                var stall = direct.path().getLast();
-                advice = "; terrain near x=" + Math.round(stall.x())
-                        + ": needs Run (matched native-terrain probe reaches and settles)";
-            }
-            if (run.status() == CANCELLED) return new StageplayRouteProposal(CANCELLED,
-                    "Route speed diagnosis cancelled", List.of(), detour.path(), nodes, ticks);
-        }
-        return new StageplayRouteProposal(detour.status(), detour.message()+advice,
+        String explanation = detour.message();
+        if (!direct.message().equals(explanation) && (direct.message().contains("more frames")
+                || direct.message().contains("Starting actor") || direct.message().contains("Spindash")))
+            explanation += "; " + direct.message();
+        return new StageplayRouteProposal(detour.status(), explanation + advice,
                 List.of(), detour.path(), nodes, ticks);
     }
 

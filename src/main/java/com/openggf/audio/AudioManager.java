@@ -80,6 +80,7 @@ public class AudioManager implements MusicRestoreSink {
     private boolean ringLeft = true;
     // Director-owned playlist admission survives producer/shot replacement until its scope closes.
     int levelMusicControls;
+    int levelEntryMusicControls;
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
     // Internal world ownership never replaces the single external diagnostic observer.
     AudioMutatorAccess.Binding mutatorBinding;
@@ -2228,6 +2229,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void playMusic(int musicId) {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(musicId >= 0xE0 ? AudioMutatorAccess.Kind.COMMAND : AudioMutatorAccess.Kind.MUSIC, musicId);
         if (suppressingRewindReplay()) {
             return;
@@ -2659,8 +2661,9 @@ public class AudioManager implements MusicRestoreSink {
             ensureShadowPresentation();
             if (shadowRequestService != null) {
                 requestObserver.onRequested(sfxRequestClass(sfxId), sfxId);
-                shadowRequestService.submitSound(
-                        sfxId, commandForNativeRequest(source, sfxId, pitch));
+                var command = commandForNativeRequest(source, sfxId, pitch);
+                if (LevelMusicAccess.allowsEntryRequest(this, command))
+                    shadowRequestService.submitSound(sfxId, command);
                 return true;
             }
         }
@@ -3387,6 +3390,7 @@ public class AudioManager implements MusicRestoreSink {
      * Used when exiting special stages or changing game modes.
      */
     public void stopMusic() {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(AudioMutatorAccess.Kind.STOP, 0);
         if (suppressingRewindReplay()) {
             return;
@@ -3458,6 +3462,7 @@ public class AudioManager implements MusicRestoreSink {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void fadeOutMusic(int steps, int delay) {
+        if (!LevelMusicAccess.allowsEntryMusic(this)) return;
         mutatorMusicIntent(AudioMutatorAccess.Kind.FADE, 0);
         if (suppressingRewindReplay()) {
             return;

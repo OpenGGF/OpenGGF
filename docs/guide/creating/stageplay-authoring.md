@@ -37,7 +37,9 @@ behavior without a window or audio playback. Every scene uses one `LIVE` native
 world, including actors, objects, rings and events in `sample.world`. To stage a
 terrain-only picture, author a `CLEAR_OBJECTS` world command at shot frame zero;
 it clears object roots and their graphs, while rings remain separately owned.
-Simulation reports actual positions, velocity, grounded state and movement status,
+Simulation reports actual positions, velocity, grounded state and movement status.
+Reported secondary abilities use each actor's own game capability, including donors;
+Sonic 1 Sonic has no Insta-Shield and Sonic 2 Tails has no flight. Simulation keeps
 advancing every native tick even with `--every N`. Shot spawns and cuts remain
 authored; these observations do not alone prove a continuous cold route or ROM
 parity. Keep bulk timelines beside the movie, distinct from normal gameplay CSV.
@@ -50,7 +52,8 @@ The render command accepts `--s1-rom`, `--s2-rom`, `--s3k-rom`, optional `--rom`
 `--game` for the boot ROM, `--scale` (1..8), `--ffmpeg`, and `--staging-dir` (empty or
 new owned staging directory). It produces lossless FFV1/FLAC MKV at the document's
 60 Hz cadence using offline audio. Output dimensions are the scene dimensions multiplied by `--scale`, using integer
-nearest-neighbour scaling (the default is 1).
+nearest-neighbour scaling (the default is 1). A `--ffmpeg` path containing a directory
+is relative to the caller's working directory; a bare name is found on PATH.
 Linux uses surfaceless EGL with desktop display variables removed. Other platforms
 use the capture host's hidden native context; macOS uses Java's first thread.
 
@@ -152,7 +155,7 @@ A shot is an explicit cut even when it reuses the preceding set.
 | Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,facing:RIGHT,visible:true,scale:1`; interpolation defaults to `HOLD` for puppets, `LINEAR` for Poser actors |
 | Dialogue | `startFrame,endFrame,text` and `speakerActor` or `speakerName`; optional profiles, timing and panel fields below |
 | Caption | `startFrame,endFrame,text`; `x:12,y:12,argb:-1`, optional `id` |
-| Audio | `frame,kind`; `gameId` defaults to the shot's game, `soundId:0,asset:"",gain:1`, optional `id` |
+| Audio | `frame,kind`; `gameId` defaults to the shot's game, `music` (named music) or native `soundId`, `asset:"",gain:1`, optional `id` |
 | Camera effect | `startFrame,endFrame,amplitudeX,amplitudeY,frequency`; `seed:0`, optional `id` |
 | Incoming transition | `kind` (`CUT`, `FADE_BLACK`, `FADE_WHITE`, `WIPE_LEFT`, `WIPE_RIGHT`), `durationFrames` |
 
@@ -161,9 +164,21 @@ nonnegative values hold a mapping frame. Positions use sprite origins. Captions 
 screen-space pixels. Audio kinds are `ROM_MUSIC`, `ROM_SFX`, `VOICE`, `MUSIC_STOP`;
 voices reference bounded WAV/Ogg files beside/below the scene. Relative resource scenes
 must compile beside the screenplay to preserve their root.
+ROM music and SFX numbers are the shipped game's sound-request IDs, in decimal.
+For music, use either `"music":"EMERALD_HILL"` or `"soundId":130` for Sonic 2's
+Emerald Hill (`$82`); the compiler rejects both together. Names and display titles
+are case-insensitive. `catalog` lists names, native IDs and each set's native music
+ID, and both editors offer named choices with the native hexadecimal ID. F2 retains
+exact decimal entry; screenplay export retains precise native numbers. Sonic 1's
+music numbers already match the ROM. Sonic 3 & Knuckles uses the combined game's
+soundtrack and native `$DC` (220) for S&K credits; `$33` is the right-ring effect.
+Native `$2E` (`MINIBOSS_S3`, the S3 slot) plays the locked-on driver's S&K
+miniboss arrangement. Engine-only S3-driver selector numbers are not native sound IDs.
 ROM music and SFX cues require `gain:1`; gain is available only for voice clips.
 Compilation, canonical validation and editor loading reject other ROM gains with
 `ROM cue gain must be 1; gain is available for voice clips`.
+
+New dialogue lines share the screenplay compiler's top margin in both editors.
 
 An absent transition means `CUT` with duration zero. Non-cut transitions last 2..600
 frames and straddle the incoming shot's start: the set changes at the fully covered
@@ -472,6 +487,9 @@ using the matching `catalog` music ID. A scene containing `ROM_MUSIC` or
 `MUSIC_STOP` owns automatic level-playlist admission during playback, including deferred
 level-entry and title-card playlist requests. Validation/preparation alone does
 not claim music ownership.
+Native load presentation runs under the same entry music policy before it can
+queue a fade or stop. This protects entry-frame cues from deferred controls while
+preserving native entry bookkeeping and ordinary sound effects in every game.
 A frame-zero `MUSIC_STOP` keeps later level music silent; an authored music cue
 keeps its track. Seeking and shot changes retain that ownership; Stop/close
 releases it. Scenes with neither music kind retain native playlist behavior.
@@ -686,8 +704,9 @@ Level positions have an in-level picker. In the HUD, press **Enter** on **Positi
 (or **Column** in Place on floor). The form hides while a yellow crosshair and
 coordinate tag mark the point. Arrows or the controller d-pad move it, accelerating
 while held; **Shift** (controller right bumper) gives one-pixel movement. The camera
-follows across the level. **S** (controller X) toggles floor snapping; route destinations
-start with snapping on. A yellow floor line and dashed vertical guide mark the
+follows across the level. **S** (controller X) toggles floor snapping; player and object placement
+pickers, including route destinations, start with snapping on. Camera framing
+starts unsnapped. A yellow floor line and dashed vertical guide mark the
 queried floor below the cursor in both editors.
 **Enter** confirms the field values and restores the form; **Esc** cancels. **F2**
 opens numeric entry instead. The picker changes no scene data until the form's
@@ -820,7 +839,14 @@ All Walk endings reserve native ground/air acceleration headroom. Facing taps ac
 subpixel nudge. Direct steering is tried first; only failure enables penalised
 64/128-pixel back-up/run-up goals. Consecutive identical goals are merged.
 A failed Walk search reports terrain near the observed stall X as needing Run
-only when a matched native-terrain Run probe reaches and settles. Generic budget
+only when a matched native-terrain Run probe reaches and settles. Diagnostic work
+runs before detours within the same total node/tick/time limits. Its frame horizon
+uses the continuous shot and next actor key, capped at the route's maximum horizon,
+rather than inheriting the requested Attempt frames. If that rehearsal needs a
+longer window, advice says that more Attempt frames are needed as well. Diagnostic
+commands never become an applicable route. Specific settling, final-facing, landing
+and charge explanations remain in F1 instead of being replaced by a generic limit.
+Generic budget
 or wall failures receive no speculative speed advice; Spindash is never guessed.
 This terrain-only diagnostic is not cold verification through live objects/events. Only a cold successful replay receives VERIFIED.
 

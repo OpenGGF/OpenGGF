@@ -320,7 +320,7 @@ final class StageplayHud implements com.openggf.stageplay.editor.StageplayRouteO
             c.rect(x,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Walk",x+10,y+14,Size.SMALL,TEXT_DIM,1);
             c.rect(x+60,y+14,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.AIR,1);c.text("Air",x+70,y+14,Size.SMALL,TEXT_DIM,1);
             c.rect(x,y+26,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.GROUND,1);c.text("Start",x+10,y+26,Size.SMALL,TEXT_DIM,1);
-            c.rect(x+60,y+26,6,6,com.openggf.stageplay.editor.StageplayRouteOverlay.WHITE,1);c.text("Goal",x+70,y+26,Size.SMALL,TEXT_DIM,1);
+            c.rect(x+60,y+26,6,6,route.goalColor(),1);c.text("Goal",x+70,y+26,Size.SMALL,TEXT_DIM,1);
             c.rect(x,y+37,6,6,route.applied()?0xFFFFFF:com.openggf.stageplay.editor.StageplayRouteOverlay.FAILURE,1);
             c.text(route.applied() ? "Actual" : "Stopped", x+10, y + 37, Size.SMALL, TEXT_DIM, 1);
             c.text("F1 Commands / Direction details",x,y+50,Size.SMALL,TEXT_FAINT,1);

@@ -47,6 +47,47 @@ class TestStageplayPositionPicker {
             }
         });w.activate();w.selectActor("hero");w.invoke(StageplayWorkspace.Action.ROUTE_HELPER);return w;
     }
+    @Test void firstActorSnapsUsingTheCharacterBeingAddedRatherThanAnExistingSelection() {
+        var query = new java.util.concurrent.atomic.AtomicReference<StageplayGround.Query>();
+        var w = new StageplayWorkspace(new StageplayWorkspace.Host() {
+            public StageplayDocument initialDocument() { return StageplayDocument.empty("s2",0,0,0,0,320,224); }
+            public StageplayGround.Report ground(StageplayDocument d,Path root,int frame,StageplayGround.Batch batch) {
+                var q=batch.queries().getFirst(); query.set(q);
+                return new StageplayGround.Report(new StageplayGround.SceneFrame(d.set(),frame),List.of(
+                        new StageplayGround.Answer("picker",StageplayGround.Outcome.FOUND,List.of(
+                                new StageplayGround.Placement(q.x(),200,219,0,new StageplayGround.PlayerTerrainProposal(
+                                        StageplayGround.Foot.LEFT,0,9,19))),List.of(),false)),
+                        new StageplayGround.Work(10,0,1,StageplayGround.StopReason.NONE));
+            }
+        });
+        w.activate(); w.invoke(StageplayWorkspace.Action.ADD_ACTOR); w.menu().setValue("game","s3k");
+        w.menu().setValue("character","tails"); w.menu().pick("x");
+        assertTrue(w.positionPicker().snap()); w.pickPoint(100,150); w.confirmPositionPick();
+        assertEquals("200",w.menu().values().get("y"));
+        assertEquals("",query.get().cast()); assertEquals(new StageplayGround.Player("s3k","tails",0),query.get().performer());
+        assertTrue(w.controller().document().actors().isEmpty(),"Picking must not create the actor before Apply");
+    }
+
+    @Test void playerAndObjectPlacementPickersStartWithSnapEnabled() {
+        var w = workspace();
+        for (var action : List.of(StageplayWorkspace.Action.ADD_ACTOR)) {
+            w.invoke(action); w.menu().pick("x"); assertTrue(w.positionPicker().snap(),action.name());
+            w.pickPoint(160,205); w.confirmPositionPick(); assertEquals("220",w.menu().values().get("y"));
+        }
+        w.invoke(StageplayWorkspace.Action.PUPPET_ACTIONS); w.menu().runAction(8); w.menu().pick("x");
+        assertTrue(w.positionPicker().snap(),"Shot placement"); w.cancelPositionPick();
+        w.menu().showForm("Object key",List.of(
+                new com.openggf.editor.project.EditorProjectMenu.Field("frame","Frame","0",List.of()),
+                new com.openggf.editor.project.EditorProjectMenu.Field("facing","Facing","RIGHT",List.of()),
+                new com.openggf.editor.project.EditorProjectMenu.Field("mode","Mode","PUPPET",List.of()),
+                new com.openggf.editor.project.EditorProjectMenu.Field("delete","Delete","false",List.of()),
+                new com.openggf.editor.project.EditorProjectMenu.Field("x","X","160",List.of()),
+                new com.openggf.editor.project.EditorProjectMenu.Field("y","Y","205",List.of())),"Apply",v -> {});
+        w.menu().pick("x"); assertTrue(w.positionPicker().snap(),"Object placement"); w.cancelPositionPick();
+        w.invoke(StageplayWorkspace.Action.CAMERA_KEY); w.menu().runAction(0); w.menu().pick("x");
+        assertFalse(w.positionPicker().snap(),"Camera coordinates are deliberate framing");
+    }
+
     @Test void positionRowStartsPickerAndConfirmWritesOnlyTheFormWithCurrentFloor(){
         var w=workspace();var before=w.controller().document();var input=new InputHandler();
         press(w,input,GLFW_KEY_DOWN);press(w,input,GLFW_KEY_ENTER);

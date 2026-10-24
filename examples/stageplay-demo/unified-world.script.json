@@ -152,7 +152,7 @@
         {
           "frame": 0,
           "kind": "ROM_MUSIC",
-          "soundId": 129
+          "soundId": 130
         }
       ]
     },
@@ -274,7 +274,7 @@
         {
           "frame": 0,
           "kind": "ROM_MUSIC",
-          "soundId": 129
+          "soundId": 130
         }
       ],
       "transition": {
