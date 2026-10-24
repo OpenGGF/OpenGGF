@@ -1166,3 +1166,53 @@ Main fetch/fast-forward pull found no intervening upstream changes at this
 checkpoint. All parent jobs have completed. Documentation/policy checks, final
 integration, push and accounted-for cleanup remain delivery obligations. Later
 boss-inventory and donated-team work is outside these completed runs.
+
+### Seventh-loop transition and S1 fixture ownership
+
+The sixth loop was integrated and pushed as `591c679b39c61f162a839cde6baaedd387135bc4`.
+Its tree matches accepted `a286d527e`; the policy audit checked 14,593 entries.
+Remote develop was verified at the integration SHA. All seven fully merged owned
+worktrees and branches were removed after checking tracked/untracked content,
+generated configuration examples, setup links and retained test identities.
+The main checkout's four dirty submodules and five untracked user files remain
+untouched. No parent job or cleanup obligation remains from that wave.
+
+The seventh coordinator starts at that SHA in
+`.worktrees/ai-architecture-loop7-20261024`. Its first slice changes only tests
+and exact fixture accounting. Gargoyle render tests receive their recording
+ObjectRenderManager through supplied ObjectServices instead of reflecting into a
+session LevelManager. Their renderer also receives an explicitly constructed
+GraphicsManager, avoiding the convenience constructor's process fallback. Geyser
+checks use the existing named S1 fixture instead of manual engine/bootstrap and
+ambient session setup. All nine test identities and assertions remain; the
+lifecycle guard removes precisely those two setup keys, reaching 95 methods in
+94 files. No runtime implementation, API signature or architecture permission
+changes.
+
+On the first source delta, the two classes plus TestSingletonLifecycleGuard
+passed 17 distinct cases, zero failures/errors/skips. Admission took 20 seconds;
+Maven reported 90 seconds. A final inspection found the renderer convenience
+constructor still obtains process graphics; after supplying its own manager,
+both affected Gargoyle cases passed again, zero failures/errors/skips, with 40
+seconds admission and 25.033 seconds Maven execution. No test source changed
+while either request was queued or running. Exact identities were read from XML;
+six initial and two final XML/text reports were consumed and removed.
+
+Both commands used the absolute current main-checkout wrapper, Java 25, Lua 5.4,
+and unset DISPLAY, WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS. These
+are CPU argument/camera checks and do not require a native GL context or ROM:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestSonic1GargoyleObjectInstanceRender,TestSonic1LavaGeyserOutOfRange,TestSingletonLifecycleGuard' test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestSonic1GargoyleObjectInstanceRender' test -B
+```
+
+This evidence covers the fixture change only. The end-boss launch-history slice
+`c82d81f2d` has independent static review acceptance and awaits composition.
+The final-boss inventory work is still running. Donated-team candidate
+`fe60ed29a` is held for review corrections: sharing normal colors does not
+establish identical mod-main/follower water policy, and missing donor ROMs must
+abort their test invocation safely. Its original 93-case evidence does not
+qualify those pending corrections. Mutable donor-color rewind is a separate
+reproduction, with no runtime failure claimed yet. Parent combined validation,
+integration, push and cleanup remain outstanding for the seventh loop.
