@@ -2542,3 +2542,51 @@ supplies native state to gameplay. A dedicated R3 external revision preserves
 the tested six-file bytes, failed and successful input history, review response,
 commands and remaining publication limits. No merge, push or public launch is
 performed by this checkpoint.
+
+
+### Optional frontier assets and counted formats, 24 October 2026
+
+Added nine individually lazy USA views for Animal/3DPlant/ramp-booster data and
+a separate lazy FrontierArtBank for their three actual art sources. Existing
+opening load still eagerly reads exactly its original nine views and decodes
+only Ring/Mosqui; initialArtBank remains two bindings. The owner authenticates
+the retained immutable MMD, synchronizes private lazy caches and publishes only
+complete immutable derivatives. Native act/time indices preserve actual zero
+Animal base words and promise no art residency for other acts/periods.
+
+Unscripted counted mapping tables now have an explicit decodeStatic entry;
+the old animated entry still requires a script. Unscripted selection uses the
+native full unsigned oMapFrame byte, independently of the script's five-bit
+frame field (DrawObjects.DrawSprite, Object Functions.asm:333-335). This is not
+the bit-5 header-free StaticMap format. A separate exact-tail overload retains
+the ramp's11/21 unused source bytes after mapping frames8/9 without drawing or
+compacting them; unlisted frames retain strict body/alignment validation.
+The metadata is about native mapping indices, never gameplay frames/routes.
+
+Finite Nemesis bounds distinguish authored blob from actual reader bytes:
+Animals446/445, Plant392/393, Ramp678/677. Plant's required extra lookahead is
+the actual adjacent MMD byte80, not invented padding. Exact decoded capacities
+are640/896/2016 bytes. Bank association checks source/PLC row/VRAM/base word;
+surrounding gaps remain absent. No object dispatch, live PLC or resident-VRAM
+certificate is established by these bindings.
+
+Independent Opus decoder and Sol asset reviews found no P1/P2 in their frozen
+scopes. Root verified their advisories against code/native source, strengthened
+tail-key/unlisted-frame regressions, documented StaticMap distinction and added
+the full-byte unscripted frame boundary. A fresh asset owner first decodes its
+frontier bank after the media source has closed, checking real Plant bytes and
+repeat identity. Root44175 passed22 decoder/old-asset cases; then23823 passed13
+new-asset cases; final71286 passed16 affected decoder/retail cases (13+3), all
+zero failures/errors/skips. Java25.0.5.0.2 and actual media were inspected in all
+selected XML. These selections overlap and are not one aggregate suite.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectVisualAssets,TestCdR11aObjectRetailAssets' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+```
+
+The full ordinary byte-pointer range does not invent any additional source
+table or runtime admission. Roaming/hologram animals, solid FloatBlock,
+object-to-player effects and shared-world dispatch remain separate owners.
+Actual first Ring captures and their documented scroll/publication gap are
+unchanged by this asset/format work. Original frozen reports/source mirrors
+retain their reviewed hashes; root's small advisory followups are recorded here.

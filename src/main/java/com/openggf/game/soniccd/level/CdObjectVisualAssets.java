@@ -2,6 +2,7 @@ package com.openggf.game.soniccd.level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Finite CD object visual data, not an animator, DPLC owner or renderer.
@@ -37,16 +38,27 @@ public final class CdObjectVisualAssets {
     private final List<MappingFrame> mappingFrames;
     private final List<AnimationScript> animations;
 
-    private CdObjectVisualAssets(byte[] mappings, int frameCount, byte[] scripts, int animationCount, int artTileCount) {
-        if (frameCount < 1 || frameCount > 32 || animationCount < 1 || animationCount > 256
+    private CdObjectVisualAssets(byte[] mappings, int frameCount, byte[] scripts, int animationCount, int artTileCount,
+                                  Map<Integer, Integer> mappingTailBytes) {
+        // Script frame values have five bits; unscripted oMapFrame selection uses the full byte.
+        // DrawObjects.DrawSprite (Object Functions.asm:333-335) zero-extends that native byte.
+        int maximumFrames = animationCount == 0 ? 256 : 32;
+        if (frameCount < 1 || frameCount > maximumFrames || animationCount < 0 || animationCount > 256
                 || artTileCount < 1 || artTileCount > 2048) {
             throw new IllegalArgumentException("Object visual counts exceed the bounded native contract");
         }
+        var tails = Map.copyOf(mappingTailBytes);
+        for (var tail : tails.entrySet()) {
+            if (tail.getKey() < 0 || tail.getKey() >= frameCount || tail.getValue() < 0 || tail.getValue() > 0x7FFF) {
+                throw new IllegalArgumentException("Mapping tail declaration exceeds its bounded frame/include");
+            }
+        }
         this.mappings = table(mappings, frameCount);
-        this.animationTable = table(scripts, animationCount);
+        this.animationTable = animationCount == 0 ? CdAssetBytes.copyOf(new byte[0]) : table(scripts, animationCount);
         int[] mapOffsets = offsets(this.mappings, frameCount);
         var frames = new ArrayList<MappingFrame>();
-        for (int offset : mapOffsets) {
+        for (int frame = 0; frame < mapOffsets.length; frame++) {
+            int offset = mapOffsets[frame];
             int end = nextDistinct(mapOffsets, offset, this.mappings.length());
             int count = this.mappings.unsignedByte(offset);
             // Native SUBQ.B/BMI admits up to 128 pieces. Higher count bytes are unsupported here.
@@ -54,7 +66,11 @@ public final class CdObjectVisualAssets {
             if (count > 128 || length > end - offset) {
                 throw new IllegalArgumentException("Object mapping crosses its next distinct body or include end");
             }
-            trailingZero(this.mappings, offset + length, end);
+            Integer declaredTail = tails.get(frame);
+            if (declaredTail == null) trailingZero(this.mappings, offset + length, end);
+            else if (end - offset - length != declaredTail) {
+                throw new IllegalArgumentException("Declared mapping tail does not match its distinct-body extent");
+            }
             var pieces = new ArrayList<Piece>();
             for (int i = 0; i < count; i++) {
                 int at = offset + 1 + i * 5;
@@ -68,7 +84,7 @@ public final class CdObjectVisualAssets {
             frames.add(new MappingFrame(offset, pieces, this.mappings.slice(offset, length)));
         }
         mappingFrames = List.copyOf(frames);
-        int[] scriptOffsets = offsets(animationTable, animationCount);
+        int[] scriptOffsets = animationCount == 0 ? new int[0] : offsets(animationTable, animationCount);
         var parsedScripts = new ArrayList<AnimationScript>();
         for (int offset : scriptOffsets) {
             int end = nextDistinct(scriptOffsets, offset, animationTable.length());
@@ -104,7 +120,27 @@ public final class CdObjectVisualAssets {
     /** Pure component decoder for constructed format inputs; does not authenticate media or create an asset owner. */
     public static CdObjectVisualAssets decode(byte[] mappings, int frameCount, byte[] scripts,
                                                 int animationCount, int artTileCount) {
-        return new CdObjectVisualAssets(mappings, frameCount, scripts, animationCount, artTileCount);
+        return decode(mappings, frameCount, scripts, animationCount, artTileCount, Map.of());
+    }
+    /**
+     * Counted mapping bodies may retain explicitly declared, unconsumed source bytes.
+     * Keys are native mapping-frame indices; lengths must equal the full remaining
+     * extent before the next distinct body/include end. Those bytes stay in mappings(),
+     * never in pieces or the consumed MappingFrame.bytes view. Unlisted frames retain
+     * the strict body/zero-alignment rule. This metadata does not authenticate media.
+     */
+    public static CdObjectVisualAssets decode(byte[] mappings, int frameCount, byte[] scripts,
+                                                int animationCount, int artTileCount,
+                                                Map<Integer, Integer> mappingTailBytes) {
+        if (animationCount < 1) throw new IllegalArgumentException("Animated object visuals require a script");
+        return new CdObjectVisualAssets(mappings, frameCount, scripts, animationCount, artTileCount, mappingTailBytes);
+    }
+    /**
+     * Counted mapping table without animation scripts, as used by the 3D plant's init-selected frames.
+     * This is not the native bit-5 header-free single-piece StaticMap format.
+     */
+    public static CdObjectVisualAssets decodeStatic(byte[] mappings, int frameCount, int artTileCount) {
+        return new CdObjectVisualAssets(mappings, frameCount, new byte[0], 0, artTileCount, Map.of());
     }
     public CdAssetBytes mappings() { return mappings; }
     public CdAssetBytes animationTable() { return animationTable; }

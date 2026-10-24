@@ -5,11 +5,89 @@ import org.junit.jupiter.api.Test;
 import java.nio.ReadOnlyBufferException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Constructed format inputs only; these do not construct an authenticated object-asset owner. */
 class TestCdObjectVisualAssets {
+    @Test
+    void unscriptedMappingTableRetainsFramesWithoutInventingAnimation() {
+        byte[] maps = aliasMaps();
+        var data = CdObjectVisualAssets.decodeStatic(maps, 3, 14);
+        Arrays.fill(maps, (byte) 0);
+        assertEquals(List.of(12, 6, 12), data.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(0x180A, data.mappingFrames().get(1).pieces().getFirst().rawTileWord());
+        assertEquals(0, data.animationTable().length());
+        assertTrue(data.animations().isEmpty());
+        assertThrows(UnsupportedOperationException.class, () -> data.animations().add(null));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(
+                aliasMaps(), 3, new byte[0], 0, 14), "Animated entry still requires a script");
+    }
+
+    @Test
+    void unscriptedTablesKeepPointerExtentAndArtBounds() {
+        byte[] outsideArt = aliasMaps();
+        outsideArt[10] = 11;
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(outsideArt, 3, 14));
+        byte[] pointerIntoIndex = aliasMaps();
+        word(pointerIntoIndex, 0, 2);
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(pointerIntoIndex, 3, 14));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(aliasMaps(), 0, 14));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(aliasMaps(), 3, 0));
+    }
+
+    @Test
+    void unscriptedFrameSelectionUsesTheFullNativeUnsignedByte() {
+        byte[] mappings = new byte[519];
+        for (int frame = 0; frame < 255; frame++) word(mappings, frame * 2, 512);
+        word(mappings, 255 * 2, 513);
+        mappings[513] = 1;
+        mappings[514] = -2;
+        mappings[517] = 1;
+        mappings[518] = 3;
+        var data = CdObjectVisualAssets.decodeStatic(mappings, 256, 2);
+        assertTrue(data.mappingFrames().get(254).pieces().isEmpty());
+        var last = data.mappingFrames().get(255).pieces().getFirst();
+        assertEquals(new CdObjectVisualAssets.Piece(-2, 0, 1, 3), last);
+        byte[] excessive = new byte[515];
+        for (int frame = 0; frame < 257; frame++) word(excessive, frame * 2, 514);
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(excessive, 257, 2));
+    }
+
+    @Test
+    void declaredUnconsumedMappingBytesStayInSourceButNeverBecomePieces() {
+        byte[] maps = {0, 4, 0, 13, 1, 0, 0, 0, 0, 0, 77, 88, 99, 0};
+        byte[] scripts = {0, 2, 0, 0, (byte) 0xFF};
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 2, scripts, 1, 1));
+        var data = CdObjectVisualAssets.decode(maps, 2, scripts, 1, 1, Map.of(0, 3));
+        assertArrayEquals(maps, data.mappings().copy());
+        assertEquals(1, data.mappingFrames().getFirst().pieces().size());
+        assertEquals(6, data.mappingFrames().getFirst().bytes().length());
+        assertTrue(data.mappingFrames().getLast().pieces().isEmpty());
+        assertEquals(77, data.mappings().unsignedByte(10));
+        assertEquals(99, data.mappings().unsignedByte(12));
+    }
+
+    @Test
+    void mappingTailDeclarationsMustMatchAnExistingFrameAndItsExactExtent() {
+        byte[] maps = {0, 4, 0, 13, 1, 0, 0, 0, 0, 0, 77, 88, 99, 0};
+        byte[] scripts = {0, 2, 0, 0, (byte) 0xFF};
+        for (var declaration : List.of(Map.of(0, 2), Map.of(-1, 3), Map.of(2, 3), Map.of(0, -1), Map.of(0, 3, 2, 0))) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> CdObjectVisualAssets.decode(maps, 2, scripts, 1, 1, declaration));
+        }
+        byte[] undeclaredTail = Arrays.copyOf(maps, maps.length + 1);
+        undeclaredTail[14] = 5;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(undeclaredTail, 2, scripts, 1, 1, Map.of(0, 3)));
+        byte[] outsideArt = maps.clone();
+        outsideArt[8] = 1;
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectVisualAssets.decode(outsideArt, 2, scripts, 1, 1, Map.of(0, 3)));
+    }
+
     @Test
     void fiveBytePiecesKeepSignedPositionsRawWordsAndNonmonotonicAliases() {
         byte[] maps = aliasMaps();
