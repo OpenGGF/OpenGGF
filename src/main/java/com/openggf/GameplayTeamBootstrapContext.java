@@ -124,6 +124,8 @@ final class GameplayTeamBootstrapContext {
         configuration.resolveDisplayAspect();
 
         try {
+            // Audio must release the reader this restart is about to retire.
+            engineServices.audio().setRom(null);
             engineServices.roms().close();
             Rom rom = engineServices.roms().getRom();
             GameModule rootModule = engineServices.romDetection()

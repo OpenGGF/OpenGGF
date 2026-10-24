@@ -4622,3 +4622,91 @@ jobs/children remain, and original06:40Z expiry is not extended. Root authorized
 only this factual append and one normal-hook local six-test-file leaf; held
 recording-audio source composition follows only at the clean committed boundary,
 with separately qualified evidence and no new runtime edits/checks/push.
+### Recording restart audio-reader ownership — 2026-10-24
+
+Root receives qualified fixture successor71fcf491 once by clean fast-forward.
+The peer's A51735 passes42 tests but recursively reports82 caught closed-ROM
+SFX/DAC loader errors in the actual recording restart. Its B26664 passes the
+separate9 scene discriminators without those faults. Neither result is rewritten
+as audio or aggregate qualification. Source comparison confirms the hazardous
+close/reopen/profile/ROM order and the complete setters are inherited across
+659/e633/0b2/71fc; this alone does not determine runtime regression newness.
+
+The close owner in `GameplayTeamBootstrapContext.restartRecording` now calls
+the existing `audio.setRom(null)` immediately before `roms.close()`. Removing
+that call and its explanatory comment reconstructs the whole original file.
+Later profile-then-new-ROM order, backend/profile publication and every other
+control remain unchanged. Reversing those setters would instead construct an
+old-profile/new-ROM pair. Null-ROM detachment already exists at the headless
+boot and complete-run audio teardown owners; its use here is qualified below,
+not assumed from that precedent. No AudioManager/InternalAccess/API/pin edits.
+
+The separate new `TestRecordingRestartAudioOwnership` uses an isolated actual
+RomManager and real no-device S2 boot, not RomCache's borrowed reader or a
+replacement restart adapter. It invokes public
+`GameLoop.restartFromRecordingLaunchContext`. Distinct real old/new profiles
+reject a wrong/retired ROM before eager loader construction using AssertionError,
+outside S2's caught exception set. Returned real loader operations are guarded
+too. At actual close entry it samples the private immutable source tuple without
+a new production accessor. The successful case verifies reader retirement,
+replacement/profile/loader ownership, music/SFX loading and nonzero final PCM
+with advancing frames on the same live capture. The controlled reopen failure
+retains the exact IOException cause and leaves audio detached while retaining
+the profile; it does not claim gameplay rollback or donor-source retirement.
+
+Read-only actual-code review finds one fixture blocker before the red run:
+an assertion incorrectly expected `playSfx` to reject a request after detachment.
+S2's retained request service can accept submission without a loader. Remove
+only that assertion; closed-reader/null-loader/profile checks stay, and the
+positive case separately requires actual loader use and PCM. Build-only81061
+passes31.587s with major69 before this deletion. Red13229 recompiles and tests
+the final regression SHA256
+`0ce96cc9318b8d9f786572e279c4c4862ae5f57449dcc60367782a08730b61e7`.
+
+Both ordinary requests use the current absolute Main wrapper from the owned
+Root cwd/target, `--normal -Dmse=off`, explicit surfaceless EGL, Java25/Lua5.4,
+null audio, ambient JVM/display/library overrides unset, and the three original
+absolute stock-ROM properties reverified by SHA-1. Their portable selector shape:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=$RECORDING_AUDIO_SELECTORS" test -B
+```
+
+For original-source13229, `RECORDING_AUDIO_SELECTORS` is exactly
+`com.openggf.tools.TestRecordingRestartAudioOwnership`. It exits1:2 tests,
+2 failures,0 errors/skips, queue50s/Maven27.807s. The actual public restart
+fails in the guard at `setAudioProfile928`/`restartRecording136` before an eager
+catch can hide the retired reader. The controlled reopen case observes that
+same retired reader still named at close instead of null. Both actual
+identities/properties/streams are inspected on unchanged71fc production.
+
+After only the manifested owner detach, final96339 selects the whole classes
+`com.openggf.tools.TestRecordingRestartAudioOwnership`,
+`com.openggf.tools.TestHeadlessGameBootAudioIdentity`,
+`com.openggf.TestGameLoopSuspension`, `com.openggf.audio.TestAudioMutatorAccess`,
+`com.openggf.audio.TestAudioManagerResetState`,
+`com.openggf.audio.TestAudioManagerRuntimeInstallation`, and
+`com.openggf.audio.TestUnifiedAudioPresentationIntegration`.
+It exits0:72 distinct tests in7 XMLs,0 failures/errors/skips (2/3/7/8/35/7/10),
+queue0s/Maven1:19. Production SHA256
+`717908192f71a58cd61d5c977d62152e433565df7bad143564663b29ef1cfa5c`
+and the regression pin above match through completion. All identities, seven
+property sets (Java25.0.5.0.2/EGL/owned cwd and classpath/exact selectors/absolute
+ROM paths), text reports and28 recursive streams42773B are inspected; no dumps.
+The original Suspension recording method now executes without closed-ROM or
+SFX/DAC loader failures. Streams retain FAST/NONE, synthetic missing-WAV,
+expected incompatible-snapshot and injected device-failure negative controls.
+
+This is bounded S2 recording-restart ownership/capture qualification. It does
+not certify native waveforms, all source-mutator failure modes, donor-loader
+lifetime, routes or a new common smoke. The original f340189 failed identities
+and108 skips remain their own complete epoch. Both ordinary requests are spent;
+no third, broad/manualCI/Main/PR/native/passive action follows automatically.
+Consumed own XML/text/log/message output is removed, compiled outputs and useful
+unmerged source retained. The folded prerelease text and existing measurement
+hazard catalogue preserve the result without raw archives or pass receipts.

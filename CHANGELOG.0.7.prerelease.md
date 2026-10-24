@@ -117,9 +117,11 @@ Unreleased. The earlier development themes remain in
   beginner scene with a story-first tutorial/promo, native reactions, timed dialogue
   and a single-setting jump comparison.
 
-- **Recording imports:** copied BK2 recordings are bounded during decompression
+- **Recordings:** copied BK2 recordings are bounded during decompression
   and parsing, including metadata, input rows and verification sidecars. Oversized,
   ambiguous or inconsistent files are rejected without hiding healthy recordings.
+  Restarting a recording releases the retired audio reader before replacing the
+  ROM, while a live audio capture continues on the reopened source.
 
 - **Time Attack multiplayer security:** identity proofs bind the complete join
   intent to the master, direct-room or relay-room role and observed TLS

@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A passing restart can hide eager-loader faults (2026-10-24, recording audio).
+The catalogue fixture repair let a restart complete, but S2 caught 82 SFX/DAC
+failures while its new profile still received the retired reader. The owning
+regression rejects wrong/retired reader construction with AssertionError before
+the loader's caught exception set, then checks actual forward PCM and the same
+live capture across restart. Request submission alone is not playback evidence;
+a retained S2 profile can accept an SFX request with no loader installed. See
+the [source and red/green evidence](../architecture/plans/2026-10-22-native-gap-swarm.md#recording-restart-audio-reader-ownership--2026-10-24).
+
 An absolute test-ROM property does not populate every production ROM catalogue
 (2026-10-24, PR223 common smoke). RomTestUtils accepts the supplied absolute paths,
 while RomManager resolves its catalogue from configuration and cwd. Secondary
