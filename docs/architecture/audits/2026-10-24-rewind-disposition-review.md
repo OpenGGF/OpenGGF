@@ -35,8 +35,8 @@ obligation is not a passing test claim.
 | 8 | [`sonic2.objects.badniks.RexonBadnikInstance#heads`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/RexonBadnikInstance.java) | Retained pending broader owner evidence. Recreated heads attach through `nearestRexon`; the custom list rebuilds linked-head order during addition. | [`TestS2BadnikChildGraphRewind.s2BadnikChildGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2BadnikChildGraphRewind.java) checks five heads, restored parent references, and chain links in one Rexon family. Before excluding the list, exercise two nearby families, partial head retirement, restored indices, and forward chain behavior. The current nearest-owner recipe does not establish exact multi-family identity. |
 | 9 | [`sonic2.objects.badniks.SolBadnikInstance#fireballs`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/SolBadnikInstance.java) | Retained pending broader owner evidence. Recreated fireballs attach through `nearestSol`; detached flying fireballs may have no parent. | The same S2 badnik graph test checks four parent-owned restored fireballs. `detachedFlyingSolFireballRestoresWithoutLiveParent` checks the detached case. Add two nearby owners and mixed attached/flying retirement evidence before declaring this cache wholly reconstructible. |
 | 10 | [`sonic2.objects.bosses.CPZBossPipe#segments`](../../../src/main/java/com/openggf/game/sonic2/objects/bosses/CPZBossPipe.java) | Closed with central `TRANSIENT`. CPZBossPipeSegment recreation calls `reregisterRestoredSegment` on the recreated pipe. | [`TestS2CpzBossGraphRewind.cpzBossGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2CpzBossGraphRewind.java) destructively replaces the graph and checks stable identities, fresh objects, parent links, and the pipe's exact live segment list. Its representative graph has one segment; sparse multi-segment retract ordering remains outside this check. |
-| 11 | [`sonic3k.objects.AizPlaneIntroInstance#activeWaves`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Retained. `tickWaveSpawn` appends managed waves. Child recreation restores parent links, but does not rebuild this parent list. The list is currently appended and cleared on unload, rather than read by the gameplay dispatch. | [`TestS3kAizIntroGraphRewind.aizIntroPlaneAndWaveChildrenRestoreFreshWithRestoredParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kAizIntroGraphRewind.java) checks managed children and their parent links, not this list. Prove retirement/unload behavior and the absence of a live list consumer across the intro boundary before an explicit diagnostic-only exclusion. |
-| 12 | [`sonic3k.objects.AizPlaneIntroInstance#emeralds`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Retained. Emerald scattering appends managed children; unload clears the list. Recreation does not repopulate it. | The AIZ intro graph fixture does not exercise the seven scattered emeralds and their retirement boundary. Add that graph and a destructive restore/forward run before excluding the parent inventory. Emerald glow-child tests cover a different class. |
+| 11 | [`sonic3k.objects.AizPlaneIntroInstance#activeWaves`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Removed the unused append-only history. ObjectManager owns each live wave; no gameplay consumer, public accessor, or unmanaged dispatch used the parent list. No transient policy or historical reconstruction is added. | [`TestS3kAizIntroInventoryRewind.liveChildrenRestoreFreshAndReplayThroughTheirRetirement`](../../../src/test/java/com/openggf/game/sonic3k/objects/TestS3kAizIntroInventoryRewind.java), WAVES case, destroys the native managed graph and checks fresh identities, exact parent/slots, animation, motion, new spawns and retirement against uninterrupted dispatch. The final-wait/Knuckles-monitor regression now observes current managed children, not past spawns. See the AIZ follow-up below for results and boundaries. |
+| 12 | [`sonic3k.objects.AizPlaneIntroInstance#emeralds`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Removed the unused history. Seven managed emeralds outlive the retiring intro parent. A reproduced independent restore defect required capturing the parent's and emeralds' exact Knuckles links by ObjectRefId; the histories do not repair that ownership. | The same native test covers before-scatter, seven falling emeralds and partial pickup with destructive session-registry restore and forward replay through collection. A separate managed graph test distinguishes nearby opposite-direction collectors and an intentionally unbound emerald. See the AIZ follow-up below for baseline failures and limits. |
 | 13 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization finds or creates a managed pillar and records it. Generic spawn reconstruction with `initialized` restored does not run that creation path again. The public test accessor reads this inventory. | `TestLbz2RideCameoInstances` exercises production creation and cameo choreography, not destructive restoration of this list. Prove existing-pillar reuse, fresh pillar recreation, and list ownership after restore. |
 | 14 | [`sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren`](../../../src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesLbz2Instance.java) | Retained. Initialization records four children. SwingChild recreation selects a nearest live cameo, without reattaching to its parent's inventory. | `TestLbz2RideCameoInstances` is named by the isolated sweep but does not perform registry capture/restore. Required evidence includes four exact child identities, parent inventory restoration, and shake/freefall replay. Do not equate that sweep label with executed graph proof. |
 | 15 | [`sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris`](../../../src/main/java/com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java) | Retained. `spawnDebris` records managed IceDebris; FrozenPlayerBlock recreation starts an empty inventory. Current reads are the testing accessor, but the deletion and auxiliary-sidekick paths have distinct lifetimes. | [`TestS3kIczFreezerGraphRewind.iczFreezerGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS3kIczFreezerGraphRewind.java) checks cloud/block/player graph links. It does not certify this nonempty debris inventory after the block breaks. Exercise the native and auxiliary-sidekick debris boundaries, including retirement and forward replay. |
@@ -332,3 +332,97 @@ piece checks distinguish offsets, dimensions, tile, palette, flips and priority.
 This is renderer-input evidence, not GPU pixel verification or a complete CPZ,
 HTZ or OOZ route certification. No broad smoke selection, complete guard profile,
 S3K check, API check or release-only full suite ran in this follow-up.
+
+## AIZ intro inventories follow-up
+
+This work is bounded to `AizPlaneIntroInstance#activeWaves` and `#emeralds`,
+on base `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`, branch
+`bugfix/ai-aiz-intro-rewind-inventories-20261024`, supplied T3 isolation worktree.
+Other audit rows, aggregate accounting and delivery-wide validation belong to the
+parent composition.
+
+Producer/consumer tracing found that both fields only received newly allocated
+objects and were cleared by `onUnload`; neither list directed updates, deletion,
+rendering or respawn. The only reader was the reflection-based wave-count test,
+which counted historical spawns rather than live waves. There was no public
+inventory accessor. `spawnDynamicObject` hands accepted children to the owning
+ObjectManager; when no manager exists it does not dispatch them. Unmanaged direct
+intro calls never updated children by iterating these lists. Clearing them did
+not destroy a child or release a slot. Waves read the live parent scroll word and
+self-delete; emeralds use their own motion/phase and the cutscene Knuckles collector
+and deliberately continue after the intro parent unloads.
+
+The smaller responsibility is to remove both redundant histories, rather than
+retain a diagnostic cache requiring a second rewind policy. No old retired-child
+inventory is fabricated. The wave test now compares real live managed child
+identities before/after both native callback windows. Its local observation means
+current, managed, non-destroyed children at that call, with no promise of history
+or persistent list identity across restore. Existing gameplay accessors are
+unchanged; no new runtime inventory API, transient allowance or renderer handle
+enters a snapshot.
+
+The initial five-case native session-registry run on unchanged base runtime
+reproduced three failures, zero errors and zero skips. WAVES and the distinct
+Stageplay player-owner case passed. BEFORE_SCATTER diverged at forward dispatch 2,
+the explosion boundary: the restored parent had lost its Knuckles reference.
+FALLING_EMERALDS and PARTLY_COLLECTED_EMERALDS immediately restored each emerald's
+collector as null. These links were classified as structural solely by the
+existing `knuckles` field-name policy and neither recreate path rebuilt them.
+The positive uninterrupted runs landed and collected all emeralds; this was a
+live ownership defect rather than evidence for storing retired children.
+
+The correction uses two exact `CAPTURED` entries for the parent and emerald
+`knuckles` fields, letting the existing two-phase identity codec resolve the
+original collector even when restored later. No search by proximity or history
+is used. The native trigger remains at `AIZPlaneIntro_Finale`
+(sonic3k.asm:135760-135787); wave scroll/animation/deletion remain at
+`AIZPlaneIntro_WaveChildMain` (sonic3k.asm:135894-135905), and the emerald collector
+read remains at `AIZPlaneIntro_EmeraldChildWaitForPlane`
+(sonic3k.asm:135941-135960). No native clock, RNG call, allocation, update order,
+delete/respawn routine, or player-release behavior changes.
+
+`TestS3kAizIntroInventoryRewind` boots the actual native 320px Sonic+Tails intro,
+uses the session registry (including real player/sidekick identity registration),
+and disables placed-instance reuse. It compares live object identities, slots,
+parent/collector links, motion/subpixels, wave animation/deletion callbacks,
+Knuckles animation and player control/mapping/hurt state at every replayed
+dispatch. It removes manager dynamics and leaves an unmanaged singleton decoy
+before restoring. The four capture points are independent; active-wave replay
+continues for 30 dispatches, and the other cases run until emerald retirement,
+with a 600-dispatch watchdog. The Stageplay case restores an actual registered
+sidekick as the intro's control owner while focus remains on P1, then releases
+only that owner.
+
+The focused graph test also checks the existing wave recreation boundary: a
+managed selected intro is accepted, an ambiguous selection or stale unmanaged
+singleton is rejected. Native gameplay owns one intro; this does not claim
+support for simultaneously running multiple full intro cinematics. The collector
+test uses two nearby Knuckles objects with opposite velocities, restores the exact
+bound owner, and preserves an explicitly null owner without guessing.
+
+Validation commands use the environment above, with Java 25, Lua 5.4 and unset
+DISPLAY, WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS. `MAIN_CHECKOUT`
+is the existing main checkout supplying current admission tooling; `ROM_ROOT`
+is the discovered existing root ROM directory. The locked-on S3&K ROM's CRC32
+`63522553` and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` were verified.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Dtest=TestS3kAizIntroInventoryRewind "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kAizIntroInventoryRewind,TestS3kAizIntroGraphRewind,TestAizPlaneIntroInstance,TestAizEmeraldScatterInstance,TestAizIntroPlaneChild,TestAizIntroArtLoader,TestRewindFieldDispositionGuard' "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The first request waited 303 seconds; Maven reported 1 minute 23 seconds including
+both compilation phases. Its XML cases were inspected and consumed reports
+removed. The second selection passed all 42 cases across seven classes with zero
+failures, errors or skips. Its request waited 68 seconds; Maven reported
+1 minute 24 seconds including compilation. XML inspection confirmed every native
+restore case, the collector/owner boundaries, existing intro/art checks and the
+disposition guard executed. The generated disposition report exactly matched
+the local baseline with only the two assigned keys removed. Consumed XML and the
+field report were removed; no pass cache or archived raw output is retained.
+The three new disassembly citations validate against pinned skdisasm `8b2cf3c`;
+the audit file also contains two pre-existing unverifiable citations outside
+this follow-up. `git diff --check` passes.
+This is bounded intro/ownership evidence, not a complete AIZ→HCZ route, GPU pixel
+verification, broad smoke selection, all-guards run or public-release suite.
+The parent owns combined validation and the four mandatory S3K stability checks.

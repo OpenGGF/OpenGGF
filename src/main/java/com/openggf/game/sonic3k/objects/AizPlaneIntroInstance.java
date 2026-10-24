@@ -21,7 +21,6 @@ import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -199,14 +198,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     /** Reference to the plane child sprite (biplane visual). */
     private AizIntroPlaneChild planeChild;
 
-    /** Reference to the Knuckles cutscene object. */
+    /** Live finale trigger/emerald collector; captured by identity, not a reconstructed history. */
     private CutsceneKnucklesAiz1Instance knuckles;
-
-    /** List of active wave children for cleanup. */
-    private final ArrayList<AizIntroWaveChild> activeWaves = new ArrayList<>();
-
-    /** List of scattered emeralds. */
-    private final ArrayList<AizEmeraldScatterInstance> emeralds = new ArrayList<>();
 
     private int mappingFrame;
     private int lastFrameCounter;
@@ -405,8 +398,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
             activeIntroInstance = null;
         }
         releasePlayersForVisualDirection();
-        activeWaves.clear();
-        emeralds.clear();
         // Art reset moved to CutsceneKnucklesAiz1Instance.onUnload() —
         // Knuckles (and emeralds, rock child) still need the shared art data
         // after the plane parent destroys itself mid-cutscene.
@@ -554,7 +545,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                         currentX, currentY + 0x18, 0, 0, 0, false, 0);
                 AizIntroWaveChild wave = new AizIntroWaveChild(waveSpawn, this);
                 spawnDynamicObject(wave);
-                activeWaves.add(wave);
             }
         }
     }
@@ -1108,7 +1098,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 AizEmeraldScatterInstance emerald = new AizEmeraldScatterInstance(emeraldSpawn);
                 emerald.setKnuckles(knuckles);
                 spawnDynamicObject(emerald);
-                emeralds.add(emerald);
 
                 // Compensate for pendingDynamicAdditions delay: ROM processes each
                 // emerald's first movement in the same frame via CreateChild6_Simple.

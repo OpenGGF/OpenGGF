@@ -110,7 +110,7 @@ public class AizEmeraldScatterInstance extends AbstractObjectInstance implements
     /** Current phase of this emerald's lifecycle. */
     private Phase phase;
 
-    /** Reference to the Knuckles cutscene object for proximity collection. */
+    /** Exact live collector, captured by identity even after the intro parent has retired. */
     private CutsceneKnucklesAiz1Instance knuckles;
 
     // -----------------------------------------------------------------------
