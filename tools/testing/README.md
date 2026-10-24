@@ -273,7 +273,7 @@ test reservation below includes a separate test JVM and is not a build requireme
 
 On Linux, exact focused commands with `-Dmse=off` automatically use the **lean
 lane** when every selected class belongs to the reviewed small-test registry in
-`maven_small.py` (70 classes, including the 15 bounded additions in the
+`maven_small.py` (90 classes, including the 35 bounded additions in the
 [2026-10-24 qualification](../../docs/architecture/research/2026-10-24-lean-test-qualification.md)). Up to 50
 classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
@@ -349,6 +349,15 @@ per-job reservations and sampled usage, plus recent execution history. Pause and
 refresh controls affect only the display. It never submits, cancels or reorders jobs,
 acquires admission slots, or prunes queue files. Completed history entries describe
 the wrapper's execution outcome, not whether tests passed.
+
+The admission summary shows the dashboard's loaded tooling revision, configured
+standard budget, lean budget, registry size and per-invocation class limit.
+Waiting rows show their own reported RAM/CPU reservations, including custom
+values; legacy rows remain `Unknown` rather than inheriting the current defaults.
+Registry membership still requires source and command-shape checks in the caller's
+worktree. Updating files does not reload a running dashboard: restart only the
+dashboard to load new code and registry entries. A warning identifies jobs with
+newer tooling than the dashboard; leave queued and running test requests intact.
 
 Scheduling age includes carried wait credit; it is separate from actual wait.
 Older wrappers do not publish actual wait/start metadata, so those fields display
@@ -714,6 +723,48 @@ certification. Inspect Surefire outcomes/skips as well as memory. Raw event file
 rotating GC/Maven logs, temporary helper classes and test artifacts are removed after
 extracting the report, including handled interruption. Record durable conclusions
 in the research artifact and remove consumed target reports.
+
+## Bounded small-test qualification
+
+For reviewed small classes, `profile_small_tests.py` runs an ordinary Surefire
+invocation with explicit normal or lean heaps and Linux process-tree sampling:
+
+```bash
+python3 tools/testing/profile_small_tests.py --lane lean \
+  --test com.openggf.tests.TestCollisionLogic,com.openggf.version.TestBuildIdentity \
+  --cold-compile --max-minutes 10 --output target/small-lean.json
+python3 tools/testing/profile_small_tests.py --lane normal \
+  --test com.openggf.tests.TestCollisionLogic,com.openggf.version.TestBuildIdentity \
+  --max-minutes 10 --output target/small-normal.json
+```
+
+It accepts at most 50 exact fully qualified class names, without methods,
+wildcards, profiles or JVM overrides. The execution watchdog defaults to ten
+minutes and caps at thirty; queue/tree waiting and build draining are recorded
+separately. It takes own-worktree ownership, exclusive test admission, then
+exclusive build activity, and passes these leases into Maven. `--cold-compile`
+clears only generated class/compiler outputs under that ownership. Normal uses
+the existing 3 GiB test heap and Maven launch defaults; lean bounds both JVM
+heaps to 1 GiB. It does not change the registry or queue policy.
+
+The compact report includes sampled simultaneous RSS plus swap, separate peaks,
+per-process heap arguments, complete case identities/multiplicity, skips, and
+pre-wait and before/after fingerprints of source/fixture/build inputs. Missing JVM evidence,
+sampler errors, source drift (including during admission waiting), incomplete/unexpected
+case inventories, timeout or
+Maven failure fail the diagnostic. A complete diagnostic can still contain skips:
+review their causes and exact outcomes before accepting a candidate. No JVM
+listener, attach probe, forced GC or allocation accounting is installed.
+
+Sampling waits 100 ms between scans; scans are non-atomic, can miss short peaks,
+and RSS can double-count shared pages. Reservations are admission estimates,
+not enforced limits. Cold/warm runs are not matched timing pairs. The tool
+excludes concurrent dashboard/prose edits from its source fingerprint, but tracks
+Java, fixtures, added source roots and testing runtime helpers. Keep those inputs
+stable during a run. Output must be new; raw logs/XML and temporary directories
+are cleaned after extraction, including handled interruption. Consume and delete
+the target report after recording durable conclusions in the research artifact.
+This is bounded qualification evidence, not broad suite certification.
 
 ## Bounded category-result comparison
 

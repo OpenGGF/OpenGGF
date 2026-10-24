@@ -380,7 +380,7 @@
     const policy = data.policy, small = data.smallJobs, parts = [];
     const item = (label, text, title) => { const node = element('span', '', null, title); node.append(element('b', '', label + ' '), document.createTextNode(text)); return node; };
     if (policy) {
-      parts.push(item('Standard', number(policy.memoryGiB, 0) + ' GiB · ' + cores(policy.cpuCores) + ' cores', 'Default per-job reservation'));
+      parts.push(item('Standard', memory(finite(policy.memoryGiB) ? policy.memoryGiB * GIB : null) + ' · ' + cores(policy.cpuCores) + ' cores', 'Default per-job reservation'));
       parts.push(item('Max', number(policy.maxRuns, 0) + ' concurrent', 'Maximum concurrent shared jobs'));
       parts.push(item('Headroom', number(policy.headroomGiB, 0) + ' GiB', 'Memory kept free beyond reservations'));
     } else parts.push(element('span', '', 'Configured resource budgets unavailable'));

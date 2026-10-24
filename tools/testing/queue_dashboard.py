@@ -19,7 +19,8 @@ import time
 
 from maven_resources import GIB, admission_reason, policy, snapshot
 from maven_running import FRESH_SECONDS, LEASE_NAME, LOG_NAME
-from maven_schedule import AGING_SECONDS, REQUEST_NAME, TOOLING_REVISION, ordered
+from maven_schedule import AGING_SECONDS, REQUEST_NAME, SMALL_RESERVATION, TOOLING_REVISION, ordered
+from maven_small import MAX_SMALL_CLASSES, QUALIFIED_CLASSES
 
 DEFAULT_PORT = 8766
 REFRESH_SECONDS = 2
@@ -407,11 +408,15 @@ def collect_snapshot(root, *, common, policy_config=None, now=None, monotonic=No
     statuses = {job['tooling']['status'] for job in running + waiting}
     if 'older' in statuses:
         warnings.append('Some jobs report older queue tooling. Their owners should use the updated main-workspace wrapper for future invocations.')
+    if 'newer' in statuses:
+        warnings.append('Some jobs report newer queue tooling than this dashboard. Restart the dashboard from the updated main workspace; leave queued and running jobs intact.')
     if 'unknown' in statuses:
         warnings.append('Some jobs do not report a usable queue tooling revision. Check their wrapper before assuming they have recent admission fixes; running jobs keep their loaded code.')
     return dict(version=1, capturedAt=datetime.fromtimestamp(now, timezone.utc).isoformat(timespec='seconds'),
                 refreshSeconds=REFRESH_SECONDS, root=str(root), liveness=liveness, host=host,
                 toolingRevision=TOOLING_REVISION,
+                smallJobs=dict(registeredClasses=len(QUALIFIED_CLASSES), maxClasses=MAX_SMALL_CLASSES,
+                               memoryBytes=SMALL_RESERVATION[0], cpuCores=SMALL_RESERVATION[1]),
                 policy=policy_config, heldSlots=held_slots, exclusiveHeld=exclusive_held,
                 running=running, waiting=waiting, unverified=unverified,
                 recent=_recent(common, warnings), warnings=list(dict.fromkeys(warnings)))
