@@ -6040,3 +6040,56 @@ continue autonomously under the user's clarification about approval ceremonies.
 Main/develop, PR publication/draft state, manual CI and native/passive observations
 remain outside this recovery action. No PR-green or complete native-route claim is
 made.
+
+
+### Editor results-boundary semantic music fixture — 2026-10-24
+
+On base `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`, the two positive
+`TestEditorHostExports` service stubs implemented only integer music requests.
+Native signposts and the S3K results graph submit `GameMusic.ACT_CLEAR`; the
+inherited semantic default dereferenced the stub's null audio manager. The local
+fixture now records that semantic request and requires it exactly once for all
+three authored-goal cases and six unsigned-signpost cases. The signposts also
+require no request before their original results boundary. All original inputs,
+frame bounds, assertions and host-return checks remain; removing the ten added
+lines reconstructs the complete base file. Production and the shared stub are
+unchanged. This proves semantic submission, not physical playback.
+
+The one normal queued whole-class request used:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Dtest=com.openggf.editor.persistence.TestEditorHostExports \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Run from the isolated validation worktree with the current wrapper, JDK 25,
+Lua 5.4, null OpenAL driver and surfaceless EGL, with ambient JVM/Maven/display
+options unset. The three original stock images were CRC/SHA-1 verified.
+Actual original session `83305`, wrapper PID `2994249`: **19 unique cases,
+19 passes, zero failures/errors/skips**, queue 61 seconds separately from Maven
+`01:42 min`, suite 0.695 seconds. Its normal lifecycle compiled 4,545 main and
+4,762 test sources. All identities, 69 properties, 79 classpath entries,
+19 recursive streams (6,104 bytes), report text and the complete 192-line
+21,830-byte command log were read. No stage-clear music failure or fresh dump
+appeared. The exact input frame remained
+`f513bd4abfc016128b0e2855075451c9d524047abbd5eb3b041ddb0e4ab3f387`
+(13,178 paths / 856,446,929 bytes); the tested fixture SHA-256 is
+`80b72268d567509ec215bda4fd94acad8086f45851c624ef86f8e1d3f0cf5247`.
+
+Limits remain explicit: the positive S1 export parameter emitted one inherited
+`0xE8DF` / frame-count-768 mapping warning. The separately qualified S1 pointer
+leaf `4e854d8244792a45f9d3ca809ace5494ad79be7d` was not in this epoch.
+The S3K authored-goal parameter used the existing deterministic estimate for
+unmeasured `s3k-kos-v1` workload
+`d24be13589290e524a4b8bcd45d2b234d35956a6d0c98e8cec93a773405f377b`.
+FAST/NONE, the initial absent temporary-directory warning and 26 compiler
+warnings are retained. This is bounded fixture-owner qualification with art
+and measured-timing limits, not fault-free art/audio or aggregate parity.
+The original Root category run remains separately attributed to frozen `2a9`.
+Consumed XML/text/log files were removed after readback; source and compiled
+outputs remain. No retry, extra engine check, runtime/oracle change, remote
+operation or Root source/job/target observation occurred.

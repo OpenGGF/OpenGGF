@@ -1,5 +1,6 @@
 package com.openggf.editor.persistence;
 
+import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.*;
 import com.openggf.game.modzone.*;
@@ -145,6 +146,7 @@ class TestEditorHostExports {
             var fade=new com.openggf.graphics.FadeManager();
             var reader=com.openggf.data.RomByteReader.fromRom(rom);
             ObjectManager[] objects={null};
+            List<GameMusic> musicRequests=new ArrayList<>();
             var services=new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return objects[0]; }
                 @Override public LevelManager levelManager() { return manager; }
@@ -153,6 +155,7 @@ class TestEditorHostExports {
                 @Override public com.openggf.camera.Camera camera() { return camera; }
                 @Override public GameStateManager gameState() { return state; }
                 @Override public GameModule gameModule() { return module; }
+                @Override public boolean playMusic(GameMusic music) { musicRequests.add(music); return true; }
                 @Override public Rom rom() { return rom; }
                 @Override public com.openggf.data.RomByteReader romReader() { return reader; }
                 @Override public RuntimeArtCoordinator runtimeArtCoordinator() { return gameplay.runtimeArtCoordinator(); }
@@ -206,6 +209,8 @@ class TestEditorHostExports {
             assertTrue(sawResults,"The authored goal must allocate the native results graph");
             assertTrue(returned[0],"Native results must finish through the isolated host return contract");
             assertEquals(0,manager.getCurrentZone(),"Completion must return before loading a stock successor");
+            assertEquals(List.of(GameMusic.ACT_CLEAR),musicRequests,
+                    "The native results graph must request stage-clear music exactly once");
             if(game==GameId.S3K) {
                 assertTrue(registry.browsableObjectKeys().contains(
                         com.openggf.game.sonic3k.objects.S3kAuthoredGoalInstance.OBJECT_KEY));
@@ -258,11 +263,13 @@ class TestEditorHostExports {
         var camera=new com.openggf.camera.Camera(); camera.setMaxX((short)cameraMaxX);
         var state=new GameStateManager();
         ObjectManager[] ref={null};
+        List<GameMusic> musicRequests=new ArrayList<>();
         var services=new StubObjectServices() {
             @Override public ObjectManager objectManager() { return ref[0]; }
             @Override public com.openggf.camera.Camera camera() { return camera; }
             @Override public GameStateManager gameState() { return state; }
             @Override public GameModule gameModule() { return module; }
+            @Override public boolean playMusic(GameMusic music) { musicRequests.add(music); return true; }
             @Override public com.openggf.configuration.SonicConfigurationService configuration() {
                 return GameServices.configuration();
             }
@@ -281,8 +288,11 @@ class TestEditorHostExports {
         int threshold=(cameraMaxX+0x128)&0xFFFF;
         com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,(threshold-1)&0xFFFF);
         sign.update(300,player); assertFalse(results.getAsBoolean(),"Below unsigned cmp.w threshold");
+        assertTrue(musicRequests.isEmpty(),"Stage-clear music must await the native results boundary");
         com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,threshold);
         sign.update(301,player); assertTrue(results.getAsBoolean(),"Native unsigned walk-off must allocate results");
+        assertEquals(List.of(GameMusic.ACT_CLEAR),musicRequests,
+                "The committed signpost must request stage-clear music exactly once");
     }
 
     @Test void missingKeyDependenciesFailMemoryAndDiskBeforePublication() throws Exception {
