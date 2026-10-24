@@ -7,6 +7,7 @@ import com.openggf.data.*;
 import com.openggf.debug.*;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.*;
+import com.openggf.game.Game;
 import com.openggf.game.session.*;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.resources.*;

@@ -224,6 +224,11 @@ The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` proper
   seconds (rings against toll, live badniks, hitpoints spawned against damage dealt, level,
   chests, evolutions). Compare across changes; it is not a human difficulty measure. Origin:
   Survivors balance pass, 2026-10-07.
+- [Sonic Echoes room capture entrypoint](../../examples/sonic-echoes/src/test/java/echoes/RoomCaptureMod.java)
+  (mod test scope, `-Dechoes.capture.room=<room ID>`) wraps the ordinary mod so
+  `GameplayCaptureTool --mod` can film any puzzle room from stock boot; package it in a temporary
+  capture jar, never the distributed one. Each room's reference solution doubles as the input
+  script. Origin: Sonic Echoes content, 2026-10-24.
 - `ObjectArtContactSheetProbe` (test scope, opt-in `-Dopenggf.artsheets.out=<dir>` plus
   `openggf.artsheets.game/acts/keys`) renders every frame of the object art sheets a zone
   registers to labelled PNG contact sheets with the level palette, so mapping frames (walk,

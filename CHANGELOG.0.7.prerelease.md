@@ -226,6 +226,17 @@ Unreleased. The earlier development themes remain in
   background, plays between Emerald Hill and Chemical Plant. Both levels open in the
   level editor.
 
+- **Sonic Echoes:** a new example mod, a time-loop puzzle game for Sonic 2. Each of
+  twelve rooms is a fenced stretch of Emerald Hill, Hill Top or Chemical Plant with a
+  short loop clock; when it runs out the room snaps back and every earlier attempt
+  replays beside you as an echo, a physical Sonic driven by your recorded inputs
+  through the native player-2 controls. Echoes hold pressure plates, ride Hill Top's
+  seesaws, take springs and clear badniks. Undisturbed echoes repeat themselves exactly,
+  and one knocked off its recorded path breaks in a Paradox. An Echo Engine hub on the
+  Sonic 2 title tracks clear, par and Chrono Shard stars, unlocks and saved bests.
+  Every room ships with a reference solution that a headless test replays.
+  See [the README](examples/sonic-echoes/README.md).
+
 - **Super Sonic Bros.:** a new example mod, a platform fighter for one to four
   players (people or CPUs) on Sonic 3 & Knuckles. Sonic, Tails, Knuckles, Robotnik,
   Mecha Sonic, Egg Robo and Rhinobot each have a full move set (tilts, chargeable

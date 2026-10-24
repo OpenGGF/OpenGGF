@@ -128,6 +128,8 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 - [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the nine maintained gallery samples.
 
+- [Sonic Echoes](../../examples/sonic-echoes/README.md) — a Sonic 2 time-loop puzzle game: twelve fenced rooms where earlier attempts replay as physical echo Sonics through the native player-2 controls, rewind-snapshot loop restores, Paradox fractures, ROM-art plates and gates, a hub on the stock title and saved star progress, all through the existing code-patch API. Not part of the nine maintained gallery samples.
+
 - [Eggman's Sky](../../examples/eggmans-sky/README.md) — a No Man's Sky-style S3K mod scene: Dr. Eggman explores planets remixed from every supplied ROM's zones with `SceneRomArt.levelKit`, a software-rendered space cockpit (streaming images), survival, scanning, crafting, Sonic as sentinels, Egg Stations and a galaxy map.
 - [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
 - [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the nine maintained gallery samples.

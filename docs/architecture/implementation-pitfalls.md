@@ -2263,3 +2263,14 @@ preserve native allocation order, routine advancement and lifecycle flags. The
 [AIZ correction evidence](plans/2026-10-24-architecture-continuation.md#fifth-loop-focused-results-correction-and-acceptance)
 distinguishes this admission boundary from arbitrary early collector retirement,
 which remains a separate unproven lifecycle contract.
+
+**A palette context created after level art setup needs GPU publication.** Setting a
+player renderer's `RenderContext` and populating its palettes does not upload its
+rows. A dynamically added sidekick can therefore have a visible label and an
+invisible body while logic tests and context-identity assertions pass. Publish
+ordinary sidekick contexts with `RenderContext.uploadDonorPalettes` after writing
+their rows; discard retained contexts after `refreshPlayableSpriteArt`, which
+clears the sidekick context registry. Sonic Echoes' surfaceless tutorial capture
+exposed this on base `97eb86f186` (2026-10-24). Its invincibility-star art also
+has an intentionally empty mapping frame 0; select visible frames 1 onward for
+rift/shard/fracture effects. See the [foundation evidence](designs/2026-10-24-sonic-echoes.md#decisions-and-evidence).
