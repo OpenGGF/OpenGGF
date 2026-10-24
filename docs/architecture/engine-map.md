@@ -39,8 +39,12 @@ Companion references:
 `com.openggf.Engine` — GLFW window with a manual timing loop (`display()` → `update()` → `draw()`).
 `GameLoopDebugShortcuts` owns debug modifier resolution, checkpoint teleport,
 preview-position logging and special-stage completion requests. It receives the
-current mode/provider and a results callback; `GameLoop` retains provider-aware
-reward publication and the fade/results transition.
+current mode/provider and a results callback. `GameLoopSpecialStageLifecycle`
+owns special entry, retained provider identity, captured results, exit latches
+and special-return completion for the loop lifetime. Its private root Host reads
+typed cached slots and preserves virtual provider/results-entry dispatch;
+boundary admission, scoped pacing input and shared title release stay in GameLoop.
+Binding refresh, parking and provider reset retain this owner and its state.
 `GameLoopEndingSession` owns the ending provider, shared ending/standalone
 transition gate, phase execution, credits-demo loading and ending-only cleanup.
 Its private host adapter reads the loop's current managers as the original

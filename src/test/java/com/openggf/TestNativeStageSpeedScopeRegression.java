@@ -39,7 +39,7 @@ class TestNativeStageSpeedScopeRegression {
         }
         assertTrue(provider.getManager().getPlayer().isStarted());
         var loop = loop(25); loop.body = () -> { provider.handleInput(0, 0); provider.update(); };
-        set(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         int before = provider.getManager().getFrameCounter();
         loop.stepPresentationFrame(); loop.stepPresentationFrame(); loop.stepPresentationFrame();

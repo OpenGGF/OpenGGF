@@ -610,6 +610,10 @@ Unreleased. The earlier development themes remain in
   source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
+  One loop-lifetime special-stage lifecycle now owns entry presentation, retained
+  provider identity, captured results and return completion through the existing
+  virtual controller seams; shared rewind admission and title release keep their
+  original owners.
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
   reject stale rewind and dependency allowances, and identify raw lifecycle calls
   by caller rather than a shared total. Shared menu animation and execution-time

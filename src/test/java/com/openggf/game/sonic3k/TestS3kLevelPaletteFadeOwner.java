@@ -124,9 +124,7 @@ class TestS3kLevelPaletteFadeOwner {
             GameLoop loop = new GameLoop(new InputHandler());
             loop.setGameplayMode(TestEnvironment.activeGameplayMode());
             setField(loop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
-            Method exit = GameLoop.class.getDeclaredMethod("doExitResultsScreen");
-            exit.setAccessible(true);
-            exit.invoke(loop);
+            com.openggf.SpecialStageLifecycleTestAccess.invoke(loop, "doExitResultsScreen", new Class<?>[0]);
             Map<Integer, String> observed = new TreeMap<>();
             for (int frame = 0; frame < 400 && !observed.containsKey(23); frame++) {
                 loop.step();

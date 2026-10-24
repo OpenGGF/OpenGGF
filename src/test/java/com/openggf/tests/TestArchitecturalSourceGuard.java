@@ -42,6 +42,115 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
+    private static final String SPECIAL_STAGE_LIFECYCLE_PATH = "com/openggf/GameLoopSpecialStageLifecycle.java";
+    private static final String SPECIAL_STAGE_HOST_CONTRACT = """
+        LevelManager level(); SpriteManager sprites(); Camera camera(); FadeManager fade();
+        GameStateManager gameState(); GameModule module(); GameMode currentMode(); GameplayRunPolicy runPolicy();
+        SonicConfigurationService config(); InputHandler input(); PlaybackDebugManager playback();
+        GameplayModeContext boundGameplayContext(); GameplayModeContext resolvedGameplayContext();
+        PlcLifecycleFrame plcFrame(); LiveRewindManager rewind(); GameLoopSpecialStageInput pacingInput();
+        SpecialStageProvider activeProvider(); String mainCharacterCode(); TitleCardProvider titleCard();
+        GameMode changeMode(GameMode mode); boolean debugKeyPressed(int key); boolean rewindable();
+        Runnable debugCompletionCallback(); Runnable debugFailureCallback(); void deregisterSpecialStageAdapter();
+        void doEnterSpecialStage(SpecialStageProvider provider, int stage, boolean black);
+        void doEnterResultsScreen(); void lockTitleControls(boolean locked);
+        void restoreBigRingReturn(AbstractPlayableSprite playable); void notifyModeChanged(GameMode oldMode);
+        void requestSessionSave(SaveReason reason);
+            """;
+    private static final List<String> SPECIAL_STAGE_FIELDS = List.of(
+            "private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;",
+            "private GameLoop.SpecialStageObservationPacing specialStageObservationPacing;",
+            "private ResultsScreen resultsScreen;",
+            "private int ssRingsCollected;",
+            "private boolean ssEmeraldCollected;",
+            "private int ssStageIndex;",
+            "private EmeraldRewardKind activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;",
+            "private int resultsFrameCounter = 0;",
+            "private boolean returningFromSpecialStage = false;",
+            "private boolean specialStageTransitionPending = false;",
+            "private final SpecialStageEntryPresentationController specialStageEntryPresentation =\n            new SpecialStageEntryPresentationController();",
+            "private boolean resultsExitFadeCompleted;",
+            "private boolean resultsExitToWhite = true;",
+            "private boolean resultsExitReady;",
+            "private int resultsExitPreLevelFadeFramesRemaining = -1;");
+    private static final Set<String> SPECIAL_STAGE_METHODS = Set.of("updateSpecialStageMode", "updateSpecialStageResultsMode", "runSpecialStageResultsIteration", "enterResultsScreenWithDebugRings", "defaultSpecialStageStartupPolicy", "enterResultsScreen", "exitResultsScreen", "doExitResultsScreen", "startResultsReturnFadeIn", "enterTitleCardFromResults", "updateSpecialStageInput", "completeTitleReturn");
+
+    @Test
+    void specialStageLifecycleOwnsEntryResultsAndReturnWithTypedLiveHost() throws IOException {
+        assertNoViolations("Special-stage lifecycle ownership failed", specialStageOwnershipViolations(
+                Files.readString(SRC_MAIN.resolve(GAME_LOOP_PATH)),
+                Files.readString(SRC_MAIN.resolve(SPECIAL_STAGE_LIFECYCLE_PATH))));
+    }
+
+    @Test
+    void specialStageOwnershipAllowsNestedPacingTypeAndRejectsActualRootAccessAndMirrors() {
+        String root = "class GameLoop { private final GameLoopSpecialStageLifecycle specialStageLifecycle = null; "
+                + "private boolean specialStageRewindBoundaryThisFrame; private final GameLoopSpecialStageInput specialStagePacingInput = null; }";
+        String owner = "final class GameLoopSpecialStageLifecycle { " + String.join(" ", SPECIAL_STAGE_FIELDS)
+                + " GameLoopSpecialStageLifecycle(Host host, AudioManager audioManager) { this.host = host; this.audioManager = audioManager; } "
+                + "interface Host { " + SPECIAL_STAGE_HOST_CONTRACT + " } "
+                + SPECIAL_STAGE_METHODS.stream().sorted().map(name -> "void " + name + "() {}")
+                        .collect(java.util.stream.Collectors.joining(" ")) + " }";
+        assertTrue(specialStageOwnershipViolations(root, owner).isEmpty(), "the existing nested pacing type is permitted");
+        for (String field : SPECIAL_STAGE_FIELDS) {
+            assertFalse(specialStageOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { " + field), owner).isEmpty(), field);
+            assertFalse(specialStageOwnershipViolations(root, owner.replace(field, "")).isEmpty(), field);
+        }
+        for (String forbidden : List.of("GameLoop loop;", "void call() { GameLoop.this.step(); }",
+                "void call() { GameLoop.shouldPlaySpecialStageEntrySfx(false); }", "EngineContext context;",
+                "Object lookup(Class key) { return null; }", "void call() { GameServices.module(); }",
+                "private SpecialStageProvider publishedProvider;", "private boolean pendingMirror;",
+                "private boolean specialStageRewindBoundaryThisFrame;", "private GameLoopSpecialStageInput specialStagePacingInput;")) {
+            assertFalse(specialStageOwnershipViolations(root, owner.replace("final class GameLoopSpecialStageLifecycle {",
+                    "final class GameLoopSpecialStageLifecycle { " + forbidden)).isEmpty(), forbidden);
+        }
+        for (String method : SPECIAL_STAGE_METHODS) {
+            assertFalse(specialStageOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { private void " + method + "() {}"), owner).isEmpty(), method);
+            assertFalse(specialStageOwnershipViolations(root, owner.replace("void " + method + "() {}", "")).isEmpty(), method);
+        }
+        assertFalse(specialStageOwnershipViolations(root, owner.replace("void notifyModeChanged(GameMode oldMode);",
+                "void runWholeFrame(Runnable frame);")).isEmpty(), "no concealed whole-frame callback");
+        assertFalse(specialStageOwnershipViolations(root, owner.replace("this.host = host;", "this.host = host; host.module();")).isEmpty(), "constructor has no eager Host reads");
+        assertFalse(specialStageOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { private ResultsScreen mirror;"), owner).isEmpty());
+    }
+
+    private static List<String> specialStageOwnershipViolations(String root, String owner) {
+        List<String> violations = new ArrayList<>();
+        String rootCode = stripCommentsAndStrings(root), ownerCode = stripCommentsAndStrings(owner);
+        if (!Pattern.compile("private\\s+final\\s+GameLoopSpecialStageLifecycle\\s+specialStageLifecycle\\b").matcher(rootCode).find())
+            violations.add("root retains one loop-lifetime special lifecycle");
+        if (Pattern.compile("private\\s+(?:final\\s+)?(?:SpecialStageProvider|ResultsScreen|SpecialStageEntryPresentationController|(?:GameLoop\\.)?SpecialStageObservationPacing)\\s+\\w+\\s*[;=]").matcher(rootCode).find())
+            violations.add("root retains special state or a mirror");
+        for (String field : SPECIAL_STAGE_FIELDS) {
+            // Exact declaration checks preserve every initial value, including the -1 exit sentinel.
+            if (rootCode.replaceAll("\\s+", "").contains(field.replaceAll("\\s+", ""))) violations.add("root state: " + field);
+            if (!ownerCode.replaceAll("\\s+", "").contains(field.replaceAll("\\s+", ""))) violations.add("missing state: " + field);
+        }
+        long stateCount = Pattern.compile("private\\s+(?:final\\s+)?(?:SpecialStageProvider|GameLoop\\.SpecialStageObservationPacing|ResultsScreen|int|boolean|EmeraldRewardKind|SpecialStageEntryPresentationController)\\s+\\w+\\s*[;=]")
+                .matcher(ownerCode).results().count();
+        if (stateCount != 15) violations.add("exactly fifteen session fields, no mirrors");
+        String withoutPacingType = ownerCode.replace("GameLoop.SpecialStageObservationPacing", "AllowedPacingType");
+        if (Pattern.compile("\\b(?:GameLoop|EngineContext|GameServices|Object|specialStageRewindBoundaryThisFrame|specialStagePacingInput)\\b").matcher(withoutPacingType).find())
+            violations.add("root/context/global backreference, erased locator or shared iteration state");
+        if (!Pattern.compile("(?<!public )final\\s+class\\s+GameLoopSpecialStageLifecycle").matcher(ownerCode).find()
+                || Pattern.compile("public\\s+final\\s+class\\s+GameLoopSpecialStageLifecycle").matcher(ownerCode).find())
+            violations.add("special lifecycle remains package-private");
+        for (MethodSpan method : SourceFile.fromText(root).methods()) {
+            if (method.identity().startsWith("GameLoop#") && SPECIAL_STAGE_METHODS.contains(method.name())) violations.add("root choreography: " + method.identity());
+        }
+        Set<String> methods = SourceFile.fromText(owner).methods().stream()
+                .filter(method -> method.identity().startsWith("GameLoopSpecialStageLifecycle#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        if (!methods.containsAll(SPECIAL_STAGE_METHODS)) violations.add("complete lifecycle belongs to owner");
+        Matcher host = Pattern.compile("interface\\s+Host\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!host.find() || !host.group(1).replaceAll("\\s+", "").equals(SPECIAL_STAGE_HOST_CONTRACT.replaceAll("\\s+", "")))
+            violations.add("host retains narrow typed live capabilities");
+        Matcher constructor = Pattern.compile("GameLoopSpecialStageLifecycle\\(Host host, AudioManager audioManager\\)\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!constructor.find() || !constructor.group(1).replaceAll("\\s+", "").equals("this.host=host;this.audioManager=audioManager;"))
+            violations.add("constructor only retains collaborators");
+        return violations;
+    }
+
     private static final String BONUS_SESSION_PATH = "com/openggf/GameLoopBonusStageSession.java";
     private static final Set<String> BONUS_VISIT_METHODS = Set.of("enterBonusStage", "doEnterBonusStage",
             "exitBonusStage", "doExitBonusStage", "prepareBonusStageForTitleCard", "applyDeferredBonusStageSetup",
@@ -335,7 +444,8 @@ class TestArchitecturalSourceGuard {
             // 2026-10-24: ending state, phase execution and cleanup move as one session.
             ENDING_SESSION_PATH, 320,
             BONUS_SESSION_PATH, 357,
-            GAME_LOOP_PATH, 2811
+            SPECIAL_STAGE_LIFECYCLE_PATH, 571,
+            GAME_LOOP_PATH, 2443
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -367,11 +477,11 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 276),
             new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 111),
-            new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 9),
+            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "updateSpecialStageInput", 9),
             new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
-            new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 62),
+            new MethodBudget(SPECIAL_STAGE_LIFECYCLE_PATH, "enterTitleCardFromResults", 60),
             new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 45)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(

@@ -105,6 +105,18 @@ class TestS3kSanctuaryOriginReturnLifecycle {
                                         "off", ""), outcome)));
     }
 
+    @Test
+    void donatedTailsNativeWidthResultsReturnPilot() throws Exception {
+        assertOriginReturn(new CanonicalEntryMatrixSupport.Row("tails", WidescreenAspect.NATIVE_4_3,
+                "s2", ""), SanctuaryResultsLifecycleProbe.Outcome.SUCCESS);
+    }
+
+    @Test
+    void nativeKnucklesWideMixedTeamResultsReturnPilot() throws Exception {
+        assertOriginReturn(new CanonicalEntryMatrixSupport.Row("knuckles", WidescreenAspect.SUPER_32_9,
+                "off", "tails,tails,knuckles,sonic,knuckles,sonic,tails"), SanctuaryResultsLifecycleProbe.Outcome.FAILURE);
+    }
+
     static Stream<org.junit.jupiter.params.provider.Arguments> supportedOutcomes() {
         return configurations().flatMap(row -> Stream.of(SanctuaryResultsLifecycleProbe.Outcome.values())
                 .map(outcome -> org.junit.jupiter.params.provider.Arguments.of(row, outcome)));

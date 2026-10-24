@@ -70,16 +70,7 @@ class TestGameLoopSpecialStageResultsHandoff {
     }
 
     private void enterResultsScreen() throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod("enterResultsScreen", boolean.class);
-        method.setAccessible(true);
-        try {
-            method.invoke(loop, false);
-        } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof Exception cause) {
-                throw cause;
-            }
-            throw e;
-        }
+        SpecialStageLifecycleTestAccess.invoke(loop, "enterResultsScreen", new Class<?>[]{boolean.class}, false);
     }
 
     private void completeActiveFade() {
