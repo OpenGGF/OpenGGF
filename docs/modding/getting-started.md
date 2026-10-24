@@ -5,6 +5,33 @@ artifacts built at the same engine commit; a candidate API range does not promis
 binary compatibility between commits. Rebuild code mods when changing candidates.
 No Maven repository publication or stable creator baseline is implied.
 
+## Player-art provider import migration
+
+The current unpublished candidate intentionally breaks both previous art-provider
+imports. Replace:
+
+```java
+import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.data.SpindashDustArtProvider;
+```
+
+with:
+
+```java
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.SpindashDustArtProvider;
+```
+
+Rebuild every compiled mod, donor implementation and caller against the matching
+updated engine artifacts. Compiled interface names and donor-factory return
+descriptors changed, so an old binary is not compatible even if its manifest's
+`engineApiRange` still includes `0.7.0`. The manifest range cannot distinguish
+these two unpublished binary contracts. Old candidate binaries are retired;
+there are no forwarding interfaces. Provider methods, default palette behavior
+and the canonical `Palette`/`SpriteArtSet` models are unchanged. The API remains
+an unpublished `0.7.0` candidate with no published baseline; see the
+[compatibility decision](../architecture/mod-api-compatibility.md#player-art-provider-candidate-migration).
+
 ## Tools and artifacts
 
 Install a Java **25 JDK** and Maven **3.8 or newer**. Check `java -version`,

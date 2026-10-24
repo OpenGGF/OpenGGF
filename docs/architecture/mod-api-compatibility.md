@@ -373,6 +373,39 @@ an unreviewed third-party type. Before publication, removals, narrowing changes,
 record-shape changes, and unannotation require intentional candidate review and a
 pin rewrite; after publication they require an explicit compatibility decision.
 
+## Player-art provider candidate migration
+
+The reviewed unpublished 0.7 candidate intentionally relocates both complete
+`@ModApi` interfaces to their existing sprite-art domain:
+
+| Previous import | Replacement import |
+| --- | --- |
+| `com.openggf.data.PlayerSpriteArtProvider` | `com.openggf.sprites.art.PlayerSpriteArtProvider` |
+| `com.openggf.data.SpindashDustArtProvider` | `com.openggf.sprites.art.SpindashDustArtProvider` |
+
+This breaks old source imports and compiled interface names, including the return
+descriptors of donor factories. Rebuild all compiled mods, donor implementations
+and callers against the same updated engine candidate; old candidate binaries are
+retired, with no forwarding interfaces. An unchanged manifest `engineApiRange`
+accepting `0.7.0` cannot distinguish the old binary contract from this replacement.
+See the [creator migration steps](../modding/getting-started.md#player-art-provider-import-migration).
+
+This is an intentional incompatible candidate-pin rewrite under the unpublished
+policy above, not an API-neutral refactor. `ModApiVersion.CURRENT` remains `0.7.0`;
+its description records the break. The release descriptor is byte-identical:
+`candidate`, no published baselines, and the existing `develop`/`next` topology.
+There are exactly 14 removed signature lines and 14 replacements differing only
+in the two provider FQNs after sorting. The recursive annotated inventory retains
+its cardinality, canonical `Palette`/`SpriteArtSet` closure, roots, internal
+terminals and platform allowlist. The palette method retains its default-null
+body and its existing declaration without a checked exception; the two art-load
+methods retain `throws IOException`.
+
+Construction and donation stay with game modules. Supplied-ROM scene decoding,
+configured donor selection, registered mod suppliers, palette refresh/order,
+Tails banks, aliases and restoration retain their existing implementations.
+No factory, registry, callback, facade or model replacement is introduced.
+
 ## 0.7 reset inventory
 
 The reset removed provisional compatibility shims before establishing the first

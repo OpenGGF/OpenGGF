@@ -131,10 +131,8 @@ CF-ANNOTATION TYPE com.openggf.control.PhysicalInputEvent visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.control.PhysicalInputEvent$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.control.PlayerInputState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.Game visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.data.PlayerSpriteArtProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.Rom visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.data.RomByteReader visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.data.SpindashDustArtProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.debug.DebugColor visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.debug.DebugObjectArtViewer visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.debug.DebugOverlayManager visible @com.openggf.game.ModApi
@@ -1156,6 +1154,8 @@ CF-ANNOTATION TYPE com.openggf.sprites.animation.SpriteAnimationEndAction visibl
 CF-ANNOTATION TYPE com.openggf.sprites.animation.SpriteAnimationProfile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.animation.SpriteAnimationScript visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.animation.SpriteAnimationSet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.art.PlayerSpriteArtProvider visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.sprites.art.SpindashDustArtProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.art.SpriteArtSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.managers.AbstractSpriteMovementManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.sprites.managers.PlayableSpriteAnimation visible @com.openggf.game.ModApi
@@ -4001,8 +4001,8 @@ INTERFACE com.openggf.data.Rom java.lang.AutoCloseable
 INTERFACE com.openggf.debug.PerformanceProfiler com.openggf.debug.SectionProfiler
 INTERFACE com.openggf.game.AbstractLevelInitProfile com.openggf.game.LevelInitProfile
 INTERFACE com.openggf.game.AbstractStandaloneGameModule com.openggf.game.GameModule
-INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.data.PlayerSpriteArtProvider
-INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.data.SpindashDustArtProvider
+INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.sprites.art.PlayerSpriteArtProvider
+INTERFACE com.openggf.game.CrossGameFeatureProvider com.openggf.sprites.art.SpindashDustArtProvider
 INTERFACE com.openggf.game.DelegatingZoneRegistry com.openggf.game.ZoneRegistry
 INTERFACE com.openggf.game.GameRng com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameRngSnapshot>
 INTERFACE com.openggf.game.GameStateManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.GameStateSnapshot>
@@ -5275,8 +5275,6 @@ METHOD com.openggf.data.Game public,abstract  int[] getBackgroundScroll(int,int,
 METHOD com.openggf.data.Game public,abstract  java.lang.String getIdentifier()
 METHOD com.openggf.data.Game public,abstract  java.util.List<java.lang.String> getTitleCards()
 METHOD com.openggf.data.Game public,abstract  java.util.Map<com.openggf.audio.GameSound,java.lang.Integer> getSoundMap()
-METHOD com.openggf.data.PlayerSpriteArtProvider public  com.openggf.level.Palette loadCharacterPalette(java.lang.String)
-METHOD com.openggf.data.PlayerSpriteArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadPlayerSpriteArt(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  boolean isInMemory()
 METHOD com.openggf.data.Rom public  boolean isOpen()
 METHOD com.openggf.data.Rom public  byte readByte(long) THROWS java.io.IOException
@@ -5311,7 +5309,6 @@ METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteRea
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromBytes(byte[],int,int)
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromRom(com.openggf.data.Rom) THROWS java.io.IOException
 METHOD com.openggf.data.RomByteReader public,static,transient varargs  com.openggf.data.RomByteReader concat(com.openggf.data.RomByteReader[])
-METHOD com.openggf.data.SpindashDustArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadSpindashDustArt(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.debug.DebugColor public  boolean equals(java.lang.Object)
 METHOD com.openggf.debug.DebugColor public  int getAlpha()
 METHOD com.openggf.debug.DebugColor public  int getBlue()
@@ -5708,18 +5705,18 @@ METHOD com.openggf.game.ContinueScreenProvider public,abstract  void initialize(
 METHOD com.openggf.game.ContinueScreenProvider public,abstract  void reset()
 METHOD com.openggf.game.ContinueScreenProvider public,abstract  void update(boolean,boolean)
 METHOD com.openggf.game.CrossGameDonorProvider public  boolean hasSeparateTailsTailArt()
-METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.data.SpindashDustArtProvider createSpindashDustArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.level.Palette loadCharacterPalette(com.openggf.data.RomByteReader,java.lang.String)
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.level.Palette loadHostCompatiblePalette(com.openggf.data.RomByteReader,java.lang.String)
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.level.Palette loadUnderwaterCharacterPalette(com.openggf.data.RomByteReader,java.lang.String)
+METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.art.SpindashDustArtProvider createSpindashDustArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.art.SpriteArtSet loadInstaShieldArt(com.openggf.data.RomByteReader) THROWS java.io.IOException
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt(com.openggf.data.RomByteReader) THROWS java.io.IOException
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.CrossGameDonorProvider public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getShieldFactory()
 METHOD com.openggf.game.CrossGameDonorProvider public  java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory()
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.audio.GameAudioProfile getAudioProfile()
-METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.game.DonorCapabilities getDonorCapabilities()
+METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.sprites.art.PlayerSpriteArtProvider createPlayerArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameFeatureProvider public  boolean hasSeparateTailsTailArt()
 METHOD com.openggf.game.CrossGameFeatureProvider public  boolean supportsSidekick()
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.game.rules.GameRules getHybridRules()
@@ -5832,7 +5829,7 @@ METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasSidekick()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasSpindash()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasSuperTransform()
 METHOD com.openggf.game.DonorCapabilities public,abstract  boolean hasTailsFlight()
-METHOD com.openggf.game.DonorCapabilities public,abstract  com.openggf.data.PlayerSpriteArtProvider getPlayerArtProvider(com.openggf.data.RomByteReader)
+METHOD com.openggf.game.DonorCapabilities public,abstract  com.openggf.sprites.art.PlayerSpriteArtProvider getPlayerArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.DonorCapabilities public,abstract  int resolveNativeId(com.openggf.game.CanonicalAnimation)
 METHOD com.openggf.game.DonorCapabilities public,abstract  java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation> getAnimationFallbacks()
 METHOD com.openggf.game.DonorCapabilities public,abstract  java.util.Set<com.openggf.game.PlayerCharacter> getPlayableCharacters()
@@ -14102,6 +14099,9 @@ METHOD com.openggf.sprites.animation.SpriteAnimationSet public  com.openggf.spri
 METHOD com.openggf.sprites.animation.SpriteAnimationSet public  int getScriptCount()
 METHOD com.openggf.sprites.animation.SpriteAnimationSet public  java.util.Map<java.lang.Integer,com.openggf.sprites.animation.SpriteAnimationScript> getAllScripts()
 METHOD com.openggf.sprites.animation.SpriteAnimationSet public  void addScript(int,com.openggf.sprites.animation.SpriteAnimationScript)
+METHOD com.openggf.sprites.art.PlayerSpriteArtProvider public  com.openggf.level.Palette loadCharacterPalette(java.lang.String)
+METHOD com.openggf.sprites.art.PlayerSpriteArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadPlayerSpriteArt(java.lang.String) THROWS java.io.IOException
+METHOD com.openggf.sprites.art.SpindashDustArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadSpindashDustArt(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.sprites.art.SpriteArtSet public  boolean isEmpty()
 METHOD com.openggf.sprites.art.SpriteArtSet public  com.openggf.level.Pattern[] artTiles()
 METHOD com.openggf.sprites.art.SpriteArtSet public  com.openggf.sprites.animation.SpriteAnimationProfile animationProfile()
@@ -20455,8 +20455,6 @@ TYPE interface public,abstract com.openggf.audio.smps.CoordFlagHandler SUPER <no
 TYPE interface public,abstract com.openggf.audio.smps.SmpsLoader SUPER <none>
 TYPE interface public,abstract com.openggf.audio.smps.SmpsProgramView SUPER <none>
 TYPE interface public,abstract com.openggf.control.GamepadStateSource SUPER <none>
-TYPE interface public,abstract com.openggf.data.PlayerSpriteArtProvider SUPER <none>
-TYPE interface public,abstract com.openggf.data.SpindashDustArtProvider SUPER <none>
 TYPE interface public,abstract com.openggf.debug.SectionProfiler SUPER <none>
 TYPE interface public,abstract com.openggf.game.AnimationId SUPER <none>
 TYPE interface public,abstract com.openggf.game.BonusStageProvider SUPER <none>
@@ -20598,6 +20596,8 @@ TYPE interface public,abstract com.openggf.physics.BackgroundPlaneCollisionProvi
 TYPE interface public,abstract com.openggf.physics.CollisionTrace SUPER <none>
 TYPE interface public,abstract com.openggf.sprites.Sprite SUPER <none>
 TYPE interface public,abstract com.openggf.sprites.animation.SpriteAnimationProfile SUPER <none>
+TYPE interface public,abstract com.openggf.sprites.art.PlayerSpriteArtProvider SUPER <none>
+TYPE interface public,abstract com.openggf.sprites.art.SpindashDustArtProvider SUPER <none>
 TYPE interface public,abstract com.openggf.sprites.managers.SpriteMovementManager SUPER <none>
 TYPE interface public,abstract com.openggf.sprites.playable.SidekickCarryTrigger SUPER <none>
 TYPE interface public,abstract com.openggf.sprites.playable.SidekickRespawnStrategy SUPER <none>
@@ -21302,10 +21302,8 @@ TYPE-ANNOTATION com.openggf.control.PhysicalInputEvent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PhysicalInputEvent$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.control.PlayerInputState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.Game @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.data.PlayerSpriteArtProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.Rom @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.data.RomByteReader @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.data.SpindashDustArtProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.debug.DebugColor @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.debug.DebugObjectArtViewer @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.debug.DebugOverlayManager @com.openggf.game.ModApi
@@ -22327,6 +22325,8 @@ TYPE-ANNOTATION com.openggf.sprites.animation.SpriteAnimationEndAction @com.open
 TYPE-ANNOTATION com.openggf.sprites.animation.SpriteAnimationProfile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.animation.SpriteAnimationScript @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.animation.SpriteAnimationSet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.art.PlayerSpriteArtProvider @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.sprites.art.SpindashDustArtProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.art.SpriteArtSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.managers.AbstractSpriteMovementManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.sprites.managers.PlayableSpriteAnimation @com.openggf.game.ModApi

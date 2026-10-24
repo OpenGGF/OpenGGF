@@ -5,7 +5,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.data.PlayerSpriteArtProvider;
+import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.RomManager;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
