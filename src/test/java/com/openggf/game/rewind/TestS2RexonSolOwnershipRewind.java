@@ -289,7 +289,8 @@ class TestS2RexonSolOwnershipRewind {
         assertNotNull(field(head, "linkedHead"));
         RewindCaptureContext context = RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
         var snapshot = head.captureRewindState(context);
-        assertNotNull(snapshot.objectSubclassExtra(), "a supplied table authoritatively captures absent identities");
+        assertNotNull(snapshot.compactGenericState(), "a supplied table authoritatively captures absent identities");
+        assertNull(snapshot.objectSubclassExtra(), "native links use the compact schema");
 
         if (explicitContext) head.restoreRewindState(snapshot, context);
         else head.restoreRewindState(snapshot);
@@ -308,7 +309,8 @@ class TestS2RexonSolOwnershipRewind {
         assertSame(owner, field(ball, "parent"));
         RewindCaptureContext context = RewindCaptureContext.withIdentityTable(new RewindIdentityTable());
         var snapshot = ball.captureRewindState(context);
-        assertNotNull(snapshot.objectSubclassExtra(), "a supplied table authoritatively captures absent identities");
+        assertNotNull(snapshot.compactGenericState(), "a supplied table authoritatively captures absent identities");
+        assertNull(snapshot.objectSubclassExtra(), "native links use the compact schema");
 
         if (explicitContext) ball.restoreRewindState(snapshot, context);
         else ball.restoreRewindState(snapshot, RewindCaptureContext.none());
