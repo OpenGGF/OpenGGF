@@ -2996,6 +2996,201 @@ or performed. Code, tests, the open-bug entry, stores, permissions and pins stay
 byte-identical to the documentation base. No integration, push or worktree
 removal is part of this follow-up.
 
+### Bounded native fixed-tail pressure observation
+
+This reference-research follow-up starts from accepted
+`c008b4d209f7e3a7b930f243f075c9837d970729` (tree
+`0cf220b04b2dda46f3e26224863dfa91f5c6479b`). It does not implement the storage
+candidate. The [probe and launch instructions](../../../tools/bizhawk/README.md#s2-fixed-tail-pressure-diagnostic)
+preserve the finite experiment; raw observations/builds stay in the owned
+external task root `s2-fixed-tail-native-pressure-20261024`. Main, foreign
+validation trees and dirty optional checkouts are not modified or built in.
+
+**Runtime and build authority.** TraceChaser source is exported from Git object
+`322851cbfa2e1c1803332142e11ab74b4eb34eea` into that root, including the existing
+native-headless owner. S2 source is read only from pinned Git object
+`34fc7f130a96db171e1a1c43e28e0bad81cd6ca7`. The original S2 REV01 ROM is read
+by absolute path without copying/linking it; SHA-1 is
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`. The explicit existing Linux
+installation under `MAIN_CHECKOUT/docs/BizHawk-2.11-linux-x64` passes the
+unmodified installation preflight: exact **2.11.0.0**, **30 Lua capabilities**.
+Static Assembly metadata independently reports 2.11.0.0 for all seven
+versioned files. No display is needed; child DISPLAY/WAYLAND_DISPLAY/XAUTHORITY
+are removed and ordinary host advancement disables video/sound rendering.
+
+The user Linux archive SHA-256 is
+`9a018fd85b3824f121d962de82a954bee045acf4adddecd903e72174f4effe8c`, different
+from installer-lock `cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`.
+The installed Common DLL is
+`438a49d6a45d9fcac17016240ae205d1af7a4632865f6f70468b684b82323f33`, different
+from native source-lock stock `f20cd009f6f5b0a95bd47b66c48dc8de85afcd7ae0cc6aab3486baf55f501fb4`.
+Installed cores, compressed GPGX and native loader do match their recorded stock
+hashes (`0144e6e2…`, `c4231296…`, `d2367818…`). These are separate compatibility
+and provenance facts: the archive is not lock-verified, no installer/lock is
+relaxed, and neither archive nor installation is rewritten. Existing main host
+binaries are not assumed to match source or used. Pinned `build.sh` builds the
+host externally with the locked Roslyn compiler; xbuild emits its existing
+v4.8 toolset warnings but exits zero. Its test assembly is compiled by that
+script, with no test execution.
+
+**Declared setup and finite coverage.** The pre-execution `setup-manifest.json`
+and source hash define six cases: empty/live/reinstall, each with the last
+dynamic slot or final two dynamic slots. `RunObject` (s2.asm:29832-29846) is
+hooked before the selected slot's ID read, after the Sidekick's dispatch. Setup
+requires native CPZ2/unlocked gameplay, a live initialized Sidekick/tail and
+ID-empty selected parent slots. Each parent SST is cleared once and given
+ID `$7A`, subtype `$06`, routine zero, original X = camera X + `$A8` (second
+parent + `$80`) and Y = camera Y + `$200`. This uses
+`Obj7A_Properties` / `Obj7A_Init` (s2.asm:56281-56310); native initialization
+then applies the actual property offsets/bounds. Parent remember indices
+`$BC/$BD` use initially-clear bits within the respawn-data array; setup sets
+those bits once. These synthetic indices establish native bit release, not
+placement-loader admission or a natural remembered respawn route.
+
+Empty/reinstall cases clear all 64 fixed-tail bytes once. Reinstall cases also
+declare one Sidekick routine-byte reset after its dispatch. Subsequent
+`Obj02_Init_Continued` (s2.asm:38934-38952) installation stores, all Obj7A/Obj05
+writes and retirement are native execution. The separate DPLC cache and DMA
+queue are never initialized by setup. Every setup byte write records old/new
+values; complete pre-entry residue is retained in the observations. This skips
+the route/placement sequence to the constructed platforms and natural Sidekick
+death/respawn. It supplies no authoritative engine input or canonical fixture.
+
+The original CPZ2 BK2 and its SyncSettings drive fresh cores from power-on.
+Ingress is limited to 11,000 input rows; observation to 360 frames after setup;
+each process to 180 seconds. Eighteen instruction hooks verify literal ROM
+bytes before registration. They sample allocator return and Z/A1/caller;
+post-failure pointer/bounds/X writes; ID-zero/live fixed walks; actual Obj05
+parent copies/animation and separate DPLC/DMA decisions; native installation;
+and current-physical-target deletion, full-slot clearing and remember release.
+Positive counts, byte effects and frame continuity are checked; unmet required
+events are incomplete coverage. The finite window is not extended or corrected
+in flight to obtain expected outcomes.
+
+Compilation/preflight retain `worktree_build_slot` plus shared
+`build_activity_slot` through compiler children. Both release before ordinary
+`maven_slot(kind='native:s2-fixed-tail-pressure', estimate=600)` admission, with
+default conservative reservations and inherited leases through sequential Mono
+children. No performance lane, priority override, Maven engine tests or trace
+campaign is used. Exact argv and separated preparation/admission/execution
+timings belong to the external preparation/host records.
+
+**Observed native result, not source inference.** Run
+`run-20261024T160307Z` completed all six cases with process exit zero, case and
+host `execution_status=completed`, no unmet assertions and no launch-log error,
+exception or warning. Each setup occurs at original input row **8791** and ends
+at **9151**, with 361 contiguous frame-end observations (the setup frame plus
+360 following frames), 361 actual fixed-slot walks and unbroken event sequences.
+Callbacks on row 8791 report 8790 as the host's previously completed frame;
+that row's frame-end record reports 8791. Input row, callback boundary and
+completed-frame identity are kept distinct.
+
+| Case | Exhausted parents / confirmed clears | Obj05 main / redirected copies | Native installs / Obj05 init | Tail DMA requests / accepted | Retirement input rows |
+| --- | --- | --- | --- | --- | --- |
+| live-last | 1 / 1 | 153 / 153 | 0 / 0 | 0 / 0 | 8944 |
+| empty-last | 1 / 1 | 0 / 0 | 0 / 0 | 0 / 0 | 8944 |
+| reinstall-last | 1 / 1 | 152 / 0 | 1 / 1 | 16 / 16 | 8944 |
+| live-two | 2 / 2 | 153 / 153 | 0 / 0 | 0 / 0 | 8944, 8965 |
+| empty-two | 2 / 2 | 0 / 0 | 0 / 0 | 0 / 0 | 8944, 8965 |
+| reinstall-two | 2 / 2 | 152 / 0 | 1 / 1 | 16 / 16 | 8944, 8965 |
+
+All **nine** allocation returns have PC `$18014`, A1 `$FFFFD000`, SR `$2300`
+(Z clear) and caller `$2940C`. Only parent-self initialization reaches
+`Obj7A_LoadSubObject`; no rejected child is initialized. Complete target-byte
+comparisons preserve every byte outside X-word `$08/$09`, bounds `$32..$35`
+and reciprocal pointer `$3C..$3F`. Empty targets remain ID zero while retaining
+the unwanted bounds, X offset and parent pointer. Both parents in two-parent
+cases point at `$FFFFD000`; target parent changes `$CF80` then `$CFC0` in that
+same pass. A live target first executes against `$CFC0` on row 8791. Its X word
+becomes `$FFF9` (single) or `$0079` (two), copied from the moved parent and
+replacing the earlier target-offset result. Angle/status copies also match the
+actual resolved parent bytes. This observes the `$3C` longword overwriting the
+real `$3E` parent alias, rather than inferring an alias from a field name.
+
+Empty cases have **361 ID-zero walks and zero Obj05 executions**. Reinstall
+cases are initially skipped, then the separately declared trigger reaches real
+`Obj02_Init_Continued` on row **8792**. At completed installation, only target
+ID and parent-word bytes differ from its install-entry snapshot; the unwanted
+`$32/$34` bounds, upper `$3C` word and X residue remain until their actual later
+consumers. Parent word is now `$B040`, followed by one genuine Obj05 init. At
+row 8944, the older platform's `DeleteObject2` sees **current ID05, parent
+$B040**, then clears that entire physical SST and releases its own remember bit.
+In `live-two`, the first platform instead deletes the tail whose parent is the
+second platform `$CFC0`; at row 8965 that second platform clears the same,
+already-empty storage. Parent SSTs are also fully cleared and both synthetic
+remember bits released. This is physical-address lifetime, not retained occupant
+identity.
+
+Animation/DPLC observations are independent of the pair links. Live cases run
+153 DPLC decisions each, with mapping frame/cache zero and advancing animation
+duration; **zero** DMA requests match that cache-hit branch. Reinstall cases run
+152 decisions each, visit 15 mapping/cache values and generate 16 requests each.
+Read-only decoding of the **original ROM** `MapRUnc_Tails` descriptors checks
+all **610** observed decisions and all 32 source/destination/length tuples;
+each accepted queue call advances its pointer by 14 bytes. No decision is left
+open. The first inspection incorrectly compared all 32 bits of D2; the ROM
+consumer uses D2.w/D3.w, so inspection was corrected to those widths while raw
+register capture stays unchanged. No setup or native output was changed, and
+no native case was rejected, retried or extended to obtain these results.
+
+**Commands, fingerprints and limits.** With absolute `MAIN_CHECKOUT`, original
+`S2_ROM`, explicit `BIZHAWK_HOME` and the owned `TASK_ROOT`, the executed run is:
+
+```bash
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase run \
+  --task-root "$TASK_ROOT" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2"
+```
+
+Initial preparation invoked the staged, unmodified
+`bizhawk/preflight_bizhawk_2_11.sh --bizhawk-home "$BIZHAWK_HOME"` and
+`bizhawk-headless/build.sh` under the two build leases, then the exact Roslyn
+compile argv now retained in the launcher's `prepare` phase. External
+`prepare.json` records every original argv. Preflight took **0.123 s**, pinned
+host build **2.234 s**, and probe compilation **0.635 s**; each associated lease
+wait was below 0.002 s. Native admission waited **570.163 s** separately from
+**26.589 s** sequential execution (individual Mono processes 4.37–4.47 s).
+These are process/preparation timings, not isolated CPU or frame-cost measures.
+
+| Input / executed artifact | SHA-256 |
+| --- | --- |
+| Original CPZ2 BK2, including original SyncSettings | `7e28cf822d5dbbe64646965cd857f264bf51d3349075af94db1a818cac7311e4` |
+| Fresh pinned host executable | `2a919f1ccdb1b218b05a7d9fd3b92e96a3323c4b46b78415c49b4d708f3cff0e` |
+| Executed probe executable | `8dc21cf225d4220784f1257c9f290a86f1212f9182c7a966033070ecc787e77a` |
+| Executed/final C# probe source | `84ddbac1930bfb7784cbc86bd8a91c26c3f85b39966051fd47776a593d329e92` |
+| Launcher used for native execution | `d13a3360a3cf5c220deae66acc643eb5e5a0b3fb0f88376f56ca3a28114ace48` |
+| Retained launcher after read-only completion/DPLC validation | `789b121a50ff6dd800ba1e42da197331186c2281f5db7da8f4f91ad3d85dcea5` |
+
+The retained launcher adds explicit required-output/hash/sequence/caller checks,
+the ROM-descriptor comparison and failure/timeout reporting. Its
+`verify_output` was exercised against **each existing case**, with no additional
+native execution or C# change; the final prepare/run CLI pair as one invocation
+is not claimed newly executed. All six observation hashes match their original
+case summaries; per-case full hashes, setup writes, complete slot/register
+records and runtime hashes remain under that external run. Final Python AST,
+CLI help, links, literal hook-opcode and pinned native citation checks accompany
+`git diff --check`; no Maven engine tests or broader native campaign is run.
+The final citation check reports **35 anchored, 16 unverifiable historical/source
+references**, with no hard/stale finding; new native ranges are also read
+directly from the recorded Git object. Post-run hashes confirm both user
+archives and all four fingerprinted runtime inputs unchanged. The original
+movie also matches its committed Git blob. All process/queue handles are terminal.
+
+The preceding source-only statements of unobserved behavior describe the c008
+checkpoint; this run supersedes them **only for this declared setup**. Native
+failed writes, live consumption, later installation and physical alias deletion
+are now reached evidence. Natural pressure/placement-loader admission and
+respawn, arbitrary dormant residue, destructive engine rewind and general
+controller/manager lifetime remain outside this native probe. The DPLC cache
+is zero at retirement in these cases, so survival of a **nonzero** cache across
+that boundary remains source-only. There is no framebuffer/pixel acceptance.
+The Java strict-capture gap stays open; per-manager complete storage, real
+consumer binding, capture/reset authority and public caller compatibility remain
+the next owner's obligations. No null/self substitute or codec tolerance is
+justified. Production blob `583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten
+count-one bridges, 119 store records, tests, APIs, pins and the known-bug entry
+remain unchanged. No storage-owner implementation begins here.
+
 ## S3K monitor contents admission
 
 Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch

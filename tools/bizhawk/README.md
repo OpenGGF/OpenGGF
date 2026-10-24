@@ -111,3 +111,47 @@ compiler helpers, including external outputs; retain it through owned compiler
 children and release it before queued tests. Engine captures continue through
 GameplayCaptureTool. The Lua exporter host above remains available for its
 explicit isolated diagnostic workflow.
+
+### S2 fixed-tail pressure diagnostic
+
+[`run_s2_fixed_tail_pressure.py`](run_s2_fixed_tail_pressure.py) builds the pinned
+TraceChaser host and [`S2FixedTailPressureProbe.cs`](S2FixedTailPressureProbe.cs)
+in an owned external directory. It uses the original S2 REV01 ROM and CPZ2 BK2,
+explicit-installation preflight, build leases and ordinary shared admission.
+It never rebuilds the optional checkout or uses an unverified existing harness
+binary. Supply an absent external task root; later `run` reuses only that root's
+matching ownership marker and prepared source/binary fingerprints.
+
+```bash
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase prepare \
+  --task-root "$TASK_ROOT" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2"
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase run \
+  --task-root "$TASK_ROOT" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2"
+```
+
+All paths must be absolute. The six cases are `live-last`, `empty-last`,
+`reinstall-last`, `live-two`, `empty-two` and `reinstall-two`; repeated `--case`
+selects an explicit subset. Each fresh core replays original inputs/sync settings
+for at most 11,000 ingress frames, then observes 360 frames after setup. There
+is a 180-second process timeout. No display or sound device is opened.
+
+`setup-manifest.json` declares the constructed parent SSTs, original positions,
+synthetic unused remember entries, optional fixed-tail clear and separately
+declared one-time Sidekick reinitialization trigger. Setup runs after Sidekick
+dispatch, before the final dynamic slot's ID read. Every byte write records its
+old/new value; all subsequent writes come from native execution. These cases
+skip placement-loader admission and natural death/respawn and do not certify
+their route. The separate DPLC cache is never initialized by the setup.
+
+ROM-byte-checked execute hooks record allocator return, failure-tail writes,
+ID-zero/live fixed-slot walks, actual Obj05 copies, DPLC decisions and DMA queue
+effects, native installation, physical pair deletion and remember-bit release.
+Complete parent/target bytes and CPU/caller context accompany observations.
+Each case writes `observations.jsonl` and `summary.json`; the launcher writes
+`provenance.json`, `host.json` and bounded launch logs under its external run
+directory. Inspect exact events/counts and unmet assertions. `completed` requires
+the asserted paths and complete window; missing installation/retirement is
+`incomplete`, not evidence that the behavior is absent. Output is reference
+research only, with no canonical fixture publication or engine hydration.
