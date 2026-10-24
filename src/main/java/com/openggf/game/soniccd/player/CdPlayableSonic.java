@@ -90,7 +90,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
                     // admitted Body reader observes this deferred pure-call write.
                     frame.publishDrawObjectOnScreen(false);
                     var camera = com.openggf.game.GameServices.camera();
-                    queuedPointer = insideSourceCamera(cut, frame.state().header().width(), camera.getX(), camera.getY());
+                    queuedPointer = insideSourceCamera(cut, camera.getX(), camera.getY());
                 }
             }
             awaitingSpriteBuild = true;
@@ -118,11 +118,12 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
         projectNativeState();
     }
 
-    private static boolean insideSourceCamera(CdPlayerBody.DisplayEligibility cut, int width, int cameraX, int cameraY) {
+    private static boolean insideSourceCamera(CdPlayerBody.DisplayEligibility cut, int cameraX, int cameraY) {
         if ((cut.spriteFlags() & 12) != 4) {
             throw new UnsupportedOperationException("CD development queue requires foreground-relative sprites");
         }
         int dx = (short) (cut.centreXWord() - cameraX);
+        int width = cut.width();
         if ((short) (dx + width) < 0 || (short) (dx - width) >= 320) return false;
         int y = sourceWrappedY(cut.centreYWord(), cameraY & 0xFFFF);
         int dy = (short) (y - cameraY);

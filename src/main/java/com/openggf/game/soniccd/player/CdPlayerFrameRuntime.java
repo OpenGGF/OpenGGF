@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 /**
- * Finite CD-private R11A terrain-only development frame-state/service owner.
+ * Finite CD-private R11A development frame-state/service owner.
  * Original external handoff was uncompiled; parent behavioral checks are
  * recorded with the task evidence. scddisasm source pin:
  * 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff.
@@ -185,7 +185,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      */
     public static CdPlayerFrameRuntime terrainOnlyDevelopment(CdR11aAssets assets, ArtPublication publication) {
         Objects.requireNonNull(publication, "publication");
-        return createTerrainOnlyDevelopment(assets, publication);
+        return createDevelopment(assets, publication, CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96);
     }
 
     /**
@@ -194,10 +194,25 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * construction does not grant a source service even if its first cue is empty.
      */
     public static CdPlayerFrameRuntime terrainOnlyDevelopment(CdR11aAssets assets) {
-        return createTerrainOnlyDevelopment(assets, null);
+        return createDevelopment(assets, null, CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96);
     }
 
-    private static CdPlayerFrameRuntime createTerrainOnlyDevelopment(CdR11aAssets assets, ArtPublication publication) {
+    /**
+     * Two-stage player ingress for an external touch owner: reuse the documented
+     * cold player initializer, but NEVER declare that dynamic object RAM is empty.
+     * Root must bind art before service and supply a fresh, world/source-bound
+     * TouchContext to each calling Body slot. Missing input rejects at the real
+     * touch gate; Init/absent/native skip gates still need no touch input.
+     * This factory retains the existing player-only DEV policies, not the
+     * terrain factory's empty-object declaration. It runs no Body/world/load or
+     * native work and grants no retail, opening-route or object admission.
+     */
+    public static CdPlayerFrameRuntime externalTouchRequiredDevelopment(CdR11aAssets assets) {
+        return createDevelopment(assets, null, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
+    }
+
+    private static CdPlayerFrameRuntime createDevelopment(CdR11aAssets assets, ArtPublication publication,
+                                                           CdPlayerBody.DynamicSlots dynamicSlots) {
         Objects.requireNonNull(assets, "assets");
         var plan = Objects.requireNonNull(assets.loadPlan(), "R11A load plan");
         var centre = Objects.requireNonNull(plan.initialCentre(), "initial centre");
@@ -212,7 +227,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 0),
                 new CdPlayerMovement.Globals(0, bounds.cameraCentreY(), 0, 0, 0, 0, 0, 0, 0, 0));
         var environment = new CdPlayerBody.Environment(movement, new CdPlayerBody.Controls(0, 0, 0, 0, 0),
-                new CdPlayerBody.Globals(0, 160, 0, 0, 0, 0, 0, 0), CdPlayerBody.DynamicSlots.EMPTY_DEVELOPMENT_96);
+                new CdPlayerBody.Globals(0, 160, 0, 0, 0, 0, 0, 0), dynamicSlots);
         return new CdPlayerFrameRuntime(assets, publication, state, environment);
     }
 
@@ -302,11 +317,16 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * levelFrames is the engine's ALREADY incremented argument projected low16.
      */
     public BodyPublication runBody(int levelFrames) {
+        return runBody(levelFrames, Optional.empty());
+    }
+
+    /** Ephemeral declared pure input; never retained in shared/actor state or a capture. */
+    public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext) {
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF));
+            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext);
             var publication = new BodyPublication(result, collectSounds(result.effects()));
             state = result.state(); environment = result.environment(); display = result.display();
             return publication;
@@ -360,7 +380,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      *
      * Body R1's pure call is unchanged: no later admitted own-player bit7 read
      * observes the deferred clear before return. This equivalence is bounded
-     * to that body and the admitted R11A empty-dynamic-slot path. Only bit7 is
+     * to that body and the admitted R11A touch scan. Only bit7 is
      * changed here in actor motion and its optional current display projection.
      * No cue/input/clock/Body/effect/callback is executed. Call at a closed
      * post-Body boundary; semantic phase ownership remains with root.

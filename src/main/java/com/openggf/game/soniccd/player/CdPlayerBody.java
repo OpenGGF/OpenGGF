@@ -6,6 +6,8 @@ import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdObjectState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -100,9 +102,20 @@ public final class CdPlayerBody {
     /**
      * Deliberate development admission of 96 inactive dynamic slots. This says
      * NOTHING about native placement data, rings, badniks or opening-route support.
-     * UNIMPLEMENTED rejects only when the source actually calls the touch owner.
+     * This fallback applies only without an explicit TouchContext. UNIMPLEMENTED
+     * rejects only when the source actually calls the touch owner without one.
      */
     public enum DynamicSlots { EMPTY_DEVELOPMENT_96, UNIMPLEMENTED }
+
+    /**
+     * Ephemeral declared pure input, NOT a world/source ownership certificate.
+     * The external world binding/preflight owns the actual scanner table and
+     * pool identity. Body neither retains this input nor owns a pool capture;
+     * Environment/State and frame/actor captures must never contain it.
+     */
+    public record TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot) {
+        public TouchContext { Objects.requireNonNull(scanner); Objects.requireNonNull(snapshot); }
+    }
     public record Environment(CdPlayerMovement.Environment movement, Controls controls,
                               Globals globals, DynamicSlots dynamicSlots) {
         public Environment {
@@ -127,7 +140,8 @@ public final class CdPlayerBody {
     /** Present R11A PlayLevelMusic resolves to SCMD_R1AMUS (Level/Main.asm:555-583). */
     public enum Sound { SCMD_R1AMUS, FM_9C }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
-            CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication, TouchScanCompleted, SoundRequest { }
+            CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
+            ObjectTouchResult, TouchScanCompleted, SoundRequest { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -146,21 +160,31 @@ public final class CdPlayerBody {
     }
     /**
      * Exact Display call cut before history, Animate and SpecialChunks. The queue
-     * owner uses this radius/position with the pre-scroll camera, and owns both
+     * owner uses this radius/position/raw width with the pre-scroll camera and
+     * the raw priority byte for queue selection. It owns both
      * DrawObject's entry bit7 clear and DrawObjects' later bit7 set. Body leaves
      * that bit as ingress; no admitted later body owner reads its own bit7.
      * The final DisplayPublication remains the completed pose for the queued pointer.
      */
     public record DisplayEligibility(boolean eligible, int centreXWord, int centreYWord,
-                                     int yRadius, int spriteFlags) implements Effect {
+                                     int yRadius, int spriteFlags, int width, int priority) implements Effect {
         public DisplayEligibility {
             wordValue(centreXWord); wordValue(centreYWord); byteValue(yRadius); byteValue(spriteFlags);
+            byteValue(width); byteValue(priority);
         }
     }
     public record PositionHistoryWrite(int byteOffset, int centreXWord, int centreYWord, int nextIndex) implements Effect { }
     /** Actual animator result/effects, already incorporated once into State. No art service is requested. */
     public record AnimationPublication(CdPlayerAnimation.State state, CdPlayerAnimation.Effects effects) implements Effect {
         public AnimationPublication { Objects.requireNonNull(state); Objects.requireNonNull(effects); }
+    }
+    /**
+     * Existing immutable scanner result, including at most one detached item
+     * image. The external pool owner may commit that image only after the WHOLE
+     * Body call succeeds; this is no Ring reward, sound or instruction replay.
+     */
+    public record ObjectTouchResult(CdPlayerObjectTouch.Result result) implements Effect {
+        public ObjectTouchResult { Objects.requireNonNull(result); }
     }
     public record TouchScanCompleted(int slotsVisited) implements Effect { }
     public record SoundRequest(Sound sound) implements Effect {
@@ -207,6 +231,19 @@ public final class CdPlayerBody {
         public CdPlayerMovement.Continuation continuation() { return continuation; }
     }
 
+    /** Selected native handler is not owned here; no staged Body result escapes. */
+    public static final class UnsupportedTouchHandler extends UnsupportedOperationException {
+        private final CdPlayerObjectTouch.Kind kind;
+        private final CdObjectState selectedSlot;
+        private UnsupportedTouchHandler(CdPlayerObjectTouch.HandlerBoundary selected) {
+            super("Unsupported touch handler " + selected.kind() + " at whole slot "
+                    + selected.selectedSlot().orElseThrow().identity().wholeIndex());
+            kind = selected.kind(); selectedSlot = selected.selectedSlot().orElseThrow();
+        }
+        public CdPlayerObjectTouch.Kind kind() { return kind; }
+        public CdObjectState selectedSlot() { return selectedSlot; }
+    }
+
     private final CdR11aAssets assets;
     private final CdR11aTerrain terrain;
     private final CdSonicVisualAssets sonic;
@@ -226,7 +263,16 @@ public final class CdPlayerBody {
 
     /** ObjSonic (56-105). No slot means no header, charge or routine work. */
     public Result step(State state, Environment environment) {
-        Objects.requireNonNull(state); Objects.requireNonNull(environment);
+        return step(state, environment, Optional.empty());
+    }
+
+    /**
+     * Explicit per-call touch input overrides only DynamicSlots fallback.
+     * Neither scanner nor snapshot is sampled unless Main reaches its actual
+     * post-Animate, pre-SpecialChunks call with both native touch gates open.
+     */
+    public Result step(State state, Environment environment, Optional<TouchContext> touchContext) {
+        Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
         if (state.header().slotId() == 0) {
             return new Result(state, environment, List.of(), Optional.empty(), Boundary.SLOT_ABSENT, Optional.empty());
         }
@@ -242,7 +288,7 @@ public final class CdPlayerBody {
         c.returned(NativeCall.CHARGE_BEFORE_DISPATCH);
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
-            case 2 -> { main(c); return c.finish(Boundary.MAIN_RETURN); }
+            case 2 -> { main(c, touchContext); return c.finish(Boundary.MAIN_RETURN); }
             case 4 -> unsupported(UnsupportedBoundary.HURT_ROUTINE);
             case 6 -> unsupported(UnsupportedBoundary.DEAD_ROUTINE);
             case 8 -> unsupported(UnsupportedBoundary.RESTART_ROUTINE);
@@ -262,7 +308,7 @@ public final class CdPlayerBody {
     }
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
-    private void main(Cursor c) {
+    private void main(Cursor c, Optional<TouchContext> touchContext) {
         if (c.header.mappingAddress() != mappingAddress) unsupported(UnsupportedBoundary.MAPPING_BINDING);
         extendedCamera(c); waterfall(c);
         if (c.debugCheat != 0 && (c.controls.rawTap() & 0x10) != 0) unsupported(UnsupportedBoundary.DEBUG_ENTRY);
@@ -293,11 +339,31 @@ public final class CdPlayerBody {
         }
         animate(c);
         if ((byte) c.motion.playerControl() >= 0 && c.motion.animation() != 0x2B) {
-            if (c.env.dynamicSlots() != DynamicSlots.EMPTY_DEVELOPMENT_96) unsupported(UnsupportedBoundary.TOUCH_SCAN);
-            // Actual PP Player_ObjCollide.Loop (7-37) checks 96 inactive slot sprite flags and returns.
-            c.effects.add(new TouchScanCompleted(96));
+            touch(c, touchContext);
         }
         specialChunks(c);
+    }
+
+    /** Player_ObjCollide (PP Player Object Collision.asm:7-98), exactly Main:347. */
+    private static void touch(Cursor c, Optional<TouchContext> touchContext) {
+        if (touchContext.isEmpty()) {
+            if (c.env.dynamicSlots() != DynamicSlots.EMPTY_DEVELOPMENT_96) unsupported(UnsupportedBoundary.TOUCH_SCAN);
+            // Existing deliberate development fallback: 96 inactive slot flag visits.
+            c.effects.add(new TouchScanCompleted(CdObjectPool.DYNAMIC_COUNT));
+            return;
+        }
+        var input = touchContext.orElseThrow();
+        var selected = input.scanner().scan(new CdPlayerObjectTouch.PlayerCut(c.x(), c.y(),
+                c.motion.yRadius(), c.animation.mapFrame(), c.hurt), input.snapshot());
+        if (selected instanceof CdPlayerObjectTouch.HandlerBoundary handler) {
+            throw new UnsupportedTouchHandler(handler);
+        }
+        c.effects.add(new ObjectTouchResult(selected));
+        // The scanner's first overlap returns in the immutable 32..127 physical
+        // sequence. Its selected identity gives actual visits without a rescan.
+        int visits = selected.selectedSlot().map(slot -> slot.identity().wholeIndex()
+                - CdObjectPool.FIRST_WHOLE_INDEX + 1).orElse(CdObjectPool.DYNAMIC_COUNT);
+        c.effects.add(new TouchScanCompleted(visits));
     }
 
     /** ObjSonic_ExtCamera (231-279), incoming ground word and unsigned CMP/BCC including wrapped NEG.W. */
@@ -337,7 +403,8 @@ public final class CdPlayerBody {
             eligible = (oldHurt == 0 || (oldHurt & 4) != 0) && (c.motion.playerControl() & 0x40) == 0;
         }
         c.displayEligible = eligible;
-        c.effects.add(new DisplayEligibility(eligible, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags()));
+        c.effects.add(new DisplayEligibility(eligible, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags(),
+                c.header.width(), c.header.priority()));
         if (c.invincible != 0 && c.invincibilityTimer != 0) {
             c.invincibilityTimer = uw(c.invincibilityTimer - 1); c.actor(ActorField.INVINCIBILITY_TIMER, c.invincibilityTimer);
             if (c.invincibilityTimer == 0) {

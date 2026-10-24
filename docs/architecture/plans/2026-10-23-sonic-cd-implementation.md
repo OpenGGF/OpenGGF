@@ -2288,3 +2288,42 @@ ordinary38921 tests,2 failures,2 errors,176 skips; guards722 tests,8 failures.
 Attribution and required corrections remain open; no clean delivery is claimed.
 Actual Ring pickup, Mosqui execution, shared displayed SAT and composite rewind
 remain the next private-world integration, separate from this internal phase.
+
+
+### Ephemeral player touch through the frame owner, 24 October 2026
+
+Body now accepts one optional immutable touch context at the actual post-Animate,
+pre-SpecialChunks call. It stages the first physical selected item image without
+writing the pool, retains no snapshot in player/environment/rewind state, and
+rejects unimplemented enemy/monitor/hazard/special handlers with a typed boundary.
+A later Body failure publishes no item patch, sound or player result. The caller
+still owns committing an item only after the complete Body returns. Raw Display
+width/priority travel with the call cut; the old terrain-only cull remains equal.
+
+The named external-touch-required Frame factory does not claim empty dynamic
+RAM and retains the two-stage art callback binding. Existing terrain factories
+keep their prior behavior. Root added four Frame checks for binding, missing or
+non-retained context, detached item/replay behavior, failed handlers and unserviced
+/paused entitlement. Opus's four-file source review found no P1/P2 or wrong
+expectation. Root's additional four Frame invocations executed separately from
+that historical source review in the combined parent run below.
+
+Parent83771 passed244 tests, zero failures/errors, one skip at componentac49f80cb
+plus the reviewed touch/Mosqui files and parent Frame regressions. Per class:
+Body78, Frame78, actual-regional actor12, regional lifecycle24, boot8 (one
+skipped), Mosqui26, floor helper7 and Mod API11. Java25.0.5.0.2 and actual CD
+media/surfacelessEGL properties were verified in all eight XML reports. The
+skipped boot case is cartridge-to-CD switching: the command omitted sonic2.rom.path.
+It is not counted as observed switching coverage and will be included with the
+next affected world integration selection. The other boot cases included the
+existing USA132-input rendered/rewind route and regional EGL loading. No new
+Ring pickup or shared-object world route ran.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestCdMosqui,TestCdObjectCollisionCheck,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+This commit contains only the five touch/player test paths and this existing
+record. Mosqui is a separately reviewed component. Pool commit, live dynamic
+execution, shared CPU SAT and displayed-next-VInt pixels remain root-owned
+world integration, with no touch suppression or generic Ring fallback.

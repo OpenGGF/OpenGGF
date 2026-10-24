@@ -5,6 +5,9 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerBody;
+import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.player.CdPlayerCharge;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
@@ -20,13 +23,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Authored before the frame owner. ALL JAVA/TESTS UNRUN. Real component and
- * load-plan decoders consume constructed bounded format inputs; this package
+ * Real component and load-plan decoders consume constructed bounded format inputs; this package
  * uses the existing aggregate constructor, never a production test factory,
  * reflection, mock Body/art implementation, supplied-media fallback or skip.
  * Constructed bytes are not an authenticated retail MMD/native execution.
@@ -469,6 +472,106 @@ class TestCdPlayerFrameRuntime {
     void inputRequiresAnActualUnsignedByte(int held) throws IOException {
         var f = new Fixture().runtime(); assertThrows(IllegalArgumentException.class, () -> f.prepareInput(held));
         assertNotNull(f.captureActor());
+    }
+
+    @Test void externalTouchFactoryRequiresArtBindingAndNeverDeclaresEmptyDynamicRam() throws IOException {
+        var assets = new Fixture().assets();
+        var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
+        assertSame(assets, f.assets());
+        assertEquals(CdPlayerBody.DynamicSlots.UNIMPLEMENTED, f.environment().dynamicSlots());
+        var before = f.captureShared();
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, () -> f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL));
+        assertSharedValues(before, f.captureShared());
+        f.bindArtPublication((dma, complete) -> { });
+        service(f, 0);
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, f.runBody(1).result().boundary());
+        service(f, 0);
+        var state = f.state(); var environment = f.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.TOUCH_SCAN,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(2)).boundary());
+        assertEquals(state, f.state()); assertEquals(environment, f.environment());
+        assertThrows(IllegalStateException.class, () -> f.runBody(2));
+    }
+
+    @Test void frameStagesDetachedTouchAndReplaysOnlyWhenTheCallerResuppliesItsSnapshot() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0x47);
+        var selected = pool.state(32); var touch = frameTouchContext(pool);
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0);
+        var result = f.runBody(2, Optional.of(touch));
+        var item = frameTouchResult(result);
+        assertEquals(CdPlayerObjectTouch.Kind.ITEM, item.kind());
+        assertSame(selected, item.selectedSlot().orElseThrow());
+        assertEquals(4, item.changedSlot().orElseThrow().routine());
+        assertSame(selected, pool.state(32)); assertEquals(2, pool.state(32).routine());
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0);
+        var replay = f.runBody(2, Optional.of(touch));
+        assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        assertEquals(result.sounds(), replay.sounds());
+        assertArrayEquals(item.changedSlot().orElseThrow().copyBytes(),
+                frameTouchResult(replay).changedSlot().orElseThrow().copyBytes());
+        service(f, 0);
+        assertEquals(CdPlayerBody.UnsupportedBoundary.TOUCH_SCAN,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary(),
+                "The previous ephemeral context must not be retained");
+    }
+
+    @Test void framePublishesNothingForAnUnsupportedSelectedHandlerAndConsumesOnlyThatSlotTurn() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 7);
+        var selected = pool.state(32); var context = frameTouchContext(pool);
+        service(f, 0);
+        var state = f.state(); var environment = f.environment(); var display = f.display(); var art = f.artState();
+        var failure = assertThrows(CdPlayerBody.UnsupportedTouchHandler.class,
+                () -> f.runBody(2, Optional.of(context)));
+        assertEquals(CdPlayerObjectTouch.Kind.ENEMY, failure.kind());
+        assertSame(selected, failure.selectedSlot());
+        assertEquals(state, f.state()); assertEquals(environment, f.environment()); assertEquals(display, f.display());
+        assertSame(art, f.artState()); assertSame(selected, pool.state(32));
+        assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(context)));
+        // The world/actor closes a failed serviced cycle; the pure Frame does not pretend to roll V-int back.
+        f.close(); assertTrue(f.closed());
+    }
+
+    @Test void externalTouchOverloadKeepsTheExistingUnservicedAndPausedSlotAdmission() throws IOException {
+        var f = externalTouchRuntime(); var context = frameTouchContext(new CdObjectPool());
+        assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(context)));
+        service(f, 0x80); assertTrue(f.paused());
+        var before = f.captureActor();
+        assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(context)));
+        assertEquals(before, f.captureActor());
+        service(f, 0); service(f, 0x80); assertFalse(f.paused());
+        var result = f.runBody(2, Optional.of(context));
+        assertEquals(CdPlayerObjectTouch.Kind.NONE, frameTouchResult(result).kind());
+    }
+
+    private static CdPlayerFrameRuntime externalTouchRuntime() throws IOException {
+        var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(new Fixture().assets());
+        f.bindArtPublication((dma, complete) -> { });
+        service(f, 0); f.runBody(1);
+        return f;
+    }
+    private static CdObjectPool frameTouchPool(CdPlayerFrameRuntime frame, int collisionType) {
+        var pool = new CdObjectPool();
+        pool.write(pool.state(32).moveByte(CdObjectState.ByteField.ID, 0x10)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x80)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, collisionType)
+                .moveByte(CdObjectState.ByteField.ROUTINE, 2)
+                .moveWord(CdObjectState.WordField.X, frame.state().motion().centreX16_16() >>> 16)
+                .moveWord(CdObjectState.WordField.Y, frame.state().motion().centreY16_16() >>> 16));
+        return pool;
+    }
+    private static CdPlayerBody.TouchContext frameTouchContext(CdObjectPool pool) {
+        var scanner = new CdPlayerObjectTouch(java.util.Collections.nCopies(63,
+                new CdR11aObjectAssets.TouchSize(16, 16)));
+        return new CdPlayerBody.TouchContext(scanner, pool.capture());
+    }
+    private static CdPlayerObjectTouch.Result frameTouchResult(CdPlayerFrameRuntime.BodyPublication publication) {
+        return publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResult.class::isInstance)
+                .map(CdPlayerBody.ObjectTouchResult.class::cast).map(CdPlayerBody.ObjectTouchResult::result)
+                .findFirst().orElseThrow();
     }
 
     private static void service(CdPlayerFrameRuntime f, int held) { f.serviceVBlank(f.prepareInput(held).phase()); }
