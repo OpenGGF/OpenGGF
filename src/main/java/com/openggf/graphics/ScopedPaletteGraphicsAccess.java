@@ -12,15 +12,15 @@ public final class ScopedPaletteGraphicsAccess {
         private final GraphicsManager graphics;private final Object owner;private final int base;private final long generation;
         private boolean released;
         private Bank(GraphicsManager graphics,Object owner,int base) {
-            this.graphics=graphics;this.owner=owner;this.base=base;generation=graphics.scopedPaletteGeneration(owner);
+            this.graphics=graphics;this.owner=owner;this.base=base;generation=graphics.paletteTextures().scopedPaletteGeneration(owner);
         }
     }
     public static Bank acquire(GraphicsManager graphics,Object owner,PaletteView[] palettes) {
-        engineCaller();return new Bank(graphics,owner,graphics.scopedPaletteBank(owner,palettes));
+        engineCaller();return new Bank(graphics,owner,graphics.paletteTextures().scopedPaletteBank(owner,palettes));
     }
     public static boolean valid(Bank bank,GraphicsManager graphics,Object owner) {
         engineCaller();return bank!=null&&!bank.released&&bank.graphics==graphics&&bank.owner==owner
-                &&graphics.scopedPaletteBankValid(owner,bank.base,bank.generation);
+                &&graphics.paletteTextures().scopedPaletteBankValid(owner,bank.base,bank.generation);
     }
     public static int base(Bank bank,GraphicsManager graphics,Object owner) {
         engineCaller();if(!valid(bank,graphics,owner))throw new IllegalArgumentException("Palette bank belongs to another owner, generation or render host");
@@ -30,14 +30,14 @@ public final class ScopedPaletteGraphicsAccess {
         engineCaller();if(bank==null)return;
         if(bank.owner!=owner)throw new IllegalArgumentException("Palette bank belongs to another owner");
         if(!bank.released) {
-            if(valid(bank,bank.graphics,owner))bank.graphics.releaseScopedPaletteBank(owner);
+            if(valid(bank,bank.graphics,owner))bank.graphics.paletteTextures().releaseScopedPaletteBank(owner);
             bank.released=true;
         }
     }
     public static void bindWorld(GraphicsManager graphics,Object world) {
-        engineCaller();graphics.bindScopedPaletteWorld(world);
+        engineCaller();graphics.paletteTextures().bindScopedPaletteWorld(world);
     }
     public static void leaveAssembly(GraphicsManager graphics,Object world) {
-        engineCaller();if(graphics!=null)graphics.clearScopedUnderwaterBasis(world);
+        engineCaller();if(graphics!=null)graphics.paletteTextures().clearScopedUnderwaterBasis(world);
     }
 }

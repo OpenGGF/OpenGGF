@@ -41,6 +41,12 @@ Companion references:
 preview-position logging and special-stage completion requests. It receives the
 current mode/provider and a results callback; `GameLoop` retains provider-aware
 reward publication and the fade/results transition.
+`GameLoopEndingSession` owns the ending provider, shared ending/standalone
+transition gate, phase execution, credits-demo loading and ending-only cleanup.
+Its private host adapter reads the loop's current managers as the original
+choreography requires; GameLoop keeps frame admission and shared frame work.
+Engine presentation continues through the virtual `GameLoop.getEndingProvider()`
+boundary. Runtime rebinding and suspension retain the ending session.
 
 Running the engine needs LWJGL (OpenGL/OpenAL/GLFW bindings) and JOML, both already in `pom.xml`.
 
@@ -434,6 +440,14 @@ The range table and capacity limits are in
 
 The engine works in Mega Drive coordinates (Y increases downward);
 `BatchedPatternRenderer` flips to the OpenGL convention automatically.
+
+Each `GraphicsManager` owns one package-private `PaletteTextureOwner`. It owns
+normal and underwater textures, upload staging and source aliases, requested and
+displayed fade generations, publication gates, scoped leases and appearance
+residency. GraphicsManager retains the supported typed APIs, virtual dispatch and
+render orchestration. Shared `RenderContext` row allocation and mutable CPU bank
+colors retain their existing lifetimes; texture disposal does not retire ordinary
+CPU banks. Palette rewind remains with its gameplay owner.
 
 ## Data select and save system
 

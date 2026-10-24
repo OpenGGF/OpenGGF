@@ -257,6 +257,11 @@ public class TestSatReplayBatching {
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
+        if (target instanceof GraphicsManager host && (fieldName.equals("combinedPaletteTextureId")
+                || fieldName.equals("underwaterPaletteTextureId"))) {
+            PaletteTextureTestAccess.set(host, fieldName, value);
+            return;
+        }
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         if (value instanceof Boolean b) {

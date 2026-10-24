@@ -77,8 +77,7 @@ class TestRenderProjection {
             assertEquals(height, field(instanced, "batchDisplayHeight"));
             graphics.initHeadless(); graphics.cachePatternTexture(new Pattern(), PatternAtlasRange.OBJECTS.base());
             graphics.setHeadlessMode(false); // Command construction only; no GL execution.
-            Field palette = GraphicsManager.class.getDeclaredField("combinedPaletteTextureId");
-            palette.setAccessible(true); palette.set(graphics, 0);
+            PaletteTextureTestAccess.set(graphics, "combinedPaletteTextureId", 0);
             graphics.renderPatternWithId(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), 8, 16);
             graphics.renderPatternWithIdScaled(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), -2.25f, 16.5f, 11.75f, 3.25f);
             graphics.renderStripPatternWithId(PatternAtlasRange.OBJECTS.base(), new PatternDesc(), 8, 16, 2);

@@ -613,7 +613,11 @@ Unreleased. The earlier development themes remain in
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
   reject stale rewind and dependency allowances, and identify raw lifecycle calls
   by caller rather than a shared total. Shared menu animation and execution-time
-  graphics injection close the remaining menu/framework seams. SAT replay uses a
+  graphics injection close the remaining menu/framework seams. Ending provider
+  state, credits-demo execution and ending cleanup share one session owner while
+  the game loop retains frame admission. Each graphics host owns its complete
+  palette texture, publication, fade and residency lifetime, preserving CPU bank
+  allocation and immediate rewind redraws. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Stock title
   previews use detached game-owned providers, preserving animated pixels and

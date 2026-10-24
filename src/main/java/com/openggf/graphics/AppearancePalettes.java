@@ -55,7 +55,7 @@ public final class AppearancePalettes {
             throw new IllegalArgumentException("character line must be 0..3");
         if ((overrideMask & ~0xFFFF) != 0) throw new IllegalArgumentException("override mask covers entries 0..15");
         Block block = new Block(graphics, source, characterLine, stock, liveSource, overrides, overrideMask);
-        if (!graphics.appearancePaletteRows().admit(block)) return null;
+        if (!graphics.paletteTextures().appearancePaletteRows().admit(block)) return null;
         return block;
     }
 
@@ -99,7 +99,7 @@ public final class AppearancePalettes {
          */
         public RenderContext context() {
             if (released) return null;
-            if (!resident() && !graphics.appearancePaletteRows().admit(this)) return null;
+            if (!resident() && !graphics.paletteTextures().appearancePaletteRows().admit(this)) return null;
             return context;
         }
 
@@ -107,7 +107,7 @@ public final class AppearancePalettes {
         public void release() {
             if (released) return;
             released = true;
-            graphics.appearancePaletteRows().remove(this);
+            graphics.paletteTextures().appearancePaletteRows().remove(this);
         }
 
         /** Composed colour of {@code index} on logical line {@code line}, as last uploaded. */
@@ -202,12 +202,12 @@ public final class AppearancePalettes {
 
     /** The per-render-host registry behind every live block; driven by {@link GraphicsManager}. */
     static final class Rows {
-        private final GraphicsManager graphics;
+        private final PaletteTextureOwner palettes;
         private final List<Block> blocks = new ArrayList<>();
         private final int[] ratio = new int[3];
 
-        Rows(GraphicsManager graphics) {
-            this.graphics = graphics;
+        Rows(PaletteTextureOwner palettes) {
+            this.palettes = palettes;
         }
 
         boolean isEmpty() {
@@ -227,10 +227,10 @@ public final class AppearancePalettes {
             block.bind(token, base);
             if (!blocks.contains(block)) blocks.add(block);
             for (int line = 0; line < RenderContext.LINES_PER_CONTEXT; line++) {
-                block.compose(line, graphics.cachedPaletteLine(block.sourceBase + line));
-                graphics.uploadAppearanceRow(block.rows[line], base + line, block.sourceBase + line);
+                block.compose(line, palettes.cachedPaletteLine(block.sourceBase + line));
+                palettes.uploadAppearanceRow(block.rows[line], base + line, block.sourceBase + line);
             }
-            graphics.appearanceRowsChanged();
+            palettes.appearanceRowsChanged();
             return true;
         }
 
@@ -238,10 +238,10 @@ public final class AppearancePalettes {
             blocks.remove(block);
             if (block.resident()) {
                 for (int line = 0; line < RenderContext.LINES_PER_CONTEXT; line++) {
-                    graphics.uploadAppearanceRow(ScopedUnderwaterBasis.blankLine(), block.base + line, block.base + line);
+                    palettes.uploadAppearanceRow(ScopedUnderwaterBasis.blankLine(), block.base + line, block.base + line);
                 }
                 RenderContext.releaseScopedPaletteBank(block.token);
-                graphics.appearanceRowsChanged();
+                palettes.appearanceRowsChanged();
             }
             block.unbind();
         }
@@ -257,9 +257,9 @@ public final class AppearancePalettes {
                     continue;
                 }
                 changed |= block.compose(line, palette);
-                graphics.uploadAppearanceRow(block.rows[line], block.base + line, row);
+                palettes.uploadAppearanceRow(block.rows[line], block.base + line, row);
             }
-            if (changed) graphics.appearanceUnderwaterChanged();
+            if (changed) palettes.appearanceUnderwaterChanged();
         }
 
         /** The row a block contributes to the underwater texture, or null when {@code row} is not one. */
