@@ -172,6 +172,16 @@ change under test, while native and the semantic `--clip aiz-fire-transition`
 capture both show it covering those frames. Capture from the semantic start, or
 from well before the window, before reading a missing overlay as a regression.
 
+Exclusive test admission does not also exclude build-only work (2026-10-24,
+lean qualification). The test-cost audit's `profile_test_memory.py` runs held
+exclusive test admission, but Maven preparation used shared activity and the
+measurement did not hold exclusive activity. Their allocation observations do
+not establish isolated timing or a proportional peak-RAM reduction. For isolated
+measurements, take own-worktree ownership, exclusive test admission, then
+exclusive build activity, and pass those leases into descendants. The
+[qualification record](../architecture/research/2026-10-24-lean-test-qualification.md)
+corrects the earlier claim and distinguishes sampled RSS, swap and heap caps.
+
 Preflight and Python safety checks can launch real JVMs (2026-10-17, test queue).
 `mvn -v` starts Java; two Python memory-observer controls also compile and run
 JUnit fixtures. They previously bypassed isolated measurement leases. Preflight

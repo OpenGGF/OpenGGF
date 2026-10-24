@@ -1,8 +1,9 @@
 """Qualified small test commands for automatic 4 GiB Maven admission.
 
 This is an execution-budget policy, never a test selection or pass cache. The
-explicit classes exercise small configuration/input/value fixtures; qualification
-and the 1 GiB heap run are recorded in the 2026-10-16 throughput investigation.
+explicit classes exercise bounded configuration/input, math, codec and headless
+fixtures. Qualification and 1 GiB heap runs are recorded in the 2026-10-16
+throughput investigation and 2026-10-24 lean-test qualification.
 Unknown classes and custom invocation shapes keep normal admission. Adding a
 class requires reviewing its allocations/fixtures and running it in the lean lane.
 """
@@ -17,6 +18,9 @@ from maven_resources import snapshot
 MAX_SMALL_CLASSES = 50
 QUALIFIED_CLASSES = frozenset({
     'com.openggf.TestInputBindingFactoryTempDirectory',
+    'com.openggf.audio.runtime.TestAudioFrameClock',
+    'com.openggf.audio.runtime.TestAudioRingBuffers',
+    'com.openggf.audio.synth.TestFastFmWaveformAlignment',
     'com.openggf.configuration.CaptureConfigDefaultsTest',
     'com.openggf.configuration.FrameRateResolverTest',
     'com.openggf.configuration.TestAudioHardwareDefaults',
@@ -65,6 +69,18 @@ QUALIFIED_CLASSES = frozenset({
     'com.openggf.control.TestPlayerInputState',
     'com.openggf.control.TestRetainedGameplayInput',
     'com.openggf.control.TestScenePhysicalInput',
+    'com.openggf.game.TestPhysicsProfile',
+    'com.openggf.graphics.TestPatternAtlasLookup',
+    'com.openggf.level.TestLevelManagerRewindBoundary',
+    'com.openggf.mods.code.TestGolfProtocol',
+    'com.openggf.net.ghost.TestGhostFrameCodec',
+    'com.openggf.net.identity.TestDisplayNames',
+    'com.openggf.net.identity.TestPlayerIdentity',
+    'com.openggf.net.protocol.TestControlCodec',
+    'com.openggf.net.protocol.TestControlCodecAdversarial',
+    'com.openggf.net.protocol.TestControlCodecPolymorphism',
+    'com.openggf.physics.TestSwingMotion',
+    'com.openggf.sprites.TestNativePositionOps',
     'com.openggf.tests.TestCollisionLogic',
     'com.openggf.util.TestAnimationTimer',
     'com.openggf.util.TestDplcStaticFlattener',
