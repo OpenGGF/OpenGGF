@@ -92,6 +92,10 @@ Unreleased. The earlier development themes remain in
   Leaf generators retain the native touch phase after slow contact. ARZ bubbles
   preserve their native slot lifetime, pop animations and generator allocation
   order, including the final out-of-range spawn and a full object pool.
+  Authored stages publish prepared stock or namespaced music through ordinary
+  presentation, honoring both automatic-playlist suppression owners. Their common
+  object art loads without a native zone header; native stages retain their title
+  timing and zone-owned spring art.
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
@@ -899,7 +903,9 @@ Unreleased. The earlier development themes remain in
   cleanup. Sonic 1 palette fades retain prepared player art; full loads clear
   unpublished readiness, and results enter the next-level routine on the following
   object pass. Audio's installed
-  source stays in one immutable, typed tuple. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
+  source stays in one immutable, typed tuple. Terminal streamed-music cleanup
+  releases presentation slots without recapturing retired cursors, while ordinary
+  reset commands retain transactional rollback. Sonic 1 and Sonic 2 selected-slot images use the shared data-select
   converter and payload validators; Sonic 3 & Knuckles keeps explicit host ROM
   donation while consuming the same patterns, palette and mapping contract.
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,

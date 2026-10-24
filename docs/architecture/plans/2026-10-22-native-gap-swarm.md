@@ -6193,3 +6193,446 @@ The original Root category run remains separately attributed to frozen `2a9`.
 Consumed XML/text/log files were removed after readback; source and compiled
 outputs remain. No retry, extra engine check, runtime/oracle change, remote
 operation or Root source/job/target observation occurred.
+
+
+### Isolated Emerald and real-valley catalogue prerequisites — 2026-10-24
+
+This fixture-setup-only leaf starts at
+`fa7f88deca20ce9ea8b9a1f5107772113734366d`. It changes only the two already-tested
+fixtures and this factual append. The complete fa7 Plan prefix is preserved.
+The earlier LivePlayback1, background/draw38 and registration/donor7 results
+remain separate epochs, included once through ancestry rather than rerun here.
+
+`com.openggf.mods.code.TestEmeraldRemix` gains four intermediate
+`RomCatalogueFixture` try-with-resources bindings for the original discovered S2
+file and the actual configuration/ROM manager. Each original owned-ROM resource
+is followed by the catalogue resource and then the existing Fixture resource,
+so runtime/fixture cleanup precedes catalogue restoration, which precedes owned
+ROM close. The fifth method,
+`cloverValleyRoundTripsThroughEditorImportProjectExportAndPlaytest`, is byte-exact.
+All original ROM assumptions, recipe/editor/export checks, route inputs,
+coordinates, timing and native-source oracles remain unchanged.
+
+`com.openggf.mods.code.TestStarpostRealValley` conditionally binds the original
+supplied S1 file immediately after its S3K `SharedLevel.load`, before the original
+logical-S1 availability assumption. A null discovery does not create an empty
+binding or replace that assumption. Catalogue close runs last in a narrow outer
+finally around the original kit-close then bootstrap-dispose sequence. The
+Tails/Knuckles method retains its manual close and fresh launch/binding. There
+is no reapply, global harness change, alias, cache clearing, manager close or
+borrowed annotation-ROM close. Every matrix, assumption, floor/pixel/loop/rewind
+assertion and controller input remains intact. Whole-file inverses of only these
+fixture/import hunks reproduce fa7 exactly.
+
+Frozen tested Java SHA-256 values are:
+
+- Emerald: `f84f546b5814a5abd984bc86387703dd13e14b0898314ea88e12bc2adc9dfcaf`
+  (blob `a98be57469ea5e39e263558d6122ad2edb09c26d`, +17/-4).
+- RealValley: `2d5a5165b0e38f49cc859e6475df417924bd2a06e5e97d5ef8f7985821f2fd9f`
+  (blob `04d9894b9e905e94bc972114ab0668abe4bdfc31`, +19/-5).
+
+The tested tree before this prose is
+`a9666f39bda7b728919924077ec81587016c261f`. This worktree's path/mode/mtime/content
+input frame is
+`64209009696ae93c0a9b96e29efdf66b923c9a7f90f20eafa3ca219c4a66010d`,
+13,178 paths / 856,434,238 bytes. This is checkout-specific timestamp attribution,
+not a portable cross-worktree claim. Both Java pins, all 20 protected/helper/prior
+leaf pins, tree and complete input frame remained exact through full readback.
+Production, shared helpers, assets, configuration files, codecs, API signatures,
+guards, baselines and native budgets did not change.
+
+Exactly one original normal queued request, session58048, ran from
+`<PR_WORKTREE>`:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.mods.code.TestEmeraldRemix,com.openggf.mods.code.TestStarpostRealValley' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+`OPENGGF_QUEUE_WRAPPER` denotes the absolute current
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py`, SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`;
+all ten reviewed wrapper/import pins matched before submission. Selector SHA-256
+is `5b969f35bf2fea2cea553bab360a271321a707581d5df25b3aaf6553b6e04a4a`.
+The original three stock files were freshly CRC32/SHA-1 verified before launch.
+The reviewed Java25/Lua5.4/null-audio/EGL environment and unset ambient
+launcher/display variables were retained. Exact own-worktree dedup was empty;
+the same request stayed alive through admission. There was one parent author,
+no child/reviewer/watcher, no version probe, preflight, standalone build, helper
+unit/API/guard/policy check, retry, extra selector or destination-property addition.
+
+Actual JUnit result: **18 distinct identities / 18 passes / 0 failures /
+0 errors / 0 skips**, Emerald5 and RealValley13. This is fixture admission/setup
+qualification with **four explicit OPEN positive-run guard warnings**, not
+fault-free qualification. Exactly these two methods each emit one music refusal
+and one PLC warning:
+
+- `com.openggf.mods.code.TestEmeraldRemix#sonicCompletesTheRemixedActAndCloverValley`
+- `com.openggf.mods.code.TestEmeraldRemix#cloverValleySlopesTurnSonicThroughEasedAngles`
+
+The exact messages are `Refusing to arm S2 Level_PlayBgm: Sonic 2 zone id out of
+range: 135` and `Zone index -1 out of range for LEVEL_DATA_DIR (max 16)`.
+`Sonic2PreBgmTimingModel.resolve` returns `Unresolved` for the invalid zone; the
+identified `Sonic2LevelInitProfile.scheduleLevelMusic` guard cancels scheduling
+and logs that reason. The message is not evidence of an exception caught by its
+separate catch branch. `Sonic2PlcLoader.getZonePlcIds` logs its bounds refusal and
+returns `{0,0}`. Diagnostics do not identify the exact runtime PLC caller; the
+triggering runtime chain, effects on playback/art/PLC coverage and frequency or
+newness remain UNKNOWN. Neither method declares these guard refusals as negative
+controls. No suppression, waiver, fitted expectation, catch change or runtime
+repair follows from the 18 JUnit passes. Native music/PLC/art closure is not claimed.
+
+RealValley retained its observed 2,129,920 exact art pixels, 3,407,872 exact
+collision pixels and 3,072 production floor probes. The three farmer loop cases
+and all six character/aspect gate cases execute, alongside rewind and the
+original Tails/Knuckles controls. These are existing bounded oracles, not complete
+native/art coverage or a matched historical baseline.
+
+Queue wait was **127 seconds**, separately from Maven **39.125 seconds**;
+command wall time was 166.456 seconds. Suite times were Emerald3.876s and
+RealValley4.421s; these are not an elapsed-delivery sum. All 18 identities, two
+XMLs with identical 69-property sets, 79 nonempty owned/dependency classpath
+entries, 27 recursive streams / 8,535 UTF-8 bytes, two text reports and the entire
+208-line / 21,549-byte console were read. Java25.0.5.0.2, exact selector, owned
+cwd/target, EGL and all three absolute ROM properties match. Five packages report
+validation0findings. FAST/NONE warnings (42 XML / 44 console) and 18 compiler
+deprecation warnings are separate from the four OPEN guards. No fresh dump or
+infrastructure/source-drift failure was observed.
+
+The one-test-request scope fe76 closed after reporting the positive-warning
+boundary, without a Plan write, commit, runtime correction or automatic retry.
+After bounded disposition accepted the fixture-owned prerequisite changes with
+those warnings still OPEN, a fresh delivery-only slice authorized this factual
+append and one normal-hook local leaf, sole parent fa7. No new executable edit,
+test or separate policy command occurs in that delivery slice. All five fully
+read owned XML/text/console files, 81,498 bytes, were consumed; no raw archive or
+validation receipt was created. Useful source, compiled outputs and the worktree
+remain. There are no owned live jobs or children.
+
+Root reports fa7 received once with its separately qualified FBO leaf into
+composition `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`; this isolated successor
+must remain held until that composition's new complete-category continuation
+reaches terminal/full readback. No Root source, targets or jobs were read here.
+The abnormally terminated original 3da run retains only its available evidence;
+this leaf does not complete or retroactively qualify that run. Original f340
+189 failed identities/108 skips, 41 disputed route causes, inherited mapping
+limitation, warm secondary-cache identity limitation and all other epochs remain
+unchanged evidence. No all-family, all-native or aggregate PR-green claim, remote
+push, PR-body/draft change, Main/develop mutation, CI, native/passive observation,
+route profile or FBO/runtime work is included.
+
+### S2 authored entry music, common PLC ownership and terminal streamed teardown — 2026-10-24
+
+This is a separate successor epoch in the isolated S2 worktree, with sole parent
+`1537657c920bd3775e97a9abf6666ad8922721f6`. The parent's original focused
+38-case request ended **36 passes / 1 failure / 1 error**. Its common-only art
+test incorrectly required a vertical spring from the standard PLCs, and
+`authoredNamespacedMusicUsesPreparedPublicationAndHonorsBothSuppressionOwners`
+completed its body but errored in `closeSession()` during audio teardown. Those
+original results remain failed evidence; the new requests below do not rewrite
+or retroactively qualify that epoch.
+
+S2 authored entry now consumes the already-prepared stock or namespaced music
+through its publication owner, cancels stale native work and honors both
+automatic-playlist suppression and the level's one-shot suppression. Returning
+to stock retains the native deferred publication boundary. Common-only art
+uses the existing `-1` contract without consulting a native zone header; other
+invalid zone indices still reach the stock parser's rejection. Native PLC
+disposition established that Std1, Std2 and StdWtr do not contain ordinary
+vertical-spring art, while EHZ2 does. The positive sheet, renderer, decoded-pattern
+and mapping-frame assertions moved to `zonePlcOwnsVerticalSpringArt`; the common
+case checks their absence while retaining every other real common-art oracle.
+No spring asset, expected pixel, track length or integration assertion was
+removed to obtain a pass.
+
+The teardown error came from combining terminal disposal with a live rollback
+snapshot. `AudioManager` retires streamed session cursors and closes the port
+before producer close. The producer already marks itself closed and retires its
+capture handles before calling `AudioVoiceRegistry.clear()`, but that clear
+previously captured the still-referenced retired voice through the atomic stop
+helper. Terminal clear now captures all actual owned references, including
+suspended overrides, withdraws slots and resets metadata before callbacks, and
+disposes without snapshots. It attempts remaining disposals after either a
+`RuntimeException` or an `Error`, rethrowing the original failure with later
+failures suppressed. Both ordinary `HardReset` branches call a private atomic
+reset retaining the prior reset order and exact RuntimeException-only rollback
+catch. The mutation/rollback helpers and owned-reference enumeration are
+unchanged. Runtime producer, manager, streamed session, voice and factory remain
+byte-exact to `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`; strict retired-cursor
+snapshot rejection is preserved. No ongoing-render-after-explicit-detach claim
+is made.
+
+The coherent ten-file staged source tree is
+`5bd54c10b8a8120b7b37495c0c0f0ed7e19503bc`, rather than the unchanged parent
+HEAD's index tree. The whole working-input frame before and after both requests
+is `1de2f69a5d84b317458171a3ad9cbfa33534807ce122de88b7515cddbb92ae5a`:
+13,178 paths / 856,471,686 bytes. Its exact protocol is sorted stage-zero
+`src/`, `racing/`, `examples/`, `.mvn/`, `tools/testing/` and `pom.xml` entries,
+with relative path, Git mode, mtime-nanoseconds and actual working bytes each
+NUL-delimited; gitlinks use their object bytes and zero mtime. There are no
+untracked inputs in that scope. This is local timestamp attribution, not a
+portable cross-checkout hash. All ten tested SHA-256 pins, 22 selected source
+files, protected runtime/helper/build inputs and the ten current wrapper/import
+pins remain exact. Documentation below is outside that executable frame.
+
+Exactly two original queued requests ran from `<S2_WORKTREE>`. Both used the
+current absolute `<MAIN_WORKSPACE>/tools/testing/maven_queue.py`, SHA-256
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`,
+normal admission, Java25, Lua5.4, null OpenAL, surfaceless EGL and
+`PYTHONDONTWRITEBYTECODE=1`, with ambient JVM/Maven/display/driver overrides
+unset. The original three absolute stock ROM paths were freshly CRC32/SHA-1
+verified against the documented identities. Own-worktree dedup was empty;
+report ownership was registered before launch and each original command session
+was retained through admission and terminal readback. The execution estimate was
+5–10 active minutes per cohort, with queue time unknown; no timeout, heap/fork
+override, preflight, standalone build, version probe or retry was added.
+
+The ordinary selector was exactly these 19 source families, with four selected
+Emerald methods:
+
+```text
+com.openggf.audio.TestAudioManagerStreamedPortOwnership,com.openggf.audio.presentation.TestStreamedPresentationSession,com.openggf.audio.presentation.TestStreamedAudioVoiceRegistry,com.openggf.audio.presentation.TestAudioPresentationProducer,com.openggf.audio.presentation.TestAudioVoiceRegistry,com.openggf.audio.AudioManagerCaptureModeTest,com.openggf.audio.AudioManagerLiveCaptureTest,com.openggf.audio.TestLiveCaptureSurvivesBackendSwap,com.openggf.audio.presentation.TestAudioPresentationProducerRewind,com.openggf.game.sonic2.TestSonic2LevelInitProfile,com.openggf.level.TestLevelMusicCoordinator,com.openggf.game.sonic2.timing.TestSonic2PreBgmTimingModel,com.openggf.game.sonic2.timing.TestSonic2LevelMusicScheduler,com.openggf.game.sonic2.TestSonic2PlcParser,com.openggf.game.sonic2.TestSonic2SkippedPresentationPlcLifecycle,com.openggf.game.sonic2.TestSonic2VisibleTitleReleasePlcOrdering,com.openggf.mods.code.TestEmeraldRemix#sonicCompletesTheRemixedActAndCloverValley+cloverValleySlopesTurnSonicThroughEasedAngles+authoredMusicCancelsStockWorkAndReturningStockKeepsItsNativeBoundary+authoredNamespacedMusicUsesPreparedPublicationAndHonorsBothSuppressionOwners,com.openggf.tools.TestRecordingRestartAudioOwnership,com.openggf.tools.TestHeadlessGameBootAudioIdentity
+```
+
+The command shape was:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$ORDINARY_SELECTOR" \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+O, original session63943, EXIT0, completed at **17:22:41Z**: **201 distinct
+actual JUnit identities / 201 passes / 0 failures / 0 errors / 0 skips**, 19
+XMLs. Queue wait was **259 seconds**, Maven time **90 seconds**, and command
+wall time **349.918 seconds**. Real four-sample looping namespaced PCM is admitted
+before manager reset/backend/launch/destroy teardown, followed by usable fresh playback. The
+new terminal controls cover strict retired snapshots, capture/replay/sink/session
+retirement, suspended and later voices after RuntimeException/Error, suppressed
+later failures and reentrant close without duplicate disposal. Both ordinary
+HardReset paths retain snapshot, cursor identity and override retryability after
+an actual controlled port mutation. The selected capture/history/restore checks,
+four Emerald bodies and the real headless boot/restart ownership consumers pass.
+Source-configured parameter rows were not used to predict this JUnit total.
+
+Only after O's original terminal/full readback and owned raw consumption, G used
+the same command/environment/ROM properties, adding only `-Pguards` and replacing
+the selector with:
+
+```text
+com.openggf.audio.TestAudioPresentationArchitectureGuard,com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules
+```
+
+G, original session1932, EXIT0, completed at **17:28:42Z** in a separate fresh
+invocation: **148 distinct actual identities / 148 passes / 0 failures /
+0 errors / 0 skips**, three XMLs: audio architecture38, architectural source77,
+ArchUnit33. Queue wait was **56 seconds**, Maven time **50.798 seconds**, and
+command wall time **107.504 seconds**. The ordinary selection excludes guards;
+no profile or POM setting was changed to admit them there. Intervals above are
+per-request measurements, not a summed elapsed-delivery claim.
+
+Every actual XML identity, all properties and owned/dependency classpath values,
+recursive output/error streams, text reports and full bounded consoles were
+read. Java25, selectors, owned cwd/target, EGL and all three ROM properties
+match. O's console has exactly the declared opaque-zone135 refusal (one),
+PLC99 negative (one), invalid zones -2 and17 (two each), and the existing
+48000-to-44100 capture-lease negative (one), all bound to their owning test
+methods. FAST/NONE fallback warnings remain explicit (O116, G2), separately
+from compiler deprecations (O26, G18). Stop-fault injections are controlled by
+their exact new test cases; they are not blanket permission for loader faults.
+No unexpected caught runtime fault, S2b9 fault, fresh dump, missing/empty report,
+skip, Maven/test infrastructure failure or source drift was observed. Base153's known
+S1 mapping address E8DF/frame-count768 limitation remains **OPEN**; it did not
+naturally emit in this cohort, and this result does not establish general
+fault-free art loading. FAST/NONE and unmeasured deterministic KOS fallback,
+hardware timing, physical video and broader native coverage remain limitations.
+
+The fully read owned O38 and G6 XML/text files and both consoles were consumed
+under the worktree metadata lock, without raw archives, pass caches or extra
+validation receipts. Compiled classes, source, pre-existing native extractions
+and the worktree are retained. No more JVM requests, source repairs, authors,
+reviewers, watchers, standalone engine/emulator/native probes, reserved provider
+activation, paired MHZ, remote or CI actions occurred in this epoch.
+
+Only these ten tested executable files plus this factual append and the folds
+into existing `CHANGELOG.0.7.prerelease.md` entries are authorized for one
+normal-hook local leaf with sole parent153. No executable bytes change after
+qualification. The local leaf and its ancestry/code receipt stay **HELD** until
+the parent confirms the original Root category71421 and its separate guard have
+reached terminal/full readback. No Root source, target, process, job, output or
+lease was inspected here; parent153 is not replayed. This is bounded affected
+and separate guard qualification, not an aggregate PR-green or full-suite claim.
+
+### 2026-10-24 — completed 2a9 category epoch and qualified local composition
+
+This checkpoint composes independently qualified local changes; it does not
+turn their separate epochs into an aggregate green branch. The original
+`3da9b979` all-smoke attempt remains incomplete at 75/82 completed batches with
+stranded batch 76, and is not summed with the completed focused continuation.
+
+The sole validation owner completed the unchanged `2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`
+epoch before releasing the source boundary. Its complete input frame remained
+`617b24f96679dcf7e7ac886f611fb9cad1a6534c3834f9b63bf988851a318cc6`
+(13,178 paths / 856,446,139 bytes); all eight qualified leaf pins, both tool
+import closures, clean index/worktree and three original stock ROM identities
+matched. No restart, retry, source adaptation or held-leaf receipt occurred
+inside that validation boundary.
+
+The actual category command, with the recorded original ROM directory represented
+by the existing portable variable, was:
+
+```bash
+python3 tools/testing/run_categories.py \
+  --category audio --category rendering --category rewind --category content \
+  --category mods --category network --category tooling --workers 1 \
+  --headless-gl surfaceless-egl --rom-directory "$OPENGGF_ROM_DIR" \
+  --max-minutes 180 --run
+```
+
+Locked selection `7477e8e454bfb015bc163322567850bd12624b843820900df895cc5147e1808b`
+selected 2,011/4,052 candidate paths, with automatic common coverage, focused
+mode/base null/full false/smoke, one worker and no scheduled guards. Run
+`20261024T154249Z-5ccfce1f`, original session 71421, completed 41/41 batches:
+15,770 JUnit case elements, 41 failures, zero errors and 97 skips, with zero
+failure/skip omissions. Repeated factory display names are retained; candidate
+paths are not asserted to be distinct executed JUnit identities. Preparation
+was 95.83s; runner-reported ordinary elapsed was 3,258.74s. Rounded acquired
+admission reports sum to 2,855s separately. Queue, active work and unmeasured
+overhead are not added across parallel workers to invent delivery elapsed time.
+
+The separate fresh original guard request used the current absolute Main queue
+wrapper, `--normal -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards`,
+the same three absolute stock ROM properties, and `test -B`. Original session
+26964 completed 93 actual XML families / 774 case elements, one failure, zero
+errors/skips and zero omissions. Its only failure was
+`TestNativeHolderReleaseGuard#everyNativeObjectAcquiringPlayerControlHasAReleaseHook`:
+ICZ Teleporter (`applyTo`) and MegaChopper (`setForcedInputMask`,
+`setControlLocked`) lacked owned player-only visual release hooks. This is an
+actual failing guard, not a baseline exemption. Rounded queue was 20s; supervised
+wall 544.19s; Maven reported 08:43. All 774 identities, 6,324 properties,
+12 recursive streams / 13,907 bytes, full bounded logs and generated diagnostics
+were read. Java 25.0.5.0.2, surfaceless EGL, the three correct ROM properties,
+owned basedir and absence of prior-output classpaths matched. No fresh dump or
+retained launcher/JVM/infrastructure failure was found. FieldDisposition's one
+case and ObjectPhysics's 32 cases passed. The codec's 254 fields are a diagnostic
+count, not 254 JUnit cases. The two current LBZ field-disposition rows remained
+baseline-aware; no baseline resnapshot occurred.
+
+The 41 ordinary failures, with their actual first messages, are retained below.
+Each is an AssertionFailedError; no runtime cause or blanket inherited status
+is inferred from this list.
+
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesBothTransportersWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesGravityTubesConveyorAndStaircaseWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoTraversesUpperTransportChainsAndEastHubWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoDefeatsGravityBossAndLoadsFinalStageWithoutTransformation`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoCrossesTiltingBridgeWithoutAShieldWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoClimbsEnergyBridgesAndTogglesGravityWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldRouteClearsAllTurbinePanelsAndOpensDoorWhileObjectControlled`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldCompleteRouteDefeatsBothMinibossPhasesAndLoadsActTwo`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoDescendsInvertedSpringShaftWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldUpperRouteTraversesLiftsConveyorsAndTimedBridgesWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezColdRouteCapture#coldIncomingActTwoCompletesUpperGravityRouteCarrierAndCountdownLaunchWithRewind`: expected: <9589> but was: <3203>
+- `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding`: death at 19930 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`: death at 14721 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding`: death at 36000 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday`: death at 21162 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding`: death at 21162 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldWideSonicAloneClearsActTwoAndLoadsFinalStage`: death at input 36000 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldTailsAloneClearsActTwoAndLoadsFinalStage`: death at input 19930 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldTailsLowerGravityPadPreservesPendingContactAcrossRewind`: death at 19930 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloActTwoColdRouteCapture#coldSonicAloneClearsActTwoAndLoadsFinalStage`: death at input 14721 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloColdRouteCapture#coldSonicAloneClearsMinibossAndReachesPlayableActTwo`: death at input 14721 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloColdRouteCapture#coldTailsAloneClearsMinibossAndReachesPlayableActTwo`: death at input 19930 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestDezSoloColdRouteCapture#coldWideSonicClearsBothBossPhasesAndReachesPlayableActTwo`: both eight-hit phases must be defeated through player contact ==> expected: <2> but was: <0>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoUpperClimbsAndDoorRelease`: death at input 5027 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReplaysIncomingRouteAndFirstActTwoDoor`: first-door death at input 15323 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace`: death at input 5027 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesReachesMinibossAndRestoresTraversalAndCloudEscape`: death at input 15323 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesClearsMinibossAndRestoresFightAndActTwoHandoff`: death at input 15323 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesRestoresActTwoTraversalToTheMiddleCorridor`: death at input 5027 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions`: cold Knuckles death at 26853 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline`: cold Knuckles death at 26853 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestS3kHpzJoinedColdRouteCapture#coldKnucklesReplaysUpperPadAndTheJoinedSszCraneControlRelease`: cold death 5027 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestS3kLrzHpzSszColdCampaign#sonicColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`: cold death 44639 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestS3kLrzHpzSszColdCampaign#tailsColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`: cold death 80320 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestS3kLrzHpzSszColdCampaign#pairColdCampaignLeavesSkySanctuaryForDeathEggWithIsolatedHistory`: cold death 73285 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestS3kLrzHpzSszColdCampaign#knucklesColdCampaignClearsSkySanctuaryTwoThroughTheEndingAndTitle`: cold death 5027 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestSozColdRouteCapture#soloColdActCompletesWithTraversalReplayAndPlayableDestination(int, String)[5]`: cold death at 15850 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestSozColdRouteCapture#knucklesColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`: cold death at 11787 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`: cold death at 23478 ==> expected: <false> but was: <true>
+- `com.openggf.tools.TestSszWidePairedColdRouteCapture#coldFirstReplicaAndTransportReplayWithRetiredColumnDebris`: expected: <46> but was: <48>
+- `com.openggf.tools.TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline`: FIRST_FORWARD [wide-route-11640] frame=11640 n=24 input=11664 ==> expected: <false> but was: <true>
+
+All 97 skips were read. Coverage remains limited by 17 catalogue setup skips,
+15 GLFW shader skips and one foreground surfaceless-EGL-unavailable case, plus
+explicit opt-in benchmark/reference/native/creator/soak gates and geometry-absent
+controls. Supplying Maven ROM paths did not establish a per-game catalogue in
+the skipped fixtures. The later catalogue and music leaves are separate tested
+states, not retroactive successes for these skipped identities.
+
+Early batch 2 retained only the exact `Sonic2SmpsLoader.loadSfxInternal` /
+`SEVERE: Failed to parse SFX ID b9` tail before ordinary raw output was normally
+removed. Individual reader/case/causal binding remains unknown. Static original
+stock-ROM four-track evidence does not explain that occurrence. Early audio
+fallback/configuration groups also lack complete case binding; unrelated
+source-negative methods do not authenticate them. Later EggmansSky provider
+faults were matched to declared injected negative controls. Positive editor
+stage-clear null-audio faults and S1 E8DF mapping errors remain actual limits
+of this frozen epoch even though qualified fixes are received afterward.
+
+The completed category directory was normally acknowledged and removed. The
+validator consumed 188 proven owned fresh guard outputs and preserved the
+unchanged pre-existing lifecycle diagnostic. After lock release, the parent
+reclassified/rehashed both old output trees under the supported metadata lock:
+21,857 generated files / 856,042,649 bytes, comprising Java-major-69 classes,
+exact aa1 resource blobs and the exact filtered version resource. Only those
+two owned prior trees and their then-empty namespace were removed. Fresh compiled
+outputs, other target trees, useful source and all lock files were preserved.
+
+Post-boundary composition receives the following local ancestry exactly once:
+S1 mapping leaf `4e854d8244792a45f9d3ca809ace5494ad79be7d` (separate 44-case
+five-class PASS), editor semantic music fixture `79d10ce72baca364dd033f700a2282bd4bed2b92`
+(separate 19-case PASS with recorded art/KOS limits), and coherent S2 authored
+music/common-art plus terminal streamed teardown leaf
+`5d13f54c887fa1ab941ed9da2ecfa23ea8752eff`. The latter includes catalogue leaf
+`1537657c920bd3775e97a9abf6666ad8922721f6` by ancestry, not replay. Its original
+38-case 36P/1F/1E attempt remains separate. The corrected coherent source passed
+201 distinct ordinary cases and a fresh 148-case three-family guard invocation,
+zero failures/errors/skips in each. Queue was 259s / 56s separately from Maven
+90s / 50.798s. All ten executable blobs and its complete input frame remained
+unchanged. The common-only spring test now asserts native PLC ownership: standard
+PLCs exclude ordinary vertical springs, while EHZ owns their positive sheet,
+renderer, pattern and mapping checks. Terminal clear disposes without snapshots;
+ordinary HardReset retains atomic rollback. No API pin, cap, baseline or native
+input/physics oracle was weakened.
+
+One DEZ upper-route first assertion was reproduced on exact original `f3405cf`:
+frame 5300 X expected 9589, actual 3203. Separate forward-only sparse and
+full-draw controls reproduced it without the cycling intervention. A later
+single public-scalar sampler preserved all original input/settings/oracles and
+captured 114 rows with the same failure. Sampled late movement stays within
+X2925–3245 after the sampled maximum X3245 at frame2900, with changing velocity;
+this is not evidence of a fixed-position stall. Sampled player/camera/focus
+identities remain stable. Final observed position is (3203,1898), but Y/rings/
+onObject/final zone-act assertions remain unreached. Neither sampling nor those
+controls identify a physics cause, exonerate rewind/rendering generally, or
+attribute the other 40 failures. Temporary diagnostics were consumed and exact
+clean f340 restored; no route oracle or production behavior was changed.
+
+The complete current Plan prefix and each distinct incoming factual append are
+preserved. Executable reception is by exact qualified blob identity, with no
+original-leaf replay or whole-file ancestor import. The new composed tree has
+not itself passed aggregate smoke or fresh guards. Holder-hook source work,
+route parity, unexplained warning attribution, unavailable graphics/reference
+coverage and applicable final delivery gates remain open. Main, provider
+activation and the paired MHZ observation window remain closed. No push, PR
+body/draft change or manual CI dispatch is part of this local composition.

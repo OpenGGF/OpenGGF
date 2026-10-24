@@ -175,6 +175,16 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
                 levelMusicScheduler.cancel();
                 return;
             }
+            if (GameServices.module().getZoneRegistry()
+                    .modZoneRuntimeContribution(ctx.getLevelIndex()) != null) {
+                // Registered authored levels have opaque indices, not entries
+                // in the ROM's LevelOrder table. Release their prepared request
+                // at this ordered music step through the existing owner, which
+                // also handles namespaced tracks and automatic-music controls.
+                levelMusicScheduler.cancel();
+                level.publishPreparedLevelMusic(music.getAsInt());
+                return;
+            }
             var region = Sonic2PreBgmTimingModel.Region.fromConfiguration(
                     GameServices.configuration().getString(SonicConfiguration.REGION));
             // The model costs ROM routines that key off Current_Zone /

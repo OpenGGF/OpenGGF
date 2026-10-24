@@ -397,7 +397,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } else if (command instanceof ToggleSolo solo) {
             toggleSolo(solo.type(), solo.channel());
         } else if (command instanceof HardReset) {
-            clear();
+            clearAtomically();
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.registry(
                             SmpsDriverServiceObserver.LifecycleKind.RESET,
@@ -521,7 +521,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             return true;
         }
         if (command instanceof HardReset) {
-            clear();
+            clearAtomically();
             return true;
         }
         return false;
@@ -1167,9 +1167,48 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         applySessionMasks(fmMuteMask, fmSoloMask, psgMuteMask, psgSoloMask);
     }
 
+    /**
+     * Disposes a terminal registry without capturing playback for rollback.
+     * Its streamed session may already have retired every cursor. Withdraw all
+     * slots and controls before calling voices so teardown callbacks cannot
+     * observe or dispose the same owned slots again.
+     */
     public void clear() {
         assertOwnerBoundary();
+        PresentationVoice[] voices = allOwnedVoices();
+        removeAllVoiceSlots();
+        resetMetadata();
+        Throwable primary = null;
+        for (int index = 0; index < voices.length; index++) {
+            PresentationVoice voice = voices[index];
+            if (containsIdentity(voices, index, voice)) {
+                continue;
+            }
+            try {
+                voice.stop();
+            } catch (RuntimeException | Error failure) {
+                if (primary == null) {
+                    primary = failure;
+                } else if (primary != failure) {
+                    primary.addSuppressed(failure);
+                }
+            }
+        }
+        if (primary instanceof RuntimeException failure) {
+            throw failure;
+        }
+        if (primary instanceof Error failure) {
+            throw failure;
+        }
+    }
+
+    private void clearAtomically() {
+        assertOwnerBoundary();
         stopAndRemoveAllVoices();
+        resetMetadata();
+    }
+
+    private void resetMetadata() {
         fmMuteMask = 0;
         fmSoloMask = 0;
         psgMuteMask = 0;
@@ -1949,6 +1988,10 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private void stopAndRemoveAllVoices() {
         PresentationVoice[] voices = allOwnedVoices();
         stopVoicesAtomically(voices);
+        removeAllVoiceSlots();
+    }
+
+    private void removeAllVoiceSlots() {
         activeMusic = null;
         for (int index = 0; index < overrideCount; index++) {
             overrideStack[index] = null;

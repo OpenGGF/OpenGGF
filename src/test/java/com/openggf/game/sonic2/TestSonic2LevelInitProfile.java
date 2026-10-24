@@ -163,6 +163,52 @@ public class TestSonic2LevelInitProfile {
     }
 
     @Test
+    void unregisteredOpaqueIndexCancelsStockMusicInsteadOfPublishingEagerly() throws Exception {
+        audioRom = new Rom();
+        assertTrue(audioRom.open(requireSonic2Rom().getAbsolutePath()));
+        TestEnvironment.configureRomFixture(audioRom);
+        var level = GameServices.level();
+        var activeProfile = GameServices.module().getLevelInitProfile();
+        var audio = GameServices.audio();
+        audio.setBackend(new NullAudioBackend());
+        int stockIndex = LevelData.EMERALD_HILL_1.getLevelIndex();
+        level.initGameModule(stockIndex);
+        level.configureAudio();
+
+        var stock = new LevelLoadContext();
+        stock.setLevelIndex(stockIndex);
+        var stockSteps = activeProfile.levelLoadSteps(stock);
+        stockSteps.get(stepIndex(stockSteps, "ScheduleLevelMusic")).execute();
+        assertTrue(activeProfile.isLevelMusicPublicationPending());
+
+        // The same opaque value allocated to the first additive level has no
+        // authored meaning in this stock registry. Its accidental LevelOrder
+        // bytes must still be rejected by the native model.
+        int unregisteredIndex = 0x400;
+        assertNull(GameServices.module().getZoneRegistry()
+                .modZoneRuntimeContribution(unregisteredIndex));
+        int entry = Sonic2Constants.LEVEL_SELECT_ADDR + unregisteredIndex * 2;
+        assertInstanceOf(Sonic2PreBgmTimingModel.Unresolved.class,
+                Sonic2PreBgmTimingModel.resolve(audioRom,
+                        Byte.toUnsignedInt(audioRom.readByte(entry)),
+                        Byte.toUnsignedInt(audioRom.readByte(entry + 1)),
+                        java.util.OptionalInt.empty(),
+                        Sonic2PreBgmTimingModel.Region.NTSC, false));
+        var invalid = new LevelLoadContext();
+        invalid.setLevelIndex(unregisteredIndex);
+        var invalidSteps = activeProfile.levelLoadSteps(invalid);
+        invalidSteps.get(stepIndex(invalidSteps, "ScheduleLevelMusic")).execute();
+
+        assertFalse(activeProfile.isLevelMusicPublicationPending());
+        for (int frame = 0; frame < 12; frame++) {
+            activeProfile.serviceLevelLoadVBlank();
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
+                "an unknown index must neither bypass native guards nor release stale stock music");
+    }
+
+    @Test
     public void levelEntryTransfersFadeOutThroughPlaySoundBeforeLaterRequests() {
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
         Sonic2AudioProfile audioProfile = new Sonic2AudioProfile(projector);
