@@ -2815,3 +2815,94 @@ This is bounded fixture/guard evidence. No broad/full suite, unchanged frontend
 or engine-family rerun, ROM/trace replay or pixel validation was submitted.
 The parent retains the composed four-selector S3K/API/guards checks and delivery;
 this slice ends with a local commit and retained branch/worktree.
+
+
+### Eighth-through-tenth composed validation checkpoint
+
+The frozen composed executable state is `19619db8078530563baf973c8ec31dc576a067bc`
+in `bugfix/ai-architecture-loop10-20261024`. It includes the accepted palette
+texture-height fix, pooled-command and renderer scalar boundaries, S1 fixtures,
+monitor admission correction, S2/MGZ and engine/frontend/direct fixture families,
+and complete art-provider candidate migration. The later Game, palette-decoder,
+module-fixture and sensor/event slices are separate and are not certified here.
+No executable source or tested allowance changed during the following jobs.
+
+Parent-observed checks on that exact state:
+
+| Selection | Reports / cases | Failure / error / skip | Timing |
+| --- | --- | --- | --- |
+| A: art/donor/scene/ghost consumers, monitor and required S3K controls | 36 / 585 | 0 / 0 / 0 | Maven 3:23; queue wait not retained |
+| B: GPU command/backends, SAT, palette capacity, appearance/water/fades | 19 / 201 | 0 / 0 / 0 | Maven 29.722s; queue wait not retained |
+| C: candidate API, SDK/Javadoc fixtures, samples and starters | 10 / 60 | 0 / 0 / 0 | wait 288s; Maven 36.372s |
+| Separate fresh guards JVM | 92 / 769 | 0 / 0 / 0 | Maven 5:20; exact queue wait not retained |
+
+The three focused selections contain 846 cases. Their exact XML identities,
+Java25 and EGL launch properties were inspected; all four absolute ROM properties
+were supplied. The four required S3K selectors account for 60 executed cases:
+bootstrap6, decoding3, game-package level-loading36, headless AIZ skip8 and the
+tests-package level-loading7. No required ROM control silently skipped.
+The guards include all33 ArchUnit rules with store updates disabled, all9
+architectural-review checks, all77 architectural source checks and all8 singleton
+lifecycle controls. The previously reported renderer component's published-count
+failure is resolved by the composed 136-record ledger. Source was clean and
+unchanged before and after the commands.
+
+The commands below retain the executed argument sets. `MAIN_CHECKOUT` denotes the
+actual absolute main checkout, including its existing verified ROMs; the commands
+ran from the coordinator's own directory/target with the absolute current queue
+wrapper. Queue waits and overlapping jobs are not added into an elapsed-delivery
+claim.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestCrossGameFeatureProviderRefactor,TestDonorCapabilities,TestLevelPlayableArtInitializerModArt,TestNativeCarriedPlayerArtBinding,TestS3kCanonicalEntryLifecycle,TestS3kHpzSanctuaryLifecycleProduction,TestCrossGameRuleComposer,TestPlayerHeadMaskReview,TestKis2EndingContinue,TestKis2HeadlessBoot,TestDonatedTeamPalettes,TestDonorTailsTailBanks,TestPlayerHeadPresentation,TestSampleFlappyIntegration,TestSampleRomArtRemixIntegration,TestCharacterLooks,TestDonorPaletteRewind,TestStockSceneArtRom,TestDetachedStockScenePictures,TestStageplayTailsRom,TestGhostRendererLayerSelection,TestLocalPlayerLook,TestDynamicArtGhostIsolation,TestSceneRomLibrary,TestSceneArtHelpers,TestStageplayNativeBinding,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kMonitorGraphRewind,TestSonic3kMonitorObjectInstance,TestSonic3kMonitorContentOverride' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B'
+
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestGraphicsManagerPatternAtlasPageOrdering,TestGraphicsManagerReinit,TestPooledRenderCommandDiscard,TestPresentationPatternBatching,TestSatReplayBatching,TestRenderProjection,TestGraphicsManagerSpriteSatReplay,TestSpritePreparationSnapshots,TestSpriteSatReplayPixels,TestPaletteTextureCapacity,TestGraphicsManagerFadeRebinding,TestRenderContext,TestUnderwaterPaletteUpload,TestUnderwaterPaletteRendering,TestAppearancePalettes,TestPaletteUploadLatch,TestPaletteFadePresentation,TestNativeWhitePaletteFade,TestScopedPalettePresentationRewind' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B'
+
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiJavadocTool,TestModApiSdkPackager,TestPurposeStarters,TestSampleModsPackage,TestSampleFlappyLevelSource,TestSamplePlatformerLevelSource,TestSampleRomArtRemixLevelSource' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B'
+
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 'python3' "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" '-Dmse=off' '-Dopenggf.headless.gl=surfaceless-egl' '-Pguards' "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" 'test' '-B'
+```
+
+All 314 corresponding XML/text reports were consumed after inspection
+(72 + 38 + 20 + 184). No pass cache, validation receipt or log archive was made.
+The fresh full canonical art-provider Javadoc/artifact proof remains separately
+attributed to the accepted component; the parent C selection above verifies its
+maintained tooling controls rather than claiming another canonical generation.
+
+The eighth composition's original broad smoke request remains alive:
+`20261024T061914Z-01fb5ad5`, based on pre-task destination `e9d8087aca`, in the
+separate loop-eight checkout at `3e0811d711` plus its owned count-prose edits.
+It selected3746 candidates in75 ordinary batches. At this checkpoint it remains
+incomplete; no broad or fully green delivery claim follows from the focused and
+guard passes. Its observed HCZ native-pixel failure occurs at GLFW initialization
+before graphics/ROM setup. The exact isolated baseline command on unchanged
+`e9d8087aca` reproduced the same class, method and failure message with the same
+Java25/EGL environment and ROM paths. Thus this is an inherited no-display
+prerequisite, while that native-pixel oracle remains unvalidated. Legacy GLFW,
+opt-in measurement/capture and external-mod prerequisites are inspected as skips,
+not counted as exercised coverage. Final smoke results and acknowledgment follow
+only after the existing request completes.
+
+### Qualified SMPS restore-boundary retention
+
+The independent grounding and design judgment retain exactly the two legacy
+`SmpsSequencer` convenience constructors that sample `GameServices.audio()`
+during construction. New callers with an owned context already use explicit
+`MusicRestoreSink` overloads. The proposed caller-complete injection alternative
+would migrate four production and100 test/fixture calls, plus backend/tool
+composition, and deliberately change construction-time configured-root sampling
+to stable backend-lifetime ownership. No legitimate observable restore defect
+establishes that new lifecycle requirement here. `AudioManager.presentationOwner()`
+is the lazy singleton, not the configured `EngineServices` owner. Neither it,
+a backend callback nor a no-op substitutes for manager mutator/timeline behavior.
+
+The normal presentation path's explicit deferred natural-restore callback stays
+unchanged. Retain both frozen records with delta0 and preserve validation order,
+detached/inferred hosts, descriptor trust and publication. Reopen only for a
+concrete owner-lifetime requirement with actual restore effects, command history,
+suppression and foreground behavior before/after; identity differences alone are
+characterization. This is source-based qualified retention, not a runtime fix or
+claim that all audio architecture is exhausted.
+
+Integration/push and safe worktree accounting remain pending. Later local slices
+retain their own commits, tests and coverage limits.

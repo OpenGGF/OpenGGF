@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 136 records | Hold at 136 pending composed verification | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 136 records | Hold at 136 pending broad smoke completion | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -602,16 +602,25 @@ palette owner captures donor RGB values and bank lifetime tokens, restores curre
 cells without replacing aliases, and uploads restored colors immediately. These
 close demonstrated palette defects without moving the registry or reducing its
 typed allowances. The sampler-height correction is composed locally alongside the
-scalar GPU boundary; combined validation remains pending.
+scalar GPU boundary; combined focused checks and fresh guards passed. The
+original broad smoke request remains incomplete.
 
-The prepared composition contains 136 low-level records: the pooled command
+The locally verified composition contains 136 low-level records: the pooled command
 boundary removes nine identities and adds five (147 → 143), both GPU backend
 boundaries remove twenty-one and add seventeen (143 → 139), and the complete
 art-provider contracts remove three (139 → 136). GraphicsManager retains its typed
 creator ingress and the SAT callback adapter. Moving the two art-provider names
 to `sprites.art` intentionally changes the unpublished 0.7 candidate; compiled
 mods must rebuild as documented in the compatibility guide. The release descriptor
-remains unchanged. Component checks and independent review are complete; the
-composed behavior/API/strict guards remain pending. The
+remains unchanged. Independent review is complete. The composed candidate passed
+846 focused behavior/API/tooling cases and 769 fresh structural checks with zero
+failures/errors/skips. Broad smoke, integration and push remain pending. The
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
+
+The two legacy `SmpsSequencer` restore-owner lookup constructors remain qualified
+exceptions. They sample the configured audio root at construction; replacing this
+with a retained backend owner would change lifetime semantics across104 callers.
+Existing explicit `MusicRestoreSink` overloads serve newly owned callers. No
+demonstrated restore defect justifies the broad migration here; allowance delta0.
+The continuation plan records the alternative and evidence needed to reopen it.
