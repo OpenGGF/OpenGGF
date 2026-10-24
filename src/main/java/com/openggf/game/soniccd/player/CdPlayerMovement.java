@@ -6,6 +6,7 @@ import com.openggf.game.soniccd.level.CdR11aTerrain;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 /**
  * One R11A ordinary normal-sized MODE call (Main.asm:675-776), plus the shared
@@ -119,6 +120,34 @@ public final class CdPlayerMovement {
     /** ObjSonic_LevelBound returns just before its unowned KillPlayer call when killRequested is true. */
     public record LevelBoundResult(CdPlayerMotionState state, Environment environment, boolean killRequested) {
         public LevelBoundResult { Objects.requireNonNull(state); Objects.requireNonNull(environment); }
+    }
+
+    /** Actual d1 and this call's native angle-buffer stores, including same-value stores. No caller state commits. */
+    public record ProbeResult(int distance, OptionalInt primaryAngleWrite, OptionalInt secondaryAngleWrite) {
+        public ProbeResult {
+            signedWord(distance); Objects.requireNonNull(primaryAngleWrite); Objects.requireNonNull(secondaryAngleWrite);
+            primaryAngleWrite.ifPresent(CdPlayerMovement::byteValue);
+            secondaryAngleWrite.ifPresent(CdPlayerMovement::byteValue);
+        }
+    }
+
+    /** Player_CalcRoomInFront (Collision Check.asm:14-65); no MODE/input/gravity/position advance. */
+    public ProbeResult calcRoomInFront(CdPlayerMotionState state, int angle) {
+        byteValue(angle); var c = new Cursor(Objects.requireNonNull(state));
+        return probeResult(c, roomInFront(c, angle));
+    }
+    /** Player_CheckFloor and ChooseAngle (:79-125), using the same paired floor probes as MODE. */
+    public ProbeResult checkFloor(CdPlayerMotionState state) {
+        var c = new Cursor(Objects.requireNonNull(state));
+        return probeResult(c, pair(c, 0).distance());
+    }
+    /** Player_GetCeilDist (:298-314), primary buffer only; does not apply its correction. */
+    public ProbeResult getCeilDist(CdPlayerMotionState state) {
+        var c = new Cursor(Objects.requireNonNull(state));
+        return probeResult(c, single(c, c.x(), c.y(), 0x80));
+    }
+    private static ProbeResult probeResult(Cursor cursor, int distance) {
+        return new ProbeResult(distance, cursor.writtenPrimary, cursor.writtenSecondary);
     }
 
     private final CdR11aTerrain terrainData;
@@ -669,7 +698,7 @@ public final class CdPlayerMovement {
     private int roomInFront(Cursor c, int angle) {
         int x = (c.xpos + (c.xv << 8)) >>> 16;
         int y = (c.ypos + (c.yv << 8)) >>> 16;
-        c.pri = c.sec = angle;
+        c.seedAngles(angle);
         int rounded;
         if ((byte) (angle + 0x20) < 0) {
             rounded = (angle + ((byte) angle < 0 ? -1 : 0) + 0x20) & 0xC0;
@@ -687,7 +716,7 @@ public final class CdPlayerMovement {
             case 0x80 -> terrain.floor(x, uw(y - 10) ^ 15, 14, 0x1000, -16, c.spr);
             default -> terrain.wall(uw(x + 10), y, 14, 0, 16, c.spr);
         };
-        c.pri = result.angleWrite().orElse(c.pri);
+        c.writePrimary(result.angleWrite());
         return result.distance();
     }
     private record Pair(int distance, int otherDistance, int angle) { }
@@ -699,26 +728,26 @@ public final class CdPlayerMovement {
         switch (direction) {
             case 0 -> {
                 first = terrain.floor(uw(x + rx), uw(y + ry), 13, 0, 16, c.spr);
-                c.pri = first.angleWrite().orElse(c.pri);
+                c.writePrimary(first.angleWrite());
                 second = terrain.floor(uw(x - rx), uw(y + ry), 13, 0, 16, c.spr);
             }
             case 0x40 -> {
                 first = terrain.wall(uw(x - ry) ^ 15, uw(y - rx), 14, 0x800, -16, c.spr);
-                c.pri = first.angleWrite().orElse(c.pri);
+                c.writePrimary(first.angleWrite());
                 second = terrain.wall(uw(x - ry) ^ 15, uw(y + rx), 14, 0x800, -16, c.spr);
             }
             case 0x80 -> {
                 first = terrain.floor(uw(x + rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr);
-                c.pri = first.angleWrite().orElse(c.pri);
+                c.writePrimary(first.angleWrite());
                 second = terrain.floor(uw(x - rx), uw(y - ry) ^ 15, 14, 0x1000, -16, c.spr);
             }
             default -> {
                 first = terrain.wall(uw(x + ry), uw(y - rx), 14, 0, 16, c.spr);
-                c.pri = first.angleWrite().orElse(c.pri);
+                c.writePrimary(first.angleWrite());
                 second = terrain.wall(uw(x + ry), uw(y + rx), 14, 0, 16, c.spr);
             }
         }
-        c.sec = second.angleWrite().orElse(c.sec);
+        c.writeSecondary(second.angleWrite());
         boolean secondary = second.distance() <= first.distance();
         int angle = secondary ? c.sec : c.pri;
         return new Pair(secondary ? second.distance() : first.distance(),
@@ -731,8 +760,29 @@ public final class CdPlayerMovement {
         final Environment env;
         final int held, tap, previousPri, previousSec;
         final List<Effect> effects = new ArrayList<>();
+        OptionalInt writtenPrimary = OptionalInt.empty(), writtenSecondary = OptionalInt.empty();
         int xpos, ypos, xv, yv, gv, angle, flags, spr, xr, yr, anim, prev, jump, charge, lock, stick, ctrl;
         int look, cam, pri, sec, bored, score, debugAngle, debugShift, debugQuadrant, debugFloor;
+        /**
+         * Probe-only cut: no Environment, input or Body globals exist. The three shared helpers read only
+         * these motion fields. Their d1 is independent of unwritten angle buffers; those values never
+         * leave this cursor, and no State/Environment result can be produced from this constructor.
+         */
+        Cursor(CdPlayerMotionState state) {
+            original = state; env = null; held = tap = previousPri = previousSec = 0;
+            xpos = state.centreX16_16(); ypos = state.centreY16_16();
+            xv = state.xVelocity(); yv = state.yVelocity(); spr = state.spriteFlags();
+            xr = state.xRadius(); yr = state.yRadius();
+        }
+        void seedAngles(int value) {
+            pri = sec = value; writtenPrimary = writtenSecondary = OptionalInt.of(value);
+        }
+        void writePrimary(OptionalInt write) {
+            if (write.isPresent()) { pri = write.getAsInt(); writtenPrimary = write; }
+        }
+        void writeSecondary(OptionalInt write) {
+            if (write.isPresent()) { sec = write.getAsInt(); writtenSecondary = write; }
+        }
         Cursor(CdPlayerMotionState s, Input input, Environment env) {
             original = s; this.env = env; held = input.logicalHeld(); tap = input.logicalTap();
             xpos = s.centreX16_16(); ypos = s.centreY16_16(); xv = s.xVelocity(); yv = s.yVelocity(); gv = s.groundVelocity();

@@ -1071,6 +1071,71 @@ class TestCdPlayerMovement {
         a.pri = 0x26; a.sec = 0x64; return a;
     }
 
+    @Test void sharedFloorProbeReportsSameValueWritesToBothNativeAngleBuffers() {
+        var result = new Fixture().owner().checkFloor(new Actor().state());
+        assertEquals(0, result.distance()); // Feet95, full floor begins96: native distance96-95-1.
+        assertEquals(java.util.OptionalInt.of(0), result.primaryAngleWrite());
+        assertEquals(java.util.OptionalInt.of(0), result.secondaryAngleWrite());
+    }
+
+    @ParameterizedTest @CsvSource({"4,true,false", "3,false,true"})
+    void floorProbeSeparatesTheTwoSensorWriteSets(int column, boolean primary, boolean secondary) {
+        Fixture f = new Fixture(false); f.block(column, 6, 0x2001);
+        var result = f.owner().checkFloor(new Actor().state());
+        assertEquals(0, result.distance());
+        assertEquals(primary ? java.util.OptionalInt.of(0) : java.util.OptionalInt.empty(), result.primaryAngleWrite());
+        assertEquals(secondary ? java.util.OptionalInt.of(0) : java.util.OptionalInt.empty(), result.secondaryAngleWrite());
+    }
+
+    @Test void absentTerrainLeavesFloorAndCeilingBuffersUnwrittenButRoomSeedsBoth() {
+        var owner = new Fixture(false).owner(); var actor = new Actor().state();
+        var floor = owner.checkFloor(actor);
+        assertEquals(16, floor.distance()); assertTrue(floor.primaryAngleWrite().isEmpty());
+        assertTrue(floor.secondaryAngleWrite().isEmpty());
+        var ceiling = owner.getCeilDist(actor);
+        assertEquals(18, ceiling.distance()); assertTrue(ceiling.primaryAngleWrite().isEmpty());
+        assertTrue(ceiling.secondaryAngleWrite().isEmpty());
+        var room = owner.calcRoomInFront(actor, 8);
+        assertEquals(25, room.distance());
+        assertEquals(java.util.OptionalInt.of(8), room.primaryAngleWrite());
+        assertEquals(java.util.OptionalInt.of(8), room.secondaryAngleWrite());
+    }
+
+    @Test void roomPredictionIncludesFractionCarryAndUsesTheExistingRightWallProbe() {
+        Fixture f = new Fixture(false); f.column(5, 0x4002);
+        Actor a = new Actor(); a.x = 0x003FFFFF; a.xv = 1;
+        var result = f.owner().calcRoomInFront(a.state(), 0xC0);
+        assertEquals(5, result.distance()); // PredictedX64, sensor74, full wall starts80:80-74-1.
+        assertEquals(java.util.OptionalInt.of(0xC0), result.primaryAngleWrite());
+        assertEquals(java.util.OptionalInt.of(0xC0), result.secondaryAngleWrite());
+    }
+
+    @Test void sharedCeilingProbeWritesPrimaryOnlyAtTheNativeTenPixelSensor() {
+        Fixture f = new Fixture(false); f.row(3, 0x5001);
+        Actor a = new Actor(); a.y = 80 << 16;
+        var result = f.owner().getCeilDist(a.state());
+        assertEquals(6, result.distance());
+        assertEquals(java.util.OptionalInt.of(0x80), result.primaryAngleWrite());
+        assertTrue(result.secondaryAngleWrite().isEmpty());
+    }
+
+    @Test void zeroMetricStillWritesTheAnglesBeforeReturningAnEmptyDistance() {
+        Fixture f = new Fixture(); Arrays.fill(f.heights, 16, 32, (byte) 0);
+        var result = f.owner().checkFloor(new Actor().state());
+        assertEquals(16, result.distance());
+        assertEquals(java.util.OptionalInt.of(0), result.primaryAngleWrite());
+        assertEquals(java.util.OptionalInt.of(0), result.secondaryAngleWrite());
+    }
+
+    @Test void probePortsValidateTheirExplicitNativeInputs() {
+        var owner = new Fixture().owner(); var actor = new Actor().state();
+        assertThrows(NullPointerException.class, () -> owner.checkFloor(null));
+        assertThrows(NullPointerException.class, () -> owner.getCeilDist(null));
+        assertThrows(NullPointerException.class, () -> owner.calcRoomInFront(null, 0));
+        assertThrows(IllegalArgumentException.class, () -> owner.calcRoomInFront(actor, -1));
+        assertThrows(IllegalArgumentException.class, () -> owner.calcRoomInFront(actor, 256));
+    }
+
     private static Actor airborne() { Actor a = rolled(); a.flags = 6; return a; }
     private static CdPlayerMovement.Globals globals(int look, int camera, int pri, int sec, int bored, int score) {
         return new CdPlayerMovement.Globals(look, camera, pri, sec, bored, score, 0, 0, 0, 0);

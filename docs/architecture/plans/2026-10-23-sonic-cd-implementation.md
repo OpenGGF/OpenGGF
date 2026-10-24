@@ -3512,3 +3512,25 @@ rerun was duplicated. Both review P2s are resolved.
 These are silent DEV entries with explicit art preload and V-int seed0.
 Native LevelStart fades/title/HUD/audio/PLC timing, actual reconstruction,
 zero-lives program exit, pixel parity and the complete game remain open.
+
+### Shared SolidObject probe ports — 24 October 2026
+
+The CD movement owner now exposes CalcRoomInFront, CheckFloor and GetCeilDist
+as thin calls into its existing private probes. Each returns the native signed
+distance and optional primary/secondary angle-buffer stores, including stores
+that preserve the old value or precede a zero-height fallback. Room seeds both
+buffers before probing. A private probe-only cursor has no Environment/input;
+unwritten scratch values never escape it. MODE continues to use the same probes
+and final-value behavior. Source is Collision Check.asm:14-65,79-125,298-314 at
+the existing CD pin; no collision algorithm or route-specific correction is added.
+
+Root26637 tested the exact two-file port at7b758b364 plus those changes:
+211tests/0failures/0errors/0skips, Java25, comprising Movement123, Ground54,
+Terrain20 and Math14. All eight new constructed probe cases executed. The later
+affected533case selection also ran the new88case pure SolidObject consumer;
+that consumer remains a separate unit. Independent source review found no
+P1/P2. Its optional suggestions concern direct ProbeResult validation coverage
+and a room probe whose stored angle differs from its seed; no incorrect
+expectation or production defect was found. No World standing/pushing or
+Floating Block dispatch is admitted by these ports. Full-USA and regional
+completion remain open.
