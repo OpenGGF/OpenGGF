@@ -145,8 +145,8 @@ class TestSonicCdOpeningWorldEgl {
                 var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aContactDevPreloadedArt(
-                                module.requirePlayerFrame().artState(), source.assets().openingObjects(),
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aGameOverDevPreloadedArt(
+                                module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base(),
@@ -156,7 +156,8 @@ class TestSonicCdOpeningWorldEgl {
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 136,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 199,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 269,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 274));
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 274,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 313));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -364,6 +365,219 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(new HurtRouteOutcome(600, 643, 3), route);
     }
 
+    @Test void actualEglSecondWalkingContactFallsLosesOneLifeAndReplaysTheResetDelay() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // One fixed controller proposal, compiled and re-parsed by production input owners.
+        // No coordinates, actor/object bytes, clocks or reference rows are injected.
+        String script = System.getProperty("soniccd.death.script", "2 -;108 R;500 -;77 R;230 -;100 R;120 -");
+        String log = InputScriptCompiler.compileToInputLog(script);
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("death-world-input-log"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.death.output");
+        if (output != null) Files.writeString(output.resolve("death-state.csv"),
+                "call,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,animation,hurt,rings,lives,reset,hud_lives,level_restart,powerup,vint,camera_x,camera_y,lost_rings,game_over_slots,mosqui_routine,mosqui_x,mosqui_y,input_mask,action_mask\n",
+                StandardOpenOption.CREATE_NEW);
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                for (int i = 0; i < 82; i++) step(loop, movie.getFrame(i));
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var rows = new ArrayList<Bk2FrameInput>(); var expected = new ArrayList<Capture>();
+                int firstHurt = -1, deathCall = -1, lifeCall = -1, deathCameraX = -1, deathCameraY = -1;
+                RgbaImage previousImage = beforePixels;
+                for (int index = 82; index < movie.getFrameCount(); index++) {
+                    var input = movie.getFrame(index);
+                    var previousState = module.requirePlayerFrame().state();
+                    int previousRings = runtime.ringGlobals().rings(), previousLives = runtime.ringGlobals().lives();
+                    var priorScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                    step(loop, input); rows.add(input); expected.add(capture(module));
+                    var state = module.requirePlayerFrame().state(); var motion = state.motion();
+                    var image = render(module, true);
+                    assertTerrainOutsideSprites(image, renderTerrain(module, priorScroll), runtime.displayedFrame());
+                    var pool = runtime.placement().pool(); var mosqui = pool.state(34);
+                    long lost = pool.capture().slots().stream().filter(slot -> slot.id() == 0x11).count();
+                    long gameOver = pool.capture().slots().stream().filter(slot -> slot.id() == 0x3B).count();
+                    if (output != null) Files.writeString(output.resolve("death-state.csv"), String.format(Locale.ROOT,
+                            "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n",
+                            index + 1, motion.centreX16_16(), motion.centreY16_16(), motion.xVelocity(), motion.yVelocity(),
+                            motion.groundVelocity(), motion.routine(), motion.animation(), state.timers().hurt(),
+                            runtime.ringGlobals().rings(), runtime.ringGlobals().lives(), state.timers().reset(),
+                            runtime.ringGlobals().updateHudLives(), runtime.levelGlobals().levelRestart(), runtime.levelGlobals().powerup(),
+                            module.requirePlayerFrame().vIntClock().absoluteValue().orElseThrow(),
+                            GameServices.camera().getX(), GameServices.camera().getY(), lost, gameOver,
+                            mosqui.routine(), mosqui.centreX(), mosqui.centreY(), input.p1InputMask(), input.p1ActionMask()),
+                            StandardOpenOption.APPEND);
+                    if (firstHurt < 0 && motion.routine() == 4) {
+                        firstHurt = index + 1;
+                        assertTrue(previousRings > 0); assertEquals(0, runtime.ringGlobals().rings());
+                    }
+                    if (deathCall < 0 && motion.routine() == 6) {
+                        deathCall = index + 1;
+                        assertTrue(firstHurt > 0 && firstHurt < deathCall, "The first hit must precede this second contact");
+                        assertEquals(0, previousRings); assertEquals(2, previousState.motion().routine());
+                        assertEquals(0, state.timers().hurt()); assertEquals(0x18, motion.animation());
+                        assertEquals(-0x700, motion.yVelocity()); assertEquals(3, runtime.ringGlobals().lives());
+                        assertTrue(runtime.lastSoundRequests().contains(new CdOpeningObjectRuntime.PlayerSound(
+                                new CdPlayerFrameRuntime.ContactFmSound(com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_HURT))));
+                        deathCameraX = GameServices.camera().getX(); deathCameraY = GameServices.camera().getY();
+                        if (output != null) {
+                            ScreenshotCapture.savePNG(previousImage, output.resolve("before-death.png"));
+                            ScreenshotCapture.savePNG(image, output.resolve("death-call.png"));
+                        }
+                    }
+                    if (deathCall > 0) {
+                        assertEquals(deathCameraX, GameServices.camera().getX());
+                        assertEquals(deathCameraY, GameServices.camera().getY());
+                        assertEquals(deathCameraY & 0xFFFF, module.requirePlayerFrame().environment().movement().bounds().bottom());
+                        assertEquals(0, runtime.levelGlobals().levelRestart(), "Stop before the actual reload boundary");
+                        if (output != null && index + 1 == deathCall + 4)
+                            ScreenshotCapture.savePNG(image, output.resolve("death-flight.png"));
+                    }
+                    if (lifeCall < 0 && runtime.ringGlobals().lives() < previousLives) {
+                        lifeCall = index + 1;
+                        assertTrue(lifeCall > deathCall); assertEquals(6, previousState.motion().routine());
+                        assertEquals(2, runtime.ringGlobals().lives()); assertEquals(1, runtime.ringGlobals().updateHudLives());
+                        assertEquals(8, motion.routine()); assertEquals(60, state.timers().reset());
+                        assertEquals(0, gameOver, "The lives-remaining GameOver owner deletes its newly allocated slot in this same pass");
+                        assertEquals(8, runtime.levelGlobals().powerup());
+                        assertTrue(runtime.lastSoundRequests().contains(new CdOpeningObjectRuntime.GameOverSubCpu(
+                                com.openggf.game.soniccd.objects.CdGameOver.SubCpuCommand.SCMD_FADEPCM)));
+                        if (output != null) ScreenshotCapture.savePNG(image, output.resolve("life-lost.png"));
+                    }
+                    previousImage = image;
+                    if (lifeCall > 0 && index + 1 == lifeCall + 4) {
+                        assertEquals(8, motion.routine()); assertEquals(56, state.timers().reset()); break;
+                    }
+                }
+                assertTrue(deathCall > firstHurt && firstHurt > 0,
+                        "Fixed proposal reached no second zero-ring contact; inspect the retained CSV before revising input");
+                assertTrue(lifeCall > deathCall, "Death fall did not reach its native gone line within this input proposal");
+                assertEquals(lifeCall + 4, 82 + rows.size());
+                var after = capture(module); var finalPixels = render(module, true);
+                if (output != null) ScreenshotCapture.savePNG(finalPixels, output.resolve("reset-delay.png"));
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int i = 0; i < rows.size(); i++) {
+                        step(loop, rows.get(i)); assertCapture(expected.get(i), module);
+                        render(module, true); assertCapture(expected.get(i), module);
+                    }
+                    assertCapture(after, module); assertArrayEquals(finalPixels.pixels(), render(module, true).pixels());
+                }
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: normal-controller second contact, death fall, one life lost, live GameOver deletion, reset delay and full/course rendered replay.\n"
+                        + "First hurt: " + firstHurt + "; death: " + deathCall + "; life lost: " + lifeCall + "; replay rows: " + rows.size() + "\n"
+                        + "Actual OpenGGF USA R11A DEV: silent audio, explicit preload/clock0, no completed level rebuild or native timing/pixel/full-game parity claim.\n",
+                        StandardOpenOption.CREATE_NEW);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
+    @Test void actualEglConstructedGameOverUsesServicedArtReplaysAndRetiresGlyphBank() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("21 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-game-over-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.gameover.output");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                step(loop, movie.getFrame(0)); // Real Init, followed by an explicitly constructed component cut.
+                for (int expectedLives : new int[] {2, 1, 0}) {
+                    var frame = module.requirePlayerFrame(); var actor = frame.captureActor(); var old = actor.state();
+                    var m = old.motion(); int goneY = frame.environment().movement().bounds().bottom() + 0x110;
+                    var motion = new com.openggf.game.soniccd.player.CdPlayerMotionState(64 << 16, goneY << 16,
+                            0, -0x700, 0, 6, 0, 2, 4, 9, 19, 0x18, 0x18, 0, 0, 0, 0, 0,
+                            m.previousPrimaryAngle(), m.previousSecondaryAngle());
+                    var header = old.header();
+                    var state = new com.openggf.game.soniccd.player.CdPlayerBody.State(motion,
+                            new com.openggf.game.soniccd.player.CdPlayerBody.AnimationCursor(0, 0, 0),
+                            new com.openggf.game.soniccd.player.CdPlayerBody.Header(header.slotId(), header.mappingAddress(),
+                                    header.tile() | 0x8000, 0, header.width()),
+                            new com.openggf.game.soniccd.player.CdPlayerBody.Timers(0, 0, 0, 0), old.history(), old.rotationDistance());
+                    frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), state, java.util.Optional.empty()));
+                    module.requirePlayerActor().rebindAfterRestore();
+                    runtime.placement().pool().clearDynamicSlots();
+                    step(loop, movie.getFrame(0));
+                    assertEquals(expectedLives, runtime.ringGlobals().lives());
+                }
+                assertEquals(8, module.requirePlayerFrame().state().motion().routine());
+                assertEquals(480, module.requirePlayerFrame().state().timers().reset());
+                assertEquals(0x88, runtime.levelGlobals().powerup());
+                assertEquals(2, runtime.placement().pool().capture().slots().stream().filter(slot -> slot.id() == 0x3B).count());
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var expected = new ArrayList<Capture>();
+                for (int index = 0; index < movie.getFrameCount(); index++) {
+                    step(loop, movie.getFrame(index)); expected.add(capture(module)); render(module, true);
+                    assertEquals(8, runtime.levelGlobals().powerup());
+                }
+                var after = capture(module); var image = render(module, true); var terrain = render(module, false);
+                assertEquals(32, runtime.displayedFrame().tiles().size());
+                int first = com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 313;
+                assertEquals(32, runtime.displayedFrame().patternVersions().size());
+                assertTrue(runtime.displayedFrame().tiles().stream().allMatch(tile ->
+                        tile.patternId() >= first && tile.patternId() < first + 32));
+                assertArrayEquals(source.assets().shield().copy(3).bytes().copy(),
+                        runtime.powerupArtState().residentBank().slice(0, 0x400).copy());
+                assertFalse(Arrays.equals(image.pixels(), terrain.pixels()), "Real GPU output must contain the serviced text");
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int index = 0; index < movie.getFrameCount(); index++) {
+                        step(loop, movie.getFrame(index)); assertCapture(expected.get(index), module);
+                        render(module, true); assertCapture(expected.get(index), module);
+                    }
+                    assertCapture(after, module); assertArrayEquals(image.pixels(), render(module, true).pixels());
+                }
+                var atlas = GameServices.graphics().getPatternAtlas();
+                for (int id = first; id < first + 32; id++) assertNotNull(atlas.getEntry(id));
+                if (output != null) {
+                    ScreenshotCapture.savePNG(image, output.resolve("game-over.png"));
+                    ScreenshotCapture.savePNG(terrain, output.resolve("terrain-control.png"));
+                }
+                module.closeTerrainPlayer();
+                for (int id = first; id < first + 32; id++) assertNull(atlas.getEntry(id),
+                        "World retirement must remove the newly added powerup patterns beyond the old 313-pattern window");
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: constructed zero-lives cut, native GameOver bodies, serviced GAME art, actual EGL text, full/course replay and glyph-bank retirement.\n"
+                        + "This is component ingress through the real World, not a normal-controller route to zero lives.\n"
+                        + "Three constructed gone-line actor cuts, each preceded by clearing all dynamic object slots, precede the 21 neutral forward inputs.\n"
+                        + "No lives/powerup/global setter; actor cuts and object-slot clears are explicit construction. World retirement removed patterns +313..+344.\n"
+                        + "No native pixel/timing/full-game parity claim.\n", StandardOpenOption.CREATE_NEW);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
     private record HurtRouteOutcome(int hitCall, int landingCall, int spilled) { }
 
     private HurtRouteOutcome runWalkingHurtRoute(String script, String outputProperty,
@@ -567,6 +781,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());
         assertEquals(expected.objects().levelGlobals(), actual.objects().levelGlobals());
+        assertEquals(expected.objects().powerupArtState(), actual.objects().powerupArtState());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());

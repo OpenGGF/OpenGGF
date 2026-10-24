@@ -3467,3 +3467,48 @@ unreachable invalid-selector failure, the pure owner publishes no partial
 BCLR result, so the closed Runtime keeps its pre-call diagnostic byte; this is
 not the native post-BCLR byte and no closed owner consumer may rely on it.
 Actual World route/capture results belong to the following client checkpoint.
+
+
+### Controller death and constructed GAME OVER in the World — 24 October 2026
+
+The presentation now retires all349picture patterns. WorldLoad and EGL rewind
+comparators include both complete powerup windows, and the pickup oracle uses
+all nine now-serviced art spans. The actual controller-only death route uses
+fixed ordinary input, never a position, slot, clock or reference write. It
+first takes a walking hit at644, then a zero-ring second contact at968. The
+death camera remains(377,1803); lives fall3→2 at1052, reset60 then56 at1056.
+The newly allocated lives-remaining GameOver object deletes itself in that
+same physical pass. Full and course restore each reproduce974 rendered rows
+and final pixels from the pre-event cut. Actual outputs and inputs are retained
+under Downloads/Sonic-CD/native/engine-death-world-r1, outside the repository.
+
+A separate constructed scene uses three same-owner gone-line actor cuts, each
+preceded by clearing ALL dynamic slots, then21neutral forward inputs. It is
+explicitly not a controller-only route to zero lives. The actual World runs
+the GameOver bodies and selector8 art service; EGL renders32retail glyph tiles.
+Both rewind modes replay the21rendered rows and final picture. Retirement then
+removes the glyph atlas entries beyond the prior313-pattern bank. A terrain-only
+absence control differs from the rendered GAME OVER image.
+
+Root5086's255affected checks recorded in the preceding section include both
+new EGL cases, the four maintained EGL routes and lifecycle consumers, without
+skips. Independent client review found no logic defect but two evidence P2s:
+PASS was written before cleanup assertions and labels omitted the dynamic-slot
+clears. R2 keeps all R1 logic and moves PASS after successful retirement, with
+complete construction labels. The R1 JUnit run did pass all cleanup assertions;
+its original outcome ordering is historical rather than proof on its own.
+
+Root4338 deliberately restored cleanup313:1test/1failure/0errors/0skips at
+19:02:16BST, specifically first added glyph131385 still present; no outcome.txt
+was written. Root6117 was an invalid positive attempt: copy2 preserved an old
+source timestamp, Maven reused the negative bytecode and produced the same
+failure with no outcome. After advancing the restored349source timestamp,
+Root46132 actually recompiled and passed1/0/0/0, exit0 at19:09:51BST. Fresh XML
+confirm Java25/media/EGL, and the new PASS follows all cleanup checks. Its GAME
+image is byte-identical to the original. This does not add three passes to255.
+The narrow repair did not change production or other test behavior; no broad
+rerun was duplicated. Both review P2s are resolved.
+
+These are silent DEV entries with explicit art preload and V-int seed0.
+Native LevelStart fades/title/HUD/audio/PLC timing, actual reconstruction,
+zero-lives program exit, pixel parity and the complete game remain open.
