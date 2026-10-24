@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+An absolute test-ROM property does not populate every production ROM catalogue
+(2026-10-24, PR223 common smoke). RomTestUtils accepts the supplied absolute paths,
+while RomManager resolves its catalogue from configuration and cwd. Secondary
+donor opening and recording restart therefore requested absent short filenames;
+other logical-ROM consumers skipped or failed admission. The old checkout's
+ignored aliases and a clean receiving checkout were different resource setups.
+Keep those failures and skips explicit; do not create ROM links or classify a
+gameplay regression from totals alone. See the [terminal evidence](../architecture/plans/2026-10-22-native-gap-swarm.md#approved-pr223-common-smoke-terminal-readback--2026-10-24).
+
 Mock objects do not inherit constructor state or resolved ownership (2026-10-23, native-gap smoke). A mocked graphics manager supplied null for the new pixel-operation field, a mocked level supplied zero raster dimensions, and mocked main-character resolution returned null before art preflight. Those preconditions hid the intended copy, ownership and capacity assertions. Supply the actual fixture dimensions, input scalar state and owning resolver result; preserve all downstream negative controls rather than restoring production fallbacks. See the [fixture evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).
 
 The explicit presentation origin controls SAT admission (2026-10-23, SSZ fixtures). A gameplay camera did not affect a separate prepare(graphics,0,0) capture: world objects near Y $C00 fell outside its zero-origin raster, while direct capture retained them. Use the same scene origin in direct and SAT preparation and independently translate the ROM oracle. Preserve complete lists, masks, native budgets and owner clocks; filtering to an intersection would hide the error. See the [fixture evidence](../architecture/plans/2026-10-22-native-gap-swarm.md).

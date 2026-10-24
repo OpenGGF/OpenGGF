@@ -4237,3 +4237,117 @@ committed successor is offered to the PR owner for one ancestry receipt, then
 latest-develop intent reconciliation and affected checks. Root retains the
 single final shared smoke lead. Main, provider activation, historical SOZ/MHZ
 and LRZ diagnostic gameplay gates remain closed. No PR/develop push here.
+
+## Approved PR223 common smoke terminal readback — 2026-10-24
+
+Root receives PR223's committed successor
+`f3405cf03d39c72b18af27d5dad4adf2d98762c0` once by ancestry. Farrell explicitly
+approves one candidate-local smoke against delivery base
+`94c40570a15a11b70caf7456e9b0d0a8eec8a9b4`: 3964 candidates, 80 ordinary
+batches, one worker, then fresh guards. The sorted candidate paths plus a final
+LF hash to `6097ae82eddb51b66d1c21cde233c98b9ab95d587a2023f07aa29802dbb350b3`.
+The approved allowance is 240 cumulative execution minutes excluding admission
+waits, with a ten-minute Maven-silence stop. Reported JUnit reds continue within
+the same invocation; source drift, failed preparation, infrastructure/JVM failure,
+empty or wholly skipped lanes, timeout or cancellation stop incomplete. There
+is no automatic retry, extension, narrowed selection or manual CI dispatch.
+
+Request9768/run `20261024T000719Z-7b48682b` completes exit1. The frozen HEAD and
+runner fingerprint match before preparation and after terminal readback:
+`0a5d1e6eb4af6cda47ea63a4d0056ccb7f4dd976775d5938d16cd32f1adda58d`.
+The worktree is clean throughout execution. This runner framing differs from
+the peer's source-only frame; they are not interchangeable digest algorithms.
+The actual command, with the original ROM directory expressed portably, is:
+
+```bash
+env -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS \
+  -u MAVEN_OPTS -u JAVA_OPTS -u MAVEN_ARGS -u DISPLAY -u WAYLAND_DISPLAY \
+  -u LD_LIBRARY_PATH -u LIBGL_DRIVERS_PATH -u LIBGL_ALWAYS_SOFTWARE \
+  -u MESA_LOADER_DRIVER_OVERRIDE \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  ALSOFT_DRIVERS=null EGL_PLATFORM=surfaceless PYTHONDONTWRITEBYTECODE=1 \
+  python3 tools/testing/run_categories.py \
+  --base 94c40570a15a11b70caf7456e9b0d0a8eec8a9b4 \
+  --headless-gl surfaceless-egl --rom-directory "$OPENGGF_ROM_DIR" \
+  --workers 1 --max-minutes 240 --run
+```
+
+The plan selects all ten **smoke** categories, not the release-only full suite.
+All80 ordinary command arrays use `-Psmoke`; the separate command uses
+`-Pguards`. All81 retain explicit EGL and the three verified absolute stock-ROM
+properties. Directory discovery also supplies the existing `kis2.gen` property;
+its image identity is not independently certified by the three stock-ROM checks.
+One actual JUnit properties record is sampled: Java25.0.5.0.2, owned cwd and test
+classpath, surfaceless EGL and the original three absolute ROM paths. This is
+not a claim to have inspected every raw XML/property set or nested stream;
+the runner consumes XML between batches.
+
+| Lane | Completed | Tests | Failures | Errors | Skips | Reports | Runner process time |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ordinary |80/80 |41023 |121 |68 |108 |3941 |7250.73s |
+| Fresh guards |1/1 |733 |0 |0 |0 |90 |465.12s |
+
+Build-only preparation passes in89.80s. Preparation plus completed lane process
+times total7805.65s (2h10m05.65s). The81 admission messages report4511s in
+rounded waits, separately; this is not exact queue elapsed or delivery time.
+The final Maven completion is03:32:43Z. There is no timeout, source drift,
+infrastructure stop or unfinished batch. All733 guards pass, including the
+previously failing graph, raw-caller, clock-name, constructor and singleton
+families; source77, ArchUnit32 and build-tooling123 execute in this fresh lane.
+
+All189 failed ordinary identities, messages, retained stack details and108 skip
+entries are inspected; there are no duplicate failed identities or omitted
+records. The longest retained failure message is163 characters and detail6903,
+below their2048/8192 limits; no failure detail reaches the cap. No dump is found
+in the retained namespace. Counts above are reported test totals, not a new
+claim that all candidate files produced a distinct executed identity.
+
+| Actual ordinary failure group | Identities | Observed boundary and remaining limit |
+| --- | --- | --- |
+| Starpost scene/content admission |97 |ModSceneActBridge15, festivals30, ruins37, art-failure1, town8, town-scene1, valley5. Missing valley/startup registrations and first-entry failures; town8 explicitly report unavailable logicalS1. The source aggregate requires S1 through nine Ruins art requests, but this is not blanket runtime causality or newness attribution. |
+| LRZ donor opening |45 |EndBoss10, BossCamera10, Boulder10, ChainedPlatforms10, Turbine5 fail before their bodies in secondary `s1.gen`/`s2.gen` opening. No interaction/boss behavior is reached in those identities. |
+| Recording restart |1 |`TestGameLoopSuspension#escapeHeldDuringAnActiveRecordingKeepsTheFullReturn`: restart reopens the catalogue and reports missing `s2.gen`. |
+| Slot runtime fixture |1 |`lateRuntimeRenderPassDoesNotDrawMachineFacePanel`: the fixture installs an ObjectRenderManager but no ObjectManager; the retained real OM/services graphics-owner path dereferences null. Do not restore a global fallback to hide this fixture gap. |
+| Eggman's Sky menu |1 |`productionMenusRememberSelectionAndJournalDoesNotChangeExpedition` expects BatchMode but remains SurfaceMode. PLAY/no-dialog readiness is an unchecked prerequisite, not an observed cause. |
+| Three Islands |3 |Water-reflection assertion, unavailable configuredS1 route prerequisite, and expected song not live. Causes/newness remain unqualified. |
+| Maintained routes/campaigns |41 |23DEZ plus the18 continuing LRZ/MHZ/HPZ/campaign/SOZ/SSZ identities below. No first-writer/native-cause claim. |
+
+The23DEZ cases comprise11 `TestDezColdRouteCapture` methods, five incoming-final,
+four solo-Act2 and three solo-Act1 methods. All11 first compare player centreX
+9589 with actual3203 at input index5300, the5301st decoded row. Their movies
+share the same first5301 input rows (LF-joined, no final LF SHA256
+`4df94c3bfd07561e58a565141dfd60a5196bab3561efc54f209eb66329d244cb`).
+The test, movies/scripts and loader are unchanged across659/e633/0b2/f340;
+source initialization changes alone do not establish runtime cause or newness.
+The other DEZ deaths report14721/19930/21162/36000; one wide Act1 route instead
+reports zero of two required boss phases. No input/expected-coordinate fitting
+or route correction is justified by these terminal numbers alone.
+
+The18 continuing identities are LRZ6 (three5027/three15323), MHZ2 (26853),
+joined HPZ1 (5027), campaign4 (Sonic44639, Tails80320, pair73285, Knuckles5027),
+SOZ3 (parameter5=15850, Knuckles11787, wide23478), and SSZ-wide2 (rings46/48;
+FIRST_FORWARD11640+n24/input11664 death). These match the old659 identity/message
+record. The previously failed CNZ live-history fixture is absent from this
+failure list. Different source, candidate selection and ROM availability mean
+that subtracting old totals does not classify all changes as regressions or fixes.
+
+The108 skips comprise20 ROM/catalogue availability assumptions,32 InfiniteSonic
+geometry assumptions,18 graphics assumptions (15GLFW, one surfaceless-EGL,
+two CNZ capture-environment), one CPZ capture/release assumption and37 optional
+input/reference/diagnostic conditions. The last group includes ten absent
+packaged-mod inputs. All remain coverage limits. In particular, absolute
+`sonic1.rom.path`/`sonic2.rom.path` properties do not populate every production
+catalogue: RomTestUtils reads those properties, while RomManager's catalogue
+uses resolved configuration and cwd. The old659 checkout has pre-existing ignored
+ROM aliases; this receiving checkout has none. No ROM links, copies, renames,
+configuration changes or source changes are made to alter this run's result.
+
+Read-only Starpost, EggSky and DEZ audits finish without writes, tests, jobs or
+artifacts. They identify prerequisites and source lineage only. Further setup
+correction or disputed-route attribution needs a separately coordinated bounded
+check with matching resources, not an unapproved repeat of this smoke. Root
+records the complete red result, acknowledges this run's diagnostics and removes
+only its consumed launch log. Compiled outputs and useful unmerged source remain.
+No raw archive, pass cache or validation receipt is retained. PR223 is not green;
+Main/develop, draft status, manual CI and historical passive/native gates remain
+closed. This evidence-only follow-up does not change the tested executable inputs.
