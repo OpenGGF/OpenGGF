@@ -1084,12 +1084,25 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic3k..",
                                     "com.openggf.game.session..",
                                     "com.openggf.tools..",
-                                    "com.openggf.audio.debug..",
                                     "com.openggf.debug..")
                             .and().areNotAnnotatedWith(CompositionRoot.class)
                             .should().callConstructorWhere(targetIsConcreteSonicProvider())
                             .as("shared code should not construct concrete Sonic provider/art/object classes"))
                     .because("shared layers should obtain game-specific providers through GameModule or approved composition roots; frozen baseline: 0 violations");
+
+    @ArchTest
+    static final ArchRule runtime_code_does_not_depend_on_sound_test_app =
+            noClasses().that().resideInAPackage("com.openggf..")
+                    .and().resideOutsideOfPackage("com.openggf.tools..")
+                    .should().dependOnClassesThat(new DescribedPredicate<>(
+                            "the standalone sound-test app or one of its nested classes") {
+                        @Override
+                        public boolean test(JavaClass target) {
+                            String app = "com.openggf.tools.audio.SoundTestApp";
+                            return target.getName().equals(app) || target.getName().startsWith(app + "$");
+                        }
+                    })
+                    .because("the standalone desktop tool must not become an audio or runtime dependency");
 
     @ArchTest
     static final ArchRule object_packages_do_not_access_global_game_services =

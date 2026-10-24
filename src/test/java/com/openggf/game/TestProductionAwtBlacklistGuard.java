@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestProductionAwtBlacklistGuard {
 
-    private static final Path EXEMPT_FILE = Path.of("com/openggf/audio/debug/SoundTestApp.java");
+    private static final Path EXEMPT_FILE = Path.of("com/openggf/tools/audio/SoundTestApp.java");
     // The mod SDK used to be exempt for its BufferedImage/ImageIO PNG path. That
     // now goes through the pure-Java com.openggf.io.PngCodec: no AWT, and no
     // natives either, since the SDK is a CLI creators run on a plain JDK.

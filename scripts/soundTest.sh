@@ -14,5 +14,5 @@ for arg in "$@"; do
 done
 
 exec mvn -q -Dmse=off -DskipTests compile exec:java \
-    -Dexec.mainClass=com.openggf.audio.debug.SoundTestApp \
+    -Dexec.mainClass=com.openggf.tools.audio.SoundTestApp \
     "-Dexec.args=$exec_args"

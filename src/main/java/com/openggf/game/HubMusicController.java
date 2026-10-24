@@ -118,7 +118,7 @@ public final class HubMusicController implements AutoCloseable {
             var dac = loader.loadDacData();
             if (music == null) throw new IllegalStateException("Missing ROM title music");
             HubMusicPresentationSink[] filter = new HubMusicPresentationSink[1];
-            StandaloneAudioPresentationHost host = StandaloneAudioPresentationHost.open(gameId, config, null, noDevice,
+            StandaloneAudioPresentationHost host = StandaloneAudioPresentationHost.open(gameId, profile, config, null, noDevice,
                     sink -> filter[0] = new HubMusicPresentationSink(sink));
             try { host.playMusic(music, dac); }
             catch (Throwable failure) { host.close(); throw failure; }

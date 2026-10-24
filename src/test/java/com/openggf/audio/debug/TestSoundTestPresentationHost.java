@@ -10,6 +10,8 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
+import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,7 +50,7 @@ class TestSoundTestPresentationHost {
     void directBackendPlaybackCallsAreAbsentFromSoundTestApp()
             throws IOException {
         String source = Files.readString(Path.of(
-                "src/main/java/com/openggf/audio/debug/SoundTestApp.java"));
+                "src/main/java/com/openggf/tools/audio/SoundTestApp.java"));
         assertFalse(source.contains("AudioBackend"));
         assertFalse(source.contains("backend.play"));
         assertFalse(source.contains("backend.update"));
@@ -59,7 +63,7 @@ class TestSoundTestPresentationHost {
     void noDeviceModeStillAdvancesAndOwnsMuteSoloSpeedCommands() {
         try (StandaloneAudioPresentationHost host =
                      StandaloneAudioPresentationHost.open(
-                             "s2",
+                             "s2", new Sonic2AudioProfile(),
                              SonicConfigurationService.createStandalone(),
                              null, true)) {
             host.toggleMute(ChannelType.FM, 1);
@@ -76,7 +80,7 @@ class TestSoundTestPresentationHost {
     void explicitCliGameOverrideIsTheBoundGameId() {
         try (StandaloneAudioPresentationHost host =
                      StandaloneAudioPresentationHost.open(
-                             "s3k",
+                             "s3k", new Sonic3kAudioProfile(),
                              SonicConfigurationService.createStandalone(),
                              null, true)) {
             assertEquals("s3k", host.boundGameId());
@@ -84,10 +88,71 @@ class TestSoundTestPresentationHost {
     }
 
     @Test
+    void suppliedProfileConfiguresTheHostWithoutReplacingItsExplicitGameId() throws Exception {
+        AtomicReference<SmpsCoordFlagHandlerOwner> configuredOwner = new AtomicReference<>();
+        Sonic1AudioProfile profile = new Sonic1AudioProfile() {
+            @Override
+            public void configurePresentationCoordFlagHandlers(SmpsCoordFlagHandlerOwner owner) {
+                configuredOwner.set(owner);
+                super.configurePresentationCoordFlagHandlers(owner);
+            }
+        };
+        try (StandaloneAudioPresentationHost host = StandaloneAudioPresentationHost.open(
+                "S1", profile, SonicConfigurationService.createStandalone(), null, true)) {
+            assertEquals("base", profile.presentationGameId());
+            assertEquals("s1", host.boundGameId());
+            assertSame(profile, host.managerForTesting().getAudioProfile());
+            assertNotNull(configuredOwner.get());
+            assertSame(configuredOwner.get(), presentationOwner(host.managerForTesting()));
+        }
+    }
+
+    @Test
+    void hostsSharingAProfileKeepDistinctHandlerOwners() throws Exception {
+        Sonic3kAudioProfile profile = new Sonic3kAudioProfile();
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        try (StandaloneAudioPresentationHost first = StandaloneAudioPresentationHost.open(
+                     "s3k", profile, config, null, true);
+             StandaloneAudioPresentationHost second = StandaloneAudioPresentationHost.open(
+                     "s3k", profile, config, null, true)) {
+            SmpsCoordFlagHandlerOwner firstOwner = presentationOwner(first.managerForTesting());
+            SmpsCoordFlagHandlerOwner secondOwner = presentationOwner(second.managerForTesting());
+            assertNotSame(firstOwner, secondOwner);
+            assertNotSame(firstOwner.handlerFor("s3k"), secondOwner.handlerFor("s3k"));
+            firstOwner.state().setSpindashRevCounter(7);
+            assertEquals(0, secondOwner.state().spindashRevCounter());
+        }
+    }
+
+    @Test
+    void nullProfileIsRejectedBeforeTheSinkDecoratorRuns() {
+        AtomicInteger decorated = new AtomicInteger();
+        assertThrows(NullPointerException.class, () -> StandaloneAudioPresentationHost.open(
+                "s1", null, SonicConfigurationService.createStandalone(), null, true, sink -> {
+                    decorated.incrementAndGet();
+                    return sink;
+                }));
+        assertEquals(0, decorated.get());
+    }
+
+    @Test
+    void invalidGameIdStillTakesPrecedenceOverNullProfile() {
+        AtomicInteger decorated = new AtomicInteger();
+        for (String gameId : new String[] {null, "unknown"}) {
+            assertThrows(IllegalArgumentException.class, () -> StandaloneAudioPresentationHost.open(
+                    gameId, null, SonicConfigurationService.createStandalone(), null, true, sink -> {
+                        decorated.incrementAndGet();
+                        return sink;
+                    }));
+        }
+        assertEquals(0, decorated.get());
+    }
+
+    @Test
     void consoleAndInteractivePathsTickTheSameHostOwnedProducer()
             throws IOException {
         String source = Files.readString(Path.of(
-                "src/main/java/com/openggf/audio/debug/SoundTestApp.java"));
+                "src/main/java/com/openggf/tools/audio/SoundTestApp.java"));
         assertTrue(source.contains(
                 "runInteractiveWindow(options, loader, dacData, host"));
         assertTrue(source.contains(
@@ -170,7 +235,7 @@ class TestSoundTestPresentationHost {
     void interactiveExecutorCommandsRunOnTheHostProducerOwner() throws Exception {
         try (StandaloneAudioPresentationHost host =
                      StandaloneAudioPresentationHost.open(
-                             "s1",
+                             "s1", new Sonic1AudioProfile(),
                              SonicConfigurationService.createStandalone(),
                              null, true);
              ExecutorService executor = Executors.newSingleThreadExecutor()) {
@@ -185,7 +250,7 @@ class TestSoundTestPresentationHost {
     void productionOwnerIsDaemonWhenADeadlineLeavesLateCleanup() throws Exception {
         try (StandaloneAudioPresentationHost host =
                      StandaloneAudioPresentationHost.open(
-                             "s1",
+                             "s1", new Sonic1AudioProfile(),
                              SonicConfigurationService.createStandalone(),
                              null, true)) {
             Field ownerField = StandaloneAudioPresentationHost.class
@@ -218,7 +283,7 @@ class TestSoundTestPresentationHost {
     void concurrentProductionCloseRequestsShareOneOwnerCleanup() throws Exception {
         StandaloneAudioPresentationHost host =
                 StandaloneAudioPresentationHost.open(
-                        "s1",
+                        "s1", new Sonic1AudioProfile(),
                         SonicConfigurationService.createStandalone(),
                         null, true);
         try (ExecutorService closers = Executors.newFixedThreadPool(2)) {
