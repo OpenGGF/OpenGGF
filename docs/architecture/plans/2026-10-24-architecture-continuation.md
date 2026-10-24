@@ -9174,3 +9174,92 @@ receiving staged writes, or if it needs new physical-retirement/ledger policy.
 Future compiled accounting and runtime behavior of a private source owner remain
 unverified. The local commit retains tests plus this record in the clean T3-owned
 worktree/branch; T3 and the parent retain lifecycle and delivery ownership.
+
+### Baseline review P2: same identities with an absent loader (2026-10-25)
+
+The independent baseline review identified one missing precondition control:
+`sameIdentityReentryBypassesAdmissionButChangedIdentityIsRejected` installs a
+nonnull loader, while the original `reinstallsInstalledSource` also requires
+`installed.loader() != null` (AudioManager line 948). This follow-up closes that
+specific gap directly atop `85bfd70baddb126f4102d29b434151d63b2990a6` (tree
+`0cf94865bbcf3cc3980a65e3cce0344c9bda9a24`). It remains test-only, before any
+extraction, with original AudioManager blob
+`4f47a72678dcfcdb961624949e882060cfe48f85` and Java production tree
+`3024f457b1c1e85a6dfe4d266c3f066e112cb1df`.
+
+The only test delta is **74 added lines / zero removals**, one parameterized method
+with two cases:
+`sameIdentityWithAbsentLoaderRejectsReentryButRetriesPreparationOutsideAdmission(boolean)`.
+`[1]` (`false`) covers `setAudioProfile`; `[2]` (`true`) covers `setRom`.
+It uses the existing `AudioTestFixtures.StubAudioProfile(null)` constructor and
+real `super.createSmpsLoader` null result; no shared helper or production seam is
+changed. All prior assertions remain. SfxCatalogReuse, ScopedDonorAudio and
+SceneRomAudioSourcesPublication retain their exact accepted baseline blobs and
+SHA-256 values recorded above. No production, guard, store, API, descriptor,
+version, build-policy or pin edits occur.
+
+Each case first positively observes the same nonnull installed profile/ROM and
+null loader, with one loader preparation and one config callback. During the
+actual outer donor config callback, the identical-argument nested setter must
+throw the original IllegalStateException, retain the exact base tuple, leave both
+preparation counts unchanged and preserve the outer guard under the manager
+monitor. The donor callback must execute exactly once; donor registration must
+finish at generation one and release admission. Immediately before the outside
+retry the profile and ROM are still those exact instances, the base tuple is
+still the original tuple and its loader is still null. That same retry Runnable
+must then prepare a second time and publish a fresh tuple at generation + 1,
+retaining the same profile/ROM and null loader. Config callbacks increase to two
+only for `setAudioProfile`; `setRom` retains the existing config and count one.
+These observations prevent a vacuous nested attempt, an outside identity change,
+or a mistaken unconditional same-identity bypass from satisfying the control.
+
+Only the new pair and the directly affected existing nonnull-loader control were
+run. No repeat of the historical 185 cases, broad category, full suite or guard
+fleet was requested. Exact commands, from the existing owned checkout:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl test-compile -B
+
+env -u DISPLAY -u WAYLAND_DISPLAY JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestAudioSourcePublicationContract#sameIdentityWithAbsentLoaderRejectsReentryButRetriesPreparationOutsideAdmission+sameIdentityReentryBypassesAdmissionButChangedIdentityIsRejected' test -B
+```
+
+Build-only session **5547** exited 0 in **26.663 s** through the own-worktree
+build/activity lane (wait not separately measured). Normal queued session
+**10810** waited **276 s**, then exited 0 after **29.575 s** Maven execution;
+the selected class took **0.579 s**. Physical XML contained exactly these three
+IDs, all passing, with **0 failures / 0 errors / 0 skips**:
+
+```text
+com.openggf.audio.TestAudioSourcePublicationContract#sameIdentityReentryBypassesAdmissionButChangedIdentityIsRejected
+com.openggf.audio.TestAudioSourcePublicationContract#sameIdentityWithAbsentLoaderRejectsReentryButRetriesPreparationOutsideAdmission(boolean)[1]
+com.openggf.audio.TestAudioSourcePublicationContract#sameIdentityWithAbsentLoaderRejectsReentryButRetriesPreparationOutsideAdmission(boolean)[2]
+```
+
+Their individual XML times were **0.325 / 0.015 / 0.003 s**, respectively. XML
+confirmed Java **25.0.5.0.2**, home `/usr/lib/jvm/java-25-openjdk`, EGL property
+`surfaceless-egl`, and the exact selector above, with no missing or extra IDs.
+No supplied-ROM property is required or present: the empty Rom objects are
+identity inputs, and the fixtures use the existing no-device backend/sink. The
+EGL launch property is preserved, not a claim that these logic cases render or
+open a graphics context. There were no fixture failures, corrections or retries
+in this follow-up. Source stayed fixed through both terminal invocations; queue
+wait is distinct from execution, and remaining authoring time is unmeasured.
+Both owned session handles are terminal and their inspected XML/text diagnostics
+have been consumed. No pass receipt, cache or raw archive was created.
+
+The final contract test file SHA-256 is
+`36dde50e442745345b068f2b252317686b0e446c1ec2eff9a123371a71a1bde3`.
+The four-test-file sorted path + NUL + exact bytes + NUL fingerprint becomes
+`e3d98cfd9a206b34b169c3485f1a133b9276a49a56eaedb3822246499c73f74a`;
+only this contract file differs from the preceding accepted baseline. Its
+declared inventory is now 22 methods / 28 case IDs, but this invocation certifies
+only the three exact cases above. The other accepted evidence remains historical
+and was not rerun or relabeled. This small follow-up is a separate local commit,
+without amendment, directly after 85bfd; the worktree remains clean and retained
+for parent inspection. No subdelegation, foreign target/job access, integration,
+push, lifecycle cleanup or production mutation is authorized or performed.

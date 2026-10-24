@@ -106,6 +106,80 @@ class TestAudioSourcePublicationContract {
         verify(audio, times(2)).setAudioProfile(installed);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void sameIdentityWithAbsentLoaderRejectsReentryButRetriesPreparationOutsideAdmission(boolean changeRom) {
+        Rom rom = new Rom();
+        int[] loaderPreparations = {0};
+        int[] configCallbacks = {0};
+        GameAudioProfile installed = new AudioTestFixtures.StubAudioProfile(null) {
+            @Override public SmpsLoader createSmpsLoader(Rom sourceRom) {
+                assertSame(rom, sourceRom);
+                assertTrue(Thread.holdsLock(audio));
+                assertTrue(guard());
+                loaderPreparations[0]++;
+                return super.createSmpsLoader(sourceRom);
+            }
+
+            @Override public SmpsSequencerConfig getSequencerConfig() {
+                assertTrue(Thread.holdsLock(audio));
+                assertTrue(guard());
+                configCallbacks[0]++;
+                return Profile.CONFIG;
+            }
+        };
+        audio.setAudioProfile(installed);
+        audio.setRom(rom);
+        Object prior = base();
+        assertSame(installed, component(prior, "profile"));
+        assertSame(rom, component(prior, "rom"));
+        assertNull(component(prior, "loader"));
+        assertEquals(1, loaderPreparations[0]);
+        assertEquals(1, configCallbacks[0]);
+        Runnable sameIdentityRetry = () -> {
+            if (changeRom) audio.setRom(rom);
+            else audio.setAudioProfile(installed);
+        };
+        int[] donorCallbacks = {0};
+        Profile donor = new Profile("donor");
+        donor.onConfig = () -> {
+            donorCallbacks[0]++;
+            assertTrue(Thread.holdsLock(audio));
+            assertTrue(guard());
+            assertSame(prior, base());
+            IllegalStateException failure = assertThrows(IllegalStateException.class, sameIdentityRetry::run);
+            assertEquals("Audio source mutation must not be re-entered", failure.getMessage());
+            assertSame(prior, base(), "identical identities with no installed loader must not bypass admission");
+            assertEquals(1, loaderPreparations[0], "nested rejection precedes loader preparation");
+            assertEquals(1, configCallbacks[0], "nested rejection precedes profile configuration");
+            assertTrue(guard(), "nested rejection must preserve the outer admission");
+        };
+
+        audio.registerDonorLoader("donor", donor.loader, EMPTY_DAC, null, donor);
+
+        assertEquals(1, donorCallbacks[0], "the nested attempt must actually execute");
+        assertSame(prior, base());
+        assertSame(installed, audio.getAudioProfile());
+        assertSame(rom, component(base(), "rom"));
+        assertNull(component(base(), "loader"), "the outside retry still starts without an installed loader");
+        assertEquals(1, loaderPreparations[0]);
+        assertEquals(1, configCallbacks[0]);
+        assertEquals(1L, generations().get("donor"));
+        assertFalse(guard());
+
+        sameIdentityRetry.run();
+
+        assertNotSame(prior, base(), "outside admission the same identities must prepare a fresh tuple");
+        assertEquals(generation(prior) + 1, generation(base()));
+        assertSame(installed, component(base(), "profile"));
+        assertSame(rom, component(base(), "rom"));
+        assertNull(component(base(), "loader"), "preparation uses the same null-loader seam again");
+        assertEquals(2, loaderPreparations[0]);
+        assertEquals(changeRom ? 1 : 2, configCallbacks[0]);
+        assertEquals(1, donorCallbacks[0]);
+        assertFalse(guard());
+    }
+
     @Test
     void compatibilityOverloadsRetainVirtualDispatchToTheFiveArgumentEntry() {
         SmpsLoader loader = new AudioTestFixtures.StubSmpsLoader();
