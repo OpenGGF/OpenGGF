@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 /** Render traversal must never turn explicit DisplaySprite FIFO back into SST sort order. */
@@ -47,32 +49,59 @@ class TestObjectDrawSlotEmissions {
     }
 
     @Test void legacyExternalAnchorsStayInLegacySuffixAndQueuedSlotsAreNotDrawnTwice() throws Exception {
-        var entries = List.of(entry(80), entry(30), nativeEntry(60, 3), nativeEntry(70, 2),
-                nativeEntry(40, 1), nativeEntry(70, 0));
+        register(80, 2);
+        register(30, 2);
+        var seventy = register(70, 2);
+        var forty = register(40, 2);
+        var sixty = register(60, 2);
+        admit(2, seventy, forty, seventy, sixty);
+        var ledger = NativeSpriteSubmissionAccess.admissions(manager);
+        assertEquals(List.of(new NativeSpriteSubmissionAccess.Admission(70, 2),
+                new NativeSpriteSubmissionAccess.Admission(40, 2),
+                new NativeSpriteSubmissionAccess.Admission(70, 2),
+                new NativeSpriteSubmissionAccess.Admission(60, 2)), ledger);
         graphics.beginSpriteSatCollection();
-        draw(entries, List.of(new SpriteSlotEmission(50, 2, 0, () -> observed.add(50)),
+        ObjectDrawInternalAccess.drawBucket(manager, 2, graphics,
+                List.of(new SpriteSlotEmission(50, 2, 0, () -> observed.add(50)),
                 new SpriteSlotEmission(70, 2, 0, () -> observed.add(-70))));
         graphics.endSpriteSatCollectionAndReplay();
         assertEquals(List.of(70, 40, 70, 60, 30, 50, 80), observed);
+        assertEquals(ledger, NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @Test void queuedCurrentOccupantSuppressesItsInferredLegacyCopyWithoutDroppingRepeatedCalls() throws Exception {
-        var entries = List.of(entry(70), entry(30), nativeEntry(70, 2), nativeEntry(40, 1), nativeEntry(70, 0));
+        var seventy = register(70, 2);
+        var forty = register(40, 2);
+        register(30, 2);
+        admit(2, seventy, forty, seventy);
+        var ledger = NativeSpriteSubmissionAccess.admissions(manager);
+        assertEquals(List.of(new NativeSpriteSubmissionAccess.Admission(70, 2),
+                new NativeSpriteSubmissionAccess.Admission(40, 2),
+                new NativeSpriteSubmissionAccess.Admission(70, 2)), ledger);
         graphics.beginSpriteSatCollection();
-        draw(entries, List.of());
+        ObjectDrawInternalAccess.drawBucket(manager, 2, graphics, List.of());
         graphics.endSpriteSatCollectionAndReplay();
         assertEquals(List.of(70, 40, 70, 30), observed);
         observed.clear();
-        draw(entries, List.of());
+        ObjectDrawInternalAccess.drawBucket(manager, 2, graphics, List.of());
         assertEquals(List.of(30, 70, 40, 70), observed);
+        assertEquals(ledger, NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @Test void queuedBucketRetainsTheSlotWhenCurrentOccupantInfersADifferentBucket() throws Exception {
+        var fifty = register(50, 2);
+        register(80, 3);
+        admit(2, fifty);
+        fifty.bucket = 3;
+        assertEquals(3, fifty.getPriorityBucket());
+        var ledger = NativeSpriteSubmissionAccess.admissions(manager);
+        assertEquals(List.of(new NativeSpriteSubmissionAccess.Admission(50, 2)), ledger);
         graphics.beginSpriteSatCollection();
-        draw(2, List.of(nativeEntry(50, 0)), List.of());
-        draw(3, List.of(entry(80), entry(50)), List.of());
+        ObjectDrawInternalAccess.drawBucket(manager, 2, graphics, List.of());
+        ObjectDrawInternalAccess.drawBucket(manager, 3, graphics, List.of());
         graphics.endSpriteSatCollectionAndReplay();
         assertEquals(List.of(50, 80), observed, "the admitted bucket owns the slot across the whole table");
+        assertEquals(ledger, NativeSpriteSubmissionAccess.admissions(manager));
     }
 
     @Test void legacySlotBridgePreservesOppositePainterAndSatOrder() throws Exception {
@@ -145,6 +174,31 @@ class TestObjectDrawSlotEmissions {
         verify(owner, never()).setCurrentSpriteTileOcclusionPaletteMask(anyInt());
         verify(supplied, never()).disableVerticalWrapAdjust();
         verify(supplied, never()).enableVerticalWrapAdjust(anyInt(), anyInt());
+    }
+
+    private RegisteredSlotProbe register(int slot, int bucket) {
+        var owner = new RegisteredSlotProbe(bucket);
+        manager.addDynamicObjectAtSlot(owner, slot);
+        assertEquals(slot, owner.getSlotIndex());
+        assertSame(owner, manager.currentNativeSstOwner(slot));
+        return owner;
+    }
+
+    private void admit(int bucket, RegisteredSlotProbe... owners) {
+        for (var owner : owners) {
+            assertSame(owner, manager.currentNativeSstOwner(owner.getSlotIndex()));
+            assertTrue(NativeSpriteSubmissionAccess.submit(manager, owner.getSlotIndex(), bucket));
+        }
+    }
+
+    private final class RegisteredSlotProbe extends AbstractObjectInstance {
+        private int bucket;
+        private RegisteredSlotProbe(int bucket) {
+            super(new ObjectSpawn(128, 128, 1, 0, 0, false, 0), "registered queue probe");
+            this.bucket = bucket;
+        }
+        @Override public int getPriorityBucket() { return bucket; }
+        @Override public void appendRenderCommands(List<GLCommand> commands) { observed.add(getSlotIndex()); }
     }
 
     private ObjectRenderParts.RenderEntry entry(int slot) {

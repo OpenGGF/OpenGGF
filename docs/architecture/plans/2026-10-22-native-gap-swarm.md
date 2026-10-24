@@ -5549,3 +5549,132 @@ normal-hook local test/Plan leaf are included; no push, PR-body/draft change,
 Main/develop mutation, extra policy invocation, CI, native observation or route
 profile follows. Consumed owned XML/text/log outputs are removed after readback;
 useful source, compiled outputs and the clean local branch/worktree are retained.
+
+
+### Isolated background/draw fixtures declare their actual authority — 2026-10-24
+
+This test-only slice starts at the clean local LivePlayback successor
+`ad613fd7a488e1585db2e5d0c2780e6ac94a80ad`, whose sole parent is 3da. It neither
+receives source into Root nor reads Root's jobs, targets or reports. Root's
+original broad invocation remains attributed to the unchanged 3da source;
+the supplied background/draw failures are not retroactively changed by this
+separate fixture qualification. The preceding LivePlayback session 43951 and
+its one pass remain a distinct source/invocation, not an extra case in this cohort.
+
+Only two existing test files change. In
+`TestPersistentBgNametable#cinematicRingRetainsNativeEventCellsAndFillsPrivateEnteringStrips`,
+five added setup lines capture `BackgroundBuildParameters` through the production
+factory using the existing provider and a mock owning level/camera, then install
+those parameters on the private copy before the first private ensure. This
+matches the renderer's parameter-before-preparation contract instead of weakening
+the fail-closed guard. The capture supplies frozen policy and explicit inactive
+retained planes; the event-mutated ordinary 64x32 ring remains a cloned ring,
+not a complete retained-plane image. There is no GPU baseline publication because
+this fixture's renderer is null. Every original assertion remains: descriptor
+bytes `ab/e1` at (10,10), movement (16,16), logical cell (63,31), directed jump
+(640,272), expected source window (640,256), native bytes/origins/anchors, and
+full/incremental publication counts 1/0. The existing hostile-provider control
+and all other methods remain byte-identical.
+
+In `TestObjectDrawSlotEmissions`, only the following three fixture methods,
+two assertion imports and new local registered-probe helpers change:
+
+- `legacyExternalAnchorsStayInLegacySuffixAndQueuedSlotsAreNotDrawnTwice`
+- `queuedCurrentOccupantSuppressesItsInferredLegacyCopyWithoutDroppingRepeatedCalls`
+- `queuedBucketRetainsTheSlotWhenCurrentOccupantInfersADifferentBucket`
+
+The old failing fixtures supplied unregistered Java objects and cached native
+markers while leaving the actual manager ledger empty. The receiving consumer
+suppresses only real accepted raw addresses. The supplied source triage contrasts
+this authority with the older cache-marker inference; this slice performs no
+matched historical runtime/newness check and establishes no production suppression
+bug. The new local helpers register one actual owner per physical slot through
+`addDynamicObjectAtSlot`, assert its physical slot/current-owner identity, and
+assert successful real raw submissions in the intended bucket/call order. The
+repeated slot70 calls name the same registered object. The bucket test accepts
+bucket2 before changing that owner's inferred bucket to3. Every changed method
+uses `ObjectDrawInternalAccess.drawBucket` for normal population; it does not
+inject or relabel cached native entries. Probes remain legacy-renderable so the
+inferred-copy suppression is exercised, rather than bypassed by authoritative
+producer classification. Exact ledger order and its preservation after drawing
+are asserted in addition to all original expected arrays:
+`[70,40,70,60,30,50,80]`, `[70,40,70,30]`, painter `[30,70,40,70]`, and `[50,80]`.
+No original oracle is deleted; all other methods and original cache-test helpers
+remain unchanged. No registration map, ledger entry, capacity, producer, runtime
+or expected value is privately forged or changed.
+
+Whole-file inverses of only those fixture additions/replacements reconstruct both
+ad613 originals exactly. The background file is +5/-0, SHA-256
+`a38e30e50d8bf84266c40e9f2a3a99cc788555e296f01dee424436a85587e4d7`
+(blob `4d7e724477d79c22bb6ebb82e4c3ed71c312d4e2`). The draw fixture is +62/-8,
+SHA-256 `8ded99034c1c9b0e63a72367918325c1c1a64e4cf36a9916579625a3c2c86403`
+(blob `fe6fb6a9546b80c9c1561138efeb630e73feb817`). Every original assertion line,
+array and timing choice remains; neither file adds an assumption or skip.
+The unchanged native-owner discriminator source is
+`a7ce8ca9917c7e4490ce3b899d27e6944e4210dad41c05852d3ca6aa78136f75`.
+
+The frozen tested tree is `2ccf203a6382bc880b36d8b6c32a5d59931b224f`, with
+this worktree's conservative input frame
+`a98aef570e0df5ec66a0a7219dd8c8c4a6467fc0585eaf2c396769b2d63b9876`
+(13,178 paths / 856,429,465 bytes). The prior path/mode/mtime/content protocol is
+checkout-specific timestamp attribution, not a portable content hash. Both file
+pins and the complete frame remained exact through terminal readback. Production,
+helpers, harnesses, assets, configuration files, API pins, guards and baselines
+are unchanged; the already-qualified LivePlayback source remains exact and was
+not re-executed.
+
+One queued normal request, session 11787, ran from `<PR_WORKTREE>`:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  '-Dtest=com.openggf.level.TestPersistentBgNametable,com.openggf.level.objects.TestObjectDrawSlotEmissions,com.openggf.level.objects.TestObjectManagerNativeSpriteSubmissions#rawAcceptedZeroIdAndOrphanAddressesCannotFallThroughToLegacyExternalAnchors+rawAddressSuppressionPreservesTypedRepeatsAndUnsubmittedLegacyAnchorOrder' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+`OPENGGF_QUEUE_WRAPPER` is the reviewed absolute current
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py` (77d3a3e5 prefix); all ten module
+pins remained unchanged. The original three stock images were freshly CRC32/SHA-1
+verified, and launch metadata matched. The same Java25/Lua5.4/null-audio/EGL and
+unset ambient launcher/display environment was retained. Exact own-worktree
+dedup was empty. There was no additional worker, reviewer, watcher, version probe,
+preflight, build-only command, helper/API/guard check, retry or broad run. Queue
+waiting retained its original handle and normal resource selection throughout.
+
+Actual terminal result is **38 distinct identities / 38 passes / 0 failures /
+0 errors / 0 skips**, with three nonempty XML families: whole background26,
+whole draw-emissions10 (including both generated boolean rows in each of its two
+parameterized methods), and the exact two unchanged native-owner controls.
+Those two controls are
+`rawAcceptedZeroIdAndOrphanAddressesCannotFallThroughToLegacyExternalAnchors` and
+`rawAddressSuppressionPreservesTypedRepeatsAndUnsubmittedLegacyAnchorOrder`;
+they preserve real-ID0/orphan refusal, qualified typed repeats and unsubmitted
+legacy order. Every formerly failing fixture and its later original assertions,
+including the second painter traversal, now executes and passes.
+
+Queue wait was **763 seconds**, separately from Maven **30.328 seconds**. Suite
+times were background0.694s, draw0.127s and native controls0.007s; these are not an
+elapsed-delivery sum. The normal lifecycle found main classes current and compiled
+4,762 test sources. All 38 identities, all 210 XML properties (the same 70 per
+family), owned/dependency 79-entry classpaths, 26 recursive streams / 4,056 bytes,
+three text reports and the full 178-line / 23,246-byte console were read. Actual
+Java25.0.5.0.2, exact selector, owned cwd/target, EGL flag and all absolute ROM
+properties match. XML contains26 FAST/NONE warnings, console29, alongside18
+compiler deprecation warnings. No unexpected caught runtime fault or fresh dump
+was found. This headless fixture cohort is not new real-GPU/native-parity or
+complete native DisplaySprite capacity coverage.
+
+The one-request budget is exhausted. Only this factual append and the two frozen
+test files form the next normal-hook local leaf, sole parent ad613; the earlier
+qualified LivePlayback leaf is included once by ancestry. Root must not receive
+that successor before its original 3da broad invocation reaches terminal and full
+readback. The original f340 189 failed identities/108 skips, inherited GHZ mapping
+limitation, 41 disputed route causes and all other source epochs retain their
+existing attribution; these 38 passes make no aggregate-green or runtime-newness
+claim. No production repair, fitted expectation, retiming, suppression, remote
+push, PR body/draft change, Main/develop mutation, CI, native/passive observation
+or route profile is included. Consumed owned diagnostics are deleted after
+readback; useful source, classes and the local worktree/branch remain retained.
