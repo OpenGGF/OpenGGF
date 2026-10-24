@@ -273,7 +273,8 @@ test reservation below includes a separate test JVM and is not a build requireme
 
 On Linux, exact focused commands with `-Dmse=off` automatically use the **lean
 lane** when every selected class belongs to the reviewed small-test registry in
-`maven_small.py` (initially 55 configuration, input and utility classes). Up to 50
+`maven_small.py` (70 classes, including the 15 bounded additions in the
+[2026-10-24 qualification](../../docs/architecture/research/2026-10-24-lean-test-qualification.md)). Up to 50
 classes or exact methods qualify per invocation. Unknown or ambiguous selectors,
 profiles, custom properties/JVM settings and expensive fixture annotations keep
 normal admission. The wrapper prints when it selects the smaller budget. Use
