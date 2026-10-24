@@ -5042,3 +5042,29 @@ Parent delivery validation is deferred until the three source components and
 reviews are stable. The combined selection will use the pinned97eb86f18 base,
 actual category preflight, affected ROM/EGL/domain controls and fresh guards.
 No broad or full-suite success is claimed at this checkpoint.
+
+Both independent component reviews subsequently found no actionable blockers.
+The ending reviewer verified all12 moved methods, PLC and return behavior,
+original live/snapshot and virtual dispatch boundaries, and the single pending
+alias. Independent measurements agree: GameLoop3305 to3085 effective lines,
+owner320, step body277 to276, moved loader84. Ending full binary diff SHA-256
+against97eb86f18 is
+`77179ce754bab66063c92aa164815b5c3de6e566dbf5e2e5a32fa29efa44d05a`.
+
+The palette reviewer verified actual coupled work ownership, all132 preserved
+public/protected GraphicsManager declarations, the live typed replay bridge,
+pending aliases and detached publication inputs, and teardown dispatch/order.
+Palette full binary diff SHA-256 is
+`67b18aba8844ece7b75f3ffcb81eb24a80d1ebee8e7374dc33477251c666ce96`.
+Both reviews were source-only: reported test executions remain worker evidence,
+not independent reruns. Parent static comparison at composed8b4ff54d6 also
+confirms the frozen low-level store, candidate signature pin and release
+descriptor are byte-identical to97eb86f18; the store retains121 records.
+
+The preliminary change-based plan at8b4ff54d6 selects all3755 candidate classes
+across ten ordinary smoke categories plus fresh guards, because the shared loop
+and source controls affect multiple subsystems. No run has been submitted for
+this preliminary state. The final SMPS composition will be planned afresh and
+validated once stable. Its new source cannot be certified by completed component
+checks. The next bonus-stage ownership candidate is being grounded read-only;
+it does not extend the current frozen validation source.
