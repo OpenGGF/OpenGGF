@@ -1,0 +1,65 @@
+{
+  "frames": 2690,
+  "inputs": [
+    {
+      "first": 600,
+      "last": 600,
+      "button": "Start"
+    },
+    {
+      "first": 900,
+      "last": 900,
+      "button": "Start"
+    },
+    {
+      "first": 1200,
+      "last": 1200,
+      "button": "Start"
+    },
+    {
+      "first": 1800,
+      "last": 1800,
+      "button": "Start"
+    },
+    {
+      "first": 1900,
+      "last": 1900,
+      "button": "A"
+    },
+    {
+      "first": 2100,
+      "last": 2100,
+      "button": "Start"
+    },
+    {
+      "first": 2400,
+      "last": 2400,
+      "button": "Start"
+    },
+    {
+      "first": 2600,
+      "last": 2611,
+      "button": "Up"
+    },
+    {
+      "first": 2602,
+      "last": 2602,
+      "button": "A"
+    },
+    {
+      "first": 2670,
+      "last": 2711,
+      "button": "Up"
+    },
+    {
+      "first": 2672,
+      "last": 2672,
+      "button": "A"
+    }
+  ],
+  "screenshots": [
+    2602,
+    2612,
+    2690
+  ]
+}

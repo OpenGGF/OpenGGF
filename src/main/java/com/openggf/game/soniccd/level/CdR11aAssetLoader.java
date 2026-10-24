@@ -56,10 +56,13 @@ public final class CdR11aAssetLoader {
         var sonicArt = new CdR11aProfile.FileRange(profile.file(), profile.domain(), profile.range(ART_SONIC).fileOffset(), 69472);
         var sonic = CdSonicVisualAssets.decode(read(profile, image, MAP_SPR_SONIC), read(profile, image, DPLC_SONIC),
                 sonicArt.read(image).copy());
+        var player = CdR11aPlayerAssets.decode(read(profile, image, ANI_SONIC), read(profile, image, SONIC_MINI_ANIMATIONS),
+                read(profile, image, SONIC_RAMP_CHUNKS), read(profile, image, SPEC_CHUNKS),
+                read(profile, image, SINE_TABLE), read(profile, image, ARC_TAN_TABLE), sonic);
         var shield = CdShieldArt.decode(profile, image);
         var identity = new CdR11aAssets.Identity(variant, stage, payload.file(), profile.domain(),
                 profile.expectedMmdSha256(), source.identity().normalizedSha256());
-        return new CdR11aAssets(profile, identity, image, blocks, tiles, terrain, loadPlan, placements, sonic, shield);
+        return new CdR11aAssets(profile, identity, image, blocks, tiles, terrain, loadPlan, placements, sonic, player, shield);
     }
 
     private static CdR11aAssets.NemesisRead decode(CdR11aProfile profile, CdMmdImage image, CdR11aAsset asset,

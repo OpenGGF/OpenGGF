@@ -324,13 +324,44 @@ public class TestNativeRewindAdapterPublication {
         Object before=current.capture();
         assertThrows(IllegalArgumentException.class,()->registry.restoreCourse(new CompositeSnapshot(invalid)));
         assertEquals(before,current.capture()); assertEquals(99,mode.value);
+        registry.deregister(current.key());
+        var incompleteScopedCourse=registry.captureCourse();
+        context.registerGameModuleRewindAdapters();
+        var layoutFailure=assertThrows(IllegalArgumentException.class,()->registry.restoreCourse(incompleteScopedCourse));
+        assertTrue(layoutFailure.getMessage().contains("registry layout"),"Exercise partition validation with retained world scope");
+        assertEquals(before,current.capture()); assertEquals(99,mode.value);
+        var foreign=new GameplayModeContext(new WorldSession(world.rootGameModule(),resolved,world.getDataSource(),null));
+        foreign.attachGameplayManagers(new Camera(),new TimerManager(),new GameStateManager(),new FadeManager(),
+                new GameRng(rng.flavour()),new DefaultSolidExecutionRegistry());
+        var foreignCourse=foreign.getRewindRegistry().captureCourse();
+        assertEquals(course.entries().keySet(),foreignCourse.entries().keySet());
+        assertCourseCheckpointRejected(context,foreignCourse,registry.courseLayoutVersion(),"world",context.courseCheckpointIdentity());
+        assertEquals(before,current.capture()); assertEquals(99,mode.value);
         assertStaleCourseCheckpointRejected(context,course,epoch);
         assertEquals(before,current.capture()); assertEquals(99,mode.value);
         assertThrows(IllegalStateException.class,()->RewindAdapterOwnership.bind(current,"thief","native"));
+        foreign.destroy();
+        Object oldContextOwner=context.courseCheckpointIdentity();
         context.destroy();
+        var rebuilt=new GameplayModeContext(world);
+        rebuilt.attachGameplayManagers(new Camera(),new TimerManager(),new GameStateManager(),new FadeManager(),
+                new GameRng(rng.flavour()),new DefaultSolidExecutionRegistry());
+        rebuilt.getRewindRegistry().restore(full);
+        assertEquals(queue,current.capture()); assertEquals(7,mode.value);
+        mode.value=99; rebuilt.getRewindRegistry().restoreCourse(course);
+        assertEquals(queue,current.capture()); assertEquals(99,mode.value);
+        assertCourseCheckpointRejected(rebuilt,course,rebuilt.getRewindRegistry().courseLayoutVersion(),
+                "another session",oldContextOwner);
+        assertEquals(queue,current.capture()); assertEquals(99,mode.value);
+        rebuilt.destroy();
     }
 
     static void assertStaleCourseCheckpointRejected(GameplayModeContext context,CompositeSnapshot course,long epoch) throws Exception {
+        assertCourseCheckpointRejected(context,course,epoch,"registry adapters have changed",context.courseCheckpointIdentity());
+    }
+
+    static void assertCourseCheckpointRejected(GameplayModeContext context,CompositeSnapshot course,long epoch,
+            String expectedMessage,Object checkpointOwner) throws Exception {
         // Only level metadata is a double. The actual retained checkpoint, registry
         // generation and CourseControl rejection execute before any player/world mutation.
         var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
@@ -338,14 +369,18 @@ public class TestNativeRewindAdapterPublication {
         var checkpointType=com.openggf.game.mode.CourseCheckpoint.class;
         var constructor=checkpointType.getDeclaredConstructor(Object.class,com.openggf.level.Level.class,int.class,int.class,String.class,CompositeSnapshot.class,long.class);
         constructor.setAccessible(true);
-        var checkpoint=constructor.newInstance(context.courseCheckpointIdentity(),null,0,0,"sonic",course,epoch);
+        var checkpoint=constructor.newInstance(checkpointOwner,null,0,0,"sonic",course,epoch);
         var controlConstructor=CourseControl.class.getDeclaredConstructor(GameplayModeContext.class); controlConstructor.setAccessible(true);
         var failure=assertThrows(IllegalArgumentException.class,()->controlConstructor.newInstance(context).restore(checkpoint));
-        assertTrue(failure.getMessage().contains("registry adapters have changed"));
-        org.mockito.Mockito.verify(level).getCurrentLevel();
-        org.mockito.Mockito.verify(level).getCurrentZone();
-        org.mockito.Mockito.verify(level).getCurrentAct();
-        org.mockito.Mockito.verifyNoMoreInteractions(level);
+        assertTrue(failure.getMessage().contains(expectedMessage));
+        if (checkpointOwner == context.courseCheckpointIdentity()) {
+            org.mockito.Mockito.verify(level).getCurrentLevel();
+            org.mockito.Mockito.verify(level).getCurrentZone();
+            org.mockito.Mockito.verify(level).getCurrentAct();
+            org.mockito.Mockito.verifyNoMoreInteractions(level);
+        } else {
+            org.mockito.Mockito.verifyNoInteractions(level);
+        }
     }
 
     static void prepareNativeQueue(RewindSnapshottable<?> service) throws Exception {

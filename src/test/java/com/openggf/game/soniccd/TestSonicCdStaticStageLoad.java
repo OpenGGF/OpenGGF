@@ -10,9 +10,12 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadMode;
+import com.openggf.game.GameDataSource;
+import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.mode.ControlledFrameRuntime;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.tests.TestEnvironment;
@@ -143,6 +146,58 @@ class TestSonicCdStaticStageLoad {
     private static final class RetirementBackend extends NullAudioBackend {
         private int stops;
         @Override public void stopPlayback() { stops++; }
+    }
+
+    @ParameterizedTest(name = "{0}: same disc and different authenticated disc cannot donate snapshots")
+    @EnumSource(CdReleaseVariant.class)
+    void independentStaticWorldsRejectForeignFullAndCourseSnapshots(CdReleaseVariant variant) throws Exception {
+        GameServices.audio().setBackend(new NullAudioBackend());
+        var source = CdStockLaunch.prepare(suppliedCue(variant), CdStockLaunch.Request.r11a());
+        var first = loadStaticWorld(source);
+        var full = first.getRewindRegistry().capture();
+        var course = first.getRewindRegistry().captureCourse();
+        var firstWorld = first.getWorldSession();
+
+        var sameDisc = loadStaticWorld(source);
+        assertNotSame(firstWorld, sameDisc.getWorldSession());
+        assertSame(source, sameDisc.getWorldSession().getDataSource());
+        assertForeignSnapshotsLeaveStaticWorldIntact(sameDisc, full, course);
+
+        var otherVariant = variant == CdReleaseVariant.USA ? CdReleaseVariant.JAPAN : CdReleaseVariant.USA;
+        var otherSource = CdStockLaunch.prepare(suppliedCue(otherVariant), CdStockLaunch.Request.r11a());
+        assertNotEquals(source.identity(), otherSource.identity());
+        var otherDisc = loadStaticWorld(otherSource);
+        assertForeignSnapshotsLeaveStaticWorldIntact(otherDisc, full, course);
+    }
+
+    private static GameplayModeContext loadStaticWorld(GameDataSource source) throws Exception {
+        var module = new SonicCdGameModule();
+        var mode = SessionManager.openGameplaySession(module, module, source, null);
+        GameplaySessionFactory.attachManagers(mode, EngineServices.current());
+        mode.getLevelManager().loadLevel(0, LevelLoadMode.FULL, SonicCdLevelInitProfile.staticStageContext());
+        assertInstanceOf(SonicCdLevel.class, mode.getLevelManager().getCurrentLevel());
+        return mode;
+    }
+
+    private static void assertForeignSnapshotsLeaveStaticWorldIntact(
+            GameplayModeContext target, CompositeSnapshot full, CompositeSnapshot course) {
+        var manager = target.getLevelManager();
+        var level = assertInstanceOf(SonicCdLevel.class, manager.getCurrentLevel());
+        var block = level.getBlock(0);
+        var chunk = level.getChunk(0);
+        var pattern = level.getPattern(1);
+        var tilemap = manager.getTilemapManager();
+        target.getCamera().setY((short) 123);
+        var camera = target.getCamera().capture();
+        assertThrows(IllegalArgumentException.class, () -> target.getRewindRegistry().restore(full));
+        assertThrows(IllegalArgumentException.class, () -> target.getRewindRegistry().restoreCourse(course));
+        assertEquals(camera, target.getCamera().capture());
+        assertSame(level, manager.getCurrentLevel());
+        assertSame(level, target.getWorldSession().getCurrentLevel());
+        assertSame(block, level.getBlock(0));
+        assertSame(chunk, level.getChunk(0));
+        assertSame(pattern, level.getPattern(1));
+        assertSame(tilemap, manager.getTilemapManager());
     }
 
     private static Path suppliedCue(CdReleaseVariant variant) throws IOException {

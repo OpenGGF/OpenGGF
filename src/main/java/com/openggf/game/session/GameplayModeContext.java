@@ -354,7 +354,7 @@ public final class GameplayModeContext implements ModeContext {
             dynamicArtLifecycle.beginRun();
         }
 
-        this.rewindRegistry = new RewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
+        this.rewindRegistry = worldSession.createRewindRegistry(profiler, worldSession.getGameModule().gameplayFrameController());
         this.levelEventExtraRewindKeys.clear();
         this.contributedZoneRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);

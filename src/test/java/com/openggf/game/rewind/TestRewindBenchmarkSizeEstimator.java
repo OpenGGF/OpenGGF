@@ -33,6 +33,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindBenchmarkSizeEstimator {
 
     @Test
+    void compositeEstimateChargesLayoutScopeReferenceAndOpaqueOwnerOnlyOnce() {
+        assertEquals(224L, RewindBenchmark.estimateStructuralSize(new CompositeSnapshot(Map.of())),
+                "empty unscoped container includes the layout's additional reference slot");
+        Object scope = new Object();
+        var first = EngineRewindRegistryFactory.create(scope, null, null);
+        var rebuilt = EngineRewindRegistryFactory.create(scope, null, null);
+        var foreign = EngineRewindRegistryFactory.create(new Object(), null, null);
+        IdentityHashMap<Object, Boolean> seen = new IdentityHashMap<>();
+        assertEquals(240L, RewindBenchmark.estimateStructuralSizeShared(first.capture(), seen),
+                "first layout charges its scope reference and the 16-byte opaque Object");
+        assertEquals(112L, RewindBenchmark.estimateStructuralSizeShared(first.capture(), seen),
+                "another frame shares the layout and scope but owns its container and value array");
+        assertEquals(224L, RewindBenchmark.estimateStructuralSizeShared(first.captureCourse(), seen),
+                "a course layout owns its reference slot but shares the already charged scope");
+        assertEquals(224L, RewindBenchmark.estimateStructuralSizeShared(rebuilt.capture(), seen),
+                "a rebuilt registry has a distinct layout over the same opaque scope");
+        assertEquals(240L, RewindBenchmark.estimateStructuralSizeShared(foreign.capture(), seen),
+                "a different world retains its own scope object");
+    }
+
+    @Test
     void expandedCollisionSchemaPreservesOrderedIdsAndPartialBuildState() {
         ObjectRefId previousFirst = ObjectRefId.layout(4, 0, 10);
         ObjectRefId previousSecond = ObjectRefId.dynamic(5, 0, 11);

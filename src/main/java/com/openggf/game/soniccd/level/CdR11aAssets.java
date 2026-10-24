@@ -23,11 +23,12 @@ public final class CdR11aAssets {
     private final CdR11aLoadPlan loadPlan;
     private final CdObjectPlacements placements;
     private final CdSonicVisualAssets sonic;
+    private final CdR11aPlayerAssets player;
     private final CdShieldArt shield;
 
     CdR11aAssets(CdR11aProfile profile, Identity identity, CdMmdImage image, NemesisRead blocks, NemesisRead tiles,
                    CdR11aTerrain terrain, CdR11aLoadPlan loadPlan, CdObjectPlacements placements,
-                   CdSonicVisualAssets sonic, CdShieldArt shield) {
+                   CdSonicVisualAssets sonic, CdR11aPlayerAssets player, CdShieldArt shield) {
         this.profile = profile;
         this.identity = identity;
         this.image = image;
@@ -37,6 +38,7 @@ public final class CdR11aAssets {
         this.loadPlan = loadPlan;
         this.placements = placements;
         this.sonic = sonic;
+        this.player = player;
         this.shield = shield;
     }
 
@@ -46,6 +48,7 @@ public final class CdR11aAssets {
     public CdR11aLoadPlan loadPlan() { return loadPlan; }
     public CdObjectPlacements placements() { return placements; }
     public CdSonicVisualAssets sonic() { return sonic; }
+    public CdR11aPlayerAssets player() { return player; }
     public CdShieldArt shield() { return shield; }
     public NemesisRead blocksDecode() { return blocks; }
     public NemesisRead levelTilesDecode() { return tiles; }

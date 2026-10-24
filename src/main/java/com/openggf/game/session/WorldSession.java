@@ -9,6 +9,10 @@ import com.openggf.level.Level;
 import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.timing.LoadTimeSimulationMode;
+import com.openggf.debug.SectionProfiler;
+import com.openggf.game.mode.GameplayFrameController;
+import com.openggf.game.rewind.EngineRewindRegistryFactory;
+import com.openggf.game.rewind.RewindRegistry;
 
 import java.util.Objects;
 
@@ -18,6 +22,8 @@ public final class WorldSession {
     private final GameModule gameModule;
     private final SaveSessionContext saveSessionContext;
     private final GameDataSource dataSource;
+    // Identity only: survives manager/context rebuilds without retaining a mutable world in history.
+    private final Object rewindScope = new Object();
     private final PlayableCharacterRegistry playableCharacterRegistry;
     private LoadTimeSimulationMode loadTimeSimulationMode;
 
@@ -84,6 +90,10 @@ public final class WorldSession {
     }
 
     public GameDataSource getDataSource() { return dataSource; }
+
+    RewindRegistry createRewindRegistry(SectionProfiler profiler, GameplayFrameController controller) {
+        return EngineRewindRegistryFactory.create(rewindScope, profiler, controller);
+    }
 
     /** Returns the one immutable registry view pinned when this session opened. */
     public PlayableCharacterRegistry getPlayableCharacterRegistry() {

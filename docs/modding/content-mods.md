@@ -622,6 +622,13 @@ remains the fixed menu-confirm prompt and is not a substitute for a player bindi
 Session rewind registration and removal belong to the engine. Contribute adapters
 through your module or owner transaction; a creator may still construct and use
 a private `RewindRegistry` for isolated calculations.
+Those public private registries and `new CompositeSnapshot(map)` remain unscoped
+and compatible with each other. Engine full and course captures retain their
+world's opaque admission scope. Keep the original composite for engine restore:
+copying or filtering its `entries()` into a new composite drops that authority
+and is rejected before any adapter runs. Compatible raw captures can survive
+manager/context rebuilding within the same world; `CourseCheckpoint` still
+requires its original context, level and adapter generation.
 
 ## Compose a campaign from authored acts
 

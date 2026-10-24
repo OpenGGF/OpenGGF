@@ -102,7 +102,10 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     private static GameplayModeContext buildAttachedContext() {
-        WorldSession world = new WorldSession(new Sonic2GameModule());
+        return buildAttachedContext(new WorldSession(new Sonic2GameModule()));
+    }
+
+    private static GameplayModeContext buildAttachedContext(WorldSession world) {
         GameplayModeContext ctx = new GameplayModeContext(world);
 
         Camera camera = new Camera();
@@ -114,6 +117,65 @@ class TestGameplayModeContextRewindRegistry {
 
         ctx.attachGameplayManagers(camera, timers, gameState, fade, rng, solid);
         return ctx;
+    }
+
+    @Test
+    void worldsSharingTheExactSourceRejectFullAndCourseBeforeCoreStateChanges() {
+        var module = new Sonic2GameModule();
+        var source = mock(com.openggf.game.GameDataSource.class);
+        when(source.identity()).thenReturn("same-claimed-identity");
+        var first = buildAttachedContext(new WorldSession(module, module, source, null));
+        var second = buildAttachedContext(new WorldSession(module, module, source, null));
+        assertSame(first.getWorldSession().getDataSource(), second.getWorldSession().getDataSource());
+        first.getCamera().setX((short) 11);
+        first.getGameStateManager().addScore(100);
+        var full = first.getRewindRegistry().capture();
+        var course = first.getRewindRegistry().captureCourse();
+        second.getCamera().setX((short) 321);
+        second.getGameStateManager().addScore(500);
+        var cameraBefore = second.getCamera().capture();
+        var stateBefore = second.getGameStateManager().capture();
+        var rngBefore = second.getRng().capture();
+        AtomicInteger callbacks = new AtomicInteger();
+        second.getRewindRegistry().registerPostRestoreCallback("test-observer", callbacks::incrementAndGet);
+
+        assertThrows(IllegalArgumentException.class, () -> second.getRewindRegistry().restore(full));
+        assertThrows(IllegalArgumentException.class, () -> second.getRewindRegistry().restoreCourse(course));
+
+        assertEquals(cameraBefore, second.getCamera().capture());
+        var stateAfter = second.getGameStateManager().capture();
+        assertEquals(500, stateAfter.score());
+        assertEquals(stateBefore.lives(), stateAfter.lives());
+        assertArrayEquals(stateBefore.gotEmeralds(), stateAfter.gotEmeralds());
+        assertArrayEquals(stateBefore.gotSuperEmeralds(), stateAfter.gotSuperEmeralds());
+        assertEquals(rngBefore, second.getRng().capture());
+        assertEquals(0, callbacks.get());
+        org.mockito.Mockito.verifyNoInteractions(source);
+    }
+
+    @Test
+    void sameWorldNewContextRestoresCompatibleCoreCapturesIntoReplacementManagers() {
+        var world = new WorldSession(new Sonic2GameModule());
+        var first = buildAttachedContext(world);
+        first.getCamera().setX((short) 71);
+        first.getGameStateManager().addScore(100);
+        var full = first.getRewindRegistry().capture();
+        first.getCamera().setX((short) 82);
+        var course = first.getRewindRegistry().captureCourse();
+        var oldRegistry = first.getRewindRegistry();
+        var oldCamera = first.getCamera();
+        first.tearDownManagers();
+        var second = buildAttachedContext(world);
+        assertNotSame(first, second);
+        assertNotSame(oldRegistry, second.getRewindRegistry());
+        assertNotSame(oldCamera, second.getCamera());
+
+        second.getRewindRegistry().restore(full);
+        assertEquals(71, second.getCamera().getX());
+        assertEquals(100, second.getGameStateManager().getScore());
+        second.getRewindRegistry().restoreCourse(course);
+        assertEquals(82, second.getCamera().getX());
+        assertEquals(100, second.getGameStateManager().getScore());
     }
 
     @Test
@@ -382,6 +444,10 @@ class TestGameplayModeContextRewindRegistry {
     void reattachRebuildsRegistry() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry first = ctx.getRewindRegistry();
+        ctx.getCamera().setX((short) 37);
+        CompositeSnapshot full = first.capture();
+        ctx.getCamera().setX((short) 48);
+        CompositeSnapshot course = first.captureCourse();
 
         // Tear down and re-attach (simulates a resume-parked path)
         ctx.tearDownManagers();
@@ -398,6 +464,10 @@ class TestGameplayModeContextRewindRegistry {
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
         // New registry should have the same thirteen keys
         assertEquals(15, second.capture().entries().keySet().size());
+        second.restore(full);
+        assertEquals(37, camera2.getX());
+        second.restoreCourse(course);
+        assertEquals(48, camera2.getX());
     }
 
     @Test

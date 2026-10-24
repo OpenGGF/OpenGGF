@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Stored velocity is not proof of movement (2026-10-24, CD charge reference).
+Retail spindash can retain nonzero X/Y velocity while the complete 16:16 position
+stays fixed. Require observed displacement within the admitted release continuation
+before certifying a launch, and check raw/logical held-and-tap latches on the
+charge-to-zero row as well as while charge is positive. A source helper's return
+also precedes the remaining movement tail; post-frame values are not its direct
+outputs. See the [CD player component record](../architecture/plans/2026-10-23-sonic-cd-implementation.md).
+
 A callback scope name does not authenticate its CPU owner (2026-10-23, Sonic CD
 device research). Both M68K and S68K reach hooks advertised as `M68K BUS`; the
 stock adapter drops CPU identity and access width. An ownership poll can prove

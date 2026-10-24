@@ -58,6 +58,13 @@ class TestCdR11aRetailAssets {
             changed[0x3B0AB] ^= 1;
             assertThrows(IOException.class,
                     () -> data.profile().verifyProgram(CdNativeFile.R11A, data.profile().domain(), CdMmdImage.parse(changed)));
+            for (CdR11aAsset asset : new CdR11aAsset[]{ANI_SONIC, SONIC_MINI_ANIMATIONS, SONIC_RAMP_CHUNKS,
+                    SPEC_CHUNKS, SINE_TABLE, ARC_TAN_TABLE}) {
+                byte[] playerChanged = source.mmd(CdNativeFile.R11A).readFile(0, 0x40000);
+                playerChanged[data.profile().range(asset).fileOffset()] ^= 1;
+                assertThrows(IOException.class, () -> data.profile().verifyProgram(CdNativeFile.R11A,
+                        data.profile().domain(), CdMmdImage.parse(playerChanged)), asset.nativeLabel());
+            }
             assertEquals(source.identity().normalizedSha256(), data.identity().observedWholeDiscSha256());
         }
 
@@ -131,6 +138,39 @@ class TestCdR11aRetailAssets {
             assertTrue(data.sonic().dplcFrames().get(frame).pieces().stream().anyMatch(piece -> piece.artByteOffset() + piece.byteLength() == 69472));
         }
         assertEquals(736, data.sonic().dplcFrames().stream().mapToInt(CdSonicVisualAssets.DplcFrame::outputBytes).max().orElseThrow());
+        var player = data.player();
+        assertSame(data.sonic(), player.sonic(), "Reuse the already decoded visual owner");
+        assertEquals(60, player.animations().size());
+        assertEquals("96c145e86b5f841f36dbfca9361c7139df4ff5705423566836d361ace6098af9", sha(player.animationTable()));
+        assertEquals("adcb220955503a487e05e9d1310f244e7c84e50c26c0fbf5c2a64e968f2f4c1a", sha(player.miniAnimations()));
+        assertEquals("203fe6a5ab55693db5a4daca78171984996c54a85119395dbd59d5fae00c7218", sha(player.rampChunks()));
+        assertEquals("365475d471c68745e3881c3743e1669911103607f18d88d9db7292e29177c0bf", sha(player.specialChunks()));
+        assertEquals("bbde7b84eb90b56a2425842a67a0ff0316b3f3b0ff49b956f9b86c1267d75bb9", sha(player.sineTable()));
+        assertEquals("a981a16e050ef47017e44f23c991256a478755f1b415667f56e6788d1b655295", sha(player.arcTanTable()));
+        // SonAni_Walk / Run / Peelout / Run3D and the native Roll3D/FallAway aliases.
+        for (int[] entry : new int[][]{{0, 0x78}, {1, 0x80}, {5, 0xA0}, {0x1E, 0x134},
+                {0x21, 0x152}, {0x31, 0x1DC}, {0x35, 0x202}, {0x36, 0x20A}, {0x37, 0x212},
+                {0x38, 0x216}, {0x39, 0x22C}, {0x3A, 0x20A}, {0x3B, 0x212}}) {
+            assertEquals(entry[1], player.animation(entry[0]).relativeOffset());
+        }
+        assertEquals((byte) 0xFF, player.animation(0).signedDelayOrHandler());
+        assertEquals((byte) 0xFE, player.animation(2).signedDelayOrHandler());
+        assertEquals((byte) 0xFD, player.animation(4).signedDelayOrHandler());
+        assertEquals((byte) 0xFC, player.animation(0x2C).signedDelayOrHandler());
+        // SonAni_Unk1E's following zero is the real FD operand, not invented padding.
+        assertArrayEquals(new byte[]{3, 0x3C, (byte) 0xFD, 0}, player.animation(0x1E).bytes().copy());
+        assertArrayEquals(player.animation(0x36).bytes().copy(), player.animation(0x3A).bytes().copy());
+        assertArrayEquals(player.animation(0x37).bytes().copy(), player.animation(0x3B).bytes().copy());
+        assertEquals(0x21, player.miniAnimationId(0));
+        assertEquals(0x39, player.miniAnimationId(0x38));
+        assertArrayEquals(new byte[]{6, 7, 8, 0x49, 0x4C, (byte) 0xFF}, player.rampChunks().copy());
+        assertArrayEquals(new byte[]{0x7F, 0x7F, 0x7F, 0x7F}, player.specialChunks().copy());
+        assertEquals(-0x75, player.sineWord(147), "Retain the native asymmetric word, without math replacement");
+        for (int i = 0; i < 64; i++) { assertEquals(player.sineWord(i), player.sineWord(256 + i)); }
+        assertEquals(0x20, player.arcTanByte(255));
+        assertEquals(0x20, player.arcTanByte(256));
+        assertThrows(IndexOutOfBoundsException.class, () -> player.arcTanByte(257));
+        assertThrows(IndexOutOfBoundsException.class, () -> player.miniAnimationId(60));
         String[] shieldHashes = {
                 "cbca98fc186fec63ea75c2c0dd8da06ec651c02c37232c15e38cecb749d5b7d0",
                 "706736889a2cced446522a69a86853de41d4dfc9204c83ab0a7d2690d3036fcc",
@@ -146,7 +186,7 @@ class TestCdR11aRetailAssets {
         assertThrows(UnsupportedOperationException.class, data.shield()::completeUploadBytes);
 
         assertEquals(69, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.SOURCE_BLOB).count());
-        assertEquals(30, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.TABLE).count());
+        assertEquals(35, Arrays.stream(CdR11aAsset.values()).filter(asset -> asset.kind() == CdR11aAsset.Kind.TABLE).count());
         for (CdR11aAsset asset : CdR11aAsset.values()) {
             assertEquals(asset.length(), data.view(asset).bytes().length());
             assertEquals(data.profile().range(asset), data.view(asset).range());

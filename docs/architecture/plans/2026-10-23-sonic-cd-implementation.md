@@ -1640,3 +1640,119 @@ env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN
 
 All individual skip identities were inspected. These checks resolve the four
 new fixture-test failures; they do not fill the timed-out ordinary/guard coverage.
+
+## R11A player components and world-owned snapshots — 24 October 2026
+
+The private tree imports source-reviewed finite components from the external
+`world-snapshot-guard-r1`, `collision-placement-r2`, `player-terrain-r1`,
+`player-assets-r1`, `player-art-runtime-r1` and `player-animation-r1` candidates.
+Runtime data continues through authenticated supplied discs. Native placement
+keeps original material/solidity words independent of drawing and delays shape
+ID reads until the native gates. Floor/wall probes retain signed distances and
+optional angle writes. Bounded animation and V-int art transfer own their state
+without executing a player or issuing draw-time cues.
+
+Command examples below use `OPENGGF_MAIN` for the original checkout and
+`SCD_MEDIA_ROOT` for the supplied regional media directory. Exact machine-specific
+invocations remain in the external task plan.
+
+On parent `dbe9b40be` plus these 30 imported files, the first combined focused
+check passed 130 tests, zero failures/errors/skips, with Java 25 and all three
+supplied discs. Command from the private cwd, with DISPLAY/WAYLAND_DISPLAY unset
+and LUA_BIN=/usr/bin/lua5.4:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdTerrainCollision,TestCdPlayerTerrain,TestCdR11aPlayerAssets,TestCdR11aRetailAssets,TestCdSonicVisualAssets,TestCdShieldArt,TestCdR11aLoadPlan,TestCdR11aTerrain,TestCdBoundedAssets,TestCdObjectPlacements,TestCdPlayerArtRuntime,TestCdPlayerAnimation,TestSonicCdStockPreparation,TestSonicCdLevelGeometry,TestSonicCdLevelRetail,TestSonicCdModuleContracts,TestSonicCdStaticStageLoad' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+```
+
+Queue wait was 21 seconds; Maven execution was 1 minute 35 seconds. All 17
+completed XML reports and their media/Java properties were inspected. This
+includes real-media foreign-world snapshot rejection; shared rewind/API/native
+publication and real-GL regressions remain pending at this checkpoint. Scope is
+an opaque WorldSession identity carried by engine-created layouts. Full/course
+restore checks it before adapters, callbacks, RNG or character selection.
+Unscoped public private registries retain Map roundtrips; reconstructing a Map
+cannot confer engine-world authority. No public signature change is intended.
+
+Corrected native reference tools are promoted under `tools/soniccd`: R2 output
+admission discovers the bound producer repository's registered worktrees; R2
+charge comparison checks release-row latches and displacement rather than stored
+positive velocity. The recipes are `player_reference_retail_route.json`,
+`player_charge_peelout.json` and `player_charge_spindash.json`, supplied explicitly
+to the producer's scenario argument. Original external sources/manifests remain
+unchanged. Promoted-path Python checks passed all 33 player-reference and 20 charge-checker
+cases, with zero skips; no new native boot was needed for this path integration. Earlier movement captures retain ten unexplained
+private-state replay bytes; the later charge captures match complete states.
+Exact instruction phase and immediate threshold-release coverage remain unknown.
+
+Cold entry has a source owner: RunMMD (CD Initial Program/IPX.asm:1307-1341)
+clears [FF2000,FFFB00), including the complete Sonic CPU art window and comparison
+bytes. Both R11A GameInit branches call InitVDP, whose full VRAM DMA clears the
+resident window. The unique clear/call/setup bytes were checked against all
+three supplied program images. These are cold transition facts; the finite art
+owner still requires explicit complete ingress. Intervening PLC/DMA writers,
+restart/carry boundaries and actual engine initialization remain separate proof
+and implementation obligations. No initial cue, zero tail or timing is fitted
+from a native capture. Collision/animation/art component passes do not enable
+Sonic execution, actor touch, camera scrolling, time travel or complete act parity.
+
+### Shared, charge and rendered verification at the player-component checkpoint
+
+The unchanged shared/world component state passed 296 tests across 31 actual
+classes (30 selectors), zero failures/errors/skips. API surface/pin policy passed
+without changing any signature pin. Cartridge SHA-1/CRC32 identities and all
+selected XML properties were checked. Command from the private tree, with
+DISPLAY/WAYLAND_DISPLAY unset and LUA_BIN=/usr/bin/lua5.4:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestRewindRegistry,TestCompositeSnapshot,TestCompositeSnapshotOwnership,TestRewindBenchmarkSizeEstimator,TestGameplayModeContextRewindRegistry,TestGameDataSourceSessionOwnership,TestEditorModeContextLifecycle,TestOwnerBoundGamePatch,TestS1S2PlcSessionOwnership,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestRewindController,TestRewindProfilerAttribution,TestSegmentCache,TestInMemoryKeyframeStore,TestPlaybackController,TestRewindDeterminismAuditor,TestGameplayInputBranchTool,TestModZoneEventLifecycle,TestSonic1SwitchStateRewindAdapter,TestFbzBadnikGraphRewind,TestS3kIczIceObjectRewind,TestS3kCnzLocalMechanicsRewind,TestNativeRewindAdapterPublication,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" test -B
+```
+
+Session 77545 waited 244 seconds; Maven execution was 37.138 seconds. The
+separate real-GL/audio/charge invocation (29219) executed 86 cases, with two
+charge assertion failures and zero errors/skips. All three regional real-EGL
+terrain/restore cases and both headless audio ownership cases passed. Command:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerCharge,TestSonicCdDirectStageBoot,TestHeadlessAudioOwnership' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+That invocation waited zero seconds and executed Maven for 1m25s. Source
+attribution found two wrong authored expectations: starting at +/−4500 adds
+native +/−100 to +/−4600, below the shoes cap +/−4608. Main.asm:984-1014 and
+production agree; no production edit was needed. Corrected the expected
+literals and added exact-cap +/−4508 and just-crossing +/−4509 inputs. The
+entire charge class then passed 85 tests, zero failures/errors/skips (51184,
+zero queue wait, Maven 26.716s):
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerCharge' test -B
+```
+
+These are separate bounded selections. The failed 86-case invocation is not
+relabeled green or added to the successful charge total. Its five unchanged
+render/audio positives remain evidence for those exact cases. The 130-component
+and 296-shared checks retain their original tested inputs; later changes add
+only the isolated charge owner, its corrected tests, standalone reference tools
+and prose. No repeated unchanged broad coverage was launched.
+
+The change-based planner against integration base `56beba899` selects all
+3,660 smoke candidates in 74 ordinary batches plus guards for this working
+state. That broad combined coverage remains pending during continuing player
+implementation. Its prior 90-minute invocation was incomplete, and these
+focused checks do not fill its unexecuted tail. A fresh complete smoke run needs
+an execution budget informed by that measured cost; do not launch the public
+release-only full suite. This is a private implementation checkpoint, not a
+completed delivery or complete game/act/parity claim.
+
+A follow-up cold-art source audit checked the intervening setup/PLC writers,
+load/fade/lag interrupt selectors and conditional first V-int sequence. At the
+completed cold/default-start cut before Level_MainLoop, both complete $300-byte
+windows remain zero, last-frame is zero and dirty is clean; PLC work is empty.
+The first two normal services see frame zero and issue no player DMA. An actual
+later animation publication selects the first changed cue. Full details and
+writer extents remain in the external `research/player-art-cold-ingress.md`.
+That resolves the bounded source ingress question, not engine initialization:
+no cold-art factory or lifecycle hook has been added. In-program restart,
+checkpoint, carry and restore must retain their own state and never reuse that
+cold clear. Native timing and live player/render integration remain open.

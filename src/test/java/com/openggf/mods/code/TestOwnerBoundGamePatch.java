@@ -491,6 +491,10 @@ public class TestOwnerBoundGamePatch {
     }
 
     public interface BridgeBinding { String bind(Object adapter, String owner, String localKey); }
+    public interface RegistryCreation {
+        com.openggf.game.rewind.RewindRegistry create(Object scope, com.openggf.debug.SectionProfiler profiler,
+                com.openggf.game.mode.GameplayFrameController controller);
+    }
     public interface PatchOwnershipBinding { GamePatch wrap(String owner,GamePatch patch,ModFaultBoundary boundary); }
     public interface StandaloneOwnershipBinding { GameModule wrap(String owner,GameModule module,ModFaultBoundary boundary); }
     public interface CallbackConstruction {
@@ -498,6 +502,12 @@ public class TestOwnerBoundGamePatch {
                 java.util.Map<String,RewindSnapshottable<?>> adapters);
     }
     public static final class OwnershipProbe {
+        public static com.openggf.game.rewind.RewindRegistry scopedRegistry(Object scope) {
+            return com.openggf.game.rewind.EngineRewindRegistryFactory.create(scope, null, null);
+        }
+        public static RegistryCreation hiddenRegistry() {
+            return com.openggf.game.rewind.EngineRewindRegistryFactory::create;
+        }
         public static BridgeBinding hiddenBinding() { return com.openggf.game.rewind.RewindAdapterOwnership::bind; }
         public static PatchOwnershipBinding hiddenPatchOwner() { return com.openggf.mods.runtime.OwnerBoundGamePatch::wrap; }
         public static StandaloneOwnershipBinding hiddenStandaloneOwner() { return com.openggf.mods.runtime.OwnerBoundGamePatch::wrapStandaloneRewinds; }
@@ -523,6 +533,9 @@ public class TestOwnerBoundGamePatch {
         public static com.openggf.game.rewind.CompositeSnapshot privateRegistry(RewindSnapshottable<?> adapter) {
             var registry = new com.openggf.game.rewind.RewindRegistry();
             List.of(adapter).forEach(registry::registerOrRefresh);
+            var original = registry.capture();
+            registry.restore(new com.openggf.game.rewind.CompositeSnapshot(original.entries()));
+            registry.restoreCourse(new com.openggf.game.rewind.CompositeSnapshot(registry.captureCourse().entries()));
             return registry.capture();
         }
         public static void replacePlans(com.openggf.game.patch.ModuleResolutionService service) {
@@ -549,6 +562,20 @@ public class TestOwnerBoundGamePatch {
         try (var loader = new ModDependencyClassLoader("hostile", new java.net.URL[]{jar.toUri().toURL()}, engineParent, List.of())) {
             Class<?> probe = loader.loadClass(name);
             assertSame(loader, probe.getClassLoader());
+            var scopedCreation = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                    () -> probe.getMethod("scopedRegistry", Object.class).invoke(null, new Object()));
+            assertInstanceOf(SecurityException.class, scopedCreation.getCause());
+            var hiddenRegistry = (RegistryCreation) probe.getMethod("hiddenRegistry").invoke(null);
+            assertThrows(SecurityException.class, () -> hiddenRegistry.create(new Object(), null, null));
+            RegistryCreation engineRegistry = com.openggf.game.rewind.EngineRewindRegistryFactory::create;
+            var engineCreated = assertDoesNotThrow(() -> engineRegistry.create(new Object(), null, null));
+            Mode engineState = new Mode(null); engineState.suppliedKey = "factory-state"; engineState.state = 17;
+            engineCreated.register(engineState);
+            var engineSnapshot = engineCreated.capture();
+            engineState.state = 99;
+            engineCreated.restore(engineSnapshot);
+            assertEquals(17, engineState.state);
+            assertThrows(NullPointerException.class, () -> engineRegistry.create(null, null, null));
             var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
                     () -> probe.getMethod("forge").invoke(null));
             assertInstanceOf(SecurityException.class, failure.getCause());

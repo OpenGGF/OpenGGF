@@ -95,6 +95,14 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   compare decompression output and bounded native fields against R2 metadata.
   This supports R11A assets, not a playable module or other stage paths.
   Origin: 2026-10-23 CD-04/CD-10.
+- [Native CD player reference](../../tools/soniccd/player_reference.py) records
+  source-gated post-frame observations, lossless pictures and repeat/restore controls
+  from controller recipes. Its [checker](../../tools/soniccd/player_reference_check.py)
+  verifies complete actor fields; the [charge checker](../../tools/soniccd/charge_reference_check.py)
+  requires consistent release latches and actual full-position movement. Output
+  preflight protects all registered checkouts of the producer repository. Exact
+  player/V-int instruction phase remains unknown; rows never drive engine state.
+  Origin: 2026-10-24 CD-08.
 - `HeadlessGameBoot.bootSonicCdStatic` and `GameplayCaptureSession.bootSonicCdStatic`
   join authenticated detached disc data to the existing world, load and rendering
   owners. `TestSonicCdDirectStageBoot` checks three regional static views and

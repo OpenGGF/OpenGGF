@@ -3,7 +3,7 @@ package com.openggf.game.soniccd.level;
 import com.openggf.game.soniccd.CdReleaseVariant;
 
 /**
- * Reviewed file extents from schema-v2 research at scddisasm 1ecc5f3a.
+ * Reviewed schema-v2 extents plus source/retail-checked player table views at scddisasm 1ecc5f3a.
  * A source blob is not a consumer read extent. Encoding names cover only the
  * inventory's checked consumer; UNKNOWN is preserved even for .nem-named blobs.
  * No data bytes, JSON parser, source path or runtime disassembly dependency.
@@ -79,6 +79,14 @@ public enum CdR11aAsset {
     PAL_S1_TITLE("Pal_S1Title", Kind.SOURCE_BLOB, 0x5D4, 0x5D4, 128, Encoding.UNKNOWN),
     PAL_SONIC("Pal_Sonic", Kind.SOURCE_BLOB, 0x6D4, 0x6D4, 32, Encoding.UNKNOWN),
     ANI_SONIC("Ani_Sonic", Kind.TABLE, 0x599A, 0x59A8, 578, Encoding.UNKNOWN),
+    // Bounded player consumers at scddisasm 1ecc5f3a. The mini view admits only
+    // the 60 valid Ani_Sonic IDs, not the source's unused $3C..$4F entries.
+    SONIC_MINI_ANIMATIONS("ObjSonic_GetMiniAnim.MiniAnims", Kind.TABLE, 0x594A, 0x5958, 60, Encoding.UNKNOWN),
+    SONIC_RAMP_CHUNKS("ObjSonic_Handle3DRamp.ChunkList", Kind.TABLE, 0x4710, 0x470C, 6, Encoding.UNKNOWN),
+    SPEC_CHUNKS("SpecChunks", Kind.TABLE, 0x29F2, 0x29EE, 4, Encoding.UNKNOWN),
+    SINE_TABLE("SineTable", Kind.TABLE, 0x872, 0x872, 640, Encoding.UNKNOWN),
+    // CalcAngle can index quotient 256. The following EVEN byte is not read.
+    ARC_TAN_TABLE("ArcTanTable", Kind.TABLE, 0xB58, 0xB58, 257, Encoding.UNKNOWN),
     CAM_BOUNDS("CamBounds", Kind.TABLE, 0x2950, 0x294C, 12, Encoding.UNKNOWN),
     CLOUD_SECT_SIZES("CloudSectSizes", Kind.TABLE, 0x2C72, 0x2C6E, 10, Encoding.UNKNOWN),
     CLOUD_UPSIDE_DOWN_SECT_SIZES("CloudUpsideDownSectSizes", Kind.TABLE, 0x2C7C, 0x2C78, 9, Encoding.UNKNOWN),

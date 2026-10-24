@@ -23,6 +23,10 @@ import java.util.Objects;
  * since); such entries are skipped. The reverse — registered subsystems
  * with no entry in the snapshot — explicitly resets them, failing closed when
  * a subsystem does not provide a missing-snapshot reset implementation.
+ * This key compatibility applies only after world admission: engine registries
+ * reject foreign or unscoped composites before any subsystem mutation. Public
+ * constructors create unscoped private registries compatible with Map snapshots
+ * and other unscoped registries.
  */
 @com.openggf.game.ModApi
 public final class RewindRegistry {
@@ -36,25 +40,30 @@ public final class RewindRegistry {
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
     private final SectionProfiler profiler;
     private final Object modeAdapter;
+    private final Object scope;
     private long layoutVersion;
     private long courseLayoutVersion;
     private LayoutState layoutState;
 
     public RewindRegistry() {
-        this.profiler = null;
-        this.modeAdapter = null;
+        this(null, null, null);
     }
 
     public RewindRegistry(SectionProfiler profiler) {
-        this.profiler = profiler;
-        this.modeAdapter = null;
+        this(profiler, null, null);
     }
 
     /** The session supplies its actual controller; creator keys never select the partition. */
     public RewindRegistry(SectionProfiler profiler,
                           com.openggf.game.mode.GameplayFrameController controller) {
+        this(profiler, controller, null);
+    }
+
+    RewindRegistry(SectionProfiler profiler,
+                   com.openggf.game.mode.GameplayFrameController controller, Object scope) {
         this.profiler = profiler;
         this.modeAdapter = controller instanceof RewindSnapshottable<?> ? controller : null;
+        this.scope = scope;
     }
 
     public void register(RewindSnapshottable<?> s) {
@@ -181,7 +190,7 @@ public final class RewindRegistry {
     }
 
     public void restore(CompositeSnapshot cs) {
-        Objects.requireNonNull(cs, "cs");
+        requireScope(cs);
         if (profiler != null) {
             profiler.beginSection("rewind.restore");
         }
@@ -207,19 +216,32 @@ public final class RewindRegistry {
 
     /** Captures a course partition, omitting only the session controller by identity. */
     public CompositeSnapshot captureCourse() {
-        var values = new LinkedHashMap<String, Object>();
+        var keys = new ArrayList<String>(entries.size());
+        var values = new ArrayList<Object>(entries.size());
         entries.forEach((key, adapter) -> {
-            if (adapter != modeAdapter) values.put(key, Objects.requireNonNull(adapter.capture(), key));
+            if (adapter != modeAdapter) {
+                keys.add(key);
+                values.add(Objects.requireNonNull(adapter.capture(), key));
+            }
         });
-        return new CompositeSnapshot(values);
+        return CompositeSnapshot.owned(
+                CompositeSnapshotLayout.fromKeys(courseLayoutVersion, keys, scope), values.toArray());
     }
 
     /** Validates the entire partition before mutating any subsystem. */
     public void requireCourseLayout(CompositeSnapshot snapshot) {
+        requireScope(snapshot);
         var keys = new java.util.LinkedHashSet<>(entries.keySet());
         keys.removeIf(key -> entries.get(key) == modeAdapter);
         if (!keys.equals(snapshot.entries().keySet()))
             throw new IllegalArgumentException("Course checkpoint belongs to a different registry layout");
+    }
+
+    private void requireScope(CompositeSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        if (!snapshot.layout().hasScope(scope)) {
+            throw new IllegalArgumentException("Rewind snapshot belongs to a different world scope");
+        }
     }
 
     /** Restores the exact course partition while retaining the match/mode ledger. */
@@ -271,7 +293,7 @@ public final class RewindRegistry {
             index++;
         }
         state = new LayoutState(
-                CompositeSnapshotLayout.fromKeys(layoutVersion, keys),
+                CompositeSnapshotLayout.fromKeys(layoutVersion, keys, scope),
                 adapters,
                 gameRngIndex);
         layoutState = state;

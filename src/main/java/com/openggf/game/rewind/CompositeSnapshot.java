@@ -19,6 +19,9 @@ import java.util.Set;
  * <p>The public constructor defensively copies its input. Production captures
  * share an immutable key layout and own a compact value array. The public map
  * view is array-backed, so compatibility does not require a map node per key.
+ * Engine captures also retain opaque world admission on their layout. The
+ * public Map constructor creates an unscoped payload for private registries;
+ * copying {@link #entries()} does not transfer engine restore authority.
  */
 @com.openggf.game.ModApi
 public final class CompositeSnapshot {
