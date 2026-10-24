@@ -2436,3 +2436,47 @@ python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off -Pguards
 All work stays on private local branches. Public changelog/guide publication is
 intentionally deferred under the user's explicit no-disclosure instruction;
 this existing dated engineering record preserves the corrections and limits.
+
+
+### Opening native frame owner and shared player bridge, 24 October 2026
+
+CdOpeningObjectRuntime now composes the authenticated USA placement pool/saved
+bank, Ring and Mosqui bodies, ephemeral post-player touch, shared live-pointer
+DrawObject queue, CPU SAT and immutable displayed-next-VInt picture. It executes
+physical slots in live ascending order, including same-pass children; unknown
+IDs and unsupported enemy/hazard/monitor/special contact fail at their real
+dispatch or handler. No visibility/coordinate/route fence suppresses execution.
+The separately declared development ingress has zero CPU SAT, empty displayed
+picture, explicit Ring globals, absent reserved slots1..31 and preloaded actual
+object art. It does not prove a retail title/new-game load or native residency.
+
+Ordinary service latches the previous CPU SAT with now-serviced player art;
+pause publishes without a body and lag retains the prior picture. A single
+root-supplied primary-angle setter commits Mosqui's returned scratch byte before
+later dispatch; actor previous-angle copies remain separate. Completed Body
+returns stage the detached selected-item patch before pool commit. The last-loop
+typed sound ledger resets on ordinary service only, remains visible across
+holds and must not be replayed by draw/restore. FM_CHARGESTOP remains a stop
+request. Runtime and queue failure close sibling admission without rollback.
+
+CdPlayableSonic's optional ObjectPass delegates Body and the exact DrawObject
+cut, then projects the shared on-screen bit after camera/SAT construction. It
+does not build or draw a private one-player SAT in this mode. Pre-service misuse
+still rejects without closing an unadvanced frame; body/enqueue/GPU failures
+after admission close both owners. The existing terrain-only constructor and
+draw path are retained. Snapshots partition actor Body/history/display from
+Frame globals/art and runtime pool/CPU/display/sounds; each retained owner
+preflights its capture before mutation.
+
+Fable's independent runtime review found no production P1/P2. Its one test-only
+finding confirmed native unconditional charge-stop precedes a Ring reward;
+root corrected only that expectation. Parent18666 passed114 cases, no failures,
+errors or skips:Frame80, regional actor12, shared bridge4 and runtime18. Actual
+media and Java25 were inspected in all four reports. The earlier omitted S2
+property was supplied in parent31860, whose cartridge-to-CD switching case
+passed; it is not a retained skip. These component checks do not themselves
+establish a composed World pickup or native gameplay parity.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestCdOpeningObjectRuntime' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+```

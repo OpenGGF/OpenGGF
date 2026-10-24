@@ -27,7 +27,15 @@ import java.util.Optional;
  */
 public final class CdPlayableSonic extends AbstractPlayableSprite implements NativePlayableSlot {
     private static final CdPlayerEngineRules ENGINE_RULES = new CdPlayerEngineRules();
+    /** Internal composition port; the source-bound shared owner owns touch and queue admission. */
+    public interface ObjectPass {
+        CdPlayerFrameRuntime.BodyPublication runBody(int levelFrames);
+        void enqueuePlayer(CdPlayerBody.DisplayEligibility cut);
+        void close();
+    }
+
     private final CdPlayerFrameRuntime frame;
+    private final ObjectPass objectPass;
     private final PlayerSpriteRenderer renderer;
     private List<CdPlayerFrameRuntime.Sound> lastSounds = List.of();
     private boolean awaitingSpriteBuild;
@@ -35,9 +43,14 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     private Optional<CdPlayerBody.DisplayPublication> packet = Optional.empty();
 
     public CdPlayableSonic(String code, CdPlayerFrameRuntime frame, GraphicsManager graphics) {
+        this(code, frame, graphics, null);
+    }
+
+    public CdPlayableSonic(String code, CdPlayerFrameRuntime frame, GraphicsManager graphics, ObjectPass objectPass) {
         super(code, (short) (Objects.requireNonNull(frame, "frame").state().motion().centreX16_16() >> 16),
                 (short) (frame.state().motion().centreY16_16() >> 16), CdPlayerEngineRules.SPEC);
         this.frame = frame;
+        this.objectPass = objectPass;
         try {
             renderer = new PlayerSpriteRenderer(CdPlayerVisualAdapter.artSet(frame.assets().sonic(), 0x10000),
                     Objects.requireNonNull(graphics, "graphics"));
@@ -48,7 +61,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
             frame.bindArtPublication((request, completeState) -> restoreResident(completeState));
             projectNativeState();
         } catch (RuntimeException | Error failure) {
-            frame.close(); // A partial bank claim/upload cannot be retried as a fresh admission.
+            closeAfterFailure(failure); // A partial bank claim/upload cannot be retried.
             throw failure;
         }
     }
@@ -76,13 +89,15 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
         requireCompletedNativeFrame();
         frame.requireBodyEntitlement(); // A pre-service protocol rejection has advanced no Body.
         try {
-            var publication = frame.runBody(levelFrames);
+            var publication = objectPass == null ? frame.runBody(levelFrames) : objectPass.runBody(levelFrames);
             lastSounds = publication.sounds();
             queuedPointer = false;
             if (publication.result().boundary() == CdPlayerBody.Boundary.MAIN_RETURN) {
                 var cut = publication.result().effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
                         .map(CdPlayerBody.DisplayEligibility.class::cast).findFirst().orElseThrow();
-                if (cut.eligible()) {
+                if (cut.eligible() && objectPass != null) {
+                    objectPass.enqueuePlayer(cut);
+                } else if (cut.eligible()) {
                     if ((cut.spriteFlags() & 12) != 4) {
                         throw new UnsupportedOperationException("CD development queue requires foreground-relative sprites");
                     }
@@ -103,6 +118,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
 
     /** Source DrawObjects after the camera pass, independent of GPU submission. */
     public void finishAfterCamera() {
+        if (objectPass != null) throw new IllegalStateException("Shared CD object owner constructs the sprite table");
         if (!awaitingSpriteBuild) throw new IllegalStateException("No completed CD slot awaits sprite construction");
         if (queuedPointer && frame.state().header().slotId() != 0) {
             var pose = frame.display().orElseThrow();
@@ -114,6 +130,17 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
             packet = frame.display();
         } else packet = Optional.empty();
         queuedPointer = false;
+        awaitingSpriteBuild = false;
+        projectNativeState();
+    }
+
+    /** Shared owner has built the CPU SAT and written bit7; project only, without another sprite build. */
+    public void finishSharedAfterCamera() {
+        if (objectPass == null || !awaitingSpriteBuild) {
+            throw new IllegalStateException("No shared CD slot awaits its completed sprite table");
+        }
+        queuedPointer = false;
+        packet = Optional.empty();
         awaitingSpriteBuild = false;
         projectNativeState();
     }
@@ -150,6 +177,10 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     }
 
     private void closeAfterFailure(Throwable failure) {
+        if (objectPass != null) {
+            try { objectPass.close(); }
+            catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+        }
         try { frame.close(); }
         catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
         awaitingSpriteBuild = false;
@@ -198,6 +229,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
     @Override public void draw() {
         if (frame.closed()) throw new IllegalStateException("CD player admission is closed");
         requireCompletedNativeFrame();
+        if (objectPass != null) return; // The overlay draws the one immutable shared picture.
         var optional = packet;
         if (optional.isEmpty() || !optional.orElseThrow().queued()) return;
         var pose = optional.orElseThrow();

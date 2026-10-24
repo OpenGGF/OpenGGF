@@ -574,6 +574,44 @@ class TestCdPlayerFrameRuntime {
                 .findFirst().orElseThrow();
     }
 
+    @Test void objectFloorScratchUpdatesOnlyTheExistingSharedByteAndRestoresWithoutActorWrites() throws IOException {
+        var f = new Fixture().runtime();
+        var actor = f.captureActor(); var shared = f.captureShared(); var oldEnvironment = f.environment();
+        var oldMovement = oldEnvironment.movement(); var oldGlobals = oldMovement.globals();
+        f.applyObjectPrimaryAngle(0x81);
+        assertEquals(0x81, f.environment().movement().globals().primaryAngle(), "Odd scratch byte remains raw");
+        assertEquals(oldGlobals.secondaryAngle(), f.environment().movement().globals().secondaryAngle());
+        assertEquals(oldGlobals.lookMode(), f.environment().movement().globals().lookMode());
+        assertEquals(oldGlobals.cameraYCentre(), f.environment().movement().globals().cameraYCentre());
+        assertEquals(oldGlobals.boredTimer(), f.environment().movement().globals().boredTimer());
+        assertEquals(oldGlobals.scoreChain(), f.environment().movement().globals().scoreChain());
+        assertEquals(oldGlobals.debugAngle(), f.environment().movement().globals().debugAngle());
+        assertEquals(oldGlobals.debugAngleShift(), f.environment().movement().globals().debugAngleShift());
+        assertEquals(oldGlobals.debugQuadrant(), f.environment().movement().globals().debugQuadrant());
+        assertEquals(oldGlobals.debugFloorDistance(), f.environment().movement().globals().debugFloorDistance());
+        assertSame(oldMovement.physics(), f.environment().movement().physics());
+        assertSame(oldMovement.bounds(), f.environment().movement().bounds());
+        assertSame(oldMovement.gates(), f.environment().movement().gates());
+        assertSame(oldEnvironment.controls(), f.environment().controls());
+        assertSame(oldEnvironment.globals(), f.environment().globals());
+        assertEquals(actor, f.captureActor());
+        assertEquals(shared.vIntClock(), f.captureShared().vIntClock());
+        f.restoreShared(shared); assertSharedValues(shared, f.captureShared());
+    }
+
+    @Test void objectScratchRequiresAnOpenClosedFrameCutAndAnUnsignedByte() throws IOException {
+        var f = new Fixture().runtime();
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectPrimaryAngle(-1));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectPrimaryAngle(256));
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, () -> f.applyObjectPrimaryAngle(0x22));
+        f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertThrows(IllegalStateException.class, () -> f.applyObjectPrimaryAngle(0x22));
+        f.runBody(1);
+        f.applyObjectPrimaryAngle(255); assertEquals(255, f.environment().movement().globals().primaryAngle());
+        f.close(); assertThrows(IllegalStateException.class, () -> f.applyObjectPrimaryAngle(0));
+    }
+
     private static void service(CdPlayerFrameRuntime f, int held) { f.serviceVBlank(f.prepareInput(held).phase()); }
     private static List<CdPlayerBody.NativeCall> calls(CdPlayerFrameRuntime.BodyPublication p) {
         return p.result().effects().stream().filter(CdPlayerBody.CallReturned.class::isInstance)

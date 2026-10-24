@@ -356,6 +356,21 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
+     * ObjGetFloorDist's final shared scratch byte, published by the dynamic object owner after Body.
+     * Collision Check.asm:166-175 writes primaryAngle even when its odd value returns zero in d3.
+     * This does not write the player's oAngle/previous angles or the secondary scratch buffer.
+     */
+    public void applyObjectPrimaryAngle(int unsignedByte) {
+        requireOpenIdle(); requireClosedFrame();
+        if ((unsignedByte & ~0xFF) != 0) throw new IllegalArgumentException("Primary collision angle requires a byte");
+        var m = environment.movement(); var g = m.globals();
+        var globals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), unsignedByte, g.secondaryAngle(),
+                g.boredTimer(), g.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance());
+        var movement = new CdPlayerMovement.Environment(m.physics(), m.bounds(), m.gates(), globals);
+        environment = new CdPlayerBody.Environment(movement, environment.controls(), environment.globals(), environment.dynamicSlots());
+    }
+
+    /**
      * Source scroll/event owner feeds existing shared fields after Body. It owns
      * the camera algorithm and bound changes. No duplicate bounds/centre shadow,
      * source work, input read, level counter or renderer update is performed here.
