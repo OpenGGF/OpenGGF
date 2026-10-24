@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 136 records | Hold at 136 pending composed verification | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 126 records | Hold at 126 after decoder qualification | Palette decoding belongs beside the canonical Palette; GPU commands/backends consume scalars and art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 136
+- `low_level_layers_do_not_depend_on_runtime_layers`: 126
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -615,3 +615,10 @@ remains unchanged. Component checks and independent review are complete; the
 composed behavior/API/strict guards remain pending. The
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.
+
+The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
+canonical-palette decoding dependencies (136 → 126), with no replacement frozen
+records or supported API change. ROM reads and all decoding bodies remain
+unchanged. `data -> level` stays allowed while the separately reviewed `Game`
+contract still uses that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
+combined parent delivery remains separate.

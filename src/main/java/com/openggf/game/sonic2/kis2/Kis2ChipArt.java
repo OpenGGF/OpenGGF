@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2.kis2;
 
-import com.openggf.data.PaletteLoader;
+import com.openggf.level.PaletteLoader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
