@@ -35,7 +35,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic1/dataselect/TestS1DataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic1/events/TestSonic1SBZEvents.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
@@ -48,7 +47,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic2/TestTodo11_SCZEventSpecs.java#setUp
             src/test/java/com/openggf/game/sonic2/TestTodo12_WFZEventSpecs.java#setUp
             src/test/java/com/openggf/game/sonic2/TestTodo9_DEZEventSpecs.java#setUp
-            src/test/java/com/openggf/game/sonic2/dataselect/TestS2DataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic2/objects/TestMonitorObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestSpiralObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestSpringObjectInstance.java#setUp
@@ -59,9 +57,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectManager.java#setUp
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java#configureEngineServices
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2BgRiseEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2ChunkEvents.java#setUp
             src/test/java/com/openggf/game/sonic3k/events/TestSonic3kMgz2CollapseEvents.java#setUp

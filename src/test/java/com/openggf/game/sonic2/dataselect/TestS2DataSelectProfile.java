@@ -1,7 +1,6 @@
 package com.openggf.game.sonic2.dataselect;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectExitTransition;
 import com.openggf.game.dataselect.DataSelectDestination;
@@ -11,7 +10,6 @@ import com.openggf.game.dataselect.DataSelectActionType;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SaveSlotState;
 import com.openggf.game.dataselect.HostSlotPreview;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.ZoneKey;
@@ -19,6 +17,7 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ class TestS2DataSelectProfile {
 
     @BeforeAll
     static void configureEngineServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

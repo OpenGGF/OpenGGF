@@ -1840,3 +1840,86 @@ preserves the existing `resetAll()` suffix, with the affected families and reset
 consumers covered directly. These are bounded ROM-free checks, not broad smoke,
 full-suite, all-guard or ROM/trace certification. Integration, push and worktree
 cleanup remain parent-owned.
+
+
+### Data Select engine-only setup continuation
+
+This bounded follow-up starts from accepted commit
+`dfdce6eb620b918e41c9aac112b609e009b0a27e` on the renamed isolated branch
+`bugfix/ai-engine-only-test-fixture-20261024`. The reviewed `resetEngineOnly()`
+boundary and production code are unchanged. The four profile/presentation
+`configureEngineServices` hooks keep their `@BeforeAll` cadence; the manager's
+`setUp` keeps `@BeforeEach`. After import/bootstrap-call normalization, all
+136 existing test bodies, annotations, helper methods and teardown code compare
+identically with that base; no assertions or test identities change.
+
+The three host profiles construct their own explicit modules/zone registries;
+bootstrap no longer inherits an unrelated world. Presentation still has its
+class-level `@RequiresRom(SONIC_3K)`. `RequiresRomCondition` configures the cached
+ROM before the class hook and again before every method. Engine-only class reset
+retires the initial world without closing the borrowed primary ROM; the original
+per-method extension restores its S3K world/module. The existing S1/S2 host-ROM
+`configureRomFixture` calls, local try-with-resources ROM lifetimes, and ROM
+availability assumptions remain intact.
+
+`TestS3kDataSelectManager#setUp` has no shared ROM/gameplay fixture to retain:
+it configures per-test engine services/default configuration, uses temporary
+saves and injected `SuccessfulAssets`, and tests donor routing with explicit
+mock-audio roots. Its existing configuration reset and extra-team setting stay
+in the same order after the engine-only reset. All five allowance keys close:
+
+```text
+src/test/java/com/openggf/game/sonic1/dataselect/TestS1DataSelectProfile.java#configureEngineServices
+src/test/java/com/openggf/game/sonic2/dataselect/TestS2DataSelectProfile.java#configureEngineServices
+src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java#configureEngineServices
+src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java#configureEngineServices
+src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectManager.java#setUp
+```
+
+No inspected key is retained. These exact identities are independent of the
+parent's seven S2 closures and the parallel branch's three S1 closures; no old
+global baseline total is copied or replaced. The fixed focused selection is the
+five changed classes, `TestDataSelectSessionController`, and
+`TestS3kDataSelectDataLoader`, followed by the exact singleton lifecycle guard.
+Existing absolute S1 REV01, S2 REV01 and locked-on S3K ROM files were verified
+against the repository's CRC32/SHA-1 identities; none were created or modified.
+Maven uses the current absolute main-checkout wrapper from this worktree, Java 25,
+Lua 5.4.9, unset display variables and the explicit surfaceless EGL property.
+The fixed frontend run completed 151 cases: 150 passed, zero failures/errors,
+and one skip (44-second queue wait, 29.216-second Maven execution). XML confirms
+11 S1 profile, 18 S2 profile, 20 S3K profile, 75 S3K presentation, 12 S3K manager,
+10 shared controller and five S3K loader identities; all changed-class identities
+match their source methods. The sole skip is
+`TestS3kDataSelectPresentation#visualCapture_selectedSaveSlotShowsRightBodyRail`:
+`Assumption failed: GLFW unavailable for visual regression capture`. Its legacy
+hidden-GLFW capture utility does not use the EGL property; no pixel-capture pass
+is claimed and no desktop fallback was attempted. Every other selected case,
+including real S1/S2 host-preview and S3K asset-loader cases, executed. XML also
+confirms Java 25.0.5.0.2, the EGL property and all three absolute ROM properties.
+The separate exact `TestSingletonLifecycleGuard` run passed eight cases with
+zero failures/errors/skips (87-second queue wait, 27.012-second Maven execution);
+its fresh XML was inspected. Source/test inputs are identical between the
+completed frontend/guard runs; only this appendix was finalized afterward.
+Prior engine-family checks are unchanged inputs and are not repeated.
+
+The commands below use neutral variables for the actual verified absolute
+parent-checkout and ROM paths; they run from the task worktree:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestS1DataSelectProfile,TestS2DataSelectProfile,TestS3kDataSelectProfile,TestS3kDataSelectPresentation,TestS3kDataSelectManager,TestDataSelectSessionController,TestS3kDataSelectDataLoader' \
+  "-Dsonic1.rom.path=${OPENGGF_S1_ROM}" \
+  "-Dsonic2.rom.path=${OPENGGF_S2_ROM}" \
+  "-Ds3k.rom.path=${OPENGGF_S3K_ROM}" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+This is bounded frontend/guard evidence, not broad smoke, a full-suite pass,
+all-guard coverage or display-free pixel certification. Integration, push and
+worktree/branch cleanup remain parent-owned.
