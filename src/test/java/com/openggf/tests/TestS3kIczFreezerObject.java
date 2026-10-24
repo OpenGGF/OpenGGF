@@ -171,7 +171,10 @@ class TestS3kIczFreezerObject {
     void captureCloudFreezesPlayerThenBlockReleasesWithHurtAndInvulnerability() {
         installLevelGamestate();
 
-        RecordingServices services = new RecordingServices();
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+        };
         IczFreezerObjectInstance freezer = createFreezer(services,
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
         freezer.setServices(services);
@@ -212,7 +215,8 @@ class TestS3kIczFreezerObject {
         assertFalse(player.isObjectControlAllowsCpu(), "Frozen block should clear CPU movement allowance on release");
         assertEquals(120, player.getInvulnerableFrames());
         assertTrue(block.isDestroyed());
-        assertEquals(12, block.debrisSpawnedForTesting());
+        verify(manager, times(12)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.argThat(
+                child -> child.getClass().getSimpleName().equals("IceDebris")));
     }
 
     @Test
@@ -424,7 +428,10 @@ class TestS3kIczFreezerObject {
     void fallingNativePartnerShattersFrozenBlockAndBouncesWithoutHurtingCaptive() {
         installLevelGamestate();
 
-        RecordingServices services = new RecordingServices();
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+        };
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x43A6, (short) 0x069C);
         sonic.setAnimationId(2);
         sonic.setYSpeed((short) 0x03E0);
@@ -446,7 +453,8 @@ class TestS3kIczFreezerObject {
         assertFalse(tails.isObjectControlled());
         assertTrue(tails.getAir());
         assertEquals(120, tails.getInvulnerableFrames());
-        assertEquals(12, block.debrisSpawnedForTesting());
+        verify(manager, times(12)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.argThat(
+                child -> child.getClass().getSimpleName().equals("IceDebris")));
         assertEquals(List.of(), services.lostRingSpawnFrames);
     }
 
