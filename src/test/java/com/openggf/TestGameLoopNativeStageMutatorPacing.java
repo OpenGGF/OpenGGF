@@ -109,7 +109,7 @@ class TestGameLoopNativeStageMutatorPacing {
         when(pumpContext.isGameplayRuntimeReady()).thenReturn(true);
         when(pumpContext.getActiveBonusStageProvider()).thenReturn(provider);
         var input = new InputHandler(); var loop = new PumpLoop(input); var audio = mock(AudioManager.class);
-        install(loop, pumpContext, audio); set(loop, "activeBonusStageProvider", provider);
+        install(loop, pumpContext, audio); BonusStageSessionTestAccess.provider(loop, provider);
         set(loop, "camera", GameServices.camera()); loop.setGameMode(GameMode.BONUS_STAGE);
         loop.body = () -> fixture.stepIdleFrames(1);
         int before = GameServices.level().getFrameCounter();
@@ -150,7 +150,7 @@ class TestGameLoopNativeStageMutatorPacing {
         context.setActiveBonusStageProvider(provider);
         assertTrue(provider.supportsRewind()); assertFalse(provider.updateDuringLevelFrame());
         var input = new InputHandler(InputBindingFactory.supplier(config())); var loop = new GameLoop(input);
-        set(loop, "activeBonusStageProvider", provider); loop.setGameMode(GameMode.BONUS_STAGE);
+        BonusStageSessionTestAccess.provider(loop, provider); loop.setGameMode(GameMode.BONUS_STAGE);
         var audio = mock(AudioManager.class); set(loop, "audioManager", audio);
         set(loop, "outerFramePresentation", new OuterFramePresentation(audio));
         int before = GameServices.level().getFrameCounter(); clearInvocations(provider);

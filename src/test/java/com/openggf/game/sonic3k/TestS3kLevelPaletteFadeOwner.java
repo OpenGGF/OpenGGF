@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.GameLoop;
+import com.openggf.BonusStageSessionTestAccess;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -145,10 +146,7 @@ class TestS3kLevelPaletteFadeOwner {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder().withZoneAndAct(0x00, 0).build();
         GameLoop loop = new GameLoop(new InputHandler());
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
-        Method enter = GameLoop.class.getDeclaredMethod(
-                "doEnterBonusStage", BonusStageProvider.class, BonusStageType.class, BonusStageState.class);
-        enter.setAccessible(true);
-        enter.invoke(loop, provider, BonusStageType.GLOWING_SPHERE, savedState(fixture.sprite(), fixture.camera()));
+        BonusStageSessionTestAccess.entered(loop, provider, BonusStageType.GLOWING_SPHERE, savedState(fixture.sprite(), fixture.camera()));
         Map<Integer, String> observed = new TreeMap<>();
         for (int frame = 0; frame < 400 && !observed.containsKey(23); frame++) {
             loop.step();

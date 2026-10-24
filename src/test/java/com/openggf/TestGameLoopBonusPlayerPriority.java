@@ -30,25 +30,21 @@ class TestGameLoopBonusPlayerPriority {
         GameLoop loop = new GameLoop(new InputHandler());
         var provider = new Sonic3kBonusStageCoordinator();
         provider.onEnter(type, null);
-        var field = GameLoop.class.getDeclaredField("activeBonusStageProvider");
-        field.setAccessible(true);
-        field.set(loop, provider);
+        BonusStageSessionTestAccess.provider(loop, provider);
         var sonic = new Sonic("sonic", (short) 0, (short) 0);
         var tails = new Tails("tails", (short) 0, (short) 0);
         GameServices.sprites().addSprite(sonic);
         GameServices.sprites().addSprite(tails);
-        var enforce = GameLoop.class.getDeclaredMethod("forcePlayerHighPriorityInBonusStage");
-        enforce.setAccessible(true);
         for (int frame = 0; frame < 2; frame++) {
             sonic.setHighPriority(false);
             tails.setHighPriority(false);
-            enforce.invoke(loop);
+            BonusStageSessionTestAccess.priority(loop);
             assertEquals(type != BonusStageType.SLOT_MACHINE, sonic.isHighPriority());
             assertEquals(type != BonusStageType.SLOT_MACHINE, tails.isHighPriority());
         }
         sonic.setPriorityBucket(RenderPriority.MIN);
         sonic.setHighPriority(false);
-        enforce.invoke(loop);
+        BonusStageSessionTestAccess.priority(loop);
         assertFalse(sonic.isHighPriority(), "Object-owned priority overrides must remain untouched");
     }
 }
