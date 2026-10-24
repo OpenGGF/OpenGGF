@@ -52,6 +52,19 @@ class TestCdObjectMappings {
     private static final List<CdObjectDrawQueue.RawPiece> TIME_OVER_TEXT = List.of(
             new CdObjectDrawQueue.RawPiece(-8, 0x0D, 0x000E, 4), new CdObjectDrawQueue.RawPiece(-8, 0x0D, 0x0016, 36));
 
+    /** MapSpr_FloatBlock, Floating Block/Main.asm:42,174-176 at scddisasm 1ecc5f3af; USA oMap long. */
+    private static final int FLOAT_BLOCK_MAP = 0x20A3FA;
+    /** Literal counted bodies from Floating Block/Data/Mappings.asm:9-41, including the empty frame. */
+    private static final List<List<CdObjectDrawQueue.RawPiece>> FLOAT_BLOCK_FRAMES = List.of(
+            List.of(),
+            List.of(new CdObjectDrawQueue.RawPiece(-12, 9, 0x0000, -12),
+                    new CdObjectDrawQueue.RawPiece(4, 0, 0x0000, -4), new CdObjectDrawQueue.RawPiece(4, 0, 0x0000, 4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-12, 9, 0x0800, -12),
+                    new CdObjectDrawQueue.RawPiece(4, 0, 0x0800, -12), new CdObjectDrawQueue.RawPiece(4, 0, 0x0800, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-12, 9, 0x1800, -12), new CdObjectDrawQueue.RawPiece(4, 0, 0x1800, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-12, 9, 0x1000, -12), new CdObjectDrawQueue.RawPiece(4, 0, 0x1000, -4)),
+            List.of(new CdObjectDrawQueue.RawPiece(-12, 0x0A, 0x0006, -12)));
+
     @Test void signedNegativeOffsetFullUnsignedFrameAndAliasesSelectLiteralBodies() {
         byte[] bytes = new byte[520];
         // Root is at offset 8; frame 255's signed -8 points before the table.
@@ -373,6 +386,231 @@ class TestCdObjectMappings {
                 10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236);
         assertThrows(UnsupportedOperationException.class, () -> contactPixels.resolve(0x544));
         assertThrows(UnsupportedOperationException.class, () -> CdObjectPresentation.convert(gameSat, contactPixels));
+    }
+
+    @Test void actualUsaFloatBlockRegistersSixLiteralCountedFramesAndKeepsExistingRoots() throws Exception {
+        var usa = usaMedia();
+        var objects = usa.objects();
+        var view = objects.view(CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS);
+        assertEquals(FLOAT_BLOCK_MAP, view.range().nativeAddress());
+        assertEquals("98fa7f8f57a4f5d8a00cd60ac795f7331e5a9f6009af31fcfaf33b85b8ff6e5e", sha256(view.bytes().copy()));
+        assertArrayEquals(view.bytes().copy(), objects.floatBlock().mappings().copy());
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        for (int frame = 0; frame < 6; frame++) {
+            var pieces = FLOAT_BLOCK_FRAMES.get(frame);
+            assertEquals(new CdObjectDrawQueue.FrameMapping(pieces.size(), pieces),
+                    resolver.resolve(FLOAT_BLOCK_MAP, false, frame), "native counted frame " + frame);
+        }
+        for (int frame : new int[]{6, 255}) {
+            var failure = assertThrows(UnsupportedOperationException.class,
+                    () -> resolver.resolve(FLOAT_BLOCK_MAP, false, frame));
+            assertTrue(failure.getMessage().contains("frame outside the registered source table"));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(FLOAT_BLOCK_MAP, true, 0));
+        for (int pointer : new int[]{0x20A3F9, 0x20A3FC, 0x20A406, 0xFF20A3FA, 0x8020A3FA}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+        }
+        assertGameOverRoots(resolver); // Both prior roots still select their own two frames.
+        int sonic = usa.assets().profile().range(CdR11aAsset.MAP_SPR_SONIC).nativeAddress();
+        assertEquals(usa.assets().sonic().mappingFrames().get(197).pieceCount(),
+                resolver.resolve(sonic, false, 197).pieces().size());
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(sonic, false, 198));
+    }
+
+    @Test void actualUsaFloatBlockPolicyBindsOnly364SourcePatternsAndKeepsServicedSnapshots() throws Exception {
+        var usa = usaMedia();
+        var assets = usa.assets();
+        var objects = usa.objects();
+        var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
+        var floatBlock = objects.floatBlockArtBank();
+        var binding = floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK);
+        assertEquals(0x334, binding.firstTileId());
+        assertEquals(15, binding.tileCount());
+        assertEquals("df65b0523d19f52de3f61737c9d130bd493c1591077767651012ac94047e8362", sha256(binding.bytes().copy()));
+
+        // Explicit constructed ingress, never a cold-entry or residency claim. Real loaded art services refresh it.
+        var playerIngress = new CdPlayerArtRuntime.State(filled(0x300, 0xA5), filled(0x300, 0xCC), 0, false);
+        var playerService = new CdPlayerArtRuntime(assets.sonic(), playerIngress);
+        var powerupService = new CdPowerupArtRuntime(assets.shield());
+        var shield = powerupService.service(
+                new CdPowerupArtRuntime.State(filled(0x480, 0xA5), filled(0x480, 0xCC)), 0x82).state();
+        var before = floatBlockBank(playerIngress, shield, objects, frontier, contact, floatBlock, floatBlockBases());
+        assertAllFloatBlockPatterns(before, playerIngress, shield, objects, frontier, contact, floatBlock);
+        var resolver = CdObjectMappings.fromOpeningAssets(assets, objects);
+        var visibleSat = drawFloatBlock(resolver, 5);
+        assertEquals(1, visibleSat.spriteCount());
+        assertEquals(0x0A, visibleSat.bytes()[2] & 255);
+        assertEquals(0x433A, word(visibleSat.bytes(), 4));
+        var requested = new TreeSet<Integer>();
+        var blockPicture = CdObjectPresentation.convert(visibleSat, id -> { requested.add(id); return before.resolve(id); });
+        assertEquals(tileRange(0x33A, 0x343), requested, "frame 5 uses exactly the last nine of the fifteen source tiles");
+        assertEquals(List.of(12317, 12320, 12323, 12318, 12321, 12324, 12319, 12322, 12325),
+                blockPicture.tiles().stream().map(SpritePresentation.Tile::patternId).toList());
+        for (int index = 0; index < 9; index++) {
+            var tile = blockPicture.tiles().get(index);
+            assertEquals(244 + (index % 3) * 8, tile.x());
+            assertEquals(116 + (index / 3) * 8, tile.y());
+            assertEquals(2, tile.palette()); assertFalse(tile.priority());
+            assertFalse(tile.hFlip()); assertFalse(tile.vFlip());
+            assertEquals(before.resolve(0x33A + (index % 3) * 3 + index / 3).version(),
+                    blockPicture.patternVersions().get(tile.patternId()));
+        }
+        var emptySat = drawFloatBlock(resolver, 0);
+        assertEquals(0, emptySat.spriteCount());
+        assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(emptySat, before));
+        var gameSat = drawGameOver(resolver, GAME_MAP);
+        var earlierGame = CdObjectPresentation.convert(gameSat, before);
+
+        // Select an actual nonempty native DPLC frame from loaded bytes; no invented cue or frame is supplied.
+        int nonemptyFrame = -1;
+        for (int frame = 1; frame < assets.sonic().dplcFrames().size(); frame++) {
+            if (!assets.sonic().dplcFrames().get(frame).pieces().isEmpty()) { nonemptyFrame = frame; break; }
+        }
+        assertTrue(nonemptyFrame > 0);
+        var dma = playerService.serviceVInt(nonemptyFrame).orElseThrow();
+        var servicedPlayer = playerService.capture();
+        assertArrayEquals(dma.bytes().copy(), servicedPlayer.residentBank().slice(0, 0x2E0).copy());
+        assertArrayEquals(filled(32, 0xCC), servicedPlayer.residentBank().slice(0x2E0, 32).copy());
+        var game = powerupService.service(shield, 0x88).state();
+        var after = floatBlockBank(servicedPlayer, game, objects, frontier, contact, floatBlock, floatBlockBases());
+        assertAllFloatBlockPatterns(after, servicedPlayer, game, objects, frontier, contact, floatBlock);
+        assertEquals(CdObjectPresentation.patternVersion(CdAssetBytes.copyOf(filled(32, 0xCC))),
+                before.resolve(0x780).version(), "an earlier bank retains its supplied resident pixels");
+        assertNotEquals(playerIngress.residentBank(), servicedPlayer.residentBank());
+        var refreshedGame = CdObjectPresentation.convert(gameSat, after);
+        assertEquals(windowVersions(game, 12275, 32), refreshedGame.patternVersions());
+        assertEquals(windowVersions(shield, 12275, 32), earlierGame.patternVersions());
+        assertNotEquals(earlierGame.patternVersions(), refreshedGame.patternVersions());
+        assertEquals(earlierGame.tiles(), refreshedGame.tiles());
+        assertEquals(earlierGame, CdObjectPresentation.convert(gameSat, before));
+        assertEquals(blockPicture, CdObjectPresentation.convert(visibleSat, before));
+        assertEquals(blockPicture, CdObjectPresentation.convert(visibleSat, after), "static FloatBlock art is unchanged");
+        assertThrows(UnsupportedOperationException.class, () -> blockPicture.patternVersions().clear());
+        var detached = binding.bytes().copy(); Arrays.fill(detached, (byte) 0xEE);
+        assertEquals(blockPicture, CdObjectPresentation.convert(visibleSat, before));
+
+        // The old nine-span policy still rejects both edges of the added source and the actual block SAT.
+        var old = gameOverBank(servicedPlayer, game, objects, frontier, contact, 12275);
+        assertThrows(UnsupportedOperationException.class, () -> old.resolve(0x334));
+        assertThrows(UnsupportedOperationException.class, () -> old.resolve(0x342));
+        assertThrows(UnsupportedOperationException.class, () -> CdObjectPresentation.convert(visibleSat, old));
+    }
+
+    @Test void actualUsaFloatBlockPolicyRejectsEveryInvalidSpanBeforeEvenAnEmptySatCanConvert() throws Exception {
+        var usa = usaMedia();
+        var objects = usa.objects();
+        var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
+        var floatBlock = objects.floatBlockArtBank();
+        var player = new CdPlayerArtRuntime.State(new byte[0x300], new byte[0x300], 0, false);
+        var powerup = new CdPowerupArtRuntime.State(filled(0x480, 0xA5), filled(0x480, 0xCC));
+        var emptySat = drawFloatBlock(CdObjectMappings.fromOpeningAssets(usa.assets(), objects), 0);
+        int[] sizes = {24, 14, 70, 28, 63, 70, 5, 39, 36, 15};
+        for (int span = 0; span < 10; span++) {
+            var negative = floatBlockBases(); negative[span] = -1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(emptySat,
+                    floatBlockBank(player, powerup, objects, frontier, contact, floatBlock, negative)));
+            var overflow = floatBlockBases(); overflow[span] = Integer.MAX_VALUE - sizes[span] + 2;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(emptySat,
+                    floatBlockBank(player, powerup, objects, frontier, contact, floatBlock, overflow)));
+        }
+        for (int prior = 0; prior < 9; prior++) {
+            var overlap = floatBlockBases(); overlap[9] = overlap[prior] + sizes[prior] - 1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(emptySat,
+                    floatBlockBank(player, powerup, objects, frontier, contact, floatBlock, overlap)));
+        }
+        for (int base : new int[]{0, Integer.MAX_VALUE - 14}) {
+            var bounds = floatBlockBases(); bounds[9] = base;
+            var bank = floatBlockBank(player, powerup, objects, frontier, contact, floatBlock, bounds);
+            assertEquals(base, bank.resolve(0x334).logicalPatternId());
+            assertEquals(base + 14, bank.resolve(0x342).logicalPatternId());
+            assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(emptySat, bank));
+        }
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(null, powerup, objects, frontier, contact, floatBlock, floatBlockBases()));
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(player, null, objects, frontier, contact, floatBlock, floatBlockBases()));
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(player, powerup, null, frontier, contact, floatBlock, floatBlockBases()));
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(player, powerup, objects, null, contact, floatBlock, floatBlockBases()));
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(player, powerup, objects, frontier, null, floatBlock, floatBlockBases()));
+        assertThrows(NullPointerException.class,
+                () -> floatBlockBank(player, powerup, objects, frontier, contact, null, floatBlockBases()));
+    }
+
+    /** The previous nine sources retain their complete byte/version checks; all final 11-bit IDs are audited. */
+    private static void assertAllFloatBlockPatterns(CdObjectPresentation.PatternSource bank, CdPlayerArtRuntime.State player,
+                                                   CdPowerupArtRuntime.State powerup, CdR11aObjectAssets objects,
+                                                   CdR11aObjectAssets.FrontierArtBank frontier,
+                                                   CdR11aObjectAssets.ContactArtBank contact,
+                                                   CdR11aObjectAssets.FloatBlockArtBank floatBlock) {
+        assertAllGameOverPatterns(bank, player, powerup, objects, frontier, contact);
+        var logical = new HashSet<Integer>();
+        var binding = floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK);
+        assertSpan(bank, logical, 0x334, 12311, binding.bytes());
+        assertEquals(15, logical.size());
+        assertEquals(12325, bank.resolve(0x342).logicalPatternId());
+        logical.clear();
+        int count = 0;
+        for (int tile = 0; tile <= 0x7FF; tile++) {
+            int id = tile;
+            // Literal native ranges, independent of binding metadata and production span construction.
+            boolean admitted = (id >= 0x334 && id <= 0x342) || (id >= 0x3A0 && id <= 0x3E5)
+                    || (id >= 0x424 && id <= 0x43F) || (id >= 0x441 && id <= 0x47F)
+                    || (id >= 0x544 && id <= 0x567) || (id >= 0x680 && id <= 0x6C5)
+                    || (id >= 0x6C6 && id <= 0x6CA) || (id >= 0x6D7 && id <= 0x6FD)
+                    || (id >= 0x780 && id <= 0x797) || (id >= 0x7AE && id <= 0x7BB);
+            if (admitted) {
+                assertTrue(logical.add(bank.resolve(id).logicalPatternId()), "distinct logical ID for native tile " + id);
+                count++;
+            } else {
+                assertThrows(UnsupportedOperationException.class, () -> bank.resolve(id), "unowned native tile " + id);
+            }
+        }
+        assertEquals(364, count); assertEquals(364, logical.size());
+        assertThrows(IllegalArgumentException.class, () -> bank.resolve(-1));
+        assertThrows(IllegalArgumentException.class, () -> bank.resolve(0x800));
+    }
+
+    private static int[] floatBlockBases() {
+        return new int[]{10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236, 12275, 12311};
+    }
+
+    private static CdObjectPresentation.PatternSource floatBlockBank(CdPlayerArtRuntime.State player,
+                                                                     CdPowerupArtRuntime.State powerup,
+                                                                     CdR11aObjectAssets objects,
+                                                                     CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                     CdR11aObjectAssets.ContactArtBank contact,
+                                                                     CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                     int[] bases) {
+        return CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(player, powerup, objects, frontier, contact, floatBlock,
+                bases[0], bases[1], bases[2], bases[3], bases[4], bases[5], bases[6], bases[7], bases[8], bases[9]);
+    }
+
+    /** Constructed live slot using the actual USA mapping and selector-5 tile word; no object-body/route claim. */
+    private static CdObjectDrawQueue.CpuSat drawFloatBlock(CdObjectDrawQueue.CdDrawMappings mappings, int frame) {
+        var live = new CdObjectDrawQueue.LiveDrawSlot(0x12, 4, 0x100, 0x80, 0x9999, FLOAT_BLOCK_MAP, frame, 0x4334);
+        var slots = new CdObjectDrawQueue.CdDrawSlots() {
+            private CdObjectDrawQueue.LiveDrawSlot current = live;
+            @Override public CdObjectDrawQueue.LiveDrawSlot read(CdObjectDrawQueue.CdSlotRef ref) {
+                assertEquals(32, ref.wholeIndex()); return current;
+            }
+            @Override public void writeOnScreenBit(CdObjectDrawQueue.CdSlotRef ref, boolean on) {
+                assertEquals(32, ref.wholeIndex());
+                var s = current;
+                current = new CdObjectDrawQueue.LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, mappings, new byte[CdObjectDrawQueue.SAT_BYTE_SIZE]);
+        var camera = new CdObjectDrawQueue.CameraWords(0, 0);
+        queue.beginPass();
+        assertEquals(CdObjectDrawQueue.EnqueueResult.QUEUED, queue.drawObject(new CdObjectDrawQueue.DrawCallCut(
+                new CdObjectDrawQueue.CdSlotRef(32), 4, 0x100, 0x80, 0x0C, 0x0C, 1), camera));
+        return queue.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(camera, camera, camera));
     }
 
     /** Exact retail pieces for oMapFrame 0/1 at both full 32-bit roots; every other request fails closed. */

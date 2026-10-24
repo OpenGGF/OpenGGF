@@ -309,6 +309,42 @@ class TestCdObjectPresentation {
                 () -> CdObjectPresentation.powerupResidentSpan(game, Integer.MAX_VALUE - 34));
     }
 
+    @Test void declaredFifteenTileFloatBlockSpanKeepsBothEdgesAndRejectsPhysicalOrLogicalOverlapBeforeDrawing() {
+        // Constructed pixel input for the generic bank contract, NOT file art or an authenticated object owner.
+        byte[] raw = new byte[15 * 32];
+        for (int i = 0; i < raw.length; i++) raw[i] = (byte) (i * 13 + 7);
+        var span = new CdObjectPresentation.PixelSpan(0x334, 12311, CdAssetBytes.copyOf(raw));
+        var alone = CdObjectPresentation.declaredPixelBank(List.of(span));
+        for (int tile = 0; tile < 15; tile++) {
+            var decoded = new Pattern(); decoded.fromSegaFormat(Arrays.copyOfRange(raw, tile * 32, (tile + 1) * 32));
+            assertEquals(12311 + tile, alone.resolve(0x334 + tile).logicalPatternId());
+            assertEquals(SpritePresentationRenderer.version(decoded), alone.resolve(0x334 + tile).version());
+        }
+        assertThrows(UnsupportedOperationException.class, () -> alone.resolve(0x333));
+        assertThrows(UnsupportedOperationException.class, () -> alone.resolve(0x343));
+        var one = CdAssetBytes.copyOf(new byte[32]);
+        var adjacent = CdObjectPresentation.declaredPixelBank(List.of(
+                new CdObjectPresentation.PixelSpan(0x333, 12310, one), span,
+                new CdObjectPresentation.PixelSpan(0x343, 12326, one)));
+        assertEquals(12310, adjacent.resolve(0x333).logicalPatternId());
+        assertEquals(12325, adjacent.resolve(0x342).logicalPatternId());
+        assertEquals(12326, adjacent.resolve(0x343).logicalPatternId());
+        for (var conflict : List.of(new CdObjectPresentation.PixelSpan(0x334, 13000, one),
+                new CdObjectPresentation.PixelSpan(0x342, 13000, one),
+                new CdObjectPresentation.PixelSpan(0x333, 13000, CdAssetBytes.copyOf(new byte[64])),
+                new CdObjectPresentation.PixelSpan(0x500, 12311, one),
+                new CdObjectPresentation.PixelSpan(0x500, 12325, one))) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(span, conflict)));
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(conflict, span)));
+        }
+        var maximum = new CdObjectPresentation.PixelSpan(2033, Integer.MAX_VALUE - 14, span.bytes());
+        var boundary = CdObjectPresentation.declaredPixelBank(List.of(maximum));
+        assertEquals(Integer.MAX_VALUE, boundary.resolve(0x7FF).logicalPatternId());
+        assertThrows(IllegalArgumentException.class, () -> new CdObjectPresentation.PixelSpan(2034, 0, span.bytes()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdObjectPresentation.PixelSpan(0x334, Integer.MAX_VALUE - 13, span.bytes()));
+    }
+
     private static CdObjectPresentation.PatternSource powerupBank(CdPowerupArtRuntime.State state) {
         return CdObjectPresentation.declaredPixelBank(List.of(CdObjectPresentation.powerupResidentSpan(state, LOGICAL)));
     }

@@ -128,6 +128,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.POINTS_MAPPINGS, objects.points());
         addObject(tables, objects, CdR11aObjectAssets.Table.FLOWER_MAPPINGS, objects.flower());
         addGameOver(tables, objects);
+        // ObjFloatBlock_Init stores MapSpr_FloatBlock (Floating Block/Main.asm:42,174-176).
+        // Its six counted frames include the real empty frame 0 (Data/Mappings.asm:1-11).
+        addObject(tables, objects, CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS, objects.floatBlock());
         return new CdObjectMappings(tables, List.of());
     }
 

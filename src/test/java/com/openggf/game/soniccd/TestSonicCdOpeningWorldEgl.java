@@ -42,10 +42,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL11.*;
 
 /**
- * Finite USA normal-input route and full/course restore acceptance.
+ * Finite USA normal-controller routes and explicitly constructed component cuts, with full/course restore.
  * Opt in with soniccd.media.root and soniccd.opening.egl=true; an opted-in run
- * fails on missing media, EGL selection or pixels. Optional soniccd.opening.output
- * saves actual engine pictures and observations in a new Downloads/Sonic-CD directory.
+ * fails on missing media, EGL selection or pixels. Optional soniccd.*.output properties
+ * save labelled actual engine pictures and observations in new Downloads/Sonic-CD directories.
  */
 @Isolated
 class TestSonicCdOpeningWorldEgl {
@@ -145,10 +145,11 @@ class TestSonicCdOpeningWorldEgl {
                 var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aGameOverDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), runtime.powerupArtState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
                                 source.assets().openingObjects().contactArtBank(),
+                                source.assets().openingObjects().floatBlockArtBank(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 24,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 38,
@@ -157,7 +158,8 @@ class TestSonicCdOpeningWorldEgl {
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 199,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 269,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 274,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 313));
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 313,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 349));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -571,6 +573,109 @@ class TestSonicCdOpeningWorldEgl {
                         + "Three constructed gone-line actor cuts, each preceded by clearing all dynamic object slots, precede the 21 neutral forward inputs.\n"
                         + "No lives/powerup/global setter; actor cuts and object-slot clears are explicit construction. World retirement removed patterns +313..+344.\n"
                         + "No native pixel/timing/full-game parity claim.\n", StandardOpenOption.CREATE_NEW);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
+    @Test void actualEglConstructedFallingFloatBlockReplaysAndRetiresItsNewPatternSpan() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("8 -");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("constructed-float-block-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.floatblock.output");
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                step(loop, movie.getFrame(0)); // Real player Init; no player or global setter below.
+                var pool = runtime.placement().pool(); pool.clearDynamicSlots();
+                // Explicit constructed falling routine, not a Present route into the Future-only Fall transition.
+                var s = pool.state(40).moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.ID, 0x12)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.ROUTINE, 4)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.SPRITE_FLAGS, 0x84)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.PRIORITY, 1)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.WIDTH, 12)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.Y_RADIUS, 12)
+                        .moveByte(com.openggf.game.soniccd.objects.CdObjectState.ByteField.MAP_FRAME, 5)
+                        .moveLong(com.openggf.game.soniccd.objects.CdObjectState.LongField.MAPPINGS, 0x20A3FA)
+                        .moveWord(com.openggf.game.soniccd.objects.CdObjectState.WordField.TILE, 0x4334)
+                        .moveWord(com.openggf.game.soniccd.objects.CdObjectState.WordField.X, 200)
+                        .moveWord(com.openggf.game.soniccd.objects.CdObjectState.WordField.Y, 0x740);
+                pool.write(s);
+                step(loop, movie.getFrame(1));
+                assertEquals(0x742, pool.state(40).centreY());
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var expected = new ArrayList<Capture>(); var expectedPixels = new ArrayList<int[]>();
+                for (int i = 2; i < 8; i++) {
+                    step(loop, movie.getFrame(i)); expected.add(capture(module));
+                    expectedPixels.add(render(module, true).pixels().clone());
+                }
+                var after = capture(module); var image = render(module, true); var terrain = render(module, false);
+                assertEquals(0x74E, pool.state(40).centreY(), "seven source Fall calls advance two pixels each");
+                assertFalse(Arrays.equals(image.pixels(), terrain.pixels()), "actual object overlay must reach the GPU");
+                int first = com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 349;
+                var floatTiles = runtime.displayedFrame().tiles().stream()
+                        .filter(t -> t.patternId() >= first && t.patternId() < first + 15).toList();
+                assertEquals(9, floatTiles.size());
+                int changedFloatPixels = 0;
+                var imagePixels = image.pixels(); var terrainPixels = terrain.pixels();
+                for (var tile : floatTiles) {
+                    assertTrue(tile.x() >= 180 && tile.x() + tile.width() <= 220, "Float-only region excludes Sonic near X64");
+                    for (var other : runtime.displayedFrame().tiles()) {
+                        if (other.patternId() >= first && other.patternId() < first + 15) continue;
+                        assertTrue(other.x() + other.width() <= tile.x() || other.x() >= tile.x() + tile.width()
+                                        || other.y() + other.height() <= tile.y() || other.y() >= tile.y() + tile.height(),
+                                "control footprint cannot include any other sprite");
+                    }
+                    for (int y = (int) tile.y(); y < tile.y() + tile.height(); y++) {
+                        for (int x = (int) tile.x(); x < tile.x() + tile.width(); x++) {
+                            assertTrue(x >= 0 && x < 320 && y >= 0 && y < 224);
+                            if (imagePixels[y * 320 + x] != terrainPixels[y * 320 + x]) changedFloatPixels++;
+                        }
+                    }
+                }
+                assertTrue(changedFloatPixels > 0, "GPU must draw inside the Float-only footprint, independently of Sonic");
+                var atlas = GameServices.graphics().getPatternAtlas();
+                for (int i = 6; i < 15; i++) {
+                    assertNotNull(atlas.getEntry(first + i));
+                    assertEquals(com.openggf.game.soniccd.resources.CdObjectPresentation.patternVersion(
+                                    source.assets().openingObjects().floatBlockArtBank().tile(0x334 + i)),
+                            runtime.displayedFrame().patternVersions().get(first + i));
+                }
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module); assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int i = 2; i < 8; i++) {
+                        step(loop, movie.getFrame(i)); assertCapture(expected.get(i - 2), module);
+                        assertArrayEquals(expectedPixels.get(i - 2), render(module, true).pixels(), "rendered row " + i);
+                    }
+                    assertCapture(after, module); assertArrayEquals(image.pixels(), render(module, true).pixels());
+                }
+                if (output != null) {
+                    ScreenshotCapture.savePNG(image, output.resolve("constructed-float-block.png"));
+                    ScreenshotCapture.savePNG(terrain, output.resolve("terrain-control.png"));
+                }
+                module.closeTerrainPlayer();
+                for (int i = 6; i < 15; i++) assertNull(atlas.getEntry(first + i),
+                        "retirement must remove Float patterns beyond the old349-pattern picture");
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: constructed falling FloatBlock, real World live dispatch, decoded nine-tile picture with Float-only GPU differences, full/course six-row pixel replay and new-bank retirement.\n"
+                        + "All dynamic slots were explicitly cleared, then one routine4 FloatBlock was placed at(200,$740). No player/global setter.\n"
+                        + "This is constructed component ingress, not a Present route into Future falling or standing-object MODE support.\n"
+                        + "USA DEV preload only; no native timing, live PLC residency, pixel, act or full-game parity claim.\n", StandardOpenOption.CREATE_NEW);
             } finally {
                 try { SessionManager.closeGameplaySession(); }
                 finally { GraphicsManager.destroyForReinit(); }

@@ -38,12 +38,12 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  *
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower/Floating-Block art (the inert Animal path draws nothing).
  * The 36-tile powerup window starts cold zero and changes only at the selector-8 LoadShieldArt cut.
  * The initial Ring, contact, score and level globals are caller-declared DEV ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $11 LostRing, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp,
- * aftermath IDs $18/$1C/$1F and the death row's $3B Game/Time Over are owned; every other ID
- * (including $12 FloatBlock) fails at its live dispatch.
+ * aftermath IDs $18/$1C/$1F, $12 Floating Block and the death row's $3B Game/Time Over are owned.
+ * Every other ID fails at its live dispatch; standing-object MODE remains a typed player boundary.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -62,16 +62,17 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its nine disjoint subdivisions; this value neither
+     * Root reserves/binds its ten disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28.
      * The contact spans append 70 + 5 + 39 tiles. The shorter forms then place the
      * 36-tile powerup window (LVLDMA aniArtBuffer,$A880,$480: Powerup/Main.asm:173)
-     * at flower + 39, for 349 patterns in all; the canonical form takes it explicitly.
+     * at flower + 39. The 15-tile FloatBlock span follows the powerup window,
+     * for 364 patterns in all; the canonical form takes both explicitly.
      */
     public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
-                               int explosion, int points, int flower, int powerup) {
+                               int explosion, int points, int flower, int powerup, int floatBlock) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
         }
@@ -80,6 +81,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
         public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points, int flower) {
             this(player, ring, mosqui, plant, ramp, explosion, points, flower, flower + 39);
+        }
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp, int explosion, int points,
+                            int flower, int powerup) {
+            this(player, ring, mosqui, plant, ramp, explosion, points, flower, powerup, powerup + 36);
         }
     }
 
@@ -215,12 +220,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdFlower flower;
     private final CdLostRing lostRing;
     private final CdGameOver gameOver;
+    private final CdFloatBlock floatBlock;
     private final CdPowerupArtRuntime powerupArt;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
     private final CdR11aObjectAssets.FrontierArtBank frontierArt;
     private final CdR11aObjectAssets.ContactArtBank contactArt;
+    private final CdR11aObjectAssets.FloatBlockArtBank floatBlockArt;
     private CdRingGlobals ringGlobals;
     // Level/Main.asm:178-184 ClearFlowers covers the three ringLoss animation values.
     private CdRingSpillGlobals spillGlobals = new CdRingSpillGlobals(0, 0, 0);
@@ -241,6 +248,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private boolean operating;
     private boolean cleaned;
     private boolean inDrawCallback;
+    private boolean inSolidCommit;
     private int dispatchWholeIndex = -1;
 
     /**
@@ -281,7 +289,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * ingress. initialPowerup is the complete LoadShieldArt window: .ClearFlowers zeroes its CPU buffer (:178-184),
      * ClearScreen leaves VRAM $A880 (Level/Functions (General).asm:182-228) and :312's LoadShieldArt returns at once
      * after :167 clears powerup (Powerup/Main.asm:157-159). Root supplies both; their content is not policed here.
-     * All nine bank spans are validated against the supplied window before construction. Installs the supplied
+     * All ten bank spans are validated against the supplied window before construction. Installs the supplied
      * windows only: no service, reset, upload or capture/restore.
      */
     public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
@@ -326,14 +334,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // The frontier art decodes once here (plant/booster pixels); an IO failure stops before construction.
         var frontier = objects.frontierArtBank();
         var contact = objects.contactArtBank();
+        var floatBlockArt = objects.floatBlockArtBank();
         var placement = placementIngress.apply(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // Validate all nine physical/logical bank extents and overlaps now, even for an empty picture.
-        CdObjectPresentation.usaR11aGameOverDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
-                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
-                banks.explosion(), banks.points(), banks.flower(), banks.powerup());
+        // Validate all ten physical/logical bank extents and overlaps now, even for an empty picture.
+        CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
+                floatBlockArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initialContact, initialScore, initialLevel, initial,
-                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, placement, mappings, initialPowerup);
+                banks, preScrollForeground, primaryAngleWrite, objects, frontier, contact, floatBlockArt, placement, mappings, initialPowerup);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
@@ -342,6 +351,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
                                    CdR11aObjectAssets.FrontierArtBank frontier,
                                    CdR11aObjectAssets.ContactArtBank contact,
+                                   CdR11aObjectAssets.FloatBlockArtBank floatBlockArt,
                                    CdObjectPlacementRuntime placement, CdObjectMappings mappings,
                                    CdPowerupArtRuntime.State initialPowerup) {
         this.assets = assets;
@@ -349,6 +359,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         this.objects = objects;
         this.frontierArt = frontier;
         this.contactArt = contact;
+        this.floatBlockArt = floatBlockArt;
         this.placement = placement;
         this.banks = banks;
         this.primaryAngleWrite = primaryAngleWrite;
@@ -387,6 +398,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 new CdPlayerMath(assets.player()), new CdPlayerTerrain(assets.terrain()),
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()), CdRing::collectRing);
         gameOver = new CdGameOver(placement, CdGameOver.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        floatBlock = new CdFloatBlock(placement, CdFloatBlock.Assets.fromObjectAssets(objects),
+                CdSolidObject.fromAssets(assets), this::commitTopSolid,
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
 
@@ -434,9 +448,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA, then :829-837 Sonic art and LoadShieldArt. At the completed boundary,
                 // convert PREVIOUS CPU SAT using NOW-serviced immutable player and powerup resident pixels.
-                var pixels = CdObjectPresentation.usaR11aGameOverDevPreloadedArt(frame.artState(), powerupArtState,
-                        objects, frontierArt, contactArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(),
-                        banks.ramp(), banks.explosion(), banks.points(), banks.flower(), banks.powerup());
+                var pixels = CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(frame.artState(), powerupArtState,
+                        objects, frontierArt, contactArt, floatBlockArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(),
+                        banks.ramp(), banks.explosion(), banks.points(), banks.flower(), banks.powerup(), banks.floatBlock());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -767,6 +781,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
+                } else if (id == CdFloatBlock.OBJECT_ID) {
+                    // The source wrapper makes two TopSolid calls (four on Main -> Fall). Every call sees the
+                    // previous call's player, angle buffers and actual pool publication before the next one.
+                    floatBlock.run(whole, new CdFloatBlock.Globals(gates.timeZone(), preScrollForeground.xWord(),
+                            preScrollForeground.yWord()), new CdFloatBlock.SolidInputs(solidPlayer(),
+                            new CdSolidObject.Gates(environment.globals().debugMode(), gates.miniSonic()), solidGlobals()));
                 } else if (id == CdGameOver.OBJECT_ID) {
                     // Init/Main over the live pool; the OVER child runs only when this walk reaches its own ID.
                     for (var effect : gameOver.run(whole, gameOverPort).effects()) {
@@ -892,6 +912,53 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         requireReadable();
         try { requireSupportedService(servicePhase); frame.prepareAfterLoop(servicePhase); }
         catch (RuntimeException | Error failure) { failIdle(failure); throw failure; }
+    }
+
+    private CdSolidObject.Player solidPlayer() {
+        var s = frame.state(); var h = s.header();
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+    }
+
+    private CdSolidObject.Globals solidGlobals() {
+        var env = frame.environment(); var g = env.movement().globals();
+        return new CdSolidObject.Globals(env.globals().invincible(), g.scoreChain(), g.primaryAngle(), g.secondaryAngle());
+    }
+
+    /**
+     * One synchronous native TopSolid return. The pure owner has committed nothing. The Float wrapper has
+     * already made its source a0 writes and captured exactly this cut; no callback/owner runs between the
+     * following preflight, pool CAS and Frame apply. Only completed FM requests then enter the sound ledger.
+     * Both globals' collision buffers are adopted by Frame's one existing store, never replayed via metadata.
+     */
+    private void commitTopSolid(CdFloatBlock.TopSolidCall call) {
+        checkActive(Phase.DYNAMIC_SLOTS);
+        if (inDrawCallback || inSolidCommit) {
+            throw new IllegalStateException("TopSolid commit must be synchronous and non-reentrant");
+        }
+        inSolidCommit = true;
+        try {
+            Objects.requireNonNull(call, "completed TopSolid call");
+            var result = call.result(); var pool = placement.pool(); var cut = call.callCut();
+            pool.validateRestore(cut);
+            if (result.entry() != CdSolidObject.Entry.TOP_SOLID_OBJECT
+                    || result.object().identity().wholeIndex() != dispatchWholeIndex
+                    || cut.slots().get(result.object().identity().dynamicIndex()).id() != CdFloatBlock.OBJECT_ID) {
+                throw new IllegalStateException("TopSolid return must belong to the current Floating Block dispatch");
+            }
+            if (!pool.capture().slots().equals(cut.slots())) {
+                throw new IllegalStateException("CD pool changed after the TopSolid call cut");
+            }
+            var images = new ArrayList<CdObjectState>(1 + result.otherSlots().size());
+            images.add(result.object()); images.addAll(result.otherSlots());
+            // Validate every image's real pool owner before any pool or player/global mutation.
+            for (var image : images) pool.validateWrite(image);
+            frame.validateObjectSolidResult(call.player(), call.globals(), result);
+            commitTouchImages(cut, images);
+            frame.applyObjectSolidResult(call.player(), call.globals(), result);
+            for (var fm : result.fmRequests()) appendSound(new PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(fm)));
+            checkActive(Phase.DYNAMIC_SLOTS);
+        } finally { inSolidCommit = false; }
     }
 
     private void drawDynamic(CdObjectPool pool, int whole) {

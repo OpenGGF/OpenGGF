@@ -3704,3 +3704,45 @@ are not yet present, though the implementation and separate owner paths were
 checked. S4 still owns same-cut pool coherence/CAS before publication, a
 synchronous apply without intervening callbacks, ordered FM forwarding and
 failure closure. Next supported-object MODE is not admitted by this port.
+
+### Live Floating Block composition and actual World pixels — 24 October 2026
+
+The physical dynamic walk now owns ID$12. Every native TopSolid call validates
+its exact same-pool cut, the complete live pool, all returned image owners and
+Frame's declared player/global write sets before the first result write. Pool
+CAS then Frame adoption run synchronously with no callback between. Only FM
+requests enter the existing contact sound ledger; source-call metadata is not
+replayed. A later slot observes earlier stand/link/angle writes and can release
+the previous slot. The object's pre-call source stores remain on failure; the
+queue/Frame close, with no rollback. Existing native Solid/Float owners are reused.
+
+The byte-equal mapping join adds20A3FA's6countedframes (empty0), and a separate
+preloaded Float art span adds native334..342. Older pixel policies remain intact.
+LogicalBanks derives a tenth span at powerup+36 in its older constructor forms;
+all ten spans validate even with emptySAT. World reservation/retirement now spans
+364patterns. This remains named DEV residency, not live native sectionPLCs.
+
+Tests-only Root46828 hit exactly the missing$12dispatch in five cases (59tests,
+1failure/4errors/0skips). Root52852 then passed483/0/0/0 across16actualclasses,
+exit0 at21:03:46BST (0squeue/138sMaven), actualmedia/EGL/S2ROM/Java25. A mistaken
+TestApiSignaturePin selector matched nothing; the corrected separate
+TestModApiSignatureSurface request88687 passed11/0/0/0, pin unchanged. Independent
+Codex review found noP1/P2 and re-derived actual terrain probes, fractions,
+angleC0 writes, live two-block release, exact FM order, SAT and picture ranges.
+
+All three P3 proof/wording advisories were addressed in tests/comments, with
+production unchanged: actual playerSAT uses post-objectX65/Y721 plus native
+mapping offsets; GPUdifferences are required within a Float-only footprint that
+excludes Sonic/other tiles; full/course replay compares all6intermediate rows'
+pixels. Root68523 passed the2affectedmethods,0failure/error/skip,exit0 at21:15:17BST
+(58squeue/31.225sMaven). No unchanged broad selection was repeated for that edit.
+
+Real HeadlessGameBoot neutral controls exercise a constructed slot40Fall at
+(200,740) after explicitly clearing ALL dynamic slots. Seven Fallcalls endY74E;
+full/course eachreplay6rows/finalpixels and remove the nine used Float patterns
+on World retirement. No player/globalsetter, normalPresent-to-FutureFall route,
+standingMODE, nativeplanes/PLCs/timing/pixel/act/fullgame claim. R1/R2images/input
+match byteforbyte; captures/provenance remain external under
+native/engine-float-block-world-r1 and-r2. Broad smoke remains pending. The next
+source dependencies are supportedplayer movement, actual rampBG and earlier
+Springdispatch; neither gatesuppression nor staticBG substitutes for those owners.

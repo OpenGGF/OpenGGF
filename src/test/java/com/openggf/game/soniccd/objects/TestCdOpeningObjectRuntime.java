@@ -10,6 +10,8 @@ import com.openggf.game.soniccd.media.CdProgramAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
+import com.openggf.game.soniccd.player.CdPlayerMovement;
+import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.resources.CdObjectPresentation;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
@@ -659,9 +661,8 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    // Catches skipping the unowned FloatBlock, failing at the plant instead, replaying
-    // ChildCreated effects, or snapshotting the pool before the plant's live allocations.
-    @Test void unrunCameraChunk380RunsThePlantFamilyThenFailsAtTheUnownedFloatBlock() throws Exception {
+    // Constructed camera ingress: catches skipping FloatBlock, replaying ChildCreated, or a stale pool walk.
+    @Test void cameraChunk380RunsThePlantFamilyAndOffscreenFloatBlockWithoutPlayerWrites() throws Exception {
         try (var f = new Fixture()) {
             f.firstCycle();
             var camera = new CameraWords(0x380, 0x70B);
@@ -673,12 +674,12 @@ class TestCdOpeningObjectRuntime {
             assertEquals(0x590, f.slot(42).centreX());
             assertEquals(1, f.slot(42).subtype());
             f.body(2);
-            var error = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
-            assertTrue(error.getMessage().contains("$12") && error.getMessage().contains("43"), error.getMessage());
-            assertTrue(f.runtime.closed());
-            assertTrue(f.frame.closed());
+            var playerCut = f.frame.captureActor();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+            assertEquals(playerCut.state(), f.frame.state(), "offscreen TopSolid calls do not write the player");
             var parent = f.slot(42);
-            assertEquals(2, parent.routine(), "Obj3DPlant_Init committed before the later FloatBlock dispatch failed");
+            assertEquals(2, parent.routine(), "Obj3DPlant_Init commits before the later FloatBlock dispatch");
             assertEquals(0, parent.subtype(), "BCLR #0");
             assertEquals(0x5D0, parent.centreX());
             assertEquals(0x590, parent.word(PLANT_ANCHOR_X));
@@ -704,8 +705,158 @@ class TestCdOpeningObjectRuntime {
             // Derived from the pinned first cycle: 32/35 were drawn (bit 7 kept them), 33/36/37 and 34 despawned first.
             assertEquals(List.of(33), mains);
             assertEquals(List.of(34, 36, 37), smalls);
-            assertEquals(0x12, f.slot(43).id(), "the unowned FloatBlock record is untouched, not skipped");
+            var block = f.slot(43);
+            assertEquals(List.of(0x12, 2, 0x20A3FA, 0x4334, 0, 4), List.of(block.id(), block.routine(),
+                    block.longBits(MAPPINGS), block.word(TILE), block.unsignedByte(MAP_FRAME), block.spriteFlags()));
+            var sat = f.runtime.finishAfterCamera(new DrawCameras(camera, camera, camera));
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 43));
+            f.runtime.finishOrdinaryTail();
         }
+    }
+
+    // Constructed completed-player cut, not a controller route. Catches omitted/doubled TopSolid commits,
+    // integer-only Y stores losing fractions, the horizontal longword carry, dropped angle buffers, stale SAT
+    // player sampling, missing Float art and capture partitions that discard a real stand link.
+    @Test void floatBlockCommitsEachCallWithFractionsAndAnglesThenPublishesTheLivePicture() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 2, 0, 0, 0x100, 0x100, (64 << 16) | 0x1234, (0x721 << 16) | 0x5678);
+            pool.write(floatBlock(pool.state(40), 8, 0x84, 0).moveWord(X_VELOCITY, 0x80));
+            var before = f.frame.state();
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var after = f.frame.state(); var m = after.motion();
+            assertEquals((65 << 16) | 0x1234, m.centreX16_16(), "two native X longword moves of $80<<8");
+            assertEquals((0x721 << 16) | 0x5678, m.centreY16_16(), "word-only alignment keeps the fraction");
+            assertEquals(0, m.yVelocity()); assertEquals(0x100, m.groundVelocity());
+            assertEquals(8, m.flags() & 10); assertEquals(new CdPlayerBody.ObjectLinks(0, 40), after.objectLinks());
+            assertEquals(8, f.slot(40).flags() & 8); assertEquals(8, f.slot(40).routine());
+            assertEquals(5, f.slot(40).unsignedByte(MAP_FRAME));
+            assertEquals(0xC0, f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0xC0, f.frame.environment().movement().globals().secondaryAngle());
+            assertEquals(before.history(), after.history()); assertEquals(before.animation(), after.animation());
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertTrue(sat.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 40));
+            assertEquals(0x433A, word(sat.bytes(), 4), "priority1 Float frame5 precedes priority2 player");
+            assertEquals(0x80 + 64 - 12, word(sat.bytes(), 6));
+            int playerEntry = -1;
+            for (int i = 0; i < sat.provenance().size(); i++) {
+                if (sat.provenance().get(i).slotRef().wholeIndex() == 0) { playerEntry = i; break; }
+            }
+            assertTrue(playerEntry >= 0); assertEquals(0, m.spriteFlags() & 3, "fixture has no whole-object flips");
+            var sonic = f.assets.sonic().mappingFrames().get(after.animation().mapFrame());
+            assertTrue(sonic.pieceCount() > 0);
+            assertEquals((0x80 + 65 + sonic.bytes().signedByte(5)) & 0x1FF, word(sat.bytes(), playerEntry * 8 + 6),
+                    "player SAT samples the post-object X65, not the pre-object X64");
+            assertEquals((0x80 + 0x721 - PRE.yWord() + sonic.bytes().signedByte(1)) & 0x1FF,
+                    word(sat.bytes(), playerEntry * 8), "post-object player geometry uses the same completed camera");
+            f.runtime.finishOrdinaryTail();
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            var expected = f.frame.state();
+            f.service(0x80); assertTrue(f.frame.paused());
+            for (int i = 6; i < 15; i++) {
+                var pixels = f.assets.openingObjects().floatBlockArtBank().tile(0x334 + i);
+                assertEquals(CdObjectPresentation.patternVersion(pixels),
+                        f.runtime.displayedFrame().patternVersions().get(BANKS.powerup() + 36 + i));
+            }
+            f.frame.validateActorRestore(actor); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objects);
+            f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(expected, f.frame.state()); assertEquals(objects.placement().pool().slots(), pool.capture().slots());
+            f.service(0); f.runtime.spawnBeforeReservedSlots();
+            var stop = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.body(3));
+            assertEquals(CdPlayerMovement.UnsupportedBoundary.OBJECT_SUPPORT, stop.boundary());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    // Native GetOffObject's charge sound belongs to contact FM, once at the first call. The second call sees
+    // the cleared standing bits/link and cannot emit it again. This also catches a pool-only/player-only commit.
+    @Test void floatBlockReleaseCommitsItsLinkAndOneOrderedChargeStopBeforeTheSecondCall() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); var publication = f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 8, 40, 1, 0, 0, (0x130 << 16) | 0x1234, (0x721 << 16) | 0x5678);
+            pool.write(floatBlock(pool.state(40), 2, 0x84, 8));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(2, f.frame.state().motion().flags() & 10);
+            assertEquals(0, f.frame.state().objectLinks().standObject());
+            assertEquals(0, f.slot(40).flags() & 8); assertEquals(2, f.slot(40).routine());
+            var sounds = new ArrayList<CdOpeningObjectRuntime.SoundRequest>();
+            publication.sounds().forEach(v -> sounds.add(new CdOpeningObjectRuntime.PlayerSound(v)));
+            sounds.add(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(
+                    CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)));
+            assertEquals(sounds, f.runtime.lastSoundRequests());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var actor = f.frame.captureActor(); var shared = f.frame.captureShared(); var objects = f.runtime.captureClosedCut();
+            f.service(0x80); f.frame.restoreActor(actor); f.frame.restoreShared(shared); f.runtime.restore(objects);
+            assertEquals(0, f.frame.state().objectLinks().standObject()); assertEquals(sounds, f.runtime.lastSoundRequests());
+        }
+    }
+
+    // A later physical slot must see the first block's player patch, then release that earlier block through a2.
+    @Test void laterFloatBlockSeesTheFirstStandAndReleasesItsPoolImageInTheSamePass() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 2, 0, 0, 0, 0x100, 64 << 16, 0x721 << 16);
+            pool.write(floatBlock(pool.state(40), 2, 0x84, 0));
+            pool.write(floatBlock(pool.state(41), 2, 0x84, 0));
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(41, f.frame.state().objectLinks().standObject());
+            assertEquals(0, f.slot(40).flags() & 8); assertEquals(8, f.slot(41).flags() & 8);
+            assertEquals(6, f.slot(40).routine()); assertEquals(6, f.slot(41).routine());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Visible's animation write precedes the unsupported StandOn a2 dereference, but no staged player/globals
+    // escape the failing pure call. The runtime must close queue and Frame without undoing that source prefix.
+    @Test void floatBlockSolidBoundaryClosesBothOwnersAfterKeepingThePublishedObjectPrefix() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            seedSolidPlayer(f, 8, 5, 0, 0, 0, 64 << 16, 0x721 << 16);
+            pool.write(floatBlock(pool.state(40), 8, 0x84, 8).moveByte(ANIMATION, 2));
+            var before = f.frame.state();
+            var stop = assertThrows(CdSolidObject.UnsupportedSolidObject.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertEquals(CdSolidObject.UnsupportedBoundary.RESERVED_SLOT_ADDRESS, stop.boundary());
+            assertEquals(0, f.slot(40).unsignedByte(ANIMATION));
+            assertEquals(before, f.frame.state()); assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        }
+    }
+
+    @Test void tenthFloatBankFollowsPowerupAndItsOwnOverlapRejectsBeforeAdmission() throws Exception {
+        assertEquals(12311, BANKS.floatBlock());
+        var nine = new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8, 47);
+        assertEquals(83, nine.floatBlock());
+        assertEquals(nine, new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5, 6, 7, 8, 47, 83));
+        var assets = load();
+        for (int floating : List.of(12310, 12236, 10000, -1, Integer.MAX_VALUE - 13)) {
+            try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+                var banks = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098,
+                        12161, 12231, 12236, 12275, floating);
+                assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                        assets, frame, INITIAL, CONTACT, SCORE, LEVEL, new byte[640], banks, PRE, value -> { }), "base " + floating);
+                assertFalse(frame.closed()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            }
+        }
+    }
+
+    private static CdObjectState floatBlock(CdObjectState s, int routine, int spriteFlags, int flags) {
+        return s.moveByte(ID, 0x12).moveByte(ROUTINE, routine).moveByte(SPRITE_FLAGS, spriteFlags)
+                .moveLong(MAPPINGS, 0x20A3FA).moveWord(TILE, 0x4334).moveByte(PRIORITY, 1)
+                .moveByte(WIDTH, 12).moveByte(Y_RADIUS, 12).moveByte(MAP_FRAME, 5)
+                .moveWord(X, 64).moveWord(Y, 0x740).moveByte(FLAGS, flags);
+    }
+
+    /** Constructed source cut after Body, before the live object pass; never route evidence. */
+    private static void seedSolidPlayer(Fixture f, int flags, int stand, int charge, int xv, int yv, int x, int y) {
+        var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
+        var next = new CdPlayerMotionState(x, y, xv, yv, 0, 2, 0, flags, m.spriteFlags(), 9, 19,
+                0, m.previousAnimation(), 0, charge, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(),
+                new CdPlayerBody.State(next, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance(),
+                        new CdPlayerBody.ObjectLinks(0, stand)), actor.display()));
     }
 
     // Catches applying the staged launch inside the body, deferring it past the next slot,
