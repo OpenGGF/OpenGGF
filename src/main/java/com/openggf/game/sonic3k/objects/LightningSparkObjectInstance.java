@@ -10,9 +10,12 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindStateful;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.level.objects.ObjectServices;
@@ -22,6 +25,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.art.SpriteArtSet;
 
 import java.util.List;
+import java.util.Arrays;
 
 /**
  * Lightning shield spark particle (sonic3k.asm:34851-34898).
@@ -50,9 +54,100 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
     /** Shared descriptor for spark tiles: palette 0, no flip, no priority. */
     private static final PatternDesc SPARK_DESC = new PatternDesc(0);
 
-    private final SpriteAnimationSet animSet;
-    private final Pattern[] sparkTiles;
+    @RewindTransient(reason = "Animation scripts are captured by sparkArtState as immutable values")
+    private SpriteAnimationSet animSet;
+    @RewindTransient(reason = "Pattern pixels are captured by sparkArtState, including independent constructor art")
+    private Pattern[] sparkTiles;
+    @RewindTransient(reason = "Atlas residency is republished after sparkArtState restores; never snapshot GPU state")
     private boolean tilesCached;
+
+    // The public constructors accept art independent of the current provider. A
+    // provider-key recipe alone would replace it (or turn a null recipe into art).
+    // Keep the default owner/scalar capture and snapshot only pixels and scripts.
+    private final RewindStateful<SparkArtSnapshot> sparkArtState = new RewindStateful<>() {
+        @Override
+        public SparkArtSnapshot captureRewindStateValue() {
+            byte[][] pixels = sparkTiles == null ? null : new byte[sparkTiles.length][];
+            if (sparkTiles != null) {
+                for (int i = 0; i < sparkTiles.length; i++) {
+                    if (sparkTiles[i] != null) {
+                        pixels[i] = new byte[Pattern.PATTERN_SIZE_IN_MEM];
+                        sparkTiles[i].copyInto(pixels[i], 0);
+                    }
+                }
+            }
+            ScriptSnapshot[] scripts = animSet == null ? null : animSet.getAllScripts().entrySet().stream()
+                    .map(entry -> new ScriptSnapshot(entry.getKey(), entry.getValue()))
+                    .toArray(ScriptSnapshot[]::new);
+            return new SparkArtSnapshot(pixels, scripts);
+        }
+
+        @Override
+        public void restoreRewindStateValue(SparkArtSnapshot snapshot) {
+            byte[][] pixels = snapshot.pixels();
+            sparkTiles = pixels == null ? null : new Pattern[pixels.length];
+            if (pixels != null) {
+                for (int i = 0; i < pixels.length; i++) {
+                    if (pixels[i] == null) continue;
+                    Pattern tile = new Pattern();
+                    for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+                        for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                            tile.setPixel(x, y, pixels[i][y * Pattern.PATTERN_WIDTH + x]);
+                        }
+                    }
+                    sparkTiles[i] = tile;
+                }
+            }
+            ScriptSnapshot[] scripts = snapshot.scripts();
+            animSet = scripts == null ? null : new SpriteAnimationSet();
+            if (scripts != null) {
+                for (ScriptSnapshot script : scripts) animSet.addScript(script.id(), script.toScript());
+            }
+            tilesCached = false;
+        }
+    };
+
+    private record SparkArtSnapshot(byte[][] pixels, ScriptSnapshot[] scripts) {
+        private SparkArtSnapshot {
+            pixels = copyPixels(pixels);
+            scripts = scripts == null ? null : scripts.clone();
+        }
+
+        @Override
+        public byte[][] pixels() { return copyPixels(pixels); }
+
+        @Override
+        public ScriptSnapshot[] scripts() { return scripts == null ? null : scripts.clone(); }
+
+        private static byte[][] copyPixels(byte[][] source) {
+            if (source == null) return null;
+            byte[][] copy = source.clone();
+            for (int i = 0; i < copy.length; i++) if (copy[i] != null) copy[i] = copy[i].clone();
+            return copy;
+        }
+    }
+
+    private record ScriptSnapshot(int id, int delay, int[] frames, SpriteAnimationEndAction endAction,
+                                  int endParam, int[] trailingBytes) {
+        private ScriptSnapshot {
+            frames = frames.clone();
+            trailingBytes = trailingBytes.clone();
+        }
+
+        private ScriptSnapshot(int id, SpriteAnimationScript script) {
+            this(id, script.delay(), script.frames().stream().mapToInt(Integer::intValue).toArray(),
+                    script.endAction(), script.endParam(),
+                    script.trailingBytes().stream().mapToInt(Integer::intValue).toArray());
+        }
+
+        @Override public int[] frames() { return frames.clone(); }
+        @Override public int[] trailingBytes() { return trailingBytes.clone(); }
+
+        private SpriteAnimationScript toScript() {
+            return new SpriteAnimationScript(delay, Arrays.stream(frames).boxed().toList(), endAction, endParam,
+                    Arrays.stream(trailingBytes).boxed().toList());
+        }
+    }
 
     private int currentX;
     private int currentY;
@@ -113,8 +208,9 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
      * velocities and high-priority flag are placeholders.
      * Art (animation set + spark tiles) is re-fetched from the live S3K object-art
      * provider exactly as {@link LightningShieldObjectInstance#triggerSparks()}
-     * does; the object null-guards missing art, so a structurally-valid instance is
-     * always returned.
+     * does for direct factory callers. Managed restore then reapplies the captured
+     * pixel/script values through sparkArtState, preserving independent and null
+     * constructor recipes without retaining a renderer or an atlas handle.
      */
     public static LightningSparkObjectInstance forRewindRecreate(
             ObjectSpawn spawn, ObjectServices services) {

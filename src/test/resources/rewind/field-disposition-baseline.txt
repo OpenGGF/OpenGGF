@@ -7,6 +7,5 @@ com.openggf.game.sonic1.objects.Sonic1RingInstance#childRingSpawns
 com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#supportPillars
 com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz2Instance#swingChildren
 com.openggf.game.sonic3k.objects.IczFreezerObjectInstance$FrozenPlayerBlock#debris
-com.openggf.game.sonic3k.objects.LightningSparkObjectInstance#sparkTiles
 com.openggf.game.sonic3k.objects.bosses.LbzEndBossInstance#launchedSpikeBallRomSubtypes
 com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance#spawned

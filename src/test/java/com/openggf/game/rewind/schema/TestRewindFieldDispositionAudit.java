@@ -23,6 +23,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
     @Test
+    void lightningSparkArtValuesRideTheActualDefaultCapturePath() {
+        Class<?> owner = com.openggf.game.sonic3k.objects.LightningSparkObjectInstance.class;
+        assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
+        assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(owner));
+        assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(owner).capturedFields().stream()
+                .anyMatch(plan -> plan.field().getName().equals("sparkArtState")),
+                "pixels/scripts must be captured by the owner-local holder, without excluding the owner");
+        List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
+        RewindFieldDispositionAudit.auditClass(owner, gaps);
+        assertEquals(List.of(), gaps);
+    }
+
+    @Test
     void wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath() {
         Class<?> owner = com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance.class;
         assertTrue(com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
