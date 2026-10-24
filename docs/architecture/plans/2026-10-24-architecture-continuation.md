@@ -1444,3 +1444,225 @@ family recheck, with the common Java 25/Lua 5.4/EGL/verified-ROM command above.
 The branch remains on the reviewed worker lineage; parent main `591c679b3` is
 not imported or changed. Composed gates and delivery stay parent-owned; this
 correction does not close donor-colour rewind ownership.
+
+### Shared donor palette color rewind owner (bounded follow-up)
+
+The isolated implementation checkout is
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9db4cd35`, branch
+`bugfix/ai-donor-palette-rewind-owner-20261024`, based on
+`591c679b39c61f162a839cde6baaedd387135bc4`. This follows the read-only
+RenderContext study at `3ca14002f`. The shared typed static bank API, allocation
+and reset boundaries remain justified. The separate completed-team initializer
+candidate `fe60ed29a` is neither merged nor modified here. No allowance decrease
+is claimed.
+
+Grounding: `GameplayModeContext.attachLevelManagers` registers the existing
+`palette-colors` adapter for level and native-water colors. The active S2 super
+controller resolves `SuperStateController.resolvePaletteTarget` to the donor's
+normal row, writes ROM transformation colors into its existing Color cells and
+immediately calls `GraphicsManager.cachePaletteTexture` for the expanded row.
+Controller restore restores its RAM/scripts/physics, explicitly leaving palette
+cells to the world owner. `RewindRegistry.restore` uses production registration
+order and then its production callbacks. `LevelRewindSnapshotAdapter` does not
+replace palettes. Thus donor CPU colors had no registered value capture owner.
+
+The first actual-path reproduction used one S2 Sonic, no followers, on an S3K
+MGZ1 host through `GameplayCaptureSession`. It loads normal expected RGB from a
+separate donor-ROM palette load, identifies visible blue body pixels against a
+tiles-only draw, captures the active gameplay registry, executes 24 ordinary
+frames of the actual transformation, restores and redraws without a forward
+tick. It does not fabricate snapshot entries or restore a renderer snapshot.
+At the unchanged production base, XML identity
+`com.openggf.tools.TestDonorPaletteRewind#donatedSuperWriteRestoresLiveAliasesAndPresentedPixelsWithoutForwardTick`
+executed once: one failure, zero errors/skips. Its grouped assertions found
+color 2 still `0x6D6D6D` instead of prior ROM `0x2424B6`, and 198 differing
+previously visible blue body pixels. Palette/Color aliases and shared bank
+identity survived. This converts the source-inspection risk into a reproduced
+CPU and immediate-presentation defect. Admission was zero; Maven reported
+78 seconds. Its XML was inspected and the consumed XML/text reports deleted.
+
+Two complete bounded ownership shapes were compared after grounding these routes:
+
+- Extend the existing gameplay palette color adapter. Capture populated normal
+  donor rows as RGB values, rebind each row through the same live registered bank
+  on restore, update Color fields in place, and immediately recache using that
+  bank's current effective row. Restore donor CPU values before uploads and donor
+  uploads before native-water derivation. Keep the native fade/publication owners
+  and controller/profile order unchanged. An adapter-local bank lifetime token
+  prevents captures from another adapter or retired/replaced bank adopting a new
+  bank merely because its GameId or numeric GPU rows match; tokens and RGB values
+  contain no renderer references or GPU addresses. Only currently registered banks
+  remain in the local binding map. Replacing a Palette within the same live bank
+  deliberately rebinds to the current Palette/Color aliases.
+- Give CrossGameFeatureProvider a separate registered palette adapter. It would
+  capture the active donor's normal RGB, resolve its current render context at
+  restore, perform the same in-place write/immediate upload, and need equivalent
+  lifetime isolation plus attach/detach and restore-order wiring. Its provider
+  pointer resets at level teardown, while the shared bank registry can retain a
+  bank and supplies standalone typed access. It therefore adds a second color
+  ownership/registration route and does not naturally cover the registered shared
+  donor banks. Rejected in favor of the existing world color owner; no alternative
+  production implementation, relocation or framework was added.
+
+The selected extension captures only shared donor normal colors. Sidekick bank
+height/lifetime, private appearances, donor native-water palette authority,
+completed-team initialization and cross-reset gameplay reconstruction are outside
+this slice. A reset/replacement control must leave retired rows detached, avoid
+recreating missing banks, and avoid recoloring a replacement bank at the same
+GameId/row. Existing native surfaces keep their stock three-argument adapter path.
+
+Commands below use the existing `MAIN_CHECKOUT` convention, resolving the actual
+absolute wrapper and ROM paths without retaining a machine-local home path:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+```
+
+Commands use the verified existing S2 World REV01
+`$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen`
+(CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`) and
+S3K locked-on
+`$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+(CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`). Hooks
+are installed. The red command, from this checkout with only the new reproduction
+uncommitted, was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestDonorPaletteRewind' \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The change-based planner at the pinned base selects all 3,741 smoke classes
+because the internal snapshot and gameplay composition files are shared. That is
+disproportionate to adding donor values to the existing color adapter and a single
+constructor wiring site: native controllers, renderer bodies, public API pins,
+allocation and reset boundaries are unchanged. The worker uses affected palette,
+production donor-replay and presentation checks; the parent owns composed API,
+mandatory S3K and complete fresh guards, integration and push. No broad engine or
+release-only full-suite run was requested by this worker.
+
+The initial green selection was the red command with the exact selector
+`-Dtest=TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind`.
+It passed 17 cases in three XML reports, zero failures/errors/skips. Admission was
+31 seconds and Maven 77 seconds. This qualified the first owner extension and
+the original CPU/body-pixel reproduction. The reports were inspected and removed.
+A subsequent bounded refinement preserves donor registry upload order and adds
+actual GPU-row readback before redraw/V-int, displayed native-fade generation,
+forward replay/seek and combined native/donor/water upload-order assertions. The
+final check below qualifies those final executable inputs rather than reusing
+the earlier 17-case result for them.
+
+The final affected invocation passed **45 distinct XML cases in five reports**,
+zero failures/errors/skips, with the final executable sources stable throughout
+submission and execution. Admission was 79 seconds; Maven reported 78 seconds.
+The original failing identity now passes CPU RGB, immediate GPU-row readback,
+visible body pixels, displayed native-fade generation, ordinary forward writes
+and forward seek without a palette tick. Alias, same-bank row replacement,
+uncaptured-row preservation, upload order, retired/replaced-bank isolation and
+new-adapter isolation controls passed. The 22 water cases include all six actual
+EGL fade/profile pixel parameters. This command was:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestDonorPaletteRewind,TestPaletteColorStateAdapter,TestSonic2DonorSuperStateRewind,TestPaletteUploadLatch,TestUnderwaterPaletteUpload' \
+  "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Exact final XML identities follow (each method is qualified by its preceding
+class; parameter suffixes are the XML identities). All executed, none skipped:
+
+`com.openggf.game.palette.TestPaletteColorStateAdapter`:
+
+```text
+nullSurfacesCaptureEmptyAndRestoreNoops
+captureRestoreRoundTripsBothSurfaces
+keyIsStable
+resetForMissingSnapshotLeavesLiveColorsUnchanged
+restoreRecachesUnderwaterEvenWhenNormalSurfaceMissing
+donorRestoreRebindsCurrentRowsAndPreservesTheirAliasesAndUncapturedRows
+restoreDoesNotRecacheWhenGlIsNotInitialized
+restoreWritesInPlaceWithoutReplacingColorObjects
+donorResetAndReplacementCannotAdoptAnOldCaptureByGameOrGpuRow
+restoreRecachesNormalLinesAndUnderwaterWhenGlInitialized
+restoreToleratesNullGraphicsSupplierResult
+snapshotDefensivelyCopiesConstructorInputs
+```
+
+`com.openggf.game.sonic2.TestSonic2DonorSuperStateRewind`:
+
+```text
+normalStateStillCapturesTheInFlightRevertPaletteAndShippedResidualByte
+activeToRevertedWorldRecreationDeletesTheCurrentStarsOwnerAndRestoresMappings
+normalTailsRestoreKeepsTheCharacterPhysicsProfile
+midTransformationRestoresPaletteTimerDrainAndOrdinaryMapping
+```
+
+`com.openggf.graphics.TestPaletteUploadLatch`:
+
+```text
+releaseUploadsPendingLinesAndRestoresImmediateUploads
+immediateScenePublicationReleasesARewindHeldFadeWithoutALevelLatch
+scenesOutsideTheLevelPipelineUploadImmediatelyWhileLatched
+cinematicRevealRestoresNativeFadeAndPublicationOwnershipEvenWhenDrawingFails
+latchedWritesReachTheGpuAtTheNextPublication
+rangeChangesDoNotPublishPendingNativeLinesBeforeVInt
+```
+
+`com.openggf.graphics.TestUnderwaterPaletteUpload`:
+
+```text
+unchangedContentReusesPreparedStaging
+wholePaletteWhiteFadeAlsoReachesScopedRowsBeyondTheMaskWidth
+whiteWaterPublicationKeepsRawWritersPendingAndRestoresTheDisplayedGeneration
+whiteWaterCacheUsesTheSaturatedColourStepRatherThanAWrappedByte
+nativeStagingBufferIsReusedAndOnlyGrows
+toWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio
+headlessOwnerCleanupReleasesNativeStagingAndContentCache
+clearingPaletteTexturesReleasesStagingAndAllowsReinitialization
+inPlacePaletteMutationForcesAnotherUploadAndPreservesRgbaRules
+fromWhiteFadesTheDerivedWaterTargetRatherThanChangingTheTintRatio
+expansionToggleReuploadsDirectAndDerivedRowsWithoutChangingNativePaletteBytes
+donorRowCacheRecomputesOnlyRowsWhoseContributingContentChanges
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[1]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[2]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[3]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[4]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[5]
+underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder(Mode, int, DisplayColorProfile, DisplayColorExpansion, String, String, String)[6]
+structurallyDifferentRowsCannotShareAnUploadKey
+limitedExpansionFollowsFadeAndRetainsTransparentColourZero
+scopedPublishedBasisTracksNativePublicationAndExactWorldLifetime
+realCacheBoundaryUploadsOnceForBothConsumersAndInvalidatesContributingContent
+```
+
+`com.openggf.tools.TestDonorPaletteRewind`:
+
+```text
+donatedSuperWriteRestoresLiveAliasesAndPresentedPixelsWithoutForwardTick
+```
+
+The first green run's 17 identities are precisely the final palette-adapter,
+S2-controller and reproduction groups above; the red run executed only the
+reproduction identity. All ten final XML/text reports were consumed and removed;
+no archive, receipt or retained capture was created. Java 25 was selected explicitly
+and accepted by the build JDK gate; the selected Lua binary reports 5.4.9. Headless
+capture uses the production no-device audio boot and owned EGL path.
+
+Limits: actual donated gameplay coverage is the supported solo S2 Sonic on dry
+S3K MGZ1, not S3K-as-donor or an underwater gameplay route. Water/fade/profile
+coverage is the existing renderer component contract. Reset tests prove isolation,
+not reconstruction across a reset or migration between gameplay owners. Sidekick
+rows, native-water donor authority, completed-team initialization and texture
+height concerns remain separate. There are no API-pin, annotation/exclusion,
+manual owner override, frozen baseline or allowance edits. Parent-composed checks
+and delivery remain outstanding; this worker stops at a local review-ready commit
+without pushing or removing its branch/worktree. All worker test jobs completed.
