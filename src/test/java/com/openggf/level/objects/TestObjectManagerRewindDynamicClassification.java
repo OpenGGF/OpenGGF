@@ -3,11 +3,9 @@ package com.openggf.level.objects;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
 import com.openggf.game.sonic2.objects.CheckpointObjectInstance;
 import com.openggf.game.sonic2.objects.CheckpointStarInstance;
@@ -38,8 +36,7 @@ class TestObjectManagerRewindDynamicClassification {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

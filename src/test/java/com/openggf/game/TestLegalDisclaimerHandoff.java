@@ -2,7 +2,6 @@ package com.openggf.game;
 
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -56,9 +55,9 @@ class TestLegalDisclaimerHandoff {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        // Sample before fixture teardown: a live world owns getCurrent().
+        TestEnvironment.configureGameModuleFixture(GameModuleRegistry.getCurrent());
         inputHandler = mock(InputHandler.class);
         gameLoop = new GameLoop(inputHandler);
         mockScreen = mock(LegalDisclaimerScreen.class);
