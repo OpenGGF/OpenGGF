@@ -1728,7 +1728,7 @@ public final class StageplayWorkspace {
         if(result.success()) {
             long jumps=result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).count();
             status+=" · "+String.format(java.util.Locale.ROOT,"%.1f",overlay.performanceFrames()/60.0)
-                    +" s · "+jumps+(jumps==1?" jump":" jumps");
+                    +" s"+(jumps==0?"":" · "+jumps+(jumps==1?" jump":" jumps"));
         }
         var sections=new ArrayList<MenuDetailsScreen.Section>();
         var advice=new ArrayList<MenuDetailsScreen.Row>();
@@ -1749,12 +1749,15 @@ public final class StageplayWorkspace {
                 result.path().size()+" samples · "+result.expandedNodes()+" nodes · "+result.simulatedTicks()+" ticks")),true));
         var buttons=new ArrayList<MenuDetailsScreen.Action>();
         var actions=menu.actionEntries();
-        for(String label:List.of("Plan another route","Check inputs and apply route","Cancel route"))
-            for(int i=0;i<actions.size();i++) if(actions.get(i).label().equals(label)) {
-                int index=i;buttons.add(new MenuDetailsScreen.Action(label.startsWith("Check inputs")?"Apply":label,
-                        ()->menu.runAction(index),label.equals("Plan another route")));
-            }
         boolean apply=routeUpdate.phase()==StageplayRouteJob.Phase.READY;
+        // A ready route's next step is Apply; otherwise the next step is another plan.
+        String primary=apply?"Check inputs and apply route":"Plan another route";
+        for(String label:List.of(primary,"Plan another route","Check inputs and apply route","Cancel route"))
+            for(int i=0;i<actions.size();i++) if(actions.get(i).label().equals(label)) {
+                int index=i;String shown=label.startsWith("Check inputs")?"Apply":label;
+                if(buttons.stream().anyMatch(b->b.label().equals(shown))) continue;
+                buttons.add(new MenuDetailsScreen.Action(shown,()->menu.runAction(index),label.equals(primary)));
+            }
         menu.setDetailsContent(new MenuDetailsScreen.Content("Route details",status,meaning,
                 result.success()?MenuDetailsScreen.Tone.SUCCESS:MenuDetailsScreen.Tone.WARNING,sections,
                 menu.helpText(),buttons,apply?"Apply replaces commands in the requested window":""));

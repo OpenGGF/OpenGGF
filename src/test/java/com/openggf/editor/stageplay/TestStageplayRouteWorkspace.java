@@ -288,12 +288,13 @@ class TestStageplayRouteWorkspace {
             workspace.tick(new InputHandler());workspace.invoke(ROUTE_HELPER);workspace.menu().openDetails();
             var text=new java.util.ArrayList<String>();
             workspace.menu().render(new com.openggf.graphics.PixelFont(){@Override public void drawText(String t,int x,int y,float scale,float r,float g,float b,float a){text.add(t);}},398);
-            assertTrue(text.contains("Route found · 0.5 s · 0 jumps"),text.toString());
+            assertTrue(text.contains("Route found · 0.5 s"),text.toString());
+            assertTrue(text.indexOf("Apply")<text.indexOf("Plan another route"),"A ready route leads with Apply: "+text);
             assertFalse(text.contains("Try"));assertTrue(text.contains("Apply replaces commands in the requested window"));
             switch(action) {
                 case "back" -> {press(workspace,new InputHandler(),GLFW_KEY_ESCAPE);assertTrue(workspace.menu().isOpen());assertFalse(workspace.menu().showingDetails());}
-                case "apply" -> {press(workspace,new InputHandler(),GLFW_KEY_DOWN);press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals(1,host.applyRequests);}
-                case "replan" -> {press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals("Plan route",workspace.menu().title());assertFalse(workspace.menu().showingDetails());}
+                case "apply" -> {press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals(1,host.applyRequests);}
+                case "replan" -> {press(workspace,new InputHandler(),GLFW_KEY_DOWN);press(workspace,new InputHandler(),GLFW_KEY_ENTER);assertEquals("Plan route",workspace.menu().title());assertFalse(workspace.menu().showingDetails());}
             }
             assertEquals(before,workspace.controller().document(),"Buttons retain the existing fresh-check and undo boundaries");
         }
