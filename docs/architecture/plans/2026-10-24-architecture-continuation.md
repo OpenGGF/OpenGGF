@@ -1784,3 +1784,44 @@ monitor fixtures, creator content and real child-slot/occupancy/recycle controls
 Only documentation changed afterwards. Consumed XML was inspected and removed;
 no live Maven handle remains. The review-ready local branch/worktree stays with
 the parent, which owns composed gates, integration and push.
+
+## Ninth-loop S2 named fixture family
+
+Coordinator base `e9d8087aca13f8868c783a4fe001b39aa7015ca7`, branch
+`bugfix/ai-architecture-loop9-20261024`; the reviewed monitor admission merge is
+`97534dcb558ab5d03e85cc3888cac70ba19dd803`. This separate test-only slice replaces
+manual or implicit gameplay opening with the existing
+`configureGameModuleFixture(SonicGame.SONIC_2)` boundary in seven setup methods:
+`TestSpringObjectInstance`, `TestSpiralObjectInstance`, `TestMonitorObjectInstance`,
+`TestTodo10_MTZEventSpecs`, `TestTodo11_SCZEventSpecs`, `TestTodo12_WFZEventSpecs`,
+and `TestTodo9_DEZEventSpecs`. Camera resets, construction scopes and existing
+cleanup remain in their original order after fixture initialization. Spiral's
+previous-module restoration is retained.
+
+A direct service-only fixture would omit the module-owned playable and event
+collaborators exercised by these tests. The existing named module fixture supplies
+that ownership and central reset without another helper. All non-import source
+outside the seven setup bodies is byte-identical to the parent. This preserves
+87 test declarations expanding to 91 executed cases and all 271 assertion or
+verification calls. Only these seven exact `#setUp` allowance keys are removed;
+parallel S1 and engine-only fixture removals must be reconciled by identity.
+
+Observed focused validation used Java 25, Lua 5.4 and the absolute main-checkout
+queue wrapper from this coordinator. `MAIN_CHECKOUT` below denotes that existing
+checkout, not the task target:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSpringObjectInstance,TestSpiralObjectInstance,TestMonitorObjectInstance,TestTodo10_MTZEventSpecs,TestTodo11_SCZEventSpecs,TestTodo12_WFZEventSpecs,TestTodo9_DEZEventSpecs,TestSingletonLifecycleGuard' test -B
+```
+
+All **99 cases** passed, with zero failures, errors or skips: spring 19, spiral
+11, monitor 9, MTZ 15, SCZ 9, WFZ 17, DEZ 11 and lifecycle guard 8. Exact XML
+identities and the fork's Java 25/EGL properties were inspected; all 16 consumed
+XML/text reports were deleted. Admission waited 72 seconds; execution duration
+was not retained. These are ROM-free component checks, not full-route, native
+pixel or composed ninth-loop certification. No production source, API pin,
+allocation permission or test assertion changed. No task Maven handle remains.

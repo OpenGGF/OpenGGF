@@ -47,14 +47,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2PlcArtRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestTodo10_MTZEventSpecs.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestTodo11_SCZEventSpecs.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestTodo12_WFZEventSpecs.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestTodo9_DEZEventSpecs.java#setUp
             src/test/java/com/openggf/game/sonic2/dataselect/TestS2DataSelectProfile.java#configureEngineServices
-            src/test/java/com/openggf/game/sonic2/objects/TestMonitorObjectInstance.java#setUp
-            src/test/java/com/openggf/game/sonic2/objects/TestSpiralObjectInstance.java#setUp
-            src/test/java/com/openggf/game/sonic2/objects/TestSpringObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestTodo4_MCZBossCollision.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestTornadoObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
