@@ -2383,7 +2383,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		if (!audioBackendInitialized) {
-			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
+			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler, audioManager));
 			audioBackendInitialized = true;
 		} else {
 			audioManager.ensurePresentationSink();
@@ -2447,7 +2447,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				// A runtime reset closes the sink, not the caller-owned offline backend.
 				audioManager.ensurePresentationSink();
 			} else if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler));
+				audioManager.setBackendForLaunch(new LWJGLAudioBackend(configService, profiler, audioManager));
 			}
 			ModSubsystem subsystem = ModSubsystem.current();
 			// Muting speaker output does not remove creator asset identity. Level

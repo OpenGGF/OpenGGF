@@ -622,7 +622,10 @@ Unreleased. The earlier development themes remain in
   bridge allowances pin callers and call counts, and special-stage rewind coverage
   follows the registered provider through replacement and retirement. Standalone
   audio callers supply their selected profile to the reusable presentation host;
-  desktop sound-test composition lives with the developer tools. Native SMPS
+  desktop sound-test composition lives with the developer tools. SMPS backends
+  keep their explicitly supplied restore-request destination for their usable
+  lifetime, including later source construction after engine-root reconfiguration;
+  SoundTest windows retain their configured destination for WAV export. Native SMPS
   loaders retain their own ROM references while the shared cache and hexadecimal
   dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence

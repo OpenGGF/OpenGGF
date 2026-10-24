@@ -118,7 +118,7 @@ class TestHeldRewindAudioStepCost {
         // presentation producer, which would otherwise drop the offline
         // capture lease (mirrors the TraceCaptureSession boot order).
         SonicConfigurationService config = SonicConfigurationService.getInstance();
-        audio.setBackend(new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance()));
+        audio.setBackend(new HeadlessSmpsAudioBackend(config, PerformanceProfiler.getInstance(), audio));
         assertTrue(audio.getBackend() instanceof HeadlessSmpsAudioBackend,
                 "real headless SMPS backend must survive init (setBackend silently falls back to Null on failure)");
         int sampleRate = audio.outputSampleRate();

@@ -85,7 +85,7 @@ public final class TimeAttackVideoCaptureTool implements AutoCloseable {
             glBoot = new HeadlessGameBoot(width, height, context);
             engine = new Engine(context);
             input = new InputHandler(InputBindingFactory.supplier(config));
-            offlineBackend = new HeadlessSmpsAudioBackend(config, context.profiler());
+            offlineBackend = new HeadlessSmpsAudioBackend(config, context.profiler(), audio);
             grabber = new GlReadPixelsGrabber(width, height);
             display = method("display");
             invoke(method("initializeExternalContentAtBoot"));

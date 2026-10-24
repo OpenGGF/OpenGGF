@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -119,7 +120,7 @@ public class TestSonic1AudioPriority {
         dummyData.setId(sfxId);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
-        SmpsSequencer seq = new SmpsSequencer(dummyData, dummyDac, driver, Sonic1SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic1SmpsSequencerConfig.CONFIG);
         seq.setSfxPriority(priority);
         seq.setSpecialSfx(special);
         return seq;

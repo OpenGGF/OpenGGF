@@ -54,6 +54,12 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     protected final Object streamLock = new Object();
     protected final SonicConfigurationService configService;
     /**
+     * Restore-request destination for this backend's usable lifetime. Root
+     * reconfiguration does not transfer it; another manager needs a replacement
+     * backend. Existing owner-thread and retirement rules still apply.
+     */
+    protected final MusicRestoreSink musicRestoreSink;
+    /**
      * Currently unread: the {@code audio.music_stream} / {@code audio.sfx_stream}
      * / {@code audio.upload} profile sections this fed disappeared with the
      * backend's stream fill, and audio timing is now profiled on the
@@ -157,8 +163,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
     private long nextServiceOrdinal;
     private long nextDriverInstanceOrdinal;
     private long nextDriverAdmissionOrdinal;
-    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
+    protected AbstractSmpsAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+            MusicRestoreSink musicRestoreSink) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.musicRestoreSink = Objects.requireNonNull(musicRestoreSink, "musicRestoreSink");
         this.profiler = profiler;
         // Initialize fallback mappings
         // SFX
@@ -774,7 +782,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
             }
-            SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
+            SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, musicRestoreSink, effectiveConfig);
             seq.setSourceDescriptor(describeSmpsSource(null, data, true));
             seq.setSampleRate(smpsStream.outputSampleRate());
             seq.setFm6DacOff(fm6DacOff);
@@ -806,7 +814,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 if (isContinuous) {
                     sfxDriver.startContinuousSfx(data.getId(), contTrackCount);
                 }
-                SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, effectiveConfig);
+                SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, musicRestoreSink, effectiveConfig);
                 seq.setSourceDescriptor(describeSmpsSource(null, data, true));
                 seq.setSampleRate(ownedSfx.outputSampleRate());
                 seq.setFm6DacOff(fm6DacOff);
@@ -1204,7 +1212,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 ? SmpsSequencer.Region.PAL
                 : SmpsSequencer.Region.NTSC);
         SmpsSequencer sequencer = new SmpsSequencer(
-                data, dacData, driver, sequencerConfig);
+                data, dacData, driver, musicRestoreSink, sequencerConfig);
         sequencer.setSourceDescriptor(
                 describeSmpsSource(descriptor, data, false));
         sequencer.setSampleRate(stream.outputSampleRate());

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.audio.smps;
 
+import com.openggf.game.GameServices;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.VirtualSynthesizer;
@@ -37,7 +38,7 @@ class TestSonic3kSmpsMetaCommandOperands {
         setLe16(data, 0x0A, 0x40); // second FM/DAC entry is the synthetic FM track
         System.arraycopy(trackBytes, 0, data, 0x40, trackBytes.length);
         Sonic3kSmpsData smps = new Sonic3kSmpsData(data, 0);
-        SmpsSequencer sequencer = new SmpsSequencer(smps, EMPTY_DAC, new VirtualSynthesizer(),
+        SmpsSequencer sequencer = new SmpsSequencer(smps, EMPTY_DAC, new VirtualSynthesizer(), GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
 
         sequencer.advanceSamples(20_000);

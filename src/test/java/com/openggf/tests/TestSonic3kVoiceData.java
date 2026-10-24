@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.Test;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -88,7 +89,7 @@ public class TestSonic3kVoiceData {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         CaptureSynth synth = new CaptureSynth();
-        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
 
         // Run a few frames to process the track through voice load + SSG-EG command
         short[] buffer = new short[4096];
@@ -145,7 +146,7 @@ public class TestSonic3kVoiceData {
         };
         Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
         CaptureSynth synth = new CaptureSynth();
-        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, GameServices.audio(), Sonic3kSmpsSequencerConfig.CONFIG);
 
         // Run enough frames to process through voice change
         short[] buffer = new short[4096];

@@ -500,7 +500,7 @@ class TestAudioManagerSfxCatalogReuse {
     @Test
     void legacyCachedHitMakesRealBackendUseRetainedCompletePolicy() {
         NoDeviceBackend backend = new NoDeviceBackend(
-                SonicConfigurationService.createStandalone());
+                SonicConfigurationService.createStandalone(), audio);
         backend.init();
         audio.setBackend(backend);
         CountingLoader firstLoader = new CountingLoader(EMPTY_DAC);
@@ -781,8 +781,8 @@ class TestAudioManagerSfxCatalogReuse {
 
     private static final class NoDeviceBackend
             extends AbstractSmpsAudioBackend {
-        private NoDeviceBackend(SonicConfigurationService configuration) {
-            super(configuration, null);
+        private NoDeviceBackend(SonicConfigurationService configuration, MusicRestoreSink musicRestoreSink) {
+            super(configuration, null, musicRestoreSink);
         }
 
         @Override protected int getDeviceSampleRate() { return 48_000; }

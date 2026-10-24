@@ -1,5 +1,6 @@
 package com.openggf.audio;
 
+import com.openggf.game.GameServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.audio.smps.AbstractSmpsData;
@@ -165,7 +166,7 @@ public class AudioRegressionTest {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
-        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         musicSeq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(musicSeq, false);
 
@@ -182,7 +183,7 @@ public class AudioRegressionTest {
             int currentFrame = samplesWritten / 2;
 
             if (!sfx1Triggered && currentFrame >= sfx1TriggerFrame && sfxRingData != null) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfxRingData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfxRingData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -190,7 +191,7 @@ public class AudioRegressionTest {
             }
 
             if (!sfx2Triggered && currentFrame >= sfx2TriggerFrame && sfxJumpData != null) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfxJumpData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfxJumpData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -295,7 +296,7 @@ public class AudioRegressionTest {
         SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
-        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
 
@@ -346,7 +347,7 @@ public class AudioRegressionTest {
         SmpsDriver driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
 
-        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
 
@@ -361,7 +362,7 @@ public class AudioRegressionTest {
         // Reset for actual benchmark
         driver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         driver.setRegion(SmpsSequencer.Region.NTSC);
-        seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        seq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
         final SmpsDriver benchmarkDriver = driver;
@@ -379,7 +380,7 @@ public class AudioRegressionTest {
 
         SmpsDriver replayDriver = SmpsDriverTestAccess.create(SAMPLE_RATE);
         replayDriver.setRegion(SmpsSequencer.Region.NTSC);
-        SmpsSequencer replaySeq = new SmpsSequencer(musicData, dacData, replayDriver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer replaySeq = new SmpsSequencer(musicData, dacData, replayDriver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         replaySeq.setSampleRate(SAMPLE_RATE);
         replayDriver.addSequencer(replaySeq, false);
         short[] replayBuffer = new short[BUFFER_SIZE * 2];
@@ -434,7 +435,7 @@ public class AudioRegressionTest {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
-        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
 
@@ -457,7 +458,7 @@ public class AudioRegressionTest {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(SmpsDriver.ReadMode.SAMPLE_ACCURATE);
 
-        SmpsSequencer seq = new SmpsSequencer(sfxData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(sfxData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         seq.setSfxMode(true);
         driver.addSequencer(seq, true);
@@ -526,7 +527,7 @@ public class AudioRegressionTest {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
-        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer seq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         seq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(seq, false);
 
@@ -546,7 +547,7 @@ public class AudioRegressionTest {
         driver.setRegion(SmpsSequencer.Region.NTSC);
         driver.setReadModeForTesting(mode);
 
-        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer musicSeq = new SmpsSequencer(musicData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         musicSeq.setSampleRate(SAMPLE_RATE);
         driver.addSequencer(musicSeq, false);
 
@@ -563,7 +564,7 @@ public class AudioRegressionTest {
             int currentFrame = samplesWritten / 2;
 
             if (!sfx1Triggered && currentFrame >= sfx1TriggerFrame) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfxRingData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfxRingData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -571,7 +572,7 @@ public class AudioRegressionTest {
             }
 
             if (!sfx2Triggered && currentFrame >= sfx2TriggerFrame) {
-                SmpsSequencer sfxSeq = new SmpsSequencer(sfxJumpData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                SmpsSequencer sfxSeq = new SmpsSequencer(sfxJumpData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
                 sfxSeq.setSampleRate(SAMPLE_RATE);
                 sfxSeq.setSfxMode(true);
                 driver.addSequencer(sfxSeq, true);
@@ -614,7 +615,7 @@ public class AudioRegressionTest {
     }
 
     private void addSfxSequencer(SmpsDriver driver, AbstractSmpsData sfxData) {
-        SmpsSequencer sfxSeq = new SmpsSequencer(sfxData, dacData, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfxSeq = new SmpsSequencer(sfxData, dacData, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         sfxSeq.setSampleRate(SAMPLE_RATE);
         sfxSeq.setSfxMode(true);
         driver.addSequencer(sfxSeq, true);

@@ -611,7 +611,7 @@ class TestTraceCaptureUnifiedAudio {
     private HeadlessSmpsAudioBackend headlessBackend() {
         return new HeadlessSmpsAudioBackend(
                 SonicConfigurationService.getInstance(),
-                PerformanceProfiler.getInstance());
+                PerformanceProfiler.getInstance(), audio);
     }
 
     private LiveCaptureAudioHandle attachedLease() throws AssertionError {

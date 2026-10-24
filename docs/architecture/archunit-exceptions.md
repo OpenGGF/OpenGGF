@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 121 records | Hold at 121 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 119 records | Hold at 119 at qualified contract boundaries | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -276,7 +276,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 121
+- `low_level_layers_do_not_depend_on_runtime_layers`: 119
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -685,7 +685,7 @@ permissions and matching cycle ignores are removed, leaving151 directed pairs.
 The parent will verify the actual compiled graph and exact published counts;
 component results are not a claim of completed joint delivery.
 
-The current source composition has121 low-level records. Native SMPS readers
+The preceding native-reader composition had121 low-level records. Native SMPS readers
 retain their own identical caller-supplied ROM reference; the generic cache/hex
 dispatch base is ROM-free. Its two obsolete records disappear without replacement
 or permission removal. All three public native `(Rom)` constructors and supported
@@ -713,7 +713,7 @@ exactly four behavior controls with no measurement or external-WAV cases.
 
 ## Current continuation status
 
-The composed candidate has121 low-level records,151 unique permitted package
+The standalone restore-destination slice has119 low-level records,151 unique permitted package
 pairs, and6 ambient setup methods across5 files. GameLoop's existing per-test
 owner closes the last qualified ordinary setup after preservation controls for
 base preferences and incoming world/data identities. The six remaining methods
@@ -732,3 +732,33 @@ tests, one matched-baseline GLFW failure and93 inspected skips; this is not a
 green or complete smoke result. Exact commands, source states and limits are
 in the continuation plan. Remaining allowances have qualified retention reasons,
 not an assertion that every native lifecycle or external caller is certified.
+
+
+### Explicit SMPS restore-request destination lifetime (2026-10-24)
+
+The user explicitly changed the lifetime contract after the qualified retention
+record above. Each backend now requires one nonnull `MusicRestoreSink` for its
+usable lifetime; production passes its exact receiving `AudioManager`. Root A
+reconfiguration to B does not transfer a retained backend, including music,
+mixed SFX and standalone SFX constructed later. Installing on another manager
+requires a replacement backend. This is a caller composition contract under the
+existing owner-thread/retirement rules, not concurrent-root support or a new
+runtime enforcement mechanism. The sink owns restore requests, not every mutation.
+
+Exactly the two obsolete constructor-to-`GameServices.audio()` records are
+removed from `40afa018-d450-4b84-8cb9-d539d75d8062`:121 -> 119, zero replacements;
+all other bytes/order, stores, 151 package permissions and API/descriptor pins
+are preserved. All 104 convenience calls migrate (four production, 100 fixtures
+in 18 files). Six production backend compositions,21 existing test compositions,
+three test subclasses/twelve instantiations and the standalone native-tool
+composition pass their existing receiving/configured manager. Existing explicit
+sequencer sinks and isolated raw-tool no-ops retain their roles.
+
+SoundTest captures the configured-root sink when composing its window and keeps
+it for later WAV export. The reference generator captures its CLI owner and
+requires it in its constructor. Normal snapshots retain the actual sink and
+live-reference reconstruction preserves it; explicit resolvers may choose another
+sink. No blanket identity assertion changes that resolver contract. The legacy
+singleton config binder and deferred presentation natural-restore callback stay
+unchanged. Focused evidence and limits are appended to the existing
+[continuation artifact](plans/2026-10-24-architecture-continuation.md).

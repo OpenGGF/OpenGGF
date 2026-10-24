@@ -445,7 +445,7 @@ class TestAudioDiagnosticObservers {
         audio.setAudioProfile(backendProfile);
         audio.setRom(mock(Rom.class));
         HeadlessSmpsAudioBackend backend = new HeadlessSmpsAudioBackend(
-                SonicConfigurationService.getInstance(), null);
+                SonicConfigurationService.getInstance(), null, audio);
         backend.setAdmissionObserver(decision -> {
             admitted.add(decision.result().resolvedSoundId());
             backendDecisions.add(decision.result());

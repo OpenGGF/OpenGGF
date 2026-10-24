@@ -105,7 +105,7 @@ class TestAudioHistoryAllocationMeasurement {
             AudioBenchmarkMemoryProbe probe) throws Exception {
         try {
             audio.setBackend(new HeadlessSmpsAudioBackend(
-                    config, PerformanceProfiler.getInstance()));
+                    config, PerformanceProfiler.getInstance(), audio));
 
             AudioBenchmarkMemoryProbe.RunResult measurement =
                     probe.measureTimedRun(() -> audio.setRewindHistoryArmed(true));
@@ -125,7 +125,7 @@ class TestAudioHistoryAllocationMeasurement {
             AudioBenchmarkMemoryProbe probe) throws Exception {
         try {
             audio.setBackend(new HeadlessSmpsAudioBackend(
-                    config, PerformanceProfiler.getInstance()));
+                    config, PerformanceProfiler.getInstance(), audio));
             audio.setRewindHistoryArmed(true);
             assertTrue(audio.releaseStateForTesting().producer().historyArmed());
             PcmHistoryRing before = producerHistory(audio);

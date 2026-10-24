@@ -1,6 +1,7 @@
 package com.openggf.tests;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 
+import com.openggf.game.GameServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,8 +150,8 @@ public class TestSmpsDriver {
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
         // Create two sequencers (SFX)
-        SmpsSequencer sfx1 = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
-        SmpsSequencer sfx2 = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfx1 = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfx2 = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
 
         driver.addSequencer(sfx1, true);
         driver.addSequencer(sfx2, true);
@@ -181,11 +182,11 @@ public class TestSmpsDriver {
         AbstractSmpsData dummyData = new Sonic2SmpsData(new byte[100]);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
-        SmpsSequencer special = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer special = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         special.setSfxPriority(0x80); // S1-style special/non-storing
         special.setSpecialSfx(true);
 
-        SmpsSequencer normal = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer normal = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         normal.setSfxPriority(0x70);
         normal.setSpecialSfx(false);
 
@@ -205,11 +206,11 @@ public class TestSmpsDriver {
         AbstractSmpsData dummyData = new Sonic2SmpsData(new byte[100]);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
-        SmpsSequencer normal = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer normal = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         normal.setSfxPriority(0x70);
         normal.setSpecialSfx(false);
 
-        SmpsSequencer special = new SmpsSequencer(dummyData, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer special = new SmpsSequencer(dummyData, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         special.setSfxPriority(0x80); // Higher numeric priority, but special class
         special.setSpecialSfx(true);
 
@@ -233,11 +234,11 @@ public class TestSmpsDriver {
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
         // SFX-A uses PSG channel 2 (PSG3)
-        SmpsSequencer sfxA = new SmpsSequencer(dummyDataA, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfxA = new SmpsSequencer(dummyDataA, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         sfxA.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
 
         // SFX-B also uses PSG channel 2 (PSG3)
-        SmpsSequencer sfxB = new SmpsSequencer(dummyDataB, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfxB = new SmpsSequencer(dummyDataB, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         sfxB.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
 
         // Add SFX-A, give it the PSG2 lock via a write
@@ -270,14 +271,14 @@ public class TestSmpsDriver {
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
 
         // Old SFX on PSG3 (channel 2)
-        SmpsSequencer sfxOld = new SmpsSequencer(dummyDataA, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfxOld = new SmpsSequencer(dummyDataA, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         sfxOld.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
         driver.addSequencer(sfxOld, true);
         // Give it the PSG2 lock
         driver.writePsg(sfxOld, 0x80 | (2 << 5) | 0x00);
 
         // New SFX also on PSG3 (channel 2) - should trigger noise silencing
-        SmpsSequencer sfxNew = new SmpsSequencer(dummyDataB, dummyDac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        SmpsSequencer sfxNew = new SmpsSequencer(dummyDataB, dummyDac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         sfxNew.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
 
         driver.rawPsgWrites.clear();
@@ -294,7 +295,7 @@ public class TestSmpsDriver {
         dummyData.setId(0xCD);
         DacData dummyDac = new DacData(new HashMap<>(), new HashMap<>());
         SmpsSequencer sfx = new SmpsSequencer(
-                dummyData, dummyDac, driver,
+                dummyData, dummyDac, driver, GameServices.audio(),
                 Sonic2SmpsSequencerConfig.CONFIG);
         sfx.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
 
@@ -313,14 +314,14 @@ public class TestSmpsDriver {
         AbstractSmpsData ownerData = new Sonic2SmpsData(new byte[100]);
         ownerData.setId(0xCD);
         SmpsSequencer owner = new SmpsSequencer(
-                ownerData, dac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+                ownerData, dac, driver, GameServices.audio(), Sonic2SmpsSequencerConfig.CONFIG);
         owner.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
         driver.addSequencer(owner, true);
         driver.writePsg(owner, 0xC0);
         physical.psgWrites.clear();
 
         SmpsSequencer music = new SmpsSequencer(
-                new Sonic2SmpsData(new byte[100]), dac, driver,
+                new Sonic2SmpsData(new byte[100]), dac, driver, GameServices.audio(),
                 Sonic2SmpsSequencerConfig.CONFIG);
         driver.writePsg(music, 0xDF);
         assertTrue(physical.psgWrites.isEmpty(),
@@ -350,7 +351,7 @@ public class TestSmpsDriver {
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
 
         Sonic3kSmpsData musicData = new Sonic3kSmpsData(new byte[64], 0);
-        SmpsSequencer music = new SmpsSequencer(musicData, dac, driver,
+        SmpsSequencer music = new SmpsSequencer(musicData, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track musicTrack = createTrack(
                 SmpsSequencer.TrackType.PSG, 2);
@@ -364,7 +365,7 @@ public class TestSmpsDriver {
 
         Sonic3kSmpsData sfxData = new Sonic3kSmpsData(new byte[64], 0);
         sfxData.setId(0x59);
-        SmpsSequencer sfx = new SmpsSequencer(sfxData, dac, driver,
+        SmpsSequencer sfx = new SmpsSequencer(sfxData, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track stopped = createTrack(
                 SmpsSequencer.TrackType.PSG, 2);
@@ -399,7 +400,7 @@ public class TestSmpsDriver {
         SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
         SmpsSequencer music = new SmpsSequencer(
-                new Sonic3kSmpsData(new byte[64], 0), dac, driver,
+                new Sonic3kSmpsData(new byte[64], 0), dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track track = createTrack(SmpsSequencer.TrackType.PSG, 2);
         track.active = false;
@@ -445,7 +446,7 @@ public class TestSmpsDriver {
         SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
         SmpsSequencer music = new SmpsSequencer(
                 new Sonic3kSmpsData(new byte[64], 0),
-                new DacData(new HashMap<>(), new HashMap<>()), driver,
+                new DacData(new HashMap<>(), new HashMap<>()), driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track track = createTrack(SmpsSequencer.TrackType.PSG, 2);
         track.active = true;
@@ -467,7 +468,7 @@ public class TestSmpsDriver {
         SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
         SmpsSequencer music = new SmpsSequencer(
-                new Sonic3kSmpsData(new byte[64], 0), dac, driver,
+                new Sonic3kSmpsData(new byte[64], 0), dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track covered = createTrack(SmpsSequencer.TrackType.PSG, 2);
         covered.noiseMode = true;
@@ -478,7 +479,7 @@ public class TestSmpsDriver {
 
         Sonic3kSmpsData sfxData = new Sonic3kSmpsData(new byte[64], 0);
         sfxData.setId(0x59);
-        SmpsSequencer sfx = new SmpsSequencer(sfxData, dac, driver,
+        SmpsSequencer sfx = new SmpsSequencer(sfxData, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track noise = createTrack(SmpsSequencer.TrackType.PSG, 2);
         noise.noiseMode = true;
@@ -503,7 +504,7 @@ public class TestSmpsDriver {
         SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
         SmpsSequencer music = new SmpsSequencer(
-                new Sonic3kSmpsData(new byte[64], 0), dac, driver,
+                new Sonic3kSmpsData(new byte[64], 0), dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track covered = createTrack(SmpsSequencer.TrackType.PSG, 2);
         covered.noiseMode = true;
@@ -514,7 +515,7 @@ public class TestSmpsDriver {
 
         Sonic3kSmpsData oldData = new Sonic3kSmpsData(new byte[64], 0);
         oldData.setId(0x59);
-        SmpsSequencer old = new SmpsSequencer(oldData, dac, driver,
+        SmpsSequencer old = new SmpsSequencer(oldData, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track stopped = createTrack(SmpsSequencer.TrackType.PSG, 2);
         stopped.active = false;
@@ -525,7 +526,7 @@ public class TestSmpsDriver {
 
         Sonic3kSmpsData otherData = new Sonic3kSmpsData(new byte[64], 0);
         otherData.setId(0xBA);
-        SmpsSequencer other = new SmpsSequencer(otherData, dac, driver,
+        SmpsSequencer other = new SmpsSequencer(otherData, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         driver.addSequencer(other, true);
         driver.writePsg(other, 0xE7);
@@ -554,7 +555,7 @@ public class TestSmpsDriver {
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
         Sonic3kSmpsData data = new Sonic3kSmpsData(new byte[64], 0);
         data.setId(0x59);
-        SmpsSequencer sfx = new SmpsSequencer(data, dac, driver,
+        SmpsSequencer sfx = new SmpsSequencer(data, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track endingTone = createTrack(
                 SmpsSequencer.TrackType.PSG, 2);
@@ -585,7 +586,7 @@ public class TestSmpsDriver {
         DacData dac = new DacData(new HashMap<>(), new HashMap<>());
         Sonic3kSmpsData data = new Sonic3kSmpsData(new byte[64], 0);
         data.setId(0x59);
-        SmpsSequencer sfx = new SmpsSequencer(data, dac, driver,
+        SmpsSequencer sfx = new SmpsSequencer(data, dac, driver, GameServices.audio(),
                 Sonic3kSmpsSequencerConfig.CONFIG);
         SmpsSequencer.Track ending = createTrack(SmpsSequencer.TrackType.PSG, 2);
         SmpsSequencer.Track duplicate = createTrack(SmpsSequencer.TrackType.PSG, 2);

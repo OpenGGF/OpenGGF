@@ -217,7 +217,7 @@ public final class NativeGameplayCheck {
 
     private static void installAudio(ModTestKit kit,Path repository,ModManifest manifest,String game,Path output) throws Exception {
         var audio=GameServices.audio();
-        audio.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(GameServices.configuration(),EngineServices.current().profiler()));
+        audio.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(GameServices.configuration(),EngineServices.current().profiler(), audio));
         try(ZipFile zip=new ZipFile(kit.catalog().effective().orderedEnabled().getFirst().jarPath().toFile())) {
             var entry=zip.getEntry("audio/audio-manifest.yaml");
             if(entry==null) return;
