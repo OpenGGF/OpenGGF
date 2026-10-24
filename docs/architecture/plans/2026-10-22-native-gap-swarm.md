@@ -4782,3 +4782,121 @@ original epoch. Two ordinary requests are exhausted; no guard/broad/manualCI,
 Main/PR push, native/passive or automatic retry follows. Consumed owned reports,
 logs and the prepared commit message are removed after readback; compiled
 outputs and useful local source/worktree are retained.
+
+
+### PR223 direct-scene catalogue fixtures and uncovered Bridge/Town cases: E/F — 2026-10-24
+
+Parent `3b20dd624081710cd06c4e50a11517d2495cae40` was received once by clean
+fast-forward before this fresh scope. Only TestStarpostTownSceneBridge and
+TestStarpostValleyScene change. After each original primary SharedLevel load,
+conditional nonnull S1 discovery binds that supplied image before the existing
+harness build. There is no empty-map bind or new early assertion/assumption.
+Each class has one fixture-owned catalogue field; the unchanged original level
+disposal runs inside a narrow finally that closes only the new catalogue last.
+Original harness resource scopes, bodies, four Valley assumptions (including
+60 original year-test ticks before its assumption), storage/owner negatives,
+input, timing and oracles remain unchanged. No helper, global harness, runtime,
+configuration-file, cache, manager/ROM-close or resource fallback change is made.
+No additional reapply is required by these direct fixture bodies.
+
+The two accepted requests use the current Main absolute queue wrapper from the
+owned PR worktree with `--normal -Dmse=off` and explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, reviewed Java25/Lua54/null-audio/EGL
+launch environment, unset ambient JVM/display overrides and the original three
+verified absolute stock ROM properties. No tool preflight, guard, repeat,
+resource override or wall-time timeout was added. Queue waits are reported
+separately from Maven execution; their sums are not whole-delivery elapsed time.
+
+The core executable/source frame (sorted tracked relative path + NUL + full
+bytes + NUL over src/main, src/test, pom.xml, .mvn and tools/testing) stayed
+`f44a5bb83a9de62f506447d67e7a0c791f24accbc0270e06d04567aaff14410e`,
+11,519 paths / 840,594,511 bytes. The separately frozen example-input frame
+under examples/starpost-valley stayed
+`b39c5200bf1a97bd573e0cadeffca3ded4a0f70a6f12656cce8ca6c73cb7de0a`,
+303 tracked files / 1,879,362 bytes. Its optional generate_resources.py hook is
+absent; the harness's original optional behavior is unchanged. Both frames,
+the two Java pins, protected helper/unit, unchanged Bridge/Town sources and
+complete pre-result Plan match before and after each request. Only this factual
+append follows; the Plan is outside the core frame.
+
+E, session54069, EXIT0: **6 distinct / 0F / 0E / 0S**, two XMLs. Exact selection:
+
+```text
+com.openggf.mods.code.TestStarpostTownSceneBridge
+com.openggf.mods.code.TestStarpostValleyScene
+```
+
+The actual Town method is
+doorsRetainTheLiveGameAndAcceptedFestivalStartsWithoutAnotherQuestion (1).
+Actual Valley methods are wateringCanWatersTheFacingTileInsteadOfHarvestingUnderfoot,
+wateringAtFieldEdgesOrInvalidTargetsNeverFallsBackUnderfoot,
+plantingStillUsesTheTileUnderfootAndThePondStillRefillsTheCan,
+refusedRealStoragePublishesTheOriginalBedtimeDuringOwnerExit, and
+aYearOfScreensOpensPlaysAndDrawsWithoutFaults (5). All four original assumptions
+execute without a skip in this supplied-ROM environment; absence behavior is not
+newly exercised. Queue wait28s, Maven01:30; suite times Town2.682s/Valley5.304s.
+All identities, two property sets,12 recursive streams (13,612B), both text
+reports and full command log were read.
+
+E retains one expected XML FileSystemException (`Is a directory`) from
+FileSceneStorage.writeBounded:119 in the original refusedRealStorage control.
+That test deliberately obstructs its save path, then retains recovery, accepted
+bytes, explicit host close and closed-owner checks. Mirrored command-log output
+is not a second fault. No unexpected caught fault, closed-ROM/SFX/DAC loader
+fault or dump was observed. FAST/NONE and compiler deprecations also remain.
+
+After E's zero-unexpected-issue terminal readback/report, the unchanged reserved
+F ran as session24820, EXIT0: **21 distinct / 0F / 0E / 0S**, two XMLs. Its exact
+method-only inventory was:
+
+```text
+com.openggf.TestModSceneActBridge#nativeStartOverrideTeamRingsAudioAndRewindBoundariesRoundTrip
+com.openggf.TestModSceneActBridge#sceneReturnRetiresOwnedLiveHistoryWithoutAReporterOverride
+com.openggf.TestModSceneActBridge#signedAndUnsignedNativeCentreWordsSurviveLaunch
+com.openggf.TestModSceneActBridge#pendingExitRestoresWithRewindBeforeConsumption
+com.openggf.TestModSceneActBridge#holdEscapeClosesSuspendedSceneWithoutResume
+com.openggf.TestModSceneActBridge#creatorObjectFaultInActSafelyClosesSuspendedScene
+com.openggf.TestModSceneActBridge#starpostFarmActDoorMenuActGateFarmUsesSameSession
+com.openggf.TestModSceneActBridge#realTerrainRoundTripWalksAndRewinds
+com.openggf.TestModSceneActBridge#realTownSchedulesWalkSlopesAndAllDoorsUseDecodedFloor
+com.openggf.TestModSceneActBridge#realValleySeasonClaimsFollowCalendarAndRewindWithoutRecolouringHud
+com.openggf.mods.code.TestStarpostTownAct#villagerWalksScheduleOnActFloor
+com.openggf.mods.code.TestStarpostTownAct#padActionOpensPicturesFreezesPlayerAndGiftingUsesExistingInventory
+com.openggf.mods.code.TestStarpostTownAct#collectsWalletMomentumAndNativeHealthRingOnce
+com.openggf.mods.code.TestStarpostTownAct#fullRegistryRewindRestoresTownObjectsRewardsAndForwardReplay
+com.openggf.mods.code.TestStarpostTownAct#romTownPresentationQueuesVisiblePicturesWithoutMutatingRules
+```
+
+The actual command joins methods per class with Surefire's `+` selector and
+joins the two class groups with a comma. Nine ordinary Bridge identities plus
+terrain[1..5] give14; four ordinary Town identities plus villager[1..3] give7.
+The previously executed B controlled-Bridge and Town-doorway methods are omitted,
+not rerun or silently counted here. Queue wait17s, Maven45.313s; suite times
+Bridge15.794s/Town1.637s. All21 identities, two property sets,36 recursive streams
+(21,138B), both text reports and full command log were read. The original gameplay,
+rewind, history, scene ownership, input and CPU presentation assertions execute.
+
+F retains one expected XML IllegalStateException (`act fault`) for verified
+owner `failing` under creatorObjectFaultInActSafelyClosesSuspendedScene, originating
+at its fixture update:252. Its fault-boundary/closure assertions remain intact;
+the mirrored command log is not another fault. No unexpected caught fault,
+closed-ROM/SFX/DAC loader fault or dump was observed. FAST/NONE and compiler
+deprecations remain. Every suite property set matches Java25.0.5.0.2, owned
+cwd/classpath, explicit EGL, exact selectors and all original ROM paths.
+
+E and F are separate bounded invocations, not an aggregate pass or blanket
+closure for97 scene-family cases. Supplied-path binding does not prove native
+ROM behavior or every optional-library materialization. Existing warm secondary
+cache entries precede catalogue lookup; no image-identity or cache-retirement
+claim follows. The complete f340 epoch remains 41,023 ordinary tests /121F /68E
+/108 skips, with733 separate fresh guards passing. No arithmetic changes that
+original189-failed-identity readback or certifies the current PR as green.
+Native/campaign/disputed-route and broader delivery limits stay open.
+
+Both authorized requests are exhausted. All14 owned E/F report/log/native-extract
+files and the empty invocation namespace were consumed after readback; compiled
+outputs and useful source/worktree stay. No raw archive or pass cache is created.
+There are no live jobs/children, no executable edit or validation after these
+results, and original07:00Z expiry is unchanged. Root authorized only this factual
+append and one normal-hook local two-test-file leaf for an ancestry receipt.
+No PR/Main push, draft/manual CI, broad run, native or passive observation follows.
