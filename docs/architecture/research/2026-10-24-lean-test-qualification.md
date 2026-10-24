@@ -3,6 +3,8 @@
 Base: `0b2c3c2a9127b080137b231ba7e7cfd9e3b1e164` (`develop`).
 Task: qualify a bounded set of additional tests for the existing 4 GiB / 4-core
 queue lane, following the [test value and cost audit](../audits/testing/2026-10-23-test-value-cost.md).
+The first pass is recorded below; the subsequent dashboard and qualification
+pass is recorded at the end of this document.
 
 ## Decision and scope
 
@@ -196,3 +198,182 @@ The final source/evidence review found no substantive blocker. Before integratio
 new document links resolved and `git diff --check` passed. All executable inputs
 for the final automatic check were the pinned base plus the registry additions
 and advisory revision change recorded here; later edits completed prose only.
+
+## Second pass: dashboard visibility and further qualification
+
+Base: `d3deeb692bb61745148361266796effa1ce9a3c0`, the delivered first pass.
+The user requested an updated dashboard and another bounded pass, then asked
+for a tooling notice to other active agents.
+
+The live dashboard had loaded revision 2 while the main workspace contained
+revision 3. The user stopped its owning thread during this work. The updated
+view reports its own loaded revision, configured standard budget, lean budget,
+registry size and 50-class command limit. Waiting rows now show reported RAM/CPU
+reservations, preserving custom fractional CPU values and unknown legacy data.
+Jobs advertising a newer revision produce a dashboard-restart notice. None of
+these display fields changes queue admission or authorizes a job restart.
+
+The tooling notice was delivered to the three other active OpenGGF lead threads,
+asking them to use the current main-workspace wrapper by absolute path for future
+commands and forward the notice to active workers. Existing queued/running jobs
+retain their requests, selections and loaded code.
+
+The second shortlist contains 20 previously unregistered classes, with 183
+JUnit declaration sites. The candidate reviewer stopped its final artifact check
+when lead-owned documentation changed. The lead reconciled those changes,
+verified that Java/POM/fixtures and eligibility rules still matched the base,
+and checked all selector shapes, declaration counts, JSON/Markdown consistency
+and evidence paths/line bounds. This did not require source or guard exceptions.
+
+| Candidate | Declarations | Bounded fixture |
+|---|---:|---|
+| `com.openggf.net.protocol.TestGhostPackets` | 14 | 500 seeded samples of 1–30 seven-byte frames (at most 210 frame bytes); at most 19 aggregate entries; largest explicit hostile array is 4,097 bytes. Helpers create arrays in memory only. |
+| `com.openggf.net.host.jdk.TestWebSocketFrames` | 4 | Four encoding payload lengths: 125, 126, 65,535 and 65,536 bytes. Reader uses an 11-byte in-memory masked frame with caps 16 and 4; close reason is 200 copies of é. No server or socket. |
+| `com.openggf.game.rewind.TestRewindRegistry` | 16 | Per case, at most two active scalar adapters and one callback; tiny maps, integer snapshots and event lists. Anonymous helpers implement interfaces and carry no inherited JUnit fixtures. Default registry has no profiler. |
+| `com.openggf.data.compression.TestKosinskiWindowBoundaries` | 2 | Two streams; fixed 10,000-byte builder; expected outputs 258 and 8,195 bytes. Resumable steps process 31 descriptors. Decoder starts with 4 KiB output, grows to 16 KiB for the larger case, and has a 1 MiB production output ceiling. |
+| `com.openggf.data.compression.TestResumableKosinskiDecoder` | 6 | Canonical input is 8 bytes producing ABC; largest input is a 23-byte refill vector producing 16 bytes. Completion loops assert fewer than 4,096 steps. Decoder/snapshot copies start with 4 KiB output buffers. |
+| `com.openggf.mods.state.TestModSaveSlot` | 18 | Mostly two-entry in-memory maps and v1/v2 integer text. Failure matrix is two destinations × two failure modes. Real temporary-file cases include a 1,048,577-byte oversized backup/text input and a two-byte malformed UTF-8 input; no workers. |
+| `com.openggf.net.client.TestFrameAssembler` | 6 | Maximum explicit text is 65,537 ASCII characters; binary fragment is 2,049 bytes against a 4,096-byte cap. Custom-cap cases use 4/8 bytes. Exactly one nine-byte direct ByteBuffer branch, with no native library/device or socket. |
+| `com.openggf.net.hub.TestGhostStreamValidator` | 13 | Injected integer clock; one or two validators per case; packets carry at most three seven-byte frames. Longest bounded loop permits 200 batches, stops on first rate violation; ordinary stream is 20 batches. Production retains one previous frame and a streaming SHA-256 digest. |
+| `com.openggf.net.hub.TestRelevanceClassifier` | 8 | Seeded 120 rounds × at most 64 slots. Each query sorts at most 63 peers; retained history is at most 64 sets of eight peers. Directed cases use at most 13 players. Production scratch arrays each contain eight ints. |
+| `com.openggf.game.rewind.TestRewindController` | 21 | FakeInputSource stores only a count (maximum 300), synthesizing tiny input records on demand. Largest history scenario records 180 scalar frames, rewinds 130 positions and runs short branch/boundary loops; intervals at most 60. Fade case advances 40 ticks and limits backward iterations to 100. |
+| `com.openggf.game.rewind.schema.TestRewindStateBuffer` | 6 | Largest write is 28 primitive bytes in the default 64-byte backing array. Other arrays are two or four bytes. No managers, reflection schemas, files or property expansion. |
+| `com.openggf.game.rewind.TestCompositeSnapshotOwnership` | 3 | One- or two-entry maps and a single-element Object array; standalone layout metadata only. Source and exposed view mutations are the discriminating controls. |
+| `com.openggf.game.TestGameRngGoldenSequence` | 6 | One GameRng per vector; scalar long/int operations, one generation step per arithmetic case, no arrays or game boot. |
+| `com.openggf.sprites.playable.TestObjectControlState` | 10 | One TestablePlayableSprite per case, two in the preserve-CPU case. Shared helper overrides drawing/sensor creation; superclass allocates six fixed 64-entry history arrays and a controller. No frames, level load or art loading. |
+| `com.openggf.physics.TestObjectTerrainUtils` | 9 | At most one LevelManager mock, two SolidTiles and two chunk descriptors per case; each tile holds two 16-byte arrays. A handful of stubs and one reflected production probe; no level boot or simulation loop. |
+| `com.openggf.mods.code.TestModObjectKeyRegistry` | 8 | At most two factories/owner patches, tiny registration maps, one interface proxy and record stub objects. Preview registration stores one BakedSheetRef path only. In-memory asset root has no assets; empty ROM-art/zone maps prevent materialization. |
+| `com.openggf.net.protocol.TestPhase3Protocol` | 6 | 19 small control-message samples; roster encodes 1,283 bytes. Relay rejection input is 4,094 bytes. Tunneled string contains 65,336 quote characters, with escaped JSON bounded by the 132,096-byte master cap. No sockets or workers. |
+| `com.openggf.io.TestModAssetRoot` | 25 | Temporary trees/JARs have at most three entries; payloads are generally 0–5 bytes, with one 8,192-byte replacement vector. Lowered caps exercise failure boundaries without allocating production maxima. One case submits exactly three three-byte reads to three workers; helpers stream through 8 KiB buffers. |
+| `com.openggf.io.TestModAssetRootConcurrentBudget` | 1 | Exactly three fixed-pool tasks, per-asset cap three bytes, total validation cap six bytes; the failing InputStream emits two-byte chunks. Production read buffer is 8 KiB. Latch/future waits are five seconds plus one 250 ms coordination wait; executor/root are try-with-resources. |
+| `com.openggf.physics.TestFbzCalcRoomInFrontBackgroundCollision` | 1 | Manually invokes only the other fixture's setUp/tearDown: two mocks, one 16-byte full-height tile array, one minimal playable sprite and one explicit background state. One reflected scan, no FBZ route, ROM load, rendering or inherited test execution. |
+
+Deferred: `TestProtocolFuzzing` (bulk parser/exception churn), `TestModStorage`
+(filesystem churn and creator-loader lifetime), and `TestSegmentCache`
+(allocation measurement within the class). `TestGolfTransport` remains deferred.
+These are scope/value decisions, not observed lean OOMs.
+
+The recurring procedure is now `tools/testing/profile_small_tests.py`, using
+existing queue/activity/cleanup helpers. Lead review added the Maven-added
+`racing`/`examples` roots to its source fingerprint, cleanup of descendants after
+an already-exited Maven parent, and rejection of unrequested test classes. Its
+21 focused Python controls passed after the independent review fixes below. Unlike the first-pass diagnostics, it uses no
+GC flags or JVM instrumentation. This pass compares exact outcomes and memory
+headroom; the cold-lean/warm-normal timings are not a matched speed comparison.
+
+The normal and lean runs each completed 183 cases across all 20 classes, with
+zero failures, errors or skips. Their full `(class, name, status, count)`
+multisets were identical. Both ran at `d3deeb692bb6` with unchanged input hash
+`352cd0f4b435bbf0cc12323602c8fa2ec4ee3279cf84f8720a35d4bf02a96211`.
+The lead kept the included source/tooling inputs frozen across both runs.
+
+| Diagnostic | Compilation | Queue wait | Build drain | Execution | Sampled peak RSS + swap | Peak swap | Samples |
+|---|---|---:|---:|---:|---:|---:|---:|
+| lean | cold | 449.75s | 0.002s | 78.32s | 1.753 GiB | 0.000 MiB | 708 |
+| normal | warm | 665.48s | 0.218s | 27.01s | 2.995 GiB | 0.000 MiB | 243 |
+
+Own-worktree acquisition took under 2 ms in each run. The sampled lean JVM
+arguments were `-Xmx1g` for both Maven and Surefire; normal Maven had no explicit
+`-Xmx`, and normal Surefire had `-Xmx3g`. These cold/warm results establish outcome
+equivalence and observed headroom, not a matched speed or memory reduction.
+
+Independent profiler review found two evidence gaps after these runs: the
+queue's best-effort process enumerator could suppress observation errors, and
+fingerprinting only after admission could misidentify tooling edited during a
+wait. The delivered diagnostic instead walks owned Linux task children with
+explicit read-error handling and rejects input drift from a pre-wait hash before
+cold cleanup/Maven execution. New controls cover failed inventory/owned-stat
+reads, worker-thread children, exited/reused PIDs and edits during admission.
+The earlier measurements have the former sampler's error-detection limitation;
+the final cold automatic-lane check below uses the hardened sampler, includes all
+20 candidates, and is the stronger admission-headroom evidence.
+
+While qualification was running, develop advanced to `85d32cda4fe3`, including
+architecture fixes and the dashboard redesign (`df1476c99`). The task tree
+fast-forwarded after the paired runs. The incoming layout already rendered
+per-job reservations and the new optional policy fields, so it replaced this
+pass's initial HTML changes. Only fractional standard-memory display needed a
+local correction. Backend fields and advisory revision warnings remain additive.
+The final automatic run is against the reconciled tree, with no task-authored
+Java, POM, fixture, scheduling-function or selection-policy edits.
+
+All 20 candidates are accepted, bringing the registry from 70 to **90 classes**
+(35 additions across both passes). The final ordinary-wrapper command selected
+all 20 new classes plus the lexicographically first 30 pre-existing registry
+classes. It passed **379 cases in 50 classes, zero failures/errors/skips**. The
+new candidates' complete 183-case multiset still exactly matches both diagnostic
+lanes after upstream reconciliation.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B \
+  "-Dtest=$automatic_classes" \
+  "-Dopenggf.surefire.reports=$owned_temporary_directory/reports" test
+```
+
+The task-owned harness cleared only generated class/compiler outputs while
+holding its worktree lease, then released that lease for the ordinary wrapper's
+own ownership/admission. It reused the delivered strict sampler, retained a
+ten-minute post-admission watchdog, and removed temporary XML/logs after outcome
+extraction. There was no explicit `--lean`, custom JVM flag or performance
+isolation in this final shared-lane check. The wrapper automatically chose
+resource-aware admission at **4 GiB / 4 cores**; both observed JVMs used `-Xmx1g`.
+It overlapped another admitted job.
+
+At reconciled base `85d32cda4fe3` plus this task's executable edits, input hash
+`43978e98b49bd14d5fa819d43bedec89d026bd90c255a2bac9ac3b0f7c1262f5` matched before and after.
+Queue wait was 234.07s; post-admission wall time was
+85.21s (including final observation/summary cleanup),
+and total command observation was 319.28s. Across 3,170 samples,
+peak simultaneous RSS plus swap was **2.092 GiB**,
+peak RSS 2.080 GiB and peak swap
+14.293 MiB. The swap belonged to the Python wrapper; neither
+observed JVM showed swap. Separate peaks are not additive. There were no sampler
+errors or missing JVM roles. This is sampled headroom for the selected cold run,
+not a hard memory bound or a general reservation reduction for heavy jobs.
+
+
+Dashboard validation: 30 focused Python tests passed before reconciliation. The
+reconciled page also passed headless browser fixtures
+at 1280 px and 390 px checked standard/lean/custom/unknown reservations, dynamic
+registry counts, filtering, empty-row column span and absence of page overflow.
+The collaborative browser snapshot operation twice timed out after 15 seconds;
+headless rendering and direct API inspection supplied the UI checks instead.
+The reconciled fixtures additionally checked fractional standard memory and
+missing optional API fields; their console assertions passed at both widths.
+
+Validation commands (from `ai-lean-dashboard-pass2`):
+
+```bash
+# The exact diagnostic selector is the sorted set of all 20 table FQCNs above.
+python3 tools/testing/profile_small_tests.py --lane lean --test "$candidate_classes" --cold-compile --max-minutes 10 --output target/lean-pass2-cold.json
+python3 tools/testing/profile_small_tests.py --lane normal --test "$candidate_classes" --max-minutes 10 --output target/lean-pass2-normal.json
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/testing -p test_run_category_small_profile.py -v
+PYTHONDONTWRITEBYTECODE=1 LUA_BIN=/usr/bin/lua5.4 python3 -m unittest discover -v -s tools/testing -p 'test_run_categor*.py'
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d3deeb692bb61745148361266796effa1ce9a3c0 --preflight
+python3 tools/testing/run_categories.py --base d3deeb692bb61745148361266796effa1ce9a3c0
+```
+
+The complete Python safety selection passed **274 tests, zero skips**, including
+30 dashboard controls and 21 profiler controls. Preflight verified Java 25,
+Lua 5.4 and PowerShell in the actual launch environment. The reconciled
+change-based plan selected 3,661 smoke candidate classes plus guards. The lead
+used proportionate focused validation for this task's registry/diagnostic/display
+changes: the real automatic command, paired outcomes, Python safety suite and UI
+checks exercise their consumers and failure modes directly. No broad smoke or
+release-only full-suite result is claimed; incoming architecture changes retain
+their separate delivery evidence.
+
+Static checks confirm all 90 registered classes satisfy the existing source
+checks, 51-class requests remain ineligible, eligibility code is unchanged, and
+`maven_schedule.py` differs only in the advisory revision literal (3 to 4).
+Normal reservations stay 7 GiB / 8 cores, lean stays 4 GiB / 4 cores, the
+50-class limit and source/invocation guards stay unchanged. New local links,
+instruction mirrors and `git diff --check` passed.
+
+The previously restarted dashboard instance at port 8766 had loaded revision 3
+without the new registry metadata. Deployment restarts only that dashboard from
+integrated main and checks revision 4, 90 registered classes, the 4 GiB / 4-core
+lean reservation, the unchanged 50-class limit and the served HTML. Existing
+queued/running Maven requests keep their original processes and loaded tooling.
+Consumed diagnostic reports, raw outputs and task-owned transient harnesses are
+removed; candidate and review conclusions remain in this durable research record.
