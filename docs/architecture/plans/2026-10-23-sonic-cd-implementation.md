@@ -2716,3 +2716,34 @@ plane VRAM/palette publication, background deformation, mixed sprite/plane
 priority, live PLC, driver audio, contact consequences and complete-game parity
 remain open. Generic mode-copy allocation impact is unmeasured. Existing earlier
 smoke attribution remains historical; no unrelated donor/platform code was fixed.
+
+
+### Lazy enemy-contact asset bindings, 24 October 2026
+
+Added six individually lazy USA tables for EnemyPoints and the explosion,
+points and flower visuals. Points is an unscripted counted mapping. A separate
+ContactArtBank binds the three cold PLC1 sources:70 explosion tiles,5 points
+and39 flower tiles. The checkpoint tile gap remains unbound. Opening load still
+reads its original nine views/two sources; neither existing bank is expanded.
+No contact response, object lifetime or runtime residency is inferred from art.
+
+Finite source/reader extents are explosions1256/1256, points100/101 and
+flower646/645. Points uses the actual adjacent80 byte at the FlowerCapsule
+header, not padding. Init base words8680/06C6/A6D7 record their actual consumers;
+flower's later06D7/26D7 writes remain object execution decisions. All lazy
+views/visuals/art first decode after media closure in the fresh-owner regression.
+Authentication and separate JP/EU terrain loading are unchanged.
+
+Independent source/data review found no P1/P2. Root combined session1757 passed
+166 cases with zero failures/errors/skips, including all13 constructed asset
+cases and three actual regional invocations. It also exercised the existing
+frontier bank through the new runtime factory, World lifecycle, actual EGL
+pickup/full-course replay and API. All nine XML confirm Java25.0.5.0.2 and the
+actual media/EGL properties. This is one bounded selection, not a full suite.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdOpeningObjectRuntime,TestCdPlayerFrameRuntime,TestCdObjectMappings,TestCdObjectPresentation,TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+```
+
+These bindings do not implement hurt, defeat, death, score/global writes or
+the missing aftermath bodies. The full USA and regional parity goal stays open.

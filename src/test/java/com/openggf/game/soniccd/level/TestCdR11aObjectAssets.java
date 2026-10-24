@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,7 +46,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void reusedNemesisDecoderHasRealFiniteReadAheadAndFixedObjectOutputContracts() throws Exception {
-        for (int tiles : new int[]{14, 70, 20, 28, 63}) {
+        for (int tiles : new int[]{14, 70, 20, 28, 63, 5, 39}) {
             // Constructed one-bit repeat-eight A code: one payload byte per tile, plus real reader lookahead.
             byte[] input = new byte[6 + tiles + 1];
             input[1] = (byte) tiles;
@@ -163,7 +164,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(18, CdR11aObjectAssets.Table.values().length);
+        assertEquals(24, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -203,6 +204,85 @@ class TestCdR11aObjectAssets {
         assertTrue(Arrays.stream(CdR11aObjectAssets.Table.values())
                 .noneMatch(t -> t.nativeLabel().contains("FloatBlock")));
         assertThrows(UnsupportedOperationException.class, () -> CdR11aObjectAssets.decodeTileWord(tileIds(), 5, 0));
+    }
+
+    @Test
+    void contactMetadataHasSixDistinctUsaRangesWithoutExtendingRegionalAssets() {
+        var tables = List.of(CdR11aObjectAssets.Table.ENEMY_POINTS,
+                CdR11aObjectAssets.Table.EXPLOSION_ANIMATIONS, CdR11aObjectAssets.Table.EXPLOSION_MAPPINGS,
+                CdR11aObjectAssets.Table.POINTS_MAPPINGS, CdR11aObjectAssets.Table.FLOWER_ANIMATIONS,
+                CdR11aObjectAssets.Table.FLOWER_MAPPINGS);
+        assertEquals(List.of(0x6EDC, 0x3F074, 0x3F088, 0xAC64, 0x35ED8, 0x35EF4),
+                tables.stream().map(t -> t.range().fileOffset()).toList());
+        assertEquals(List.of(8, 20, 146, 82, 28, 90), tables.stream().map(t -> t.range().length()).toList());
+        assertEquals(List.of("EnemyPoints", "Ani_Explosion", "MapSpr_Explosion", "MapSpr_Points",
+                        "Ani_Flower", "MapSpr_Flower"),
+                tables.stream().map(CdR11aObjectAssets.Table::nativeLabel).toList());
+        for (var left : tables) {
+            for (var right : CdR11aObjectAssets.Table.values()) {
+                if (left == right) { continue; }
+                assertTrue(left.range().endExclusive() <= right.range().fileOffset()
+                        || right.range().endExclusive() <= left.range().fileOffset());
+            }
+        }
+    }
+
+    @Test
+    void constructedPointsFormatIsStaticDetachedAndBoundedByFiveTiles() {
+        byte[] maps = constructedMappings(6, 4);
+        var visual = CdObjectVisualAssets.decodeStatic(maps, 6, 5);
+        assertEquals(6, visual.mappingFrames().size());
+        assertTrue(visual.animations().isEmpty());
+        assertEquals(0, visual.animationTable().length());
+        assertEquals(0x1804, visual.mappingFrames().getLast().pieces().getFirst().rawTileWord());
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(maps, 6, 4));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decodeStatic(
+                Arrays.copyOf(maps, maps.length - 1), 6, 5));
+        assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, 6, new byte[0], 0, 5));
+        Arrays.fill(maps, (byte) 0);
+        assertEquals(12, visual.mappings().unsignedWord(0));
+        assertEquals(-8, visual.mappingFrames().getFirst().pieces().getFirst().x());
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        assertThrows(UnsupportedOperationException.class, visual.mappingFrames().getFirst().pieces()::clear);
+        assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 1));
+    }
+
+    @Test
+    void constructedContactAnimationsKeepRealTerminalsAndRejectAbsentFramesOrArt() {
+        for (int[] shape : new int[][]{{7, 2, 70}, {8, 4, 39}}) {
+            int frames = shape[0], scripts = shape[1], tiles = shape[2];
+            byte[] maps = constructedMappings(frames, tiles - 1);
+            var input = ByteBuffer.allocate(scripts * 6);
+            for (int i = 0; i < scripts; i++) { input.putShort((short) (scripts * 2 + i * 4)); }
+            for (int i = 0; i < scripts; i++) {
+                input.put((byte) 3).put((byte) (frames - 1)).put((byte) (i % 2 == 0 ? 0xFF : 0xFC)).put((byte) 0);
+            }
+            byte[] raw = input.array();
+            var visual = CdObjectVisualAssets.decode(maps, frames, raw, scripts, tiles);
+            assertEquals(frames, visual.mappingFrames().size());
+            assertEquals(scripts, visual.animations().size());
+            assertEquals(CdObjectVisualAssets.Terminal.LOOP_FF, visual.animations().getFirst().terminal());
+            assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, visual.animations().getLast().terminal());
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, frames, raw, scripts, tiles - 1));
+            raw[scripts * 2 + 1] = (byte) frames;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectVisualAssets.decode(maps, frames, raw, scripts, tiles));
+            Arrays.fill(raw, (byte) 0);
+            assertEquals(List.of(frames - 1), visual.animations().getFirst().frameBytes());
+            assertEquals(4, visual.animations().getFirst().bytes().length());
+            assertThrows(UnsupportedOperationException.class, visual.animations()::clear);
+            assertThrows(UnsupportedOperationException.class, visual.animations().getFirst().frameBytes()::clear);
+            assertThrows(ReadOnlyBufferException.class, () -> visual.animationTable().buffer().put((byte) 1));
+        }
+    }
+
+    /** Constructed format fixture, not retail mapping payload. */
+    private static byte[] constructedMappings(int frames, int lastTile) {
+        var bytes = ByteBuffer.allocate(frames * 8);
+        for (int i = 0; i < frames; i++) { bytes.putShort((short) (frames * 2 + i * 6)); }
+        for (int i = 0; i < frames; i++) {
+            bytes.put((byte) 1).put((byte) -8).put((byte) 0).putShort((short) (0x1800 | lastTile)).put((byte) -8);
+        }
+        return bytes.array();
     }
 
     private static byte[] tileIds() {

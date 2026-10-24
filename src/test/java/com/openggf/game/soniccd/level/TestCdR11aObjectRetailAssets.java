@@ -28,6 +28,9 @@ import static com.openggf.game.soniccd.level.CdR11aAsset.ART_RINGS;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_ANIMALS;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_PLANT;
 import static com.openggf.game.soniccd.level.CdR11aAsset.ART_3D_RAMP_BOOST;
+import static com.openggf.game.soniccd.level.CdR11aAsset.ART_EXPLOSIONS;
+import static com.openggf.game.soniccd.level.CdR11aAsset.ART_POINTS;
+import static com.openggf.game.soniccd.level.CdR11aAsset.ART_FLOWER;
 import static com.openggf.game.soniccd.level.CdR11aObjectAssets.Table.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,14 +57,17 @@ class TestCdR11aObjectRetailAssets {
             if (variant == CdReleaseVariant.USA) {
                 objects = terrainOwner.openingObjects();
                 var original = source.mmd(CdNativeFile.R11A);
-                // A separate owner is never asked for frontier data before media closure.
+                // A separate owner is never asked for frontier or contact data before media closure.
                 untouchedFrontier = CdR11aObjectAssets.load(terrainOwner.profile(), terrainOwner.identity(),
                         original, terrainOwner.loadPlan());
                 verifyFrontierNativeReferences(original, terrainOwner, objects);
+                verifyContactNativeReferences(original, terrainOwner);
                 for (int offset : List.of(0x9C96, 0xA0F2, 0xA0FA, 0xB6CA, 0xB6D8, 0xB6E6, 0xB722,
                         0xCF48, 0x70C6, 0x35626, 0x3702A, 0x30000,
                         0xD1AE, 0xD1F0, 0xD22C, 0xD240, 0xD264, 0xE020, 0xDDC8, 0x1FDBC, 0xE046,
-                        0x381C0, 0x3AC7A, 0x3AE02)) {
+                        0x381C0, 0x3AC7A, 0x3AE02,
+                        0x6EDC, 0x3F074, 0x3F088, 0xAC64, 0x35ED8, 0x35EF4,
+                        0x3513E, 0x315C4, 0x31628, 0x35F4E)) {
                     byte[] altered = original.readFile(0, original.fileBytes());
                     altered[offset] ^= 1;
                     // A plausible/correct caller record cannot authenticate even an unrelated changed byte.
@@ -91,6 +97,8 @@ class TestCdR11aObjectRetailAssets {
         assertEquals("a3a40dce6206cd71835f043eadee914a860724ec4361d1275a9535c7b2a1b164",
                 CdR11aProfile.sha256(postCloseBank.binding(ART_3D_PLANT).bytes().copy()));
         assertEquals(393, postCloseBank.binding(ART_3D_PLANT).decode().readerInputRange().length());
+        // First contact visual/table/art reads occur after close, from the retained authenticated image.
+        verifyContact(terrainOwner, untouchedFrontier);
         verifyUsa(terrainOwner, objects);
     }
 
@@ -116,6 +124,13 @@ class TestCdR11aObjectRetailAssets {
                 PLANT_OFFSETS, "f51ae30277622886f2ae6d035f28c562a0246850cc8a4821cabddebb2ec12bba",
                 RAMP_BOOSTER_MAPPINGS, "a05ddcca02858f2bff236a02279726ef8170995325365f7b63b45645f95dbf94",
                 RAMP_BOOSTER_ANIMATIONS, "95f05b61076aa3b77cef9fbeea466b7a03f5d2e77f62346cbcfe7fe9630871fe"));
+        hashes.putAll(Map.of(
+                ENEMY_POINTS, "75e523a6a18ea8818deee70a328935af02f65b890f34c7cf27b65f0a99e839e5",
+                EXPLOSION_ANIMATIONS, "9119f6ae5b68628549bb895b3bb7dcc3a6d4d9cc81918efc848846f745359649",
+                EXPLOSION_MAPPINGS, "0b509dfbd51d21babeb6f551b2032e8e82325c5a518f8c5e976b88b039624d44",
+                POINTS_MAPPINGS, "24a65d4f2732e077fa1d9c881479a5e52cb46c7a9a371f6f30f0efa67ecf459e",
+                FLOWER_ANIMATIONS, "74105bb36227383768d51cd9084560633d8315a9c940e23e80c707532a5353e9",
+                FLOWER_MAPPINGS, "48b7482f83af1300d834e07ec7326e670740d8c5f89f5c8a2253de123e46bb41"));
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -182,10 +197,12 @@ class TestCdR11aObjectRetailAssets {
         altered[0] = 99;
         assertEquals(0, ringView.unsignedByte(0));
         verifyFrontier(terrainOwner, objects);
+        verifyContact(terrainOwner, objects);
         assertSame(bank, objects.initialArtBank());
         assertEquals(List.of(ART_RINGS, ART_MOSQUI), bank.bindings().stream()
                 .map(CdR11aObjectAssets.ArtBinding::source).toList());
-        for (var added : List.of(ART_ANIMALS, ART_3D_PLANT, ART_3D_RAMP_BOOST)) {
+        for (var added : List.of(ART_ANIMALS, ART_3D_PLANT, ART_3D_RAMP_BOOST,
+                ART_EXPLOSIONS, ART_POINTS, ART_FLOWER)) {
             assertThrows(UnsupportedOperationException.class, () -> bank.binding(added));
             assertThrows(UnsupportedOperationException.class, () -> terrainOwner.decoded(added));
         }
@@ -274,6 +291,174 @@ class TestCdR11aObjectRetailAssets {
         assertThrows(IllegalArgumentException.class, () -> bank.tile(-1));
         assertThrows(IllegalArgumentException.class, () -> bank.tile(0x800));
         assertThrows(ReadOnlyBufferException.class, () -> bank.tile(0x424).buffer().put((byte) 0));
+    }
+
+    private static void verifyContact(CdR11aAssets owner, CdR11aObjectAssets objects) throws Exception {
+        var explosion = objects.explosion();
+        var points = objects.points();
+        var flower = objects.flower();
+        assertSame(explosion, objects.explosion());
+        assertSame(points, objects.points());
+        assertSame(flower, objects.flower());
+        assertEquals(List.of(14, 26, 42, 64, 86, 108, 124), explosion.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(2, 3, 4, 4, 4, 3, 4), explosion.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(List.of(List.of(0, 5, 6, 3, 4), List.of(0, 1, 2, 3, 4)), explosion.animations().stream()
+                .map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(3, 3), explosion.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertTrue(explosion.animations().stream().allMatch(a -> a.terminal() == CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC));
+        assertEquals(List.of(12, 24, 36, 48, 60, 66), points.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(2, 2, 2, 2, 1, 3), points.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(0, points.animationTable().length());
+        assertTrue(points.animations().isEmpty(), "ObjPoints selects oMapFrame directly; no invented script");
+        assertEquals(List.of(16, 22, 28, 34, 40, 52, 58, 74), flower.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(1, 1, 1, 1, 2, 1, 3, 3), flower.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+        assertEquals(List.of(List.of(0, 1), List.of(2, 3, 2, 3), List.of(5, 5, 4, 6), List.of(6, 7)),
+                flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::frameBytes).toList());
+        assertEquals(List.of(3, 3, 1, 19), flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::delay).toList());
+        assertEquals(List.of(CdObjectVisualAssets.Terminal.LOOP_FF, CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC,
+                        CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, CdObjectVisualAssets.Terminal.LOOP_FF),
+                flower.animations().stream().map(CdObjectVisualAssets.AnimationScript::terminal).toList());
+        assertEquals(List.of(69, 4, 38), List.of(lastUsedTile(explosion), lastUsedTile(points), lastUsedTile(flower)));
+        var visuals = List.of(explosion, points, flower);
+        var mappings = List.of(EXPLOSION_MAPPINGS, POINTS_MAPPINGS, FLOWER_MAPPINGS);
+        for (int i = 0; i < visuals.size(); i++) {
+            var visual = visuals.get(i);
+            assertArrayEquals(objects.view(mappings.get(i)).bytes().copy(), visual.mappings().copy());
+            byte[] changed = visual.mappings().copy();
+            changed[0] ^= 1;
+            assertNotEquals(changed[0], visual.mappings().copy()[0]);
+            assertThrows(ReadOnlyBufferException.class, () -> visual.mappings().buffer().put((byte) 0));
+            assertThrows(UnsupportedOperationException.class, visual.mappingFrames()::clear);
+        }
+        assertArrayEquals(objects.view(EXPLOSION_ANIMATIONS).bytes().copy(), explosion.animationTable().copy());
+        assertArrayEquals(objects.view(FLOWER_ANIMATIONS).bytes().copy(), flower.animationTable().copy());
+        var rewards = objects.view(ENEMY_POINTS).bytes();
+        assertEquals(List.of(10, 20, 50, 100), List.of(rewards.unsignedWord(0), rewards.unsignedWord(2),
+                rewards.unsignedWord(4), rewards.unsignedWord(6)));
+        assertThrows(IndexOutOfBoundsException.class, () -> rewards.unsignedWord(8));
+        assertThrows(ReadOnlyBufferException.class, () -> rewards.buffer().put((byte) 0));
+        byte[] changedRewards = rewards.copy();
+        changedRewards[1] = 0;
+        assertEquals(10, rewards.unsignedWord(0));
+
+        var initial = objects.initialArtBank();
+        var frontier = objects.frontierArtBank();
+        var bank = objects.contactArtBank();
+        assertSame(bank, objects.contactArtBank());
+        var sources = List.of(ART_EXPLOSIONS, ART_POINTS, ART_FLOWER);
+        assertEquals(sources, bank.bindings().stream().map(CdR11aObjectAssets.ArtBinding::source).toList());
+        int[] vrams = {0xD000, 0xD8C0, 0xDAE0}, bases = {0x8680, 0x06C6, 0xA6D7};
+        int[] blobs = {1256, 100, 646}, readers = {1256, 101, 645}, tiles = {70, 5, 39};
+        String[] hashes = {"434f2415b56d7623e57fd94533506804d7ee1fe3a0321f77bfe86f58d8ff6664",
+                "2270d6453b2d2526412afab1ba19c3cf175b571a41766dc4fe0da422283d57db",
+                "db06551b90412becaec9aa45ccfd14dca62c94e1f165718629553f8fdaac6793"};
+        for (int i = 0; i < sources.size(); i++) {
+            var source = sources.get(i);
+            var binding = bank.binding(source);
+            assertEquals(1, binding.plcId());
+            assertEquals(owner.loadPlan().plcs().get(1).entries().get(10 + i), binding.plc());
+            assertEquals(source, binding.plc().source());
+            assertEquals(vrams[i], binding.plc().vramAddress());
+            assertEquals(bases[i], binding.baseWord());
+            assertEquals(bases[i] & 0x7FF, binding.firstTileId());
+            assertEquals(owner.profile().range(source), binding.decode().sourceBlobRange());
+            assertEquals(binding.plc().sourceRange(), binding.decode().sourceBlobRange());
+            assertEquals(blobs[i], binding.decode().sourceBlobRange().length());
+            assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A, CdMmdImage.Domain.ORIGINAL_WORD_RAM,
+                    binding.decode().sourceBlobRange().fileOffset(), readers[i]), binding.decode().readerInputRange());
+            assertEquals(readers[i], binding.decode().consumedInputBytes());
+            assertEquals(tiles[i], binding.tileCount());
+            assertEquals(tiles[i] * 32, binding.bytes().length());
+            assertEquals(hashes[i], CdR11aProfile.sha256(binding.bytes().copy()));
+            int first = binding.firstTileId(), last = first + tiles[i] - 1;
+            assertArrayEquals(binding.bytes().slice(0, 32).copy(), bank.tile(first).copy());
+            assertArrayEquals(binding.bytes().slice((tiles[i] - 1) * 32, 32).copy(), bank.tile(last).copy());
+            for (var previous : List.of(initial.bindings(), frontier.bindings())) {
+                for (var old : previous) {
+                    assertTrue(last < old.firstTileId() || first >= old.firstTileId() + old.tileCount());
+                    assertThrows(UnsupportedOperationException.class, () -> bank.binding(old.source()));
+                    assertThrows(UnsupportedOperationException.class, () -> bank.tile(old.firstTileId()));
+                }
+            }
+            assertThrows(UnsupportedOperationException.class, () -> initial.binding(source));
+            assertThrows(UnsupportedOperationException.class, () -> frontier.binding(source));
+            assertThrows(UnsupportedOperationException.class, () -> initial.tile(first));
+            assertThrows(UnsupportedOperationException.class, () -> frontier.tile(first));
+            assertThrows(UnsupportedOperationException.class, () -> owner.decoded(source));
+            byte[] altered = bank.tile(first).copy();
+            altered[0] ^= 1;
+            assertNotEquals(altered[0], bank.tile(first).copy()[0]);
+        }
+        for (int tile = 0x6CB; tile <= 0x6D6; tile++) {
+            int gap = tile;
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(gap), "checkpoint gap must remain absent");
+        }
+        for (int tile : new int[]{0x67F, 0x6FE, 0x780, 0x797}) {
+            assertThrows(UnsupportedOperationException.class, () -> bank.tile(tile));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> bank.binding(CdR11aAsset.ART_CHECKPOINT));
+        assertThrows(UnsupportedOperationException.class, () -> bank.bindings().clear());
+        assertThrows(IllegalArgumentException.class, () -> bank.tile(-1));
+        assertThrows(IllegalArgumentException.class, () -> bank.tile(0x800));
+        assertThrows(ReadOnlyBufferException.class, () -> bank.tile(0x680).buffer().put((byte) 0));
+        assertSame(initial, objects.initialArtBank());
+        assertSame(frontier, objects.frontierArtBank());
+        assertEquals(List.of(ART_RINGS, ART_MOSQUI), initial.bindings().stream().map(CdR11aObjectAssets.ArtBinding::source).toList());
+        assertEquals(List.of(ART_ANIMALS, ART_3D_PLANT, ART_3D_RAMP_BOOST), frontier.bindings().stream()
+                .map(CdR11aObjectAssets.ArtBinding::source).toList());
+    }
+
+    private static void verifyContactNativeReferences(CdMmdImage image, CdR11aAssets owner) throws Exception {
+        for (var reference : List.of(new int[]{0x609C, 0x23F088}, new int[]{0xAC38, 0x20AC64}, new int[]{0x6136, 0x235EF4})) {
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 8));
+            assertEquals((short) 0x217C, instruction.getShort());
+            assertEquals(reference[1], instruction.getInt());
+            assertEquals(4, instruction.getShort());
+        }
+        for (var reference : List.of(new int[]{0x60CA, 0x23F074}, new int[]{0x61BE, 0x235ED8})) {
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 6));
+            assertEquals((short) 0x43F9, instruction.getShort());
+            assertEquals(reference[1], instruction.getInt());
+        }
+        var enemyPoints = ByteBuffer.wrap(image.readFile(0x6E80, 4));
+        assertEquals((short) 0x303B, enemyPoints.getShort());
+        assertEquals(0, enemyPoints.get()); // PC + signed byte displacement + D0.w
+        assertEquals(ENEMY_POINTS.range().fileOffset(), 0x6E82 + enemyPoints.get());
+        for (var reference : List.of(new int[]{0x608A, 0x8680}, new int[]{0xAC32, 0x06C6},
+                new int[]{0x6124, 0xA6D7}, new int[]{0x6168, 0x06D7}, new int[]{0x620E, 0x26D7})) {
+            var instruction = ByteBuffer.wrap(image.readFile(reference[0], 6));
+            assertEquals((short) 0x317C, instruction.getShort());
+            assertEquals(reference[1], Short.toUnsignedInt(instruction.getShort()));
+            assertEquals(2, instruction.getShort());
+        }
+        int body = 0xFBC6 + ByteBuffer.wrap(image.readFile(0xFBC8, 2)).getShort();
+        assertEquals(0xFBFA, body);
+        assertEquals(13, ByteBuffer.wrap(image.readFile(body, 2)).getShort());
+        var sources = List.of(ART_EXPLOSIONS, ART_POINTS, ART_FLOWER);
+        int[] vrams = {0xD000, 0xD8C0, 0xDAE0}, headers = {0x0046, 0x0005, 0x8027}, readers = {1256, 101, 645};
+        String[] sourceHashes = {"1f642f6b44332f7ffa63d84970ff1abbacd72bbbd400417c5b3800215d7ec5c1",
+                "6923bd2ac955ac11b88bb75b036d2fbd24f02fe523cd401e30bb1520426ad363",
+                "baae7501cf372a57007db352ffcfe404cc8d2066a9cc639e64d1f2796cfe9af1"};
+        for (int i = 0; i < sources.size(); i++) {
+            var range = owner.profile().range(sources.get(i));
+            var row = ByteBuffer.wrap(image.readFile(body + 2 + (10 + i) * 6, 6));
+            assertEquals(range.nativeAddress(), row.getInt());
+            assertEquals(vrams[i], Short.toUnsignedInt(row.getShort()));
+            assertEquals(headers[i], Short.toUnsignedInt(ByteBuffer.wrap(image.readFile(range.fileOffset(), 2)).getShort()));
+            assertEquals(sourceHashes[i], CdR11aProfile.sha256(range.read(image).copy()));
+            int outputBytes = (headers[i] & 0x7FFF) * 32, truncated = readers[i] - 1;
+            assertThrows(IOException.class, () -> CdNemesisAsset.decode(image.readFile(range.fileOffset(), truncated), outputBytes, outputBytes));
+            var exact = CdNemesisAsset.decode(image.readFile(range.fileOffset(), readers[i]), outputBytes, outputBytes);
+            var extended = CdNemesisAsset.decode(image.readFile(range.fileOffset(), readers[i] + 1), outputBytes, outputBytes);
+            assertEquals(readers[i], exact.consumedInputBytes());
+            assertEquals(readers[i], extended.consumedInputBytes());
+            assertArrayEquals(exact.bytes().copy(), extended.bytes().copy());
+        }
+        assertEquals(0x80, Byte.toUnsignedInt(image.readFile(0x31628, 1)[0]),
+                "points lookahead is the first real FlowerCapsule byte, not invented EOF padding");
     }
 
     private static int lastUsedTile(CdObjectVisualAssets visual) {

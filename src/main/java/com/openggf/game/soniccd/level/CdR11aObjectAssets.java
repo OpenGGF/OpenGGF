@@ -38,7 +38,14 @@ public final class CdR11aObjectAssets {
         PLANT_MAPPINGS("MapSpr_3DPlant", 0xE020, 38),
         PLANT_OFFSETS("Obj3DPlant_Offsets1/Obj3DPlant_Offsets2", 0xDDC8, 14),
         RAMP_BOOSTER_MAPPINGS("MapSpr_3DRamp", 0x1FDBC, 580),
-        RAMP_BOOSTER_ANIMATIONS("Ani_3DRamp", 0xE046, 30);
+        RAMP_BOOSTER_ANIMATIONS("Ani_3DRamp", 0xE046, 30),
+        // Player Object Collision.asm:166,200-204 and the three objects' direct USA operands.
+        ENEMY_POINTS("EnemyPoints", 0x6EDC, 8),
+        EXPLOSION_ANIMATIONS("Ani_Explosion", 0x3F074, 20),
+        EXPLOSION_MAPPINGS("MapSpr_Explosion", 0x3F088, 146),
+        POINTS_MAPPINGS("MapSpr_Points", 0xAC64, 82),
+        FLOWER_ANIMATIONS("Ani_Flower", 0x35ED8, 28),
+        FLOWER_MAPPINGS("MapSpr_Flower", 0x35EF4, 90);
 
         private final String nativeLabel;
         private final int offset;
@@ -117,6 +124,29 @@ public final class CdR11aObjectAssets {
         }
     }
 
+    /**
+     * Separate optional sources for PLC_Std rows 10/11/12. No PLC service or live residency is implied;
+     * the checkpoint gap and all sources in the initial/frontier banks remain unbound here.
+     */
+    public static final class ContactArtBank {
+        private final List<ArtBinding> bindings;
+        private ContactArtBank(List<ArtBinding> bindings) { this.bindings = List.copyOf(bindings); }
+        public List<ArtBinding> bindings() { return bindings; }
+        public ArtBinding binding(CdR11aAsset source) {
+            return bindings.stream().filter(b -> b.source() == source).findFirst()
+                    .orElseThrow(() -> new UnsupportedOperationException("No contact object art binding for " + source));
+        }
+        /** Native 11-bit tile ID after mapping/base-word addition; absent art is never zero-filled. */
+        public CdAssetBytes tile(int nativeTileId) {
+            if ((nativeTileId & ~0x7FF) != 0) { throw new IllegalArgumentException("Not an 11-bit tile ID"); }
+            for (var binding : bindings) {
+                int index = nativeTileId - binding.firstTileId();
+                if (index >= 0 && index < binding.tileCount()) { return binding.bytes().slice(index * 32, 32); }
+            }
+            throw new UnsupportedOperationException("Tile has no decoded contact object source: " + nativeTileId);
+        }
+    }
+
     // Preserve the opening load's exact nine table reads and two art decodes. New data is opt-in below.
     private static final List<Table> OPENING_TABLES = List.of(Table.RING_DELTAS, Table.RING_ANIMATIONS,
             Table.RING_MAPPINGS, Table.MOSQUI_NORMAL_ANIMATIONS, Table.MOSQUI_DAMAGED_ANIMATIONS,
@@ -141,6 +171,10 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets flyingAnimal;
     private PlantOffsets plantOffsets;
     private FrontierArtBank frontierArtBank;
+    private CdObjectVisualAssets explosion;
+    private CdObjectVisualAssets points;
+    private CdObjectVisualAssets flower;
+    private ContactArtBank contactArtBank;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -269,6 +303,39 @@ public final class CdR11aObjectAssets {
         return frontierArtBank;
     }
 
+    /** ObjExplosion_Init/Main (Explosion/Main.asm:73,89-92); binds both source scripts without executing them. */
+    public synchronized CdObjectVisualAssets explosion() {
+        if (explosion == null) {
+            explosion = CdObjectVisualAssets.decode(read(Table.EXPLOSION_MAPPINGS), 7,
+                    read(Table.EXPLOSION_ANIMATIONS), 2, 70);
+        }
+        return explosion;
+    }
+    /** ObjPoints_Init (HUD and Points/Main.asm:37-39) sets oMapFrame directly, with no animation scripts. */
+    public synchronized CdObjectVisualAssets points() {
+        if (points == null) { points = CdObjectVisualAssets.decodeStatic(read(Table.POINTS_MAPPINGS), 6, 5); }
+        return points;
+    }
+    /** ObjFlower_Init/Animate (Flower/Main.asm:42,95-97); no saved-flags, floor or object-lifetime admission. */
+    public synchronized CdObjectVisualAssets flower() {
+        if (flower == null) {
+            flower = CdObjectVisualAssets.decode(read(Table.FLOWER_MAPPINGS), 8,
+                    read(Table.FLOWER_ANIMATIONS), 4, 39);
+        }
+        return flower;
+    }
+    /** Explicit opt-in from the retained authenticated MMD; does not extend either existing bank. */
+    public synchronized ContactArtBank contactArtBank() throws IOException {
+        if (contactArtBank == null) {
+            // These are the init base words. Explosion layer and Flower palette changes belong to object execution.
+            contactArtBank = new ContactArtBank(List.of(
+                    contactArt(CdR11aAsset.ART_EXPLOSIONS, 10, 0xD000, 0x8680, 70, 1256),
+                    contactArt(CdR11aAsset.ART_POINTS, 11, 0xD8C0, 0x06C6, 5, 101),
+                    contactArt(CdR11aAsset.ART_FLOWER, 12, 0xDAE0, 0xA6D7, 39, 645)));
+        }
+        return contactArtBank;
+    }
+
     /** Obj3DPlant_Init (3D Ramp/Main.asm:57-90): ADD.W consumes signed offsets in two distinct bodies. */
     public static PlantOffsets decodePlantOffsets(byte[] input) {
         var bytes = exact(input, 14, "Obj3DPlant_Offsets1/Obj3DPlant_Offsets2");
@@ -362,6 +429,28 @@ public final class CdR11aObjectAssets {
         }
         var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
         return new ArtBinding(source, 2, entry, baseWord, read);
+    }
+    private ArtBinding contactArt(CdR11aAsset source, int row, int vram, int baseWord, int tiles,
+                                   int readerBytes) throws IOException {
+        // PLC_Std (Data (Act 1 Present).asm:54-83), specifically the three adjacent source rows 10..12.
+        var entries = loadPlan.plcs().get(1).entries();
+        var entry = entries.get(row);
+        var blob = profile.range(source);
+        if (entry.source() != source || entry.vramAddress() != vram || !entry.sourceRange().equals(blob)
+                || entries.stream().filter(p -> p.source() == source).count() != 1
+                || (baseWord & 0x7FF) * 32 != vram
+                || source.encodingForReviewedConsumer() != CdR11aAsset.Encoding.NEMESIS) {
+            throw new IllegalArgumentException("Unverified native contact PLC row/base-word/source association");
+        }
+        // Independent prefix/8-bit-reader checks: Explosions 1256 of 1256, Flower 645 of 646;
+        // Points needs 101 for its 100-byte source: real FlowerCapsule byte $80 at MMD $31628.
+        var reader = new CdR11aProfile.FileRange(blob.file(), blob.domain(), blob.fileOffset(), readerBytes);
+        var decoded = CdNemesisAsset.decode(reader.read(image).copy(), tiles * 32, tiles * 32);
+        if (decoded.consumedInputBytes() != readerBytes) {
+            throw new IOException("Contact Nemesis reader consumption differs from its reviewed finite extent");
+        }
+        var read = new CdR11aAssets.NemesisRead(source, blob, reader, decoded.consumedInputBytes(), decoded.bytes());
+        return new ArtBinding(source, 1, entry, baseWord, read);
     }
     private byte[] read(Table table) { return view(table).bytes().copy(); }
     private static List<Integer> signedWords(List<Integer> words, int count) {
