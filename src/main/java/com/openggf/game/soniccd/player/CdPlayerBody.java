@@ -6,20 +6,24 @@ import com.openggf.game.soniccd.level.CdR11aAsset;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.CdSonicVisualAssets;
+import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
+import com.openggf.game.soniccd.objects.CdRingGlobals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
- * Pure R11A ObjSonic dispatch/Init/Main/Hurt owner.
+ * Pure R11A ObjSonic dispatch/Init/Main/Hurt/Dead/Restart owner.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * src/Level/_Objects/Sonic/Main.asm:56-106,135-456,2351-2391,2500-2603, plus
- * src/Level/Object Functions.asm:91-128 (ObjMove) and 137 (DrawObject) for Hurt.
+ * src/Level/_Objects/Sonic/Main.asm:56-106,135-456,2351-2495,2500-2603, plus
+ * src/Level/Object Functions.asm:42-82 (ObjMoveGrv), 91-128 (ObjMove) and 137 (DrawObject), and
+ * src/Level/Object Spawner.asm:329-340 (FindObjSlot over the call-cut capture).
  * Shipped FixBugs=0 behavior; no repaired arithmetic, route or frame gates.
  *
  * One invocation is one loaded player object call, NOT a level frame, V-int,
@@ -157,6 +161,18 @@ public final class CdPlayerBody {
             this(scanner, snapshot, Optional.of(response));
         }
     }
+
+    /**
+     * Ephemeral declared pure input for routines 6 and 8 only, NOT a world/source ownership certificate: the
+     * Runtime's call-cut dynamic pool capture (the same one it gives TouchContext), its ring globals (lives,
+     * updateHUDLives) and its level-flow globals. Sampled only by ObjSonic_Dead/Restart; never retained,
+     * captured or published. The Runtime alone commits DeadCheckGone/RestartCut after the whole call.
+     */
+    public record LevelContext(CdObjectPool.Snapshot snapshot, CdRingGlobals ring, CdLevelGlobals level) {
+        public LevelContext {
+            Objects.requireNonNull(snapshot); Objects.requireNonNull(ring); Objects.requireNonNull(level);
+        }
+    }
     public record Environment(CdPlayerMovement.Environment movement, Controls controls,
                               Globals globals, DynamicSlots dynamicSlots) {
         public Environment {
@@ -165,12 +181,21 @@ public final class CdPlayerBody {
         }
     }
 
-    /** HURT_RETURN is a completed ObjSonic_Hurt call (Main.asm:2351-2366): drawn, but no MODE was called. */
-    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN, HURT_RETURN }
+    /**
+     * HURT_RETURN is a completed ObjSonic_Hurt call (Main.asm:2351-2366): drawn, but no MODE was called.
+     * DEAD_RETURN is a completed ObjSonic_Dead call (2397-2404): its tail JMP DrawObject always draws.
+     * RESTART_RETURN is a completed ObjSonic_Restart call (2453-2494): no DrawObject and no MODE.
+     */
+    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN, HURT_RETURN, DEAD_RETURN, RESTART_RETURN }
+    /**
+     * STOP_Z80/START_Z80 are ordered source-position observations of the Z80 bus calls around Restart's driver
+     * byte write (2461-2463). No Z80 bus or driver owner exists; they are never instructions to replay the calls.
+     */
     public enum NativeCall {
         CHARGE_BEFORE_DISPATCH, INIT, EXTENDED_CAMERA, WATERFALL_SPLASH_CHECK, MODE,
         PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
-        OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT
+        OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT,
+        DEAD_CHECK_GONE, FIND_OBJ_SLOT, OBJ_MOVE_GRAVITY, STOP_Z80, START_Z80
     }
     /** CENTRE_*_LONG values are ObjMove's complete 16.16 longs; velocity values are signed words. */
     public enum ActorField {
@@ -182,12 +207,28 @@ public final class CdPlayerBody {
         CAMERA_X_CENTRE, LOGICAL_HELD, LOGICAL_TAP, INVINCIBLE, SPEED_SHOES,
         TOP_SPEED, ACCELERATION, DECELERATION
     }
-    /** Present R11A PlayLevelMusic resolves to SCMD_R1AMUS (Level/Main.asm:555-583). */
-    public enum Sound { SCMD_R1AMUS, FM_9C }
+    /**
+     * Native ordered writes to Runtime-owned level-flow and ring globals (Main CPU Variables.inc):
+     * updateHUDTime $FF1510, levelRestart word $FF1502, plcLoadFlags $FF151C and spawnMode $FF1522 belong to
+     * CdLevelGlobals; lives and updateHUDLives to CdRingGlobals. FLOWER_COUNT_LONG is CLR.L flowerCount
+     * ($FF1900), spanning the three count bytes AND fadeEnableDisplay $FF1903 (Sonic/Main.asm:2466).
+     */
+    public enum LevelField {
+        UPDATE_HUD_TIME(0xFF), UPDATE_HUD_LIVES(0xFF), LIVES(0xFF), LEVEL_RESTART(0xFFFF),
+        FLOWER_COUNT_LONG(-1), PLC_LOAD_FLAGS(0xFF), SPAWN_MODE(0xFF);
+        private final int mask;
+        LevelField(int mask) { this.mask = mask; }
+    }
+    /**
+     * Present R11A PlayLevelMusic resolves to SCMD_R1AMUS (Level/Main.asm:555-583). SCMD_FADECDA is Restart's
+     * BRA.W SubCPUCmd request (Sonic/Main.asm:2475,2490-2491). Requests only: no Sub CPU or playback here.
+     */
+    public enum Sound { SCMD_R1AMUS, FM_9C, SCMD_FADECDA }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
             ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest,
-            AirCollisionEffect, KillPlayerCall { }
+            AirCollisionEffect, KillPlayerCall, LevelWrite, DeadCheckGone, UncheckedAliasWrite,
+            Z80RamWrite, ResetSavedObjectFlagsRequest, RestartCut { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -197,6 +238,10 @@ public final class CdPlayerBody {
     public record ChargeEffect(CdPlayerCharge.Effect effect) implements Effect {
         public ChargeEffect { Objects.requireNonNull(effect); }
     }
+    /**
+     * One ordered Movement helper effect. A stopped MODE's KillRequest marker is retained here, immediately
+     * before the one KillPlayerCall it caused; resumed tail effects follow that call. Nothing is replayed.
+     */
     public record ModeEffect(CdPlayerMovement.Effect effect) implements Effect {
         public ModeEffect { Objects.requireNonNull(effect); }
     }
@@ -206,7 +251,7 @@ public final class CdPlayerBody {
     }
     /**
      * Exact DrawObject call cut: Main's Display call before history, Animate and SpecialChunks,
-     * or Hurt's unconditional tail JMP after Animate (Main.asm:2366), there always eligible. The queue
+     * or Hurt's/Dead's unconditional tail JMP after Animate (Main.asm:2366,2404), there always eligible. The queue
      * owner uses this radius/position/raw width with the pre-scroll camera and
      * the raw priority byte for queue selection. It owns both
      * DrawObject's entry bit7 clear and DrawObjects' later bit7 set. Body leaves
@@ -262,14 +307,87 @@ public final class CdPlayerBody {
      * One executed KillPlayer call (PP Player Object Collision.asm:279-298) at its native position,
      * through the shared pure owner. Its actor, invincible and scoreChain values are already adopted
      * ONCE; calls are ordered observations, never write-replay instructions. No world, contact or pool
-     * value exists here. A debug no-write exit is still a call that returned into Hurt.
+     * value exists here. A debug no-write exit is still a call that returned into Hurt or MODE.
      */
     public record KillPlayerCall(CdPlayerTouchResponse.KillResult result) implements Effect {
         public KillPlayerCall { Objects.requireNonNull(result); }
     }
 
     /**
-     * Main's Display queues the actor before Animate and Hurt's DrawObject queues it after; the later
+     * One ordered native write to a Runtime-owned global, at its source position. An observation only: the
+     * Runtime commits the DeadCheckGone/RestartCut summary once and never replays these writes.
+     */
+    public record LevelWrite(LevelField field, int value) implements Effect {
+        public LevelWrite {
+            Objects.requireNonNull(field);
+            if ((value & ~field.mask) != 0) throw new IllegalArgumentException("Level write exceeds its native width");
+        }
+    }
+
+    /**
+     * ObjSonic_DeadChkGone's gone branch (Sonic/Main.asm:2416-2444), published only when those writes ran.
+     * Final Runtime-owned values: lives and updateHudLives (CdRingGlobals), updateHudTime (CdLevelGlobals).
+     * allocation is empty on the time-attack .ResetDelay path (no call), FindObjSlot(empty) for a full pool
+     * and the first oID-zero whole slot otherwise. gameOverImage is present exactly for a found slot: the
+     * call-cut image with only MOVE.B #$3B,oID applied, every other dirty byte retained. The Runtime
+     * validates and commits it against the same call cut, before the dynamic pass; Body writes no pool.
+     */
+    public record DeadCheckGone(int lives, int updateHudLives, int updateHudTime,
+                                Optional<CdPlayerTouchResponse.FindObjSlot> allocation,
+                                Optional<CdObjectState> gameOverImage) implements Effect {
+        public DeadCheckGone {
+            byteValue(lives); byteValue(updateHudLives); byteValue(updateHudTime);
+            Objects.requireNonNull(allocation); Objects.requireNonNull(gameOverImage);
+            OptionalInt found = allocation.map(CdPlayerTouchResponse.FindObjSlot::wholeIndex).orElse(OptionalInt.empty());
+            if (found.isPresent() != gameOverImage.isPresent() || (gameOverImage.isPresent()
+                    && (gameOverImage.orElseThrow().identity().wholeIndex() != found.getAsInt()
+                    || gameOverImage.orElseThrow().id() != GAME_OVER_ID))) {
+                throw new IllegalArgumentException("Only a found FindObjSlot answer carries its oID $3B image");
+            }
+        }
+    }
+
+    /**
+     * FindObjSlot's exhausted DBF leaves a1 = dynObjectsEnd ($FFF000, Level/_Definitions.inc:165-174), and
+     * MOVE.B #$3B,oID(a1) (Sonic/Main.asm:2437) has no branch. An ordered observation of that unchecked
+     * 24-bit write only: no pool slot, owned buffer or global exists for it here.
+     */
+    public record UncheckedAliasWrite(int address, int value) implements Effect {
+        public UncheckedAliasWrite {
+            if ((address & ~0xFFFFFF) != 0) throw new IllegalArgumentException("Expected a 24-bit native address");
+            byteValue(value);
+        }
+    }
+
+    /**
+     * MOVE.B #1,Z80RAM+$1C3E between StopZ80 and StartZ80 (Sonic/Main.asm:2461-2463), as the RELATIVE Z80
+     * RAM offset (Z80RAM is $2000 bytes, Main CPU.inc:31-33). Typed observation: no Z80 driver runs here.
+     */
+    public record Z80RamWrite(int address, int value) implements Effect {
+        public Z80RamWrite {
+            if (address < 0 || address >= Z80_RAM_SIZE) throw new IllegalArgumentException("Expected a Z80 RAM offset");
+            byteValue(value);
+        }
+    }
+
+    /**
+     * BSR.W ResetSavedObjFlags (Sonic/Main.asm:2465; Object Spawner.asm:11-20) at its source position. NOT
+     * executed here: the saved bank belongs to the placement owner, which performs it once from RestartCut.
+     */
+    public record ResetSavedObjectFlagsRequest() implements Effect { }
+
+    /**
+     * ObjSonic_Restart's zero-word cut (Sonic/Main.asm:2459-2491). next is the complete post-routine level-flow
+     * value: levelRestart 1, flowerCount and fadeEnableDisplay 0, and the native plcLoadFlags/spawnMode
+     * branches. resetSavedObjectFlags is the unconditional BSR above. The Runtime commits both before later
+     * objects run; the ordered LevelWrite effects are observations of the same writes.
+     */
+    public record RestartCut(CdLevelGlobals next, boolean resetSavedObjectFlags) implements Effect {
+        public RestartCut { Objects.requireNonNull(next); }
+    }
+
+    /**
+     * Main's Display queues the actor before Animate and Hurt's/Dead's DrawObject queues it after; the later
      * SAT owner observes the completed pose. This publication therefore combines that eligibility
      * with final body fields. Reading it never advances any owner. queued means
      * eligible for queueing, not evidence that native DrawObject/SAT ran.
@@ -283,32 +401,32 @@ public final class CdPlayerBody {
         public Result {
             Objects.requireNonNull(state); Objects.requireNonNull(environment); effects = List.copyOf(effects);
             Objects.requireNonNull(display); Objects.requireNonNull(boundary); Objects.requireNonNull(modeBoundary);
-            boolean drawn = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN;
+            boolean unconditional = boundary == Boundary.HURT_RETURN || boundary == Boundary.DEAD_RETURN;
+            boolean drawn = boundary == Boundary.MAIN_RETURN || unconditional;
             if (drawn != display.isPresent()
                     || (boundary == Boundary.MAIN_RETURN) != modeBoundary.isPresent()
                     || modeBoundary.orElse(null) == CdPlayerMovement.Boundary.KILL_PLAYER
-                    || (boundary == Boundary.HURT_RETURN && !display.orElseThrow().queued())) {
+                    || (unconditional && !display.orElseThrow().queued())) {
                 throw new IllegalArgumentException(
-                        "Only a completed Main or drawn Hurt has display; only Main has completed MODE publication");
+                        "Only a completed Main or drawn Hurt/Dead has display; only Main has completed MODE publication");
             }
         }
     }
 
+    /** DEAD_ROUTINE/RESTART_ROUTINE now mean routine 6/8 without an explicit LevelContext. */
     public enum UnsupportedBoundary {
         SLOT_ID, SOURCE_FAMILY, DEBUG_UPDATE, ROUTINE_DISPATCH, DEAD_ROUTINE, RESTART_ROUTINE,
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
-        KILL_PLAYER, HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE
+        HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE
     }
-    /** No staged state or effects escape. Kill names the unexecuted external call's exact MODE continuation. */
+    /** No staged state or effects escape. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
-        private final CdPlayerMovement.Continuation continuation;
-        private UnsupportedBody(UnsupportedBoundary boundary, CdPlayerMovement.Continuation continuation) {
-            super(boundary.name() + (continuation == CdPlayerMovement.Continuation.NONE ? "" : ": " + continuation));
-            this.boundary = boundary; this.continuation = continuation;
+        private UnsupportedBody(UnsupportedBoundary boundary) {
+            super(boundary.name());
+            this.boundary = boundary;
         }
         public UnsupportedBoundary boundary() { return boundary; }
-        public CdPlayerMovement.Continuation continuation() { return continuation; }
     }
 
     /**
@@ -326,6 +444,11 @@ public final class CdPlayerBody {
         public CdPlayerObjectTouch.Kind kind() { return kind; }
         public CdObjectState selectedSlot() { return selectedSlot; }
     }
+
+    /** ObjGameOver's ID ($3B, Sonic/Main.asm:2437), dynObjectsEnd and the Z80 RAM size. */
+    private static final int GAME_OVER_ID = 0x3B;
+    private static final int DYN_OBJECTS_END = 0xFFD000 + CdObjectPool.END_WHOLE_INDEX * CdObjectState.BYTE_SIZE;
+    private static final int Z80_RAM_SIZE = 0x2000;
 
     private final CdR11aAssets assets;
     private final CdR11aTerrain terrain;
@@ -346,7 +469,7 @@ public final class CdPlayerBody {
 
     /** ObjSonic (56-105). No slot means no header, charge or routine work. */
     public Result step(State state, Environment environment) {
-        return step(state, environment, Optional.empty());
+        return step(state, environment, Optional.empty(), Optional.empty());
     }
 
     /**
@@ -355,7 +478,18 @@ public final class CdPlayerBody {
      * post-Animate, pre-SpecialChunks call with both native touch gates open.
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext) {
+        return step(state, environment, touchContext, Optional.empty());
+    }
+
+    /**
+     * As above, plus the explicit routine-6/8 LevelContext. Only ObjSonic_Dead and ObjSonic_Restart sample
+     * it; without it they stop at DEAD_ROUTINE/RESTART_ROUTINE after the unchanged header and predispatch.
+     * Init, Main, Hurt and an absent slot never read it, and no State/Environment/Result retains it.
+     */
+    public Result step(State state, Environment environment, Optional<TouchContext> touchContext,
+                       Optional<LevelContext> levelContext) {
         Objects.requireNonNull(state); Objects.requireNonNull(environment); Objects.requireNonNull(touchContext);
+        Objects.requireNonNull(levelContext);
         if (state.header().slotId() == 0) {
             return new Result(state, environment, List.of(), Optional.empty(), Boundary.SLOT_ABSENT, Optional.empty());
         }
@@ -373,8 +507,11 @@ public final class CdPlayerBody {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
             case 2 -> { main(c, touchContext); return c.finish(Boundary.MAIN_RETURN); }
             case 4 -> { hurt(c); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
-            case 6 -> unsupported(UnsupportedBoundary.DEAD_ROUTINE);
-            case 8 -> unsupported(UnsupportedBoundary.RESTART_ROUTINE);
+            case 6 -> { dead(c, level(levelContext, UnsupportedBoundary.DEAD_ROUTINE)); return c.finish(Boundary.DEAD_RETURN); }
+            case 8 -> {
+                restart(c, level(levelContext, UnsupportedBoundary.RESTART_ROUTINE));
+                return c.finish(Boundary.RESTART_RETURN); // No DrawObject, so no display and no MODE.
+            }
             default -> unsupported(UnsupportedBoundary.ROUTINE_DISPATCH);
         }
         throw new AssertionError("Unsupported routine must throw");
@@ -404,11 +541,20 @@ public final class CdPlayerBody {
         // This branch calls TimeWarp (or MMZ clears) before .SkipControl. Neither object-control owner is admitted.
         if ((c.motion.playerControl() & 1) != 0) unsupported(UnsupportedBoundary.OBJECT_CONTROL);
         var moved = movement.step(c.motion, new CdPlayerMovement.Input(c.controls.logicalHeld(), c.controls.logicalTap()), c.env.movement());
-        if (moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER) {
-            throw new UnsupportedBody(UnsupportedBoundary.KILL_PLAYER, moved.continuation());
-        }
         c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
-        for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
+        boolean stopped = moved.boundary() == CdPlayerMovement.Boundary.KILL_PLAYER;
+        for (var effect : moved.effects()) {
+            c.effects.add(new ModeEffect(effect));
+            // LevelBound .Bottom BNE.W KillPlayer (1703-1705): the ONE shared call, at the stop's final marker.
+            if (stopped && effect instanceof CdPlayerMovement.KillRequest) killPlayer(c);
+        }
+        if (stopped) {
+            // KillPlayer's RTS returns into the DISPATCHED MODE routine (701/727/748/767): only its unfinished
+            // tail runs, from the adopted actor; no dispatch, charge, ramp, slope, LevelBound or input repeats.
+            moved = movement.resumeAfterLevelBound(moved, c.motion, c.env.movement());
+            c.motion = moved.state(); c.setMovementEnvironment(moved.environment());
+            for (var effect : moved.effects()) c.effects.add(new ModeEffect(effect));
+        }
         c.modeBoundary = Optional.of(moved.boundary()); c.returned(NativeCall.MODE);
         // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
         c.returned(NativeCall.PP_SPECIAL_COLLISION);
@@ -493,6 +639,103 @@ public final class CdPlayerBody {
         drawObject(c);
     }
 
+    /**
+     * ObjSonic_Dead (2397-2404), literal call order: DeadChkGone, ObjMoveGrv, RecordPos, Animate, then the
+     * unconditional tail JMP DrawObject. No Display, ExtCamera, input copy, MODE, water, angle copy, touch or
+     * SpecialChunks call. The gone writes are adopted before ObjMoveGrv reads the new velocity word.
+     */
+    private void dead(Cursor c, LevelContext level) {
+        requireBoundMapping(c);
+        deadCheckGone(c, level);
+        objMoveGravity(c);
+        recordPosition(c);
+        animate(c);
+        drawObject(c);
+    }
+
+    /**
+     * ObjSonic_DeadChkGone (2410-2447). MOVE.W bottomBound / ADDI.W #256 wraps, then CMP.W oY / BCC.W is an
+     * UNSIGNED word test. FindObjSlot runs over the call-cut capture; the Runtime commits the summary.
+     */
+    private static void deadCheckGone(Cursor c, LevelContext level) {
+        if (c.y() > uw(c.env.movement().bounds().bottom() + 0x100)) {
+            c.setYVelocity(-0x38); // MOVE.W #-$38,oYVel (2416).
+            c.setRoutine((c.motion.routine() + 2) & 0xFF); // ADDQ.B #2,oRoutine (2417).
+            c.level(LevelField.UPDATE_HUD_TIME, 0); // CLR.B updateHUDTime (2419).
+            int hudLives = (level.ring().updateHudLives() + 1) & 0xFF; // ADDQ.B wraps (2420).
+            c.level(LevelField.UPDATE_HUD_LIVES, hudLives);
+            int lives = (level.ring().lives() - 1) & 0xFF; // SUBQ.B #1,lives (2421).
+            c.level(LevelField.LIVES, lives);
+            if ((lives & 0x80) != 0) { lives = 0; c.level(LevelField.LIVES, 0); } // BPL.S fails: CLR.B (2422-2423).
+            Optional<CdPlayerTouchResponse.FindObjSlot> allocation = Optional.empty();
+            Optional<CdObjectState> image = Optional.empty();
+            if (c.motion.animation() != 0x2B && c.timeAttack != 0) {
+                lives = 0; c.level(LevelField.LIVES, 0); // MOVE.B #0,lives, then BRA.S .ResetDelay (2432-2433).
+                c.setResetTimer(60);
+            } else {
+                // .LoadGameOver (2435-2444): the unchecked FindObjSlot answer gets oID $3B with no branch.
+                var found = findObjSlot(level.snapshot());
+                c.returned(NativeCall.FIND_OBJ_SLOT);
+                allocation = Optional.of(new CdPlayerTouchResponse.FindObjSlot(found));
+                if (found.isPresent()) {
+                    image = Optional.of(level.snapshot().slots().get(found.getAsInt() - CdObjectPool.FIRST_WHOLE_INDEX)
+                            .moveByte(CdObjectState.ByteField.ID, GAME_OVER_ID));
+                } else {
+                    c.effects.add(new UncheckedAliasWrite(DYN_OBJECTS_END, GAME_OVER_ID));
+                }
+                c.setResetTimer(8 * 60);
+                if (lives != 0) c.setResetTimer(60); // TST.B lives / BEQ.S .End (2440-2444).
+            }
+            c.effects.add(new DeadCheckGone(lives, hudLives, 0, allocation, image));
+        }
+        c.returned(NativeCall.DEAD_CHECK_GONE);
+    }
+
+    /** FindObjSlot (Object Spawner.asm:329-340): the first oID-zero whole slot 32..127 of the capture; no write. */
+    private static OptionalInt findObjSlot(CdObjectPool.Snapshot snapshot) {
+        var slots = snapshot.slots();
+        for (int i = 0; i < slots.size(); i++) {
+            if (slots.get(i).id() == 0) return OptionalInt.of(CdObjectPool.FIRST_WHOLE_INDEX + i);
+        }
+        return OptionalInt.empty();
+    }
+
+    /**
+     * ObjSonic_Restart (2453-2494). A zero word is never counted. At the zero cut, the ordered writes and
+     * requests are published for the Runtime's one RestartCut commit; the Z80/Sub CPU calls are observations.
+     * timeZone is the full byte (CMPI.B #1). ObjSonic's R11A admission keeps it 1 here, so the not-present
+     * branches are source-complete but unreachable through this owner.
+     */
+    private static void restart(Cursor c, LevelContext context) {
+        if (c.resetTimer == 0) return; // TST.W / BEQ.W .End (2454-2455).
+        c.setResetTimer(uw(c.resetTimer - 1)); // SUBQ.W #1 (2456).
+        if (c.resetTimer != 0) return; // BNE.W .End (2457).
+        var level = context.level();
+        c.level(LevelField.LEVEL_RESTART, 1); // MOVE.W #1,levelRestart (2459).
+        c.returned(NativeCall.STOP_Z80); // JSR StopZ80 (2461).
+        c.effects.add(new Z80RamWrite(0x1C3E, 1)); // MOVE.B #1,Z80RAM+$1C3E (2462).
+        c.returned(NativeCall.START_Z80); // JSR StartZ80 (2463).
+        c.effects.add(new ResetSavedObjectFlagsRequest()); // BSR.W ResetSavedObjFlags (2465).
+        c.level(LevelField.FLOWER_COUNT_LONG, 0); // CLR.L flowerCount, including fadeEnableDisplay (2466).
+        int timeZone = c.env.movement().gates().timeZone(), plc = level.plcLoadFlags(), spawn = level.spawnMode();
+        if (level.checkpoint() == 0 && timeZone == 1) { // TST.B checkpoint, CMPI.B #1,timeZone (2468-2471).
+            plc &= ~2; c.level(LevelField.PLC_LOAD_FLAGS, plc); // BCLR #1 always stores the byte (2472).
+        }
+        if (context.ring().lives() != 0) { // TST.B lives / BEQ.S .SendCmd (2477-2478).
+            if (timeZone != 1) { spawn = 0; c.level(LevelField.SPAWN_MODE, 0); } // .SpawnAtStart (2479-2480,2487-2488).
+            else if (level.checkpoint() != 0) { spawn = 1; c.level(LevelField.SPAWN_MODE, 1); } // (2481-2484).
+        }
+        c.sound(Sound.SCMD_FADECDA); // MOVE.W #SCMD_FADECDA,d0 then BRA.W SubCPUCmd (2475,2490-2491).
+        c.effects.add(new RestartCut(new CdLevelGlobals(1, level.updateHudTime(), level.checkpoint(), spawn, plc, 0, 0,
+                level.powerup(), level.timeOver()), true));
+    }
+
+    /** Routines 6/8 sample their explicit context; without one they keep their typed stop and publish nothing. */
+    private static LevelContext level(Optional<LevelContext> context, UnsupportedBoundary absent) {
+        if (context.isEmpty()) unsupported(absent);
+        return context.orElseThrow();
+    }
+
     /** ObjMove (Object Functions.asm:91-128): both longs add the OLD velocity words shifted by 8; no gravity. */
     private static void objMove(Cursor c) {
         // :97-114 reads oPlayerStandObj's slot oID for the CCZ flipper; that object belongs to the pool owner.
@@ -500,6 +743,21 @@ public final class CdPlayerBody {
         var m = c.motion;
         c.setCentre(m.centreX16_16() + (m.xVelocity() << 8), m.centreY16_16() + (m.yVelocity() << 8));
         c.returned(NativeCall.OBJ_MOVE);
+    }
+
+    /**
+     * ObjMoveGrv (Object Functions.asm:42-82), with its oPlayerCtrl branches. BTST leaves MOVE.W's N flag, so
+     * BPL tests the OLD word: bit 3 (pole) skips gravity; a negative word with bit 1 (3D ramp) skips it below
+     * -$800 unsigned; bit 2 (bar) skips it. TST.W/BMI then caps only a non-negative word at $1000 unsigned.
+     * Both longs add the OLD velocity words shifted by 8. No standing-object read exists here.
+     */
+    private static void objMoveGravity(Cursor c) {
+        var m = c.motion; int old = m.yVelocity(), control = m.playerControl();
+        boolean gravity = (control & 8) == 0 && (old >= 0 || (control & 2) == 0 || uw(old) >= 0xF800) && (control & 4) == 0;
+        if (gravity) c.setYVelocity((short) (old + 0x38)); // ADDI.W #$38 (:66).
+        if (c.motion.yVelocity() >= 0x1000) c.setYVelocity(0x1000); // TST.W/BMI, CMPI.W/BCS, MOVE.W (:69-73).
+        c.setCentre(m.centreX16_16() + (m.xVelocity() << 8), m.centreY16_16() + (old << 8));
+        c.returned(NativeCall.OBJ_MOVE_GRAVITY);
     }
 
     /**
@@ -546,7 +804,7 @@ public final class CdPlayerBody {
         c.effects.add(new KillPlayerCall(result)); c.returned(NativeCall.KILL_PLAYER);
     }
 
-    /** Hurt's tail JMP DrawObject (2366): unconditional, at the completed post-Animate pose. */
+    /** Hurt's and Dead's tail JMP DrawObject (2366, 2404): unconditional, at the completed post-Animate pose. */
     private static void drawObject(Cursor c) {
         c.displayEligible = true;
         c.effects.add(new DisplayEligibility(true, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags(),
@@ -554,7 +812,7 @@ public final class CdPlayerBody {
         c.returned(NativeCall.DRAW_OBJECT);
     }
 
-    /** Main and Hurt both draw through the actual source-bound mapping; Init alone writes it. */
+    /** Main, Hurt and Dead draw through the actual source-bound mapping; Init alone writes it. */
     private void requireBoundMapping(Cursor c) {
         if (c.header.mappingAddress() != mappingAddress) unsupported(UnsupportedBoundary.MAPPING_BINDING);
     }
@@ -709,6 +967,9 @@ public final class CdPlayerBody {
         void global(GlobalField field, int value) { effects.add(new GlobalWrite(field, value)); }
         void returned(NativeCall call) { effects.add(new CallReturned(call)); }
         void sound(Sound sound) { effects.add(new SoundRequest(sound)); }
+        void level(LevelField field, int value) { effects.add(new LevelWrite(field, value)); }
+        /** oPlayerReset ($3A word): staged once in the cursor, each native write logged. */
+        void setResetTimer(int value) { resetTimer = value; actor(ActorField.RESET_TIMER, value); }
         void setMovementEnvironment(CdPlayerMovement.Environment movement) {
             env = new Environment(movement, controls, env.globals(), env.dynamicSlots());
         }
@@ -817,14 +1078,14 @@ public final class CdPlayerBody {
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN
-                    ? Optional.of(new DisplayPublication(displayEligible, header.mappingAddress(), header.tile(), header.priority(),
+                    || boundary == Boundary.DEAD_RETURN ? Optional.of(new DisplayPublication(displayEligible, header.mappingAddress(), header.tile(), header.priority(),
                     header.width(), animation.mapFrame(), motion.spriteFlags(), motion.centreX16_16(), motion.centreY16_16())) : Optional.empty();
             return new Result(state, environment, effects, display, boundary, modeBoundary);
         }
     }
 
     private static void unsupported(UnsupportedBoundary boundary) {
-        throw new UnsupportedBody(boundary, CdPlayerMovement.Continuation.NONE);
+        throw new UnsupportedBody(boundary);
     }
     private static void writeWord(byte[] bytes, int offset, int value) {
         bytes[offset] = (byte) (value >>> 8); bytes[offset + 1] = (byte) value;

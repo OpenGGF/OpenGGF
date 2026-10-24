@@ -100,7 +100,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /** Symbolic IDs retain their original typed owner and source ordering, with no playback. */
-    public sealed interface Sound permits BodySound, ChargeSound, MovementSound, ContactFmSound, ContactSubCpuCommand { }
+    public sealed interface Sound permits BodySound, ChargeSound, MovementSound, ContactFmSound, ContactSubCpuCommand,
+            DriverRamWrite { }
     public record BodySound(CdPlayerBody.Sound sound) implements Sound {
         public BodySound { Objects.requireNonNull(sound); }
     }
@@ -121,7 +122,22 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public record ContactSubCpuCommand(CdPlayerTouchResponse.SubCpuCommand command) implements Sound {
         public ContactSubCpuCommand { Objects.requireNonNull(command); }
     }
-    /** Final values already committed once; ordered effects are observations, not write-replay instructions. */
+    /**
+     * Restart's MOVE.B #1,Z80RAM+$1C3E (Sonic/Main.asm:2462) at its position, as the RELATIVE Z80 RAM offset
+     * (Z80RAM is $2000 bytes, Main CPU.inc:31-33). Typed request only: no Z80 bus, driver or playback exists,
+     * and the Body's StopZ80/StartZ80 observations are not instructions to replay them.
+     */
+    public record DriverRamWrite(int address, int value) implements Sound {
+        public DriverRamWrite {
+            if (address < 0 || address >= 0x2000 || (value & ~0xFF) != 0) {
+                throw new IllegalArgumentException("Driver write requires a Z80 RAM offset and an unsigned byte");
+            }
+        }
+    }
+    /**
+     * Final values already committed once; ordered effects are observations, not write-replay instructions.
+     * A DeadCheckGone/RestartCut summary is the Runtime's world/global commit input, never applied here.
+     */
     public record BodyPublication(CdPlayerBody.Result result, List<Sound> sounds) {
         public BodyPublication { Objects.requireNonNull(result); sounds = List.copyOf(sounds); }
     }
@@ -343,7 +359,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * levelFrames is the engine's ALREADY incremented argument projected low16.
      */
     public BodyPublication runBody(int levelFrames) {
-        return runBody(levelFrames, Optional.empty());
+        return runBody(levelFrames, Optional.empty(), Optional.empty());
     }
 
     /**
@@ -352,11 +368,21 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * commits the published response's slots, world and contact only after this call returns.
      */
     public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext) {
+        return runBody(levelFrames, touchContext, Optional.empty());
+    }
+
+    /**
+     * As above, plus the routine-6/8 LevelContext, equally ephemeral: never retained, captured or
+     * published. Only ObjSonic_Dead/Restart sample it; the Runtime commits their DeadCheckGone/RestartCut
+     * world and global values after this call returns. Without it those routines keep their typed stops.
+     */
+    public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext,
+                                   Optional<CdPlayerBody.LevelContext> levelContext) {
         requireBodyEntitlement();
         bodyEntitled = false;
         inOperation = true;
         try {
-            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext);
+            var result = body.step(state, withLevelFrames(environment, levelFrames & 0xFFFF), touchContext, levelContext);
             var publication = new BodyPublication(result, collectSounds(result.effects()));
             state = result.state(); environment = result.environment(); display = result.display();
             return publication;
@@ -563,6 +589,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             else if (effect instanceof CdPlayerBody.AirCollisionEffect air) collectMovementSound(air.effect(), sounds);
             else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) collectContactSounds(touch.result().calls(), sounds);
             else if (effect instanceof CdPlayerBody.KillPlayerCall kill) collectContactSounds(kill.result().calls(), sounds);
+            else if (effect instanceof CdPlayerBody.Z80RamWrite driver) sounds.add(new DriverRamWrite(driver.address(), driver.value()));
         }
         return List.copyOf(sounds);
     }

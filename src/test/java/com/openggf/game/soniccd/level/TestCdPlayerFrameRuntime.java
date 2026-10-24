@@ -6,8 +6,10 @@ import com.openggf.game.soniccd.CdStagePayload;
 import com.openggf.game.soniccd.media.CdMmdImage;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
+import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.player.CdPlayerCharge;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -468,11 +471,95 @@ class TestCdPlayerFrameRuntime {
         var bounds = new CdPlayerMovement.Bounds(0, 0x2897, 0, 0);
         assertThrows(IllegalArgumentException.class, () -> f.applyScrollFeedback(bounds, 65536));
         assertSame(original, f.environment()); f.applyScrollFeedback(bounds, 96);
-        service(f, 0); var beforeBody = f.state(); var beforeEnvironment = f.environment();
-        assertEquals(CdPlayerBody.UnsupportedBoundary.KILL_PLAYER,
-                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(2)).boundary());
-        assertSame(beforeBody, f.state()); assertSame(beforeEnvironment, f.environment());
+        service(f, 0);
+        var p = f.runBody(2);
+        // MdGround's LevelBound reads the fed-back bottom: signed 0+224 < 1899 calls KillPlayer at Y $076B
+        // (Sonic/Main.asm:1697-1705). Its RTS resumes the ground tail: ObjMove -7, then GroundCol's -8 (702-707).
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, p.result().boundary());
+        assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, p.result().modeBoundary().orElseThrow());
+        var s = f.state();
+        assertEquals(6, s.motion().routine()); assertEquals(1884 << 16, s.motion().centreY16_16());
+        assertEquals(0x07, s.motion().stick()); assertEquals(0x6B, s.rotationDistance());
+        assertEquals(0x8780, s.header().tile()); assertEquals(0, s.header().priority());
+        // The standing prefix's CheckCharge stop request, then KillPlayer's FM_HURT at its call position.
+        assertEquals(List.of(new CdPlayerFrameRuntime.ChargeSound(CdPlayerCharge.Sound.FM_CHARGESTOP),
+                new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT)), p.sounds());
+        assertEquals(0, displayCut(p).priority(), "Main's Display follows the MODE kill");
         assertEquals(bounds, f.environment().movement().bounds());
+        service(f, 0); var state = f.state(); var environment = f.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.DEAD_ROUTINE,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary(),
+                "without a LevelContext the next ObjSonic_Dead keeps its typed stop");
+        assertSame(state, f.state()); assertSame(environment, f.environment());
+    }
+
+    // U5-B1/B2 routines 6 and 8 through the real Frame/Body path. Written before production.
+    // Source pin 1ecc5f3a: Sonic/Main.asm:2397-2495. Root owns the world commit of DeadCheckGone/RestartCut.
+
+    @Test void deadAndRestartThroughTheFrameAdoptTheResetWordOnceAndReplayFromActorCaptures() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        Actor dead = new Actor(f); dead.routine = 6; dead.flags = 2; dead.y = 0x0811 << 16; dead.yv = -0x700;
+        dead.animation = 0x18; dead.install(f);
+        var context = Optional.of(new CdPlayerBody.LevelContext(new CdObjectPool().capture(),
+                new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0), new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0, 0)));
+        service(f, 0); var gone = f.runBody(2, Optional.empty(), context);
+        assertEquals(CdPlayerBody.Boundary.DEAD_RETURN, gone.result().boundary());
+        assertTrue(gone.sounds().isEmpty());
+        assertEquals(8, f.state().motion().routine()); assertEquals(0, f.state().motion().yVelocity());
+        assertEquals(0x0810C800, f.state().motion().centreY16_16());
+        assertEquals(0x3C, f.state().timers().reset(), "8*60 then 60: only the final word is committed");
+        assertTrue(f.display().orElseThrow().queued(), "JMP DrawObject is unconditional");
+        var summary = gone.result().effects().stream().filter(CdPlayerBody.DeadCheckGone.class::isInstance)
+                .map(CdPlayerBody.DeadCheckGone.class::cast).toList();
+        assertEquals(1, summary.size()); assertEquals(2, summary.getFirst().lives());
+        assertEquals(Optional.of(new CdPlayerTouchResponse.FindObjSlot(OptionalInt.of(32))), summary.getFirst().allocation());
+        var savedActor = f.captureActor(); var savedShared = f.captureShared();
+        service(f, 0); var first = f.runBody(3, Optional.empty(), context);
+        assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, first.result().boundary());
+        assertEquals(0x3B, f.state().timers().reset()); assertTrue(f.display().isEmpty(), "ObjSonic_Restart has no DrawObject");
+        assertTrue(first.sounds().isEmpty());
+        var afterFirst = f.captureActor();
+        f.restoreActor(savedActor); f.restoreShared(savedShared);
+        service(f, 0); var replay = f.runBody(3, Optional.empty(), context);
+        assertEquals(first, replay); assertEquals(afterFirst, f.captureActor());
+        for (int expected = 0x3A; expected >= 1; expected--) {
+            service(f, 0); var p = f.runBody(4, Optional.empty(), context);
+            assertEquals(expected, f.state().timers().reset()); assertTrue(p.sounds().isEmpty());
+        }
+        service(f, 0); var cut = f.runBody(5, Optional.empty(), context);
+        // StopZ80 / MOVE.B #1,Z80RAM+$1C3E / StartZ80 (2461-2463), then BRA.W SubCPUCmd with SCMD_FADECDA (2475,2491).
+        assertEquals(List.of(new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E, 1),
+                new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA)), cut.sounds());
+        assertEquals(List.of(new CdPlayerBody.RestartCut(new CdLevelGlobals(1, 0, 0, 0, 1, 0, 0, 0, 0), true)),
+                cut.result().effects().stream().filter(CdPlayerBody.RestartCut.class::isInstance).toList());
+        assertEquals(0, f.state().timers().reset());
+        service(f, 0); var state = f.state(); var environment = f.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.RESTART_ROUTINE,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(6)).boundary(),
+                "the previous ephemeral LevelContext is never retained");
+        assertSame(state, f.state()); assertSame(environment, f.environment());
+    }
+
+    @Test void driverRamWriteIsATypedRelativeZ80OffsetWithoutPlayback() {
+        var write = new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E, 1);
+        assertEquals(0x1C3E, write.address()); assertEquals(1, write.value());
+        // Z80RAM is $2000 bytes from $A00000 (Main CPU.inc:31-33); the 68000 bus address is not this offset.
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerFrameRuntime.DriverRamWrite(0xA01C3E, 1));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerFrameRuntime.DriverRamWrite(0x2000, 1));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerFrameRuntime.DriverRamWrite(-1, 1));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerFrameRuntime.DriverRamWrite(0x1C3E, 256));
+    }
+
+    @Test void frameCapturesAndPublicationsNeverDeclareALevelContextOrRuntimeLevelValues() {
+        for (var type : List.of(CdPlayerFrameRuntime.ActorState.class, CdPlayerFrameRuntime.SharedState.class,
+                CdPlayerFrameRuntime.BodyPublication.class)) {
+            for (var component : type.getRecordComponents()) {
+                String name = component.getGenericType().getTypeName();
+                for (String forbidden : List.of("LevelContext", "CdLevelGlobals", "CdRingGlobals", "Snapshot")) {
+                    assertFalse(name.contains(forbidden), type.getSimpleName() + "." + component.getName() + " " + name);
+                }
+            }
+        }
     }
 
     @ParameterizedTest @ValueSource(ints = {0, 1, 0x34, 0x7F, 0x80, 0xFF})
@@ -920,15 +1007,15 @@ class TestCdPlayerFrameRuntime {
     /** Test edit of an explicit same-owner immutable capture, not another load/factory ingress. */
     private static final class Actor {
         final CdPlayerBody.State base;
-        int slot, charge, gv, invincibility, reset, flags, y, routine, spriteFlags, rotationDistance;
+        int slot, charge, gv, invincibility, reset, flags, y, yv, routine, spriteFlags, animation, rotationDistance;
         Actor(CdPlayerFrameRuntime f) { base = f.state(); slot = base.header().slotId(); charge = base.motion().charge();
             gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); reset = base.timers().reset();
-            flags = base.motion().flags();
+            flags = base.motion().flags(); yv = base.motion().yVelocity(); animation = base.motion().animation();
             y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); }
         void install(CdPlayerFrameRuntime f) {
             var a = f.captureActor(); var m = base.motion(); var h = base.header();
-            var motion = new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), m.yVelocity(), gv,
-                    routine, m.angle(), flags, spriteFlags, m.xRadius(), m.yRadius(), m.animation(),
+            var motion = new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), yv, gv,
+                    routine, m.angle(), flags, spriteFlags, m.xRadius(), m.yRadius(), animation,
                     m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
                     m.previousPrimaryAngle(), m.previousSecondaryAngle());
             var state = new CdPlayerBody.State(motion, base.animation(), new CdPlayerBody.Header(slot, h.mappingAddress(), h.tile(), h.priority(), h.width()),

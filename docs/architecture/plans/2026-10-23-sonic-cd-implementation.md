@@ -3340,3 +3340,24 @@ Java25.0.5.0.2/media and all four fresh XML were inspected. Independent
 Opus source review found no P1/P2. Only the view is observed while media is
 open; the new fromObjectAssets calls run after close. JP's identical blob
 is elsewhere; no regional GameOver owner or offset inference is admitted.
+
+
+### Native player death fall, restart delay and Main return — 24 October 2026
+
+The pure Body now runs routines6/8 from an ephemeral caller-supplied LevelContext.
+It publishes a staged lives/HUD/GameOver-slot summary, full-pool alias metadata,
+the restart saved-flags request and the typed relative Z80/FADECDA requests.
+No pool/global/driver operation is replayed inside the Body. Main calls the
+shared KillPlayer once and resumes the original movement tail, then completes
+its remaining source calls. Frame contexts are not retained; Dead draws and
+Restart does not. World commit and actual level reconstruction remain separate.
+
+Root74991 atab8804a6a plus the six exact Body files and four camera files
+executed542checks:541passed and one existing Runtime assertion was accidentally
+changed by Root's broad test-text edit. No production defect caused that failure.
+Restoring only the old ChargeSound expectation gave Root82194:40/0/0/0 for
+the entire Runtime class. The other502cases passed in74991, including Body195,
+Frame106, Actor18, Movement115 and actual EGL/restore consumers. All selected
+XML, Java25/media/EGL and zero skips were inspected; this is not a single
+combined542green run. Independent Body source review is pending at this commit.
+The routine6/8 source and tests are byte-identical to the frozen Opus handoff.

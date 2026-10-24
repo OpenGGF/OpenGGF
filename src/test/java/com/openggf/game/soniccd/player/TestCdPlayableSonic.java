@@ -5,6 +5,9 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStockLaunch;
 import com.openggf.game.soniccd.level.SonicCdLevel;
+import com.openggf.game.soniccd.objects.CdLevelGlobals;
+import com.openggf.game.soniccd.objects.CdObjectPool;
+import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.resources.CdPlayerVisualAdapter;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.render.PlayerResidentBanks;
@@ -22,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -125,14 +129,113 @@ class TestCdPlayableSonic {
         frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
         actor.runPlayableSlot(level, 1); actor.finishAfterCamera();
         frame.applyScrollFeedback(new CdPlayerMovement.Bounds(0, 0x2897, 0, 0), 96);
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        // MdGround's LevelBound reads bottom 0 and calls the shared KillPlayer at Y 1899 = $076B; its RTS
+        // resumes the ground tail and Main completes (Sonic/Main.asm:701-707,1697-1705).
+        actor.runPlayableSlot(level, 2);
+        var killed = actor.nativeState();
+        assertEquals(6, killed.motion().routine());
+        assertEquals(0x07, killed.motion().stick()); assertEquals(0x6B, killed.rotationDistance());
+        assertEquals(0x8780, killed.header().tile()); assertEquals(0, killed.header().priority());
+        assertTrue(actor.lastSoundRequests().contains(
+                new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT)));
+        assertTrue(frame.display().orElseThrow().queued(), "Main's Display follows the MODE kill");
+        actor.finishAfterCamera();
         var beforeBody = frame.state();
         frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
-        assertEquals(CdPlayerBody.UnsupportedBoundary.KILL_PLAYER,
-                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> actor.runPlayableSlot(level, 2)).boundary());
-        assertSame(beforeBody, frame.state(), "the pure Body must not publish its unfinished death continuation");
-        assertTrue(frame.closed(), "the V-int already advanced; the engine must rebuild instead of retrying a missing Main");
+        // The direct actor supplies no LevelContext, so ObjSonic_Dead keeps its typed stop.
+        assertEquals(CdPlayerBody.UnsupportedBoundary.DEAD_ROUTINE,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> actor.runPlayableSlot(level, 3)).boundary());
+        assertSame(beforeBody, frame.state(), "the pure Body must not publish a half death routine");
+        assertTrue(frame.closed(), "the V-int already advanced; the engine must rebuild instead of retrying a missing call");
         assertThrows(IllegalStateException.class, () -> frame.prepareInput(0));
         assertThrows(IllegalStateException.class, actor::draw);
+    }
+
+    // Routine-6/8 projection (Sonic/Main.asm:2397-2495). Written before production. Only the shared object
+    // pass can supply the ephemeral LevelContext; Dead's DrawObject is queued like Hurt's, Restart draws nothing.
+    @ParameterizedTest @EnumSource(CdReleaseVariant.class)
+    void deathDrawObjectIsQueuedThroughTheSharedPassAndTheRestartDelayDrawsNothing(CdReleaseVariant variant)
+            throws Exception {
+        var source = source(variant);
+        var level = mock(LevelManager.class);
+        when(level.getCurrentLevel()).thenReturn(new SonicCdLevel(source.assets()));
+        var frame = CdPlayerFrameRuntime.terrainOnlyDevelopment(source.assets());
+        var pass = new DeathPass(frame);
+        var actor = new CdPlayableSonic("sonic", frame, GameServices.graphics(), pass);
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 1); actor.finishSharedAfterCamera();
+        assertTrue(pass.cuts.isEmpty(), "Init has no DrawObject");
+        installGoneDeath(frame); actor.rebindAfterRestore();
+
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 2);
+        var dead = pass.last.result();
+        assertEquals(CdPlayerBody.Boundary.DEAD_RETURN, dead.boundary());
+        // DeadChkGone (2410-2444): routine 8; lives 3 -> 2, so 8*60 then 60; FindObjSlot answers the free slot 32.
+        assertEquals(8, actor.nativeState().motion().routine()); assertEquals(0x3C, actor.nativeState().timers().reset());
+        var summary = dead.effects().stream().filter(CdPlayerBody.DeadCheckGone.class::isInstance)
+                .map(CdPlayerBody.DeadCheckGone.class::cast).toList();
+        assertEquals(1, summary.size()); assertEquals(2, summary.getFirst().lives());
+        assertEquals(Optional.of(new CdPlayerTouchResponse.FindObjSlot(OptionalInt.of(32))), summary.getFirst().allocation());
+        // JMP DrawObject (2404) is unconditional; ObjMoveGrv left Y $0810.C800.
+        assertEquals(List.of(new CdPlayerBody.DisplayEligibility(true, 64, 0x810, 19, 4, 24, 0)), pass.cuts);
+        assertEquals(0x6A, actor.getMappingFrame(), "SonAni_Death dc.b 3,$6A,$FF (Data/Animations.asm:101)");
+        assertTrue(frame.display().orElseThrow().queued());
+        frame.publishDrawObjectOnScreen(true); actor.finishSharedAfterCamera();
+        var savedActor = actor.captureRewindState(); var savedNative = frame.captureActor(); var savedShared = frame.captureShared();
+
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 3);
+        assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, pass.last.result().boundary());
+        assertEquals(1, pass.cuts.size(), "ObjSonic_Restart calls no DrawObject");
+        assertTrue(frame.display().isEmpty()); assertEquals(0x3B, actor.nativeState().timers().reset());
+        actor.finishSharedAfterCamera();
+        var advanced = frame.captureActor();
+        actor.restoreRewindState(savedActor); frame.restoreShared(savedShared); actor.rebindAfterRestore();
+        assertEquals(savedNative, frame.captureActor());
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 3); actor.finishSharedAfterCamera();
+        assertEquals(advanced, frame.captureActor());
+        assertEquals(1, pass.cuts.size());
+        frame.close();
+    }
+
+    /** Same-owner closed-cut edit: a post-KillPlayer routine-6 pose one pixel below the $0710+$100 gone line. */
+    private static void installGoneDeath(CdPlayerFrameRuntime frame) {
+        var actor = frame.captureActor(); var s = actor.state(); var m = s.motion(); var h = s.header();
+        var motion = new CdPlayerMotionState(64 << 16, 0x0811 << 16, 0, -0x700, 0, 6, 0, 2, 4, m.xRadius(), m.yRadius(),
+                0x18, 0x18, 0, 0, 0, 8, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion,
+                new CdPlayerBody.AnimationCursor(0, 0, 0), new CdPlayerBody.Header(h.slotId(), h.mappingAddress(),
+                h.tile() | 0x8000, 0, h.width()), new CdPlayerBody.Timers(0, 0, 0, 0), s.history(), 0x11), Optional.empty()));
+        var shared = frame.captureShared(); var e = shared.environment(); var mv = e.movement();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(mv.physics(),
+                new CdPlayerMovement.Bounds(0, 0x2897, 0x710, 0), mv.gates(), mv.globals()), e.controls(), e.globals(),
+                e.dynamicSlots());
+        frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(),
+                shared.paused(), shared.vIntClock()));
+    }
+
+    /**
+     * Recording shared-owner port: the real Frame/Body runs with one fresh ephemeral LevelContext per call
+     * (DEV lives 3 and declared level globals, empty dynamic RAM); only the queue's bit-7 writes are simulated.
+     */
+    private static final class DeathPass implements CdPlayableSonic.ObjectPass {
+        final CdPlayerFrameRuntime frame;
+        final List<CdPlayerBody.DisplayEligibility> cuts = new ArrayList<>();
+        CdPlayerFrameRuntime.BodyPublication last;
+        DeathPass(CdPlayerFrameRuntime frame) { this.frame = frame; }
+        @Override public CdPlayerFrameRuntime.BodyPublication runBody(int levelFrames) {
+            last = frame.runBody(levelFrames, Optional.empty(), Optional.of(new CdPlayerBody.LevelContext(
+                    new CdObjectPool().capture(), new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0),
+                    new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0, 0))));
+            return last;
+        }
+        @Override public void enqueuePlayer(CdPlayerBody.DisplayEligibility cut) {
+            cuts.add(cut); frame.publishDrawObjectOnScreen(false);
+        }
+        @Override public void close() { }
     }
 
     @ParameterizedTest @EnumSource(CdReleaseVariant.class)
