@@ -351,6 +351,117 @@ class TestSonicCdOpeningWorldEgl {
         }
     }
 
+    @Test void actualEglWalkingHitSpillHurtLandingAndFullCourseReplay() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        // R1 continuous Right passed the Mosqui and reached the unowned FloatBlock.
+        // R3 observations show Sonic passing before the dive reaches the ground.
+        // R4 waits for the returning patrol, then approaches with a short walk.
+        // This supplies no actor, object, clock or collision state to gameplay.
+        String log = InputScriptCompiler.compileToInputLog(System.getProperty("soniccd.hurt.script", "2 -;108 R;500 -;100 R"));
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("hurt-world-input-log"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.hurt.output");
+        if (output != null) Files.writeString(output.resolve("hurt-state.csv"),
+                "call,x16_16,y16_16,x_velocity,y_velocity,ground_velocity,routine,flags,animation,hurt,rings,lost_rings,spill_timer,spill_accumulator,spill_frame,vint,camera_x,camera_y,mosqui_id,mosqui_routine,mosqui_x,mosqui_y,mosqui_sprite_flags,input_mask,action_mask\n",
+                StandardOpenOption.CREATE_NEW);
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                for (int i = 0; i < 82; i++) step(loop, movie.getFrame(i));
+                var registry = mode.getRewindRegistry(); var full = registry.capture(); var course = registry.captureCourse();
+                var before = capture(module); var beforePixels = render(module, true);
+                var rows = new ArrayList<Bk2FrameInput>(); var expected = new ArrayList<Capture>();
+                int hitCall = -1, landingCall = -1, spilled = -1;
+                RgbaImage previousImage = beforePixels;
+                for (int index = 82; index < movie.getFrameCount(); index++) {
+                    var input = movie.getFrame(index);
+                    var previousState = module.requirePlayerFrame().state();
+                    int previousRings = runtime.ringGlobals().rings();
+                    var priorScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                    step(loop, input); rows.add(input); expected.add(capture(module));
+                    var state = module.requirePlayerFrame().state(); var motion = state.motion();
+                    var image = render(module, true);
+                    assertTerrainOutsideSprites(image, renderTerrain(module, priorScroll), runtime.displayedFrame());
+                    int lostRings = (int) runtime.placement().pool().capture().slots().stream().filter(s -> s.id() == 0x11).count();
+                    if (output != null) {
+                        var spill = runtime.spillGlobals(); var mosqui = runtime.placement().pool().state(34);
+                        String row = String.format(Locale.ROOT, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n",
+                                index + 1, motion.centreX16_16(), motion.centreY16_16(), motion.xVelocity(), motion.yVelocity(),
+                                motion.groundVelocity(), motion.routine(), motion.flags(), motion.animation(), state.timers().hurt(),
+                                runtime.ringGlobals().rings(), lostRings, spill.timerByte(), spill.accumWord(), spill.frameByte(),
+                                module.requirePlayerFrame().vIntClock().absoluteValue().orElseThrow(),
+                                GameServices.camera().getX(), GameServices.camera().getY(), mosqui.id(), mosqui.routine(),
+                                mosqui.centreX(), mosqui.centreY(), mosqui.spriteFlags(), input.p1InputMask(), input.p1ActionMask());
+                        Files.writeString(output.resolve("hurt-state.csv"), row, StandardOpenOption.APPEND);
+                    }
+                    if (hitCall < 0 && motion.routine() == 4) {
+                        hitCall = index + 1; spilled = Math.min(previousRings, 32);
+                        assertEquals(2, previousState.motion().routine());
+                        assertTrue(previousRings > 0, "Natural pickup must precede the walking hit");
+                        assertEquals(0, runtime.ringGlobals().rings()); assertEquals(spilled, lostRings);
+                        assertEquals(0x1A, motion.animation()); assertEquals(120, state.timers().hurt());
+                        assertEquals(0x200, Math.abs(motion.xVelocity())); assertEquals(-0x400, motion.yVelocity());
+                        assertTrue(runtime.lastSoundRequests().stream().anyMatch(CdOpeningObjectRuntime.LostRingFm.class::isInstance));
+                        if (output != null) {
+                            ScreenshotCapture.savePNG(previousImage, output.resolve("before-hit.png"));
+                            ScreenshotCapture.savePNG(image, output.resolve("hit-call.png"));
+                        }
+                    } else if (hitCall >= 0 && landingCall < 0 && motion.routine() == 2) {
+                        landingCall = index + 1;
+                        assertEquals(4, previousState.motion().routine()); assertEquals(0, motion.flags() & 2);
+                        assertEquals(0, motion.xVelocity()); assertEquals(0, motion.yVelocity());
+                        assertEquals(0, motion.groundVelocity()); assertEquals(120, state.timers().hurt());
+                        if (output != null) ScreenshotCapture.savePNG(image, output.resolve("landing.png"));
+                    } else if (hitCall >= 0 && landingCall < 0) {
+                        assertEquals(4, motion.routine()); assertEquals(120, state.timers().hurt(), "Hurt skips Main's Display countdown");
+                    }
+                    if (output != null && hitCall >= 0 && index + 1 == hitCall + 4)
+                        ScreenshotCapture.savePNG(image, output.resolve("hurt-spill.png"));
+                    previousImage = image;
+                    if (landingCall >= 0 && index + 1 == landingCall + 1) {
+                        assertEquals(2, motion.routine()); assertEquals(119, state.timers().hurt(), "First Main after landing resumes Display");
+                        break;
+                    }
+                }
+                assertTrue(hitCall >= 0, "Fixed walking input reached no hit; inspect state before revising the proposal");
+                assertTrue(landingCall > hitCall, "Hurt did not land within the fixed input proposal");
+                assertEquals(landingCall + 1, 82 + rows.size());
+                var after = capture(module); var finalPixels = render(module, true);
+                if (output != null) ScreenshotCapture.savePNG(finalPixels, output.resolve("after-landing.png"));
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(course); else registry.restore(full);
+                    assertCapture(before, module);
+                    assertArrayEquals(beforePixels.pixels(), render(module, true).pixels());
+                    for (int i = 0; i < rows.size(); i++) {
+                        step(loop, rows.get(i)); assertCapture(expected.get(i), module);
+                        render(module, true); assertCapture(expected.get(i), module);
+                    }
+                    assertCapture(after, module);
+                    assertArrayEquals(finalPixels.pixels(), render(module, true).pixels());
+                }
+                if (output != null) Files.writeString(output.resolve("outcome.txt"),
+                        "PASS: controller-only walking hit, real ring spill, routine-4 recovery, landing and full/course rendered replay.\n"
+                        + "Hit call: " + hitCall + "; rings spilled: " + spilled + "; landing call: " + landingCall
+                        + "; continuation rows: " + rows.size() + "\n"
+                        + "Actual OpenGGF USA R11A DEV: silent audio, preloaded object art, declared V-int seed 0; no native timing/pixel/full-game parity claim.\n",
+                        StandardOpenOption.CREATE_NEW);
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
     private static void step(GameLoop loop, Bk2FrameInput row) {
         loop.getInputHandler().setLogicalOverride(LogicalInputSnapshot.ofPlayers(
                 PlayerInputState.of(row.p1InputMask(), 0, row.p1ActionMask(), 0, row.p1StartPressed(), false),
@@ -433,6 +544,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().placement().status(), actual.objects().placement().status());
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
+        assertEquals(expected.objects().spillGlobals(), actual.objects().spillGlobals());
         assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
         assertEquals(expected.objects().contactGlobals(), actual.objects().contactGlobals());
         assertEquals(expected.objects().scoreGlobals(), actual.objects().scoreGlobals());

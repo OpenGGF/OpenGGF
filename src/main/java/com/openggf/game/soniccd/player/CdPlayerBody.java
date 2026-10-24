@@ -16,9 +16,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Pure R11A ObjSonic dispatch/Init/Main owner.
+ * Pure R11A ObjSonic dispatch/Init/Main/Hurt owner.
  * Source: scddisasm 1ecc5f3af7ccfbe26c6c58c96e6e5bcfdd15d6ff,
- * src/Level/_Objects/Sonic/Main.asm:56-105,135-456,2500-2603.
+ * src/Level/_Objects/Sonic/Main.asm:56-106,135-456,2351-2391,2500-2603, plus
+ * src/Level/Object Functions.asm:91-128 (ObjMove) and 137 (DrawObject) for Hurt.
  * Shipped FixBugs=0 behavior; no repaired arithmetic, route or frame gates.
  *
  * One invocation is one loaded player object call, NOT a level frame, V-int,
@@ -159,14 +160,18 @@ public final class CdPlayerBody {
         }
     }
 
-    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN }
+    /** HURT_RETURN is a completed ObjSonic_Hurt call (Main.asm:2351-2366): drawn, but no MODE was called. */
+    public enum Boundary { SLOT_ABSENT, INIT_RETURN, MAIN_RETURN, HURT_RETURN }
     public enum NativeCall {
         CHARGE_BEFORE_DISPATCH, INIT, EXTENDED_CAMERA, WATERFALL_SPLASH_CHECK, MODE,
-        PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS
+        PP_SPECIAL_COLLISION, DISPLAY, RECORD_POSITION, PP_WATER, ANIMATE, SPECIAL_CHUNKS,
+        OBJ_MOVE, HURT_CHECK_LAND, LEVEL_COLLISION_IN_AIR, KILL_PLAYER, LEVEL_BOUND, DRAW_OBJECT
     }
+    /** CENTRE_*_LONG values are ObjMove's complete 16.16 longs; velocity values are signed words. */
     public enum ActorField {
         ROUTINE, X_RADIUS, Y_RADIUS, MAPPING_ADDRESS, TILE, PRIORITY, WIDTH, SPRITE_FLAGS,
-        HURT_TIMER, INVINCIBILITY_TIMER, SHOES_TIMER, PRIMARY_ANGLE_COPY, SECONDARY_ANGLE_COPY, ANIMATION
+        HURT_TIMER, INVINCIBILITY_TIMER, SHOES_TIMER, PRIMARY_ANGLE_COPY, SECONDARY_ANGLE_COPY, ANIMATION,
+        CENTRE_X_LONG, CENTRE_Y_LONG, X_VELOCITY, Y_VELOCITY, GROUND_VELOCITY
     }
     public enum GlobalField {
         CAMERA_X_CENTRE, LOGICAL_HELD, LOGICAL_TAP, INVINCIBLE, SPEED_SHOES,
@@ -176,7 +181,8 @@ public final class CdPlayerBody {
     public enum Sound { SCMD_R1AMUS, FM_9C }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
-            ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest { }
+            ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest,
+            AirCollisionEffect, KillPlayerCall { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -194,7 +200,8 @@ public final class CdPlayerBody {
         public CallReturned { Objects.requireNonNull(call); }
     }
     /**
-     * Exact Display call cut before history, Animate and SpecialChunks. The queue
+     * Exact DrawObject call cut: Main's Display call before history, Animate and SpecialChunks,
+     * or Hurt's unconditional tail JMP after Animate (Main.asm:2366), there always eligible. The queue
      * owner uses this radius/position/raw width with the pre-scroll camera and
      * the raw priority byte for queue selection. It owns both
      * DrawObject's entry bit7 clear and DrawObjects' later bit7 set. Body leaves
@@ -239,10 +246,26 @@ public final class CdPlayerBody {
     public record SoundRequest(Sound sound) implements Effect {
         public SoundRequest { Objects.requireNonNull(sound); }
     }
+    /**
+     * One ordered helper effect of Hurt's Player_LevelColInAir call (Main.asm:2378). Not MODE:
+     * the collision owner's final actor/scratch values are already adopted once into this Body result.
+     */
+    public record AirCollisionEffect(CdPlayerMovement.Effect effect) implements Effect {
+        public AirCollisionEffect { Objects.requireNonNull(effect); }
+    }
+    /**
+     * One executed KillPlayer call (PP Player Object Collision.asm:279-298) at its native position,
+     * through the shared pure owner. Its actor, invincible and scoreChain values are already adopted
+     * ONCE; calls are ordered observations, never write-replay instructions. No world, contact or pool
+     * value exists here. A debug no-write exit is still a call that returned into Hurt.
+     */
+    public record KillPlayerCall(CdPlayerTouchResponse.KillResult result) implements Effect {
+        public KillPlayerCall { Objects.requireNonNull(result); }
+    }
 
     /**
-     * DrawObject queues the actor before Animate; the later SAT owner observes
-     * its completed pose. This publication therefore combines that eligibility
+     * Main's Display queues the actor before Animate and Hurt's DrawObject queues it after; the later
+     * SAT owner observes the completed pose. This publication therefore combines that eligibility
      * with final body fields. Reading it never advances any owner. queued means
      * eligible for queueing, not evidence that native DrawObject/SAT ran.
      */
@@ -255,18 +278,21 @@ public final class CdPlayerBody {
         public Result {
             Objects.requireNonNull(state); Objects.requireNonNull(environment); effects = List.copyOf(effects);
             Objects.requireNonNull(display); Objects.requireNonNull(boundary); Objects.requireNonNull(modeBoundary);
-            if ((boundary == Boundary.MAIN_RETURN) != display.isPresent()
+            boolean drawn = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN;
+            if (drawn != display.isPresent()
                     || (boundary == Boundary.MAIN_RETURN) != modeBoundary.isPresent()
-                    || modeBoundary.orElse(null) == CdPlayerMovement.Boundary.KILL_PLAYER) {
-                throw new IllegalArgumentException("Only a completed Main has display and completed MODE publication");
+                    || modeBoundary.orElse(null) == CdPlayerMovement.Boundary.KILL_PLAYER
+                    || (boundary == Boundary.HURT_RETURN && !display.orElseThrow().queued())) {
+                throw new IllegalArgumentException(
+                        "Only a completed Main or drawn Hurt has display; only Main has completed MODE publication");
             }
         }
     }
 
     public enum UnsupportedBoundary {
-        SLOT_ID, SOURCE_FAMILY, DEBUG_UPDATE, ROUTINE_DISPATCH, HURT_ROUTINE, DEAD_ROUTINE, RESTART_ROUTINE,
+        SLOT_ID, SOURCE_FAMILY, DEBUG_UPDATE, ROUTINE_DISPATCH, DEAD_ROUTINE, RESTART_ROUTINE,
         MINIATURE_INIT, MAPPING_BINDING, WATERFALL_SPLASH_CREATION, DEBUG_ENTRY, OBJECT_CONTROL,
-        KILL_PLAYER, HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER
+        KILL_PLAYER, HISTORY_ADDRESS, TOUCH_SCAN, ROLL_TUNNEL_OWNER, STANDING_OBJECT_MOVE
     }
     /** No staged state or effects escape. Kill names the unexecuted external call's exact MODE continuation. */
     public static final class UnsupportedBody extends UnsupportedOperationException {
@@ -341,7 +367,7 @@ public final class CdPlayerBody {
         switch (c.motion.routine()) {
             case 0 -> { initialize(c); return c.finish(Boundary.INIT_RETURN); }
             case 2 -> { main(c, touchContext); return c.finish(Boundary.MAIN_RETURN); }
-            case 4 -> unsupported(UnsupportedBoundary.HURT_ROUTINE);
+            case 4 -> { hurt(c); return c.finish(Boundary.HURT_RETURN); } // Never samples touchContext.
             case 6 -> unsupported(UnsupportedBoundary.DEAD_ROUTINE);
             case 8 -> unsupported(UnsupportedBoundary.RESTART_ROUTINE);
             default -> unsupported(UnsupportedBoundary.ROUTINE_DISPATCH);
@@ -361,7 +387,7 @@ public final class CdPlayerBody {
 
     /** ObjSonic_Main (285-351), literal call and branch order. */
     private void main(Cursor c, Optional<TouchContext> touchContext) {
-        if (c.header.mappingAddress() != mappingAddress) unsupported(UnsupportedBoundary.MAPPING_BINDING);
+        requireBoundMapping(c);
         extendedCamera(c); waterfall(c);
         if (c.debugCheat != 0 && (c.controls.rawTap() & 0x10) != 0) unsupported(UnsupportedBoundary.DEBUG_ENTRY);
         if (c.controls.controlLocked() == 0) {
@@ -433,19 +459,99 @@ public final class CdPlayerBody {
     private static void respond(Cursor c, CdPlayerObjectTouch.HandlerBoundary selected, ResponseContext owner,
                                 CdObjectPool.Snapshot snapshot) {
         var movement = c.env.movement(); var contact = owner.contact();
-        var actor = new CdPlayerTouchResponse.Actor(c.motion, c.header.tile(), c.header.priority(), c.hurt,
-                c.rotationDistance);
         var player = new CdPlayerTouchResponse.PlayerGlobals(contact.timeWarp(), c.invincible, contact.shield(),
                 contact.combineRing(), c.debugCheat, c.debugMode, movement.globals().scoreChain(), movement.gates().miniSonic());
-        var result = owner.response().respond(selected, actor, player, owner.world(), snapshot);
-        var adopted = result.actor();
-        c.motion = adopted.motion();
-        c.header = new Header(c.header.slotId(), c.header.mappingAddress(), adopted.tile(), adopted.priority(),
-                c.header.width());
-        c.hurt = adopted.hurt(); c.rotationDistance = adopted.rotationDistance();
+        var result = owner.response().respond(selected, c.responseActor(), player, owner.world(), snapshot);
+        c.adopt(result.actor());
         c.invincible = result.player().invincible();
         c.setScoreChain(result.player().scoreChain());
         c.effects.add(new ObjectTouchResponse(result));
+    }
+
+    /**
+     * ObjSonic_Hurt (2351-2366), literal call order. There is no Display (no hurt, invincibility or
+     * shoes servicing), ExtCamera, input copy, MODE, water, angle copy, touch or SpecialChunks call.
+     * Each KillPlayer returns into this routine, so its later calls still run; DrawObject is unconditional.
+     */
+    private void hurt(Cursor c) {
+        requireBoundMapping(c);
+        objMove(c);
+        // ADDI.W #$30 then underwater SUBI.W #$20 (2354-2357): two native word writes, no ObjMoveGrv fall cap.
+        c.setYVelocity((short) (c.motion.yVelocity() + 0x30));
+        if ((c.motion.flags() & 0x40) != 0) c.setYVelocity((short) (c.motion.yVelocity() - 0x20));
+        // PP's actual Player Special Collision.asm:7-8 is RTS, not a shared collision fallback.
+        c.returned(NativeCall.PP_SPECIAL_COLLISION);
+        hurtCheckLand(c);
+        levelBound(c);
+        recordPosition(c);
+        animate(c);
+        drawObject(c);
+    }
+
+    /** ObjMove (Object Functions.asm:91-128): both longs add the OLD velocity words shifted by 8; no gravity. */
+    private static void objMove(Cursor c) {
+        // :97-114 reads oPlayerStandObj's slot oID for the CCZ flipper; that object belongs to the pool owner.
+        if ((c.motion.flags() & 8) != 0) unsupported(UnsupportedBoundary.STANDING_OBJECT_MOVE);
+        var m = c.motion;
+        c.setCentre(m.centreX16_16() + (m.xVelocity() << 8), m.centreY16_16() + (m.yVelocity() << 8));
+        c.returned(NativeCall.OBJ_MOVE);
+    }
+
+    /**
+     * ObjSonic_HurtChkLand (2372-2391). Its UNSIGNED CMP.W/BCS.W branches into KillPlayer, whose RTS
+     * returns from this subroutine into Hurt: LevelColInAir and the landing writes are then skipped.
+     */
+    private void hurtCheckLand(Cursor c) {
+        if (uw(c.env.movement().bounds().bottom() + 224) < c.y()) {
+            killPlayer(c);
+        } else {
+            var collided = movement.collideInAir(c.motion, c.env.movement()); // BSR.W Player_LevelColInAir (2378).
+            c.motion = collided.state(); c.setMovementEnvironment(collided.environment());
+            for (var effect : collided.effects()) c.effects.add(new AirCollisionEffect(effect));
+            c.returned(NativeCall.LEVEL_COLLISION_IN_AIR);
+            if ((c.motion.flags() & 2) == 0) {
+                // 2382-2388: MOVEQ #0 to Y/X/ground words, oAnim 0, SUBQ.B #2,oRoutine, then oPlayerHurt 120.
+                c.stopMotion(); c.setAnimation(0); c.setRoutine((c.motion.routine() - 2) & 0xFF);
+                c.hurt = 120; c.actor(ActorField.HURT_TIMER, 120);
+            }
+        }
+        c.returned(NativeCall.HURT_CHECK_LAND);
+    }
+
+    /**
+     * ObjSonic_LevelBound (1673-1714) through the shared port: side clamp, then its SIGNED bottom test.
+     * BNE.W KillPlayer returns into Hurt; the port itself stops at the unowned bored-death branch.
+     */
+    private static void levelBound(Cursor c) {
+        var bounded = CdPlayerMovement.applyLevelBounds(c.motion, c.env.movement());
+        c.motion = bounded.state(); c.setMovementEnvironment(bounded.environment());
+        if (bounded.killRequested()) killPlayer(c);
+        c.returned(NativeCall.LEVEL_BOUND);
+    }
+
+    /**
+     * KillPlayer (PP Player Object Collision.asm:279-298) through the shared pure owner, never a copy.
+     * debugMode is the complete word (:280). Adopted once at this call; the next call reads its result.
+     */
+    private static void killPlayer(Cursor c) {
+        var e = c.env.movement();
+        var result = CdPlayerTouchResponse.killPlayer(c.responseActor(), c.invincible, c.debugMode,
+                e.globals().scoreChain(), e.gates().miniSonic());
+        c.adopt(result.actor()); c.invincible = result.invincible(); c.setScoreChain(result.scoreChain());
+        c.effects.add(new KillPlayerCall(result)); c.returned(NativeCall.KILL_PLAYER);
+    }
+
+    /** Hurt's tail JMP DrawObject (2366): unconditional, at the completed post-Animate pose. */
+    private static void drawObject(Cursor c) {
+        c.displayEligible = true;
+        c.effects.add(new DisplayEligibility(true, c.x(), c.y(), c.motion.yRadius(), c.motion.spriteFlags(),
+                c.header.width(), c.header.priority()));
+        c.returned(NativeCall.DRAW_OBJECT);
+    }
+
+    /** Main and Hurt both draw through the actual source-bound mapping; Init alone writes it. */
+    private void requireBoundMapping(Cursor c) {
+        if (c.header.mappingAddress() != mappingAddress) unsupported(UnsupportedBoundary.MAPPING_BINDING);
     }
 
     /** ObjSonic_ExtCamera (231-279), incoming ground word and unsigned CMP/BCC including wrapped NEG.W. */
@@ -667,11 +773,43 @@ public final class CdPlayerBody {
                     m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
             actor(ActorField.ANIMATION, value);
         }
+        /** Replaces the two centre longs and three speed words; the record validates native widths. */
+        void setMotion(int x, int y, int xVelocity, int yVelocity, int groundVelocity) {
+            var m = motion;
+            motion = new CdPlayerMotionState(x, y, xVelocity, yVelocity, groundVelocity,
+                    m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                    m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                    m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        }
+        /** ObjMove's MOVE.L d2,oX then MOVE.L d3,oY. */
+        void setCentre(int x, int y) {
+            var m = motion; setMotion(x, y, m.xVelocity(), m.yVelocity(), m.groundVelocity());
+            actor(ActorField.CENTRE_X_LONG, x); actor(ActorField.CENTRE_Y_LONG, y);
+        }
+        void setYVelocity(int value) {
+            var m = motion; setMotion(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), value, m.groundVelocity());
+            actor(ActorField.Y_VELOCITY, value);
+        }
+        /** HurtChkLand's MOVE.W d0 to oYVel, oXVel, then oPlayerGVel. */
+        void stopMotion() {
+            var m = motion; setMotion(m.centreX16_16(), m.centreY16_16(), 0, 0, 0);
+            actor(ActorField.Y_VELOCITY, 0); actor(ActorField.X_VELOCITY, 0); actor(ActorField.GROUND_VELOCITY, 0);
+        }
+        /** Contact/KillPlayer call-cut projection: oTile/oPriority, the post-Display hurt word and byte39. */
+        CdPlayerTouchResponse.Actor responseActor() {
+            return new CdPlayerTouchResponse.Actor(motion, header.tile(), header.priority(), hurt, rotationDistance);
+        }
+        /** Adopts one pure response actor once; slot ID, mapping and width are not response outputs. */
+        void adopt(CdPlayerTouchResponse.Actor actor) {
+            motion = actor.motion();
+            header = new Header(header.slotId(), header.mappingAddress(), actor.tile(), actor.priority(), header.width());
+            hurt = actor.hurt(); rotationDistance = actor.rotationDistance();
+        }
         Result finish(Boundary boundary) {
             var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer), history, rotationDistance);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
-            Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN
+            Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN || boundary == Boundary.HURT_RETURN
                     ? Optional.of(new DisplayPublication(displayEligible, header.mappingAddress(), header.tile(), header.priority(),
                     header.width(), animation.mapFrame(), motion.spriteFlags(), motion.centreX16_16(), motion.centreY16_16())) : Optional.empty();
             return new Result(state, environment, effects, display, boundary, modeBoundary);

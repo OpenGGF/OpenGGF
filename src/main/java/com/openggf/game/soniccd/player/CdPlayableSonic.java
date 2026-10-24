@@ -92,7 +92,9 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
             var publication = objectPass == null ? frame.runBody(levelFrames) : objectPass.runBody(levelFrames);
             lastSounds = publication.sounds();
             queuedPointer = false;
-            if (publication.result().boundary() == CdPlayerBody.Boundary.MAIN_RETURN) {
+            var boundary = publication.result().boundary();
+            // Main's Display call or Hurt's unconditional DrawObject (Sonic/Main.asm:373-441,2366); Init/absent have none.
+            if (boundary == CdPlayerBody.Boundary.MAIN_RETURN || boundary == CdPlayerBody.Boundary.HURT_RETURN) {
                 var cut = publication.result().effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
                         .map(CdPlayerBody.DisplayEligibility.class::cast).findFirst().orElseThrow();
                 if (cut.eligible() && objectPass != null) {

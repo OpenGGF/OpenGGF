@@ -18,7 +18,10 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -154,6 +157,92 @@ class TestCdPlayableSonic {
         assertEquals(before.state().motion().xVelocity(), actor.getXSpeed());
         assertFalse(frame.closed(), "an owner mismatch rejects before native restore and does not require a cold path");
         frame.close(); foreignFrame.close();
+    }
+
+    // Routine-4 ObjSonic_Hurt projection (Sonic/Main.asm:2351-2366). Written before production.
+    @ParameterizedTest @EnumSource(CdReleaseVariant.class)
+    void hurtDrawObjectIsQueuedOnBothActorPathsWhereMainDisplayWouldSkipAndReplaysAfterRestore(CdReleaseVariant variant)
+            throws Exception {
+        var source = source(variant);
+        var level = mock(LevelManager.class);
+        when(level.getCurrentLevel()).thenReturn(new SonicCdLevel(source.assets()));
+        var frame = CdPlayerFrameRuntime.terrainOnlyDevelopment(source.assets());
+        var actor = new CdPlayableSonic("sonic", frame, GameServices.graphics());
+        var sharedFrame = CdPlayerFrameRuntime.terrainOnlyDevelopment(source.assets());
+        var pass = new HurtPass(sharedFrame);
+        var shared = new CdPlayableSonic("sonic", sharedFrame, GameServices.graphics(), pass);
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 1); actor.finishAfterCamera();
+        sharedFrame.prepareInput(0); sharedFrame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        shared.runPlayableSlot(level, 1); shared.finishSharedAfterCamera();
+        assertTrue(pass.cuts.isEmpty(), "Init has no DrawObject");
+        installPitHurt(frame); actor.rebindAfterRestore();
+        installPitHurt(sharedFrame); shared.rebindAfterRestore();
+
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 2);
+        // Debug low byte: both KillPlayer calls return unwritten, so Hurt keeps routine 4 and still draws.
+        assertEquals(4, actor.nativeState().motion().routine());
+        assertEquals(120, actor.nativeState().timers().hurt(), "no Display decrement");
+        assertEquals(2040, actor.getCentreY()); assertTrue(actor.lastSoundRequests().isEmpty());
+        assertTrue(frame.display().orElseThrow().queued());
+        assertEquals(0, actor.nativeState().motion().spriteFlags() & 0x80, "DrawObject clears bit 7 before the camera pass");
+        actor.finishAfterCamera();
+        assertEquals(0x80, actor.nativeState().motion().spriteFlags() & 0x80, "the on-screen Hurt pose reaches DrawDone");
+        assertEquals(actor.nativeState().animation().mapFrame(), actor.getMappingFrame());
+        assertEquals(0x5D, actor.getMappingFrame(), "SonAni_Hurt dc.b 3,$5D,$FF (Data/Animations.asm:105)");
+        var savedActor = actor.captureRewindState(); var savedNative = frame.captureActor(); var savedShared = frame.captureShared();
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 3); actor.finishAfterCamera();
+        var advanced = frame.captureActor();
+        actor.restoreRewindState(savedActor); frame.restoreShared(savedShared); actor.rebindAfterRestore();
+        assertEquals(savedNative, frame.captureActor());
+        frame.prepareInput(0); frame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        actor.runPlayableSlot(level, 3); actor.finishAfterCamera();
+        assertEquals(advanced, frame.captureActor());
+
+        sharedFrame.prepareInput(0); sharedFrame.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        shared.runPlayableSlot(level, 2);
+        var published = pass.last.result();
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, published.boundary());
+        var cuts = published.effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                .map(CdPlayerBody.DisplayEligibility.class::cast).toList();
+        assertEquals(cuts, pass.cuts); assertTrue(cuts.getFirst().eligible());
+        sharedFrame.publishDrawObjectOnScreen(true); shared.finishSharedAfterCamera();
+        assertEquals(0x80, shared.nativeState().motion().spriteFlags() & 0x80);
+        frame.close(); sharedFrame.close();
+    }
+
+    /** Same-owner closed-cut edit: routine-4 pit pose, debug low byte and all three Main Display skip gates. */
+    private static void installPitHurt(CdPlayerFrameRuntime frame) {
+        var actor = frame.captureActor(); var s = actor.state(); var m = s.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), 2040 << 16, 0, 0, 0, 4, m.angle(), 2, 0x84,
+                m.xRadius(), m.yRadius(), 0x1A, m.previousAnimation(), 0, 0, 0, 0, 0x40,
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(actor.owner(), new CdPlayerBody.State(motion, s.animation(),
+                s.header(), new CdPlayerBody.Timers(120, 0, 0), s.history(), s.rotationDistance()), Optional.empty()));
+        var shared = frame.captureShared(); var e = shared.environment(); var g = e.globals(); var mv = e.movement();
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(mv.physics(),
+                new CdPlayerMovement.Bounds(0, 0x2897, 0x710, 0), mv.gates(), mv.globals()), e.controls(),
+                new CdPlayerBody.Globals(g.levelFrames(), g.cameraXCentre(), g.timeAttackMode(), 1, g.debugCheat(), 210,
+                        g.invincible(), g.bossMusic()), e.dynamicSlots());
+        frame.restoreShared(new CdPlayerFrameRuntime.SharedState(shared.owner(), environment, shared.artState(),
+                shared.paused(), shared.vIntClock()));
+    }
+
+    /** Recording shared-owner port: the real Frame/Body runs; only the queue's bit-7 writes are simulated. */
+    private static final class HurtPass implements CdPlayableSonic.ObjectPass {
+        final CdPlayerFrameRuntime frame;
+        final List<CdPlayerBody.DisplayEligibility> cuts = new ArrayList<>();
+        CdPlayerFrameRuntime.BodyPublication last;
+        HurtPass(CdPlayerFrameRuntime frame) { this.frame = frame; }
+        @Override public CdPlayerFrameRuntime.BodyPublication runBody(int levelFrames) {
+            last = frame.runBody(levelFrames); return last;
+        }
+        @Override public void enqueuePlayer(CdPlayerBody.DisplayEligibility cut) {
+            cuts.add(cut); frame.publishDrawObjectOnScreen(false);
+        }
+        @Override public void close() { }
     }
 
     private static com.openggf.game.soniccd.CdGameDataSource source(CdReleaseVariant variant) throws Exception {

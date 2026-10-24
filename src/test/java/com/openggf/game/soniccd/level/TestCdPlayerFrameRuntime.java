@@ -584,7 +584,7 @@ class TestCdPlayerFrameRuntime {
         assertEquals(CdPlayerObjectTouch.Kind.NONE, frameTouchResult(result).kind());
     }
 
-    // Pure U1 response through the real Frame/Body path. Written before the composition; UNRUN.
+    // Pure U1 response through the real Frame/Body path. Written before the composition.
     // Source pin 1ecc5f3a: Sonic/Main.asm:340-351, PP Player Object Collision.asm:130-298, HUD and Points/Main.asm:157-180.
 
     @Test void frameJumpKillCommitsTheAdoptedActorOnceAndUnwrapsContactRequestsAtTheTouchPosition() throws IOException {
@@ -631,9 +631,9 @@ class TestCdPlayerFrameRuntime {
         }
     }
 
-    @ParameterizedTest @CsvSource({"5,4,HURT_ROUTINE", "0,6,DEAD_ROUTINE"})
-    void frameCommitsAHazardHurtOrKillOnceAndTheNextBodyCallStillStopsAtItsUnownedRoutine(int rings, int routine,
-            CdPlayerBody.UnsupportedBoundary next) throws IOException {
+    @ParameterizedTest @CsvSource({"5,4", "0,6"})
+    void frameCommitsAHazardHurtOrKillOnceAndTheNextBodyCallRunsHurtOrStopsAtTheUnownedDeadRoutine(int rings, int routine)
+            throws IOException {
         var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0xAB);
         service(f, 0x10);
         var p = f.runBody(2, Optional.of(frameResponseTouch(pool, rings, 0)));
@@ -658,8 +658,78 @@ class TestCdPlayerFrameRuntime {
             assertEquals(2, displayCut(p).priority(), "The Display cut precedes the touch");
         }
         service(f, 0); var state = f.state(); var environment = f.environment();
-        assertEquals(next, assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary());
+        if (rings != 0) {
+            var hurt = f.runBody(3); // ObjSonic_Hurt (Sonic/Main.asm:2351-2366) is now the owned next routine.
+            assertEquals(CdPlayerBody.Boundary.HURT_RETURN, hurt.result().boundary());
+            assertSame(hurt.result().state(), f.state());
+        } else {
+            assertEquals(CdPlayerBody.UnsupportedBoundary.DEAD_ROUTINE,
+                    assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary());
+            assertSame(state, f.state()); assertSame(environment, f.environment());
+        }
+    }
+
+    // Routine-4 ObjSonic_Hurt through the real Frame/Body path. Written before production.
+    // Source pin 1ecc5f3a: Sonic/Main.asm:1673-1714,2351-2391; PP Player Object Collision.asm:279-298.
+
+    @Test void frameHurtCallCommitsOnceThenRestoresAndReplaysForwardWithoutATouchContext() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0xAB);
+        service(f, 0x10); f.runBody(2, Optional.of(frameResponseTouch(pool, 5, 0)));
+        assertEquals(4, f.state().motion().routine());
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0);
+        // UNIMPLEMENTED dynamic RAM and no context: Hurt makes no Player_ObjCollide call to reject.
+        var p = f.runBody(3);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, p.result().boundary()); assertTrue(p.sounds().isEmpty());
+        assertSame(p.result().state(), f.state()); assertSame(p.result().environment(), f.environment());
+        var m = f.state().motion();
+        // ObjMove's old words: X 64+2, Y 1899-4; then ADDI.W #$30. Nothing is probed in the empty row-6 band.
+        assertEquals(66 << 16, m.centreX16_16()); assertEquals(1895 << 16, m.centreY16_16());
+        assertEquals(0x200, m.xVelocity()); assertEquals(-0x3D0, m.yVelocity()); assertEquals(4, m.routine());
+        assertEquals(0x78, f.state().timers().hurt()); assertEquals(8, f.state().history().index());
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 66, 1895, 19, 4, 24, 2), displayCut(p));
+        assertEquals(p.result().display(), f.display()); assertTrue(f.display().orElseThrow().queued());
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0); var replay = f.runBody(3);
+        assertEquals(p, replay); assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        service(f, 0); var forward = f.runBody(4);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, forward.result().boundary());
+        assertEquals(68 << 16, f.state().motion().centreX16_16());
+        assertEquals((1891 << 16) | 0x3000, f.state().motion().centreY16_16());
+        assertEquals(-0x3A0, f.state().motion().yVelocity()); assertEquals(12, f.state().history().index());
+        assertEquals(0x78, f.state().timers().hurt(), "the airborne hurt word stays fixed");
+    }
+
+    @Test void frameHurtPitUnwrapsBothSharedKillPlayerRequestsInCallOrderAndTheNextCallStopsAtDead() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        Actor a = new Actor(f); a.routine = 4; a.flags = 2; a.y = 2040 << 16; a.install(f);
+        service(f, 0); var p = f.runBody(2);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, p.result().boundary());
+        // HurtChkLand's unsigned and LevelBound's signed bottom tests both call KillPlayer (:2376, :1705).
+        assertEquals(List.of(new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT),
+                new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT)), p.sounds());
+        var s = f.state();
+        assertEquals(6, s.motion().routine()); assertEquals(0x07, s.motion().stick()); assertEquals(0xF8, s.rotationDistance());
+        assertEquals(0x8780, s.header().tile()); assertEquals(0, s.header().priority());
+        assertEquals(0, displayCut(p).priority(), "Hurt's DrawObject follows both kills");
+        assertTrue(f.display().orElseThrow().queued());
+        service(f, 0); var state = f.state(); var environment = f.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.DEAD_ROUTINE,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary());
         assertSame(state, f.state()); assertSame(environment, f.environment());
+    }
+
+    @Test void frameHurtLandingResetRequestIsAMovementSoundAtTheAirCollisionPosition() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        // Ingress bit 2 lets Player_ResetOnFloor request FM_CHARGESTOP; Y1905 sensors meet the row-7 band at -2.
+        Actor a = new Actor(f); a.routine = 4; a.flags = 6; a.y = 1886 << 16; a.install(f);
+        service(f, 0); var p = f.runBody(2);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, p.result().boundary());
+        assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_CHARGESTOP)), p.sounds());
+        var m = f.state().motion();
+        assertEquals(2, m.routine()); assertEquals(0, m.flags()); assertEquals(1879 << 16, m.centreY16_16());
+        assertEquals(120, f.state().timers().hurt());
     }
 
     @Test void frameResponseBoundaryInsideBodyCommitsNoStateEnvironmentDisplayOrSoundsAndConsumesTheSlot() throws IOException {

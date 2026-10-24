@@ -415,7 +415,8 @@ class TestCdPlayerBody {
         assertEquals(0, state.history().index()); assertEquals(0, state.animation().mapFrame());
     }
 
-    @ParameterizedTest @CsvSource({"4,HURT_ROUTINE", "6,DEAD_ROUTINE", "8,RESTART_ROUTINE", "1,ROUTINE_DISPATCH"})
+    // Routine 4 is now the owned ObjSonic_Hurt; 10 indexes past the five-entry table (Main.asm:101-106).
+    @ParameterizedTest @CsvSource({"10,ROUTINE_DISPATCH", "6,DEAD_ROUTINE", "8,RESTART_ROUTINE", "1,ROUTINE_DISPATCH"})
     void unownedHeaderRoutinesHaveExplicitBoundaries(int routine, CdPlayerBody.UnsupportedBoundary boundary) {
         Fixture f = new Fixture(); Actor a = new Actor(); a.routine = routine;
         assertBoundary(f, a, boundary);
@@ -680,7 +681,7 @@ class TestCdPlayerBody {
         assertThrows(NullPointerException.class, () -> new CdPlayerBody.TouchContext(scanner, null));
     }
 
-    // Selected ENEMY/HAZARD response through the real Body call path. Written before the composition; UNRUN.
+    // Selected ENEMY/HAZARD response through the real Body call path. Written before the composition.
     // Source pin 1ecc5f3a: Sonic/Main.asm:340-351 call cut, PP Player Object Collision.asm:130-298.
 
     @Test void jumpRollKillAdoptsTheSourceResponseBeforeSpecialChunksAndPublishesOneTypedResult() {
@@ -914,6 +915,352 @@ class TestCdPlayerBody {
                 }
             }
         }
+    }
+
+    // Routine-4 ObjSonic_Hurt through the real Body call path. Written before production.
+    // Source pin 1ecc5f3a: Sonic/Main.asm:56-106,1673-1714,2351-2391; Object Functions.asm:91-128;
+    // PP Player Special Collision.asm:7-8; shared KillPlayer, PP Player Object Collision.asm:279-298.
+
+    @Test void hurtIntegratesOldVelocitiesAddsGravityThenDrawsUnconditionallyWithoutMainServices() {
+        Fixture f = new Fixture(); Actor a = hurtActor();
+        a.y = 200 << 16; a.xv = -0x200; a.yv = -0x400; a.charge = 29; a.pri = 0x12; a.sec = 0x34;
+        a.spr = 0xC4; a.ctrl = 0x40; a.hurt = 120; a.invinc = 5; a.shoes = 5;
+        // Main would skip Display (warp 210, invisible, hurt bit 2 clear), expire timers and reject absent touch RAM.
+        f.timeWarpTimer = 210; f.invincible = 1; f.speedShoes = 1; f.slots = CdPlayerBody.DynamicSlots.UNIMPLEMENTED;
+        f.camX = 150; f.rawHeld = f.rawTap = 8; f.logicalHeld = f.logicalTap = 4;
+        var env = f.environment(); var r = f.owner().step(a.state(), env);
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, r.boundary()); assertTrue(r.modeBoundary().isEmpty());
+        assertEquals(hurtCalls(CdPlayerBody.NativeCall.LEVEL_COLLISION_IN_AIR, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                CdPlayerBody.NativeCall.LEVEL_BOUND), calls(r));
+        var m = r.state().motion();
+        // ObjMove adds the OLD words (X 64-2, Y 200-4) before ADDI.W #$30,oYVel.
+        assertEquals(62 << 16, m.centreX16_16()); assertEquals(196 << 16, m.centreY16_16());
+        assertEquals(-0x200, m.xVelocity()); assertEquals(-0x3D0, m.yVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(4, m.routine()); assertEquals(2, m.flags()); assertEquals(30, m.charge(), "header predispatch only");
+        assertEquals(0x1A, m.animation()); assertEquals(0xC4, m.spriteFlags(), "no SpecialChunks bit-6 clear");
+        assertEquals(0x12, m.previousPrimaryAngle()); assertEquals(0x34, m.previousSecondaryAngle());
+        assertEquals(List.of(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, 62 << 16),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG, 196 << 16),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, -0x3D0)), actorWrites(r));
+        assertEquals(new CdPlayerBody.Timers(120, 5, 5), r.state().timers(), "no Display: hurt, invincibility and shoes hold");
+        assertEquals(env.globals(), r.environment().globals(), "no ExtCamera, expiry or other Main global write");
+        assertEquals(env.controls(), r.environment().controls(), "no raw-to-logical copy");
+        var g = r.environment().movement().globals();
+        // Player_LevelColInAir: CalcAngle(-$200,-$3D0) = $B0, the up quadrant; no probe meets terrain at Y196.
+        assertEquals(0xB0, g.debugAngle()); assertEquals(0x90, g.debugAngleShift()); assertEquals(0x80, g.debugQuadrant());
+        assertEquals(0x26, g.primaryAngle()); assertEquals(0x64, g.secondaryAngle()); assertEquals(9, g.scoreChain());
+        assertEquals(env.movement().physics(), r.environment().movement().physics());
+        assertEquals(env.movement().gates(), r.environment().movement().gates());
+        assertEquals(4, r.state().history().index());
+        assertEquals(62, r.state().history().bytes().unsignedWord(0)); assertEquals(196, r.state().history().bytes().unsignedWord(2));
+        assertEquals(new CdPlayerBody.AnimationCursor(1, 3, 7), r.state().animation());
+        var cut = onlyCut(r);
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 62, 196, 19, 0xC4, 24, 2), cut);
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.ANIMATE) < r.effects().indexOf(cut));
+        assertTrue(r.effects().indexOf(cut) < indexCall(r, CdPlayerBody.NativeCall.DRAW_OBJECT));
+        assertEquals(new CdPlayerBody.DisplayPublication(true, f.mapAddress(), 0x780, 2, 24, 7, 0xC4, 62 << 16, 196 << 16),
+                r.display().orElseThrow());
+        assertTrue(bodySounds(r).isEmpty());
+        assertFalse(r.effects().stream().anyMatch(e -> e instanceof CdPlayerBody.TouchScanCompleted
+                || e instanceof CdPlayerBody.ObjectTouchResult || e instanceof CdPlayerBody.ObjectTouchResponse
+                || e instanceof CdPlayerBody.ModeEffect || e instanceof CdPlayerBody.KillPlayerCall));
+        assertEquals(r, f.owner().step(a.state(), env));
+    }
+
+    @ParameterizedTest @CsvSource({"false,-32752,128,38,100,0", "true,32752,0,0,0,5"})
+    void hurtGravityIsTwoNativeWordWritesWithNoFallCapAndTheWrappedWordReachesTheCollision(boolean underwater,
+            int yVelocity, int quadrant, int primary, int secondary, int floorDistance) {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.y = 200 << 16; a.yv = 0x7FE0;
+        if (underwater) a.flags |= 0x40;
+        var r = f.owner().step(a.state(), f.environment());
+        var m = r.state().motion();
+        // ObjMove adds $7FE0 << 8 first; ADDI.W #$30 then wraps to $8010, and SUBI.W #$20 wraps back (2354-2357).
+        assertEquals((327 << 16) | 0xE000, m.centreY16_16()); assertEquals(yVelocity, m.yVelocity());
+        var expected = new ArrayList<>(List.of(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, 64 << 16),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG, (327 << 16) | 0xE000),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, -0x7FF0)));
+        if (underwater) expected.add(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, 0x7FF0));
+        assertEquals(expected, actorWrites(r));
+        // Dry: up quadrant, nothing probed. Underwater: down quadrant, the row-6 band below writes angle 0 at +5.
+        var g = r.environment().movement().globals();
+        assertEquals(quadrant, g.debugQuadrant()); assertEquals(primary, g.primaryAngle());
+        assertEquals(secondary, g.secondaryAngle()); assertEquals(floorDistance, g.debugFloorDistance());
+        assertEquals(4, m.routine()); assertEquals(underwater ? 0x42 : 2, m.flags());
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, r.boundary());
+    }
+
+    @ParameterizedTest @CsvSource({"264,2048,90,58", "456,51200,80,48"})
+    void hurtLandingReadsTheHighMemoryYVelocityByteThenStopsAndReturnsToMainWithAFixedHurtWord(int oldYVelocity,
+            int fraction, int angle, int shift) {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.y = 77 << 16; a.xv = -0x100; a.yv = oldYVelocity;
+        a.hurt = 7; a.pri = 0x12; a.sec = 0x34;
+        var r = f.owner().step(a.state(), f.environment());
+        var m = r.state().motion();
+        // Post-gravity $0138/$01F8 both read memory byte $01, threshold -9 (Main.asm:2093). Both Y97 sensors
+        // return -2, so the floor owner lands at 76 and keeps the ObjMove fraction (:2102-2105).
+        assertEquals(63 << 16, m.centreX16_16()); assertEquals((76 << 16) | fraction, m.centreY16_16());
+        // HurtChkLand (:2382-2388): zero Y/X/ground words, oAnim 0, SUBQ.B #2,oRoutine, then oPlayerHurt 120.
+        assertEquals(0, m.yVelocity()); assertEquals(0, m.xVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(2, m.routine()); assertEquals(0, m.flags()); assertEquals(0, m.animation());
+        assertEquals(120, r.state().timers().hurt());
+        assertEquals(List.of(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, 63 << 16),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_Y_LONG, (78 << 16) | fraction),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, oldYVelocity + 0x30),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.Y_VELOCITY, 0),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.X_VELOCITY, 0),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.GROUND_VELOCITY, 0),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.ANIMATION, 0),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.ROUTINE, 2),
+                new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.HURT_TIMER, 120)), actorWrites(r));
+        var g = r.environment().movement().globals();
+        assertEquals(angle, g.debugAngle()); assertEquals(shift, g.debugAngleShift()); assertEquals(0, g.debugQuadrant());
+        assertEquals(0xFE, g.debugFloorDistance()); assertEquals(0, g.scoreChain());
+        // The floor probes write the scratch angle globals; only Main:330-331 copies them into the actor.
+        assertEquals(0, g.primaryAngle()); assertEquals(0, g.secondaryAngle());
+        assertEquals(0x12, m.previousPrimaryAngle()); assertEquals(0x34, m.previousSecondaryAngle());
+        assertFalse(r.effects().stream().anyMatch(CdPlayerBody.AirCollisionEffect.class::isInstance), "bit 2 was clear");
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 63, 76, 19, 4, 24, 2), onlyCut(r));
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, r.boundary());
+        var main = f.owner().step(r.state(), r.environment());
+        assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, main.boundary());
+        assertEquals(119, main.state().timers().hurt(), "Main's Display owns the first decrement");
+        assertFalse(main.display().orElseThrow().queued(), "old 120 has bit 2 clear");
+    }
+
+    @Test void hurtHighMemoryVelocityByteRejectsTwoTenPixelSensorsSoTheHurtWordStaysFixedInTheAir() {
+        Fixture f = new Fixture(); Arrays.fill(f.heights, 16, 32, (byte) 24); // Both Y97 sensors return -10.
+        Actor a = hurtActor(); a.y = 77 << 16; a.yv = 0x108; a.hurt = 7;
+        var r = f.owner().step(a.state(), f.environment());
+        var m = r.state().motion();
+        // Stored $0138 reads memory byte $01, threshold -9; a low-byte $38 read would land here instead.
+        assertEquals((78 << 16) | 0x800, m.centreY16_16()); assertEquals(0x138, m.yVelocity());
+        assertEquals(4, m.routine()); assertEquals(2, m.flags()); assertEquals(0x1A, m.animation());
+        assertEquals(7, r.state().timers().hurt(), "airborne Hurt neither decrements nor rewrites the word");
+        var g = r.environment().movement().globals();
+        assertEquals(0xF6, g.debugFloorDistance()); assertEquals(0, g.primaryAngle()); assertEquals(0, g.secondaryAngle());
+        assertEquals(9, g.scoreChain());
+        assertEquals(hurtCalls(CdPlayerBody.NativeCall.LEVEL_COLLISION_IN_AIR, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                CdPlayerBody.NativeCall.LEVEL_BOUND), calls(r));
+        assertEquals(3, actorWrites(r).size(), "ObjMove X/Y and gravity only; no landing writes");
+    }
+
+    @ParameterizedTest @CsvSource({"2,9,19,2040,0,2036,2,false", "6,7,14,2042,0,2033,2,true",
+            "6,7,14,2040,0,2031,1,true", "6,5,10,2040,1,2034,2,true"})
+    void hurtPitCallsTheSharedKillPlayerAtBothNativeSitesThenStillRecordsAnimatesAndDraws(int flags, int xRadius,
+            int yRadius, int y, int mini, int finalY, int killCount, boolean chargeStop) {
+        Fixture f = new Fixture(); f.mini = mini; f.invincible = 1;
+        Actor a = hurtActor(); a.flags = flags; a.xr = xRadius; a.yr = yRadius; a.y = y << 16;
+        a.xv = -0x200; a.yv = -0x400; a.hurt = 120; a.invinc = 5; a.shoes = 5; a.rotationDistance = 0xA5;
+        var r = f.owner().step(a.state(), f.environment());
+        var kills = kills(r);
+        assertEquals(killCount, kills.size());
+        // HurtChkLand's unsigned BCS.W (:2373-2376) sees the post-ObjMove/gravity actor; its KillPlayer returns into Hurt.
+        var preKill = new CdPlayerMotionState(62 << 16, (y - 4) << 16, -0x200, -0x3D0, 0, 4, 0, flags, 4, xRadius, yRadius,
+                0x1A, 0x1A, 0, 0, 0, 0, 0, 0, 0);
+        assertEquals(CdPlayerTouchResponse.killPlayer(new CdPlayerTouchResponse.Actor(preKill, 0x780, 2, 120, 0xA5),
+                1, 0, 9, mini), kills.getFirst());
+        var reset = new CdPlayerTouchResponse.ResetOnFloor();
+        var hurtSound = new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT);
+        var chargeStopSound = new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP);
+        List<CdPlayerTouchResponse.Call> first = chargeStop ? List.of(reset, chargeStopSound, hurtSound)
+                : List.of(reset, hurtSound);
+        assertEquals(first, kills.getFirst().calls());
+        if (killCount == 2) {
+            // ObjSonic_LevelBound's signed BLT (:1697-1705) reads the first call's post-reset Y and oAnim $18.
+            assertEquals(List.of(reset, hurtSound), kills.get(1).calls(), "bit 2 is already clear");
+            assertEquals(hurtCalls(CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                    CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.LEVEL_BOUND), calls(r));
+        } else {
+            assertEquals(hurtCalls(CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                    CdPlayerBody.NativeCall.LEVEL_BOUND), calls(r));
+        }
+        for (var kill : kills) assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER, kill.exit());
+        var m = r.state().motion();
+        assertEquals(6, m.routine()); assertEquals(2, m.flags()); assertEquals(finalY << 16, m.centreY16_16());
+        assertEquals(62 << 16, m.centreX16_16());
+        assertEquals(0, m.xVelocity()); assertEquals(-0x700, m.yVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(0x18, m.animation()); assertEquals(0x18, m.previousAnimation());
+        assertEquals(mini == 0 ? 9 : 5, m.xRadius()); assertEquals(mini == 0 ? 19 : 10, m.yRadius());
+        // MOVE.W oY,oPlayerStick (:289) writes byte 38 and byte 39 at each executed call.
+        assertEquals(finalY >>> 8, m.stick()); assertEquals(finalY & 0xFF, r.state().rotationDistance());
+        assertEquals(new CdPlayerBody.Header(1, f.mapAddress(), 0x8780, 0, 24), r.state().header());
+        assertEquals(new CdPlayerBody.Timers(120, 5, 5), r.state().timers());
+        assertEquals(0, r.environment().globals().invincible());
+        assertEquals(0, r.environment().movement().globals().scoreChain());
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 62, finalY, mini == 0 ? 19 : 10, 4, 24, 0), onlyCut(r));
+        assertTrue(r.display().orElseThrow().queued()); assertEquals(0, r.display().orElseThrow().priority());
+        assertTrue(bodySounds(r).isEmpty(), "KillPlayer requests stay in their pure call results");
+        assertEquals(finalY, r.state().history().bytes().unsignedWord(2));
+        var next = r.state(); var nextEnvironment = r.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.DEAD_ROUTINE, assertThrows(CdPlayerBody.UnsupportedBody.class,
+                () -> f.owner().step(next, nextEnvironment)).boundary());
+    }
+
+    @ParameterizedTest @CsvSource({"1,0", "256,1"})
+    void hurtDebugWordStillDispatchesHurtButBothKillPlayerCallsReturnWithoutWrites(int debugMode, int timeAttack) {
+        // ObjSonic tests the high byte unless time attack bypasses it (:57-71); KillPlayer:280 tests the WORD.
+        Fixture f = new Fixture(); f.debugMode = debugMode; f.timeAttack = timeAttack; f.invincible = 1;
+        Actor a = hurtActor(); a.y = 2040 << 16; a.xv = -0x200; a.yv = -0x400; a.rotationDistance = 0xA5;
+        var state = a.state(); var r = f.owner().step(state, f.environment());
+        var kills = kills(r);
+        assertEquals(2, kills.size());
+        for (var kill : kills) {
+            assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, kill.exit());
+            assertTrue(kill.calls().isEmpty());
+        }
+        assertEquals(hurtCalls(CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.LEVEL_BOUND), calls(r));
+        var m = r.state().motion();
+        assertEquals(4, m.routine()); assertEquals(2036 << 16, m.centreY16_16()); assertEquals(-0x3D0, m.yVelocity());
+        assertEquals(0x1A, m.animation()); assertEquals(0, m.stick()); assertEquals(0xA5, r.state().rotationDistance());
+        assertEquals(state.header(), r.state().header()); assertEquals(1, r.environment().globals().invincible());
+        assertEquals(9, r.environment().movement().globals().scoreChain());
+        assertEquals(debugMode, r.environment().globals().debugMode());
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 62, 2036, 19, 4, 24, 2), onlyCut(r));
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, f.owner().step(r.state(), r.environment()).boundary(),
+                "the next call is Hurt again, not a death");
+    }
+
+    @Test void hurtUnsignedLandCheckAndSignedLevelBoundAreDistinctKillPredicates() {
+        // HurtChkLand: $7FE0 <u $8000 kills; LevelBound's signed $7FE0 < -$8000 then does not (:2373-2376, :1697-1700).
+        Fixture f = new Fixture(); f.bottom = 0x7F00; Actor a = hurtActor(); a.y = 0x8000 << 16;
+        var unsigned = f.owner().step(a.state(), f.environment());
+        assertEquals(1, kills(unsigned).size());
+        assertEquals(hurtCalls(CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                CdPlayerBody.NativeCall.LEVEL_BOUND), calls(unsigned));
+        assertEquals(6, unsigned.state().motion().routine()); assertEquals(0x80, unsigned.state().motion().stick());
+        assertEquals(0, unsigned.state().rotationDistance());
+        // Bottom $7F20 makes HurtChkLand's word $8000: unsigned no, so Player_LevelColInAir runs; the signed BLT kills.
+        f.bottom = 0x7F20; a.y = 0x100 << 16;
+        var signed = f.owner().step(a.state(), f.environment());
+        assertEquals(1, kills(signed).size());
+        assertEquals(hurtCalls(CdPlayerBody.NativeCall.LEVEL_COLLISION_IN_AIR, CdPlayerBody.NativeCall.HURT_CHECK_LAND,
+                CdPlayerBody.NativeCall.KILL_PLAYER, CdPlayerBody.NativeCall.LEVEL_BOUND), calls(signed));
+        assertEquals(6, signed.state().motion().routine()); assertEquals(1, signed.state().motion().stick());
+        assertEquals(0, signed.state().rotationDistance());
+        assertEquals(28, signed.environment().movement().globals().debugFloorDistance(), "the air collision did run");
+    }
+
+    @Test void hurtBoredAnimationRejectsOnlyAtTheSignedBottomBranchWithoutPublication() {
+        // ObjSonic_LevelBound .Bottom (:1703-1707) sets routine 6 directly for $2B: the existing port's typed stop.
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.anim = a.prev = 0x2B; a.y = 200 << 16;
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, f.owner().step(a.state(), f.environment()).boundary());
+        f.bottom = 0x7F20; a.y = 0x100 << 16;
+        var state = a.state(); var env = f.environment();
+        var failure = assertThrows(CdPlayerMovement.UnsupportedMotion.class, () -> f.owner().step(state, env));
+        assertEquals(CdPlayerMovement.UnsupportedBoundary.BORED_GIVE_UP, failure.boundary());
+        assertEquals(0, state.history().index()); assertEquals(0x2B, state.motion().animation());
+    }
+
+    @Test void hurtObjMoveStandingObjectReadIsAnUnownedPoolBoundaryBeforeAnyPublication() {
+        // ObjMove (Object Functions.asm:97-114) reads oPlayerStandObj's oID for the CCZ flipper resistance.
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.flags = 0x0A; a.y = 200 << 16; a.yv = -0x400;
+        var state = a.state(); var env = f.environment();
+        assertEquals(CdPlayerBody.UnsupportedBoundary.STANDING_OBJECT_MOVE,
+                assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.owner().step(state, env)).boundary());
+        assertEquals(200 << 16, state.motion().centreY16_16()); assertEquals(0, state.history().index());
+        a.flags = 2;
+        assertEquals(CdPlayerBody.Boundary.HURT_RETURN, f.owner().step(a.state(), env).boundary());
+    }
+
+    @Test void hurtNeverSamplesSuppliedTouchInputOrTheUnimplementedTouchFallback() {
+        Fixture f = new Fixture(); f.slots = CdPlayerBody.DynamicSlots.UNIMPLEMENTED;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 32, 0x40, 62, 196); touchSlot(pool, 33, 0xAB, 62, 196);
+        var context = responseTouch(pool, new Contact()); // A sampled scan rejects selector 0 first.
+        Actor a = hurtActor(); a.y = 200 << 16; a.xv = -0x200; a.yv = -0x400;
+        var withContext = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        assertEquals(f.owner().step(a.state(), f.environment()), withContext);
+        assertFalse(withContext.effects().stream().anyMatch(e -> e instanceof CdPlayerBody.TouchScanCompleted
+                || e instanceof CdPlayerBody.ObjectTouchResult || e instanceof CdPlayerBody.ObjectTouchResponse));
+        assertEquals(pool.capture().slots(), context.snapshot().slots());
+        Actor main = new Actor();
+        assertThrows(IllegalArgumentException.class, () -> f.owner().step(main.state(), f.environment(), Optional.of(context)),
+                "Main's actual Player_ObjCollide call does sample the same context");
+    }
+
+    @Test void hurtLevelBoundSideClampFollowsTheAirCollisionAndPrecedesHistoryAndDraw() {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.x = 19 << 16; a.y = 200 << 16; a.xv = -0x200; a.yv = -0x400;
+        var r = f.owner().step(a.state(), f.environment());
+        // ObjMove leaves X17; LevelBound predicts 15 < left+16, so .Sides writes X16, oXSub 0 and both speeds 0.
+        assertEquals(new CdPlayerBody.ActorWrite(CdPlayerBody.ActorField.CENTRE_X_LONG, 17 << 16), actorWrites(r).getFirst());
+        var m = r.state().motion();
+        assertEquals(16 << 16, m.centreX16_16()); assertEquals(0, m.xVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(16, r.state().history().bytes().unsignedWord(0));
+        assertEquals(16, onlyCut(r).centreXWord());
+    }
+
+    @Test void hurtRecordsIntegerWordsAtTheCurrentNativeIndexAndRetainsBothFractions() {
+        Fixture f = new Fixture(); Actor a = hurtActor();
+        a.x = (64 << 16) | 0x1234; a.y = (200 << 16) | 0xABCD; a.xv = -0x200; a.yv = -0x400;
+        byte[] original = historyBytes(); a.history = new CdPlayerBody.History(CdAssetBytes.copyOf(original), 0xFC);
+        var r = f.owner().step(a.state(), f.environment());
+        assertEquals((62 << 16) | 0x1234, r.state().motion().centreX16_16());
+        assertEquals((196 << 16) | 0xABCD, r.state().motion().centreY16_16());
+        assertEquals(0, r.state().history().index(), "ADDQ.B wraps only the low byte");
+        assertEquals(62, r.state().history().bytes().unsignedWord(0xFC));
+        assertEquals(196, r.state().history().bytes().unsignedWord(0xFE));
+        for (int i = 0; i < 0xFC; i++) assertEquals(Byte.toUnsignedInt(original[i]), r.state().history().bytes().unsignedByte(i));
+        assertTrue(r.effects().contains(new CdPlayerBody.PositionHistoryWrite(0xFC, 62, 196, 0)));
+    }
+
+    @Test void hurtLandingResetRequestIsPublishedAsTheCollisionOwnersEffectAtItsCall() {
+        // Player_LevelColInAir's landing calls Player_ResetOnFloor (:2104); ingress bit 2 makes FM_CHARGESTOP.
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.flags = 6; a.xr = 7; a.yr = 14; a.y = 82 << 16; a.yv = 0x100;
+        var r = f.owner().step(a.state(), f.environment());
+        var m = r.state().motion();
+        assertEquals(76 << 16, m.centreY16_16()); assertEquals(9, m.xRadius()); assertEquals(19, m.yRadius());
+        assertEquals(0, m.flags()); assertEquals(2, m.routine()); assertEquals(120, r.state().timers().hurt());
+        var effect = new CdPlayerBody.AirCollisionEffect(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP));
+        assertEquals(1, r.effects().stream().filter(CdPlayerBody.AirCollisionEffect.class::isInstance).count());
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.PP_SPECIAL_COLLISION) < r.effects().indexOf(effect));
+        assertTrue(r.effects().indexOf(effect) < indexCall(r, CdPlayerBody.NativeCall.LEVEL_COLLISION_IN_AIR));
+        assertTrue(bodySounds(r).isEmpty());
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 64, 76, 19, 4, 24, 2), onlyCut(r));
+    }
+
+    @Test void resultAdmitsADrawnHurtOnlyWithAQueuedPoseAndNoModeBoundary() {
+        Fixture f = new Fixture(); Actor a = hurtActor(); a.y = 200 << 16;
+        var r = f.owner().step(a.state(), f.environment());
+        var pose = r.display().orElseThrow();
+        var hidden = new CdPlayerBody.DisplayPublication(false, pose.mappingAddress(), pose.tile(), pose.priority(),
+                pose.width(), pose.mapFrame(), pose.spriteFlags(), pose.centreX16_16(), pose.centreY16_16());
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(), r.effects(),
+                Optional.empty(), CdPlayerBody.Boundary.HURT_RETURN, Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(), r.effects(),
+                Optional.of(hidden), CdPlayerBody.Boundary.HURT_RETURN, Optional.empty()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.Result(r.state(), r.environment(), r.effects(),
+                r.display(), CdPlayerBody.Boundary.HURT_RETURN, Optional.of(CdPlayerMovement.Boundary.MODE_RETURN)));
+        assertEquals(r, new CdPlayerBody.Result(r.state(), r.environment(), r.effects(), r.display(),
+                CdPlayerBody.Boundary.HURT_RETURN, Optional.empty()));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.KillPlayerCall(null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.AirCollisionEffect(null));
+    }
+
+    /** Post-HurtPlayer actor shape (PP Player Object Collision.asm:246-266): air bit, oAnim $1A, hurt $78. */
+    private static Actor hurtActor() {
+        Actor a = new Actor(); a.routine = 4; a.flags = 2; a.anim = a.prev = 0x1A; a.hurt = 0x78;
+        return a;
+    }
+    private static List<CdPlayerBody.NativeCall> hurtCalls(CdPlayerBody.NativeCall... checks) {
+        var calls = new ArrayList<>(List.of(CdPlayerBody.NativeCall.CHARGE_BEFORE_DISPATCH,
+                CdPlayerBody.NativeCall.OBJ_MOVE, CdPlayerBody.NativeCall.PP_SPECIAL_COLLISION));
+        calls.addAll(List.of(checks));
+        calls.addAll(List.of(CdPlayerBody.NativeCall.RECORD_POSITION, CdPlayerBody.NativeCall.ANIMATE,
+                CdPlayerBody.NativeCall.DRAW_OBJECT));
+        return calls;
+    }
+    private static List<CdPlayerBody.ActorWrite> actorWrites(CdPlayerBody.Result r) {
+        return r.effects().stream().filter(CdPlayerBody.ActorWrite.class::isInstance)
+                .map(CdPlayerBody.ActorWrite.class::cast).toList();
+    }
+    private static List<CdPlayerTouchResponse.KillResult> kills(CdPlayerBody.Result r) {
+        return r.effects().stream().filter(CdPlayerBody.KillPlayerCall.class::isInstance)
+                .map(CdPlayerBody.KillPlayerCall.class::cast).map(CdPlayerBody.KillPlayerCall::result).toList();
+    }
+    private static CdPlayerBody.DisplayEligibility onlyCut(CdPlayerBody.Result r) {
+        var cuts = r.effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                .map(CdPlayerBody.DisplayEligibility.class::cast).toList();
+        assertEquals(1, cuts.size()); return cuts.getFirst();
     }
 
     private static CdPlayerObjectTouch.Result objectTouch(CdPlayerBody.Result r) {

@@ -3157,3 +3157,56 @@ pending source/test files:531passed, no skips, while the new walking input
 proposal missed contact and reached the existing unowned FloatBlock12. This is
 not described as a532pass. Hurt admission and its final controller route are
 recorded in the next checkpoint, not inferred from device cases.
+
+
+### Hurt recovery and real ring-spill route, 24 October 2026
+
+Routine4 now follows ObjSonic_Hurt source order: old-velocity ObjMove, word
+$30 gravity (underwater subtracts$20), PP special collision, unsigned HurtChkLand,
+signed LevelBound, history, animation and unconditional DrawObject. Both bottom
+calls use the same pure KillPlayer owner and return into Hurt. Main's Display,
+timer service, input copy, MODE, touch and special chunks are absent. Landing
+stops all three velocities, returns routine2 and writes hurt120; next Main
+resumes at119. Standing-object movement remains a named finite dependency.
+Actor queueing accepts the complete Hurt draw cut and the Frame preserves
+ordered collision/KillPlayer sounds. Both Root clock ports and all Hurt changes
+were composed; capture/restore retains both. Independent Opus source review of
+original and composite6files found noP1/P2 or wrong assertion. Its prerequisite
+KillPlayer port is committed in d40cb962c. Test comments now describe authorship
+without the historical UNRUN label; frozen mirrors/reports remain unchanged.
+
+Root95177,8314b20f6 plus eleven pending files, finished15:53:14BST with532tests,
+0assertion failures,1error,0skips (43squeue,2m03execution). All12freshXMLs confirm
+Java25.0.5.0.2, actual CD media/EGL and the existing S2REV01 property. Body120,
+Frame99, Actor15, shared actor4, TouchResponse99, Movement96, Runtime38,
+WorldLoad15, TerrainLoad24, TerrainBoot8, API11 and the two existing EGL routes
+passed. Only the new walking proposal missed contact and reached known ID12.
+No production state or gate was altered to force an encounter.
+
+Rejected controller proposals are preserved externally: continuous Right
+passed the Mosqui; coast/rest/Right restarted too quickly to meet its dive.
+One observation-only rerun recorded the full patrol toX751, dive selection at
+call439/X696, groundwait473 while Sonic had already reachedX797. It justified
+waiting for the returning patrol and then a short walking approach. No fitted
+physics, guest writes, player/object fixtures or production frame fences were
+introduced. Final fixed input is `2 -;108 R;500 -;100 R`.
+
+Root68427 ran ONLY the revised actual EGL method, passed1/0/0/0 at16:00:46BST
+(0squeue,31.780sexecution), with freshXML Java25/media/EGL confirmed. Natural
+hit644 had2rings: routine4, anim1A, hurt120, Xvelocity-$200/Yvelocity-$400,
+rings0 and two real LostRing objects. Landing686 resets speeds/routine/timer;
+Main687 resumes hurt119. From the call82 full/course checkpoints, each replay
+matches605successive captured rows and finalpixels; each replay row is rendered.
+The comparator covers actor, shared environment/art/clock, live slots/savedbank,
+spill/ring/contact/score globals, CPU SAT/display, camera/scroll, logical artbank
+and level clock. Terrain outside sprite pixels agrees with completed scroll.
+Five actual PNGs plus fixed input/CSV/outcome remain external; selected pictures
+were visually inspected. This is actual OpenGGF DEV evidence, not native timing,
+FM playback, pixel/full-game or regional parity. The module remains silent and
+uses explicit art preload/DEVseed0. Routines6/8, MODE kill continuations and the
+same-frame death camera boundary are the next owners.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestCdPlayerTouchResponse,TestCdPlayerMovement,TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestSonicCdTerrainPlayerLoad,TestSonicCdTerrainPlayerBoot,TestModApiSignatureSurface' "-Dsonic2.rom.path=$S2_REV01" "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestSonicCdOpeningWorldEgl#actualEglWalkingHitSpillHurtLandingAndFullCourseReplay' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
+```

@@ -110,7 +110,10 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     public record MovementSound(CdPlayerMovement.Sound sound) implements Sound {
         public MovementSound { Objects.requireNonNull(sound); }
     }
-    /** A selected enemy/hazard response's PlayFMSound request, at its call position. */
+    /**
+     * A PlayFMSound request owned by the PP Player Object Collision response owner, at its call
+     * position: a selected enemy/hazard response, or a Hurt KillPlayer call (Sonic/Main.asm:2376,1705).
+     */
     public record ContactFmSound(CdPlayerTouchResponse.FmSound sound) implements Sound {
         public ContactFmSound { Objects.requireNonNull(sound); }
     }
@@ -556,19 +559,24 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         for (var effect : effects) {
             if (effect instanceof CdPlayerBody.SoundRequest sound) sounds.add(new BodySound(sound.sound()));
             else if (effect instanceof CdPlayerBody.ChargeEffect charge) collectChargeSound(charge.effect(), sounds);
-            else if (effect instanceof CdPlayerBody.ModeEffect mode) {
-                if (mode.effect() instanceof CdPlayerMovement.SoundRequest sound) sounds.add(new MovementSound(sound.sound()));
-                else if (mode.effect() instanceof CdPlayerMovement.ChargeEffect charge) collectChargeSound(charge.effect(), sounds);
-            } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) collectContactSounds(touch.result(), sounds);
+            else if (effect instanceof CdPlayerBody.ModeEffect mode) collectMovementSound(mode.effect(), sounds);
+            else if (effect instanceof CdPlayerBody.AirCollisionEffect air) collectMovementSound(air.effect(), sounds);
+            else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) collectContactSounds(touch.result().calls(), sounds);
+            else if (effect instanceof CdPlayerBody.KillPlayerCall kill) collectContactSounds(kill.result().calls(), sounds);
         }
         return List.copyOf(sounds);
     }
     private static void collectChargeSound(CdPlayerCharge.Effect effect, List<Sound> sounds) {
         if (effect instanceof CdPlayerCharge.SoundRequest sound) sounds.add(new ChargeSound(sound.sound()));
     }
+    /** MODE and Hurt's shared collision call publish the same Movement-owned request types. */
+    private static void collectMovementSound(CdPlayerMovement.Effect effect, List<Sound> sounds) {
+        if (effect instanceof CdPlayerMovement.SoundRequest sound) sounds.add(new MovementSound(sound.sound()));
+        else if (effect instanceof CdPlayerMovement.ChargeEffect charge) collectChargeSound(charge.effect(), sounds);
+    }
     /** Only PlayFMSound/SubCPUCmd requests, in call order; FindObjSlot, AddPoints and ResetOnFloor are metadata. */
-    private static void collectContactSounds(CdPlayerTouchResponse.Result result, List<Sound> sounds) {
-        for (var call : result.calls()) {
+    private static void collectContactSounds(List<CdPlayerTouchResponse.Call> calls, List<Sound> sounds) {
+        for (var call : calls) {
             if (call instanceof CdPlayerTouchResponse.PlayFm fm) sounds.add(new ContactFmSound(fm.sound()));
             else if (call instanceof CdPlayerTouchResponse.SubCpu command) sounds.add(new ContactSubCpuCommand(command.command()));
         }
