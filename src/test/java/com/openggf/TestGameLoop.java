@@ -118,9 +118,15 @@ public class TestGameLoop {
         doThrow(failure).when(levels).loadZoneAndAct(anyInt(), anyInt());
         setPrivateField(gameLoop, "levelManager", levels);
 
-        var escaped = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> invokeFailingLoadRoute(route));
-        assertSame(failure.getCause(), escaped.getCause(), "The IO fallback must preserve the original callback abort");
+        if (route.equals("bonus")) {
+            var escaped = assertThrows(com.openggf.level.objects.ObjectCallbackAbortException.class,
+                    () -> invokeFailingLoadRoute(route));
+            assertSame(failure.getCause(), escaped, "The typed visit access preserves the original callback abort");
+        } else {
+            var escaped = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                    () -> invokeFailingLoadRoute(route));
+            assertSame(failure.getCause(), escaped.getCause(), "The IO fallback must preserve the original callback abort");
+        }
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -133,14 +139,12 @@ public class TestGameLoop {
 
         assertDoesNotThrow(() -> invokeFailingLoadRoute(route));
         assertEquals(route.equals("bonus") ? GameMode.LEVEL : before, gameLoop.getCurrentGameMode());
-        if (route.equals("bonus")) assertNull(getPrivateField(gameLoop, "activeBonusStageProvider"));
+        if (route.equals("bonus")) assertNull(BonusStageSessionTestAccess.provider(gameLoop));
     }
 
     private void invokeFailingLoadRoute(String route) throws Exception {
         if (route.equals("bonus")) {
-            invokePrivateMethod(gameLoop, "doEnterBonusStage",
-                    new Class<?>[]{BonusStageProvider.class, BonusStageType.class, BonusStageState.class},
-                    mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
+            BonusStageSessionTestAccess.entered(gameLoop, mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
         } else {
             setPrivateField(getPrivateField(gameLoop, "endingSession"), "endingProvider", mock(EndingProvider.class));
             invokePrivateMethod(getPrivateField(gameLoop, "endingSession"), "loadEndingDemoZone");
@@ -1579,15 +1583,14 @@ public class TestGameLoop {
         setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_CARD);
         setPrivateField(gameLoop, "postTitleCardDestination",
                 Enum.valueOf(PostTitleCardDestination.class, "BONUS_STAGE"));
-        setPrivateField(gameLoop, "deferredBonusProvider", provider);
-        setPrivateField(gameLoop, "deferredBonusType", BonusStageType.SLOT_MACHINE);
-        setPrivateField(gameLoop, "deferredBonusState", null);
+        BonusStageSessionTestAccess.deferred(gameLoop, provider);
 
         invokePrivateMethod(gameLoop, "exitTitleCard");
 
         verify(provider).onDeferredSetupComplete();
-        assertNull(getPrivateField(gameLoop, "deferredBonusProvider"), "Deferred provider should be cleared after setup");
-        assertNull(getPrivateField(gameLoop, "deferredBonusState"), "Deferred saved state should stay cleared after setup");
+        assertNull(BonusStageSessionTestAccess.deferred(gameLoop), "Deferred provider should be cleared after setup");
+        BonusStageSessionTestAccess.completeDeferred(gameLoop);
+        verify(provider, times(1)).onDeferredSetupComplete();
         assertEquals(GameMode.BONUS_STAGE, gameLoop.getCurrentGameMode(), "GameLoop should switch to bonus stage mode");
     }
 
@@ -1863,10 +1866,7 @@ public class TestGameLoop {
                 0, 0, 0, 0, -1, 0, 0, 0,
                 0, 0, 0, 0, (byte) 0, (byte) 0, 0, 0L, 0);
 
-        Method method = GameLoop.class.getDeclaredMethod(
-                "doExitBonusStage", BonusStageProvider.class, BonusStageState.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, provider, savedState);
+        BonusStageSessionTestAccess.exited(gameLoop, provider, savedState);
 
         assertTrue(Files.notExists(saveDir.resolve("slot1.json")));
         deleteRecursively(saveDir);
@@ -1914,10 +1914,10 @@ public class TestGameLoop {
         BonusStageProvider provider = mock(BonusStageProvider.class);
         when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
         when(provider.getSavedState()).thenReturn(bonusReturnState(0x0000, 0x0000));
-        setPrivateField(gameLoop, "activeBonusStageProvider", provider);
+        BonusStageSessionTestAccess.provider(gameLoop, provider);
         setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
 
-        invokePrivateMethod(gameLoop, "exitBonusStage");
+        BonusStageSessionTestAccess.exit(gameLoop);
 
         // loc_61076 raises Restart_level_flag; LevelLoop branches to Level:
         // (sonic3k.asm:7927-7928), whose Pal_FadeToBlack loops $15 + dbf = 22
@@ -1927,7 +1927,7 @@ public class TestGameLoop {
             fade.update();
             assertEquals(GameMode.BONUS_STAGE, gameLoop.getCurrentGameMode(),
                     "the stage stays held through V-int " + vint);
-            assertTrue((Boolean) getPrivateField(gameLoop, "bonusStageTransitionPending"));
+            assertTrue((Boolean) BonusStageSessionTestAccess.pending(gameLoop));
         }
         fade.update();
         assertEquals(GameMode.TITLE_CARD, gameLoop.getCurrentGameMode(),
@@ -1942,9 +1942,7 @@ public class TestGameLoop {
         when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
         setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
 
-        invokePrivateMethod(gameLoop, "doExitBonusStage",
-                new Class<?>[] {BonusStageProvider.class, BonusStageState.class},
-                provider, bonusReturnState(0x0001, 0x0000));
+        BonusStageSessionTestAccess.exited(gameLoop, provider, bonusReturnState(0x0001, 0x0000));
 
         // Level/loc_62B6 installs Obj_TitleCard unless the zone is $1701 or
         // Act3_flag is set (sonic3k.asm:7762-7767); Obj_TitleCardInit draws the

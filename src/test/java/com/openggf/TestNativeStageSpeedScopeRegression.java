@@ -61,7 +61,7 @@ class TestNativeStageSpeedScopeRegression {
         var loop = loop(400); loop.body = () -> fixture.stepIdleFrames(1);
         var pumpContext = (GameplayModeContext) get(loop, "gameplayMode");
         when(pumpContext.getActiveBonusStageProvider()).thenReturn(provider);
-        set(loop, "activeBonusStageProvider", provider); set(loop, "camera", GameServices.camera());
+        BonusStageSessionTestAccess.provider(loop, provider); set(loop, "camera", GameServices.camera());
         loop.setGameMode(GameMode.BONUS_STAGE);
         int before = GameServices.level().getFrameCounter(); clearInvocations(provider);
         loop.stepPresentationFrame();

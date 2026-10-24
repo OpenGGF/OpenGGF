@@ -42,6 +42,100 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
+    private static final String BONUS_SESSION_PATH = "com/openggf/GameLoopBonusStageSession.java";
+    private static final Set<String> BONUS_VISIT_METHODS = Set.of("enterBonusStage", "doEnterBonusStage",
+            "exitBonusStage", "doExitBonusStage", "prepareBonusStageForTitleCard", "applyDeferredBonusStageSetup",
+            "restorePlayableStateForBonusTitleCard", "refreshPlayableSpriteArtCaches", "ensureBonusStageBootstrapObjectPresent",
+            "forcePlayerHighPriorityInBonusStage", "handleBonusStageDebugKey");
+    private static final String BONUS_HOST_CONTRACT = """
+            LevelManager level(); SpriteManager sprites(); Camera camera(); WaterSystem water(); FadeManager fade();
+            GameStateManager gameState(); GameModule module(); GameMode currentMode(); GameplayRunPolicy runPolicy();
+            GameplayModeContext publishedGameplayContext(); GameplayModeContext resolvedGameplayContext();
+            String mainCharacterCode(); AbstractPlayableSprite mainPlayable(); TitleCardProvider titleCard();
+            GameMode enterBonusTitleCardAfterLevelLoadBoundary(); GameMode changeMode(GameMode mode);
+            void titleDestination(PostTitleCardDestination destination); void lockTitleControls(boolean locked);
+            void notifyModeChanged(GameMode oldMode);
+            """;
+    private static final List<String> BONUS_VISIT_FIELDS = List.of(
+            "private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator = new BonusStageTransitionCoordinator();",
+            "private boolean bonusStageTransitionPending;", "private BonusStageProvider activeBonusStageProvider;",
+            "private int pendingBonusReturnStarPostMark = -1;", "private BonusStageProvider deferredBonusProvider;",
+            "private ShieldType pendingBonusStageShieldRestore;");
+
+    @Test
+    void bonusVisitSessionOwnsStateAndChoreographyWithTypedLiveBindings() throws IOException {
+        Path owner = SRC_MAIN.resolve(BONUS_SESSION_PATH);
+        assertNoViolations("Bonus visit ownership boundary failed", bonusOwnershipViolations(
+                Files.readString(SRC_MAIN.resolve(GAME_LOOP_PATH)), Files.exists(owner) ? Files.readString(owner) : ""));
+    }
+
+    @Test
+    void bonusOwnershipSamplesRejectMirrorsBackreferencesDeadStateAndWideHosts() {
+        String root = "class GameLoop { private final GameLoopBonusStageSession bonusSession = null; }";
+        String owner = "final class GameLoopBonusStageSession { " + String.join(" ", BONUS_VISIT_FIELDS)
+                + " interface Host { " + BONUS_HOST_CONTRACT + " } "
+                + BONUS_VISIT_METHODS.stream().sorted().map(name -> "void " + name + "() {}")
+                        .collect(java.util.stream.Collectors.joining(" ")) + " }";
+        assertTrue(bonusOwnershipViolations(root, owner).isEmpty());
+        String compatible = root.replace("class GameLoop {", "class GameLoop { static ShieldType savedShieldType(int bits) { "
+                + "return GameLoopBonusStageSession.savedShieldType(bits); } void applyPendingBonusStageShieldRestore(Player p) { "
+                + "bonusSession.applyPendingBonusStageShieldRestore(p); }");
+        assertTrue(bonusOwnershipViolations(compatible, owner).isEmpty(), "maintained compatibility delegates are allowed");
+        for (String field : BONUS_VISIT_FIELDS) {
+            assertFalse(bonusOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { " + field), owner).isEmpty(), field);
+            assertFalse(bonusOwnershipViolations(root, owner.replace(field, "")).isEmpty(), field);
+        }
+        for (String method : BONUS_VISIT_METHODS) {
+            assertFalse(bonusOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { private void " + method + "() {}"), owner).isEmpty(), method);
+            assertFalse(bonusOwnershipViolations(root, owner.replace("void " + method + "() {}", "")).isEmpty(), method);
+        }
+        for (String forbidden : List.of("GameLoop loop;", "EngineContext context;", "Object lookup(Class key) { return null; }",
+                "void frame() { GameServices.module(); }", "private BonusStageProvider publishedBonusStageProvider;", "BonusStageType deferredBonusType;", "BonusStageState deferredBonusState;",
+                "void dispose() { LevelFrameStep.execute(); }")) {
+            assertFalse(bonusOwnershipViolations(root, owner.replace("final class GameLoopBonusStageSession {",
+                    "final class GameLoopBonusStageSession { " + forbidden)).isEmpty(), forbidden);
+        }
+        assertFalse(bonusOwnershipViolations(root, owner.replace("void notifyModeChanged(GameMode oldMode);",
+                "void runWholeLoad(Runnable body);")).isEmpty(), "the host cannot conceal whole-load choreography");
+    }
+
+    private static List<String> bonusOwnershipViolations(String root, String owner) {
+        List<String> violations = new ArrayList<>();
+        String rootCode = stripCommentsAndStrings(root), ownerCode = stripCommentsAndStrings(owner);
+        if (!Pattern.compile("private\\s+final\\s+GameLoopBonusStageSession\\s+bonusSession\\b").matcher(rootCode).find()) {
+            violations.add("root retains one loop-lifetime bonus session");
+        }
+        if (Pattern.compile("private\\s+(?:final\\s+)?(?:BonusStageTransitionCoordinator|BonusStageProvider)\\s+\\w+\\s*[;=]"
+                + "|\\b(?:bonusStageTransitionPending|pendingBonusReturnStarPostMark|pendingBonusStageShieldRestore|deferredBonusType|deferredBonusState)\\s*[;=]")
+                .matcher(rootCode).find()) violations.add("bonus visit state remains in root");
+        for (MethodSpan method : SourceFile.fromText(root).methods()) {
+            if (method.identity().startsWith("GameLoop#") && BONUS_VISIT_METHODS.contains(method.name())) {
+                violations.add("root visit choreography: " + method.identity());
+            }
+        }
+        if (!Pattern.compile("(?<!public )final\\s+class\\s+GameLoopBonusStageSession").matcher(ownerCode).find()
+                || Pattern.compile("public\\s+final\\s+class\\s+GameLoopBonusStageSession").matcher(ownerCode).find()) {
+            violations.add("bonus owner must remain package-private");
+        }
+        if (Pattern.compile("\\b(?:GameLoop|EngineContext|GameServices|Object|LevelFrameStep|LiveRewindManager|PlaybackDebugManager|deferredBonusType|deferredBonusState)\\b")
+                .matcher(ownerCode).find()) violations.add("owner has backreference, erased lookup, shared driver or dead storage");
+        for (String field : BONUS_VISIT_FIELDS) {
+            if (!ownerCode.replaceAll("\\s+", "").contains(field.replaceAll("\\s+", ""))) violations.add("missing visit field: " + field);
+        }
+        long visitFields = Pattern.compile("private\\s+(?:final\\s+)?(?:BonusStageTransitionCoordinator|boolean|BonusStageProvider|int|ShieldType)\\s+\\w+\\s*[;=]")
+                .matcher(ownerCode).results().count();
+        if (visitFields != BONUS_VISIT_FIELDS.size()) violations.add("visit state must not acquire mirrored publication or pending fields");
+        Set<String> methods = SourceFile.fromText(owner).methods().stream()
+                .filter(method -> method.identity().startsWith("GameLoopBonusStageSession#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        if (!methods.containsAll(BONUS_VISIT_METHODS)) violations.add("complete visit choreography must be session-owned");
+        Matcher host = Pattern.compile("interface\\s+Host\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!host.find() || !host.group(1).replaceAll("\\s+", "").equals(BONUS_HOST_CONTRACT.replaceAll("\\s+", ""))) {
+            violations.add("bonus host must retain explicit typed live capabilities");
+        }
+        return violations;
+    }
+
     private static final String ENDING_SESSION_PATH = "com/openggf/GameLoopEndingSession.java";
     private static final Set<String> ENDING_METHODS = Set.of("startEndingFade", "doEnterEnding", "updateEnding",
             "updateEndingCreditsText", "updateEndingCreditsDemo", "updateEndingPostCredits", "updateEndingCutscene",
@@ -240,7 +334,8 @@ class TestArchitecturalSourceGuard {
             // bundled mod; the loop keeps only generic hosted-run hooks (HostedRunController).
             // 2026-10-24: ending state, phase execution and cleanup move as one session.
             ENDING_SESSION_PATH, 320,
-            GAME_LOOP_PATH, 3085
+            BONUS_SESSION_PATH, 357,
+            GAME_LOOP_PATH, 2811
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -271,13 +366,13 @@ class TestArchitecturalSourceGuard {
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 276),
-            new MethodBudget(GAME_LOOP_PATH, "doExitBonusStage", 113),
+            new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 111),
             new MethodBudget(GAME_LOOP_PATH, "updateSpecialStageInput", 9),
             new MethodBudget(ENDING_SESSION_PATH, "loadEndingDemoZone", 84),
             // 2026-08-26: exact merged spans after title-card destination/return
             // synthesis and bonus-stage rewind-adapter handoff.
             new MethodBudget(GAME_LOOP_PATH, "enterTitleCardFromResults", 62),
-            new MethodBudget(GAME_LOOP_PATH, "enterBonusStage", 45)
+            new MethodBudget(BONUS_SESSION_PATH, "enterBonusStage", 45)
     );
     private static final List<String> LOW_LEVEL_SERVICE_SCAN_ROOTS = List.of(
             "com/openggf/graphics",

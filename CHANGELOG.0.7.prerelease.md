@@ -615,8 +615,10 @@ Unreleased. The earlier development themes remain in
   by caller rather than a shared total. Shared menu animation and execution-time
   graphics injection close the remaining menu/framework seams. Ending provider
   state, credits-demo execution and ending cleanup share one session owner while
-  the game loop retains frame admission. Each graphics host owns its complete
-  palette texture, publication, fade and residency lifetime, preserving CPU bank
+  the game loop retains frame admission. Bonus visits likewise keep admission,
+  provider publication, deferred assembly and return restoration in one loop-owned
+  session, preserving the shared frame and title-card boundaries. Each graphics
+  host owns its complete palette texture, publication, fade and residency lifetime, preserving CPU bank
   allocation and immediate rewind redraws. SAT replay uses a
   graphics-owned geometry value and one tile-expansion implementation while
   preserving the existing candidate Mod API submission signature. Stock title

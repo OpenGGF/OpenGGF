@@ -92,7 +92,7 @@ class TestGameLoopAudioPresentationModes {
             ending.setAccessible(true);
             replaceField(ending.get(loop), "endingTransitionPending", true);
         } else if (mode == GameMode.BONUS_STAGE) {
-            replaceField(loop, "bonusStageTransitionPending", true);
+            BonusStageSessionTestAccess.pending(loop, true);
         }
 
         loop.step();
