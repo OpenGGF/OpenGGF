@@ -42,9 +42,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic1/events/TestSonic1SBZEvents.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1GargoyleObjectInstanceRender.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1LavaGeyserOutOfRange.java#setUp
-            src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
-            src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
-            src/test/java/com/openggf/game/sonic1/objects/badniks/TestSonic1CaterkillerBodyChaining.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/bosses/TestSonic1FzBossEscapeHitCue.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp

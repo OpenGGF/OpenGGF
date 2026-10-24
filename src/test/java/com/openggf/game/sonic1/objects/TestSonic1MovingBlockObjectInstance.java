@@ -1,13 +1,13 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.OscillationManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -29,15 +30,18 @@ class TestSonic1MovingBlockObjectInstance {
 
     @BeforeEach
     void setUp() {
-        SessionManager.clear();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        // The real playable sprite resolves its physics and solid-contact rules
+        // from the active module, beyond the block's injected object services.
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1);
         OscillationManager.resetForSonic1();
     }
 
     @AfterEach
     void tearDown() {
         SessionManager.clear();
+        GameModuleRegistry.reset();
+        OscillationManager.reset();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
     @Test
