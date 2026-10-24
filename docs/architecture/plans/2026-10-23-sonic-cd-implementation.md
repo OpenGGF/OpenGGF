@@ -2590,3 +2590,37 @@ object-to-player effects and shared-world dispatch remain separate owners.
 Actual first Ring captures and their documented scroll/publication gap are
 unchanged by this asset/format work. Original frozen reports/source mirrors
 retain their reviewed hashes; root's small advisory followups are recorded here.
+
+
+### Native frontier body owners, 24 October 2026
+
+Added bounded Animal, 3DPlant and ramp-booster bodies using the existing injected
+live pool and saved-placement bank. Animal's intact-projector Present path only
+checks despawn; roaming/hologram variants retain explicit owner boundaries.
+Plant commits parent and first-free children in native order, preserves dirty
+unwritten slot fields and stops at the actual out-of-pool write without rollback.
+Ramp Init replaces its sprite flag byte, preserves word arithmetic and returns
+its player Y-velocity write as a staged typed effect, not a private player edit.
+Draw callbacks are synchronous; completed child/despawn effects are never replayed.
+Four raw slot aliases add names only, without changing state storage behavior.
+
+The independent frozen-source review found no P1/P2. Its test-fixture advisory
+was verified: placing a ramp overwrote the dirty sprite-byte seed. Root moved the
+seed after placement so the assertion distinguishes byte replacement from OR.
+No production change was needed. Original frozen source/report bytes remain intact.
+
+Root session2865 passed113 focused cases: Animal25, Plant29, Ramp35, pool6 and
+placement18, with zero failures/errors/skips and both actual-media methods run.
+After the fixture correction, session48345 passed that exact Ramp case again;
+its unrelated scroll-fixture errors and expected CD presentation regression
+remain separate, not a green combined selection. Java25.0.5.0.2 and media inputs
+were inspected in selected reports. Overlapping executions are not summed.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdAnimal,TestCd3dPlant,TestCd3dRamp,TestCdObjectPool,TestCdObjectPlacementRuntime' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+```
+
+These pure owners are not yet dispatched by the opening world at this commit.
+Solid FloatBlock, alternate ramp fall, animal roaming, enemy/hazard response,
+live art residency, native ramp player mode and complete route parity remain
+open. Existing first-Ring evidence and the terrain/SAT publication gap are unchanged.
