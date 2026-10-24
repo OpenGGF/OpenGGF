@@ -6811,10 +6811,11 @@ separate evidence. Both Bash and PowerShell commit-range policies passed for
 
 This is focused composed qualification, not a smoke/full-suite claim. The
 change-based plan inspected against the pinned original destination `97eb86f18`
-selects all ten smoke categories, 3,762 candidate classes and fresh guards. The
-lead will recompute that plan against the actual next delivery base after the
-preceding ending/palette/SMPS wave is delivered. Shared-loop changes require
-that complete selection; existing focused results do not replace it.
+selects all ten smoke categories, 3,762 candidate classes and fresh guards. Main remains on the pinned pre-task destination `97eb86f18`; the lead will run
+that complete plan while the preceding wave's remaining coverage finishes.
+The two worktrees contain different source states, so these are independent
+required checks. Shared-loop changes require the complete selection; existing
+focused results do not replace it.
 
 ### Qualified next boundary: native fixed-tail storage
 
@@ -6842,3 +6843,30 @@ intact. All ten count-one bridges and the 119-record store remain unchanged. Thi
 is a concrete evidence prerequisite, not architectural exhaustion or a claim
 that migration cost precludes the improvement. No native probe or runtime test
 was executed by that read-only study.
+
+### Following composition smoke launch boundary
+
+The parent preflight passed in the actual Linux launch environment: Java 25,
+Lua 5.4 and PowerShell are available. The environment unsets DISPLAY,
+WAYLAND_DISPLAY, XAUTHORITY, JAVA_TOOL_OPTIONS and JDK_JAVA_OPTIONS and sets
+`MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl`, with the four existing verified
+ROMs discovered from the main checkout. There is no desktop fallback.
+
+The complete change-based selection has 3,762 candidates in 76 ordinary batches,
+then a fresh guard JVM. Expected execution is approximately 90–150 minutes plus
+queue waiting; this is an estimate, not a measured completion time. The stopping
+rules are the runner's 180-minute execution budget (queue waiting excluded),
+ten-minute no-output limit, source-fingerprint mismatch, or infrastructure
+failure without JUnit reports. JUnit failures remain identified for bounded
+attribution and correction. Do not manually narrow the plan or launch the
+release-only full suite.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base 97eb86f186b432722024ca419a00b901b38f5ec2 \
+  --rom-directory "${MAIN_CHECKOUT}" --max-minutes 180 --run
+```
