@@ -78,12 +78,15 @@ continues those cuts rather than treating the inventory as untouched.
 | Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K pixel/token fingerprints, detached ROM views, card-owned selection, source and strict frozen guards | Completed; focused behavior/API checks and strict frozen rules passed; see the [preview plan](plans/2026-10-23-title-preview-providers.md) |
 | Title-card sprite rendering / `game.titlecard` | Remove the helper's 14 low-level reverse dependencies | Exact tile submissions, asymmetric flipped-art pixels and manager draw order at 320/424 pixels, unchanged API pins and strict frozen rules | Completed; low-level records 181 → 167; focused behavior/API checks and strict frozen rules passed |
-| Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
+| Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Investigation complete; retain the graphics/context owner and all five records. Native resource checks passed; see the [follow-through plan](plans/2026-10-24-architecture-followthrough.md) |
 
-The combined guard profile has one independently reproduced pre-existing
-build-tooling assertion failure; the [plan](plans/2026-10-23-architecture-ratchet-paydown.md)
-records its exact identity, matched baseline/current command and coverage limits.
-This campaign does not claim an entirely green guard profile.
+The October 23 combined guard run recorded one independently reproduced
+pre-existing build-tooling assertion failure; that
+[plan](plans/2026-10-23-architecture-ratchet-paydown.md) preserves its exact
+identity, matched baseline/current command and coverage limits. That historical
+result is not a claim about the current guard profile. The October 24
+[follow-through plan](plans/2026-10-24-architecture-followthrough.md) records the
+new validation separately.
 
 Lifecycle calls are a separate migration inventory, not hundreds of automatically
 safe replacements. Preserve the intentional slot/reconstruction bridges and move
@@ -136,11 +139,22 @@ another declaration cannot spend removed debt; formatting does not change keys.
 This inventory covers the guarded object packages, not all application calls.
 The older figures 585/136 counted a different historical source scope.
 
-The rewind field-disposition census pruned 41 already-resolved exemptions
-(64 → 23) and now fails stale keys as well as new gaps. The ICZ segment-column
-recreation exclusion is gone. The justified recreate-throw baseline remains
-13 files / 14 occurrences; static-state coverage retains its three existing
-exceptions. These are enforcement repairs, not newly implemented rewind state.
+Event-source permissions now pin MGZ's six remaining calls by caller, operation
+and multiplicity. Three obsolete AIZ/HCZ file exemptions are gone. Object-service
+source permissions pin eleven actual caller/operation identities; the previous
+ten fragment entries covered two distinct registry callers with one entry.
+Missing or malformed scan inputs, changed counts and stale permissions fail.
+Shared event composition owners retain their explicit whole-file exclusions.
+
+The rewind field-disposition census first pruned 41 already-resolved exemptions
+(64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
+records five proven reconstruction policies, leaving 18 exact obligations. The
+guard fails stale keys as well as new gaps. The ICZ segment-column recreation
+exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
+occurrences. Initialized provider registration, restore and retirement checks
+establish the S2/S3K special-stage adapter coverage; static-state coverage now
+retains only the module-selection exclusion. These classification changes do not
+implement missing capture state for the remaining obligations.
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a

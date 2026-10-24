@@ -50,6 +50,28 @@ native presentation obligations remain in the [coverage backlog](level-test-cove
 2. [Persisted Editor Saves Disabled for S3K Gameplay Loads](#persisted-editor-saves-disabled-for-s3k-gameplay-loads)
 3. [Trace Replay Recorder Coverage Follow-Up](#trace-replay-recorder-coverage-follow-up)
 4. [S3K AIZ Items Carried From The 2026-03-25 Working List](#s3k-aiz-items-carried-from-the-2026-03-25-working-list)
+5. [S1 False-Floor Rewind During Partial Collapse](#s1-false-floor-rewind-during-partial-collapse)
+
+---
+
+## S1 False-Floor Rewind During Partial Collapse
+
+**Location:** `Sonic1FalseFloorInstance.reattachChildBlock()` and
+`updateDisintegrating()`.
+
+Source review identifies a restoration defect after a child retires: recreation
+packs surviving children into a dense list, but the captured collapse cursor
+still indexes their original positions. With block 0 gone and `currentFrame=1`,
+the next dispatch targets block 2 instead of block 1; the cursor can stall at 7
+before cleanup. This case was not reproduced at runtime during the architecture
+campaign. The existing restore test covers all eight children before collapse
+and the first subsequent signal, which does not establish this boundary.
+
+The `childBlocks` field remains in the rewind disposition baseline. Close this
+entry only after destructive restore during partial collapse preserves remaining
+block order, identities and eventual cleanup against uninterrupted execution.
+See the [field audit](../architecture/audits/2026-10-24-rewind-disposition-review.md)
+for the rejected transient classification and its evidence limits.
 
 ---
 

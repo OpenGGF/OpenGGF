@@ -27,7 +27,7 @@ obligation is not a passing test claim.
 | --- | --- | --- | --- |
 | 1 | [`sonic1.objects.Sonic1RingInstance#childRingSpawns`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingInstance.java) | Retained. The layout constructor expands a ring group, but `recreateForRewind` takes the child constructor and creates an empty list. The state enum is captured separately. | Prove restoration before the INIT dispatch can still expand the exact group, then replay spawning and collection with canonical RingManager identities. Post-spawn scalar or child-ring tests do not settle that boundary. |
 | 2 | [`sonic1.objects.bosses.FZPlasmaLauncher#activeBalls`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/FZPlasmaLauncher.java) | Closed with central `TRANSIENT`. Each recreated FZPlasmaBall adopts itself through `adoptPlasmaBallForRewind`; the launcher prunes destroyed entries and derives its active count. The native encounter has one launcher group. | [`TestS1FzBossGraphRewind.fzBossGraphRestoresChildrenLauncherBallsAndParentSideLinks`](../../../src/test/java/com/openggf/game/rewind/TestS1FzBossGraphRewind.java) removes children, creates a divergent launcher/ball, restores fresh identities, checks the exact list and count, then advances the launcher without duplicating balls. |
-| 3 | [`sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java) | Closed with central `TRANSIENT`. FalseFloorBlock recreation reattaches children to the recreated master. Captured block indices determine the restored collapse sequence. | [`TestFalseFloorBlockRewindGenericRestore.falseFloorBlocksRestoreWithIdentityScalarsAndMasterRelink`](../../../src/test/java/com/openggf/game/sonic1/objects/TestFalseFloorBlockRewindGenericRestore.java) removes all eight children, requires a fresh master, checks every restored identity and list position, then drives disintegration against those live blocks. This covers the shipped single-master group and its captured creation order. |
+| 3 | [`sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java) | Retained after independent review. Recreation densely reattaches only surviving blocks, but `currentFrame` indexes the list by original collapse position. After block 0 retires, a fresh list of indices 1–7 and a captured cursor of 1 cause the next dispatch to signal block 2; the cursor can then stall at 7 before cleanup. | [`TestFalseFloorBlockRewindGenericRestore.falseFloorBlocksRestoreWithIdentityScalarsAndMasterRelink`](../../../src/test/java/com/openggf/game/sonic1/objects/TestFalseFloorBlockRewindGenericRestore.java) proves the complete eight-child case and first signal only. Before closing this key, prove partial-collapse restoration, surviving block identity/ordering and eventual cleanup against uninterrupted execution. The review finding follows production-path inspection; this task did not execute a failing partial-collapse reproduction. |
 | 4 | [`sonic1.objects.bosses.Sonic1SLZBossInstance#seesaws`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1SLZBossInstance.java) | Closed with central `TRANSIENT`. Recreation starts the list empty. `updateBossLogic` calls `scanForSeesaws` before consuming the cache on the next forward dispatch. | [`TestS1SlzBossSpikeballGraphRewind.restoreRebuildsTheBossSeesawScanCacheSoAlignmentCanStillMatch`](../../../src/test/java/com/openggf/game/rewind/TestS1SlzBossSpikeballGraphRewind.java) forces fresh reconstruction and verifies that the next update repopulates the cache. Other tests in the class check spikeball origin matching rather than first-live-seesaw matching. This is bounded encounter evidence, not a full SLZ route replay. |
 | 5 | [`sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java) | Retained render debt. The public piece constructor retains a mapping piece and renderer, while recreation always takes the frame-index constructor. It cannot reconstruct the legacy piece recipe from its spawn. | [`TestS2BreakableBlockFragmentGraphRewind.breakableBlockFragmentRestoresFreshWithCapturedPhysicsAndFrame`](../../../src/test/java/com/openggf/game/rewind/TestS2BreakableBlockFragmentGraphRewind.java) uses the frame-index constructor with null art. It proves physics and identity only. Required evidence is a nonempty piece-backed draw before removal, after recreation, and on forward replay. Do not classify the list from this scalar-only pass. |
 | 6 | [`sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/OOZLauncherObjectInstance.java) | Retained render debt. Recreation explicitly supplies null piece and renderer, creating an empty list. Production rendering requires a ready renderer and a nonempty list. | [`TestS2LauncherGraphRewind.oozLauncherFragmentRestoresFreshWithCapturedPhysicsAndIdentity`](../../../src/test/java/com/openggf/game/rewind/TestS2LauncherGraphRewind.java) supplies null art. It cannot prove visibility. Preserve a ROM-backed frame/piece recipe and verify emitted render data through destructive restore before closing this key. No speculative capture of live render handles is added. |
@@ -99,6 +99,17 @@ explicitly. Some named classes contain choreography tests without any registry
 restore; the table records that limitation instead of certifying them as graph
 coverage.
 
+## Independent review correction
+
+Review of `46d62d09dfe726a1de4539e061004a69ee6a14be` found the false-floor
+partial-collapse case described in row 3. The coordinator confirmed that
+`reattachChildBlock` compacts survivors while `updateDisintegrating` indexes by
+`currentFrame`. The new transient policy hid an existing obligation and was
+removed before integration. Keep the eight-child test as bounded evidence; it
+does not certify partial collapse. The other five policies and provider-owned
+coverage had no review blockers. Final composed guard results belong in the
+[delivery plan](../plans/2026-10-24-architecture-followthrough.md).
+
 ## Validation
 
 The first request was terminated during queue admission by the T3 speed-setting
@@ -121,7 +132,7 @@ including both actual initialized provider lifecycles and both baseline guards.
 Queue waiting was 502 seconds; Maven reported 85 seconds of execution including
 both compilation phases. Parallel process durations are not added to these.
 
-The field guard's generated report was inspected. It contains exactly the 17
+The worker's pre-review field report was inspected. It contained exactly the 17
 retained keys above, including generic fallback for IczMiniboss childComponents
 and LBZ Knuckles wallExplosions. The static guard accepted exactly the single
 module-selection exclusion. A constant-pool check of the compiled analyzer found
@@ -160,8 +171,11 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless
 ```
 
 Documentation checks matched all 23 original keys to the table, verified every
-source link and named method, and passed `git diff --check`. The six closed keys
-are absent from the 17-key field baseline. No baseline was widened. Consumed
+source link and named method, and passed `git diff --check`. The worker initially
+removed six keys, leaving 17. Independent review rejected the false-floor closure
+and the coordinator restored that original key: five accepted policies and 18
+remaining obligations. The final baseline remains a strict subset of the original
+23 keys; no new debt is accepted. Consumed
 Surefire reports and the generated field report are deleted after inspection;
 no category run or retained validation receipt was created.
 
