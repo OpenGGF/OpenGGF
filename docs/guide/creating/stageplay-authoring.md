@@ -102,8 +102,10 @@ films and simulation output outside the repository.
 ### catalog
 
 `catalog` checks that the ROM matches the game and reports its SHA-1, every zone
-and act with its name, start position and `musicId`, the character's
-available actions (`intents`) and its animations and sprite frames. With
+and act with its name, start position and `musicId`, the game's `music` list
+(each song's `name`, `title` and native `soundId`), the character's available
+actions (`intents`) and its animations and sprite frames. Sound numbers are the
+game's own request IDs: Sonic 2's Emerald Hill is 130 (`$82`). With
 `--zone` and `--act` it also decodes that level and reports its playable area.
 `--character` defaults to `sonic`.
 
@@ -143,8 +145,9 @@ cancelled). A cast member hidden for the whole shot is `INACTIVE`.
 
 `sample.world` adds the game's frame counters, ring placements and which have
 been collected, placed objects and their positions, and for each player:
-rings, ring changes, hurt, the object it is standing on, ability state and
-timer, and the actual animation and sprite frame. Events report boarding and
+rings, ring changes, hurt, the object it is standing on, ability (only one the
+character has in its own game, so Sonic 1 Sonic reports no insta-shield and Sonic
+2 Tails no flight), ability state and timer, and the actual animation and sprite frame. Events report boarding and
 leaving objects, ring pickups and losses, hurt and recovery, ability changes
 and wait outcomes (including `WAIT_TIMED_OUT`).
 
@@ -297,7 +300,7 @@ python3 tools/stageplay/stageplay.py render --scene SCENE.stageplay --out FILM.m
 | `--s1-rom`, `--s2-rom`, `--s3k-rom` | | ROMs for the games the scene uses. |
 | `--rom`, `--game` | the scene's first game | The ROM and game to start the engine with. Without `--rom`, the configured ROMs are used. |
 | `--scale` | 1 | Whole-number upscale, 1–8, with sharp pixels. |
-| `--ffmpeg` | `ffmpeg` | FFmpeg executable. |
+| `--ffmpeg` | `ffmpeg` | FFmpeg executable. A bare name is looked up on `PATH`; a path with a directory is resolved from your current directory. |
 | `--staging-dir` | a new folder beside the output | An existing empty folder for temporary files. |
 
 Films are FFV1 video and FLAC audio at 60 frames per second, at the scene's

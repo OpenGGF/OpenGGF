@@ -64,8 +64,10 @@ hand-edit generated IDs or split intervals across shots.
   may change visibility only. Use Posers for deliberate hand choreography.
 - Use `route` (the editors' **Plan route**) for paths. Only `VERIFIED` is
   certified, and only for that exact input; search failures are not proof of
-  impossibility. A failed Walk may report `needs Run`; with no advice, the walk
-  may have used its budget, so raise `--frames`/`--nodes` before concluding.
+  impossibility. A failed Walk is rehearsed at Run within the same budget and
+  may advise `needs Run`, `needs more Attempt frames` or both; follow the advice
+  (`--travel RUN`, larger `--frames`) and plan again. The editors' side panel
+  shows a one-line result; F1 holds the full diagnosis.
   Player routes start at a shot's first frame.
 - Floors from `ground`, **Place on floor** and the picker are terrain only:
   apply, then confirm the landing in simulation. `INCOMPLETE` or truncated
@@ -86,9 +88,12 @@ hand-edit generated IDs or split intervals across shots.
   fifteen presets). Override with root `voices`; `OFF` when a recorded `VOICE`
   cue should stand alone. Check `timeline` `speech` events for sync.
 - Cue music explicitly in every shot that needs it; any music cue takes over
-  level music for the whole scene. Use the `catalog` `musicId` for a zone's own
-  song. If an S2 shot's first-frame music fades, cue it a few frames later.
-  Seeking is silent; judge sound from playback from frame 0.
+  level music for the whole scene. Sound numbers are each game's native request
+  IDs (S2 Emerald Hill is `$82` = 130); `catalog` lists music names, titles and
+  numbers plus each zone's `musicId`, and screenplay `ROM_MUSIC` accepts
+  `"music":"EMERALD_HILL"` instead of `soundId`. There is no old engine-ID mode.
+  A cue on a shot's entry frame plays as authored in every game. Seeking is
+  silent; judge sound from playback from frame 0.
 - Hold integer zoom when pixels must stay still; review fractional zoom and
   tall views in motion. A larger `--scale` cannot repair shimmer.
 
