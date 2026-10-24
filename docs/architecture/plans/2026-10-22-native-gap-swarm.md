@@ -6040,3 +6040,103 @@ continue autonomously under the user's clarification about approval ceremonies.
 Main/develop, PR publication/draft state, manual CI and native/passive observations
 remain outside this recovery action. No PR-green or complete native-route claim is
 made.
+
+### Isolated S1 GHZ edge-wall ROM mapping correction — 2026-10-24
+
+The isolated source author at `<SOURCE_WORKTREE>` (T3 worktree `t3-f2a74f24`), branch
+`bugfix/ai-pr223-s1-edgewall-rom-map-20261024`, started from clean `659b02c98`
+and fast-forwarded once to the complete qualified prerequisite ancestry
+`2a9ee36ac17956ec2627c0eae0b06b310ef93bd7`. No prerequisite leaf was replayed.
+The reviewed executable diff changes only `MAP_GHZ_EDGE_WALL_ADDR` from
+`0x00E8DF` to `0x00E8DE`, its owning citation, and one test in the existing
+`TestSonic1GhzRomMappings` class. Restoring that constant and removing its new
+comment recovers the entire base production file byte-for-byte, SHA-256
+`7ff5b9d70c8da9839e9f096b02db67954e3b7e7170ad9c696b172c36523d66eb`.
+Removing only the new method and three imports similarly recovers the entire
+base test file, preserving all 13 earlier methods byte-for-byte. Reviewed source
+blobs remain `8988478cd6a035c7567aad2b6701aebf696ca724` (constants) and
+`d561f1c67691434693dfa11aeed563a6b73e54db` (test).
+
+At pinned S1 disassembly `28872a46e2d4c94c5c4818cbd3c04e6eb17edb67`,
+Edge_Main (_incObj/44 GHZ Edge Walls.asm:17-25) loads `Map_Edge` into `obMap`.
+The supplied REV01 native-byte proof is `21 7C 00 00 E8 DE 00 04` at `$E87A`;
+its immediate longword is at `$E87C`. The regression reads that actual operand
+with existing `RomByteReader.readU32BE(0xE87C)`. Map_Edge_internal
+(_maps/GHZ Edge Walls.asm:4-27) supplies three four-piece frames: shadow tiles
+`4,8,8,8`, light `8,8,8,8`, dark `0,0,0,0`, with X `-8`, Y `-32,-16,0,16`,
+2-by-2 tiles, and zero piece flips/palette/priority. Its exact pieces and
+half-open `[-8,8) x [-32,32)` mapping bounds are asserted. The existing normal
+test fixture initializes the existing GHZ provider; the regression first
+requires its real `GHZ_EDGE_WALL` sheet, then verifies 12 patterns, palette 2
+and three frames. It neither closes the borrowed ROM nor changes bootstrap,
+provider activation, art address, loader, catches, geometry guards, VRAM,
+timing, gameplay, API surface or version/baseline pins. The old `$E8DF`
+first word `$0600` implies 768 frames and reaches the existing rejection/null
+sheet path; that sensitivity is source reasoning, not a new inverse run.
+
+One fresh normal queued request ran on those frozen sources. Dedup found no
+owned live request, `target/` and reports were absent, and the complete tracked
+input frame before/after matched: 15,167 paths / 957,058,629 bytes, SHA-256
+`9f1c244d1e77df42c882cc2d8c39cdae9076079787f0fe707e4a3c269b4104ca`.
+The five selected sources, protected runtime/fixture/build inputs, 49 current
+Main testing-wrapper/import files, and all three original stock-ROM identities
+were pinned and unchanged. S1 remained CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 and S3&K matched the repository's
+REV01/locked-on identities. No ROM alias, copy or link was created.
+
+The launch used JDK `/usr/lib/jvm/java-25-openjdk`, Lua `/usr/bin/lua5.4`,
+`ALSOFT_DRIVERS=null` and a minimal environment without ambient JVM/Maven or
+display variables. From the isolated worktree, the argument selection below uses
+neutral placeholders for the original absolute Main and stock-ROM directories:
+
+```sh
+python3 <MAIN_WORKTREE>/tools/testing/maven_queue.py --normal \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.game.sonic1.TestSonic1GhzRomMappings,com.openggf.game.rewind.TestS1RingGroupGraphRewind,com.openggf.game.sonic1.objects.bosses.TestS1FzEscapeNativeInput,com.openggf.game.sonic1.scroll.TestSonic1Sbz3ScrollAlias,com.openggf.game.sonic1.scroll.TestSonic1ScrollLoadBoundary' \
+  '-Dsonic1.rom.path=<STOCK_ROM_DIR>/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=<STOCK_ROM_DIR>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=<STOCK_ROM_DIR>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  test -B
+```
+
+Original session `44286` / wrapper PID `2964325` completed with exit 0 at
+`2026-10-24T16:21:37Z`. Admission printed 7 seconds waiting and a normal
+7 GiB / 8-core reservation; Maven reported `01:28 min`. These are separate
+queue/execution measurements, not total delivery time. Actual XML identities,
+properties, recursive streams, all five report texts, the complete 32,220-byte /
+349-line command log and the dump inventory were read before disposition:
+
+| Selected family | Actual unique cases | Failures / errors / skips |
+| --- | ---: | --- |
+| `TestSonic1GhzRomMappings` | 14 | 0 / 0 / 0 |
+| `TestS1RingGroupGraphRewind` | 14 | 0 / 0 / 0 |
+| `TestS1FzEscapeNativeInput` | 12 | 0 / 0 / 0 |
+| `TestSonic1Sbz3ScrollAlias` | 2 | 0 / 0 / 0 |
+| `TestSonic1ScrollLoadBoundary` | 2 | 0 / 0 / 0 |
+
+All 44 cases passed. The 345 properties confirm Java `25.0.5.0.2` / class 69,
+the isolated classpath/report ownership, surfaceless EGL and all three original
+absolute ROM properties. The 45 recursive stream nodes contain 16,674 bytes;
+their only warnings are 106 expected FAST-to-NONE notices. The complete command
+log contains 112 such notices, 26 compiler deprecation warnings, four JOML Unsafe
+launcher notices and one fresh-Maven-tmpdir startup warning. No caught art or
+mapping fault, unexpected runtime warning, infrastructure failure or VM/Surefire
+dump was found. The new provider-sheet assertion actually executed.
+
+This qualifies the S1 edge-wall correction and the four earlier G2 emitter
+families only. There was no retry, extra build/preflight, inverse execution,
+broad smoke, guard, trace, debugger, emulator/native observation, reserved
+provider activation or paired MHZ run. No executable input changed after the
+request. The unrelated S2 authored-music/PLC boundary and Root's category epoch
+remain separate owners and evidence. Root inputs/jobs/targets were not inspected
+or changed; ancestry reception remains on hold for its owner's terminal/full
+readback. Only this factual append and folded existing prerelease wording follow
+the affected pass, before one normal-hook local leaf with sole parent `2a9ee36ac`.
+Owned raw diagnostics and temporary messages are consumed without an archive or
+pass cache; source, compiled outputs and this worktree remain for parent reception.
+No Main/develop, remote, PR or publication action is included.
+Scoped citation checking found no hard errors and retained one inherited stale
+`Sonic_Loops` range in the constants file, byte-identical to `2a9ee36ac`; it was
+left outside this correction. The new owning references were checked against
+the pinned S1 files. Whitespace checks and the ordinary commit hooks apply to
+the four-file source/prose leaf.

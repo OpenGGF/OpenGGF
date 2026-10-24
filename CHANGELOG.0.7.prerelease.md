@@ -15,7 +15,8 @@ Unreleased. The earlier development themes remain in
   Exploding Bomb fuses retain position fractions and status in the reused slot,
   moving that first fragment immediately while fresh fragments initialize before
   animating. Grounded rolling preserves the camera's vertical look bias, with
-  ordinary recentering resuming in the air.
+  ordinary recentering resuming in the air. Green Hill edge walls load their
+  three original mapping frames and palette from the native ROM pointer.
   Ending returns preserve a pending fade callback until it hands off to the title.
   Results waits finish before the following object routine starts the next level
   or special stage, retaining the final ordinary player-art upload.
