@@ -94,6 +94,13 @@ public final class CdPlayerMovement {
         private UnsupportedMotion(UnsupportedBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
         public UnsupportedBoundary boundary() { return boundary; }
     }
+    /**
+     * Player_ResetOnFloor final values (Main.asm:2295-2330). scoreChain is the routine's MOVE.W #0
+     * write; sounds holds its single FM_CHARGESTOP request only when bit 2 was set.
+     */
+    public record ResetOnFloorResult(CdPlayerMotionState motion, int scoreChain, List<SoundRequest> sounds) {
+        public ResetOnFloorResult { Objects.requireNonNull(motion); wordValue(scoreChain); sounds = List.copyOf(sounds); }
+    }
 
     private final CdR11aTerrain terrainData;
     private final CdR11aPlayerAssets assets;
@@ -466,7 +473,7 @@ public final class CdPlayerMovement {
         int threshold = (byte) -(((c.yv >>> 8) & 0xFF) + 8);
         if ((byte) floor.distance < threshold && (byte) floor.otherDistance < threshold) return;
         c.ypos = addWord(c.ypos, floor.distance); c.angle = floor.angle;
-        resetOnFloor(c, false); c.anim = 0;
+        resetOnFloor(c); c.anim = 0;
         if (((floor.angle + 0x20) & 0x40) != 0) {
             c.xv = 0; if (c.yv > 0xFC0) c.yv = 0xFC0;
         } else if (((floor.angle + 0x10) & 0x20) != 0) {
@@ -487,7 +494,7 @@ public final class CdPlayerMovement {
         Pair floor = pair(c, 0);
         if (floor.distance >= 0) return;
         c.ypos = addWord(c.ypos, floor.distance); c.angle = floor.angle;
-        resetOnFloor(c, false); c.anim = 0; c.yv = 0; c.gv = c.xv;
+        resetOnFloor(c); c.anim = 0; c.yv = 0; c.gv = c.xv;
     }
     /** Up (2196-2238), flat ceiling keeps air/roll; steep attachment does not resize. */
     private void upAir(Cursor c) {
@@ -496,17 +503,42 @@ public final class CdPlayerMovement {
         if (ceiling.distance >= 0) return;
         c.ypos = addWord(c.ypos, -ceiling.distance);
         if (((ceiling.angle + 0x20) & 0x40) == 0) { c.yv = 0; return; }
-        c.angle = ceiling.angle; resetOnFloor(c, true);
+        c.angle = ceiling.angle; resetOnSteepSlope(c);
         c.gv = (byte) ceiling.angle < 0 ? sw(-c.yv) : c.yv;
     }
-    /** ResetOnFloor / ResetOnSteepSlope (2295-2345). No jump/charge conflation. */
-    private static void resetOnFloor(Cursor c, boolean steep) {
-        c.flags &= ~(0x20 | AIR | 0x10);
-        if (!steep && (c.flags & ROLL) != 0) {
-            c.flags &= ~ROLL; c.yr = 19; c.xr = 9; c.ypos = addWord(c.ypos, -5);
-            c.anim = 0; c.sound(Sound.FM_CHARGESTOP);
+    /**
+     * Player_ResetOnFloor (2295-2330), the single implementation shared by MODE floor landings and
+     * the touch response. miniSonic is the actual byte ($FF195B, TST.B). A miniature result is NOT
+     * MODE admission: step() still rejects miniature Sonic before any MODE work.
+     */
+    public static ResetOnFloorResult resetOnFloor(CdPlayerMotionState motion, int miniSonic) {
+        Objects.requireNonNull(motion); byteValue(miniSonic);
+        // BTST #4 / BEQ / NOP (2296-2298) has no effect; BCLR 5, 1 and 4 follow.
+        int flags = motion.flags() & ~(0x20 | AIR | 0x10), xr = motion.xRadius(), yr = motion.yRadius();
+        int y = motion.centreY16_16(), anim = motion.animation();
+        List<SoundRequest> sounds = List.of();
+        if ((flags & ROLL) != 0) {
+            flags &= ~ROLL; // SUBQ.W adjusts only the integer word; the fraction survives.
+            if (miniSonic != 0) { yr = 0xA; xr = 5; y = addWord(y, -2); } else { yr = 0x13; xr = 9; y = addWord(y, -5); }
+            anim = 0; sounds = List.of(new SoundRequest(Sound.FM_CHARGESTOP));
         }
-        c.jump = 0; c.score = 0;
+        var m = motion;
+        return new ResetOnFloorResult(new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), m.routine(), m.angle(), flags, m.spriteFlags(), xr, yr, anim, m.previousAnimation(),
+                0, m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(),
+                m.previousSecondaryAngle()), 0, sounds);
+    }
+    /** MODE floor landings (2104,2181,2280) delegate once; admission already rejected miniature Sonic. */
+    private static void resetOnFloor(Cursor c) {
+        var reset = resetOnFloor(c.motion(), c.env.gates().miniSonic());
+        var m = reset.motion();
+        c.flags = m.flags(); c.xr = m.xRadius(); c.yr = m.yRadius(); c.ypos = m.centreY16_16();
+        c.anim = m.animation(); c.jump = m.playerJump(); c.score = reset.scoreChain();
+        c.effects.addAll(reset.sounds());
+    }
+    /** Player_ResetOnSteepSlope (2339-2345, called at 2230): no bit-2 resize, Y, animation or sound. */
+    private static void resetOnSteepSlope(Cursor c) {
+        c.flags &= ~(0x20 | AIR | 0x10); c.jump = 0; c.score = 0;
     }
     private boolean wall(Cursor c, boolean left) {
         int distance = single(c, c.x(), c.y(), left ? 0x40 : 0xC0);
@@ -610,9 +642,12 @@ public final class CdPlayerMovement {
             look = s.lookMode(); cam = s.cameraYCentre();
             for (var effect : result.effects()) effects.add(new ChargeEffect(effect));
         }
-        Result finish(Boundary boundary, Continuation continuation) {
-            var state = new CdPlayerMotionState(xpos, ypos, xv, yv, gv, original.routine(), angle, flags, spr, xr, yr,
+        CdPlayerMotionState motion() {
+            return new CdPlayerMotionState(xpos, ypos, xv, yv, gv, original.routine(), angle, flags, spr, xr, yr,
                     anim, prev, jump, charge, lock, stick, ctrl, previousPri, previousSec);
+        }
+        Result finish(Boundary boundary, Continuation continuation) {
+            var state = motion();
             var globals = new Globals(look, cam, pri, sec, bored, score, debugAngle, debugShift, debugQuadrant, debugFloor);
             return new Result(state, new Environment(env.physics(), env.bounds(), env.gates(), globals), effects, boundary, continuation);
         }

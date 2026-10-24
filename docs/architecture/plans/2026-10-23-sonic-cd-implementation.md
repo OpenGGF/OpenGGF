@@ -2849,3 +2849,43 @@ does not promise complete native-prefix state on arbitrary failure. The runtime
 must close instead of retrying it. World dispatch, art banking and the real
 KillEnemy producer are separate integration units, not certified by these tests.
 Fable's earlier handoff supplied reads/derivations only; Opus authored the code.
+
+
+### Pure native enemy/hazard touch response, 24 October 2026
+
+The pure response stages the selected enemy/hazard entry over one call-cut.
+It returns final actor/player/world values, distinct changed slot images in
+first-write order, and typed ordered calls, retaining neither snapshot nor pool.
+It preserves native NEG/ASR, signed/unsigned compares, old-chain indexing and
+odd-address boundary, unsigned score cap/life wrap, shield/combined-ring order,
+hurt/kill/debug exits, bounce and the adjacent38/39 store. Result d0 is explicit
+only at native MOVEQ -1 exits; Main does not consume it. No pool, audio or world
+write occurs here. Body must pass the SAME snapshot object to scan and response;
+selected-image equality alone cannot prove the other slots came from that cut.
+
+Movement shares one floor-reset implementation, including the miniature branch,
+while steep attachment remains separate. Ordinary MODE still rejects miniature
+Sonic before work. This extraction preserves physics and the high-memory-byte
+landing threshold; the shared helper's existence is not miniature admission.
+
+Root54609 passed484cases with zero failures/errors/skips at13:31:39BST:
+90response,89Movement,78Body,88Frame,12actor,4object-pass actor,85charge,
+19scanner,3regionalcomponents,15World and1realEGL pickup/replay. The actual-USA
+EnemyPoints method executed. All11XML confirmed Java25.0.5.0.2, actual media
+and surfaceless EGL. Queue1180s is separate from1m40 Maven execution. This
+bounded CD-internal extraction uses its complete maintained MODE/Body/Frame/
+actor/World consumers; it does not repeat unchanged general-engine smoke.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerTouchResponse,TestCdPlayerMovement,TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestCdPlayerCharge,TestCdPlayerObjectTouch,TestCdPlayerRetailComponents,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+```
+
+Independent Opus review found no P1/P2 or wrong assertions in all179new-unit
+invocations. Correction to authoring prose: SPECIAL selector0B can reach
+Player_TouchHazard2; MechaBlu/bosses and spikes/time-over have related entries.
+They remain unowned here, not unreachable. Expose existing hurt/kill routines
+narrowly when those callers land rather than duplicate them. Native SubCPUCmd
+blocks on hardware; this pure ordered request has no measured service cost.
+Body/Frame staging, world score/contact globals, live aftermath dispatch,
+routine4 recovery, lost rings11 and same-frame death-camera freeze remain
+separate required units. Nothing in this commit admits contact into gameplay.

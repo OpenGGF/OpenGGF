@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -548,6 +549,85 @@ class TestCdPlayerMovement {
         assertEquals(0xC8, r.environment().globals().cameraYCentre()); assertEquals(7, r.state().animation());
         assertEquals(30, r.state().charge()); assertEquals(3059, r.state().groundVelocity());
         assertEquals(0x004BF300, r.state().centreX16_16()); assertEquals(CdPlayerMovement.Boundary.MODE_RETURN, r.boundary());
+    }
+
+    // Shared Player_ResetOnFloor (Sonic/Main.asm:2295-2330). Written before the extraction; UNRUN by the external author.
+    @Test void sharedResetOnFloorNormalBranchUnrollsByWordAndRequestsOneChargeStopLeavingEveryOtherFieldAlone() {
+        var before = new CdPlayerMotionState(0x12345678, 0x0003ABCD, -0x123, 0x456, -0x789, 4, 0x9A, 0xFF, 0xBC,
+                7, 14, 2, 0x1D, 1, 0x2E, -2, 0x80, 0x3F, 0x41, 0x52);
+        var reset = CdPlayerMovement.resetOnFloor(before, 0);
+        // BCLR 5/1/4 then 2 ($FF -> $C9); $13/9 radii; SUBQ.W #5 wraps only the integer word and keeps the fraction.
+        assertEquals(new CdPlayerMotionState(0x12345678, 0xFFFEABCD, -0x123, 0x456, -0x789, 4, 0x9A, 0xC9, 0xBC,
+                9, 0x13, 0, 0x1D, 0, 0x2E, -2, 0x80, 0x3F, 0x41, 0x52), reset.motion());
+        assertEquals(0, reset.scoreChain());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), reset.sounds());
+        assertThrows(UnsupportedOperationException.class, () -> reset.sounds().clear());
+    }
+
+    @ParameterizedTest @CsvSource({"1", "128", "255"})
+    void sharedResetOnFloorMiniatureBranchUsesTenFiveRadiiAndATwoPixelWordLift(int miniSonic) {
+        var before = new CdPlayerMotionState(0x00400000, 0x0001BEEF, 0, 0x300, 0, 2, 0, 0x16, 4,
+                7, 14, 2, 0, 1, 0, 0, 0, 0, 0, 0);
+        var reset = CdPlayerMovement.resetOnFloor(before, miniSonic); // TST.B miniSonic: any nonzero byte.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0xFFFFBEEF, 0, 0x300, 0, 2, 0, 0, 4,
+                5, 0x0A, 0, 0, 0, 0, 0, 0, 0, 0, 0), reset.motion());
+        assertEquals(0, reset.scoreChain());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), reset.sounds());
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1"})
+    void sharedResetOnFloorWithoutBitTwoClearsOnlyStatusJumpAndChainWithNoSound(int miniSonic) {
+        var before = new CdPlayerMotionState(0x00400000, 0x00501234, 5, 6, 7, 2, 0x20, 0xFB, 4,
+                9, 0x13, 0x1A, 3, 1, 9, 1, 2, 0, 0x11, 0x22);
+        var reset = CdPlayerMovement.resetOnFloor(before, miniSonic);
+        // BTST #4 / NOP has no effect; $FB loses bits 5/1/4 only. No radius, Y or animation write.
+        assertEquals(new CdPlayerMotionState(0x00400000, 0x00501234, 5, 6, 7, 2, 0x20, 0xC9, 4,
+                9, 0x13, 0x1A, 3, 0, 9, 1, 2, 0, 0x11, 0x22), reset.motion());
+        assertEquals(0, reset.scoreChain()); assertTrue(reset.sounds().isEmpty());
+    }
+
+    @Test void sharedResetOnFloorRejectsNullMotionAndNonByteMiniatureFlag() {
+        var state = new Actor().state();
+        assertThrows(NullPointerException.class, () -> CdPlayerMovement.resetOnFloor(null, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerMovement.resetOnFloor(state, 256));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerMovement.resetOnFloor(state, -1));
+        assertThrows(NullPointerException.class, () -> new CdPlayerMovement.ResetOnFloorResult(null, 0, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerMovement.ResetOnFloorResult(state, 0x10000, List.of()));
+    }
+
+    @Test void modeDownAirLandingRunsTheSharedFloorResetOnceWithCompleteStateAndExactEffectOrder() {
+        Actor a = airborne(); a.y = 0x0052ABCD; a.yv = 0x100; a.xv = 0x80; a.jump = 1; a.pri = 0x26; a.sec = 0x64;
+        var r = new Fixture().step(a, 0, 0);
+        assertEquals(new CdPlayerMotionState(0x00408000, 0x004CABCD, 0x80, 0, 0x80, 2, 0, 0, 4,
+                9, 19, 0, 0, 0, 0, 0, 0, 0, 0x26, 0x64), r.state());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), r.effects());
+        assertEquals(0, r.environment().globals().scoreChain());
+    }
+
+    @Test void modeSideAirLandingUsesTheSameSharedResetAndEmitsItsChargeStopExactlyOnce() {
+        Actor a = airborne(); a.y = 82 << 16; a.yv = 0x1C0; a.xv = 0x800;
+        var r = new Fixture().step(a, 0, 0);
+        assertEquals(0xC0, r.environment().globals().debugQuadrant());
+        assertEquals(0, r.state().flags()); assertEquals(0, r.state().animation());
+        assertEquals(19, r.state().yRadius()); assertEquals(9, r.state().xRadius());
+        assertEquals(List.of(new CdPlayerMovement.SoundRequest(CdPlayerMovement.Sound.FM_CHARGESTOP)), r.effects());
+    }
+
+    @Test void steepCeilingAttachmentKeepsTheSeparateSteepResetWithoutFloorUnrollOrChargeStop() {
+        // .LandSteepSlope (2228-2235) calls Player_ResetOnSteepSlope (2339-2345), which has no bit-2 branch.
+        Fixture f = new Fixture(false); f.row(2, 0x5003); f.angles[3] = 0x40;
+        Actor a = airborne(); a.y = 63 << 16; a.yv = -0x200; a.jump = 1;
+        var r = f.step(a, 0x10, 0);
+        assertEquals(4, r.state().flags()); assertEquals(7, r.state().xRadius()); assertEquals(14, r.state().yRadius());
+        assertEquals(2, r.state().animation()); assertEquals(62 << 16, r.state().centreY16_16());
+        assertEquals(0, r.state().playerJump()); assertEquals(0, r.environment().globals().scoreChain());
+        assertTrue(r.effects().isEmpty());
+    }
+
+    @Test void miniatureModeStillRejectsBeforeTheSharedFloorResetCanBeReached() {
+        Fixture f = new Fixture(); f.gates = new CdPlayerMovement.Gates(0, 1, 1, 0, 0, 0, 0);
+        Actor a = airborne(); a.y = 0x0052ABCD; a.yv = 0x100;
+        assertBoundary(f, a, CdPlayerMovement.UnsupportedBoundary.MINIATURE);
     }
 
     private static void assertBoundary(Fixture f, Actor a, CdPlayerMovement.UnsupportedBoundary boundary) {
