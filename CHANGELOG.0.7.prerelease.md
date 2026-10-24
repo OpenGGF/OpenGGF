@@ -603,7 +603,10 @@ Unreleased. The earlier development themes remain in
   reused capture processes off desktop audio devices.
 
 - **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
-  input, audio and fade cleanup through suspension and replacement. Destination
+  input, audio and fade cleanup through suspension and replacement. Native lock-on
+  rewind publications keep their selected module owner across fresh service
+  incarnations, while both exposed and suppressed native services remain protected
+  from creator capture. Destination
   history starts after deferred title-card assembly, and replay cannot mutate a
   replacement owner's history. Floors and checkpoints include completed frame
   publication; inactive outgoing worlds cannot seed new history. Audio's installed

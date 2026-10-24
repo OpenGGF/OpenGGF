@@ -6120,3 +6120,245 @@ Encoding is sorted path UTF-8, NUL, decimal content-byte length, NUL, then raw
 SHA-256 of content. Production remains the reviewed pair unchanged. No complete
 runtime selection was repeated for this test-only correction. The inherited
 KiS2 gate and final composed validation/delivery remain outstanding.
+
+### Bounded KiS2 native rewind publication repair (following composition)
+
+Implementation ownership is limited to
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-f0b7e10f`, branch
+`bugfix/ai-kis2-native-publication-owner-20261024`. This T3-created checkout
+started at `97eb86f186b432722024ca419a00b901b38f5ec2` and only its branch
+fast-forwarded to `85b030248ada59654b653f45c63517f7023ccb4b`; hooks were installed.
+Main remains `develop`. No parent, special-stage worker, bonus or Sideways
+source/target/job is owned by this repair. No delegation, integration, push,
+broad smoke/full suite, trace campaign or worktree cleanup is authorized here.
+The parent owns independent source review, composition and combined validation.
+
+The actual unchanged-production reproduction used the genuine `Kis2GamePatch`,
+its raw PLC service and `GameplayModeContext`, plus production
+`HeadlessGameBoot.openResolvedSessionForBoot` and repeated full level loads.
+At base `85b030248`, production `src/main` tree
+`c5960a2ec76241e97f942ced742bb4c662adfaf2`, the reproduction test blobs were
+`cbc769d406dc8d8280b482879d6a9f04a950f3a4` (new ownership class) and
+`9626a6356da15dd4a4ae28319b5121e7e5be1672` (headless class).
+Five cases executed, zero failures/skips, three errors: chip-present
+`genuineRecreationRefreshesTheSelectedRawPublication(boolean, boolean)[1]`
+(KiS2 session root) and `[2]` (S2 root/resolved KiS2) both rejected the second
+publication with `IllegalStateException: RewindSnapshottable already registered:
+sonic2-plc-service` through `RewindRegistry.registerOrRefresh`. Both forced
+fallback controls `[3]`/`[4]` passed. The second full headless load in
+`repeatedFullLoadsRecreateTheActualChipPlcPublication` failed through the same
+registry path, wrapped by the level-load IOException/RuntimeException boundary.
+This is an independent discrimination of the supplied SS worker finding, not
+execution of that worker's controller test. XML identities, ROM properties,
+Java version and zero skips were inspected; the reports were consumed/deleted.
+
+The first reproduction attempt stopped at a fixture checked-exception compile
+error, before any tests; that fixture was corrected before the above baseline.
+Its queue wait was 132 seconds and Maven reported 1 minute 22 seconds.
+The successful reproduction admission wait was five seconds and Maven time
+28.968 seconds. Terminal sessions `35802` and `5947` are completed.
+
+All focused Maven invocations here use the absolute wrapper
+`$MAIN_CHECKOUT/tools/testing/maven_queue.py` from the owned
+checkout (`MAIN_CHECKOUT` is the main root supplied in the task brief), with `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, and `DISPLAY`, `WAYLAND_DISPLAY`, `XAUTHORITY`,
+`JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS` unset. Common command arguments are
+`-Dmse=off -Dopenggf.headless.gl=surfaceless-egl` and these original absolute ROM
+properties (no files or links created):
+
+- `sonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen`
+- `sonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen`
+- `s3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+- `kis2.rom.path=$MAIN_CHECKOUT/kis2.gen`
+
+Verified CRC32/SHA-1 pairs are S1 `AFE05EEE` /
+`69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, S2 `7B905383` /
+`8bca5dcef1af3e00098666fd892dc1c2a76333f9`, S3K `63522553` /
+`cfbf98c36c776677290a872547ac47c53d2761d6`, and KiS2 `2AC1E7C6` /
+`6cd0537a3aee0e012bb86d5837ddff9342595004`. Surefire reported Java
+`25.0.5.0.2` and the supplied paths. The reproduction selector was:
+
+```text
+-Dtest=TestKis2NativeRewindPublicationOwnership,TestKis2HeadlessBoot#repeatedFullLoadsRecreateTheActualChipPlcPublication test
+```
+
+The repair changes exactly four production files: a methodless, unannotated
+internal `NativeRewindPublicationOwner` role, its unconditional implementation
+by final package-private `Kis2GameModule`, publication resolution/reservation,
+and the `GameplayModeContext` registration caller. `nativeRoot` still means the
+canonical base. The separate owner operation traverses the resolved module's
+verified structural lineage and requires actual session-root object identity in
+that chain; sibling publishers sharing a base cannot satisfy the anchor.
+Only concrete engine-loaded decorators confer the role. Outer foreign decorators
+use final `base()` and verified outer projections use their engine handler's
+inherited provenance, without donating their own publications. Foreign inner
+bases deny owner admission. A proxy below a marked owner also denies that
+owner's admission: even a verified creator projection can append creator-owned
+publications, so its inherited lineage does not prove its exposed inventory.
+Cycle/length checks continue after finding the candidate owner.
+
+Both selected and canonical inventories validate before either identity set is
+reserved. Distinct same-key chip and stock services are legitimate across those
+two inventories; they are never registered as a union. Registration admits only
+the selected owner's exact current publications. Cold attachment, fallback,
+creation and reset retain the same KiS2 authority for inherited state. The PLC
+producer, raw lifecycle instance, queue and generic registry refresh remain
+unchanged; no clear, deregistration, retained-service workaround, key claim,
+projection-handler change or API pin update is used.
+
+The inspected change-based plan (`run_categories.py --base 85b030248`) selects
+3,759 smoke candidate classes because these paths are shared/unclassified.
+That broad run is deliberately not launched in this bounded worker. Focused
+qualification addresses native/creator admission, genuine queue/reload behavior,
+existing owner/fault/snapshot consumers, and API/source guards; the parent owns
+the following composition's combined smoke/guards. The exact normal
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+remains a **required parent gate** with the eventual SS commit. No result here
+claims actual SS/results/controller return is green or removes a canonical bug
+ledger entry owned by that worker.
+
+First repaired-state checkpoint: four production blobs are
+`33b8c180ed14c522e93ed4d13daf57271794c4be` (role),
+`44ba625fa3822abfc2ec1ccff0b1027e1502c038` (publication),
+`9b442e8f745418bc0fd9022f4cdf3709fb31007f` (context), and
+`514028be65483e174ffe377fd4983614bc39510e` (KiS2 module).
+The SHA-256 over sorted repository-relative path + NUL + contents + NUL for
+all files under `src/main`, `src/test`, `racing/time-attack/src`, and
+`racing/server/src` was
+`637d426eedb851b1c2f56739d27d9515d04d01c77d99d8f28ef6b4d4c7ba6b59`.
+The first repaired invocation (terminal `32865`, completed) used:
+
+```text
+-Dtest=TestKis2NativeRewindPublicationOwnership,TestNativeRewindAdapterPublication,TestKis2PlcService,TestGameplayModeContextRewindRegistry,TestKis2HeadlessBoot,TestKis2EndingContinue,TestOwnerBoundGamePatch,TestModContextAndFaultBoundary,TestRewindRegistry,TestCompositeSnapshotOwnership test
+```
+
+It compiled all 4,348 production and 4,460 maintained test/consumer sources.
+Admission waited 136 seconds; Maven reported 1 minute 30 seconds. All 126
+cases executed with zero errors/skips, but four newly authored FIFO assertions
+failed: a fixed 30-boundary fixture window had legitimately advanced beyond
+Coconuts to Masher in both ROM tiers. This was a fixture expectation error,
+not changed queue behavior. The corrected window derives the number of ordinary
+three-pattern boundaries from the captured ROM head's remaining pattern count.
+No producer/timing code changes. The other 122 cases passed, including all seven
+`TestKis2HeadlessBoot` cases (the new actual repeated chip full-load path included),
+all nine original native-publication controls, all three existing KiS2 PLC cases,
+29 context-registry cases, three ending/continue cases, 21 owner-patch cases,
+23 context/fault cases, 16 registry cases and three snapshot-ownership cases.
+The eight other new ownership/security cases also passed. Exact reports,
+properties and skips were inspected and consumed. Terminal `4833` is the
+single focused follow-up for the corrected ownership class; no duplicate broad
+or unchanged consumer run was submitted.
+
+The corrected full ownership class passed all 12 cases, zero failures/errors/
+skips (terminal `4833`, completed; four seconds admission, 27.754 seconds Maven).
+This includes the four genuine ROM-tier/root-shape vectors through creation,
+reset/recreation, raw lifecycle/publication identity, registry FIFO/progress
+capture/restore/replay, current/old full snapshots and retained-course rejection
+before world mutation. Its XML and actual case identities were inspected and
+consumed. Three further targeted checks strengthen live owned-projection
+recreation/creator-state partitioning, actual sibling-owner rejection and
+validation of both inventories before either is marked. Terminal `3658` is the
+sole queued request for those three methods; source/test fingerprint at this
+checkpoint is
+`d95c1206383d1783c90597393cca854eab06b1e0ed890910c76526a64ead8f83`.
+Production remains the four blobs above. Waiting is admission delay, not Maven
+execution or a failed run. The exact SS controller gate is still parent-owned.
+
+The three-method extension attempt (`3658`, completed) waited 479 seconds,
+then stopped at test compilation after 22.707 seconds Maven: a new local
+`inherited` variable conflicted with an existing lambda parameter in the same
+method. Zero tests executed. The test-only name is corrected; the new fixture
+also uses the existing engine-only reset boundary instead of a raw bootstrap
+setup, keeping the six ambient keys/five files intact. The final focused request
+is terminal `72277`, comprising all 13 ownership cases (including the new live
+projection case) and the affected source/API/frozen/inventory guards. This
+repeat is justified by the test edits and previously unexecuted assertions;
+the unchanged 114 existing consumer controls are not repeated.
+
+Final bounded qualification (`72277`, completed) passed **177 cases, zero
+failures/errors/skips** in ten exact reports. Admission waited 62 seconds;
+Maven time was 50.244 seconds. Command suffix, with the common environment,
+wrapper and ROM properties above:
+
+```text
+-Pguards -Dtest=TestKis2NativeRewindPublicationOwnership,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestArchUnitRules,TestArchUnitTestRules,TestSingletonLifecycleGuard,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy test
+```
+
+All 13 ownership cases executed and passed: four genuine creation/reset/
+recreation tier/root vectors, five bundle/expert reservation vectors, and four
+focused projection/lineage/inventory cases. The actual projection case restores
+registry-captured chip state through recreation while course restore leaves
+creator mode state alone and full restore restores it. The lineage checks use
+actual foreign-loaded decorator/root/handler classes, an engine-loaded marker
+proxy with zero foreign invocation/lineage reads, a genuine engine-owned
+projection, sibling/mismatched roots, and cycle/length negatives. Inventory
+negatives include null adapter/key, bounds, distinct same-key adapters and no
+partial canonical marking when selected validation fails; repeated identical
+entries retain deduplication. Both cold inventories and unregistered live chip/
+suppressed base identities resist bundle capture, expert returned callbacks,
+direct/delegate retagging and preserve owner/dependent quarantine.
+
+The other 164 cases are the actual source guard (81), architecture review (9),
+ArchUnit production rules (34), test rules (1), singleton lifecycle/inventory (8),
+API signatures/terminals (11), API pin policy (4), API release policy (15), and
+API runtime policy (1). The 119-record low-level store, six ambient keys/five
+files, all other frozen records, API signature/terminal resources, release
+descriptor and ModApiVersion remain byte-identical to base. No pin was expanded.
+The methodless role is not annotated or exported into the candidate surface.
+The final source/test fingerprint (same path/content SHA-256 definition as
+above) is
+`f3f9325b8b2adcdff2ff9354279bb2219a90045a44fde3928b6fb16e53da76a1`;
+the four production blobs remain unchanged from the first repaired run.
+All final XML case identities, Java 25, absolute ROM properties, EGL property
+and zero skips were inspected, then the reports were consumed/deleted. Together
+with the unchanged 114 earlier consumer cases, this is bounded passing evidence
+for 127 distinct behavior/ownership cases plus 164 focused guards/API cases;
+it is not a smoke/full-suite or SS-controller-return claim.
+
+The existing runtime-ownership release theme and implementation-pitfall catalogue
+record the ownership lesson. Their new local link resolves; AGENTS/CLAUDE still
+match, and whitespace checks pass. No trace frontier moved. No live task test
+handle remains: `35802`, `5947`, `32865`, `4833`, `3658`, `72277` are terminal;
+the temporary read-only fingerprint helper `35383` was stopped after its digest
+completed because its redundant per-file Git-status loop was unnecessary.
+No timing measurement is inferred from these overlapping independent activities.
+Only queue waits and Maven durations reported by each invocation are recorded.
+The checkout/branch is retained for parent review and composition; no push,
+integration or worktree/branch removal is performed. The normal genuine
+`TestKis2SpecialStageControllerLifecycle#entryResultsReturnKeepsChipProvider`
+remains a required parent gate after the SS commit is composed, followed by the
+parent's combined smoke/guards, integration, push and cleanup.
+
+Local staging initially found an empty stale Git `index.lock` in this task's
+Git worktree metadata, timestamped to the stopped redundant status helper.
+There was no live Git process or open-file owner (`lsof`); the exact empty
+inode was verified before removing only that task-owned stale Git lock.
+Maven queue/worktree/slot locks and resource settings were untouched.
+
+
+### Composed KiS2 publication repair: controller gate pending
+
+The next composition merges `b5371e7130ea7e97da879085ce5b1e0aa064ee97`.
+Independent source/security review accepted its four-file production boundary,
+anchored resolved lineage and separate validated selected/canonical reservations.
+The review's 11,424-entry working and committed aggregates match SHA-256
+`d2242a4e08e0cadd7637a26ee8bca03b846c0fc1acd17b3e1b3a097305e16aa8`.
+For this composition, the parent compared all seven changed source/test mode,
+blob-ID and path entries against the accepted commit; every entry matches.
+The composed SS production and corrected observer retain their own accepted
+bytes. Concurrent continuation evidence is preserved in full.
+
+The worker observed127 distinct behavior/ownership cases and164 affected
+API/source/architecture checks passing without skips, including actual repeated
+headless full loads. This is distinct from the normal SS/results controller
+return. The parent will run that exact previously failing case on this composed
+source, with intended-return assertions unchanged. Until it executes, canonical
+KiS2 bug reconciliation and full-return qualification remain outstanding.
+The current three-owner delivery's smoke is a different source and supplies
+no proof for this repair. Title ownership is isolated future work.
+
+Before that composed gate, the parent removed the pilot's temporary catch/print
+block used only to classify the old KiS2 failure. The ordinary controller loop
+and all intended successful-return assertions are retained. Historical failure
+identity/partial state remains in the component evidence and original commit;
+new failures propagate directly. No production behavior changed in this cleanup.

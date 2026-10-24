@@ -50,24 +50,8 @@ class TestKis2SpecialStageControllerLifecycle {
             assertNotNull(loop.getResultsScreen());
             assertEquals(emeralds + 1, GameServices.gameState().getEmeraldCount());
             boolean title = false;
-            try {
-                for (int i = 0; i < 2400 && loop.getCurrentGameMode() != GameMode.LEVEL; i++) {
-                    capture.step(null); title |= loop.getCurrentGameMode() == GameMode.TITLE_CARD;
-                }
-            } catch (RuntimeException failure) {
-                // Observe the inherited failure's partial publication; always rethrow it.
-                // This remains a failing intended-return pilot until the separate bug is repaired.
-                Throwable cause = failure;
-                while (cause.getCause() != null) cause = cause.getCause();
-                if (cause instanceof IllegalStateException && cause.getMessage().equals(
-                        "RewindSnapshottable already registered: sonic2-plc-service")) {
-                    assertEquals(GameMode.SPECIAL_STAGE_RESULTS, loop.getCurrentGameMode());
-                    assertNull(loop.getResultsScreen());
-                    assertSame(com.openggf.game.NoOpSpecialStageProvider.INSTANCE, loop.getActiveSpecialStageProvider());
-                    assertNull(SessionManager.getCurrentGameplayMode().getRegisteredSpecialStageProvider());
-                    System.err.println("KiS2 return failure: SPECIAL_STAGE_RESULTS, results=null, retained=NoOp, registered=null");
-                }
-                throw failure;
+            for (int i = 0; i < 2400 && loop.getCurrentGameMode() != GameMode.LEVEL; i++) {
+                capture.step(null); title |= loop.getCurrentGameMode() == GameMode.TITLE_CARD;
             }
             assertTrue(title, "real return title was dispatched");
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode()); assertNull(loop.getResultsScreen());

@@ -39,6 +39,9 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -335,6 +338,48 @@ class TestKis2HeadlessBoot {
             assertEquals(character.equals("knuckles") ? 120 : 0, player.getRingCount());
             manager.loadZoneAndAct(0, 1);
             assertEquals(0, player.getRingCount(), "a new act must not inherit the checkpoint bank");
+        }
+    }
+
+    @Test
+    void repeatedFullLoadsRecreateTheActualChipPlcPublication() throws Exception {
+        var s2 = RomTestUtils.ensureSonic2RomAvailable();
+        assertNotNull(s2);
+        assertNotNull(Kis2TestRoms.lockOnDumpOrNull());
+        try (var rom = new Rom()) {
+            assertTrue(rom.open(s2.getAbsolutePath()));
+            var config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var engine = catalogueBackedContext(config);
+            EngineServices.configure(engine);
+            engine.roms().setRom(rom);
+            var root = new Sonic2GameModule();
+            var context = HeadlessGameBoot.openResolvedSessionForBoot(engine, root);
+            GameplaySessionFactory.attachManagers(context, engine);
+            engine.graphics().initHeadless();
+            var module = SessionManager.requireCurrentGameModule();
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            var level = GameServices.level();
+            level.loadZoneAndAct(0, 0);
+            var old = module.getGameService(com.openggf.game.sonic2.resources.Sonic2PlcService.class);
+            assertSame(old, module.getGameService(
+                    com.openggf.game.resources.PlcLifecycleService.class));
+            assertNotSame(old, root.getGameService(
+                    com.openggf.game.sonic2.resources.Sonic2PlcService.class));
+            long generation = context.getRewindRegistry().courseLayoutVersion();
+            level.loadZoneAndAct(0, 0);
+            var current = module.getGameService(com.openggf.game.sonic2.resources.Sonic2PlcService.class);
+            assertNotSame(old, current);
+            assertTrue(context.getRewindRegistry().courseLayoutVersion() > generation);
+            assertEquals(current.capture(),
+                    context.getRewindRegistry().capture().get(current.key()));
+            module.resetModuleScopedState();
+            level.loadZoneAndAct(0, 1);
+            assertNotSame(current, module.getGameService(
+                    com.openggf.game.resources.PlcLifecycleService.class));
         }
     }
 
