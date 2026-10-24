@@ -23,6 +23,14 @@ public final class StageplayAudio implements AutoCloseable {
     private final Map<String, com.openggf.mods.scene.host.SceneRomAudioSources.Lease> scopes = new LinkedHashMap<>();
     private StageplayDocument document;
     private StageplayCueDispatcher cues;
+    private List<com.openggf.stageplay.StageplaySpeech.Blip> speech = List.of();
+    private int speechCursor;
+    private final Map<com.openggf.stageplay.StageplaySpeech.Blip, StreamedMusicPort.SfxPcm> speechCache =
+            new LinkedHashMap<>(32, .75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<com.openggf.stageplay.StageplaySpeech.Blip, StreamedMusicPort.SfxPcm> entry) {
+                    return size() > 32;
+                }
+            };
     private AudioManager.SceneAudioSamples samples;
     private Map<String, StreamedMusicPort.SfxPcm> preparedSamples = Map.of();
     private com.openggf.audio.rewind.AudioLogicalSnapshot entryAudio;
@@ -74,10 +82,12 @@ public final class StageplayAudio implements AutoCloseable {
                 case MUSIC_STOP -> { }
             }
         }
+        var nextSpeech = com.openggf.stageplay.StageplaySpeech.plan(next);
         var replacement = audio.prepareSceneSamples(prepared);
         stop();
         if (samples != null) samples.close();
         samples = replacement; preparedSamples = Map.copyOf(prepared); document = next; cues = new StageplayCueDispatcher(next);
+        speech = nextSpeech; speechCursor = 0; speechCache.clear();
     }
 
     private void ownMusic() {
@@ -101,7 +111,14 @@ public final class StageplayAudio implements AutoCloseable {
         if (!source.equals(document)) throw new IllegalStateException("Prepare this scene's audio before playback");
         ownMusic();
         if (entryAudio == null) entryAudio = audio.captureLogicalSnapshot();
+        int previous = cues.frame();
         cues.advance(frame, this::dispatch);
+        while (speechCursor < speech.size() && speech.get(speechCursor).frame() <= frame) {
+            var blip = speech.get(speechCursor++);
+            // Forward jumps do not stack historical syllables at the destination. Seeking remains silent.
+            if (blip.frame() > previous && blip.frame() == frame)
+                samples.playTransient(speechCache.computeIfAbsent(blip, StageplaySpeechSynth::render));
+        }
     }
 
     /** Admits an isolated world's current native packet once during forward playback, never on draw/seek. */
@@ -147,6 +164,7 @@ public final class StageplayAudio implements AutoCloseable {
         if (samples != null) samples.close();
         samples = audio.prepareSceneSamples(preparedSamples);
         cues.seek(frame - 1);
+        seekSpeech(frame - 1);
     }
 
     /** The borrowed entry soundtrack is part of a cutscene's rewind state. */
@@ -160,7 +178,15 @@ public final class StageplayAudio implements AutoCloseable {
     /** No ROM commands or old cues are emitted by a seek. Voice tails are silenced. */
     public void seek(int frame) {
         requireOpen(); if (cues == null) throw new IllegalStateException("No prepared scene");
-        cues.seek(frame); samples.stop(); stopNativeSound();
+        cues.seek(frame); seekSpeech(frame); samples.stop(); stopNativeSound();
+    }
+    private void seekSpeech(int frame) {
+        int low = 0, high = speech.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (speech.get(middle).frame() <= frame) low = middle + 1; else high = middle;
+        }
+        speechCursor = low;
     }
     /** Restores the borrowed soundtrack and drops owned voice tails. */
     public void stop() {
@@ -172,6 +198,7 @@ public final class StageplayAudio implements AutoCloseable {
             for (int i = borrowed.size() - 1; i >= 0; i--) borrowed.get(i).close();
             if (entryAudio != null) { var saved = entryAudio; entryAudio = null; audio.restoreLogicalSnapshot(saved); }
             if (cues != null) cues.seek(-1);
+            speechCursor = 0;
         } finally {
             if (musicControl != null) { musicControl.close(); musicControl = null; }
         }
@@ -188,6 +215,6 @@ public final class StageplayAudio implements AutoCloseable {
     }
     @Override public void close() {
         if (closed) return;
-        try { stop(); } finally { closed = true; if (samples != null) samples.close(); loaders.clear(); profiles.clear(); preparedSamples = Map.of(); }
+        try { stop(); } finally { closed = true; if (samples != null) samples.close(); loaders.clear(); profiles.clear(); preparedSamples = Map.of(); speech = List.of(); speechCache.clear(); }
     }
 }

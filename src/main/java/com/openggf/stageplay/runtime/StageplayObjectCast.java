@@ -275,8 +275,12 @@ final class StageplayObjectCast implements AutoCloseable {
     }
 
     LiveObject observation(ObjectInstance object) {
-        for (var role : roles) if (role.root == object && role.mode != ObjectMode.FREE)
-            return observation(role);
+        for (var role : roles) if (role.root == object) {
+            if (role.mode != ObjectMode.FREE) return observation(role);
+            var spawn = object.getSpawn();
+            return new LiveObject(spawn.layoutIndex(), spawn.objectId(), spawn.subtype(), object.getX(), object.getY(),
+                    object.getClass().getSimpleName(), role.actor.id());
+        }
         var spawn = object.getSpawn();
         return new LiveObject(spawn.layoutIndex(), spawn.objectId(), spawn.subtype(), object.getX(), object.getY(), object.getClass().getSimpleName());
     }
@@ -302,7 +306,7 @@ final class StageplayObjectCast implements AutoCloseable {
 
     private static LiveObject observation(Role role) {
         return new LiveObject(role.actor.layoutIndex(), role.actor.objectId(), role.actor.subtype(),
-                (int) Math.round(role.x), (int) Math.round(role.y), "Stageplay:" + role.actor.id() + ":" + role.mode);
+                (int) Math.round(role.x), (int) Math.round(role.y), "Stageplay:" + role.actor.id() + ":" + role.mode, role.actor.id());
     }
 
     Snapshot capture() {

@@ -62,6 +62,7 @@ public final class StageplayScriptCompiler {
                             "shots",
                             "dialogueTypers",
                             "dialogueSkins",
+                            "voices",
                             "objectCast",
                             "order");
             int version = integer(script, "version", -1);
@@ -583,6 +584,16 @@ public final class StageplayScriptCompiler {
             throws IOException {
         ArrayNode typers = document.putArray("dialogueTypers"),
                 skins = document.putArray("dialogueSkins");
+        ArrayNode voices = document.putArray("voices");
+        for (var item : optionalArray(script, "voices")) {
+            var voice = object(item, "speaker voice", "speakerActor", "speakerName", "tone", "rhythm", "pitch",
+                    "variation", "lengthFrames", "level").deepCopy();
+            defaults(voice, "speakerActor", ""); defaults(voice, "speakerName", "");
+            defaults(voice, "tone", "SQUARE"); defaults(voice, "rhythm", "WORD");
+            defaults(voice, "pitch", 72); defaults(voice, "variation", 4);
+            defaults(voice, "lengthFrames", 6); defaults(voice, "level", 80);
+            voices.add(voice);
+        }
         for (var item : optionalArray(script, "dialogueTypers")) {
             var typer =
                     object(

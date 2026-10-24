@@ -137,7 +137,10 @@ final class StageplayObjectAuthoring {
                 action("Puppet move / stop commands", () -> commands(actorId)),
                 action("Remove from world at playhead", () -> removeAtPlayhead(actorId)),
                 action("Available parts / appearance exclusions", () -> parts(actorId)),
-                action("Delete authored role", () -> edit.accept(d -> d.withWorldCommands(d.worldCommands().stream()
+                action("Delete authored role and dialogue", () -> edit.accept(d -> d
+                        .withDialogue(d.dialogue().stream().filter(c -> !c.speakerActor().equals(actorId)).toList())
+                        .withVoices(d.voices().stream().filter(v -> !v.speakerActor().equals(actorId)).toList())
+                        .withWorldCommands(d.worldCommands().stream()
                                 .filter(c -> !c.actorId().equals(actorId)).toList())
                         .withObjectActors(d.objectActors().stream().filter(a -> !a.id().equals(actorId)).toList()))),
                 action("Back to cast", this::show),

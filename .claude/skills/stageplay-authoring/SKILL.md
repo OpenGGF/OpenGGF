@@ -162,8 +162,23 @@ pointer, supported by framing, facing and performance; color alone is not suffic
 identification. Use captions for titles and overlays. Reusable `dialogueTypers` and
 `dialogueSkins` support cadence, pauses, custom reveal schedules and creator PNG
 decorations. Package their relative assets with the scene, and reject overflow or
-missing resources before rendering. Scrubbing/reveal sampling is silent; use audio
-cues for deliberately timed sound. The existing engine font coverage still applies. Keep labels consistent
+missing resources before rendering. Each player or object cast ID can be a speaker, with a tail following its resolved
+native position. Built-in PSG speech noises follow actual grapheme reveal in forward
+playback. Approved defaults: Sonic **Soft Cool** (HOLLOW/WORD, 67/2/7/80), Tails
+**Workshop** (BUZZ/LETTER, 79/2/2/70), Knuckles **Red Rattle** (BUZZ/LETTER,
+62/2/3/78), S1 Motobug **Patrol Buzz** (BUZZ/WORD, 69/4/8/80), and S1 Buzz Bomber
+**Wing Chime** (CHIME/LETTER, 75/4/3/80); numbers are pitch/variation/length/level.
+Both editors retain all fifteen audition voices under Tone -> PRESETS, including
+Blue Spark, Twin Chime and Stone Hollow. Pick a preset, adjust and Apply to save
+explicit values. Existing overrides keep their sound; DEFAULT uses the current
+character selection. Do not regenerate an audition or film just to change defaults.
+Use root `voices` overrides (tone/off, word/letter rhythm, MIDI pitch, semitone
+variation, lengthFrames, level) or either editor's compact Speaker voice form.
+Offscreen voices key by exact speakerName. DEFAULT removes an override; OFF silences
+it. Inspect `timeline`'s
+`speech` events for reveal sync. Scrubbing/reveal sampling stays silent; use audio
+cues for deliberately timed effects or imported performances, and disable speech
+noises when an imported voice should stand alone. The existing engine font coverage still applies. Keep labels consistent
 when several roles share the same stock sprite. Time captions and voice cues with
 the speaking turn, leave enough time to read, and avoid obscuring the line beneath
 a transition's opaque midpoint. Listener reactions help the exchange read as action.

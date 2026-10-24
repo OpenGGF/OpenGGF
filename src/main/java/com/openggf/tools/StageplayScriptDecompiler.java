@@ -70,6 +70,7 @@ public final class StageplayScriptDecompiler {
         }
         script.set("dialogueTypers", canonical.get("dialogueTypers"));
         script.set("dialogueSkins", canonical.get("dialogueSkins"));
+        script.set("voices", canonical.get("voices"));
         ObjectNode order = script.putObject("order");
         for (String field :
                 java.util.List.of("puppets", "captions", "audio", "cameraEffects", "dialogue")) {

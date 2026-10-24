@@ -566,17 +566,42 @@ public class AudioManager implements MusicRestoreSink {
                     outputSampleRate(), 1, gain * gains.get(key)));
         }
 
+        /** Admits generated scene speech without growing an asset cache. Each copied packet is at most half a second. */
+        public void playTransient(StreamedMusicPort.SfxPcm pcm) {
+            requireCurrent(); java.util.Objects.requireNonNull(pcm);
+            if (pcm.sampleRate() < 8000 || pcm.sampleRate() > 192000 || pcm.channels() < 1 || pcm.channels() > 2
+                    || pcm.samples().length == 0 || pcm.samples().length % pcm.channels() != 0
+                    || pcm.samples().length / pcm.channels() > pcm.sampleRate() / 2
+                    || !Float.isFinite(pcm.gain()) || pcm.gain() < 0 || pcm.gain() > 1)
+                throw new IllegalArgumentException("Transient scene PCM needs at most 0.5 seconds of mono/stereo audio and gain 0..1");
+            if (suppressingRewindReplay() || reverseAudioPresentationActive) return;
+            voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
+            if (voices.size() >= 32) throw new IllegalStateException("Scene voice overlap exceeds 32 voices");
+            var decoded = new com.openggf.audio.presentation.DecodedPcm("transient", pcm.channels(), pcm.sampleRate(), pcm.samples());
+            voices.add(com.openggf.audio.presentation.SampleBackedVoice.oneShot(++nextVoice, 0, decoded,
+                    outputSampleRate(), 1, pcm.gain()));
+        }
+
         /** Seeking and cancellation silence owned voices without changing the ROM soundtrack. */
         public void stop() { voices.clear(); }
         private void requireCurrent() {
             if (closed || producer != shadowProducer) throw new IllegalStateException("Scene audio scope has expired");
         }
         private void mix(short[] target, int frames) {
+            if (voices.isEmpty()) return;
             int count = frames * 2;
             if (accumulation.length < count) accumulation = new long[count];
             java.util.Arrays.fill(accumulation, 0, count, 0);
             for (var voice : voices) voice.mixInto(accumulation, frames);
-            for (int i = 0; i < count; i++) target[i] = (short) Math.clamp(target[i] + accumulation[i], Short.MIN_VALUE, Short.MAX_VALUE);
+            // Reserve headroom by scaling an overloaded block, never flattening its peaks against the PCM rails.
+            long peak = 0;
+            boolean audibleOverlay = false;
+            for (int i = 0; i < count; i++) {
+                audibleOverlay |= accumulation[i] != 0;
+                peak = Math.max(peak, Math.abs(target[i] + accumulation[i]));
+            }
+            double gain = audibleOverlay && peak > 30000 ? 30000.0 / peak : 1;
+            for (int i = 0; i < count; i++) target[i] = (short) Math.round((target[i] + accumulation[i]) * gain);
             voices.removeIf(com.openggf.audio.presentation.SampleBackedVoice::isComplete);
         }
         @Override public void close() {

@@ -2,6 +2,8 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+- [Stageplay speech sync](../guide/creating/stageplay-authoring.md#character-speech-noises): `timeline` emits the production PSG speech events beside exact text reveal frames (2026-10-24 voice audition task).
+
 - [Racing deployment witness](../../racing/deploy/README.md#deployment-witness): `racing-server deployment-smoke` checks real TLS relay, recording upload, ROM replay and an external signed verdict using fresh isolated fixtures (2026-10-23 Docker deployment).
 - [Racing socket stress tool](../../racing/README.md#adversarial-and-capacity-testing):
   reproducible local room-capacity, hostile-state and lifecycle checks, with explicitly

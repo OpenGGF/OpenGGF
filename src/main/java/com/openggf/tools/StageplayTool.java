@@ -129,13 +129,16 @@ public final class StageplayTool {
                 int every = Integer.parseInt(flags.getOrDefault("every", "1"));
                 if (every < 1 || every > document.durationFrames()) throw new IOException("Invalid timeline sampling interval");
                 Path out = path(flags, "out");
+                var speech = com.openggf.stageplay.StageplaySpeech.plan(document).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(com.openggf.stageplay.StageplaySpeech.Blip::frame));
                 publish(out, staged -> {
                     try (var writer = Files.newBufferedWriter(staged, java.nio.charset.StandardCharsets.UTF_8)) {
                         for (int frame = 0; frame < document.durationFrames(); frame += every) {
                             int at = frame;
                             writer.write(JSON.writeValueAsString(Map.of("frame", frame, "seconds", frame / 60.0,
                                     "sample", StageplayTimeline.sample(document, frame),
-                                    "cues", document.audio().stream().filter(cue -> cue.frame() == at).toList())));
+                                    "cues", document.audio().stream().filter(cue -> cue.frame() == at).toList(),
+                                    "speech", speech.getOrDefault(at, List.of()))));
                             writer.newLine();
                         }
                     }

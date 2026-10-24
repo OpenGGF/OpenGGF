@@ -40,6 +40,16 @@ class TestStageplayDialogue {
         assertEquals("", StageplayDialogue.visibleText(document, line, -1));
     }
 
+    @Test void castObjectsAreNamedSpeakersWithoutPlayerRoles() {
+        var object = new ObjectActor("moto", "Motobug", "s1", 0, 0, 0x40, 0, -1,
+                List.of(new ObjectKey(0, 100, 200, 0, -1, StageplayDocument.Facing.LEFT, true, Interpolation.HOLD, ObjectMode.POSE)), List.of());
+        var line = new DialogueCue("object-line", 0, 100, "moto", "", "Day off.", "", "", 0, 0, 200, 60, "", List.of());
+        var document = scene().withObjectActors(List.of(object)).withDialogue(List.of(line));
+        assertEquals("Motobug", StageplayDialogue.speakerName(document, line));
+        assertEquals("Motobug", StageplayTimeline.sample(document, 0).dialogue().getFirst().speakerName());
+        assertThrows(IllegalArgumentException.class, () -> document.withObjectActors(List.of()));
+    }
+
     @Test void explicitSchedulesCanRevealGroupsAndInstantTypersIgnorePauses() {
         var offsets = new ArrayList<>(List.of(2, 2, 4));
         var line = new DialogueCue("custom", 0, 20, "", "Radio", "Ae\u0301🙂", "", "", 0, 0, 200, 60, "", offsets);
