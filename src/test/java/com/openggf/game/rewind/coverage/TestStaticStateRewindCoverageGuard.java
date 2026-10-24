@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * regardless of the rewound frame.
  *
  * <p>Same baseline-diff shape as {@link TestRewindCoverageGuard}: fails only
- * on a <em>new</em> gap key not already accepted in the committed baseline.
+ * on a <em>new</em> gap key or a stale exemption in the committed baseline.
  * Pre-existing gaps are baselined with a rationale rather than silently
  * ignored, so they stay visible for follow-up work.
  */
@@ -45,6 +45,10 @@ class TestStaticStateRewindCoverageGuard {
             baseline.add(trimmed);
         }
 
+        assertBaselineMatches(current, baseline);
+    }
+
+    static void assertBaselineMatches(Set<String> current, Set<String> baseline) {
         Set<String> regressions = new TreeSet<>(current);
         regressions.removeAll(baseline);
         assertTrue(regressions.isEmpty(),
@@ -59,9 +63,8 @@ class TestStaticStateRewindCoverageGuard {
 
         Set<String> closed = new TreeSet<>(baseline);
         closed.removeAll(current);
-        if (!closed.isEmpty()) {
-            System.out.println("[static-state-rewind-coverage] gaps closed since baseline (tighten baseline):\n  "
-                    + String.join("\n  ", closed));
-        }
+        assertTrue(closed.isEmpty(),
+                "Stale static-state rewind-coverage exemptions (remove resolved keys):\n  "
+                        + String.join("\n  ", closed) + "\nRemove these keys from " + BASELINE + ".");
     }
 }

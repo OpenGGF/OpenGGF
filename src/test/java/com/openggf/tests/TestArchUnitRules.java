@@ -185,17 +185,15 @@ class TestArchUnitRules {
             // keeps these two edges closed to general creator execution/registration.
             "editor -> io",
             "editor -> mods",
-            // Reuse the canonical art converter and no-clobber package publisher;
-            // the editor data owner guard permits only those two tool contracts.
+            // Reuse the canonical art converter, no-clobber package publisher and pure
+            // screenplay compiler/decompiler; editor_host_data_dependencies_use_only_explicit_owners
+            // permits only those tool contracts, each from its named editor owner.
             "editor -> tools",
             // Authoring consumes the shared directing values/controller; its menus stay in editor.
             // stageplay_boundaries_have_explicit_owners keeps these new edges narrow and rejects
             // any runtime dependency back on editor or the offline capture tool.
             "editor -> stageplay",
             "tools -> stageplay",
-            // Only StageplayWorkspace consumes the pure screenplay compiler/decompiler.
-            // The exact-pair assertion in stageplay_boundaries_have_explicit_owners closes this edge.
-            "editor -> tools",
             "stageplay -> audio",
             "stageplay -> camera",
             "stageplay -> physics",
@@ -743,6 +741,10 @@ class TestArchUnitRules {
                     "com.openggf.io.ModInputLimits", "com.openggf.mods.ModApiVersion", "com.openggf.mods.SemanticVersion",
                     "com.openggf.mods.code.ModCampaignDefinition", "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.tools.modsdk.JarPackager").contains(target);
+            // Screenplay import/export uses only the pure compiler and decompiler.
+            case "com.openggf.editor.stageplay.StageplayWorkspace" -> Set.of(
+                    "com.openggf.tools.StageplayScriptCompiler",
+                    "com.openggf.tools.StageplayScriptDecompiler").contains(target);
             case "com.openggf.editor.project.EditorProjectRuntimeModule" -> Set.of(
                     "com.openggf.mods.code.ModLevelExportStagingValidator",
                     "com.openggf.mods.code.AuthoredStageplayServices",
@@ -864,12 +866,6 @@ class TestArchUnitRules {
                         && !approvedStageplayConsumer(origin.getName(), target.getName())) {
                     violations.add(dependency.getDescription());
                 }
-                if ("editor".equals(originSlice) && "tools".equals(targetSlice)
-                        && !(typeOrNested(origin.getName(), "com.openggf.editor.stageplay.StageplayWorkspace")
-                                && (typeOrNested(target.getName(), "com.openggf.tools.StageplayScriptCompiler")
-                                || typeOrNested(target.getName(), "com.openggf.tools.StageplayScriptDecompiler")))) {
-                    violations.add(dependency.getDescription());
-                }
                 if ("stageplay".equals(originSlice)) {
                     if (stageplayCoreType(origin.getName())) {
                         if (!stageplayCoreType(target.getName())) violations.add(dependency.getDescription());
@@ -904,6 +900,10 @@ class TestArchUnitRules {
                 "com.openggf.editor.project.EditorCampaignExportService$Request", "com.openggf.mods.code.ModRuntime"));
         assertTrue(!approvedEditorHostDataDependency(
                 "com.openggf.editor.LevelEditorController", "com.openggf.tools.modsdk.ArtConverter"));
+        assertTrue(approvedEditorHostDataDependency(
+                "com.openggf.editor.stageplay.StageplayWorkspace", "com.openggf.tools.StageplayScriptCompiler"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.stageplay.StageplayWorkspace", "com.openggf.tools.StageplayCaptureTool"));
         Set<String> violations = new TreeSet<>();
         for (JavaClass origin : classes) {
             if (!"editor".equals(topLevelSlice(origin))) continue;
@@ -918,7 +918,8 @@ class TestArchUnitRules {
             }
         }
         assertTrue(violations.isEmpty(),
-                "editor asset/tool edges are restricted to bounded art/level import, campaign packaging, validation and staging:\n  "
+                "editor asset/tool edges are restricted to bounded art/level import, screenplay compile/decompile, "
+                        + "campaign packaging, validation and staging:\n  "
                         + String.join("\n  ", violations));
     }
 
@@ -1112,12 +1113,25 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic3k..",
                                     "com.openggf.game.session..",
                                     "com.openggf.tools..",
-                                    "com.openggf.audio.debug..",
                                     "com.openggf.debug..")
                             .and().areNotAnnotatedWith(CompositionRoot.class)
                             .should().callConstructorWhere(targetIsConcreteSonicProvider())
                             .as("shared code should not construct concrete Sonic provider/art/object classes"))
                     .because("shared layers should obtain game-specific providers through GameModule or approved composition roots; frozen baseline: 0 violations");
+
+    @ArchTest
+    static final ArchRule runtime_code_does_not_depend_on_sound_test_app =
+            noClasses().that().resideInAPackage("com.openggf..")
+                    .and().resideOutsideOfPackage("com.openggf.tools..")
+                    .should().dependOnClassesThat(new DescribedPredicate<>(
+                            "the standalone sound-test app or one of its nested classes") {
+                        @Override
+                        public boolean test(JavaClass target) {
+                            String app = "com.openggf.tools.audio.SoundTestApp";
+                            return target.getName().equals(app) || target.getName().startsWith(app + "$");
+                        }
+                    })
+                    .because("the standalone desktop tool must not become an audio or runtime dependency");
 
     @ArchTest
     static final ArchRule object_packages_do_not_access_global_game_services =

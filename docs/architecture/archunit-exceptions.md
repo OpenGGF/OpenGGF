@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 181 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 156 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -77,12 +77,17 @@ continues those cuts rather than treating the inventory as untouched.
 | Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Completed; affected checks and strict frozen rules passed |
 | Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K pixel/token fingerprints, detached ROM views, card-owned selection, source and strict frozen guards | Completed; focused behavior/API checks and strict frozen rules passed; see the [preview plan](plans/2026-10-23-title-preview-providers.md) |
-| Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
+| Title-card sprite rendering / `game.titlecard` | Remove the helper's 14 low-level reverse dependencies | Exact tile submissions, asymmetric flipped-art pixels and manager draw order at 320/424 pixels, unchanged API pins and strict frozen rules | Completed; low-level records 181 → 167; focused behavior/API checks and strict frozen rules passed |
+| Standalone audio composition / `tools.audio`, reusable presentation host | Remove the desktop app's eleven low-level records and the host's app callback | Parser/catalog characterization, actual supplied-profile use, independent host state, WAV export, ROM hub themes, launcher and strict guards | Completed; low-level records 167 → 156; behavior, CLI, API and complete guards passed; see the [second-loop plan](plans/2026-10-24-architecture-loop-two.md) |
+| Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Investigation complete; retain the graphics/context owner and all five records. Native resource checks passed; see the [follow-through plan](plans/2026-10-24-architecture-followthrough.md) |
 
-The combined guard profile has one independently reproduced pre-existing
-build-tooling assertion failure; the [plan](plans/2026-10-23-architecture-ratchet-paydown.md)
-records its exact identity, matched baseline/current command and coverage limits.
-This campaign does not claim an entirely green guard profile.
+The October 23 combined guard run recorded one independently reproduced
+pre-existing build-tooling assertion failure; that
+[plan](plans/2026-10-23-architecture-ratchet-paydown.md) preserves its exact
+identity, matched baseline/current command and coverage limits. That historical
+result is not a claim about the current guard profile. The October 24
+[follow-through plan](plans/2026-10-24-architecture-followthrough.md) records the
+new validation separately.
 
 Lifecycle calls are a separate migration inventory, not hundreds of automatically
 safe replacements. Preserve the intentional slot/reconstruction bridges and move
@@ -135,11 +140,24 @@ another declaration cannot spend removed debt; formatting does not change keys.
 This inventory covers the guarded object packages, not all application calls.
 The older figures 585/136 counted a different historical source scope.
 
-The rewind field-disposition census pruned 41 already-resolved exemptions
-(64 → 23) and now fails stale keys as well as new gaps. The ICZ segment-column
-recreation exclusion is gone. The justified recreate-throw baseline remains
-13 files / 14 occurrences; static-state coverage retains its three existing
-exceptions. These are enforcement repairs, not newly implemented rewind state.
+Event-source permissions now pin MGZ's six remaining calls by caller, operation
+and multiplicity. Three obsolete AIZ/HCZ file exemptions are gone. Object-service
+source permissions pin eleven actual caller/operation identities; the previous
+ten fragment entries covered two distinct registry callers with one entry.
+Missing or malformed scan inputs, changed counts and stale permissions fail.
+Shared event composition owners retain their explicit whole-file exclusions.
+
+The rewind field-disposition census first pruned 41 already-resolved exemptions
+(64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
+records six proven reconstruction policies, leaving 17 exact obligations after
+the false-floor partial-collapse correction. Its surviving children dispatch by
+their restored original index, preserving the native collapse counter. The
+guard fails stale keys as well as new gaps. The ICZ segment-column recreation
+exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
+occurrences. Initialized provider registration, restore and retirement checks
+establish the S2/S3K special-stage adapter coverage; static-state coverage now
+retains only the module-selection exclusion. These classification changes do not
+implement missing capture state for the remaining obligations.
 
 When a source ratchet fails, prefer moving the new dependency behind an existing
 provider, service context, codec registry, or mode collaborator. Raising a
@@ -220,7 +238,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 181
+- `low_level_layers_do_not_depend_on_runtime_layers`: 156
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -241,6 +259,27 @@ SAT storage and replay use the graphics value and its single expansion owner.
 This is a reviewed identity relocation, not a prune-only update or complete
 isolation of graphics from runtime packages.
 
+2026-10-24: `TitleCardSpriteRenderer` moves intact from `graphics` to
+`game.titlecard`, beside the mapping value it consumes. All three managers keep
+their existing calls and draw order. The move removes exactly 14 low-level
+records from `40afa018-d450-4b84-8cb9-d539d75d8062`, reducing 181 to 167 without
+replacement allowances or a forwarding class. Column-major title-card tile
+submission remains separate from the graphics-owned sprite expansion contract.
+The public static entry point keeps its parameter and return types.
+The helper has no `@ModApi` marker or curated root, and no recursive candidate
+signature names it. The release descriptor has no published API baselines.
+
+2026-10-24, second loop: `SoundTestApp` moves intact from `audio.debug` to
+`tools.audio`. Its selected profile is passed to the reusable presentation host,
+as is the hub's existing detached profile. The host no longer calls the desktop
+application, and its execution/device/cleanup ownership is unchanged. Exactly
+eleven app records are removed, reducing 167 to 156 without replacement entries.
+The old internal overloads are deleted with their callers migrated. A direct
+dependency rule rejects non-tool references to the app and its nested classes;
+the sole AWT exception follows the exact new file. The now-unused `audio.debug`
+concrete-provider construction exemption is removed. This is not a claim of
+complete transitive native-image closure.
+
 The installed-owner rewind change removed 10 framework-root records, leaving
 one. Injecting execution-time graphics selection into `ScriptFramesApplyStrategy`
 removed that last record. The S2 composition supplies `GameServices::graphics`,
@@ -252,14 +291,16 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 153 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 154 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
 `debug -> data`, `sprites -> ghost`, `stageplay -> configuration`,
 `timer -> camera`, `tools -> ghost`, `tools -> net`, and `util -> tools`.
 These were pruned from 159 to 152; editor art import adds the narrowly owned
-`editor -> tools` pair, giving the merged tree 153 permissions. The three matching obsolete
+`editor -> tools` pair (also used by Stageplay screenplay import/export, owned by
+`editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
+adds `stageplay -> util`, giving the merged tree 154 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
@@ -341,10 +382,16 @@ Rule: `object packages should not access global GameServices except approved bri
 
 Allowed bridge classes are excluded directly in the ArchUnit rule:
 
-- `AbstractObjectInstance`
-- `DefaultObjectServices`
-- `BootstrapObjectServices`
-- classes whose simple name ends with `ObjectRegistry`
+- `com.openggf.level.objects.AbstractObjectInstance`
+- `com.openggf.level.objects.DefaultObjectServices`
+- `com.openggf.level.objects.BootstrapObjectServices`
+- `com.openggf.level.objects.AbstractObjectRegistry`
+- `com.openggf.game.sonic1.objects.Sonic1ObjectRegistry`
+- `com.openggf.game.sonic2.objects.Sonic2ObjectRegistry`
+- `com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry`
+
+These are exact fully qualified class exclusions. Other registry names do not
+inherit an exception.
 
 Frozen violations:
 
@@ -361,13 +408,15 @@ Target direction:
 
 Rule: `shared level and game layers should not depend on game-specific packages`
 
-Frozen violations 1–9 are in `MasterTitleRomPreview`, which composes the
-cross-game master-title previews through concrete Sonic 1, Sonic 2, and Sonic
-3&K title-screen mappings. The five former `DefaultPowerUpSpawner` entries
+No committed records remain under UUID
+`e0b8ef04-86e9-4001-b35e-c5de3ef4d940`. The title-preview provider migration on
+2026-10-23 removed all nine `MasterTitleRomPreview` mapping dependencies. Per-game
+providers now own the concrete Sonic 1, Sonic 2, and Sonic 3&K preview decoding
+and composition. The five former `DefaultPowerUpSpawner` entries
 (Sonic 1 splash and S3K shield/insta-shield construction) were removed on
 2026-08-28 when that creation moved behind `GameModule.getShieldFactory()`,
-`getInstaShieldFactory()`, and `getWaterSplashFactory()`. The frozen set is now
-9 entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
+`getInstaShieldFactory()`, and `getWaterSplashFactory()`. The rule description's
+historical `frozen baseline: 9` remains part of its unchanged store key.
 
 Target direction:
 

@@ -3,146 +3,260 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <title>OpenGGF · Test queue</title>
 <style>
-  :root { --ink:#202a28; --muted:#69746f; --line:#dce3dc; --paper:#f5f7f2; --green:#216444; --mint:#e7f1e8; --amber:#9a6321; --amber-bg:#fff2d8; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--paper); color:var(--ink); font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-  button,input { font:inherit; }
-  button { cursor:pointer; }
-  button:focus-visible,input:focus-visible { outline:3px solid #75a88b; outline-offset:3px; }
-  .topbar { background:#202d27; color:#ecf4ec; padding:17px max(24px,calc((100vw - 1260px)/2)); display:flex; align-items:center; gap:12px; }
-  .mark { width:28px; height:28px; display:grid; grid-template-columns:repeat(3,5px); gap:3px; align-content:center; justify-content:center; border:1px solid #556b5d; border-radius:7px; }
-  .mark i { height:5px; background:#b8d8b2; border-radius:1px; }
-  .brand { font-weight:700; letter-spacing:.04em; }
-  .topbar .divider { color:#7a8b7f; }
-  .topbar .local { margin-left:auto; color:#bacabd; font-size:12px; }
-  main { max-width:1308px; margin:auto; padding:28px 24px; }
-  .heading { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-bottom:27px; }
-  h1 { font-size:36px; letter-spacing:-1.4px; font-weight:650; margin:0 0 5px; line-height:1.15; }
-  .subtitle { margin:0; color:var(--muted); }
-  .controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-  .button { border:1px solid #cbd5ca; border-radius:7px; padding:8px 13px; background:#fff; color:var(--ink); font-size:13px; }
-  .button:hover { background:#edf2eb; }
-  .connection { min-width:92px; color:var(--green); font-size:12px; font-weight:650; display:flex; align-items:center; gap:7px; }
-  .dot { width:7px; height:7px; background:currentColor; border-radius:50%; }
-  .connection[data-state="live"] .dot { box-shadow:0 0 0 4px #21644412; }
-  .connection[data-state="paused"],.connection[data-state="loading"] { color:var(--muted); }
-  .connection[data-state="error"] { color:#ad4e2c; }
-  .updated { width:100%; text-align:right; font-size:11px; color:var(--muted); margin-top:4px; }
-  .overview { display:grid; grid-template-columns:repeat(4,1fr); background:#fff; border:1px solid var(--line); border-radius:11px; overflow:hidden; margin-bottom:24px; }
-  .metric { padding:14px 23px; border-right:1px solid var(--line); }
-  .metric:last-child { border-right:0; }
-  .eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:1.15px; font-weight:700; color:var(--muted); }
-  .metric-value { font-size:26px; letter-spacing:-.7px; line-height:1.3; margin:4px 0 3px; font-variant-numeric:tabular-nums; }
-  .metric small { color:var(--muted); font-size:11px; }
-  .section-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:12px; }
-  h2 { margin:0; font-size:15px; font-weight:650; display:flex; align-items:center; gap:9px; }
-  .count { font-size:11px; font-variant-numeric:tabular-nums; border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--muted); background:white; }
-  .section-note { font-size:11px; color:var(--muted); }
-  section { margin-bottom:27px; }
-  .running-grid { display:grid; gap:10px; }
-  .job { display:grid; grid-template-columns:minmax(260px,1fr) minmax(280px,1.1fr); align-items:center; gap:36px; border:1px solid var(--line); border-left:3px solid #6b9b77; border-radius:9px; background:#fff; padding:15px 19px; min-width:0; }
-  .job-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; }
-  .badge { font-size:10px; font-weight:650; padding:3px 7px; border-radius:4px; color:var(--green); background:var(--mint); white-space:nowrap; }
-  .badge.aged { color:var(--amber); background:var(--amber-bg); }
-  .badge.neutral { color:var(--muted); background:#eff2ed; }
-  .mono { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-variant-numeric:tabular-nums; }
-  .pid { font-size:10px; color:var(--muted); }
-  .job-title { font-size:15px; font-weight:650; overflow-wrap:anywhere; }
-  .job-type { color:var(--muted); font-size:11px; margin-top:2px; }
-  .job-metrics { display:flex; justify-content:space-between; margin:0 0 11px; gap:12px; }
-  .job-value { display:block; font-size:17px; margin-top:3px; font-variant-numeric:tabular-nums; }
-  .bar { height:4px; border-radius:3px; background:#edf1e9; overflow:hidden; margin-top:4px; }
-  .bar-fill { height:100%; background:#6b9b77; width:0; }
-  .budget { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:10px; margin-top:7px; }
-  .table-wrap { background:#fff; border:1px solid var(--line); border-radius:9px; overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; text-align:left; }
-  th { padding:10px 16px; border-bottom:1px solid var(--line); color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.65px; white-space:nowrap; font-weight:600; background:#fafbf8; }
-  td { padding:13px 16px; border-bottom:1px solid #edf0ea; font-size:12px; vertical-align:middle; }
-  tr:last-child td { border-bottom:0; }
-  .queue-table th:first-child,.queue-table td:first-child { padding-right:0; width:40px; color:var(--muted); }
-  .queue-table td:nth-child(2) { min-width:210px; }
-  .row-title { font-size:12px; font-weight:600; overflow-wrap:anywhere; }
-  .row-detail { font-size:10px; color:var(--muted); margin-top:3px; }
-  .admission { font-size:11px; margin-top:5px; color:var(--amber); overflow-wrap:anywhere; }
-  .admission.observed,.admission.unknown { color:var(--muted); }
-  .number { white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .search { border:1px solid var(--line); border-radius:6px; padding:7px 10px; min-width:200px; background:#fff; font-size:12px; color:var(--ink); }
-  .empty { border:1px dashed #d3ddd0; border-radius:8px; padding:24px; text-align:center; color:var(--muted); font-size:12px; background:#ffffff80; grid-column:1/-1; }
-  .table-empty td { padding:24px; text-align:center; color:var(--muted); }
-  .notes { border:1px solid #e6d8b8; border-radius:8px; padding:8px 16px; margin-bottom:18px; color:#745727; background:#fff8e9; font-size:12px; }
-  .notes p { margin:4px 0; }
-  #unverified { border-color:#e6d8b8; }
-  .quiet { color:var(--muted); }
-  footer { display:flex; justify-content:space-between; gap:20px; padding-top:5px; color:var(--muted); font-size:10px; }
-  [hidden] { display:none!important; }
-  @media(max-width:780px) {
-    main { padding:25px 16px; } .topbar { padding:15px 16px; }
-    .heading { align-items:flex-start; } h1 { font-size:30px; }
-    .overview { grid-template-columns:repeat(2,1fr); } .metric:nth-child(2) { border-right:0; }
-    .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); } .metric { padding:14px 17px; }
-    .section-heading { align-items:flex-start; } .section-note { max-width:230px; text-align:right; }
-    .search { min-width:0; width:160px; } footer { flex-direction:column; gap:5px; }
-    .job { grid-template-columns:1fr; gap:19px; }
+  :root {
+    --bg:#f3f5f1; --panel:#fff; --panel-2:#f8faf6; --ink:#1d2623; --muted:#67736d; --faint:#97a29b; --line:#e0e6df; --line-2:#ecf0ea;
+    --accent:#22704a; --accent-soft:#e3f1e7; --track:#e9eee7;
+    --amber:#94600f; --amber-soft:#fdf0d5; --red:#a5422a; --red-soft:#fbe5de; --blue:#2f5f8f; --blue-soft:#e3edf7; --violet:#6a4a94; --violet-soft:#eee7f7;
+    --shadow:0 1px 2px #1d26230d, 0 1px 1px #1d262308;
   }
-  @media(max-width:480px) {
-    .heading { flex-direction:column; gap:16px; } .controls { justify-content:flex-start; width:100%; }
-    .updated { width:auto; margin-left:auto; } .subtitle { font-size:12px; }
-    .running-grid { grid-template-columns:1fr; } .topbar .local { font-size:10px; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#121715; --panel:#1a211e; --panel-2:#1f2723; --ink:#e3ebe5; --muted:#93a198; --faint:#66736b; --line:#2a332f; --line-2:#242c28;
+      --accent:#6cc394; --accent-soft:#1f3a2c; --track:#29322d;
+      --amber:#e6b660; --amber-soft:#3b2f16; --red:#ee8f74; --red-soft:#3e231c; --blue:#8db8e3; --blue-soft:#1d2d3d; --violet:#c0a4e6; --violet-soft:#2e2540;
+      --shadow:none;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:13px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+  button,input { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .num,.mono { font-variant-numeric:tabular-nums; }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11px; }
+  .muted { color:var(--muted); } .faint { color:var(--faint); }
+  [hidden] { display:none!important; }
+
+  /* Header */
+  header { position:sticky; top:0; z-index:5; background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .bar-inner { max-width:1280px; margin:auto; padding:11px 24px; display:flex; align-items:center; gap:12px; }
+  .mark { width:22px; height:22px; display:grid; grid-template-columns:repeat(3,4px); gap:2px; align-content:center; justify-content:center; border-radius:6px; background:var(--accent); }
+  .mark i { height:4px; background:#ffffffd0; border-radius:1px; }
+  .brand { font-weight:650; letter-spacing:.01em; }
+  .crumb { color:var(--faint); }
+  h1 { font-size:13px; font-weight:650; margin:0; }
+  .spacer { flex:1; }
+  .status { display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--muted); }
+  .status .dot { width:7px; height:7px; border-radius:50%; background:var(--faint); }
+  .status[data-state="live"] .dot { background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); animation:pulse 2s ease-in-out infinite; }
+  .status[data-state="live"] #connection-label { color:var(--accent); font-weight:600; }
+  .status[data-state="error"] .dot { background:var(--red); } .status[data-state="error"] #connection-label { color:var(--red); font-weight:600; }
+  @keyframes pulse { 50% { box-shadow:0 0 0 5px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .status .dot { animation:none!important; } }
+  .btn { border:1px solid var(--line); background:var(--panel); border-radius:6px; padding:5px 10px; font-size:12px; box-shadow:var(--shadow); }
+  .btn:hover { background:var(--panel-2); }
+  .btn[aria-pressed="true"] { background:var(--amber-soft); border-color:transparent; color:var(--amber); }
+
+  main { max-width:1280px; margin:auto; padding:20px 24px 28px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); }
+
+  /* Warnings */
+  .warnings { display:flex; gap:10px; align-items:flex-start; padding:9px 14px; margin-bottom:16px; border-radius:8px; background:var(--amber-soft); color:var(--amber); font-size:12px; }
+  .warnings .icon { font-weight:800; line-height:1.45; }
+  .warnings ul { margin:0; padding:0; list-style:none; display:grid; gap:2px; }
+
+  /* Overview */
+  .overview { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:12px; }
+  .stat { padding:14px 18px 15px; border-left:1px solid var(--line-2); min-width:0; }
+  .stat:first-child { border-left:0; }
+  .label { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:650; color:var(--muted); }
+  .value { font-size:24px; font-weight:600; letter-spacing:-.02em; line-height:1.2; margin:5px 0 8px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .value .unit { font-size:13px; font-weight:500; color:var(--muted); letter-spacing:0; margin-left:3px; }
+  .stat small { display:block; font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pips { display:flex; gap:4px; height:6px; margin-bottom:8px; }
+  .pips i { flex:1; border-radius:3px; background:var(--track); }
+  .pips i.on { background:var(--accent); } .pips.exclusive i.on { background:var(--violet); }
+  .track { position:relative; height:6px; border-radius:3px; background:var(--track); overflow:hidden; margin-bottom:8px; }
+  .track > b { position:absolute; inset:0 auto 0 0; border-radius:3px; background:var(--accent); width:0; transition:width .4s ease; }
+  .track.warn > b { background:var(--amber); } .track.over > b { background:var(--red); }
+  .track.stale { background:repeating-linear-gradient(135deg,var(--track) 0 4px,transparent 4px 8px); }
+
+  /* Policy strip */
+  .policy { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; padding:2px 4px 0; margin-bottom:22px; font-size:11.5px; color:var(--muted); }
+  .policy b { color:var(--ink); font-weight:600; }
+  .policy .sep { width:1px; height:12px; background:var(--line); }
+  .policy .right { margin-left:auto; }
+
+  /* Sections */
+  section { margin-bottom:22px; }
+  .section-head { display:flex; align-items:center; gap:10px; margin:0 2px 9px; min-height:28px; }
+  h2 { margin:0; font-size:13.5px; font-weight:650; display:flex; align-items:center; gap:8px; }
+  .count { font-size:11px; font-weight:600; min-width:20px; text-align:center; padding:1px 6px; border-radius:10px; background:var(--track); color:var(--muted); font-variant-numeric:tabular-nums; }
+  .hint { font-size:11.5px; color:var(--faint); }
+  .section-head .right { margin-left:auto; }
+  .search { border:1px solid var(--line); border-radius:6px; padding:5px 9px; width:210px; background:var(--panel); font-size:12px; }
+
+  /* Running jobs */
+  .jobs { display:grid; gap:8px; }
+  .job { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(130px,.6fr) minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:center; padding:13px 18px; position:relative; }
+  .job::before { content:""; position:absolute; left:-1px; top:12px; bottom:12px; width:3px; border-radius:0 3px 3px 0; background:var(--accent); }
+  .job.serial::before { background:var(--violet); } .job.unknown::before { background:var(--faint); }
+  .name { font-weight:650; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .meta { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin-top:4px; font-size:11.5px; color:var(--muted); }
+  .meta .dotsep::before { content:"·"; color:var(--faint); }
+  .time-main { font-size:17px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+  .time-sub { font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .meter-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; font-size:11.5px; }
+  .meter-head .label { font-size:10px; }
+  .meter-head span:last-child { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .meter .track { margin:0; }
+
+  /* Chips */
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; line-height:1; padding:4px 7px; border-radius:5px; background:var(--track); color:var(--muted); white-space:nowrap; }
+  .chip.green { background:var(--accent-soft); color:var(--accent); }
+  .chip.amber { background:var(--amber-soft); color:var(--amber); }
+  .chip.red { background:var(--red-soft); color:var(--red); }
+  .chip.blue { background:var(--blue-soft); color:var(--blue); }
+  .chip.violet { background:var(--violet-soft); color:var(--violet); }
+  .chip.observed { background:transparent; box-shadow:inset 0 0 0 1px currentColor; }
+  .chip.tiny { font-size:10px; padding:3px 5px; }
+
+  /* Tables */
+  .table-card { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:820px; text-align:left; }
+  th { padding:9px 14px; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; font-weight:650; color:var(--muted); white-space:nowrap; border-bottom:1px solid var(--line); background:var(--panel-2); }
+  th[title] { cursor:help; text-decoration:underline dotted var(--faint); text-underline-offset:3px; }
+  thead th:first-child { border-top-left-radius:10px; } thead th:last-child { border-top-right-radius:10px; }
+  td { padding:9px 14px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:0; }
+  tbody tr:not(.empty-row):hover td { background:var(--panel-2); }
+  td.r, th.r { text-align:right; }
+  td.num { white-space:nowrap; }
+  td.pos { width:36px; color:var(--faint); font-weight:600; padding-right:0; }
+  .cell-title { font-weight:600; overflow-wrap:anywhere; }
+  .cell-sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .reason { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; }
+  .reason .detail { font-size:11.5px; color:var(--muted); }
+  .empty-row td, .empty { padding:22px; text-align:center; color:var(--muted); font-size:12px; }
+  .empty { border:1px dashed var(--line); border-radius:10px; }
+  .table-foot { display:flex; justify-content:space-between; gap:10px; padding:8px 14px; border-top:1px solid var(--line-2); font-size:11.5px; color:var(--muted); }
+  .link { border:0; background:none; padding:0; color:var(--accent); font-weight:600; font-size:11.5px; }
+
+  details.notes { margin:8px 2px 0; font-size:11.5px; color:var(--muted); }
+  details.notes summary { cursor:pointer; color:var(--faint); width:max-content; }
+  details.notes summary:hover { color:var(--muted); }
+  details.notes ul { margin:6px 0 0; padding-left:18px; display:grid; gap:3px; max-width:900px; }
+  .unverified { padding:10px 14px; display:grid; gap:4px; font-size:12px; }
+
+  footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px 20px; padding:4px 2px 0; color:var(--faint); font-size:11px; }
+
+  @media (max-width:980px) {
+    .overview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .stat:nth-child(3) { border-left:0; } .stat:nth-child(-n+2) { border-bottom:1px solid var(--line-2); }
+    .job { grid-template-columns:minmax(0,1fr) auto; gap:12px 20px; }
+    .job .meter { grid-column:span 1; }
+  }
+  @media (max-width:600px) {
+    .bar-inner, main { padding-left:14px; padding-right:14px; }
+    .crumb, .brand { display:none; }
+    .job { grid-template-columns:1fr; }
+    .search { width:140px; }
+    .policy .right { margin-left:0; }
+    .stat { padding:12px 14px; } .stat small { white-space:normal; } .policy .sep { display:none; }
+    .section-head { flex-wrap:wrap; }
   }
 </style>
 </head>
 <body>
-<header class="topbar"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="brand">OpenGGF</span><span class="divider">/</span><span>Development</span><span class="local">LOCAL MACHINE</span></header>
+<header><div class="bar-inner">
+  <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  <span class="brand">OpenGGF</span><span class="crumb">/</span><h1>Test queue</h1>
+  <span class="spacer"></span>
+  <span class="status" id="connection" data-state="loading" role="status"><span class="dot"></span><span id="connection-label">Connecting</span><span class="faint" id="updated"></span></span>
+  <button class="btn" id="pause" type="button" aria-pressed="false">Pause</button>
+  <button class="btn" id="refresh" type="button">Refresh</button>
+</div></header>
 <main>
-  <div class="heading">
-    <div><h1>Test queue</h1><p class="subtitle">Shared test activity across your worktrees.</p></div>
-    <div class="controls">
-      <span class="connection" id="connection" data-state="loading" role="status"><span class="dot"></span><span id="connection-label">Connecting</span></span>
-      <button class="button" id="pause" type="button" aria-pressed="false">Pause updates</button>
-      <button class="button" id="refresh" type="button">Refresh</button>
-      <span class="updated" id="updated">Refreshes every 2 seconds</span>
+  <div class="warnings" id="warnings" role="alert" hidden><span class="icon" aria-hidden="true">!</span><ul id="warning-list"></ul></div>
+
+  <div class="card overview">
+    <div class="stat">
+      <div class="label">Admission slots</div>
+      <div class="value" id="slots">—</div>
+      <div class="pips" id="slot-pips"></div>
+      <small id="capacity">Reading admission state</small>
+    </div>
+    <div class="stat">
+      <div class="label">Queue</div>
+      <div class="value" id="counts">—</div>
+      <div class="pips" aria-hidden="true" style="visibility:hidden"><i></i></div>
+      <small id="oldest" title="Oldest scheduling age; includes carried waiting credit">Oldest scheduling age —</small>
+    </div>
+    <div class="stat" title="Host available memory; the bar compares sampled RSS of running jobs with their reservations">
+      <div class="label">Memory available</div>
+      <div class="value" id="memory">—</div>
+      <div class="track" id="memory-track"><b></b></div>
+      <small id="headroom">Host resource snapshot</small>
+    </div>
+    <div class="stat" title="One-minute load average against usable CPU cores">
+      <div class="label">CPU load · 1 min</div>
+      <div class="value" id="load">—</div>
+      <div class="track" id="load-track"><b></b></div>
+      <small id="cores">Reading usable CPU capacity</small>
     </div>
   </div>
-  <div class="notes" id="warnings" hidden></div>
-  <div class="overview">
-    <div class="metric"><div class="eyebrow">Running / waiting</div><div class="metric-value" id="counts">— / —</div><small id="capacity">Reading admission state</small></div>
-    <div class="metric"><div class="eyebrow">Available memory</div><div class="metric-value" id="memory">—</div><small id="headroom">Host resource snapshot</small></div>
-    <div class="metric"><div class="eyebrow">CPU load · 1 minute</div><div class="metric-value" id="load">—</div><small id="cores">Reading usable CPU capacity</small></div>
-    <div class="metric"><div class="eyebrow">Oldest scheduling age</div><div class="metric-value" id="oldest">—</div><small>Includes carried waiting credit</small></div>
-  </div>
+  <div class="policy" id="policy" aria-label="Admission budgets"></div>
+
   <section aria-labelledby="running-heading">
-    <div class="section-heading"><h2 id="running-heading">Running now <span class="count" id="running-count">—</span></h2><span class="section-note">Sampled usage, alongside each job's reservation</span></div>
-    <div class="running-grid" id="running"><div class="empty">Reading live jobs…</div></div>
+    <div class="section-head"><h2 id="running-heading">Running <span class="count" id="running-count">—</span></h2><span class="hint">Sampled usage against each job's reservation</span></div>
+    <div class="jobs" id="running"><div class="empty">Reading live jobs…</div></div>
   </section>
+
   <section aria-labelledby="waiting-heading">
-    <div class="section-heading"><h2 id="waiting-heading">Waiting <span class="count" id="waiting-count">—</span></h2><input class="search" id="filter" type="search" placeholder="Filter worktrees…" aria-label="Filter waiting worktrees"></div>
-    <div class="table-wrap"><table class="queue-table"><thead><tr><th scope="col">#</th><th scope="col">Worktree / job</th><th scope="col">Priority</th><th scope="col">Actual wait</th><th scope="col">Scheduling age</th><th scope="col">Scheduling estimate</th><th scope="col">Mode</th></tr></thead><tbody id="waiting"><tr class="table-empty"><td colspan="7">Reading waiting jobs…</td></tr></tbody></table></div>
-    <p class="section-note">Priority order can change as capacity becomes available. Estimates are coarse ordering hints, often based on class counts, not measured runtimes or start-time predictions. Unknown timings were not reported or could not be read. Tooling revisions are self-reported; unknown may include versions from before revision reporting. Observed resource checks use the current snapshot; only fresh wrapper reports explain scheduling decisions.</p>
+    <div class="section-head"><h2 id="waiting-heading">Waiting <span class="count" id="waiting-count">—</span></h2><span class="hint">Priority order</span><input class="search right" id="filter" type="search" placeholder="Filter worktrees…" aria-label="Filter waiting worktrees"></div>
+    <div class="card table-card"><table><thead><tr>
+      <th scope="col">#</th><th scope="col">Worktree / job</th>
+      <th scope="col" title="Why the job cannot start yet. Outlined chips are resource observations inferred from the current snapshot for older clients; filled chips are fresh scheduler reports.">Admission</th>
+      <th scope="col">Priority</th>
+      <th scope="col" class="r" title="Actual elapsed time since submission">Waited</th>
+      <th scope="col" class="r" title="Scheduling age; includes carried waiting credit and drives aged priority">Age</th>
+      <th scope="col" class="r" title="Coarse ordering hint, often from class counts; not a runtime or start-time prediction">Estimate</th>
+      <th scope="col" class="r" title="Memory and CPU reserved for admission">Reserve</th>
+    </tr></thead><tbody id="waiting"><tr class="empty-row"><td colspan="8">Reading waiting jobs…</td></tr></tbody></table></div>
+    <details class="notes"><summary>About these numbers</summary><ul>
+      <li>Priority order can change as capacity becomes available; capacity and worktree ownership can permit backfilling. An available backfill allowance is not a promise that a job will fit or start next.</li>
+      <li>Estimates are coarse ordering hints, often based on class counts, not measured runtimes or start-time predictions.</li>
+      <li>Scheduling age includes carried waiting credit and is separate from actual wait. Unknown timings were not reported or could not be read.</li>
+      <li>Tooling revisions are self-reported; unknown may include versions from before revision reporting.</li>
+      <li>Observed resource checks use the current snapshot; only fresh wrapper reports explain scheduling decisions.</li>
+    </ul></details>
   </section>
+
   <section id="unverified-section" hidden aria-labelledby="unverified-heading">
-    <div class="section-heading"><h2 id="unverified-heading">Unverified records</h2><span class="section-note">Liveness could not be established; excluded from active counts</span></div>
-    <div id="unverified" class="notes"></div>
+    <div class="section-head"><h2 id="unverified-heading">Unverified <span class="count" id="unverified-count">0</span></h2><span class="hint">Liveness could not be established; excluded from active counts</span></div>
+    <div class="card unverified" id="unverified"></div>
   </section>
+
   <section aria-labelledby="recent-heading">
-    <div class="section-heading"><h2 id="recent-heading">Recently finished</h2><span class="section-note">Execution history; completion does not mean tests passed</span></div>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Finished</th><th scope="col">Worktree / job</th><th scope="col">Queue wait</th><th scope="col">Execution</th><th scope="col">Peak RSS</th><th scope="col">Outcome</th></tr></thead><tbody id="recent"><tr class="table-empty"><td colspan="6">Reading recent activity…</td></tr></tbody></table></div>
+    <div class="section-head"><h2 id="recent-heading">Recently finished</h2><span class="hint">Execution history; completion does not mean tests passed</span></div>
+    <div class="card table-card"><table><thead><tr>
+      <th scope="col">Finished</th><th scope="col">Worktree / job</th><th scope="col">Outcome</th>
+      <th scope="col" class="r">Queue wait</th><th scope="col" class="r">Execution</th>
+      <th scope="col" class="r" title="Sampled process-tree peak; shared pages can be counted more than once">Peak RSS</th>
+      <th scope="col" class="r" title="Mean CPU cores used during execution">Mean CPU</th>
+    </tr></thead><tbody id="recent"><tr class="empty-row"><td colspan="7">Reading recent activity…</td></tr></tbody></table>
+    <div class="table-foot" id="recent-foot" hidden><span id="recent-summary"></span><button class="link" id="recent-toggle" type="button">Show all</button></div></div>
   </section>
+
   <footer><span>Observation only. No jobs are submitted, cancelled or reordered.</span><span>RSS is sampled process-tree memory; shared pages can be counted more than once.</span></footer>
 </main>
 <script>
   const byId = id => document.getElementById(id);
   const finite = value => typeof value === 'number' && Number.isFinite(value);
   const GIB = 1024 ** 3;
-  let snapshot = null, paused = false, loading = false, timer = null, controller = null;
-  function element(tag, className, text) {
+  const RECENT_ROWS = 8;
+  let snapshot = null, paused = false, loading = false, timer = null, controller = null, showAllRecent = false;
+  function element(tag, className, text, title) {
     const node = document.createElement(tag);
     if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
+    if (text !== undefined && text !== null) node.textContent = text;
+    if (title) node.title = title;
     return node;
   }
+  function chip(text, tone, title) { return element('span', 'chip' + (tone ? ' ' + tone : ''), text, title); }
   function duration(seconds) {
     if (!finite(seconds)) return 'Unknown';
     const s = Math.max(0, Math.floor(seconds));
@@ -150,113 +264,178 @@
     if (s < 3600) return Math.floor(s / 60) + 'm ' + String(s % 60).padStart(2, '0') + 's';
     return Math.floor(s / 3600) + 'h ' + String(Math.floor(s % 3600 / 60)).padStart(2, '0') + 'm';
   }
-  function memory(bytes) { return finite(bytes) ? (bytes / GIB).toFixed(1) + ' GiB' : 'Unknown'; }
+  function gib(bytes) { return finite(bytes) ? (bytes / GIB).toFixed(1) : '?'; }
+  function memory(bytes) { return finite(bytes) ? gib(bytes) + ' GiB' : 'Unknown'; }
   function number(value, digits = 1) { return finite(value) ? value.toFixed(digits) : 'Unknown'; }
+  function cores(value) { return finite(value) ? number(value, Number.isInteger(value) ? 0 : 1) : '?'; }
+  function sum(values) { return values.every(finite) ? values.reduce((a, b) => a + b, 0) : null; }
   function timeOfDay(value) {
     const date = new Date(value);
     return value && Number.isFinite(date.getTime()) ? date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : 'Unknown';
   }
-  function mode(value) { return value === 'resource-aware' ? 'Shared' : value === 'serial' ? 'Exclusive' : 'Unknown'; }
+  function mode(value) { return value === 'resource-aware' ? 'Shared' : value === 'serial' ? 'Exclusive' : 'Unknown mode'; }
   function kind(value) { return value || 'Older wrapper'; }
-  function toolingLabel(tooling) {
-    if (!tooling || tooling.status === 'unknown') return 'Tooling revision unknown';
-    const label = 'Tooling r' + tooling.revision;
-    return label + (tooling.status === 'older' ? ' · older than dashboard' : tooling.status === 'newer' ? ' · newer than dashboard' : '');
+  function toolingChip(tooling) {
+    if (!tooling || tooling.status === 'unknown') return chip('rev ?', 'tiny', 'Tooling revision unknown; may predate revision reporting');
+    const status = tooling.status === 'older' ? 'older than dashboard' : tooling.status === 'newer' ? 'newer than dashboard' : 'matches dashboard';
+    return chip('r' + tooling.revision + (tooling.status === 'current' ? '' : ' · ' + tooling.status), 'tiny' + (tooling.status === 'current' ? '' : ' amber'), 'Tooling revision ' + tooling.revision + ' · ' + status + ' (self-reported)');
   }
-  function admissionLabel(report) {
-    if (!report) return 'Waiting reason unavailable';
-    const labels = {
-      memory:'Waiting for memory', cpu:'Waiting for CPU capacity', slots:'All shared slots occupied',
-      exclusive:'Exclusive execution blocks admission', worktree:'Worktree is busy',
-      priority:'Waiting for an earlier job', draining:'Draining for an aged job',
-      ready:'Capacity available · awaiting admission', unknown:'Waiting reason unavailable'
-    };
-    let text = labels[report.reason] || labels.unknown;
-    if (report.reason === 'memory' && finite(report.memoryShortfallBytes) && report.memoryShortfallBytes > 0)
-      text += ' · ' + memory(report.memoryShortfallBytes) + ' short';
-    if (report.reason === 'cpu' && finite(report.cpuShortfallCores) && report.cpuShortfallCores > 0)
-      text += ' · ' + number(report.cpuShortfallCores) + ' cores short';
-    if (report.source === 'observation') text = 'Observed resource check: ' + text[0].toLowerCase() + text.slice(1);
-    return text;
+  function meta(...parts) {
+    const node = element('div', 'meta');
+    parts.filter(Boolean).forEach((part, index) => {
+      if (index) node.append(element('span', 'dotsep'));
+      node.append(typeof part === 'string' ? element('span', '', part) : part);
+    });
+    return node;
   }
-  function connection(state, label) {
-    byId('connection').dataset.state = state;
-    byId('connection-label').textContent = label;
+  function setTrack(track, ratio) {
+    const fill = track.querySelector('b');
+    track.classList.toggle('warn', finite(ratio) && ratio >= .85 && ratio <= 1);
+    track.classList.toggle('over', finite(ratio) && ratio > 1);
+    fill.style.width = finite(ratio) ? Math.min(100, 100 * Math.max(0, ratio)) + '%' : '0';
   }
-  function emptyRow(columns, text) {
-    const row = element('tr', 'table-empty'), cell = element('td', '', text);
-    cell.colSpan = columns; row.append(cell); return row;
+  const REASONS = {
+    memory:['Memory', 'amber', 'Waiting for memory'], cpu:['CPU', 'amber', 'Waiting for CPU capacity'],
+    slots:['Slots full', 'blue', 'All shared slots occupied'], exclusive:['Exclusive', 'violet', 'Exclusive execution blocks admission'],
+    worktree:['Worktree busy', 'blue', 'Worktree is busy'], priority:['Behind earlier job', '', 'Waiting for an earlier job'],
+    draining:['Draining', 'violet', 'Draining for an aged job'], ready:['Ready', 'green', 'Capacity available · awaiting admission'],
+    unknown:['Unknown', '', 'Waiting reason unavailable']
+  };
+  function admission(job) {
+    const report = job.admission, cell = element('div', 'reason');
+    const [label, tone, description] = REASONS[report?.reason] || REASONS.unknown;
+    const observed = report?.source === 'observation';
+    cell.append(chip(label, (tone || '') + (observed ? ' observed' : ''), (observed ? 'Observed resource check (inferred for an older client): ' : 'Scheduler report: ') + description));
+    const details = [];
+    if (report?.reason === 'memory' && finite(report.memoryShortfallBytes) && report.memoryShortfallBytes > 0) details.push(memory(report.memoryShortfallBytes) + ' short');
+    if (report?.reason === 'cpu' && finite(report.cpuShortfallCores) && report.cpuShortfallCores > 0) details.push(number(report.cpuShortfallCores) + ' cores short');
+    const blocker = report?.blockedBy && [...snapshot.waiting, ...snapshot.running].find(candidate => candidate.id === report.blockedBy);
+    if (blocker) details.push('behind ' + (blocker.worktree || 'unknown worktree'));
+    if (observed) details.push('observed');
+    if (details.length) cell.append(element('span', 'detail', details.join(' · ')));
+    if (report?.backfillAvailable) cell.append(chip('backfill open', 'tiny green', 'One qualified small job in another worktree may backfill; not a promise that any job will fit or start next'));
+    return cell;
   }
   function jobCard(job) {
-    const card = element('article', 'job');
-    const identity = element('div', 'job-identity'), resources = element('div', 'job-resources');
-    const top = element('div', 'job-top');
-    top.append(element('span', 'badge', mode(job.mode)), element('span', 'pid mono', job.pid ? 'PID ' + job.pid : 'PID unknown'));
-    identity.append(top, element('div', 'job-title', job.worktree || 'Unknown worktree'), element('div', 'job-type', kind(job.kind)));
-    identity.append(element('div', 'row-detail', toolingLabel(job.tooling)));
-    const metrics = element('div', 'job-metrics');
-    const values = [['Execution', duration(job.runSeconds)], ['RSS', job.usageFresh ? memory(job.rssBytes) : 'Stale'], ['CPU cores', job.usageFresh ? number(job.cpuCores) : 'Stale']];
-    for (const [label, value] of values) {
-      const metric = element('div'); metric.append(element('span', 'eyebrow', label), element('span', 'job-value', value)); metrics.append(metric);
-    }
-    const bar = element('div', 'bar'), fill = element('div', 'bar-fill');
-    if (job.usageFresh && finite(job.rssBytes) && finite(job.budgetMemoryBytes) && job.budgetMemoryBytes > 0) fill.style.width = Math.max(0, Math.min(100, 100 * job.rssBytes / job.budgetMemoryBytes)) + '%';
-    bar.append(fill);
-    const budget = element('div', 'budget');
-    budget.append(element('span', '', 'Reserved ' + memory(job.budgetMemoryBytes)), element('span', '', number(job.budgetCpuCores, 0) + ' CPU cores'));
-    resources.append(metrics, bar, budget); card.append(identity, resources); return card;
+    const card = element('article', 'card job' + (job.mode === 'serial' ? ' serial' : job.mode ? '' : ' unknown'));
+    const identity = element('div');
+    identity.append(element('div', 'name', job.worktree || 'Unknown worktree', job.worktree), meta(chip(mode(job.mode), job.mode === 'serial' ? 'violet tiny' : 'green tiny'), kind(job.kind), element('span', 'mono', job.pid ? 'PID ' + job.pid : 'PID unknown'), toolingChip(job.tooling)));
+    const time = element('div');
+    time.append(element('div', 'time-main', duration(job.runSeconds), 'Execution time'), element('div', 'time-sub', finite(job.waitSeconds) ? 'after ' + duration(job.waitSeconds) + ' queued' : 'queue wait unknown'));
+    const resource = (label, used, budget, text) => {
+      const node = element('div', 'meter'), head = element('div', 'meter-head'), track = element('div', 'track');
+      track.append(element('b'));
+      head.append(element('span', 'label', label), element('span', '', job.usageFresh ? text : 'Stale · of ' + text.split(' / ').pop()));
+      if (job.usageFresh && finite(used) && finite(budget) && budget > 0) setTrack(track, used / budget);
+      else if (!job.usageFresh) track.classList.add('stale');
+      node.append(head, track); return node;
+    };
+    card.append(identity, time,
+      resource('Memory', job.rssBytes, job.budgetMemoryBytes, gib(job.rssBytes) + ' / ' + memory(job.budgetMemoryBytes)),
+      resource('CPU', job.cpuCores, job.budgetCpuCores, number(job.cpuCores) + ' / ' + cores(job.budgetCpuCores) + ' cores'));
+    return card;
+  }
+  function emptyRow(columns, text) {
+    const row = element('tr', 'empty-row'), cell = element('td', '', text);
+    cell.colSpan = columns; row.append(cell); return row;
   }
   function renderWaiting() {
     if (!snapshot) return;
     const query = byId('filter').value.trim().toLowerCase();
     const jobs = snapshot.waiting.filter(job => [job.worktree, job.kind, job.pid].join(' ').toLowerCase().includes(query));
     const rows = jobs.map(job => {
-      const row = element('tr');
-      row.append(element('td', 'mono', job.position));
-      const title = element('td');
-      title.append(element('div', 'row-title', job.worktree || 'Unknown worktree'), element('div', 'row-detail', kind(job.kind) + (job.retainedTree ? ' · retains worktree' : '')));
-      title.append(element('div', 'row-detail', (job.pid ? 'PID ' + job.pid : 'PID unknown') + ' · ' + toolingLabel(job.tooling)));
-      const report = job.admission;
-      const reason = element('div', 'admission' + (!report || report.reason === 'unknown' ? ' unknown' : report.source === 'observation' ? ' observed' : ''), admissionLabel(report));
-      const blocker = snapshot.waiting.find(candidate => candidate.id === report?.blockedBy);
-      if (blocker) reason.append(document.createTextNode(' · behind ' + (blocker.worktree || 'Unknown worktree')));
-      title.append(reason);
-      const priority = element('td'); priority.append(element('span', 'badge ' + (job.aged ? 'aged' : 'neutral'), job.aged ? 'Aged' : 'Short-job order'));
-      row.append(title, priority, element('td', 'number', duration(job.waitSeconds)), element('td', 'number', duration(job.schedulingAgeSeconds)), element('td', 'number quiet', duration(job.estimateSeconds)), element('td', '', mode(job.mode)));
+      const row = element('tr'), title = element('td');
+      title.append(element('div', 'cell-title', job.worktree || 'Unknown worktree'), meta(kind(job.kind), job.retainedTree ? 'retains worktree' : null, element('span', 'mono', job.pid ? 'PID ' + job.pid : 'PID unknown'), toolingChip(job.tooling)));
+      const reasonCell = element('td'); reasonCell.append(admission(job));
+      const priority = element('td'), badges = element('div', 'reason');
+      badges.append(chip(job.aged ? 'Aged' : 'Short-job order', job.aged ? 'amber' : '', job.aged ? 'Scheduling age passed the aging threshold; takes priority in arrival order' : 'Favoured by short estimate'), element('span', 'detail', mode(job.mode)));
+      priority.append(badges);
+      const reserve = element('td', 'r num');
+      reserve.append(element('div', '', memory(job.budgetMemoryBytes)), element('div', 'cell-sub', cores(job.budgetCpuCores) + ' cores'));
+      row.append(element('td', 'pos num', job.position ?? '–'), title, reasonCell, priority,
+        element('td', 'r num', duration(job.waitSeconds)), element('td', 'r num', duration(job.schedulingAgeSeconds)),
+        element('td', 'r num muted', duration(job.estimateSeconds)), reserve);
       return row;
     });
-    byId('waiting').replaceChildren(...(rows.length ? rows : [emptyRow(7, query ? 'No worktrees match this filter.' : snapshot.liveness === 'verified' ? 'No jobs are waiting.' : 'No waiting jobs could be verified.')]));
+    byId('waiting').replaceChildren(...(rows.length ? rows : [emptyRow(8, query ? 'No worktrees match this filter.' : snapshot.liveness === 'verified' ? 'No jobs are waiting.' : 'No waiting jobs could be verified.')]));
+  }
+  const OUTCOMES = {completed:'green', interrupted:'amber', 'cancelled-waiting':''};
+  function renderRecent() {
+    const recent = snapshot.recent, shown = showAllRecent ? recent : recent.slice(0, RECENT_ROWS);
+    const rows = shown.map(job => {
+      const row = element('tr'), title = element('td'), outcome = element('td');
+      title.append(element('div', 'cell-title', job.worktree || 'Unknown worktree'), element('div', 'cell-sub', kind(job.kind) + (job.mode ? ' · ' + mode(job.mode) : '')));
+      outcome.append(chip(job.outcome || 'Unknown', OUTCOMES[job.outcome] ?? 'red'));
+      row.append(element('td', 'num muted', timeOfDay(job.end)), title, outcome, element('td', 'r num', duration(job.waitSeconds)),
+        element('td', 'r num', duration(job.runSeconds)), element('td', 'r num', memory(job.peakRssBytes)),
+        element('td', 'r num muted', finite(job.meanCores) ? number(job.meanCores) + ' cores' : 'Unknown'));
+      return row;
+    });
+    byId('recent').replaceChildren(...(rows.length ? rows : [emptyRow(7, 'No completed jobs have been recorded yet.')]));
+    byId('recent-foot').hidden = recent.length <= RECENT_ROWS;
+    byId('recent-summary').textContent = 'Showing ' + shown.length + ' of ' + recent.length + ' recent entries';
+    byId('recent-toggle').textContent = showAllRecent ? 'Show fewer' : 'Show all';
+  }
+  function renderPolicy(data) {
+    const policy = data.policy, small = data.smallJobs, parts = [];
+    const item = (label, text, title) => { const node = element('span', '', null, title); node.append(element('b', '', label + ' '), document.createTextNode(text)); return node; };
+    if (policy) {
+      parts.push(item('Standard', memory(finite(policy.memoryGiB) ? policy.memoryGiB * GIB : null) + ' · ' + cores(policy.cpuCores) + ' cores', 'Default per-job reservation'));
+      parts.push(item('Max', number(policy.maxRuns, 0) + ' concurrent', 'Maximum concurrent shared jobs'));
+      parts.push(item('Headroom', number(policy.headroomGiB, 0) + ' GiB', 'Memory kept free beyond reservations'));
+    } else parts.push(element('span', '', 'Configured resource budgets unavailable'));
+    if (small) parts.push(item('Lean', memory(small.memoryBytes) + ' · ' + cores(small.cpuCores) + ' cores · ' + number(small.registeredClasses, 0) + ' registered classes, ≤' + number(small.maxClasses, 0) + ' per run', 'Lean lane reservation; source and invocation checks still apply'));
+    const nodes = [];
+    parts.forEach((part, index) => { if (index) nodes.push(element('span', 'sep')); nodes.push(part); });
+    if (Number.isInteger(data.toolingRevision) && data.toolingRevision > 0) nodes.push(element('span', 'right faint', 'Dashboard tooling r' + data.toolingRevision));
+    nodes.push(element('span', 'faint', 'Budgets are admission estimates, not enforced limits'));
+    byId('policy').replaceChildren(...nodes);
   }
   function renderSnapshot(data) {
     if (data.version !== 1 || !Array.isArray(data.running) || !Array.isArray(data.waiting) || !Array.isArray(data.recent)) throw new Error('Unrecognized queue response');
     snapshot = data;
-    byId('counts').textContent = data.liveness === 'verified' ? data.running.length + ' / ' + data.waiting.length : '? / ?';
-    byId('running-count').textContent = data.liveness === 'verified' ? data.running.length : '?';
-    byId('waiting-count').textContent = data.liveness === 'verified' ? data.waiting.length : '?';
-    byId('capacity').textContent = data.exclusiveHeld ? 'Exclusive admission is held' : (finite(data.heldSlots) ? data.heldSlots + ' shared slots held · ' : '') + number(data.policy?.maxRuns, 0) + ' maximum concurrent jobs';
-    byId('memory').textContent = memory(data.host?.availableMemoryBytes);
-    byId('headroom').textContent = number(data.policy?.headroomGiB, 0) + ' GiB admission headroom';
-    byId('load').textContent = number(data.host?.load1);
-    byId('cores').textContent = number(data.host?.usableCores, 0) + ' usable CPU cores';
+    const verified = data.liveness === 'verified', policy = data.policy, maxRuns = policy?.maxRuns;
+    byId('running-count').textContent = verified ? data.running.length : '?';
+    byId('waiting-count').textContent = verified ? data.waiting.length : '?';
+    // Slots
+    const held = data.exclusiveHeld ? (finite(maxRuns) ? maxRuns : 1) : data.heldSlots;
+    byId('slots').replaceChildren(document.createTextNode(finite(data.heldSlots) ? String(data.heldSlots) : '?'), element('span', 'unit', '/ ' + (finite(maxRuns) ? maxRuns : '?')));
+    const pips = byId('slot-pips'); pips.classList.toggle('exclusive', !!data.exclusiveHeld);
+    pips.replaceChildren(...Array.from({length: finite(maxRuns) ? Math.min(maxRuns, 16) : 0}, (_, i) => element('i', finite(held) && i < held ? 'on' : '')));
+    byId('capacity').textContent = data.exclusiveHeld ? 'Exclusive admission is held' : data.exclusiveHeld === false ? 'No exclusive holder' : 'Exclusive state unknown';
+    // Queue
+    byId('counts').replaceChildren(document.createTextNode(verified ? String(data.running.length) : '?'), element('span', 'unit', 'running'), document.createTextNode('  ' + (verified ? data.waiting.length : '?')), element('span', 'unit', 'waiting'));
     const ages = data.waiting.map(job => job.schedulingAgeSeconds).filter(finite);
-    byId('oldest').textContent = ages.length ? duration(Math.max(...ages)) : '—';
-    byId('running').replaceChildren(...(data.running.length ? data.running.map(jobCard) : [element('div', 'empty', data.liveness === 'verified' ? 'No test jobs are running.' : 'No running jobs could be verified.')]));
+    byId('oldest').textContent = 'Oldest scheduling age ' + (ages.length ? duration(Math.max(...ages)) : '—');
+    // Memory
+    const available = data.host?.availableMemoryBytes;
+    byId('memory').replaceChildren(document.createTextNode(gib(available)), element('span', 'unit', 'GiB'));
+    const fresh = data.running.filter(job => job.usageFresh);
+    const reserved = sum(data.running.map(job => job.budgetMemoryBytes)), used = sum(fresh.map(job => job.rssBytes)), freshReserved = sum(fresh.map(job => job.budgetMemoryBytes));
+    setTrack(byId('memory-track'), finite(used) && freshReserved > 0 ? used / freshReserved : null);
+    byId('headroom').textContent = (data.running.length ? (finite(used) ? gib(used) : '?') + ' of ' + (finite(reserved) ? memory(reserved) : 'unknown') + ' reserved in use' : 'Nothing reserved') + ' · ' + number(policy?.headroomGiB, 0) + ' GiB headroom';
+    // CPU
+    const load = data.host?.load1, usable = data.host?.usableCores;
+    byId('load').replaceChildren(document.createTextNode(number(load, 2)), element('span', 'unit', '/ ' + cores(usable) + ' cores'));
+    setTrack(byId('load-track'), finite(load) && usable > 0 ? load / usable : null);
+    const reservedCores = sum(data.running.map(job => job.budgetCpuCores));
+    byId('cores').textContent = data.running.length ? (finite(reservedCores) ? cores(reservedCores) : '?') + ' cores reserved by running jobs' : 'No cores reserved';
+    renderPolicy(data);
+    byId('running').replaceChildren(...(data.running.length ? data.running.map(jobCard) : [element('div', 'empty', verified ? 'No test jobs are running.' : 'No running jobs could be verified.')]));
     renderWaiting();
-    const recentRows = data.recent.slice(0, 8).map(job => {
-      const row = element('tr'), title = element('td');
-      title.append(element('div', 'row-title', job.worktree || 'Unknown worktree'), element('div', 'row-detail', kind(job.kind)));
-      const outcome = element('td'); outcome.append(element('span', 'badge neutral', job.outcome || 'Unknown'));
-      row.append(element('td', 'number quiet', timeOfDay(job.end)), title, element('td', 'number', duration(job.waitSeconds)), element('td', 'number', duration(job.runSeconds)), element('td', 'number', memory(job.peakRssBytes)), outcome);
-      return row;
-    });
-    byId('recent').replaceChildren(...(recentRows.length ? recentRows : [emptyRow(6, 'No completed jobs have been recorded yet.')]));
+    renderRecent();
     const warnings = (data.warnings || []).filter(message => !message.startsWith('Older clients do not publish actual start times.'));
-    byId('warnings').replaceChildren(...warnings.map(message => element('p', '', message)));
+    byId('warning-list').replaceChildren(...warnings.map(message => element('li', '', message)));
     byId('warnings').hidden = warnings.length === 0;
     const unverified = data.unverified || [];
     byId('unverified-section').hidden = unverified.length === 0;
-    byId('unverified').replaceChildren(...unverified.map(job => element('p', '', (job.worktree || 'Unknown worktree') + ' · ' + kind(job.kind))));
-    byId('updated').textContent = 'Updated ' + timeOfDay(data.capturedAt);
+    byId('unverified-count').textContent = unverified.length;
+    byId('unverified').replaceChildren(...unverified.map(job => meta(element('b', '', job.worktree || 'Unknown worktree'), kind(job.kind), job.pid ? 'PID ' + job.pid : null)));
+    byId('updated').textContent = '· ' + timeOfDay(data.capturedAt);
+  }
+  function connection(state, label) {
+    byId('connection').dataset.state = state;
+    byId('connection-label').textContent = label;
   }
   async function refresh() {
     if (loading) return;
@@ -268,11 +447,11 @@
       const response = await fetch('/api/queue', {cache:'no-store',signal:controller.signal});
       if (!response.ok) throw new Error('Queue endpoint returned ' + response.status);
       renderSnapshot(await response.json());
-      connection(paused ? 'paused' : 'live', paused ? 'Paused' : 'Live · 2s');
+      connection(paused ? 'paused' : 'live', paused ? 'Paused' : 'Live');
     } catch (error) {
       if (!paused) {
-        connection('error', 'Disconnected');
-        byId('updated').textContent = snapshot ? 'Last update ' + timeOfDay(snapshot.capturedAt) + ' · retrying' : 'Cannot read the queue · retrying';
+        connection('error', snapshot ? 'Disconnected · retrying' : 'Cannot read the queue · retrying');
+        byId('updated').textContent = snapshot ? '· last ' + timeOfDay(snapshot.capturedAt) : '';
       }
     } finally {
       clearTimeout(timeout); loading = false; controller = null;
@@ -281,9 +460,10 @@
   }
   byId('filter').addEventListener('input', renderWaiting);
   byId('refresh').addEventListener('click', refresh);
+  byId('recent-toggle').addEventListener('click', () => { showAllRecent = !showAllRecent; renderRecent(); });
   byId('pause').addEventListener('click', () => {
     paused = !paused;
-    byId('pause').textContent = paused ? 'Resume updates' : 'Pause updates';
+    byId('pause').textContent = paused ? 'Resume' : 'Pause';
     byId('pause').setAttribute('aria-pressed', String(paused));
     clearTimeout(timer);
     if (paused) { controller?.abort(); connection('paused', 'Paused'); }

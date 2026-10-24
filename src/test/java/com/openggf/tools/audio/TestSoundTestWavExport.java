@@ -1,4 +1,4 @@
-package com.openggf.audio.debug;
+package com.openggf.tools.audio;
 
 import com.openggf.audio.AudioTestFixtures;
 import com.openggf.audio.smps.SmpsSequencerConfig;

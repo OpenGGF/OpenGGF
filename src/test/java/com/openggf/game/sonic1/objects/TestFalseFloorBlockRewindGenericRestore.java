@@ -7,26 +7,34 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +47,144 @@ class TestFalseFloorBlockRewindGenericRestore {
 
     @AfterEach
     void tearDown() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
         GraphicsManager.getInstance().resetState();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1,0", "1,5", "4,9", "7,0"})
+    void partialCollapseReplaysThroughCleanupAfterDestructiveRestore(
+            int retiredBlocks, int extraTicks) throws Exception {
+        ObjectManager objectManager = collapsingFloorManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        tick(objectManager);
+        Sonic1FalseFloorInstance originalMaster = findMaster(objectManager);
+        assertNotNull(originalMaster);
+        originalMaster.signalDisintegrate();
+        for (int tick = 0; falseFloorBlocks(objectManager).size() > 8 - retiredBlocks; tick++) {
+            assertTrue(tick < 150, "uninterrupted collapse must retire the requested blocks");
+            tick(objectManager);
+        }
+        for (int tick = 0; tick < extraTicks; tick++) {
+            tick(objectManager);
+        }
+        assertEquals(retiredBlocks, readInt(originalMaster, "currentFrame"));
+        assertEquals(8 - retiredBlocks, falseFloorBlocks(objectManager).size());
+
+        List<Sonic1FalseFloorInstance.FalseFloorBlock> originalBlocks = falseFloorBlocks(objectManager);
+        List<Integer> survivingOrder = new ArrayList<>();
+        for (var block : originalBlocks) {
+            survivingOrder.add(readInt(block, "blockIndex"));
+        }
+        assertEquals(IntStream.range(retiredBlocks, 8).boxed().toList(), survivingOrder);
+        CollapseState atCapture = collapseState(objectManager);
+        assertFalse(atCapture.fragments().isEmpty(), "capture must contain moving fragments");
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        List<CollapseState> uninterrupted = new ArrayList<>();
+        for (int tick = 0; tick < 200; tick++) {
+            tick(objectManager);
+            uninterrupted.add(collapseState(objectManager));
+        }
+        assertTrue(originalMaster.isDestroyed(), "uninterrupted master must complete cleanup");
+        assertEquals(List.of(), falseFloorBlocks(objectManager));
+        assertEquals(Map.of(), uninterrupted.getLast().fragments(), "all fragments must retire");
+
+        registry.restore(snapshot);
+        Sonic1FalseFloorInstance restoredMaster = findMaster(objectManager);
+        assertNotNull(restoredMaster);
+        assertNotSame(originalMaster, restoredMaster, "restore must recreate the master");
+        List<Sonic1FalseFloorInstance.FalseFloorBlock> restoredBlocks = falseFloorBlocks(objectManager);
+        assertEquals(8 - retiredBlocks, restoredBlocks.size());
+        for (var block : restoredBlocks) {
+            assertFalse(originalBlocks.contains(block), "restore must recreate surviving blocks");
+        }
+        assertEquals(new HashSet<>(restoredBlocks), new HashSet<>(readChildBlocks(restoredMaster)),
+                "the rebuilt inventory must contain exactly the fresh surviving children");
+        assertEquals(atCapture, collapseState(objectManager),
+                "surviving identities, order, timer and moving fragments must restore exactly");
+        List<CollapseState> replayed = new ArrayList<>();
+        int firstDifference = -1;
+        for (int tick = 0; tick < uninterrupted.size(); tick++) {
+            tick(objectManager);
+            CollapseState state = collapseState(objectManager);
+            replayed.add(state);
+            if (firstDifference < 0 && !uninterrupted.get(tick).equals(state)) {
+                firstDifference = tick;
+            }
+        }
+        int comparisonTick = firstDifference < 0 ? uninterrupted.size() - 1 : firstDifference;
+        assertAll(
+                () -> assertEquals(uninterrupted.get(comparisonTick), replayed.get(comparisonTick),
+                        "restored collapse must match uninterrupted dispatch at forward tick " + comparisonTick),
+                () -> assertTrue(restoredMaster.isDestroyed(), "restored master must complete cleanup"),
+                () -> assertEquals(List.of(), falseFloorBlocks(objectManager), "all restored blocks must retire"));
+    }
+
+    private record MasterState(ObjectRefId id, int routine, int frame, int timer,
+                               int halfWidth, int offsetX) {}
+
+    private record LiveBlockState(ObjectRefId id, int index, int x, int y, boolean go, boolean broken) {}
+
+    private record FragmentState(int x, int y, int subY, int yVel, int frame) {}
+
+    private record CollapseState(MasterState master, List<LiveBlockState> blocks,
+                                 Map<ObjectRefId, FragmentState> fragments) {}
+
+    private static CollapseState collapseState(ObjectManager objectManager) throws Exception {
+        var ids = objectManager.captureIdentityContext().requireIdentityTable();
+        Sonic1FalseFloorInstance master = findMaster(objectManager);
+        if (master != null && master.isSolidFor(null)) {
+            assertEquals((8 - readInt(master, "currentFrame")) * 16, master.getBalanceWidthPixels(),
+                    "FFloor_Solid obActWid must follow the original break count");
+        }
+        MasterState masterState = master == null ? null : new MasterState(ids.idFor(master),
+                readInt(master, "routine"), readInt(master, "currentFrame"),
+                readInt(master, "disintegrateTimer"), readInt(master, "currentHalfWidth"),
+                readInt(master, "solidOffsetX"));
+        List<LiveBlockState> blocks = new ArrayList<>();
+        for (var block : falseFloorBlocks(objectManager)) {
+            blocks.add(new LiveBlockState(ids.idFor(block), readInt(block, "blockIndex"),
+                    block.getX(), block.getY(), readBoolean(block, "goSignal"), readBoolean(block, "broken")));
+        }
+        Map<ObjectRefId, FragmentState> fragments = new LinkedHashMap<>();
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1FalseFloorInstance.FalseFloorFragment fragment && !fragment.isDestroyed()) {
+                fragments.put(ids.idFor(fragment), new FragmentState(fragment.getX(), fragment.getY(),
+                        readInt(fragment, "subY"), readInt(fragment, "yVel"), readInt(fragment, "mappingFrame")));
+            }
+        }
+        return new CollapseState(masterState, blocks, fragments);
+    }
+
+    private static void tick(ObjectManager objectManager) {
+        objectManager.update(0x2000, null, List.of(), 0, false);
+    }
+
+    private static ObjectManager collapsingFloorManager() {
+        ObjectManager[] holder = new ObjectManager[1];
+        Camera camera = new Camera() {
+            @Override public short getX() { return 0x2000; }
+            @Override public short getY() { return 0x500; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+            @Override public boolean isVerticalWrapEnabled() { return false; }
+        };
+        ObjectServices services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> null, List::of); }
+        };
+        ObjectSpawn spawn = new ObjectSpawn(0x2080, 0x5D0,
+                Sonic1ObjectIds.FALSE_FLOOR, 0, 0, false, 0);
+        ObjectManager objectManager = new ObjectManager(List.of(), new Sonic1ObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = objectManager;
+        objectManager.reset(0x2000);
+        objectManager.createDynamicObject(() -> new Sonic1FalseFloorInstance(spawn));
+        return objectManager;
     }
 
     @Test
@@ -118,6 +263,7 @@ class TestFalseFloorBlockRewindGenericRestore {
 
         Sonic1FalseFloorInstance restoredMaster = findMaster(objectManager);
         assertNotNull(restoredMaster, "master must still be active after restore");
+        assertNotSame(master, restoredMaster, "the list must rebuild on a fresh master");
         List<Sonic1FalseFloorInstance.FalseFloorBlock> relinked =
                 readChildBlocks(restoredMaster);
         assertEquals(8, relinked.size(),

@@ -165,7 +165,8 @@ contains_mod_api_annotation() {
 # visibility through nested bodies: a public member of a private type is private
 # implementation too. Buffer complete headers (including record components), and
 # skip member bodies lexically so braces/comments in literals cannot change owners.
-# Non-private type declarations remain conservative; the exact signature snapshot
+# Non-private top-level types remain conservative; nested types need public/protected
+# (or an interface/record/enum owner), like members. The exact signature snapshot
 # is authoritative for what the pin can express.
 mod_api_surface_text() {
     # Records have private members and executable bodies too. Use one shared
@@ -240,7 +241,9 @@ mod_api_surface_text() {
                     split(t, parts, /[ \t]+/); kind = parts[1]
                 }
                 if (kind != "") {
-                    allowed = (top == 0 || visible[top]) && code !~ /(^|[^A-Za-z0-9_])private[ \t]/
+                    # Nested types follow member visibility: package-private ones are
+                    # implementation the exact signature pin cannot express either.
+                    allowed = top == 0 ? code !~ /(^|[^A-Za-z0-9_])private[ \t]/ : member_visible()
                     append(c, c); if (allowed) emit()
                     top++; visible[top] = allowed; implicit[top] = (kind != "class")
                 } else {

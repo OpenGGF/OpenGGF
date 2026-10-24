@@ -10,11 +10,12 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingReplaySnapshot;
 import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingStreamLoader;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -33,9 +34,10 @@ class TestS3kKosTimingRewindIntegration {
     @Test
     void hczRecordedCompletionRewindsBeforeOnAndAfterAdmission()
             throws Exception {
-        TraceData trace = TraceData.load(HCZ_COMPLETE);
+        // This contract consumes the recorded completion edge, not physics or aux rows.
+        TraceMetadata metadata = TraceMetadata.load(HCZ_COMPLETE.resolve("metadata.json"));
         HardwareCompletionEdge edge =
-                trace.hardwareTimingSchedule().edges().stream()
+                HardwareTimingStreamLoader.load(HCZ_COMPLETE, metadata).edges().stream()
                         .filter(candidate -> candidate.kind()
                                 == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
                         .findFirst()

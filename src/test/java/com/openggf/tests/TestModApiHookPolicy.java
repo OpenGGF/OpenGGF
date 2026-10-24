@@ -67,6 +67,12 @@ class TestModApiHookPolicy {
                         public void run() { String braces = "{ }"; }
                         private static class Deeper { }
                     }
+                    static final class PackageHelper
+                            implements Runnable {
+                        public void run() { String braces = "{ }"; }
+                        public static class PackageExport { }
+                    }
+                    interface PackageContract { void run(); }
                 """;
         write(repo, CLASS_API, baseline.replace("    public int value", internalTypes + "    public int value"));
         git(repo, "add", CLASS_API);
@@ -75,6 +81,13 @@ class TestModApiHookPolicy {
         write(repo, CLASS_API, baseline);
         git(repo, "add", CLASS_API);
         assertStagedPasses(repo);
+    }
+
+    @Test void implicitlyPublicTypesInsideVisibleInterfacesStillRequireThePin() throws Exception {
+        Path repo = fixtureWithClassMembers("public interface Contract { void run(); }\n");
+        write(repo, CLASS_API, annotatedClass("public interface Contract { void run(); class Added { } }\n"));
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
     }
 
     @Test void removingAnnotatedPrivateFieldsNeedsNoSignaturePinChange() throws Exception {

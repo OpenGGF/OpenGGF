@@ -109,6 +109,15 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCranePlayerRelease", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
+            // These lists rebuild from recreated managed children. Exact graph checks own the evidence.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher", "activeBalls"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.CPZBossPipe", "segments"), RewindFieldPolicy.TRANSIENT),
+            // The captured spawn selects the mapping frame/piece from the current art owner.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance", "pieceList"), RewindFieldPolicy.TRANSIENT),
+            // The SLZ cache re-scans the restored seesaws before its next gameplay dispatch.
+            Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1SLZBossInstance", "seesaws"), RewindFieldPolicy.TRANSIENT),
             // Fresh title child parent2 is native graph identity, not a nearest owner hint.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kFreshTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.S3kInLevelTitleCardElementObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
