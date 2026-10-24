@@ -161,6 +161,9 @@ nonnegative values hold a mapping frame. Positions use sprite origins. Captions 
 screen-space pixels. Audio kinds are `ROM_MUSIC`, `ROM_SFX`, `VOICE`, `MUSIC_STOP`;
 voices reference bounded WAV/Ogg files beside/below the scene. Relative resource scenes
 must compile beside the screenplay to preserve their root.
+ROM music and SFX cues require `gain:1`; gain is available only for voice clips.
+Compilation, canonical validation and editor loading reject other ROM gains with
+`ROM cue gain must be 1; gain is available for voice clips`.
 
 An absent transition means `CUT` with duration zero. Non-cut transitions last 2..600
 frames and straddle the incoming shot's start: the set changes at the fully covered
@@ -384,10 +387,16 @@ with a matching interactive set and character, using visit-bound ownership and e
 KEEP_FINAL_POSITION / RESTORE_ENTRY handover; see the Stageplay guide.
 
 Direct music explicitly with a `ROM_MUSIC` cue at each shot's local frame zero,
-using the matching `catalog` music ID. The isolated preview worker stops its
-automatic level music because the parent owns authored music; offline exports
-consume those same cues alongside native SFX. Do not rely on capture-only level
-music as the film's directed soundtrack.
+using the matching `catalog` music ID. A scene containing `ROM_MUSIC` or
+`MUSIC_STOP` owns automatic level-playlist admission during playback, including deferred
+level-entry and title-card playlist requests. Validation/preparation alone does
+not claim music ownership.
+A frame-zero `MUSIC_STOP` keeps later level music silent; an authored music cue
+keeps its track. Seeking and shot changes retain that ownership; Stop/close
+releases it. Scenes with neither music kind retain native playlist behavior.
+This applies to live playback and offline export; native SFX and direct native
+event/boss music requests retain their existing routes. The isolated preview
+worker transports native SFX while the parent plays authored cues.
 
 ## Object cast (screenplay 6, document 7)
 
@@ -452,6 +461,11 @@ coordinates there, with its real world effects; the tool does not infer another
 arena restriction from the boss category. Use its original arena or a directed
 visual mode for predictable placement. There are no object-specific spatial adapters. Switching an existing graph to Puppet/Pose
 suspends all parent/child routines and contacts before the next native tick.
+Cast activation windows remain active outside the visible native viewport,
+including its wider loading overscan. Released animals include those windows in
+their retained native on-screen flag, so a living Free graph outside the main
+player's view can switch to either directed mode without losing its ROM appearance.
+Native destruction remains authoritative; direction does not resurrect a removed graph.
 Directing or removing a holder releases its acquired players through the native
 player-only cleanup. Native routine phases, timers and transport progress remain
 frozen; only acquired-player references/latches and the native release cooldowns

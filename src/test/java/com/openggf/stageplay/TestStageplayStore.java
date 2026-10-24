@@ -19,6 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayStore {
     @TempDir Path directory;
 
+    @Test void rejectsRomCueGainWhenLoadingCanonicalScenes() throws Exception {
+        for (var kind : List.of(AudioKind.ROM_MUSIC, AudioKind.ROM_SFX)) {
+            var valid = scene().withAudio(List.of(new AudioCue("cue", 0, kind, "s2", 1, "", 1)));
+            var mapper = new JsonMapper();
+            var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(valid));
+            ((ObjectNode) tree.path("audio").get(0)).put("gain", .58);
+            var error = assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)));
+            assertTrue(error.getMessage().contains("ROM cue gain must be 1; gain is available for voice clips"), error.getMessage());
+        }
+    }
+
     @Test
     void roundTripsEveryTrackAndLinkedProjectWithoutEmbeddingRomBytes() throws IOException {
         var doc = scene().withName("Arrival 🎬")

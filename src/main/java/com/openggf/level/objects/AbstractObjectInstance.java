@@ -724,7 +724,8 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return cameraBounds.contains(getX(), getY()) || stageplayVisible(getX(), getY(), 0, 0);
     }
 
-    private boolean stageplayVisible(int x, int y, int xMargin, int yMargin) {
+    // Custom native bounds/retained-flag owners use the same supplemental windows as the common helpers.
+    final boolean stageplayVisible(int x, int y, int xMargin, int yMargin) {
         return stageplayActivation != null && stageplayActivation.contains(x, y, xMargin, yMargin);
     }
 

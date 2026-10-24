@@ -28,16 +28,59 @@ class TestStageplayObjectCaptureRom {
         EngineServices.current().graphics().initHeadless();
     }
 
-    @Test
-    void buzzerCapturesNativePaletteWithoutDrawingAndReplaysItsDirectedTransition()
-            throws Exception {
-        transition(Sonic2ObjectIds.BUZZER, 0, 100, 600, 0, 500, 8, false);
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"5,POSE", "60,POSE", "5,PUPPET", "60,PUPPET"})
+    void releasedAnimalCanBeDirectedAfterNativeTicks(int switchFrame, ObjectMode mode) throws Exception {
+        try (var library = SceneRomLibrary.open(Map.of("s2", Path.of(System.getProperty("sonic2.rom.path"))));
+             var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
+                     : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
+            var role = new ObjectActor("animal", "Animal", "s2", 0, 0, 0, 0, -1,
+                    List.of(new ObjectKey(0, 564, 624, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE),
+                            new ObjectKey(switchFrame, 564, 624, 0, -1, false, true, Interpolation.HOLD, mode)),
+                    List.of(), ObjectSourceKind.RELEASED_ANIMAL);
+            var scene = StageplayDocument.empty("s2", 0, 0, 0, 480, 480, 270)
+                    .withActors(List.of(new Actor("lead", "Lead", "s2", "sonic", List.of(
+                            new ActorKey(0, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD)))))
+                    .withPuppets(List.of(new PuppetTrack("lead", true, 0, List.of())))
+                    .withDurationFrames(switchFrame + 12).withObjectActors(List.of(role))
+                    .withWorldCommands(List.of(new WorldCommand("empty", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
+            for (int frame = 0; frame < switchFrame; frame++) {
+                world.resolve(scene, StageplayTimeline.sample(scene, frame));
+                var manager = SessionManager.getCurrentGameplayMode().getLevelManager().getObjectManager();
+                assertTrue(manager.getActiveObjects().stream().anyMatch(object ->
+                                object instanceof com.openggf.level.objects.AnimalObjectInstance && !object.isDestroyed()),
+                        "The cast activation window must retain the living native animal at frame " + frame);
+            }
+            var directed = world.resolve(scene, StageplayTimeline.sample(scene, switchFrame + 6));
+            assertFalse(world.objectInspection().getFirst().parts().isEmpty());
+            var objects = SessionManager.getCurrentGameplayMode().getLevelManager().getObjectManager();
+            var picture = com.openggf.level.objects.ObjectDirectionAccess.forManager(objects)
+                    .rewindSnapshottable().capture().directed().getFirst().template();
+            assertFalse(picture.patterns().isEmpty(), "Keep actual ROM appearance");
+            assertFalse(picture.palettes().isEmpty());
+            world.resolve(scene, StageplayTimeline.sample(scene, 0));
+            assertEquals(directed, world.resolve(scene, StageplayTimeline.sample(scene, switchFrame + 6)));
+        }
     }
 
-    @Test
-    void multipartBossCapturesLatestNativePaletteAfterCacheEvictionWithoutDrawing()
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ObjectMode.class, names = {"PUPPET", "POSE"})
+    void buzzerCapturesNativePaletteWithoutDrawingAndReplaysItsDirectedTransition(ObjectMode mode)
             throws Exception {
-        transition(Sonic2ObjectIds.EHZ_BOSS, 1, 10704, 1062, 10480, 704, 8, true);
+        transition(Sonic2ObjectIds.BUZZER, 0, 400, 600, 0, 500, 8, false, mode);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ObjectMode.class, names = {"PUPPET", "POSE"})
+    void multipartBossCapturesLatestNativePaletteAfterCacheEvictionWithoutDrawing(ObjectMode mode)
+            throws Exception {
+        transition(Sonic2ObjectIds.EHZ_BOSS, 1, 10704, 1062, 10480, 704, 8, true, mode);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ObjectMode.class, names = {"PUPPET", "POSE"})
+    void monitorCanBeTakenOverOutsideTheMainView(ObjectMode mode) throws Exception {
+        transition(Sonic2ObjectIds.MONITOR, 0, 400, 600, 0, 500, 8, false, mode);
     }
 
     @Test
@@ -116,7 +159,8 @@ class TestStageplayObjectCaptureRom {
             int cameraX,
             int cameraY,
             int switchFrame,
-            boolean evictPaletteCache)
+            boolean evictPaletteCache,
+            ObjectMode mode)
             throws Exception {
         try (var library =
                         SceneRomLibrary.open(
@@ -156,7 +200,7 @@ class TestStageplayObjectCaptureRom {
                                             false,
                                             true,
                                             Interpolation.HOLD,
-                                            ObjectMode.PUPPET)),
+                                            mode)),
                             List.of());
             var scene =
                     StageplayDocument.empty("s2", 0, act, cameraX, cameraY, 320, 224)
@@ -210,7 +254,7 @@ class TestStageplayObjectCaptureRom {
             assertTrue(
                     ending.world().objects().stream()
                             .anyMatch(
-                                    object -> object.type().equals("Stageplay:performer:PUPPET")));
+                                    object -> object.type().equals("Stageplay:performer:" + mode)));
             world.resolve(scene, StageplayTimeline.sample(scene, 0));
             assertEquals(
                     ending, world.resolve(scene, StageplayTimeline.sample(scene, endingFrame)));

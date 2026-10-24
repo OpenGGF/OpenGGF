@@ -313,6 +313,7 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             return romRenderOnScreen;
         }
 
+        if (stageplayVisible(currentX, currentY, margin, margin)) return true;
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         int screenWidth = viewportWidth();
@@ -335,13 +336,16 @@ public class AnimalObjectInstance extends AbstractObjectInstance
             return;
         }
         // BuildSprites updates render_flags.on_screen after Obj28 has displayed.
+        // Include the shared cast windows at this same boundary, preserving the native
+        // one-frame flag delay and ordinary gameplay bounds without suppressing destruction.
         Camera camera = services().camera();
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         romRenderOnScreen = currentX >= cameraX - getOnScreenHalfWidth()
                 && currentX < cameraX + viewportWidth() + getOnScreenHalfWidth()
                 && currentY >= cameraY - APPROX_RENDER_HALF_HEIGHT
-                && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT;
+                && currentY < cameraY + viewportHeight() + APPROX_RENDER_HALF_HEIGHT
+                || stageplayVisible(currentX, currentY, getOnScreenHalfWidth(), APPROX_RENDER_HALF_HEIGHT);
     }
 
     public int getX() {

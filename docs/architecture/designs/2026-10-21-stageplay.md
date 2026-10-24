@@ -421,3 +421,134 @@ only the requested command-track patch may apply, once, through normal undo.
 Freshness is checked off the UI thread before Apply. Neither frontend replaces
 its gameplay/preview/audio session for planning. Exhaustion and unsupported
 geometry are explicit outcomes, not evidence that no route exists.
+
+
+## Promo authoring corrections (2026-10-24)
+
+Reproductions start at `632a5f8c3` in the `feature/ai-stageplay-promo-bugfixes`
+worktree. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
+observed a frame-zero stop followed by track 129, and authored track 130 followed
+by 129. The no-control case retained native music. The first probe omitted outer
+audio presentation and therefore did not drain the native mailbox; that probe
+could not establish soundtrack admission. Presenting every frame reproduced both
+failures. Repeating stop cues at a fitted frame or filtering exported PCM was
+rejected: Sonic2LevelInitProfile's scheduled Level_PlayBgm publication is the owner,
+through LevelManager.publishPreparedLevelMusic. A counted audio-owned playlist
+scope gates that publisher while Stageplay owns ROM_MUSIC/MUSIC_STOP control.
+Direct cues/SFX retain their existing routes; native scheduler timing is unchanged.
+The scope starts at forward playback or restored playback ownership, follows native
+producer changes, and is released on stop, close or abandonment, independently of
+a particular export or world instance. Acquiring it during prepare was rejected:
+the editor also prepares merely to validate assets. A prepared-but-unplayed case
+must retain native playlists.
+
+`TestStageplayObjectCaptureRom.releasedAnimalCanBeDirectedAfterNativeTicks` failed
+in all four combinations of frames 5/60 and Pose/Puppet. Native art was present at
+construction. A bounded probe observed a live renderer and living root at frame 0,
+then destruction at frame 1 after the retained on-screen flag became false.
+The cast-window filter treated the camera's 128-pixel loading overscan as if it
+covered on-screen lifetime checks. The animal at x=564 in a 480-pixel view therefore
+lost its supplemental window; its custom native flag also omitted those windows.
+Graph capture correctly excludes destroyed instances and then reported no visual.
+Updating the animal query alone still failed all four cases, ruling out that
+single-site repair. The complete fix retains windows outside the visible native
+viewport and uses the same supplemental-window query as common object visibility
+helpers at the animal's original native flag-publication boundary. Ordinary camera
+bounds, the previous-frame flag, and semantic destruction remain authoritative.
+Badnik, monitor and multipart-boss transitions cover the other object families;
+direction never recreates a destroyed graph or substitutes constructor art for a
+living graph's current appearance.
+
+The compiler and canonical-store gain regressions both accepted ROM gain 0.58 on
+this base. The AudioCue constructor now enforces the existing renderer rule for
+ROM_MUSIC and ROM_SFX, so compilation, validation and editor loads share its
+message. Voice gain remains supported; no ROM gain implementation was added.
+
+
+Validation used the existing root S2 REV01 ROM (CRC32 `7B905383`, SHA-1
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`) and S3&K image (CRC32 `63522553`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`) by absolute path; neither
+image nor the reporter's production directory was changed. These are focused
+Stageplay/native-owner checks, not broad smoke or release validation.
+
+Commands were run in `.worktrees/stageplay-promo-bugfixes`. The portable command
+forms below use absolute ROM paths resolved from the unchanged main-checkout files:
+
+```bash
+OPENGGF_S2_ROM="$(realpath ../../s2.gen)"
+OPENGGF_S3K_ROM="$(realpath ../../s3k.gen)"
+```
+
+The initial base regression command was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle#authoredMusicOwnsTheLateNativeLevelEntry,TestStageplayObjectCaptureRom#releasedAnimalCanBeDirectedAfterNativeTicks,TestStageplayScriptCompiler#rejectsRomCueGainDuringCompilation,TestStageplayStore#rejectsRomCueGainWhenLoadingCanonicalScenes' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+It ran nine cases with zero skips: the two gain cases failed to reject input,
+four animal transitions reported missing visuals, and the music positive control
+failed because the probe had omitted outer presentation. After correcting only
+the music harness, this command ran three cases, with the uncontrolled positive
+control passing and both authored-control cases failing as described above:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle#authoredMusicOwnsTheLateNativeLevelEntry' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+The first implementation check ran 40 cases, zero skips: music, compiler and store
+passed; four animal cases remained red, exposing the missing viewport-window
+filter change:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayObjectCaptureRom,TestStageplayScriptCompiler,TestStageplayStore' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+This bounded diagnostic repeated only the four animal cases, confirming the
+frame-zero living root and frame-one retirement; its temporary instrumentation
+was removed:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayObjectCaptureRom#releasedAnimalCanBeDirectedAfterNativeTicks' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+After the complete object repair, the following 114-case selection had zero skips.
+Its 106 cases outside the audio class passed, including all 11 capture cases,
+the other cast families, ensemble/activation/direction and unchanged Mod API pins.
+The audio class's five existing cases passed; three extended music cases errored
+because the test added a shot change before its required camera key. Reordering
+the fixture setup corrected that harness error without changing production code.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayObjectCaptureRom,TestStageplayObjectCastRom,TestStageplayEnsembleRom,TestStageplayScriptCompiler,TestStageplayStore,TestStageplayObjectDirection,TestStageplayActivationPolicy,TestStageplayAudioSamples,TestLevelMusicCoordinator,TestSonic2AnimalObjectTiming,TestEggPrisonAnimalRelease,TestModApiSignatureSurface,TestModApiPinPolicy' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+The corrected audio class and actual isolated preview/live playback checks used:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestStageplayAudioLifecycle,TestStageplayLivePreviewRom,TestStageplayLivePlayback' -Dsonic2.rom.path="$OPENGGF_S2_ROM" -Ds3k.rom.path="$OPENGGF_S3K_ROM" test -B
+```
+
+The first run passed 12 cases, zero skips. Review then added a prepared-but-unplayed
+negative control: the focused music command above ran four cases, with only that
+new case failing (`[129,129]` expected, no native music observed). Ownership was
+therefore moved out of preparation and into playback/restored playback ownership.
+
+The updated EGL/audio command then passed 13 cases, zero skips, including the
+prepared-but-unplayed control. The final ownership bookkeeping also releases a
+scope when rewind restores a pre-playback entry (`entryAudio == null`); that path
+must allow a subsequent native playlist request without emitting an old cue.
+It is checked by the audio lifecycle case alongside Stop and replay ownership.
+The last focused check was:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestStageplayAudioLifecycle,TestStageplayPlayback' -Dsonic2.rom.path="$OPENGGF_S2_ROM" test -B
+```
+
+This final check passed all 18 cases (nine audio lifecycle and nine playback),
+with zero failures, errors or skips. Together with the unaffected 106 cases and
+four EGL preview/live-playback cases above, 128 distinct focused cases passed
+across these runs. This is not a single broad-suite pass. The final restore-null
+bookkeeping was covered by the last two-class check; unchanged EGL coverage was
+not repeated after it. `git diff --check` passed. The leased version probe
+`python3 tools/testing/maven_queue.py -v` reported Maven 3.10.0 and Java
+25.0.5.0.2 from `/usr/lib/jvm/java-25-openjdk`.

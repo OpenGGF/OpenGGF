@@ -71,6 +71,15 @@ class TestStageplayScriptCompiler {
                 """);
     }
 
+    @Test void rejectsRomCueGainDuringCompilation() throws Exception {
+        for (String kind : List.of("ROM_MUSIC", "ROM_SFX")) {
+            var script = recipe();
+            ((ObjectNode) shot(script, 1).path("audio").get(0)).put("kind", kind).put("gain", .58);
+            var error = assertThrows(IOException.class, () -> compile(script));
+            assertTrue(error.getMessage().contains("ROM cue gain must be 1; gain is available for voice clips"), error.getMessage());
+        }
+    }
+
     @Test void screenplayRejectsSpindashWithWalkWithAnActionableMessage() throws Exception {
         var script=puppetRecipe();
         var action=(ObjectNode)shot(script,0).path("actions").path("hero").get(0);

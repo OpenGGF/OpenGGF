@@ -288,13 +288,14 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 performer.sprite.getCentreX() - width / 2, performer.sprite.getCentreY() - height / 2,
                 width, height));
         if (objectCast != null) windows.addAll(objectCast.activationWindows(width, height));
-        // The ordinary focus window retains its native admission and retirement
-        // timing. Publish only performers that the single native window cannot cover.
+        // Only the visible native viewport covers all on-screen lifetime tests.
+        // Loading overscan is wider: dropping a cast window there can still let a
+        // live object self-retire from its retained render flag before direction.
         int cameraX = owned.getCamera().getX(), cameraY = owned.getCamera().getY();
         windows.removeIf(w -> {
             int x = w.left() + w.width() / 2, y = w.top() + w.height() / 2;
-            return x >= cameraX - 128 && x <= cameraX + width + 128
-                    && y >= cameraY - 128 && y <= cameraY + height + 128;
+            return x >= cameraX && x < cameraX + width
+                    && y >= cameraY && y < cameraY + height;
         });
         ObjectDirectionAccess.activationWindows(owned.getLevelManager().getObjectManager(), windows);
     }

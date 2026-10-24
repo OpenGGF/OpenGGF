@@ -738,6 +738,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             }
             if (kind == AudioKind.ROM_MUSIC || kind == AudioKind.ROM_SFX) {
                 require(soundId >= 0, "ROM audio cues require a soundId");
+                require(gain == 1, "ROM cue gain must be 1; gain is available for voice clips");
             }
         }
     }

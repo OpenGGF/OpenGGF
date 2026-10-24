@@ -9,6 +9,10 @@ Unreleased. The earlier development themes remain in
   OpenGGF Editor's Stageplay workspace. Author actor movement, animation/poses,
   camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
+  Authored music control holds off automatic level playlists through deferred entry
+  and shot changes in playback/export; ROM cue gain is checked during authoring.
+  Free objects, including released animals outside the main view, retain native
+  appearances when switched to Puppet/Pose within their cast activation windows.
   Puppet mode follows destinations and urgency through native acceleration, terrain
   collision and jump physics; floor snapping defaults on. Poser mode retains manual
   positioning, animation and frame selection. Every scene uses one native world

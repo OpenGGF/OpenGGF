@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Stageplay native music requests may not appear in the logical command timeline
+until outer audio presentation drains the native mailbox (2026-10-24, promo
+bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive
+control appear silent. Present every frame when testing late playlist admission;
+assert an uncontrolled scene starts native music before trusting a stopped scene's
+absence. `TestStageplayAudioLifecycle.authoredMusicOwnsTheLateNativeLevelEntry`
+uses both the no-control case and actual presented requests.
+
 A synthetic route probe using `SpriteArtSet.EMPTY` cannot certify posture-gated
 native abilities (2026-10-23, Stageplay route motion). It has no animation profile,
 so down input cannot establish the Duck animation that native spindash reads.

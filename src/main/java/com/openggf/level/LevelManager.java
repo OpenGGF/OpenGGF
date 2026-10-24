@@ -647,6 +647,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Publishes a request the active game profile has released. */
     public void publishPreparedLevelMusic(int musicId) {
+        if (!com.openggf.audio.LevelMusicAccess.allowsAutomatic(audioManager)) return;
         var module = activeGameModule();
         var profile = module.getLevelInitProfile();
         if (profile.isLevelMusicPublicationPending()) return;
