@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 126 records | Hold at 126 pending next composition checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 123 records | Hold at 123 pending joint contract checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 126
+- `low_level_layers_do_not_depend_on_runtime_layers`: 123
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -334,7 +334,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 153 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 151 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -628,11 +628,11 @@ The continuation plan records the alternative and evidence needed to reopen it.
 The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
 canonical-palette decoding dependencies (136 → 126), with no replacement frozen
 records or supported API change. ROM reads and all decoding bodies remain
-unchanged. `data -> level` stays allowed while the separately reviewed `Game`
-contract still uses that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
+unchanged. At that component base, `data -> level` stayed allowed because the
+separately reviewed `Game` contract still used that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
 combined parent delivery remains separate.
 
-The current local composition has 126 low-level records. Decoder component
+The earlier decoder/fixture composition had 126 low-level records. Decoder component
 qualification is complete; its joint composition checks and delivery remain
 pending. The earlier 846 focused / 769 guard results above stay attributed to
 the preceding 136-record executable state.
@@ -663,3 +663,18 @@ S1 monitor tests whose earlier direct isolation was rejected. Their full-world
 fixtures preserve session camera/game-state consumers and authoritative module
 sampling. The local inventory is21 methods across20 files; these component
 checks passed110 cases plus8 guards, with joint validation still pending.
+
+The current joint composition contains123 low-level records: complete `Game`
+relocation removes three more from126, with no frozen replacements. It owns
+source-backed level/music/scroll/editing/runtime-art assembly beside `GameModule`,
+`ModGame` and `StandaloneGameSpec`. This intentional unpublished-candidate break
+requires matching-artifact rebuilds, including inferred factory callers; the
+manifest range and release descriptor are unchanged. All26 Game-bearing pin rows
+are renamed, with the accepted art-provider14 replacements retained.
+
+Game alone removes `data -> audio`; composing the independently qualified
+`PaletteLoader` move also eliminates the final `data -> level` consumer. Both
+permissions and matching cycle ignores are removed, leaving151 directed pairs.
+`audio -> data`, `data -> game` and `data -> configuration` remain required.
+The parent will verify the actual compiled graph and exact published counts;
+component results are not a claim of completed joint delivery.

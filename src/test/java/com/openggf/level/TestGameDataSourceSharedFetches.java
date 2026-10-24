@@ -4,7 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.data.Rom;

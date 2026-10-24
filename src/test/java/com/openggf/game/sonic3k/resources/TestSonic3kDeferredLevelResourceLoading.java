@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.resources;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3k;

@@ -3553,3 +3553,213 @@ certification or arbitrary incoming-world/module matrix was run. Earlier
 commits remain untouched; this slice stops at a clean local review-ready commit
 for later parent composition. Integration, push and branch/worktree removal
 remain the parent's responsibility.
+
+
+
+## Complete Game contract ownership — isolated implementation
+
+Accepted base: `19619db8078530563baf973c8ec31dc576a067bc`; local branch
+`bugfix/ai-game-contract-owner-20261024` in the T3 isolated checkout. This slice
+moves intact annotated abstract `data.Game` to `game.Game`, preserving all twelve
+abstract declarations, implicit public construction, nullable ROM, generic sound
+map, checked exceptions and concrete default no-op runtime-art callback. Seventeen
+direct production consumers, twenty-one direct test/helpers (including the
+unchanged dual-wildcard decoded-transform helper), and three creator imports are
+accounted for. Inferred Starpost Valley factories and declarative standalone/
+platformer specifications require rebuilt binaries despite unchanged sources.
+OwnerAwareStandaloneModule retains its existing identity/fault/ROM boundaries;
+its concrete runtime-art callback remains inherited. No body or behavior changes.
+
+The read-only grounding and independent accepted design review recommend this
+complete runtime-composition owner over qualified retention as a compatibility-
+sensitive loader boundary. Retention preserves old binaries but leaves runtime
+assembly in low-level data; interface conversion, shims, split facades, model
+erasure, new roots/terminals/permissions and wrapper expansion are rejected.
+The unpublished candidate break is intentional: class identity, superclass and
+factory/getter JVM descriptors change. Matching SDK/engine rebuilds are required;
+the unchanged manifest range cannot identify every old binary. The release
+descriptor must remain byte-identical; `ModApiVersion` and existing compatibility,
+getting-started, standalone and active changelog guidance describe the migration.
+
+Exact expected delta against the accepted base: 26 Game pin rows replaced by
+26 renamed rows, 22,482 unique sorted rows, 1,246 annotated types and classfile
+markers. Preserve the accepted art migration's 14 disjoint FQN replacements.
+Remove only Game loadLevel's Level return, save's Level parameter and getSoundMap's
+generic GameSound frozen records, with no additions: 136 → 133. Remove only the
+proven data → audio permission/cycle-ignore pair. PaletteLoader remains in data;
+data → level, audio → data, data → game and data → configuration stay. Scalar,
+rendering, art and all closed parent decisions remain untouched. This local slice
+claims no parent integration, broad suite, native-image execution or delivery.
+
+Verification evidence is recorded below after the focused jobs complete. Source
+is frozen from job submission through completion. Parent owns independent review,
+composed gates, integration, push and worktree cleanup.
+
+
+### Game relocation verification and local handoff
+
+All execution was in the task-owned T3 checkout on the
+accepted base plus this slice's uncommitted changes. Production source, tests and
+example sources stayed frozen from submission through completion. The only
+post-submission correction was the documented package-permission count, 153 → 152;
+no executable input changed. This section records the completed checks for that
+source state; the parent still owns review, composed gates and integration.
+
+Reproducible command definitions (all Maven tests used the absolute current-main
+wrapper from this checkout's cwd; no main target or branch was changed):
+
+```bash
+MAIN_CHECKOUT="${OPENGGF_MAIN_WORKSPACE:?absolute main-checkout path}"
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+export PATH="$JAVA_HOME/bin:$PATH"
+export LUA_BIN=lua5.4
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+MQ=(python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl)
+ROM_GAME=("-Dsonic1.rom.path=$MAIN_CHECKOUT/s1.gen" "-Dsonic2.rom.path=$MAIN_CHECKOUT/s2.gen" "-Ds3k.rom.path=$MAIN_CHECKOUT/s3k.gen" "-Dkis2.rom.path=$MAIN_CHECKOUT/kis2.gen")
+CONTROL_GAME='TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiHookPolicy,TestArchUnitRules,TestArchitecturalReviewGuard,TestModApiRuntimePolicy,TestNoProvisionalModApiShims,TestNativeUnsupportedMods,TestModClassLoaderFactoryNativeGuard,TestNativeImageResourceGuard'
+BEHAVIOR_GAME='TestPhase3SharedFoundation,TestGameModuleProfiles,TestRomDetectionService,TestSidekickGating,TestSonic3kVineAngleOwnership,TestSonic3kDeferredLevelResourceLoading,TestGameDataSourceSharedFetches,TestGameDataSourceSessionOwnership,TestLevelManagerDeferredResourceLoading,TestLevelManagerPreparedModLoading,TestLevelMusicCoordinator,TestLevelPlayableArtInitializerModArt,TestBackgroundScroll,TestModRegistrationRuntime,TestModZoneAdapterRouting,TestModZoneRuntimeProfile,TestOwnerAwareStandaloneModule,TestStandaloneGameSpec,TestModContextAndFaultBoundary,TestOwnerBoundGamePatch,TestRomLogic,TestSpawnPositions,TestAizIntroFgTerrain,TestSonic3kLevelLoading,TestS3kAiz1SkipHeadless,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestSonic1PlcProducerCoverage#levelInitOwnerClearsThenPublishesHeaderPrimaryAndMain2BeforeTitleCard,TestKis2HeadlessBoot,TestKis2EndingContinue,TestNativeCarriedPlayerArtBinding,TestS3kCanonicalEntryLifecycle,TestS3kHpzSanctuaryLifecycleProduction'
+CREATOR_GAME='TestModApiJavadocTool,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestPurposeStarters,TestProjectScaffolder,TestSampleModsPackage,TestPhase3StandaloneSampleIntegration,TestSamplePlatformerIntegration,TestSampleFlappyIntegration,TestSampleRomArtRemixIntegration,TestEmeraldRemix#recipeRebuildsActOneFromStockStripsAndCloverValleyFollowsActTwo,TestInfiniteSonic#freshReloadResetsTheCourseAndFinalZoneRemainsStock,TestSonicSurvivors#campStartsARunAndTheArenaHoldsSonic,TestStarpostValleyExample#packagesAndPassesValidation,TestStarpostRealValley#terrainAndBackgroundKeepTheirRomColoursWithinHostBudgets,TestStarpostRealRuins#everyDailyChamberLoadsThroughSharedEncoderAndRegeneratesByDay,TestStarpostRealFestivals#nativeRouteResultAndReturn'
+python3 tools/testing/run_categories.py --base 19619db8078530563baf973c8ec31dc576a067bc --preflight
+"${MQ[@]}" compile -B
+"${MQ[@]}" -DskipTests package -B
+"${MQ[@]}" -Pguards "-Dtest=$CONTROL_GAME" test -B
+"${MQ[@]}" "${ROM_GAME[@]}" "-Dtest=$BEHAVIOR_GAME" test -B
+"${MQ[@]}" "${ROM_GAME[@]}" "-Dtest=$CREATOR_GAME" test -B
+# Only the affected guard was repeated after correcting the prose count:
+"${MQ[@]}" -Pguards '-Dtest=TestArchitecturalReviewGuard' test -B
+```
+
+The preflight passed Java 25, Lua 5.4 and PowerShell prerequisites and executed no
+tests. The change-based preflight identifies shared smoke scope; the delegated
+brief explicitly reserves broad/composed validation to the parent. No broad
+smoke, release full suite, duplicate parent run or baseline suite was launched.
+The fresh target compiled 4,336 production and 4,446 test/support source files;
+package skipped tests, generated canonical actual-inventory Javadoc through
+`ModApiSdkPackager`, and built both engine artifacts and SDK/testkit classifiers.
+The harmless initial missing-temp-directory JVM warning preceded Maven creating
+its own directories; both builds succeeded. Existing deprecation warnings remain.
+
+| Completed job | Result | Admission wait | Maven execution |
+| --- | --- | --- | --- |
+| Production compile | pass | build activity, no test admission | 1:00 |
+| Package with tests skipped | pass, fresh test compilation and canonical SDK docs | build activity, no test admission | 38.658 s |
+| Controls, session `65947` | 137 cases; 1 prose count failure, no errors/skips | 319 s | 1:12 |
+| Corrected review guard, session `30789` | 9 passed, no skips | 60 s | 26.908 s |
+| Creator integrations, session `50951` | 89 passed, no skips, 17 class identities | 167 s | 2:18 |
+| Loader/runtime, session `78579` | 629 passed, no skips, 34 class identities | 361 s | 2:25 |
+
+Maven's minute-format execution values are rounded as displayed. Queue intervals
+overlap and are not added as elapsed delivery time; other unmeasured time is
+unknown. All sessions finished and released admission. The exact initial failure
+was `TestArchitecturalReviewGuard.archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances`:
+expected executable allowance 152, documented 153. The executable removal was
+correct; the prose is now 152 and all nine review guards passed fresh. No disputed
+failure required baseline attribution. The other 128 control cases passed on the
+first run, including all 33 ArchUnit rules, API signature 11, pin policy 4, release
+policy 15, both hook implementations' 47 policy cases and native rejection/resource
+controls. Current XML totals are 855 cases, zero failures/errors/skips across 62
+class identities; the earlier failed attempt and eight repeated passing guard
+cases are not hidden in that current-state total.
+
+Exact XML identities and properties were read for every selected class. The simple
+selector `TestSonic3kLevelLoading` intentionally resolved both
+`com.openggf.game.sonic3k.TestSonic3kLevelLoading` (36) and
+`com.openggf.tests.TestSonic3kLevelLoading` (7). The mandatory remaining controls
+were `TestS3kAiz1SkipHeadless` (8), `TestSonic3kBootstrapResolver` (6), and
+`TestSonic3kDecodingUtils` (3), all executed without skips. XML confirms Java
+`25.0.5.0.2`, JDK `/usr/lib/jvm/java-25-openjdk`, and the explicit surfaceless-EGL
+property. Both ROM-bearing jobs retain all four absolute path properties.
+Existing files were hashed, never copied, linked or renamed:
+
+| File below `$MAIN_CHECKOUT` | CRC32 | SHA-1 |
+| --- | --- | --- |
+| `s1.gen` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| `s2.gen` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| `s3k.gen` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| `kis2.gen` | `2AC1E7C6` | `6CD0537A3AEE0E012BB86D5837DDFF9342595004` |
+
+KiS2's explicit-path catalogue check and tier-two boot cases executed. Native
+source/factory loading covers S1 level initialization, S2 ROM logic/spawns and
+S3K loading, prepared/deferred assembly and runtime-art paths; creator integrations
+exercise the rebuilt explicit and inferred factories. The decoded-transform
+helper's native/override/prepared paths ran through `TestModContextAndFaultBoundary`
+and `TestOwnerBoundGamePatch`. Standalone specification and all existing wrapper
+identity/fault/non-null-ROM rejection checks passed. `TestBackgroundScroll` uses
+`MockRom` and is only a synthetic scroll control. Explicit EGL configuration is
+not a new pixel-parity claim; no native image, external old binary, exhaustive
+trace/zone sweep or parent composed state was certified.
+
+Compiled authority and distribution checks used the freshly packaged runtime:
+
+```bash
+CP_GAME=target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar:target/OpenGGF-0.7.prerelease-openggf-mod-sdk.jar
+java -Dopenggf.headless.gl=surfaceless-egl -cp "$CP_GAME" com.openggf.mods.code.ModApiSignatureSurface --snapshot
+javap -classpath target/classes -p com.openggf.game.Game
+java -cp "$CP_GAME" com.openggf.tools.modsdk.ModSdkArtifactVerifier target/OpenGGF-0.7.prerelease.jar target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar target/OpenGGF-0.7.prerelease-openggf-mod-sdk.jar
+```
+
+The snapshot stdout regenerated the existing 0.7 pin only after comparison with
+`sorted(parentRow.replace("com.openggf.data.Game", "com.openggf.game.Game"))`.
+It is exactly 22,482 unique sorted rows, 26 removals/replacements; both annotated
+and classfile-marker sets have 1,246 identical names and change only Game's FQN.
+Against grounding `e9d8087aca13f8868c783a4fe001b39aa7015ca7`, the accepted art
+substitutions remain 14 disjoint rows, for 40 total replacements. The descriptor,
+curated roots, signature visitor/internal terminals/platform allowlists, hook
+implementations, frozen historical keys/settings and `data.PaletteLoader` are
+byte-identical to the accepted base. Exact frozen-set comparison removes only the
+three named Game records, adds none, and leaves 133. Source census proves the
+sole data/audio reference moved, retaining actual PaletteLoader/RomManager/
+configuration edges. No additional permission was introduced.
+
+Byte comparisons proved each changed consumer equals its parent bytes after the
+FQN substitution; the new class equals the parent after its package substitution
+and explicit Rom import. ModApiVersion differs only by four description lines;
+ArchUnit differs only by the two approved allowance removals. `javap` confirms
+public implicit construction, twelve abstract methods, checked exceptions,
+generic sound map and concrete queue callback, with no fields. Maintained sources,
+starters, tools and native metadata contain no obsolete Game FQN; historical
+artifacts and explicit migration examples retain their intended old-name context.
+The current Kos-queue design reference now names the actual owner.
+
+Canonical `target/mod-sdk/javadocs` contains `com/openggf/game/Game.html`, no
+`com/openggf/data/Game.html`, and correct superclass/factory/getter references in
+ModGame, GameModule, both standalone contracts, DelegatingGameModule and
+LevelManager. The exact doclet emits signature text, so those checks compare its
+actual FQNs rather than assuming standard-doclet member hyperlinks. Both final
+engine jars contain new `game/Game.class` and no old `data/Game.class`; the actual
+artifact verifier passed. Temporary verification assumptions about an
+`ANNOTATED` row prefix and standard Javadoc hyperlinks were rejected by inspecting
+the existing formats; corrected assertions passed without implementation changes.
+
+An additional build-lock/activity-leased `javac --release 25 -cp "$CP_GAME" -d
+<own-target-output> <all project src/main/java files>` compiled all maintained
+sources against the packaged engine/SDK: Emerald Remix 4, Infinite Sonic 31,
+Sonic Survivors 25, Starpost Valley 258, standalone fixture 4 and platformer fixture
+5 (327 files). Outputs stayed under `target/game-creator-compiles/`. This covers
+inferred ActivityPatch/RuinsPatch/RealValleyPatch descriptors as well as explicit
+imports; it supplements the real package/admission/runtime integrations above.
+These reflection, packaging and compiler checks held this checkout's build/test
+lock plus the shared build-activity lease. No source changed while they ran.
+
+Migration links/anchors, shell syntax, exact protected-file comparisons and
+`git diff --check` passed. Hooks are installed at `.githooks`; all seven policy
+trailers precede the final parsed Codex co-author block. Consumed focused XML and
+raw diagnostics are removed after inspection; no category run was created, so no
+category acknowledgement, retained log, validation receipt or pass cache exists.
+Local commit/tree/diff identities are returned with the handoff; parent owns all
+review, integration, push and worktree/branch cleanup. No live job remains.
+
+The staged resource-policy check initially rejected literal machine-local
+user-home paths in this evidence section. They were replaced with the existing
+`OPENGGF_MAIN_WORKSPACE`/`MAIN_CHECKOUT` convention; all invocations resolve the
+same absolute main wrapper and ROM files. No hook or permission was bypassed.
+
+
+Parent Game composition preserves the prior decoder/fixture changes and removes
+only the reviewed three frozen identities, giving123. The additional final
+`data -> level` permission/cycle ignore is pruned only after both complete
+contracts have moved. Its comment-free unique permission set contains151 pairs;
+an initial textual check counted a duplicate quoted comment and was corrected
+before commit. Compiled graph/count evaluation remains pending, without any
+rule/settings change. The reviewed Game pin is byte-identical in this composition
+and the release descriptor is unchanged.

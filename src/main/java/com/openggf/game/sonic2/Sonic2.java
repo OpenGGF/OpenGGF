@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.audio.GameSound;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.sprites.art.SpindashDustArtProvider;
 import com.openggf.data.Rom;

@@ -2,7 +2,7 @@ package com.openggf.level;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.sprites.art.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;

@@ -373,6 +373,36 @@ an unreviewed third-party type. Before publication, removals, narrowing changes,
 record-shape changes, and unannotation require intentional candidate review and a
 pin rewrite; after publication they require an explicit compatibility decision.
 
+## Game contract candidate migration
+
+The reviewed unpublished 0.7 candidate intentionally moves the complete annotated
+abstract class `com.openggf.data.Game` to `com.openggf.game.Game`, beside
+`GameModule`, `ModGame` and `StandaloneGameSpec`. Its twelve abstract methods,
+implicit public constructor, checked exceptions, generic sound map, nullable ROM
+contract and default no-op runtime-art callback are preserved. No forwarding class
+is provided. The standalone owner wrapper keeps its existing identity, fault and
+ROM boundaries and inherits the same no-op runtime-art callback.
+
+This changes class identity, `ModGame`'s superclass and factory/getter JVM return
+descriptors. Replace explicit imports and rebuild all compiled mods, donor
+implementations and callers against matching SDK and engine artifacts. Callers
+using inferred types and declarative standalone specifications also need rebuilding.
+An unchanged `>=0.7.0 <0.8.0` manifest cannot distinguish the old binary contract;
+this migration does not add automatic rejection of every old binary. Existing
+native compiled-mod policy is unchanged. See the
+[creator migration](../modding/getting-started.md#game-contract-import-migration)
+and [standalone guidance](../modding/standalone-games.md).
+
+This is an intentional incompatible candidate-pin rewrite. `ModApiVersion.CURRENT`
+remains `0.7.0`; the release descriptor stays byte-identical with candidate status,
+`develop`/`next` and no published baseline. Regeneration changes exactly 26 old
+Game-bearing rows to 26 renamed rows, preserving the 22,482 unique sorted rows and
+1,246 annotated types/classfile markers. The accepted art-provider migration's 14
+rows are disjoint. Curated roots, internal terminals and platform allowlists stay
+unchanged. Qualified retention as a compatibility-sensitive loader boundary was
+reviewed; intact relocation earns the candidate migration because this contract
+assembles source-backed levels and runtime capabilities rather than low-level bytes.
+
 ## Player-art provider candidate migration
 
 The reviewed unpublished 0.7 candidate intentionally relocates both complete

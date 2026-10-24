@@ -362,7 +362,7 @@ class TestOwnerAwareStandaloneModule {
         ZoneRegistry zones = mock(ZoneRegistry.class);
         when(delegate.getZoneRegistry()).thenReturn(zones);
         when(zones.getZoneName(0)).thenThrow(new IllegalStateException("provider"));
-        com.openggf.data.Game game = mock(com.openggf.data.Game.class);
+        com.openggf.game.Game game = mock(com.openggf.game.Game.class);
         GameDataSource source = new GameDataSource() {
             @Override public Optional<com.openggf.data.Rom> rom() { return Optional.empty(); }
             @Override public java.io.InputStream openAsset(String path) {
@@ -399,7 +399,7 @@ class TestOwnerAwareStandaloneModule {
                 .filter(type -> type.getSimpleName().equals("OwnerAwareStandaloneGame"))
                 .findFirst().orElseThrow();
 
-        java.util.Arrays.stream(com.openggf.data.Game.class.getDeclaredMethods())
+        java.util.Arrays.stream(com.openggf.game.Game.class.getDeclaredMethods())
                 .filter(method -> Modifier.isAbstract(method.getModifiers()))
                 .forEach(method -> assertDoesNotThrow(() ->
                         wrapper.getDeclaredMethod(method.getName(), method.getParameterTypes()),

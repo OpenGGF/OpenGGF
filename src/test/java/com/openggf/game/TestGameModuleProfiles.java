@@ -87,7 +87,7 @@ public class TestGameModuleProfiles {
             @Override
             public String getIdentifier() { return "test"; }
             @Override
-            public com.openggf.data.Game createGame(com.openggf.data.Rom rom) { return null; }
+            public com.openggf.game.Game createGame(com.openggf.data.Rom rom) { return null; }
             @Override
             public com.openggf.level.objects.ObjectRegistry createObjectRegistry() { return null; }
             @Override

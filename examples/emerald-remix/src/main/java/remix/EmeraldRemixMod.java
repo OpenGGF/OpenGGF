@@ -1,6 +1,6 @@
 package remix;
 
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;

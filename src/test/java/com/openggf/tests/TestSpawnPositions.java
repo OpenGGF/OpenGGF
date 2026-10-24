@@ -3,7 +3,7 @@ package com.openggf.tests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.openggf.data.Game;
+import com.openggf.game.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.Sonic2;
 import com.openggf.level.Level;
