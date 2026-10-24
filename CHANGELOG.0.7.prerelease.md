@@ -6,7 +6,10 @@ Unreleased. The earlier development themes remain in
 ## Gameplay and presentation
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
-  OpenGGF Editor's Stageplay workspace. Author actor movement, logical Left/Right facing, animation/poses,
+  OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
+  named choices, collapsed Advanced settings and full F1 diagnostics. In-level
+  position picking pans through the level with coordinate tags and optional queried
+  floor snapping; numeric entry stays available. Author actor movement, logical Left/Right facing, animation/poses,
   camera movement, smooth animated zoom, earthquake effects, captions, ROM audio and WAV/Ogg voices;
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Authored music control holds off automatic level playlists through deferred entry

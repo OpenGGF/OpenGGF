@@ -106,6 +106,17 @@ and rejects stale/interior-player/Free/release-to-Free/ambiguous-binding edits.
 Place a physical spawn centre near the floor; floor snapping defaults on at spawn,
 then native terrain collision controls contact during movement. A MOVE_TO destination
 is an attempt, and `BLOCKED` must be inspected rather than hidden with a teleport.
+Both editors use short grouped forms with one collapsed Advanced section. F1 keeps
+full descriptions, limits and native diagnostics. Level Position rows share a
+picker: HUD Enter opens it, arrows/d-pad move with held acceleration, Shift/right
+bumper moves one pixel, S/controller X toggles floor snap, Enter confirms fields,
+Esc cancels; F2 preserves numeric entry. Desktop Pick opens canvas pointing; click
+confirms and drag/scroll pans. Route snapping defaults on. Cyan floor markers use
+the existing prepared preview ground query, never per-move worker/JVM launches.
+Confirming a pick writes only form values; Apply performs the normal undoable edit.
+Camera keys, actor/object keys and destinations use world picking; panel positions
+and relative offsets remain numeric. Verify proposed floor placements in playback.
+
 For player route motion, choose starting action Walk/Jump/Spindash (capability-gated),
 travel Walk/Run, ending Gentle Stop/Hard Stop/Overshoot and facing Inherit/Left/Right.
 Planned defaults stroll at 1.5 px/tick and coast without a skid; Run reads native

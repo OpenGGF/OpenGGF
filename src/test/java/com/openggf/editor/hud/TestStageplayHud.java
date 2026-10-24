@@ -38,6 +38,15 @@ class TestStageplayHud {
         tick();
     }
 
+    @Test void pickerUsesTheFormerPanelAndDockSpaceAndFitsLargeFrames() {
+        var ordinary=StageplayHud.layout(1280,720,480,270);
+        var picker=EditorHudLayout.positionPicker(1280,720,480,270);
+        assertNull(picker.workbench());assertTrue(picker.game().w()>ordinary.game().w());
+        assertTrue(picker.game().y()>=picker.topBar().bottom());assertTrue(picker.game().bottom()<=picker.promptBar().y());
+        var large=EditorHudLayout.positionPicker(1280,720,1920,1080);
+        assertTrue(large.game().right()<=large.width());assertTrue(large.game().bottom()<=large.promptBar().y());
+    }
+
     @Test void routeExplanationWrapsAtWordsWithoutLosingText() {
         String explanation = "Search limit reached. Try a closer goal or increase the search budget. Reachability is still unknown.";
         for (int width : new int[] {260, 280, 420}) {
@@ -61,7 +70,7 @@ class TestStageplayHud {
         hud.reactivated();
         tick();
         press(BUTTON_X);
-        assertEquals("Actor key at frame 20", workspace.menu().title());
+        assertEquals("Actor key", workspace.menu().title());
         workspace.menu().setValue("x", "240");
         workspace.menu().setValue("pose", "5");
         workspace.menu().submit();

@@ -287,8 +287,8 @@ class TestStageplayGroundWorkspace {
                 List.of(new Refusal(240, Reason.OBSTRUCTED, "Standing ceiling is blocked")), false);
         var workspace = workspace(host, "hero"); query(workspace);
         press(workspace, GLFW_KEY_DOWN); press(workspace, GLFW_KEY_ENTER);
-        assertTrue(workspace.menu().title().contains("OBSTRUCTED")); assertEquals(host.document, workspace.controller().document());
-        press(workspace, GLFW_KEY_ENTER); assertTrue(workspace.menu().title().contains("FOUND"));
+        assertEquals("Floor unavailable",workspace.menu().title()); assertTrue(workspace.menu().detailsText().contains("OBSTRUCTED")); assertEquals(host.document, workspace.controller().document());
+        press(workspace, GLFW_KEY_ENTER); assertEquals("Floor placements",workspace.menu().title());
         assertFalse(workspace.controller().canUndo());
     }
 

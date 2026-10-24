@@ -11,6 +11,41 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
     @Test
+    void directionHintsDrawActualArrowGeometryAtBothNativeSizes() throws Exception {
+        for(float scale : new float[]{.6f, 1, 2}) {
+            var fixture=new Fixture();
+            fixture.font.drawText("\u2191\u2193\u2190\u2192",0,0,scale,1,1,1,1);
+            var draws=fixture.renderer.draws;
+            assertEquals(30,draws.stream().mapToInt(Draw::quads).sum(),"Open arrowheads and long stems use native geometry, not ASCII glyph quads");
+            for(var draw:draws) {
+                assertEquals(11,draw.texture(),"Arrows share the solid native-grid texel");
+                for(int i=0;i<draw.vertices().length;i+=8) {
+                    assertEquals(MenuGlyphs.SOLID_U,draw.vertices()[i+2]);
+                    assertEquals(MenuGlyphs.SOLID_V,draw.vertices()[i+3]);
+                }
+            }
+            assertEquals(4*MenuPixelFont.glyphAdvance(scale),fixture.font.measureWidth("\u2191\u2193\u2190\u2192",scale));
+        }
+    }
+
+    @Test
+    void explicitLineBreaksResetTheColumnAndAdvanceOneNativeLineInBothWeights() throws Exception {
+        for(float scale:new float[]{.6f,1,2}) {
+            Fixture fixture=new Fixture();
+            fixture.font.drawText("AB\r\nC\nD",9,13,scale,1,1,1,1);
+            var draw=fixture.renderer.draws.getFirst();
+            assertEquals(4,draw.quads(),"Line breaks must never become question-mark glyphs");
+            int stride=TexturedQuadRenderer.COLORED_QUAD_FLOATS;
+            int line=MenuPixelFont.glyphLineHeight(scale);
+            assertEquals(9,draw.vertices()[2*stride]);
+            assertEquals(draw.vertices()[1]-line,draw.vertices()[2*stride+1]);
+            assertEquals(9,draw.vertices()[3*stride]);
+            assertEquals(draw.vertices()[1]-2*line,draw.vertices()[3*stride+1]);
+            assertEquals(2*MenuPixelFont.glyphAdvance(scale),fixture.font.measureWidth("AB\r\nC\nD",scale));
+        }
+    }
+
+    @Test
     void fullAndCompactLetteringUseTheSameCharacterCellsWithStableNativeMetrics() throws Exception {
         Fixture fixture = new Fixture();
         fixture.font.beginMegaBatch();

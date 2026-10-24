@@ -87,7 +87,7 @@ class TestStageplayWorkspace {
         assertThrows(IOException.class, () -> workspace.exportScreenplay(output));
         assertArrayEquals(exported, java.nio.file.Files.readAllBytes(output));
         assertEquals(refined, workspace.controller().document()); assertTrue(workspace.controller().canUndo());
-        workspace.invoke(SAVE); assertEquals("Save Stageplay", workspace.menu().title());
+        workspace.invoke(SAVE); assertEquals("Save scene", workspace.menu().title());
         Path canonical = directory.resolve("edited.stageplay");
         workspace.menu().setValue("path", canonical.toString()); workspace.menu().submit();
         assertEquals(refined, StageplayStore.read(canonical)); assertFalse(workspace.controller().dirty());

@@ -36,6 +36,17 @@ final class StageplayObjectAuthoring {
         this.inspection = inspection;
     }
 
+    static void objectChoices(EditorProjectMenu menu) {
+        var values=menu.values();var labels=new java.util.LinkedHashMap<String,String>();
+        try {
+            if(values.get("sourceKind").equals("RELEASED_ANIMAL")){menu.configureField("object","Animal",List.of(),Map.of());return;}
+            com.openggf.stageplay.StageplayObjectCatalog.inspect(values.get("game"),Integer.parseInt(values.get("zone")),Integer.parseInt(values.get("act"))).entries()
+                    .forEach(entry->labels.put(Integer.toString(entry.objectId()),entry.name()));
+            labels.putIfAbsent(values.get("object"),"Other object");
+            menu.configureField("object","Object",List.copyOf(labels.keySet()),labels);
+        }catch(IllegalArgumentException ignored){ /* Validation remains with Apply; incomplete numeric edits are allowed. */ }
+    }
+
     void show() {
         var actions = new ArrayList<EditorProjectMenu.Action>();
         actions.add(action("Cast ROM object", () -> properties(null)));

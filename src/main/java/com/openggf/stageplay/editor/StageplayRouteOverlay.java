@@ -68,6 +68,16 @@ public final class StageplayRouteOverlay {
                 + " / " + readable(m.endingAction().name()) + " / " + readable(m.endingFacing().name());
     }
     public String reason() { return reason; }
+    public String summary(){return switch(result.status()){
+        case VERIFIED->applied?"Route applied.":"Route found; review it before applying.";
+        case VISUAL_TERRAIN->"Object route found; native AI stays off.";
+        case BUDGET_EXCEEDED->"Search limit reached; reachability is unknown.";
+        case SEARCH_EXHAUSTED->"No route found in this search.";
+        case UNSUPPORTED->"This route is unsupported; open Details.";
+        case CANCELLED->"Route planning cancelled.";
+        case VERIFICATION_FAILED->"Playback could not confirm the route.";
+        case STALE_INPUT->"Scene or assets changed; plan again.";
+    };}
 
     public static float screenX(double world, StageplayTimeline.CameraPose camera,
                                 int filmWidth, float left, float width) {

@@ -186,10 +186,27 @@ class TestStageplayRouteWorkspace {
         assertEquals(motion,workspace.controller().document().puppets().getFirst().commands().getFirst().motion());
     }
 
+    @Test void routeFrontPageShowsNamesAndAppliesCollapsedSearchDefaults() {
+        var host=new Host();var workspace=new StageplayWorkspace(host);workspace.activate();workspace.invoke(ROUTE_HELPER);
+        var labels=new java.util.ArrayList<String>();
+        var font=new com.openggf.graphics.PixelFont(){
+            @Override public void drawText(String value,int x,int y,float scale,float r,float g,float b,float a){labels.add(value);}
+        };
+        workspace.menu().render(font,320);
+        assertTrue(labels.contains("Hero"));assertFalse(labels.contains("hero"));
+        assertTrue(labels.contains("Motion"));assertTrue(labels.contains("+ Advanced"));
+        assertTrue(labels.contains("Find route"));
+        assertFalse(labels.contains("Search nodes"));assertFalse(labels.contains("Probe ticks"));
+        workspace.menu().setValue("x","150");workspace.menu().setValue("y","200");workspace.menu().submit();
+        assertNull(workspace.menu().error());assertEquals(1024,host.request.maxNodes());
+        assertEquals(120000,host.request.maxTicks());assertEquals(60000,host.request.maxMillis());
+        assertEquals(RouteMotion.DEFAULT,host.request.motion());
+    }
+
     @Test void unavailableSpindashIsNotAmongCyclingStartChoices() {
         var workspace=new StageplayWorkspace(new Host());workspace.activate();workspace.invoke(ROUTE_HELPER);
-        // Starting action follows actor, X, Y and frame budget.
-        choose(workspace,4);assertEquals("Jump",workspace.menu().values().get("startingAction"));
+        // Start stays visible in the Motion group; headings do not consume selection rows.
+        choose(workspace,2);assertEquals("Jump",workspace.menu().values().get("startingAction"));
         press(workspace,new InputHandler(),GLFW_KEY_ENTER);
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
@@ -216,7 +233,7 @@ class TestStageplayRouteWorkspace {
         assertTrue(workspace.menu().isOpen());
         assertEquals("Spindash (unavailable)",workspace.menu().values().get("startingAction"));
         workspace.menu().submit();assertTrue(workspace.menu().error().contains("unavailable"));
-        workspace.invoke(ROUTE_HELPER);choose(workspace,4);
+        workspace.invoke(ROUTE_HELPER);choose(workspace,2);
         assertEquals("Walk",workspace.menu().values().get("startingAction"));
     }
 

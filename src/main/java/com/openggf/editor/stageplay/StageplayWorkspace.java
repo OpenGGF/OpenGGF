@@ -74,13 +74,13 @@ public final class StageplayWorkspace {
         EXPORT_SCREENPLAY("Export screenplay"), SAVE("Save"), SAVE_AS("Save as"),
         SCENE("Scene / set"), ADD_ACTOR("Add actor"), EDIT_ACTOR("Actor properties"),
         DELETE_ACTOR("Remove actor"), SET_KEY("Direct actor / set key"), DELETE_KEY("Remove actor key / action"),
-        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan collision route"), PLACE_ON_FLOOR("Place on floor"), OBJECTS("ROM object cast / clear"),
+        PUPPET_ACTIONS("Puppet actions"), ROUTE_HELPER("Plan route"), PLACE_ON_FLOOR("Place on floor"), OBJECTS("ROM object cast / clear"),
         CAMERA_MODE("Direct camera (C)"), SET_CAMERA_KEY("Capture camera key (K)"), CAMERA_KEY("Camera keys"),
         RECORD_CAMERA("Record camera take (R)"), CAMERA_EFFECTS("Camera shake / quake"),
         SCENE_CHANGES("Scene changes / transitions"), FILM_FORMAT("Film format presets"), CAPTION("Captions"), DIALOGUE("Dialogue lines"),
         DIALOGUE_TYPERS("Dialogue typers"), DIALOGUE_SKINS("Dialogue decorations"), SPEAKER_VOICE("Speaker voice"), AUDIO("Audio cues"),
         RECORD("Record actor take (R)"), PLAY("Play / pause"), STOP("Stop"),
-        UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), EXIT("Level editor");
+        UNDO("Undo"), REDO("Redo"), EXPORT("Export film"), DETAILS("Direction details"), EXIT("Level editor");
         private final String label;
         Action(String label) { this.label = label; }
         public String label() { return label; }
@@ -118,6 +118,56 @@ public final class StageplayWorkspace {
     private String previewError;
     private boolean cameraMode;
     private boolean cameraInputEnabled = true;
+    private StageplayPositionPicker picker;
+    private EditorProjectMenu.PositionField pickerField;
+    private long pickerGeneration;
+    private int pickerFrame;
+    private StageplayDocument pickerDocument;
+    private Path pickerRoot;
+    public boolean pickingPosition(){return picker!=null;}
+    public StageplayPositionPicker positionPicker(){return picker;}
+    public void pickPoint(double x,double y){if(picker!=null)picker.point(x,y);}
+    public void panPicker(double dx,double dy){if(picker!=null)picker.pan(dx,dy);}
+    public void togglePickerSnap(){if(picker!=null)picker.toggleSnap();}
+    public void paintPositionPicker(StageplayPositionPicker.Painter painter,float x,float y,float width,float height) {
+        if(picker==null)return;
+        var view=previewFrame().camera();
+        picker.paint(painter,x,y,width,height,new StageplayPositionPicker.View(view.x(),view.y(),view.zoom()));
+    }
+    public void confirmPositionPick(){finishPositionPick(true);}
+    public void cancelPositionPick(){finishPositionPick(false);}
+    private void beginPositionPick(EditorProjectMenu.PositionField field){
+        var values=menu.values();double x=Double.parseDouble(values.get(field.x()));
+        double y=field.y()==null?java.util.Optional.ofNullable(selectedActorPose()).map(StageplayTimeline.ActorPose::y).orElse(previewFrame().camera().y()+controller.document().height()/2.0)
+                :Double.parseDouble(values.get(field.y()));
+        if(!Double.isFinite(x)||!Double.isFinite(y))throw new IllegalArgumentException("Position needs finite numbers");
+        pickerField=field;pickerGeneration=menu.generation();pickerFrame=controller.frame();pickerDocument=controller.document();pickerRoot=assetRoot;
+        var frame=previewFrame();
+        java.util.function.BiFunction<Integer,Integer,List<StageplayPositionPicker.Floor>> ground=field.floor()?(cx,cy)->{
+            try {
+                String actor=menu.values().getOrDefault("actor",controller.selectedActorId());
+                StageplayGround.Visual visual=menu.values().containsKey("halfWidth")?new StageplayGround.Visual(integer(menu.values(),"halfWidth"),integer(menu.values(),"height"),integer(menu.values(),"footOffset"),StageplayGround.ObjectPath.of(integer(menu.values(),"collisionPath"))):null;
+                var performer=StageplayGround.performerOf(pickerDocument,actor,visual);
+                int top=Math.max(Short.MIN_VALUE,cy-32),bottom=Math.min(Short.MAX_VALUE,cy+256);
+                var q=new StageplayGround.Query("picker",cx,top,bottom,performer,actor);
+                var report=host.ground(pickerDocument,pickerRoot,controller.frame(),new StageplayGround.Batch(List.of(q),100,100000,0));
+                var answer=report.answer("picker");
+                if(answer.outcome()!=StageplayGround.Outcome.FOUND||answer.truncated())return List.of();
+                return answer.placements().stream().map(p->new StageplayPositionPicker.Floor(p.x(),p.y(),p.surfaceY())).toList();
+            }catch(IOException failure){throw new java.io.UncheckedIOException(failure);}
+        }:null;
+        picker=new StageplayPositionPicker(x,y,controller.document().width(),controller.document().height(),new StageplayPositionPicker.View(frame.camera().x(),frame.camera().y(),frame.camera().zoom()),field.snap(),ground);
+        menu.suspend();
+    }
+    private void finishPositionPick(boolean accept){
+        if(picker==null)return;
+        var selected=picker; if(accept)selected.refreshFloor(); picker=null;menu.resume();
+        if(accept&&controller.frame()==pickerFrame&&menu.generation()==pickerGeneration&&controller.document().equals(pickerDocument)&&assetRoot.equals(pickerRoot)){
+            menu.setValue(pickerField.x(),EditorProjectMenu.coordinate(Double.toString(selected.x())));
+            if(pickerField.y()!=null)menu.setValue(pickerField.y(),EditorProjectMenu.coordinate(Double.toString(selected.pickedY())));
+        }
+        pickerField=null;pickerDocument=null;pickerRoot=null;
+    }
     private StageplayTimeline.CameraPose cameraDraft;
     private boolean startedThisTick;
     private boolean previewSoundActive;
@@ -128,7 +178,23 @@ public final class StageplayWorkspace {
         this.host = Objects.requireNonNull(host);
         controller = new StageplayController(StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224));
         assetRoot = host.initialAssetRoot();
+        menu.onShow(m -> StageplayMenuPresentation.configure(m,menuContext(),controller.selectedActorId()));
+        menu.onPositionPick(this::beginPositionPick);
     }
+
+    /** Translate semantic document choices inside the existing authoring boundary. */
+    private StageplayMenuPresentation.Context menuContext() {
+        var players=new java.util.LinkedHashMap<String,String>();
+        var objects=new java.util.LinkedHashMap<String,String>();
+        controller.document().actors().forEach(a->players.put(a.id(),a.name()));
+        controller.document().objectActors().forEach(a->objects.put(a.id(),a.name()));
+        var choices=Map.of("Interpolation",enumNames(Interpolation.values()),"Transition",enumNames(Transition.values()),
+                "WaitCondition",enumNames(WaitCondition.values()),"ObjectSourceKind",enumNames(ObjectSourceKind.values()),
+                "ObjectMode",enumNames(ObjectMode.values()),"AudioKind",enumNames(AudioKind.values()),
+                "WorldCommandKind",enumNames(WorldCommandKind.values()),"ObjectCommandKind",enumNames(ObjectCommandKind.values()));
+        return new StageplayMenuPresentation.Context(players,objects,choices,StageplayObjectAuthoring::objectChoices);
+    }
+    private static List<String> enumNames(Enum<?>[] values) {return java.util.Arrays.stream(values).map(Enum::name).toList();}
 
     public StageplayController controller() { return controller; }
     public EditorProjectMenu menu() { return menu; }
@@ -144,6 +210,18 @@ public final class StageplayWorkspace {
         return previewFrame().baseCamera();
     }
     public String status() { return status; }
+    public String statusSummary(){
+        if(previewError!=null)return "Preview needs attention; open Direction details.";
+        for(String verb:List.of("Saved","Opened","Imported","Exported"))if(status.startsWith(verb+" "))return verb+" scene.";
+        return StageplayMenuPresentation.sentence(status);
+    }
+    public void directionDetails(){
+        var overlay=routeOverlay();
+        String route=overlay==null?"":"\n"+overlay.reason()+"\n"+overlay.motionSummary()+"\n"+overlay.result().message()
+                +"\n"+overlay.path().size()+" samples, "+overlay.result().expandedNodes()+" nodes, "+overlay.result().simulatedTicks()+" ticks.";
+        menu.showActions("Direction details",List.of(action("Back",()->{})));
+        menu.setHelp("Current status and directing controls.",status+"\n"+selectedActorStatus()+route+"\nCamera: WASD / arrows pan, Q / E zoom, K captures framing, R records. Position fields open the level picker; F2 edits numbers. Goals remain native input attempts.");
+    }
     public Path path() { return path; }
     public Path assetRoot() { return assetRoot; }
 
@@ -190,7 +268,7 @@ public final class StageplayWorkspace {
     }
 
     /** Workspace changes preserve the scene and unsaved history. */
-    public void deactivate() { cancelRoute(); stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
+    public void deactivate() { cancelPositionPick(); cancelRoute(); stop(); menu.close(); cameraDraft = null; cameraMode = false; active = false; }
 
     public void seek(int frame) { stop(); controller.seek(frame); cameraDraft = null; }
     public void selectActor(String id) { stop(); controller.selectActor(id); }
@@ -246,6 +324,7 @@ public final class StageplayWorkspace {
                 case UNDO -> { controller.undo(); cameraDraft = null; }
                 case REDO -> { controller.redo(); cameraDraft = null; }
                 case EXPORT -> exportForm();
+                case DETAILS -> directionDetails();
                 case EXIT -> deactivate();
             }
         } catch (RuntimeException failure) { report(failure); }
@@ -256,6 +335,12 @@ public final class StageplayWorkspace {
         if (!active && !menu.isOpen()) return false;
         try { pollRoute(); }
         catch(RuntimeException failure) { cancelRoute(); report(failure); }
+        if(picker!=null){
+            if(controller.frame()!=pickerFrame||menu.generation()!=pickerGeneration||!controller.document().equals(pickerDocument)||!assetRoot.equals(pickerRoot)){cancelPositionPick();return true;}
+            var result=picker.tick(input);
+            if(result==StageplayPositionPicker.Result.CONFIRM)confirmPositionPick();else if(result==StageplayPositionPicker.Result.CANCEL)cancelPositionPick();
+            return true;
+        }
         if (menu.update(input)) { resetZoomRepeat(); return true; }
         try {
             if (recording()) {
@@ -349,6 +434,13 @@ public final class StageplayWorkspace {
     public StageplayTimeline.Frame previewFrame() {
         var document = previewDocument();
         var frame = resolvePreview(document, controller.frame());
+        if(picker!=null){
+            var cursorView=picker.camera();
+            var view=new StageplayTimeline.CameraPose(cursorView.x(),cursorView.y(),cursorView.zoom());
+            var draft=new StageplayTimeline.Frame(frame.frame(),frame.actors(),view,frame.captions(),frame.set(),frame.transition(),view,frame.dialogue(),frame.puppets(),frame.world());
+            try { var resolved=host.resolvePreview(document,assetRoot,draft);picker.resolvedCamera(new StageplayPositionPicker.View(resolved.camera().x(),resolved.camera().y(),resolved.camera().zoom()));return resolved; }
+            catch(IOException failure){report(failure);return frame;}
+        }
         if (cameraDraft == null || controller.playing()) return frame;
         // Boundary clipping may suppress some native shake. A moved draft still uses
         // the authored seeded motion, then lets the preview owner bound both layers.
@@ -1245,7 +1337,9 @@ public final class StageplayWorkspace {
             return replaceDialogue(d,new DialogueCue(cue.id(),integer(v,"start"),integer(v,"end"),cue.speakerActor(),v.get("name"),line,
                     cue.skinId(),cue.typerId(),integer(v,"x"),integer(v,"y"),integer(v,"width"),integer(v,"height"),v.get("portrait"),cue.revealFrames()));
         }));
-        menu.setSubtitle("Speaker: "+StageplayDialogue.speakerName(controller.document(),cue)+". Choose decoration and typer from the line menu. Panels use film pixels.");
+        menu.setHelp("Write "+StageplayDialogue.speakerName(controller.document(),cue)+"'s line.",
+                "End is exclusive. Choose the speaker, decoration and typer from the line menu. Advanced keeps the speaker name override, panel geometry and optional portrait. "
+                + "A blank name uses the actor's name; offscreen speakers use Name. Dimensions use film pixels. Type \\n for a line break. Portrait paths stay beneath the scene folder.");
     }
 
     private void dialogueProfileMenu(DialogueCue cue, boolean typer) {
@@ -1448,7 +1542,7 @@ public final class StageplayWorkspace {
                 throw new IllegalArgumentException("Ground report does not describe the requested scene frame");
             groundResults(context, query, report);
         }));
-        menu.setSubtitle("Native floor rows. F1: details. Queries do not edit the scene. The band contains native surface rows; authored centre / anchor Y differs by the player radius or object foot offset. Terrain only: no object platforms. Review proposals before applying.");
+        menu.setSubtitle("Native floor rows. Queries do not edit the scene. Terrain only: no object platforms. Review proposals before applying; F1 retains surface rows, radii and evidence.");
     }
 
     private void groundResults(GroundContext context, StageplayGround.Query query, StageplayGround.Report report) {
@@ -1478,7 +1572,8 @@ public final class StageplayWorkspace {
         detail.append("Player terrain proposals need native playback verification after application. ")
                 .append("Applying changes the document described by this query. F1 shows all evidence and refusals.");
         menu.showActions("Place on floor: " + answer.outcome(), actions, selected);
-        menu.setSubtitle(detail.toString());
+        String summary=complete?"Choose a floor, then verify it in playback.":answer.outcome()==StageplayGround.Outcome.NONE_IN_BAND?"No usable floor in this range.":"The floor search is incomplete; try again.";
+        menu.setHelp("Choose a placement or search again.",detail.toString());menu.setStatusLine(summary,complete?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
         status = "Ground query: " + answer.outcome() + ", " + answer.placements().size() + " placements, "
                 + answer.refusals().size() + " refusals" + (answer.truncated() ? "; truncated, query again before applying" : "");
     }
@@ -1561,12 +1656,10 @@ public final class StageplayWorkspace {
         actions.add(action("Back", () -> { }));
         menu.showActions("Collision route",actions);
         var result = routeUpdate.result();
-        menu.setSubtitle((result == null ? routeUpdate.message() : new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false).reason()) + (result == null ? "" : "\n" + result.path().size() + " path samples, "
-                + result.expandedNodes() + " nodes, " + result.simulatedTicks() + " simulated ticks. "
-                + (result.nativeVerified() ? "Native input replay verified."
-                        : result.status()==com.openggf.stageplay.route.StageplayRouteResult.Status.VISUAL_TERRAIN
-                                ? "Visual terrain route; object AI stays suspended." : "No applicable route.")
-                + " Apply replaces commands in the requested frame window."));
+        var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
+        String summary=result==null?routeUpdate.phase()==StageplayRouteJob.Phase.CHECKING?"Checking route inputs.":"Finding a route.":overlay.summary();
+        menu.setHelp("Review the path before applying it.",routeUpdate.message()+(result==null?"":"\n"+result.message()+"\n"+overlay.reason()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks. Apply replaces commands in the requested window."));
+        menu.setStatusLine(summary,result==null?EditorProjectMenu.Tone.INFO:result.success()?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
     }
 
     private void routeForm() {
@@ -1633,8 +1726,13 @@ public final class StageplayWorkspace {
         menu.onValueChanged((key, value) -> {
             if (key.equals("startingAction") && value.equals("Spindash")) menu.setValue("travelSpeed", "Run");
         });
-        menu.setSubtitle(objectRoute?"Objects: visual foreground only.":"Spindash selects Run. Airborne actors land first.");
-        status="Apply replaces commands only in the requested route window. Players start at shot entry; objects can retain an earlier native Free prefix.";
+        if (objectRoute) menu.setSubtitle("Objects: visual foreground only.");
+        else menu.setHelp("Find a playable path to a destination.",
+                "Player routes start at shot entry. Advanced keeps route frames and search budgets; unchanged limits are 1024 nodes, 120000 probe ticks and 60000 ms. "
+                + "Spindash selects Run. Airborne actors land first. Endings use native braking/coasting; Keep retains facing. "
+                + "Find route runs an isolated worker. Review the observed path before Apply, which replaces commands only in the requested window. "
+                + "A bounded failure does not prove the destination is unreachable.");
+        status="Choose a destination, then find a route.";
     }
 
     private static String display(Enum<?> value) {

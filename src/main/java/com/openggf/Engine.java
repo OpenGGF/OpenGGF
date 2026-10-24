@@ -585,7 +585,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private boolean updateEditorProjectMenus(InputHandler input) {
 		if (contentImportScreen.isOpen()) return contentImportScreen.update(input);
 		if (stageplay.menu().isOpen()) {
-			stageplay.tick(input);
+			if (editorChromeActive && chromeOwnsStageplayMenu()) editorChrome.update(input);
+			else stageplay.tick(input);
 			if (!stageplay.menu().isOpen() && !editorProjects.menu().isOpen() && editorQuitView != null) restoreEditorQuitView();
 			return true;
 		}
@@ -4136,7 +4137,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			prepareOverlayState();
 			if (contentImportScreen.isOpen()) contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
 			else if (editorProjects.menu().isOpen()) editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
-			else if (stageplay.menu().isOpen()) editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			else if (stageplay.menu().isOpen() && !chromeOwnsStageplayMenu()) editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 			graphicsManager.flushScreenSpace();
 			return;
 		}
@@ -4153,7 +4154,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
 		else if (editorProjects.menu().isOpen())
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
-		else if (stageplay.menu().isOpen())
+		else if (stageplay.menu().isOpen() && !chromeOwnsStageplayMenu())
 			editorProjectMenuRenderer.render(stageplay.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		graphicsManager.flushScreenSpace();
 	}
@@ -4178,13 +4179,18 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 	}
 
+	private boolean chromeOwnsStageplayMenu() {
+		return editorChrome != null && stageplay.active() && editorChrome.handlesMenu(stageplay.menu());
+	}
+
 	/** Places the game inside the chrome's canvas while the window chrome owns the editor frame. */
 	private void syncEditorChromeViewport() {
 		if (stageplayWindowController != null) stageplayWindowController.sync(
 				getCurrentGameMode() == GameMode.EDITOR && stageplay.active(),
 				displayWindowController == null || displayWindowController.isWindowed());
 		boolean editorFrame = getCurrentGameMode() == GameMode.EDITOR && !contentImportScreen.isOpen()
-				&& !editorProjects.menu().isOpen() && !stageplay.menu().isOpen() && levelEditorController.currentLevel() != null;
+				&& !editorProjects.menu().isOpen() && (!stageplay.menu().isOpen() || chromeOwnsStageplayMenu())
+				&& levelEditorController.currentLevel() != null;
 		editorChromeActive = editorChrome != null && editorChrome.setActive(editorFrame);
 		com.openggf.control.InputHandlerInternalAccess.suppressGamepad(inputHandler,
 				editorChromeActive && editorChrome.ownsGamepads());

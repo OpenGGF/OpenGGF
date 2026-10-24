@@ -49,6 +49,32 @@ import static org.lwjgl.opengl.GL11.*;
 @Isolated
 class TestStageplayHudPictures {
     @Test
+    void captureReadabilityCheckpoint() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit HUD picture refresh only");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        try(var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try(var renderer=new EditorProjectMenuRenderer()) {
+                StageplayMenuSurvey.captureCheckpoint((name,workspace)->{
+                    renderObjectMenu(renderer,workspace);capture(name,1280,720);
+                });
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
+    @Test
+    void captureCompleteMenuSurvey() throws Exception {
+        assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit menu survey only");
+        assertEquals("surfaceless-egl",System.getProperty("openggf.headless.gl"));
+        try(var boot=new HeadlessGameBoot(1280,720,320,224,320,224)) {
+            boot.setBootToTitle(true);boot.boot(Path.of(System.getProperty("sonic2.rom.path")),0,0);
+            try(var renderer=new EditorProjectMenuRenderer()) {
+                StageplayMenuSurvey.capture((name,workspace)->{ renderObjectMenu(renderer,workspace);capture(name,1280,720); });
+            } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
+        }
+    }
+
+    @Test
     void captureCollisionRouteAndVisualFootprintForms() throws Exception {
         assumeTrue(Boolean.getBoolean("openggf.stageplay.hudPictures"), "Explicit Stageplay HUD picture refresh only");
         assumeTrue(PresentationOffscreenTestContext.requested(), "Stageplay HUD pictures require display-free EGL");
@@ -62,7 +88,7 @@ class TestStageplayHudPictures {
                 var scene=routeFormScene();var workspace=new StageplayWorkspace(() -> scene);workspace.activate();workspace.selectActor("hero");
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("x","240");workspace.menu().setValue("y","648");
                 renderObjectMenu(renderer,workspace);capture("route-player-form",1280,720);
-                workspace.menu().close();workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);workspace.menu().setValue("actor","prop");
+                workspace.menu().close();workspace.selectActor("prop");workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 workspace.menu().setValue("halfWidth","12");workspace.menu().setValue("height","24");workspace.menu().setValue("footOffset","12");
                 var input=new InputHandler();for(int i=0;i<12;i++)objectMenuPress(workspace,input,GLFW_KEY_DOWN);
                 renderObjectMenu(renderer,workspace);capture("route-object-footprint-form",1280,720);

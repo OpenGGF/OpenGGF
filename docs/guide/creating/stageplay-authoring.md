@@ -674,13 +674,37 @@ a file and failures do not publish a partial scene. Relative assets keep their
 source directory. Existing commands and actors outside the requested patch remain
 unchanged. The helper never inserts position keys or changes an actor's mode.
 
-In both editors, select a cast member and use **Plan collision route**. The transient
+Both editors use the same compact forms: a short hint, named choices, grouped rows
+and one **Advanced** section. Advanced keeps search limits, object footprints,
+follow tuning and optional assets out of the main view without resetting them.
+**F1 Help** retains full field descriptions, ranges and diagnostics; status lines
+and colour swatches summarize the current result. Text previews preserve actual
+line breaks.
+
+Level positions have an in-level picker. In the HUD, press **Enter** on **Position**
+(or **Column** in Place on floor). The form hides while a yellow crosshair and
+coordinate tag mark the point. Arrows or the controller d-pad move it, accelerating
+while held; **Shift** (controller right bumper) gives one-pixel movement. The camera
+follows across the level. **S** (controller X) toggles floor snapping; route destinations
+start with snapping on. A cyan marker shows the queried floor below the cursor.
+**Enter** confirms the field values and restores the form; **Esc** cancels. **F2**
+opens numeric entry instead. The picker changes no scene data until the form's
+primary action is applied.
+
+In the desktop editor, **Pick** beside the numeric position inputs activates the
+canvas. Hover to position the crosshair, click to choose, and drag or scroll to pan.
+**S**, **Enter** and **Esc** also work there; numeric inputs remain available.
+Actor/object placement and keys, native destinations and camera keys share this
+interaction. Screen layout coordinates and relative offsets stay numeric.
+Floor markers reuse the prepared preview world's ground query; they are terrain
+proposals and still need playback verification after application.
+
+In both editors, select a cast member and use **Plan route**. The transient
 viewport overlay draws the result's observed `path`, never command-to-goal lines:
 cyan grounded segments, gold airborne segments/takeoff chevrons, a start square,
 and a destination diamond. Failed attempts retain their sampled prefix with a red
-terminal cross. Route state, the colour/marker key and a wrapped, plain-language
-explanation live in the side panel (the HUD workbench or desktop Direction inspector),
-with a short status line. No route text is drawn over the game picture. Missing samples break the line; a failure
+terminal cross. Route state, the colour/marker key and a short result sentence live in the side panel (the HUD workbench or desktop Direction inspector),
+with full explanations behind F1 Help. No route text is drawn over the game picture. Missing samples break the line; a failure
 before observations has no invented start or stop. Search-budget exhaustion is not
 reported as a proven wall or gap. Close the route menu to review before Apply.
 

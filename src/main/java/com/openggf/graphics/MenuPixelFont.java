@@ -58,7 +58,7 @@ public final class MenuPixelFont extends PixelFont {
 
     @Override
     public int measureWidth(String text, float scale) {
-        return text.length() * glyphAdvance(scale);
+        return Arrays.stream(text.split("\\R", -1)).mapToInt(String::length).max().orElse(0) * glyphAdvance(scale);
     }
 
     @Override
@@ -88,8 +88,21 @@ public final class MenuPixelFont extends PixelFont {
         int atlasHeight = full ? MenuGlyphs.FULL_ATLAS_HEIGHT : MenuGlyphs.ATLAS_HEIGHT;
         int multiplier = full ? integerScale(scale) : 1;
         selectBatch(full ? Batch.FULL : Batch.COMPACT);
+        int column = 0, line = 0;
         for (int i = 0; i < text.length(); i++) {
-            char character = MenuGlyphs.normalized(text.charAt(i));
+            char source = text.charAt(i);
+            if (source == '\r' || source == '\n') {
+                if (source == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') i++;
+                column = 0; line++; continue;
+            }
+            int glyphColumn = column++;
+            if (source >= '\u2190' && source <= '\u2193') {
+                drawArrow(source, originX + glyphColumn * cellWidth * multiplier,
+                        originY + line * cellHeight * multiplier, cellWidth, cellHeight, multiplier, r, g, b, a);
+                selectBatch(full ? Batch.FULL : Batch.COMPACT);
+                continue;
+            }
+            char character = MenuGlyphs.normalized(source);
             if (character == ' ') continue;
             int index = character - 32;
             int sourceX = (index % MenuGlyphs.COLUMNS) * cellWidth;
@@ -97,7 +110,7 @@ public final class MenuPixelFont extends PixelFont {
             ensureCapacity(quads + 1);
             TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(vertices,
                     quads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
-                    originX + i * cellWidth * multiplier, 224 - originY - cellHeight * multiplier,
+                    originX + glyphColumn * cellWidth * multiplier, 224 - originY - (line + 1) * cellHeight * multiplier,
                     cellWidth * multiplier, cellHeight * multiplier,
                     (float) sourceX / atlasWidth,
                     1f - (float) (sourceY + cellHeight) / atlasHeight,
@@ -107,6 +120,28 @@ public final class MenuPixelFont extends PixelFont {
             quads++;
         }
         if (!batching) flushActiveBatch();
+    }
+
+    /** Native arrow heads and stems; never route control icons through ASCII substitutions. */
+    private void drawArrow(char arrow, int x, int y, int cellWidth, int cellHeight, int scale,
+                           float r, float g, float b, float a) {
+        int[] rows = switch (arrow) {
+            case '\u2190' -> new int[]{0, 4, 8, 31, 8, 4, 0};
+            case '\u2191' -> new int[]{4, 10, 21, 4, 4, 4, 4};
+            case '\u2192' -> new int[]{0, 4, 2, 31, 2, 4, 0};
+            case '\u2193' -> new int[]{4, 4, 4, 4, 21, 10, 4};
+            default -> throw new IllegalArgumentException("Unsupported arrow");
+        };
+        int left = x + (cellWidth - 5) * scale / 2;
+        int top = y + (cellHeight - 7) * scale / 2;
+        for (int row = 0; row < rows.length; row++) {
+            int bits=rows[row];
+            for (int column=0;column<5;) {
+                if ((bits & (1 << (4-column)))==0) { column++; continue; }
+                int first=column++; while(column<5 && (bits & (1 << (4-column)))!=0) column++;
+                fillRect(left+first*scale,top+row*scale,(column-first)*scale,scale,r,g,b,a);
+            }
+        }
     }
 
     @Override

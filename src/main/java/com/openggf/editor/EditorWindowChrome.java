@@ -41,6 +41,9 @@ public interface EditorWindowChrome extends AutoCloseable {
 
     boolean isActive();
 
+    /** A frontend may present the shared form model natively while keeping edits with its owner. */
+    default boolean handlesMenu(com.openggf.editor.project.EditorProjectMenu menu) { return false; }
+
     /**
      * Game viewport {@code {x, y, width, height}} in framebuffer pixels with OpenGL's bottom-left
      * origin; an empty array restores the engine's default layout; null leaves it unchanged.

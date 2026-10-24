@@ -61,6 +61,7 @@ class TestStageplayRouteOverlayPictures {
                     public StageplayRouteJob.Update pollRoute(){return session.pollRoute();}
                     public void requestRouteApply(StageplayDocument d,Path root) throws java.io.IOException {session.requestRouteApply(d,root);}
                     public void cancelRoute(){session.cancelRoute();}
+                    public StageplayGround.Report ground(StageplayDocument d,Path root,int frame,StageplayGround.Batch batch)throws java.io.IOException{return session.ground(d,root,frame,batch);}
                 });
                 workspace.activate();workspace.selectActor("hero");workspace.seek(30);
                 var level=new LevelEditorController();
@@ -74,6 +75,11 @@ class TestStageplayRouteOverlayPictures {
                 workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
                 workspace.menu().setValue("x","400");workspace.menu().setValue("y","624");
                 assertEquals("Walk",workspace.menu().values().get("travelSpeed"));
+                workspace.menu().pick("x");workspace.pickPoint(320,600);workspace.positionPicker().refreshFloor();
+                assertNotNull(workspace.positionPicker().floor(),workspace.positionPicker().detail());
+                for(int warm=0;warm<4;warm++)draw(chrome,session,workspace);
+                video.frame(output.resolve("engine-position-picker.png"));
+                workspace.cancelPositionPick();assertEquals("400",workspace.menu().values().get("x"));
                 for(int i=0;i<120;i++){
                     draw(chrome,session,workspace);
                     glViewport(0,0,WIDTH,HEIGHT);
@@ -91,6 +97,10 @@ class TestStageplayRouteOverlayPictures {
                 StageplayStore.write(output.resolve("engine-source.stageplay"),source);
                 assertNotNull(workspace.routeOverlay()); assertFalse(workspace.routeOverlay().applied());
                 assertEquals("Route proposed",workspace.routeOverlay().title());
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-ready-menu.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-proposed.png"):null);}
                 // The film renderer owns no route state. Redrawing its opaque view removes every
@@ -127,6 +137,10 @@ class TestStageplayRouteOverlayPictures {
                 assertEquals("Route search limit reached.",workspace.status());
                 assertTrue(workspace.routeOverlay().reason().contains("Reachability is still unknown"));
                 Files.writeString(output.resolve("engine-failed-result.json"),StageplayRouteProtocol.encodeResult(failed));
+                workspace.invoke(StageplayWorkspace.Action.ROUTE_HELPER);
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-failed-menu.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-failed.png"):null);}
                 // A camera draft changes only projection, never the samples.

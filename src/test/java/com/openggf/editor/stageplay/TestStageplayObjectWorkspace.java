@@ -201,7 +201,7 @@ class TestStageplayObjectWorkspace {
         var role = new ObjectActor("mask","Mask","s3k",7,0,0x8B,0,-1,List.of(key(0,true,ObjectMode.POSE,List.of())),List.of());
         var scene = StageplayDocument.empty("s3k",7,0,0,0,320,224).withObjectActors(List.of(role));
         var workspace=workspace(scene); workspace.invoke(OBJECTS); choose(workspace,6); choose(workspace,4);
-        choose(workspace,0); assertEquals("Declared native appearance exclusions",workspace.menu().title());
+        choose(workspace,0); assertEquals("Appearance limits",workspace.menu().title());
         choose(workspace,0); assertEquals("Appearance restriction 1",workspace.menu().title());
         assertEquals(scene,workspace.controller().document(),"Viewing cited exclusions does not modify the document");
     }

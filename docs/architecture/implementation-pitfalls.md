@@ -23,6 +23,13 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+Offscreen desktop form pictures reuse an existing `ImGuiEditorChrome` when one is
+already alive in the capture. A nested host caused a missing-current-context
+assertion during teardown; restoring the previous handle alone then crashed at
+`ImFontAtlas::Clear`. Keep one chrome owner per active capture, with sequentially
+owned contexts for standalone surveys. See the
+[menu readability audit](audits/2026-10-24-stageplay-menu-readability.md).
+
 A headless boot must release its audio base-ROM reference before closing the
 owned ROM. A later title boot installs its audio profile before the new ROM;
 otherwise the loader reads the previous, closed FileChannel. Close/reboot
