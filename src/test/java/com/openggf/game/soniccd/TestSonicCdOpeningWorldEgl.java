@@ -578,6 +578,127 @@ class TestSonicCdOpeningWorldEgl {
         }
     }
 
+    @Test void actualEglControllerDeathRebuildsTheLevelKeepsTwoLivesAndReplaysTheNewVisit() throws Exception {
+        Assumptions.assumeTrue(Boolean.getBoolean("soniccd.opening.egl"), "Explicit actual EGL/media opt-in");
+        assertEquals("surfaceless-egl", System.getProperty("openggf.headless.gl"));
+        assertNull(System.getenv("DISPLAY")); assertNull(System.getenv("WAYLAND_DISPLAY"));
+        String media = System.getProperty("soniccd.media.root"); assertNotNull(media);
+        CdGameDataSource source;
+        try (var files = Files.list(Path.of(media).resolve("USA"))) {
+            var cues = files.filter(f -> f.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); source = CdStockLaunch.prepare(cues.getFirst(), CdStockLaunch.Request.r11a());
+        }
+        String log = InputScriptCompiler.compileToInputLog("2 -;108 R;500 -;77 R;230 -;100 R;120 -;30 R");
+        var movie = new Bk2MovieLoader().parseInputLogText(Path.of("restart-world-input"), log.lines().toList());
+        Path output = openCaptureOutput(log, "soniccd.restart.output");
+        if (output != null) Files.writeString(output.resolve("restart-state.csv"),
+                "call,load_generation,level_frames,vint_delta,routine,x16_16,y16_16,lives,rings,reset,level_restart,powerup,camera_x,camera_y,input_mask,action_mask\n",
+                StandardOpenOption.CREATE_NEW);
+        try (var boot = new HeadlessGameBoot(320, 224)) {
+            try {
+                var loop = boot.bootSonicCdOpeningObjects(source);
+                assertEquals(NullAudioBackend.class, GameServices.audio().getBackend().getClass());
+                var mode = SessionManager.getCurrentGameplayMode();
+                var module = assertInstanceOf(SonicCdGameModule.class, mode.getWorldSession().getGameModule());
+                var old = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var oldFrame = module.requirePlayerFrame();
+                long generation = GameServices.level().getCompletedProductionLoadGeneration();
+                var registry = mode.getRewindRegistry();
+                com.openggf.game.rewind.CompositeSnapshot retiredFull = null, retiredCourse = null;
+                com.openggf.game.rewind.CompositeSnapshot newFull = null, newCourse = null;
+                Capture beforeCut = null, cut = null, beforeReplay = null;
+                RgbaImage cutPixels = null, replayPixels = null;
+                var rows = new ArrayList<Bk2FrameInput>(); var expected = new ArrayList<Capture>();
+                int restartCall = -1, newVisitCall = -1;
+                for (int index = 0; index < movie.getFrameCount(); index++) {
+                    var input = movie.getFrame(index); step(loop, input);
+                    var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                    var frame = module.requirePlayerFrame(); var state = frame.state(); var motion = state.motion();
+                    var image = render(module, true);
+                    if (output != null) Files.writeString(output.resolve("restart-state.csv"), String.format(Locale.ROOT,
+                            "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d%n", index + 1,
+                            GameServices.level().getCompletedProductionLoadGeneration(), GameServices.level().getFrameCounter(),
+                            frame.vIntClock().deltaSinceAdmittedCut(), motion.routine(), motion.centreX16_16(),
+                            motion.centreY16_16(), runtime.ringGlobals().lives(), runtime.ringGlobals().rings(),
+                            state.timers().reset(), runtime.levelGlobals().levelRestart(), runtime.levelGlobals().powerup(),
+                            GameServices.camera().getX(), GameServices.camera().getY(), input.p1InputMask(), input.p1ActionMask()),
+                            StandardOpenOption.APPEND);
+                    if (runtime == old && state.timers().reset() == 1 && motion.routine() == 8) beforeCut = capture(module);
+                    if (restartCall < 0 && runtime.levelGlobals().levelRestart() != 0) {
+                        restartCall = index + 1; assertEquals(1112, restartCall); assertNotNull(beforeCut);
+                        assertSame(old, runtime); assertFalse(old.closed()); assertEquals(2, runtime.ringGlobals().lives());
+                        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+                        cut = capture(module); cutPixels = image;
+                        assertArrayEquals(beforeCut.cpu().bytes(), cut.cpu().bytes());
+                        assertEquals(beforeCut.cpu().provenance(), cut.cpu().provenance());
+                        assertEquals(beforeCut.camera(), cut.camera()); assertEquals(beforeCut.scroll(), cut.scroll());
+                        assertEquals(beforeCut.objects().ringGlobals(), cut.objects().ringGlobals());
+                        assertEquals(beforeCut.objects().spillGlobals(), cut.objects().spillGlobals());
+                        retiredFull = registry.capture(); retiredCourse = registry.captureCourse();
+                        if (output != null) ScreenshotCapture.savePNG(image, output.resolve("restart-cut.png"));
+                    }
+                    if (newVisitCall < 0 && runtime != old) {
+                        newVisitCall = index + 1; assertEquals(restartCall + 1, newVisitCall); assertEquals(1113, newVisitCall);
+                        assertNotNull(cut); assertTrue(old.closed()); assertTrue(oldFrame.closed());
+                        assertEquals(generation + 1, GameServices.level().getCompletedProductionLoadGeneration());
+                        assertEquals(1, GameServices.level().getFrameCounter());
+                        assertEquals(1, frame.environment().globals().levelFrames());
+                        assertEquals(2, runtime.ringGlobals().lives()); assertEquals(0, runtime.ringGlobals().rings());
+                        assertEquals(2, motion.routine()); assertEquals(64 << 16, motion.centreX16_16());
+                        assertEquals(0x76B << 16, motion.centreY16_16());
+                        assertEquals(0, GameServices.camera().getX()); assertEquals(0x70B, GameServices.camera().getY());
+                        assertEquals(0, runtime.levelGlobals().levelRestart());
+                        assertArrayEquals(cut.actor().state().history().bytes().copy(), state.history().bytes().copy());
+                        assertEquals(0, state.history().index());
+                        assertArrayEquals(cut.shared().artState().residentBank().copy(), frame.artState().residentBank().copy());
+                        assertArrayEquals(cut.objects().powerupArtState().residentBank().copy(), runtime.powerupArtState().residentBank().copy());
+                        assertTrue(runtime.displayedFrame().tiles().isEmpty());
+                        var stable = capture(module); var staleFull = retiredFull; var staleCourse = retiredCourse;
+                        assertThrows(IllegalArgumentException.class, () -> registry.restore(staleFull));
+                        assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(staleCourse));
+                        assertCapture(stable, module);
+                        newFull = registry.capture(); newCourse = registry.captureCourse();
+                        beforeReplay = stable; replayPixels = image;
+                        if (output != null) ScreenshotCapture.savePNG(image, output.resolve("new-visit-init.png"));
+                    } else if (newVisitCall > 0) {
+                        rows.add(input); expected.add(capture(module));
+                    }
+                    if (output != null && newVisitCall > 0 && index + 1 == newVisitCall + 5)
+                        ScreenshotCapture.savePNG(image, output.resolve("new-visit-sonic.png"));
+                }
+                assertEquals(1112, restartCall); assertEquals(1113, newVisitCall); assertNotNull(beforeReplay);
+                assertEquals(movie.getFrameCount() - newVisitCall, rows.size());
+                var runtime = assertInstanceOf(CdOpeningObjectRuntime.class, module.getGameService(NativeDynamicObjectPass.class));
+                var after = capture(module); var finalPixels = render(module, true);
+                int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
+                assertTrue(runtime.displayedFrame().tiles().stream().anyMatch(tile ->
+                        tile.patternId() >= playerBase && tile.patternId() < playerBase + 24),
+                        "The rebuilt visit must actually display Sonic, not only scenery");
+                assertFalse(Arrays.equals(cutPixels.pixels(), finalPixels.pixels()));
+                assertEquals(2, runtime.ringGlobals().lives());
+                for (boolean courseOnly : List.of(false, true)) {
+                    if (courseOnly) registry.restoreCourse(newCourse); else registry.restore(newFull);
+                    assertCapture(beforeReplay, module); assertArrayEquals(replayPixels.pixels(), render(module, true).pixels());
+                    for (int index = 0; index < rows.size(); index++) {
+                        step(loop, rows.get(index)); assertCapture(expected.get(index), module);
+                        render(module, true); assertCapture(expected.get(index), module);
+                    }
+                    assertCapture(after, module); assertArrayEquals(finalPixels.pixels(), render(module, true).pixels());
+                }
+                if (output != null) {
+                    ScreenshotCapture.savePNG(finalPixels, output.resolve("new-visit-final.png"));
+                    Files.writeString(output.resolve("outcome.txt"), "PASS: controller-only death, native restart cut and rebuilt USA R11A visit retaining two lives.\n"
+                            + "Restart cut " + restartCall + "; new visit " + newVisitCall + "; rendered new-visit replay rows " + rows.size() + " in each rewind mode.\n"
+                            + "Actual OpenGGF DEV: no LevelStart fade/loading/title/HUD/audio/PLC timing; clock seed0 and raw-held carry are explicit policy.\n"
+                            + "No native timing/pixel/full-game parity claim.\n", StandardOpenOption.CREATE_NEW);
+                }
+            } finally {
+                try { SessionManager.closeGameplaySession(); }
+                finally { GraphicsManager.destroyForReinit(); }
+            }
+        }
+    }
+
     private record HurtRouteOutcome(int hitCall, int landingCall, int spilled) { }
 
     private HurtRouteOutcome runWalkingHurtRoute(String script, String outputProperty,

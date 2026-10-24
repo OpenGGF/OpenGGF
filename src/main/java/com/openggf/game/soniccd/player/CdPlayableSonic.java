@@ -138,7 +138,7 @@ public final class CdPlayableSonic extends AbstractPlayableSprite implements Nat
         projectNativeState();
     }
 
-    /** Shared owner has built the CPU SAT and written bit7; project only, without another sprite build. */
+    /** Shared owner built the CPU SAT, or ended the cycle at LevelStart; project only, without another build. */
     public void finishSharedAfterCamera() {
         if (objectPass == null || !awaitingSpriteBuild) {
             throw new IllegalStateException("No shared CD slot awaits its completed sprite table");

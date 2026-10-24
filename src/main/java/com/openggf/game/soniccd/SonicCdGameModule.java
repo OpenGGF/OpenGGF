@@ -10,6 +10,7 @@ import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.NativeRewindRestoreGuard;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
@@ -17,14 +18,18 @@ import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.soniccd.level.SonicCdLevel;
 import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
+import com.openggf.game.soniccd.objects.CdObjectPlacementRuntime;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerEngineRules;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
+import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
+import com.openggf.game.soniccd.resources.CdPowerupArtRuntime;
 import com.openggf.level.Level;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -65,6 +70,103 @@ public final class SonicCdGameModule implements GameModule {
     private PlcLifecycleService openingPlc;
     private CdR11aAssets authenticatedOpeningAssets;
     private boolean constructingPlayer;
+    private RestartCarry stagedRestart;
+    private LevelLoadContext stagedRestartContext;
+
+    public enum RestartBoundary { GAME_OVER_EXIT, RESTART_PATH }
+    public static final class UnsupportedRestart extends UnsupportedOperationException {
+        private final RestartBoundary boundary;
+        private UnsupportedRestart(RestartBoundary boundary) { super(boundary.name()); this.boundary = boundary; }
+        public RestartBoundary boundary() { return boundary; }
+    }
+
+    /** Immutable handoff between visits; never part of a captured Frame or a second global store. */
+    record RestartCarry(CdRingGlobals ring, CdPlayerBody.ContactGlobals contact,
+                        CdOpeningObjectRuntime.ScoreGlobals score, CdLevelGlobals level, CdAssetBytes savedObjectFlags,
+                        CdPlayerFrameRuntime.RestartIngress player, CdPowerupArtRuntime.State powerupArt) {
+        RestartCarry {
+            Objects.requireNonNull(ring); Objects.requireNonNull(contact); Objects.requireNonNull(score);
+            Objects.requireNonNull(level); Objects.requireNonNull(savedObjectFlags);
+            Objects.requireNonNull(player); Objects.requireNonNull(powerupArt);
+            if (savedObjectFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
+                throw new IllegalArgumentException("Complete native saved-object bank required");
+            }
+        }
+    }
+
+    /**
+     * LevelStart .NoReset/.NormalLoad (Level/Main.asm:37-53,154-216,278-329). Pinned Present checkpoint0 path.
+     * This pure policy uses explicit values: score/lives/history/Sonic art and powerup VRAM carry; ClearFlowers
+     * clears powerup CPU only. DEV omits fade/title/HUD/music/PLC rows, uses seed0 in install, carries rawHeld as
+     * the last represented fade-time pad read, and keeps HUD flags/control lock at the existing DEV values.
+     */
+    static RestartCarry restartCarry(CdRingGlobals ring, CdLevelGlobals level, CdPlayerBody.ContactGlobals contact,
+                                     CdOpeningObjectRuntime.ScoreGlobals score, CdAssetBytes savedFlags,
+                                     CdPlayerBody.Environment environment, CdPlayerBody.State actor,
+                                     CdPlayerArtRuntime.State art, CdPowerupArtRuntime.State powerupArt) {
+        Objects.requireNonNull(ring); Objects.requireNonNull(level); Objects.requireNonNull(contact);
+        Objects.requireNonNull(score); Objects.requireNonNull(savedFlags); Objects.requireNonNull(environment);
+        Objects.requireNonNull(actor); Objects.requireNonNull(art); Objects.requireNonNull(powerupArt);
+        if (savedFlags.length() != CdObjectPlacementRuntime.SAVED_BANK_BYTES) {
+            throw new IllegalArgumentException("Complete native saved-object bank required");
+        }
+        if (ring.lives() == 0) throw new UnsupportedRestart(RestartBoundary.GAME_OVER_EXIT);
+        var gates = environment.movement().gates();
+        if (level.levelRestart() != 1 || level.checkpoint() != 0 || level.spawnMode() != 0
+                || (level.plcLoadFlags() & 1) == 0 || level.timeOver() != 0
+                || (level.powerup() != 0 && level.powerup() != 8)
+                || gates.zoneAct() != 0 || gates.timeZone() != 1 || environment.globals().timeAttackMode() != 0) {
+            throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
+        }
+        var debug = environment.movement().globals();
+        var player = new CdPlayerFrameRuntime.RestartIngress(actor.history().bytes(), art.cpuBuffer(), art.residentBank(),
+                debug.debugAngle(), debug.debugAngleShift(), debug.debugQuadrant(), debug.debugFloorDistance(),
+                environment.globals().debugCheat(), environment.controls().rawHeld());
+        return new RestartCarry(new CdRingGlobals(0, ring.lives(), 0, 0, 0, 0, 0, 0),
+                new CdPlayerBody.ContactGlobals(0, 0, contact.combineRing()),
+                new CdOpeningObjectRuntime.ScoreGlobals(score.score(), score.nextLifeScore(), 0),
+                new CdLevelGlobals(0, 0, 0, 0, level.plcLoadFlags() | 3, 0, 2, 0, 0), savedFlags, player,
+                new CdPowerupArtRuntime.State(CdAssetBytes.copyOf(new byte[0x480]), powerupArt.residentBank()));
+    }
+
+    boolean restartStaged() { return stagedRestart != null; }
+    boolean ownsRestartContext(LevelLoadContext context) {
+        return openingObjectsAdmission && stagedRestart != null && context == stagedRestartContext;
+    }
+
+    /**
+     * Called at the NEXT beforeFrame, after the restart-cut token and old-epoch recording have finished.
+     * All preflight precedes retirement. The ordinary load owner emits the one boundary and generation;
+     * no generic death/fade request, per-test reset or extra rewind reset is used.
+     */
+    void restartOpeningWorld() {
+        if (!openingObjectsAdmission || stagedRestart != null) {
+            throw new IllegalStateException("CD restart requires its unstaged opening owner");
+        }
+        try {
+            requireTerrainPlayerReady(); requireOpeningClosedCut(); playerActor.requireCompletedNativeFrame();
+            var objects = openingObjects.captureClosedCut();
+            var shared = playerFrame.captureShared(); var actor = playerFrame.captureActor();
+            // No admitted writer changes these DEV globals yet. A future native owner must add them to carry.
+            if (!openingObjects.devGlobals().equals(new CdOpeningObjectRuntime.DevGlobals(0, 0))) {
+                throw new UnsupportedRestart(RestartBoundary.RESTART_PATH);
+            }
+            var carry = restartCarry(objects.ringGlobals(), objects.levelGlobals(), objects.contactGlobals(),
+                    objects.scoreGlobals(), objects.placement().savedFlags(), shared.environment(), actor.state(),
+                    shared.artState(), objects.powerupArtState());
+            var manager = playerMode.getLevelManager();
+            stagedRestart = carry;
+            stagedRestartContext = SonicCdPlayerInitProfile.openingObjectsRestartContext();
+            try { manager.loadLevel(0, LevelLoadMode.FULL, stagedRestartContext); }
+            catch (IOException failure) { throw new UncheckedIOException("Cannot reconstruct the CD restart visit", failure); }
+        } catch (RuntimeException | Error failure) {
+            closePlayerCycleAfterFailure(failure);
+            throw failure;
+        } finally {
+            stagedRestart = null;
+            stagedRestartContext = null;
+        }
+    }
 
     // This stable module adapter owns shared state only. Actor Body/history/display,
     // sounds and the actual sprite packet live exclusively in the actor extra.
@@ -89,7 +191,7 @@ public final class SonicCdGameModule implements GameModule {
     private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
                                       CdOpeningObjectRuntime.Snapshot objects,
                                       SonicCdPlayerPresentation.ScrollPublication scroll) { }
-    private final RewindSnapshottable<OpeningSharedState> sharedOpeningAdapter = new RewindSnapshottable<>() {
+    private final NativeRewindRestoreGuard<OpeningSharedState> sharedOpeningAdapter = new NativeRewindRestoreGuard<>() {
         @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
         @Override public OpeningSharedState capture() {
             requireTerrainPlayerReady();
@@ -98,7 +200,7 @@ public final class SonicCdGameModule implements GameModule {
             return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut(),
                     playerPresentation.captureScrollPublication());
         }
-        @Override public void restore(OpeningSharedState snapshot) {
+        @Override public void validateRestore(OpeningSharedState snapshot) {
             requireTerrainPlayerReady();
             requireOpeningClosedCut();
             playerActor.requireCompletedNativeFrame();
@@ -108,6 +210,9 @@ public final class SonicCdGameModule implements GameModule {
             playerFrame.validateSharedRestore(snapshot.frame());
             openingObjects.validateRestore(snapshot.objects());
             playerPresentation.validateScrollPublication(snapshot.scroll());
+        }
+        @Override public void restore(OpeningSharedState snapshot) {
+            validateRestore(snapshot); // Keep direct adapter restore guarded as well as composite restore.
             try {
                 playerFrame.restoreShared(snapshot.frame());
                 openingObjects.restore(snapshot.objects());
@@ -245,9 +350,11 @@ public final class SonicCdGameModule implements GameModule {
         }
         playerMode = mode;
         try {
+            var carry = stagedRestart;
             // Declared DEV native V-int seed0 at this admitted cut, not measured retail entry.
             playerFrame = openingObjectsAdmission
-                    ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0)
+                    ? (carry == null ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0)
+                            : CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets(), 0, carry.player()))
                     : CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
             if (openingObjectsAdmission) {
                 var banks = playerPresentation.reserveOpeningPictureBank();
@@ -255,19 +362,25 @@ public final class SonicCdGameModule implements GameModule {
                 try {
                     // Explicit DEVELOPMENT startup policy, never title/new-game proof.
                     // Reserved owners 1..31 absent, goodFuture=0, object art preloaded.
-                    openingObjects = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
-                            candidate.assets(), playerFrame, new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0),
-                            new CdPlayerBody.ContactGlobals(0, 0, 0),
-                            new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0),
+                    var initialRing = carry == null ? new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0) : carry.ring();
+                    var initialContact = carry == null ? new CdPlayerBody.ContactGlobals(0, 0, 0) : carry.contact();
+                    var initialScore = carry == null ? new CdOpeningObjectRuntime.ScoreGlobals(0, 5000, 0) : carry.score();
+                    var initialLevel = carry == null ? new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0) : carry.level();
+                    var foreground = new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF);
+                    openingObjects = carry == null ? CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                            candidate.assets(), playerFrame, initialRing, initialContact, initialScore,
                             // Declared post-LevelStart level globals (Level/Main.asm): levelRestart 0 (:299);
                             // updateHUDTime 0 is the DEV HUD omission, native :304 writes 1; checkpoint 0 (:41 on
                             // a first entry, no Checkpoint owner); spawnMode 0 (:301); plcLoadFlags $03 (BSET #0
                             // :37, BSET #1 :271); flowerCount 0 (:168); fadeEnableDisplay 2 (:314 writes 1, the
                             // next VInt_PalFade :897-899 adds 1); powerup 0 (:167); timeOver 0 (:293).
-                            new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0),
+                            initialLevel,
                             new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
-                            new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF),
-                            playerFrame::applyObjectPrimaryAngle);
+                            foreground, playerFrame::applyObjectPrimaryAngle)
+                            : CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(candidate.assets(), playerFrame,
+                                    initialRing, initialContact, initialScore, initialLevel, carry.savedObjectFlags(),
+                                    carry.powerupArt(), new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks, foreground,
+                                    playerFrame::applyObjectPrimaryAngle);
                     openingPlc = composeOpeningPlc(openingObjects, playerFrame);
                 } catch (IOException failure) {
                     throw new UncheckedIOException("Cannot stage authenticated CD opening objects", failure);

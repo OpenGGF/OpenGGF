@@ -39,6 +39,13 @@ public final class SonicCdPlayerInitProfile implements LevelInitProfile {
         return SonicCdLevelInitProfile.staticStageContext();
     }
 
+    /** Descriptive cause only; the exact context also requires the module's private staged carry. */
+    public static LevelLoadContext openingObjectsRestartContext() {
+        var context = SonicCdLevelInitProfile.staticStageContext();
+        context.setLoadCause(LevelLoadCause.FULL_DEATH_RELOAD);
+        return context;
+    }
+
     @Override public List<InitStep> levelLoadSteps(LevelLoadContext context) {
         // A rejected replacement request must not cancel the already admitted actor.
         admittedAttempt = false;
@@ -51,15 +58,17 @@ public final class SonicCdPlayerInitProfile implements LevelInitProfile {
             admittedAttempt = true;
             module.closeTerrainPlayer();
         }));
-        steps.addAll(terrain.levelLoadSteps(context));
+        steps.addAll(module.ownsRestartContext(context) ? terrain.restartLevelLoadSteps(context) : terrain.levelLoadSteps(context));
         steps.add(new InitStep(module.openingObjectsAdmission() ? "InstallOpeningObjectsPlayer" : "InstallTerrainPlayer", "Stage the source frame and exact registered Sonic factory after terrain/adapters",
                 module::installTerrainPlayer));
         return List.copyOf(steps);
     }
 
-    private static void validateRequest(LevelLoadContext context) {
+    private void validateRequest(LevelLoadContext context) {
+        boolean restart = module.ownsRestartContext(context);
         if (context.getLevelIndex() != 0 || context.getLoadMode() != LevelLoadMode.FULL
-                || context.getLoadCause() != LevelLoadCause.FULL_LEVEL_ASSEMBLY
+                || context.getLoadCause() != (restart ? LevelLoadCause.FULL_DEATH_RELOAD : LevelLoadCause.FULL_LEVEL_ASSEMBLY)
+                || (module.restartStaged() && !restart)
                 || context.getAssemblyKind() != LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY
                 || !context.isIncludePostLoadAssembly() || context.hasCheckpoint()
                 || context.getRom() != null || context.isShowTitleCard()

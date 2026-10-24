@@ -22,7 +22,9 @@ import java.util.Objects;
  * registered when a snapshot was captured may have been deregistered
  * since); such entries are skipped. The reverse — registered subsystems
  * with no entry in the snapshot — explicitly resets them, failing closed when
- * a subsystem does not provide a missing-snapshot reset implementation.
+ * a subsystem does not provide a missing-snapshot reset implementation. An
+ * admitted native restore guard instead rejects a missing payload before any
+ * subsystem is restored or reset.
  * This key compatibility applies only after world admission: engine registries
  * reject foreign or unscoped composites before any subsystem mutation. Public
  * constructors create unscoped private registries compatible with Map snapshots
@@ -198,6 +200,7 @@ public final class RewindRegistry {
 
     public void restore(CompositeSnapshot cs) {
         requireScope(cs);
+        validateNativePublications(cs, false);
         if (profiler != null) {
             profiler.beginSection("rewind.restore");
         }
@@ -242,6 +245,28 @@ public final class RewindRegistry {
         keys.removeIf(key -> entries.get(key) == modeAdapter);
         if (!keys.equals(snapshot.entries().keySet()))
             throw new IllegalArgumentException("Course checkpoint belongs to a different registry layout");
+        validateNativePublications(snapshot, true);
+    }
+
+    /** A current native service may reject a retired visit before unrelated adapters can mutate. */
+    private void validateNativePublications(CompositeSnapshot snapshot, boolean courseOnly) {
+        for (var entry : entries.entrySet()) {
+            var adapter = entry.getValue();
+            if (courseOnly && adapter == modeAdapter) continue;
+            // Authority belongs to this registry's actual root publication, never an interface or reported key alone.
+            if (nativePublicationAuthorities.containsKey(entry.getKey())
+                    && adapter instanceof NativeRewindRestoreGuard<?> guard) {
+                if (!snapshot.containsKey(entry.getKey())) {
+                    throw new IllegalArgumentException("Missing native rewind capture: " + entry.getKey());
+                }
+                validateNativeGuard(guard, snapshot.get(entry.getKey()));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void validateNativeGuard(NativeRewindRestoreGuard<?> guard, Object snapshot) {
+        ((NativeRewindRestoreGuard<Object>) guard).validateRestore(snapshot);
     }
 
     private void requireScope(CompositeSnapshot snapshot) {

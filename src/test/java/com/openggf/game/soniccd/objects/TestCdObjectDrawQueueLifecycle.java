@@ -304,4 +304,92 @@ class TestCdObjectDrawQueueLifecycle {
             assertThrows(IllegalStateException.class, h.queue::beginPass);
         }
     }
+
+    // U5-D restart cut, written before production (pin 1ecc5f3a). Level_MainLoop:407-408 branches to LevelStart
+    // after RunObjects, so DrawObjects (:421) never drains this pass; LevelStart rewrites objDrawQueue at :170-176
+    // with no reader in between. Catches draining, bit-7 writes, mapping or camera work at the cut, a republished
+    // or cleared CPU SAT, or pointers that survive into the next pass.
+    @Test
+    void levelStartAbandonsOnlyTheCollectingPassAndKeepsTheExactCpuSatWithoutPortWork() {
+        var h = new Harness();
+        h.put(0, live(1, 0, 128, 0, 128, MAP, 0, 5));
+        h.put(32, live(1, 0, 128, 0, 128, MAP, 0, 7));
+        h.put(33, live(1, 0, 128, 0, 128, MAP, 0, 9));
+        h.queue.beginPass();
+        h.enqueue(32, 0);
+        var built = h.queue.finishAfterCamera(cameras(0, 0));
+        assertEquals(1, built.spriteCount());
+        var builtCut = h.queue.captureClosedCut();
+        h.queue.beginPass();
+        for (int priority = 0; priority < BUCKET_COUNT; priority++) {
+            assertEquals(EnqueueResult.QUEUED, h.enqueue(33, priority));
+        }
+        assertEquals(EnqueueResult.QUEUED, h.enqueue(0, 3));
+        int reads = h.reads;
+        var writes = List.copyOf(h.writes);
+        int resolutions = h.resolutions.size();
+        var player = h.live[0];
+        var later = h.live[33];
+        h.queue.abandonPassAtLevelStart();
+        assertEquals(Phase.CLOSED_CUT, h.queue.phase());
+        assertSame(built, h.queue.cpuSat(), "no DrawObjects: the previous bytes, count and provenance stay exactly");
+        assertEquals(reads, h.reads);
+        assertEquals(writes, h.writes, "no DrawDone bit-7 write for an abandoned pointer");
+        assertEquals(resolutions, h.resolutions.size());
+        assertSame(player, h.live[0]);
+        assertSame(later, h.live[33]);
+        var cut = h.queue.captureClosedCut();
+        h.queue.validateRestore(builtCut);
+        h.queue.restore(builtCut);
+        assertSame(built, h.queue.cpuSat());
+        h.queue.restore(cut);
+        assertSame(built, h.queue.cpuSat());
+        h.queue.beginPass(); // Undrained pointers would fail this pass; LevelStart's clear leaves none.
+        var next = h.queue.finishAfterCamera(cameras(0, 0));
+        assertEquals(0, next.spriteCount());
+        assertEquals(reads, h.reads, "abandoned pointers are never dereferenced later");
+        assertEquals(writes, h.writes);
+        assertEquals(resolutions, h.resolutions.size());
+    }
+
+    // Catches reopening a terminal owner, a second abandon of the same pass, or a reentrant abandon that a
+    // swallowing callback could use to publish. Misphase keeps the existing non-failing rejection.
+    @Test
+    void levelStartAbandonFollowsTheExistingMisphasePolicyAndNeverReopensTerminalOwners() {
+        var h = new Harness();
+        var initial = h.queue.cpuSat();
+        assertThrows(IllegalStateException.class, h.queue::abandonPassAtLevelStart);
+        assertEquals(Phase.CLOSED_CUT, h.queue.phase(), "rejected like a misphased beginPass, without failing");
+        assertSame(initial, h.queue.cpuSat());
+        h.queue.beginPass();
+        h.queue.abandonPassAtLevelStart();
+        assertThrows(IllegalStateException.class, h.queue::abandonPassAtLevelStart, "one pass is abandoned once");
+        assertEquals(Phase.CLOSED_CUT, h.queue.phase());
+        assertSame(initial, h.queue.cpuSat());
+        for (boolean drain : new boolean[]{false, true}) {
+            var r = new Harness();
+            r.put(32, live(1, 0, 128, 0, 128, MAP, 0, 0));
+            r.queue.beginPass();
+            if (drain) {
+                r.enqueue(32, 0);
+                r.readHook = ref -> assertThrows(IllegalStateException.class, r.queue::abandonPassAtLevelStart);
+                assertThrows(IllegalStateException.class, () -> r.queue.finishAfterCamera(cameras(0, 0)));
+            } else {
+                r.writeHook = (ref, value) -> assertThrows(IllegalStateException.class, r.queue::abandonPassAtLevelStart);
+                assertThrows(IllegalStateException.class, () -> r.enqueue(32, 0));
+            }
+            assertEquals(Phase.FAILED, r.queue.phase());
+            assertThrows(IllegalStateException.class, r.queue::abandonPassAtLevelStart);
+            assertThrows(IllegalStateException.class, r.queue::beginPass);
+            assertThrows(IllegalStateException.class, r.queue::captureClosedCut);
+            assertEquals(Phase.FAILED, r.queue.phase());
+        }
+        var closed = new Harness();
+        closed.queue.beginPass();
+        closed.queue.close();
+        assertEquals(Phase.CLOSED, closed.queue.phase());
+        assertThrows(IllegalStateException.class, closed.queue::abandonPassAtLevelStart);
+        assertThrows(IllegalStateException.class, closed.queue::captureClosedCut);
+        assertEquals(Phase.CLOSED, closed.queue.phase());
+    }
 }

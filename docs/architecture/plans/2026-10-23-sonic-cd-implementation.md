@@ -3554,3 +3554,65 @@ Independent source review found noP1/P2 and re-derived the three real mapping
 alignment bytes, table/PLC operands and reader adjacency. This authenticates
 data only. The Floating Block body, live mapping/art presentation, solid-player
 state and world dispatch are separate work, not an act-completion claim.
+
+### Carried restart and native restore admission — 24 October 2026
+
+The opening World now ends the source LevelStart cut after every object slot,
+without scrolling, rebuilding SAT or running the Ring/spill tail. The old PLC
+token drains on its own owners, and the cut remains capturable. The next
+beforeFrame builds an explicit native carry and invokes the existing level
+load owner before admitting the new loop. Lives, score/next-life, saved object
+bank, history, Sonic art, debug scratch and the declared raw-held latch carry;
+the source-cleared fields use explicit ingress. Powerup CPU RAM is cleared and
+its resident window carries. The load omits audio reset/configuration, retires
+the old player/Frame/PLC/presentation owners, creates a new visit and emits one
+LEVEL_LOAD rewind boundary. Lives0 and unowned restart paths stop typed.
+
+Root69093 compiled and ran328cases:4failures,0errors,1skip. Two new assertions
+incorrectly compared CdObjectState wrappers from different pools. R2 compares
+the physical Identity and all64bytes through the existing public copyBytes();
+the independent review's claim that no such accessor exists was incorrect.
+The corrected77devicecases passed in Root53753, including their previously
+unreached tails. Pool owner equality was not weakened. The one skip was the
+reused-boot cartridge-to-CD case, because the first request omitted the S2ROM.
+
+The other two failures exposed a scope assumption: raw RewindRegistry captures
+share their WorldSession across loadLevel, so the old camera restored before
+the late CD adapter rejected its retired Frame. The original CD-only review
+recommended removing these raw-restore assertions; sanctioned live/course
+paths already isolate epochs. This work deliberately adds a separate shared
+native preflight rather than weakening the unchanged-state checks. It does
+not promise arbitrary adapter rollback or global transactional restore.
+
+NativeRewindRestoreGuard is an engine-internal opt-in. Only an actual native
+root publication admitted into this registry may validate before full/course
+restore. Foreign scope and course key checks still run first. Missing guarded
+payloads reject before any earlier restore/reset. Ordinary registrations gain
+no authority; generic adapter order, RNG-last and callbacks stay unchanged.
+The existing CD opening validator is factored into this preflight. Its normal
+rejection paths preserve gameplay state; immutable-source authentication may
+memoize, and already-broken lifecycle owners retain their fail-closed rules.
+The terrain-only adapter remains unguarded for raw old-visit tools; sanctioned
+epoch/course paths are safe, and this pre-existing residual is not claimed fixed.
+
+The tests-first interface-only control Root53753 produced the intended five
+guard failures (6guardcases), while77correctedDevicecases passed:83/5/0/0.
+Root57948 then passed533/0/0/0 across24affected classes, Java25, real supplied
+media, surfaceless EGL and the existing S2ROM. Native-publication authority,
+registry, session, owner-bound patch, API pin/signature and reused-boot checks
+all executed. Independent restart device/World/probe and shared-guard reviews
+were read in full; no productionP1/P2 remains. The shared guard review's
+missing-payload and validator-purity documentation advisories are clarified
+without changing code behavior. Broad smoke/guards remain pending.
+
+Actual fixed controllers reach death968, life3→2/reset60 at1052, the old cut at
+1112 and the new visit at1113. Generation1→2 and frame/V-int delta1 are observed;
+Sonic returns to64,$76B with two lives. Full and course restore each reproduce
+54rendered new-visit rows and final pixels. Live rewind also exercises the new
+epoch's frame-zero saved bank before SpawnObjects and frame-one replay. Raw
+old composites now reject without mutating the new visit. Captures, complete
+input/CSV and provenance are external under native/engine-restart-world-r2.
+
+This is a DEV restart: no native fade/loading/title/HUD/audio/PLC timing,
+explicit clock seed0 and raw-held/tap policy, and no timing/pixel/full-game or
+regional parity claim. The complete USA game remains the goal before regions.

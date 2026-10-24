@@ -1,9 +1,21 @@
 package com.openggf.game.soniccd.objects;
 
+import com.openggf.game.soniccd.CdReleaseVariant;
+import com.openggf.game.soniccd.CdStageKey;
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdObjectPlacements;
+import com.openggf.game.soniccd.level.CdR11aAssetLoader;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.media.CdProgramAssets;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static com.openggf.game.soniccd.objects.CdObjectPlacementRuntime.SavedBit.*;
@@ -312,6 +324,111 @@ class TestCdObjectPlacementRuntime {
         assertThrows(IndexOutOfBoundsException.class, () -> new CdObjectPlacementRuntime(layout(tooManySaved)));
     }
 
+    // U5-D restart ingress, written before production (pin 1ecc5f3a). savedObjFlags is rs.b 2+OBJFLAGSCNT with
+    // OBJFLAGSCNT $2FC (Main CPU Variables.inc:47-48). The carried bank is checked before the asset gate.
+    @Test
+    void carriedBankIngressRejectsNullAndEveryNonNativeLengthBeforeTheAssetGate() {
+        assertEquals(0x2FC, CdObjectPlacementRuntime.SAVED_BODY_BYTES);
+        assertEquals(766, CdObjectPlacementRuntime.SAVED_BANK_BYTES);
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(null, null));
+        for (int length : new int[]{0, 2, 0x2FC, 0x2FD, 0x2FF, 0x300, 0x400}) {
+            var bank = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPlacementRuntime.fromAssets(null, bank),
+                    "length " + length);
+        }
+        var exact = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(null, exact));
+    }
+
+    // SpawnObjects_Init (Object Spawner.asm:42-101) writes savedObjFlags only at its header: MOVE.W #$101 (:55)
+    // and the two ADDQ.B counts (:74, :92). Main's SpawnObject then BSETs each spawned row's loaded bit (:273).
+    // Retail facts: the first camera-0 present pass spawns saved IDs 3, 8 and 10
+    // (TestCdObjectPlacementRetailAssets).
+    // Catches dropping or resetting any carried byte, inventing header IDs, or a Main write outside those BSETs.
+    @Test
+    void exactCarriedBankSurvivesIngressAndTheFirstSpawnRewritesOnlyHeaderIdsAndSpawnedLoadedBits()
+            throws Exception {
+        var assets = usa();
+        byte[] bank = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];
+        // Loaded bits clear, so every spawn decision equals the cold bank's.
+        for (int i = 0; i < bank.length; i++) { bank[i] = (byte) ((0x5B + i * 0x35) & 0x7F); }
+        bank[0] = (byte) 0xC7;
+        bank[1] = (byte) 0x9E;
+        var carried = CdObjectPlacementRuntime.fromAssets(assets, CdAssetBytes.copyOf(bank));
+        assertArrayEquals(bank, carried.capture().savedFlags().copy(),
+                "every real byte is ingress, header included");
+        assertEquals(new CdObjectPlacementRuntime.Status(0, 0, 0, 0, 0xC7, 0x9E, -1, -1), carried.status());
+        assertSame(assets.placements(), carried.placements());
+        assertEquals(Optional.of(assets.identity()), carried.sourceIdentity());
+        assertTrue(carried.pool().capture().slots().stream().allMatch(slot -> slot.id() == 0));
+        var cold = CdObjectPlacementRuntime.fromAssets(assets);
+        assertArrayEquals(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES], cold.capture().savedFlags().copy(),
+                "the cold DEV factory keeps its explicit all-zero bank");
+        carried.spawnObjects(0, 1);
+        cold.spawnObjects(0, 1);
+        assertEquals(cold.status(), carried.status(), "Init's header rewrite and the same cursors");
+        assertEquals(11, carried.status().rightSavedId());
+        assertEquals(1, carried.status().leftSavedId());
+        // Distinct pool ownership is intentional; compare each physical slot's native image.
+        for (var expected : cold.pool().capture().slots()) {
+            var actual = carried.pool().state(expected.identity().wholeIndex());
+            assertEquals(expected.identity(), actual.identity());
+            assertArrayEquals(expected.copyBytes(), actual.copyBytes());
+        }
+        byte[] coldAfter = cold.capture().savedFlags().copy();
+        byte[] carriedAfter = carried.capture().savedFlags().copy();
+        for (int i = 2; i < bank.length; i++) {
+            assertEquals((bank[i] | coldAfter[i]) & 0xFF, carriedAfter[i] & 0xFF, "body byte " + i);
+        }
+        assertEquals(List.of(2 + 3 * 3 + 1, 2 + 3 * 8 + 1, 2 + 3 * 10 + 1),
+                IntStream.range(2, bank.length).filter(i -> coldAfter[i] != 0).boxed().toList());
+        for (int id : new int[]{3, 8, 10}) { assertEquals(0x80, carried.savedFlag(id, 1) & 0x80); }
+    }
+
+    // SpawnObject's BSET #7 precedes FindObjSlot and its BEQ skips an already-loaded row
+    // (Object Spawner.asm:273-274).
+    // Catches an ingress that silently clears the carried body: saved ID 3's row must not respawn.
+    @Test
+    void carriedLoadedBitIsLiveStateThatTheFirstSpawnHonoursInsteadOfResetting() throws Exception {
+        var assets = usa();
+        byte[] bank = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];
+        bank[0] = bank[1] = 1;
+        bank[2 + 3 * 3 + 1] = (byte) 0x80;
+        var runtime = CdObjectPlacementRuntime.fromAssets(assets, CdAssetBytes.copyOf(bank));
+        runtime.spawnObjects(0, 1);
+        var first = runtime.pool().state(32);
+        var second = runtime.pool().state(33);
+        assertEquals(List.of(0x1F0, 0x10, 8), List.of(first.centreX(), first.id(), first.savedFlagsId()));
+        assertEquals(List.of(0x270, 0x3D, 10), List.of(second.centreX(), second.id(), second.savedFlagsId()));
+        assertEquals(0, runtime.pool().state(34).id());
+        assertEquals(12, runtime.status().rightRecordIndex(), "a loaded skip still consumes its record");
+        assertEquals(11, runtime.status().rightSavedId());
+        for (int id : new int[]{3, 8, 10}) { assertEquals(0x80, runtime.savedFlag(id, 1)); }
+    }
+
+    // Catches carrying the bank by restoring the previous visit's capture: the new owner rejects it before any
+    // write, and the exact ingress keeps the bank while every other placement field starts cold
+    // (.ClearObjects/.ClearCamera).
+    @Test
+    void anotherOwnersCaptureNeverCarriesTheBankSoTheRestartUsesTheExplicitIngress() throws Exception {
+        var assets = usa();
+        var old = CdObjectPlacementRuntime.fromAssets(assets);
+        old.spawnObjects(0, 1);
+        old.resetSavedObjectFlags(); // Routine 8's zero call (Sonic/Main.asm:2465).
+        old.bsetSavedFlag(4, 2, MEMBER_3); // Constructed nontrivial body byte: explicit ingress, not a route.
+        var oldCapture = old.capture();
+        var next = CdObjectPlacementRuntime.fromAssets(assets, oldCapture.savedFlags());
+        assertThrows(IllegalArgumentException.class, () -> next.validateRestore(oldCapture));
+        assertThrows(IllegalArgumentException.class, () -> next.restore(oldCapture));
+        assertArrayEquals(oldCapture.savedFlags().copy(), next.capture().savedFlags().copy());
+        assertEquals(4, next.savedFlag(4, 2));
+        assertEquals(new CdObjectPlacementRuntime.Status(0, 0, 0, 0, 1, 1, -1, -1), next.status());
+        assertTrue(next.pool().capture().slots().stream().allMatch(slot -> slot.id() == 0));
+        assertThrows(NullPointerException.class, () -> CdObjectPlacementRuntime.fromAssets(assets, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdObjectPlacementRuntime.fromAssets(assets, CdAssetBytes.copyOf(new byte[0x2FD])));
+    }
+
     private static void fill(CdObjectPool pool) {
         for (int whole = 32; whole < 128; whole++) { pool.write(pool.state(whole).moveByte(ID, 1)); }
     }
@@ -332,5 +449,26 @@ class TestCdObjectPlacementRuntime {
         bytes.putShort((short) 0xFFFF).putInt(0).putShort((short) 0);
         bytes.putShort((short) 0xFFFF).putInt(0);
         return CdObjectPlacements.decodeLayout(bytes.array());
+    }
+
+    private static CdR11aAssets usaAssets;
+
+    /** Actual USA media through the production loader; immutable assets only, never a runtime or a pass. */
+    private static synchronized CdR11aAssets usa() throws Exception {
+        if (usaAssets == null) {
+            String root = System.getProperty("soniccd.media.root");
+            Assumptions.assumeTrue(root != null && !root.isBlank(), "UNRUN media opt-in: set soniccd.media.root");
+            Path cue;
+            try (var files = Files.list(Path.of(root).resolve("USA"))) {
+                var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue"))
+                        .toList();
+                assertEquals(1, cues.size(), "Configured actual USA media must contain exactly one CUE");
+                cue = cues.getFirst();
+            }
+            try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+                usaAssets = CdR11aAssetLoader.load(source, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+            }
+        }
+        return usaAssets;
     }
 }

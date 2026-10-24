@@ -41,11 +41,21 @@ public final class SonicCdLevelInitProfile implements LevelInitProfile {
     }
 
     @Override public List<InitStep> levelLoadSteps(LevelLoadContext context) {
+        return levelLoadSteps(context, false);
+    }
+
+    /** Same source/terrain reconstruction, with no audio reset inside the already opened host audio row. */
+    List<InitStep> restartLevelLoadSteps(LevelLoadContext context) {
+        return levelLoadSteps(context, true);
+    }
+
+    private List<InitStep> levelLoadSteps(LevelLoadContext context, boolean restart) {
         Objects.requireNonNull(context, "context");
-        validateRequest(context);
-        return List.of(
+        validateRequest(context, restart);
+        var steps = new java.util.ArrayList<InitStep>();
+        steps.addAll(List.of(
                 new InitStep("AdmitStaticStage", "Authenticated R11A development admission, before side effects", () -> {
-                    validateRequest(context);
+                    validateRequest(context, restart);
                     SonicCd.requireLevel(context.getLevelIndex());
                     module.requireRuntimeSource();
                     context.setGameModule(module);
@@ -55,11 +65,15 @@ public final class SonicCdLevelInitProfile implements LevelInitProfile {
                 new InitStep("ResetStaticRuntime", "Retire old render/actor/donor state through existing owners",
                         () -> resetRuntime(true, true)),
                 ioStep("InitGameModule", "Existing source factory and zone/scroll attachment",
-                        () -> GameServices.level().initGameModule(context.getLevelIndex())),
+                        () -> GameServices.level().initGameModule(context.getLevelIndex()))
+        ));
+        if (!restart) steps.addAll(List.of(
                 new InitStep("RetirePriorAudio", "Explicitly retire previous source, donor and playback ownership",
                         module::retirePriorAudio),
                 ioStep("ConfigureStaticAudio", "Install CD-owned silence, no SMPS/PCM/CDDA requests",
-                        () -> GameServices.level().configureAudio()),
+                        () -> GameServices.level().configureAudio())
+        ));
+        steps.addAll(List.of(
                 ioStep("LoadLevelData", "Authenticated decoded palettes/patterns, then derived terrain/tilemaps",
                         () -> context.setLevel(GameServices.level().loadLevelData(context.getLevelIndex()))),
                 new InitStep("InitStaticLevelState", "Read-only absent timer/rings, no native player initialization",
@@ -76,17 +90,22 @@ public final class SonicCdLevelInitProfile implements LevelInitProfile {
                     var mode = Objects.requireNonNull(SessionManager.getCurrentGameplayMode(), "gameplay mode");
                     mode.registerLevelAdapters(GameServices.level());
                 })
-        );
+        ));
+        return List.copyOf(steps);
     }
 
-    private static void validateRequest(LevelLoadContext context) {
+    private void validateRequest(LevelLoadContext context, boolean restart) {
+        if (restart && !module.ownsRestartContext(context)) {
+            throw new IllegalStateException("CD restart context has no staged source carry");
+        }
         if (context.getLevelIndex() != -1) SonicCd.requireLevel(context.getLevelIndex());
         if (context.getLoadMode() != LevelLoadMode.FULL) throw SonicCd.unsupported("preview/editor capture loads");
         if (context.getRom() != null) throw SonicCd.unsupported("cartridge load contexts");
         if (context.getAssemblyKind() == LevelAssemblyKind.STATE_RESTORATION
                 || context.hasCheckpoint()
-                || (context.getLoadCause() != LevelLoadCause.DECODE_ONLY
-                    && context.getLoadCause() != LevelLoadCause.FULL_LEVEL_ASSEMBLY)) {
+                || (restart ? context.getLoadCause() != LevelLoadCause.FULL_DEATH_RELOAD
+                    : context.getLoadCause() != LevelLoadCause.DECODE_ONLY
+                            && context.getLoadCause() != LevelLoadCause.FULL_LEVEL_ASSEMBLY)) {
             throw SonicCd.unsupported("checkpoint/editor/native transition assembly; restore the same world's registry instead");
         }
         if ((context.isIncludePostLoadAssembly() && context.isShowTitleCard())

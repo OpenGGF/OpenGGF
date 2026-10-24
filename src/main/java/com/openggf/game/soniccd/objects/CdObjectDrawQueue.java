@@ -312,6 +312,22 @@ public final class CdObjectDrawQueue implements AutoCloseable {
         }
     }
 
+    /**
+     * Level_MainLoop's LevelStart branch (Level/Main.asm:407-408) leaves after RunObjects, before LevelScroll (:418)
+     * and DrawObjects (:421). LevelStart next writes objDrawQueue at :170-176, with no reader in between, so this
+     * COLLECTING pass's pointer lists and counts are dropped and the last completed CPU SAT (bytes, count and
+     * provenance) is kept exactly. No slot read, bit-7 write, mapping, camera or SAT build. Misphase follows the
+     * existing policy; reentry fails admission, and closed or failed owners never reopen.
+     */
+    public void abandonPassAtLevelStart() {
+        requirePhase(Phase.COLLECTING);
+        for (int bucket = 0; bucket < BUCKET_COUNT; bucket++) {
+            Arrays.fill(pointers[bucket], null);
+            pointerByteCounts[bucket] = 0;
+        }
+        phase = Phase.CLOSED_CUT;
+    }
+
     /** Reject stale publication access during an active, failed or closed admission. */
     public CpuSat cpuSat() {
         requirePhase(Phase.CLOSED_CUT);

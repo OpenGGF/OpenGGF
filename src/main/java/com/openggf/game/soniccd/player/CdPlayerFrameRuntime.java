@@ -142,6 +142,31 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         public BodyPublication { Objects.requireNonNull(result); sounds = List.copyOf(sounds); }
     }
 
+    /**
+     * Plain values an in-module death restart carries because LevelStart's .NormalLoad never writes them
+     * (Level/Main.asm:19-329, lives != 0, no checkpoint, present), plus the DEV raw latch. Widths are native:
+     * sonicRecordBuf rs.b $100 and sonicArtBuf rs.b $300 (Level/_Definitions.inc:125-126), the $300-byte $F000
+     * resident window, debugAngle..debugFloorDist rs.b 1 each and debugCheat rs.w 1 (_Include/Main CPU
+     * Variables.inc:130-133,139), and p1CtrlHold rs.b 1 (_Definitions.inc:185). Every value is checked here.
+     */
+    public record RestartIngress(CdAssetBytes history, CdAssetBytes artCpu, CdAssetBytes artResident,
+                                 int debugAngle, int debugAngleShift, int debugQuadrant, int debugFloorDistance,
+                                 int debugCheat, int rawHeld) {
+        public RestartIngress {
+            Objects.requireNonNull(history, "sonicRecordBuf");
+            Objects.requireNonNull(artCpu, "sonicArtBuf");
+            Objects.requireNonNull(artResident, "resident Sonic art window");
+            if (history.length() != 0x100 || artCpu.length() != CdPlayerArtRuntime.CPU_BUFFER_BYTES
+                    || artResident.length() != CdPlayerArtRuntime.RESIDENT_WINDOW_BYTES) {
+                throw new IllegalArgumentException("Restart carry requires $100 history and $300 CPU/resident art windows");
+            }
+            if (((debugAngle | debugAngleShift | debugQuadrant | debugFloorDistance | rawHeld) & ~0xFF) != 0
+                    || (debugCheat & ~0xFFFF) != 0) {
+                throw new IllegalArgumentException("Restart carry requires native debug/held bytes and a debugCheat word");
+            }
+        }
+    }
+
     public enum UnsupportedBoundary { VBLANK_PHASE, SOURCE_FAMILY, PAUSED_RESET }
     public static final class UnsupportedFrame extends UnsupportedOperationException {
         private final UnsupportedBoundary boundary;
@@ -169,13 +194,12 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     private PendingInput pending;
     private boolean bodyEntitled;
 
-    private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication,
-                                 CdPlayerBody.State state, CdPlayerBody.Environment environment) {
+    private CdPlayerFrameRuntime(CdR11aAssets assets, ArtPublication publication, CdPlayerBody.State state,
+                                 CdPlayerBody.Environment environment, CdPlayerArtRuntime.State artIngress) {
         this.assets = assets;
         variant = Objects.requireNonNull(assets.profile(), "profile").variant();
         body = new CdPlayerBody(assets);
-        art = new CdPlayerArtRuntime(Objects.requireNonNull(assets.sonic(), "sonic"),
-                new CdPlayerArtRuntime.State(new byte[0x300], new byte[0x300], 0, false));
+        art = new CdPlayerArtRuntime(Objects.requireNonNull(assets.sonic(), "sonic"), artIngress);
         artPublication = publication;
         this.state = state; this.environment = environment;
     }
@@ -251,8 +275,54 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return frame;
     }
 
+    /**
+     * Restart sibling of the factory above, for Root's in-module LevelStart reconstruction. A new owner: the fresh
+     * Body actor and every other field are exactly this class's cold DEV cut, except the carried values:
+     * - sonicRecordBuf ($FFCB00) lies outside every LevelStart clear (Level/Main.asm:170-216) and keeps its bytes;
+     *   its index (_Definitions.inc:315) is in the cleared camera RAM, so it is 0;
+     * - sonicArtBuf ($FFC800) and VRAM $F000: ClearScreen clears only the planes, scroll and CPU SAT (Functions
+     *   (General).asm:182-228); sonicLastFrame/updateSonicArt (_Definitions.inc:285-286) are cleared: 0, clean;
+     * - debugAngle..debugFloorDist ($FF157C-$FF157F) and debugCheat ($FF1588) have no LevelStart writer;
+     * - rawHeld: :279 clears p1CtrlData, then the fade V-ints reread the pad (:860-862,894-895,942-944). DEV: the
+     *   last represented read stands in for them, so a Start held across the restart is no new tap.
+     * rawTap and the logical pair stay 0 (:278-279); debugMode and levelFrames stay 0 (:298,:300). The seed is
+     * declared by the caller, as for fresh entry. No pending sample, entitlement, pause, display or art callback
+     * exists until root binds art. Plain values only: no source, art, input or clock service, no captured context.
+     */
+    public static CdPlayerFrameRuntime externalTouchRequiredDevelopment(CdR11aAssets assets, long declaredNativeVIntSeed,
+                                                                         RestartIngress carried) {
+        Objects.requireNonNull(carried, "carried restart ingress");
+        var declaredClock = new VIntClock(OptionalLong.of(declaredNativeVIntSeed), 0);
+        var cold = coldDevelopmentCut(assets, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
+        var s = cold.state();
+        var state = new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
+                new CdPlayerBody.History(carried.history(), 0), s.rotationDistance());
+        var e = cold.environment(); var m = e.movement(); var g = m.globals(); var c = e.controls(); var b = e.globals();
+        var globals = new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
+                g.boredTimer(), g.scoreChain(), carried.debugAngle(), carried.debugAngleShift(), carried.debugQuadrant(),
+                carried.debugFloorDistance());
+        var controls = new CdPlayerBody.Controls(carried.rawHeld(), c.rawTap(), c.logicalHeld(), c.logicalTap(),
+                c.controlLocked());
+        var bodyGlobals = new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(),
+                carried.debugCheat(), b.timeWarpTimer(), b.invincible(), b.bossMusic());
+        var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
+                m.gates(), globals), controls, bodyGlobals, e.dynamicSlots());
+        var frame = new CdPlayerFrameRuntime(assets, null, state, environment,
+                new CdPlayerArtRuntime.State(carried.artCpu(), carried.artResident(), 0, false));
+        frame.vIntClock = declaredClock;
+        return frame;
+    }
+
     private static CdPlayerFrameRuntime createDevelopment(CdR11aAssets assets, ArtPublication publication,
                                                            CdPlayerBody.DynamicSlots dynamicSlots) {
+        var cold = coldDevelopmentCut(assets, dynamicSlots);
+        return new CdPlayerFrameRuntime(assets, publication, cold.state(), cold.environment(),
+                new CdPlayerArtRuntime.State(new byte[0x300], new byte[0x300], 0, false));
+    }
+
+    private record ColdCut(CdPlayerBody.State state, CdPlayerBody.Environment environment) { }
+
+    private static ColdCut coldDevelopmentCut(CdR11aAssets assets, CdPlayerBody.DynamicSlots dynamicSlots) {
         Objects.requireNonNull(assets, "assets");
         var plan = Objects.requireNonNull(assets.loadPlan(), "R11A load plan");
         var centre = Objects.requireNonNull(plan.initialCentre(), "initial centre");
@@ -268,7 +338,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 new CdPlayerMovement.Globals(0, bounds.cameraCentreY(), 0, 0, 0, 0, 0, 0, 0, 0));
         var environment = new CdPlayerBody.Environment(movement, new CdPlayerBody.Controls(0, 0, 0, 0, 0),
                 new CdPlayerBody.Globals(0, 160, 0, 0, 0, 0, 0, 0), dynamicSlots);
-        return new CdPlayerFrameRuntime(assets, publication, state, environment);
+        return new ColdCut(state, environment);
     }
 
     /** Same immutable aggregate used by Body/art; actor/renderer must not bind a second source. */

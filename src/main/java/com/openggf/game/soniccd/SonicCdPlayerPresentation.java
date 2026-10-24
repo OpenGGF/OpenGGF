@@ -248,6 +248,9 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         throw new IllegalStateException("CD uses the complete controlled-frame disposition");
     }
     @Override public GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        // The previous token/afterTick/old-epoch recording have finished. Preflight and load occur before
+        // this row admits a native owner or samples its input; preflight failure closes only our visit.
+        if (openingObjects != null && openingObjects.levelGlobals().levelRestart() != 0) module.restartOpeningWorld();
         requireBound();
         actor.requireCompletedNativeFrame();
         if (input != null && input.debugModeTogglePressed()) {
@@ -293,8 +296,16 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             }
             if (openingObjects != null) {
                 if (advanced) {
-                    openingObjects.finishOrdinaryTail(); // Exactly once, after camera/SAT build.
-                    preparedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                    if (openingObjects.levelGlobals().levelRestart() != 0) {
+                        if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                            throw new IllegalStateException("CD restart branch did not settle its old native loop");
+                        }
+                        // Level_MainLoop:407-408 branches before scroll/SAT and UpdateGlobalAnims.
+                        // Keep the last completed prepared scroll; beforeFrame reconstructs next row.
+                    } else {
+                        openingObjects.finishOrdinaryTail(); // Exactly once, after camera/SAT build.
+                        preparedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
+                    }
                 } else if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
                     throw new IllegalStateException("Held opening service did not retain its completed cut");
                 }
@@ -380,7 +391,10 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             try {
                 requireBound();
                 if (actId != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
-                if (openingObjects != null) openingObjects.beforeCameraStep();
+                if (openingObjects != null && openingObjects.endCycleAtLevelRestart()) {
+                    actor.finishSharedAfterCamera(); // Settle await only: no scroll, SAT or source bit write.
+                    return true;
+                }
                 var m = frame.state().motion(); var shared = frame.environment().movement();
                 // The native branch is after ALL object slots. Death skips LevelScroll but still
                 // builds sprites and executes the ordinary loop tail (Level/Main.asm:409-424).

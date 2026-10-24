@@ -50,6 +50,8 @@ class TestCdOpeningObjectRuntime {
     private static final CdRingGlobals INITIAL = new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0);
     /** The module's declared DEV post-LevelStart level globals, supplied explicitly as ingress. */
     private static final CdLevelGlobals LEVEL = new CdLevelGlobals(0, 0, 0, 0, 0x03, 0, 2, 0, 0);
+    /** Nonzero count/fade bytes so the restart zero call's long clear is observable (Sonic/Main.asm:2466). */
+    private static final CdLevelGlobals RESTART_LEVEL = new CdLevelGlobals(0, 1, 0, 0, 3, 0x112233, 0x80, 8, 0);
     private static CdR11aAssets mediaAssets;
 
     // Catches snapshot-of-active-list dispatch, omitted offscreen Mosqui, premature tail,
@@ -1013,7 +1015,8 @@ class TestCdOpeningObjectRuntime {
                     f.runtime.lastSoundRequests());
             f.runtime.runDynamicSlotsAfterReservedSlots();
             assertEquals(4, pool.state(40).routine(), "the later live slot still executes on a kill frame");
-            assertDoesNotThrow(f.runtime::beforeCameraStep);
+            assertFalse(f.runtime.endCycleAtLevelRestart(), "levelRestart 0: no LevelStart branch on a kill frame");
+            assertEquals(CdOpeningObjectRuntime.Phase.DYNAMIC_DONE, f.runtime.phase());
             var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
             assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
             assertFalse(f.frame.closed());
@@ -1021,18 +1024,194 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // U5-D, written before production. Level_MainLoop:407-408 branches to LevelStart after RunObjects (:403), so
+    // LevelScroll (:418), DrawObjects (:421) and the tail (:423-430) never run on the restart row. Catches a camera,
+    // SAT build, bit-7 DrawDone or ring/spill tick at the cut, a cut that closes the visit, or an uncapturable cut.
+    // Routine 8's zero call (seedLevelPlayer) is constructed ingress, not a normal-input route to this row.
     @Test void levelRestartStopsAfterAllObjectSlotsBeforeCpuSatAndOrdinaryTail() throws Exception {
-        var initial = new CdLevelGlobals(1, 0, 0, 0, 3, 0, 2, 0, 0);
-        try (var f = new Fixture(initial)) {
-            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(1);
+        try (var f = new Fixture(RESTART_LEVEL)) {
+            f.firstCycle(); seedLevelPlayer(f, 8, 1);
+            var priorCpu = f.runtime.cpuSat();
+            int mosquiX = f.slot(34).centreX();
+            f.service(0);
+            var shown = f.runtime.displayedFrame();
+            f.runtime.spawnBeforeReservedSlots();
+            assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, f.body(2).result().boundary());
             f.runtime.runDynamicSlotsAfterReservedSlots();
-            assertEquals(0x26F, f.slot(34).centreX());
-            var rings = f.runtime.ringGlobals();
-            var failure = assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, f.runtime::beforeCameraStep);
-            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LEVEL_RESTART, failure.boundary());
+            assertEquals(mosquiX - 1, f.slot(34).centreX(), "the later Mosqui slot still patrols on the restart row");
+            var rings = f.runtime.ringGlobals(); var spill = f.runtime.spillGlobals(); var level = f.runtime.levelGlobals();
+            var sounds = f.runtime.lastSoundRequests(); var placement = f.runtime.placement().capture();
+            var contact = f.runtime.contactGlobals(); var score = f.runtime.scoreGlobals(); var dev = f.runtime.devGlobals();
+            var powerup = f.runtime.powerupArtState();
+            var actor = f.frame.state(); var environment = f.frame.environment(); var display = f.frame.display();
+            int publications = f.artPublications.size(); int angles = f.angleWrites.size();
+            assertEquals(new CdLevelGlobals(1, 1, 0, 0, 1, 0, 0, 8, 0), level);
+            assertTrue(f.runtime.endCycleAtLevelRestart());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+            assertSame(priorCpu, f.runtime.cpuSat(), "no DrawObjects: the last built bytes, count and provenance");
+            assertSame(shown, f.runtime.displayedFrame());
+            assertEquals(rings, f.runtime.ringGlobals(), "no UpdateGlobalAnims ring tick");
+            assertEquals(spill, f.runtime.spillGlobals(), "no RingSpill tail");
+            assertEquals(level, f.runtime.levelGlobals()); assertEquals(sounds, f.runtime.lastSoundRequests());
+            assertEquals(contact, f.runtime.contactGlobals()); assertEquals(score, f.runtime.scoreGlobals());
+            assertEquals(dev, f.runtime.devGlobals()); assertEquals(powerup, f.runtime.powerupArtState());
+            var after = f.runtime.placement().capture();
+            assertEquals(placement.status(), after.status());
+            assertEquals(placement.pool().slots(), after.pool().slots(), "no DrawDone bit 7 for the abandoned pointers");
+            assertArrayEquals(placement.savedFlags().copy(), after.savedFlags().copy());
+            assertSame(actor, f.frame.state()); assertSame(environment, f.frame.environment());
+            assertEquals(display, f.frame.display());
+            assertEquals(publications, f.artPublications.size()); assertEquals(angles, f.angleWrites.size());
+            // The old token's preparation port stays the existing no-op on this still-open, capturable visit.
+            assertFalse(f.runtime.hasPreparationBoundary(PlcLifecyclePhase.ORDINARY_LEVEL));
+            f.runtime.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            assertFalse(f.runtime.closed());
+            var cut = f.runtime.captureClosedCut();
+            assertEquals(1, cut.levelGlobals().levelRestart(), "the captured marker identifies the cut; no new phase");
+            assertNotNull(f.frame.captureActor()); assertNotNull(f.frame.captureShared());
+        }
+    }
+
+    // Catches a camera build, ordinary tail, second cut or dynamic walk after the restart cut, or a premature cut.
+    // Each misuse is a misphase under the existing policy and closes both owners.
+    @Test void restartCutRejectsTheCameraBuildTailAndASecondCutThenClosesBothOwners() throws Exception {
+        List<Consumer<Fixture>> misuses = List.of(
+                f -> f.runtime.finishAfterCamera(POST),
+                f -> f.runtime.finishOrdinaryTail(),
+                f -> f.runtime.endCycleAtLevelRestart(),
+                f -> f.runtime.runDynamicSlotsAfterReservedSlots());
+        for (var misuse : misuses) {
+            try (var f = new Fixture(RESTART_LEVEL)) {
+                f.firstCycle(); seedLevelPlayer(f, 8, 1); runRestartRow(f);
+                assertTrue(f.runtime.endCycleAtLevelRestart());
+                assertThrows(IllegalStateException.class, () -> misuse.accept(f));
+                assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            }
+        }
+        try (var f = new Fixture(RESTART_LEVEL)) {
+            f.firstCycle(); seedLevelPlayer(f, 8, 1);
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            assertThrows(IllegalStateException.class, f.runtime::endCycleAtLevelRestart, "the dynamic walk has not run");
             assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
-            assertEquals(rings, f.runtime.ringGlobals(), "restart branches before the ordinary ring tail");
-            assertThrows(IllegalStateException.class, () -> f.runtime.finishAfterCamera(POST));
+        }
+    }
+
+    // No native Level_MainLoop V-int follows the branch: LevelStart clears levelRestart (:299) before :333's VSync.
+    // Catches re-entering the old visit's V-int (ReadController, DPLC, LoadShieldArt, Finish/count) at the cut.
+    @Test void anyVIntAfterTheRestartMarkerRejectsBeforeFrameServiceAndCloses() throws Exception {
+        for (var phase : List.of(PlcLifecyclePhase.ORDINARY_LEVEL, PlcLifecyclePhase.LAG)) {
+            try (var f = new Fixture(RESTART_LEVEL)) {
+                f.firstCycle(); seedLevelPlayer(f, 8, 1); runRestartRow(f);
+                assertTrue(f.runtime.endCycleAtLevelRestart());
+                assertVIntRejected(f, phase);
+            }
+        }
+        // The same guard holds for a declared nonzero marker at construction (explicit ingress, not a route).
+        try (var f = new Fixture(new CdLevelGlobals(1, 0, 0, 0, 3, 0, 2, 0, 0))) {
+            assertVIntRejected(f, PlcLifecyclePhase.ORDINARY_LEVEL);
+            assertTrue(f.artPublications.isEmpty());
+        }
+    }
+
+    // Catches a cut that cannot restore onto itself, a pre-row capture that replays to a different cut, or a restored
+    // cut that admits a V-int. Restore replays no service, slot, queue or art work.
+    @Test void restartCutRestoresExactlyAndAPreRowCaptureReplaysToAnEqualCut() throws Exception {
+        try (var f = new Fixture(RESTART_LEVEL)) {
+            f.firstCycle(); seedLevelPlayer(f, 8, 1);
+            var preObjects = f.runtime.captureClosedCut(); var preActor = f.frame.captureActor();
+            var preShared = f.frame.captureShared();
+            runRestartRow(f);
+            assertTrue(f.runtime.endCycleAtLevelRestart());
+            var cut = f.runtime.captureClosedCut(); var cutActor = f.frame.captureActor(); var cutShared = f.frame.captureShared();
+            var cpu = f.runtime.cpuSat(); var shown = f.runtime.displayedFrame(); int publications = f.artPublications.size();
+            f.runtime.validateRestore(cut);
+            f.runtime.restore(cut);
+            assertRestartCut(cut, f);
+            assertSame(cpu, f.runtime.cpuSat()); assertSame(shown, f.runtime.displayedFrame());
+            f.frame.validateActorRestore(preActor); f.frame.validateSharedRestore(preShared); f.runtime.validateRestore(preObjects);
+            f.frame.restoreActor(preActor); f.frame.restoreShared(preShared); f.runtime.restore(preObjects);
+            assertEquals(0, f.runtime.levelGlobals().levelRestart());
+            assertEquals(publications, f.artPublications.size());
+            runRestartRow(f);
+            assertTrue(f.runtime.endCycleAtLevelRestart());
+            assertRestartCut(cut, f);
+            assertArrayEquals(cpu.bytes(), f.runtime.cpuSat().bytes());
+            assertEquals(cpu.provenance(), f.runtime.cpuSat().provenance());
+            assertEquals(shown, f.runtime.displayedFrame());
+            assertEquals(cutActor, f.frame.captureActor());
+            var shared = f.frame.captureShared();
+            assertEquals(cutShared.environment(), shared.environment()); assertEquals(cutShared.paused(), shared.paused());
+            assertEquals(cutShared.vIntClock(), shared.vIntClock());
+            assertArrayEquals(cutShared.artState().cpuBuffer().copy(), shared.artState().cpuBuffer().copy());
+            assertArrayEquals(cutShared.artState().residentBank().copy(), shared.artState().residentBank().copy());
+            f.runtime.restore(cut); f.frame.restoreActor(cutActor); f.frame.restoreShared(cutShared);
+            assertVIntRejected(f, PlcLifecyclePhase.ORDINARY_LEVEL);
+        }
+    }
+
+    // U5-D restart factory, written before production. Root's carry is installed exactly: the saved bank
+    // (savedObjFlags 2+OBJFLAGSCNT, Main CPU Variables.inc:47-48; no .NormalLoad writer after routine 8's
+    // ResetSavedObjFlags, Sonic/Main.asm:2465) and both powerup windows (.ClearFlowers zeroes the CPU buffer,
+    // Level/Main.asm:178-184; ClearScreen leaves VRAM $A880, Functions (General).asm:182-228). With powerup 0 the
+    // selector-8 LoadShieldArt returns at once (Powerup/Main.asm:157-159). Catches a cold bank or cold seed on restart,
+    // a reset or upload at construction, or a service that rewrites the carried windows.
+    @Test void restartFactoryInstallsTheExactCarriedBankAndPowerupWindowsWithoutServiceResetOrUpload() throws Exception {
+        var assets = load();
+        byte[] bank = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];
+        for (int i = 0; i < bank.length; i++) bank[i] = (byte) (0x5B + i * 0x35);
+        byte[] resident = new byte[0x480];
+        for (int i = 0; i < resident.length; i++) resident[i] = (byte) (0xC3 ^ i);
+        var powerup = new CdPowerupArtRuntime.State(new byte[0x480], resident);
+        var publications = new ArrayList<CdPlayerArtRuntime.State>();
+        var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+        frame.bindArtPublication((request, state) -> publications.add(state));
+        var runtime = restart(assets, frame, CdAssetBytes.copyOf(bank), powerup, new byte[640], BANKS);
+        try (runtime) {
+            assertArrayEquals(bank, runtime.placement().capture().savedFlags().copy(), "every carried byte, header included");
+            assertEquals(new CdObjectPlacementRuntime.Status(0, 0, 0, 0, bank[0] & 0xFF, bank[1] & 0xFF, -1, -1),
+                    runtime.placement().status());
+            assertTrue(runtime.placement().capture().pool().slots().stream().allMatch(slot -> slot.id() == 0));
+            assertEquals(powerup, runtime.powerupArtState());
+            assertArrayEquals(new byte[0x480], runtime.powerupArtState().cpuBuffer().copy());
+            assertArrayEquals(resident, runtime.powerupArtState().residentBank().copy(), "the nonzero resident window");
+            assertEquals(LEVEL, runtime.levelGlobals()); assertEquals(INITIAL, runtime.ringGlobals());
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+            assertArrayEquals(new byte[640], runtime.cpuSat().bytes()); assertEquals(0, runtime.cpuSat().spriteCount());
+            assertTrue(runtime.displayedFrame().tiles().isEmpty()); assertTrue(runtime.lastSoundRequests().isEmpty());
+            assertTrue(publications.isEmpty()); assertEquals(0, frame.vIntClock().deltaSinceAdmittedCut());
+            runtime.setPreScrollForeground(PRE);
+            runtime.serviceVBlank(frame.prepareInput(0).phase());
+            assertEquals(powerup, runtime.powerupArtState(), "powerup 0: no load, so the carried windows stay");
+            assertEquals(LEVEL, runtime.levelGlobals());
+            assertArrayEquals(bank, runtime.placement().capture().savedFlags().copy(), "the V-int has no bank writer");
+            assertTrue(publications.isEmpty());
+            assertEquals(1, frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    // Catches a defaulted or unchecked carry: null, non-$2FE banks, the named empty-SAT policy and the nine-span
+    // admission (with the supplied window) all reject before the Frame is serviced or closed.
+    @Test void restartFactoryRejectsAMissingOrNonNativeCarryBeforeAdmission() throws Exception {
+        var assets = load();
+        var bank = CdAssetBytes.copyOf(new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES]);
+        var powerup = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
+        assertThrows(IllegalArgumentException.class, () -> new CdPowerupArtRuntime.State(new byte[0x47F], new byte[0x480]),
+                "a non-$480 powerup window cannot be supplied");
+        var overlapping = new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236, 12274);
+        byte[] nonempty = new byte[640];
+        nonempty[0] = 1;
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0)) {
+            assertThrows(NullPointerException.class, () -> restart(assets, frame, null, powerup, new byte[640], BANKS));
+            assertThrows(NullPointerException.class, () -> restart(assets, frame, bank, null, new byte[640], BANKS));
+            for (int length : List.of(0x2FD, 0x2FF)) {
+                var wrong = CdAssetBytes.copyOf(new byte[length]);
+                assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, wrong, powerup, new byte[640], BANKS));
+            }
+            assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, bank, powerup, nonempty, BANKS));
+            assertThrows(IllegalArgumentException.class, () -> restart(assets, frame, bank, powerup, new byte[640], overlapping));
+            assertFalse(frame.closed());
+            assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
         }
     }
 
@@ -1277,8 +1456,37 @@ class TestCdOpeningObjectRuntime {
                     new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.BodySound(CdPlayerBody.Sound.SCMD_FADECDA))),
                     f.runtime.lastSoundRequests());
             f.runtime.runDynamicSlotsAfterReservedSlots();
-            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LEVEL_RESTART,
-                    assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, f.runtime::beforeCameraStep).boundary());
+            assertTrue(f.runtime.endCycleAtLevelRestart());
+            // U5-D: a second runtime built from the carried $0101 + zero-body bank holds that exact bank, and since
+            // SpawnObjects_Init rewrites only the header, its first row equals a fresh visit's pool, placement and SAT.
+            var cut = f.runtime.captureClosedCut();
+            byte[] reset = new byte[CdObjectPlacementRuntime.SAVED_BANK_BYTES];
+            reset[0] = reset[1] = 1;
+            assertArrayEquals(reset, cut.placement().savedFlags().copy());
+            var actor = f.frame.captureActor().state(); var shared = f.frame.captureShared(); var e = shared.environment();
+            var g = e.movement().globals();
+            var player = new CdPlayerFrameRuntime.RestartIngress(actor.history().bytes(), shared.artState().cpuBuffer(),
+                    shared.artState().residentBank(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(),
+                    g.debugFloorDistance(), e.globals().debugCheat(), e.controls().rawHeld());
+            var powerup = new CdPowerupArtRuntime.State(CdAssetBytes.copyOf(new byte[0x480]), cut.powerupArtState().residentBank());
+            try (var next = new Fixture(LEVEL, cut.placement().savedFlags(), powerup, player); var fresh = new Fixture()) {
+                assertArrayEquals(reset, next.runtime.placement().capture().savedFlags().copy());
+                next.firstCycle(); fresh.firstCycle();
+                var a = next.runtime.placement().capture(); var b = fresh.runtime.placement().capture();
+                assertEquals(b.status(), a.status());
+                // The two runtimes have different pool owners; only native images/physical indices should match.
+                for (var expected : b.pool().slots()) {
+                    var actual = next.runtime.placement().pool().state(expected.identity().wholeIndex());
+                    assertEquals(expected.identity(), actual.identity());
+                    assertArrayEquals(expected.copyBytes(), actual.copyBytes());
+                }
+                assertArrayEquals(b.savedFlags().copy(), a.savedFlags().copy());
+                assertArrayEquals(fresh.runtime.cpuSat().bytes(), next.runtime.cpuSat().bytes());
+                assertEquals(fresh.runtime.cpuSat().provenance(), next.runtime.cpuSat().provenance());
+                assertEquals(fresh.frame.state().motion(), next.frame.state().motion());
+                assertEquals(fresh.runtime.ringGlobals(), next.runtime.ringGlobals());
+                assertEquals(powerup, next.runtime.powerupArtState(), "powerup 0: the carried windows are untouched");
+            }
         }
     }
 
@@ -1567,6 +1775,49 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    /** The restart row after a constructed routine-8 zero call: service, spawn, the Restart call, then every slot. */
+    private static void runRestartRow(Fixture f) {
+        f.service(0);
+        f.runtime.spawnBeforeReservedSlots();
+        assertEquals(CdPlayerBody.Boundary.RESTART_RETURN, f.body(2).result().boundary());
+        f.runtime.runDynamicSlotsAfterReservedSlots();
+    }
+
+    private static void assertRestartCut(CdOpeningObjectRuntime.Snapshot cut, Fixture f) {
+        var now = f.runtime.captureClosedCut();
+        assertEquals(1, now.levelGlobals().levelRestart());
+        assertEquals(cut.levelGlobals(), now.levelGlobals()); assertEquals(cut.ringGlobals(), now.ringGlobals());
+        assertEquals(cut.spillGlobals(), now.spillGlobals()); assertEquals(cut.contactGlobals(), now.contactGlobals());
+        assertEquals(cut.scoreGlobals(), now.scoreGlobals()); assertEquals(cut.devGlobals(), now.devGlobals());
+        assertEquals(cut.powerupArtState(), now.powerupArtState());
+        assertEquals(cut.lastSoundRequests(), now.lastSoundRequests());
+        assertEquals(cut.placement().status(), now.placement().status());
+        assertEquals(cut.placement().pool().slots(), now.placement().pool().slots());
+        assertArrayEquals(cut.placement().savedFlags().copy(), now.placement().savedFlags().copy());
+    }
+
+    /** The marker rejects before Frame service: no ReadController, DPLC, LoadShieldArt, Finish/count or picture. */
+    private static void assertVIntRejected(Fixture f, PlcLifecyclePhase phase) {
+        var clock = f.frame.vIntClock(); var controls = f.frame.environment().controls();
+        var level = f.runtime.levelGlobals(); var powerup = f.runtime.powerupArtState();
+        int publications = f.artPublications.size();
+        f.runtime.setPreScrollForeground(PRE);
+        f.frame.prepareInput(0x10);
+        assertThrows(IllegalStateException.class, () -> f.runtime.serviceVBlank(phase), String.valueOf(phase));
+        assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+        assertEquals(clock, f.frame.vIntClock(), "no VInt_Finish/count");
+        assertEquals(controls, f.frame.environment().controls(), "no ReadController commit");
+        assertEquals(level, f.runtime.levelGlobals()); assertEquals(powerup, f.runtime.powerupArtState());
+        assertEquals(publications, f.artPublications.size());
+    }
+
+    private static CdOpeningObjectRuntime restart(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdAssetBytes bank,
+                                                  CdPowerupArtRuntime.State powerup, byte[] sat,
+                                                  CdOpeningObjectRuntime.LogicalBanks banks) throws Exception {
+        return CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE, LEVEL,
+                bank, powerup, sat, banks, PRE, value -> { });
+    }
+
     private static void seedLevelPlayer(Fixture f, int routine, int reset) {
         var actor = f.frame.captureActor(); var s = actor.state(); var m = s.motion();
         int y = f.frame.environment().movement().bounds().bottom() + 0x110;
@@ -1619,6 +1870,16 @@ class TestCdOpeningObjectRuntime {
             frame.bindArtPublication((request, state) -> artPublications.add(state));
             runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial, contact, score,
                     level, new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
+        }
+        /** Restart-factory composition: Root's carry is explicit ingress, never a route or a foreign restore. */
+        Fixture(CdLevelGlobals level, CdAssetBytes savedFlags, CdPowerupArtRuntime.State powerup,
+                CdPlayerFrameRuntime.RestartIngress player) throws Exception {
+            assets = load();
+            frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, player);
+            frame.bindArtPublication((request, state) -> artPublications.add(state));
+            runtime = CdOpeningObjectRuntime.usaR11aRestartDevEmptySatPreloadedArt(assets, frame, INITIAL, CONTACT, SCORE,
+                    level, savedFlags, powerup, new byte[640], BANKS, PRE,
+                    value -> { angleWrites.add(value); onAngle.accept(value); });
         }
         void service(int held) { service(held, PRE); }
         /** Constructed pre-scroll camera words test the device contract; they are not natural route evidence. */

@@ -3,6 +3,7 @@ package com.openggf.game.soniccd.objects;
 import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aObjectAssets;
 import com.openggf.game.soniccd.player.CdPlayerBody;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static com.openggf.game.soniccd.objects.CdObjectDrawQueue.*;
@@ -102,13 +104,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
     }
 
-    public enum UnsupportedContactBoundary { LEVEL_RESTART, LOST_RING_NATIVE_CLOCK }
+    /** The level restart is no longer a typed stop: endCycleAtLevelRestart ends the cycle at its cut. */
+    public enum UnsupportedContactBoundary { LOST_RING_NATIVE_CLOCK }
     public static final class UnsupportedContact extends UnsupportedOperationException {
         private final UnsupportedContactBoundary boundary;
         private UnsupportedContact(UnsupportedContactBoundary boundary) {
-            super(boundary + (boundary == UnsupportedContactBoundary.LEVEL_RESTART
-                    ? ": native level reconstruction is not owned yet"
-                    : ": LostRing binding requires an explicitly represented absolute native V-int counter"));
+            super(boundary + ": LostRing binding requires an explicitly represented absolute native V-int counter");
             this.boundary = boundary;
         }
         public UnsupportedContactBoundary boundary() { return boundary; }
@@ -243,7 +244,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private int dispatchWholeIndex = -1;
 
     /**
-     * Sole construction path. The exact external-touch Frame must use assets by
+     * Fresh-entry construction path. The exact external-touch Frame must use assets by
      * reference, be open at a closed cut, and have UNIMPLEMENTED dynamic fallback.
      * Root binds Frame art publication before the first service (two-stage wiring).
      * Actual openingObjects() reauthenticates the retained media; declared source
@@ -265,6 +266,42 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public static CdOpeningObjectRuntime usaR11aOpeningDevEmptySatPreloadedArt(
             CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
             CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            PrimaryAngleWrite primaryAngleWrite) throws IOException {
+        // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
+                CdObjectPlacementRuntime::fromAssets, new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]),
+                initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+    }
+
+    /**
+     * Restart sibling of the factory above for Root's in-module LevelStart reconstruction (lives != 0, no checkpoint,
+     * present: Level/Main.asm:19-329). Same arguments, order and validation, plus two explicit immutable carry windows
+     * and no defaults. initialSavedObjectFlags is the exact carried savedObjFlags bank, through the placement's restart
+     * ingress. initialPowerup is the complete LoadShieldArt window: .ClearFlowers zeroes its CPU buffer (:178-184),
+     * ClearScreen leaves VRAM $A880 (Level/Functions (General).asm:182-228) and :312's LoadShieldArt returns at once
+     * after :167 clears powerup (Powerup/Main.asm:157-159). Root supplies both; their content is not policed here.
+     * All nine bank spans are validated against the supplied window before construction. Installs the supplied
+     * windows only: no service, reset, upload or capture/restore.
+     */
+    public static CdOpeningObjectRuntime usaR11aRestartDevEmptySatPreloadedArt(
+            CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+            CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            CdAssetBytes initialSavedObjectFlags, CdPowerupArtRuntime.State initialPowerup,
+            byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
+            PrimaryAngleWrite primaryAngleWrite) throws IOException {
+        Objects.requireNonNull(initialSavedObjectFlags, "explicit carried saved-object bank");
+        Objects.requireNonNull(initialPowerup, "explicit restart powerup CPU/resident windows");
+        return create(assets, frame, initialGlobals, initialContact, initialScore, initialLevel,
+                source -> CdObjectPlacementRuntime.fromAssets(source, initialSavedObjectFlags), initialPowerup,
+                initialCpuSatBytes, banks, preScrollForeground, primaryAngleWrite);
+    }
+
+    /** The one admission/construction path behind both named factories. */
+    private static CdOpeningObjectRuntime create(
+            CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
+            CdPlayerBody.ContactGlobals initialContact, ScoreGlobals initialScore, CdLevelGlobals initialLevel,
+            Function<CdR11aAssets, CdObjectPlacementRuntime> placementIngress, CdPowerupArtRuntime.State initialPowerup,
             byte[] initialCpuSatBytes, LogicalBanks banks, CameraWords preScrollForeground,
             PrimaryAngleWrite primaryAngleWrite) throws IOException {
         Objects.requireNonNull(assets, "actual R11A assets");
@@ -289,10 +326,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         // The frontier art decodes once here (plant/booster pixels); an IO failure stops before construction.
         var frontier = objects.frontierArtBank();
         var contact = objects.contactArtBank();
-        var placement = CdObjectPlacementRuntime.fromAssets(assets);
+        var placement = placementIngress.apply(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
-        // The cold DEV window above: .ClearFlowers zeroes the complete CPU buffer, InitVDP's fill its resident copy.
-        var initialPowerup = new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]);
         // Validate all nine physical/logical bank extents and overlaps now, even for an empty picture.
         CdObjectPresentation.usaR11aGameOverDevPreloadedArt(frame.artState(), initialPowerup, objects, frontier, contact,
                 banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
@@ -390,6 +425,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         boolean ordinary = servicePhase == PlcLifecyclePhase.ORDINARY_LEVEL;
         perform(Phase.CLOSED_CUT, Phase.SERVICING, ordinary ? Phase.SERVICED : Phase.CLOSED_CUT, () -> {
             requireSupportedService(servicePhase);
+            requireNoLevelRestart("V-int");
             if (ordinary && !cameraPrepared) {
                 throw new IllegalStateException("Root must supply the next ordinary pre-scroll camera at a closed cut");
             }
@@ -430,6 +466,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     @Override public void spawnBeforeReservedSlots() {
         perform(Phase.SERVICED, Phase.SPAWNING, Phase.SPAWNED, () -> {
+            requireNoLevelRestart("SpawnObjects"); // Unreachable while the V-int guard holds; kept at the source call.
             if (!cameraPrepared) { throw new IllegalStateException("Ordinary placement lacks its source camera"); }
             queue.beginPass();
             placement.spawnObjects(preScrollForeground.xWord(), frame.environment().movement().gates().timeZone());
@@ -749,18 +786,24 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     }
 
     /**
-     * Level_MainLoop's post-RunObjects, pre-scroll restart branch (Level/Main.asm:405-408).
-     * No ordinary camera, sprite construction or tail may run after this cut. Actual level
-     * reconstruction remains unowned; until then a restart closes this composition explicitly.
-     * The dead/debug/routine camera choice belongs to the World after this admission check.
+     * Level_MainLoop's post-RunObjects, pre-scroll restart branch (Level/Main.asm:407-408). With levelRestart 0 this
+     * returns false and leaves DYNAMIC_DONE for the ordinary camera, build and tail; the dead/debug/routine camera
+     * choice belongs to the World. Otherwise LevelStart follows: LevelScroll (:418), DrawObjects (:421) and the tail
+     * (:423-430) never run. The queue abandons its pass, the camera cut is dropped, and the cycle ends at CLOSED_CUT,
+     * still capturable, with every global, the pool, placement, CPU SAT, picture and sound ledger unchanged. The
+     * captured levelRestart word marks the cut (no new phase); no later V-int or spawn is admitted while it is set.
+     * Reconstruction is Root's; this owner never reloads.
      */
-    public void beforeCameraStep() {
-        perform(Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, () -> {
-            if (levelGlobals.levelRestart() != 0) {
-                throw new UnsupportedContact(UnsupportedContactBoundary.LEVEL_RESTART);
-            }
-            return null;
+    public boolean endCycleAtLevelRestart() {
+        boolean restart = perform(Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, () -> {
+            if (levelGlobals.levelRestart() == 0) { return false; }
+            queue.abandonPassAtLevelStart();
+            preScrollForeground = null;
+            cameraPrepared = false;
+            return true;
         });
+        if (restart) { phase = Phase.CLOSED_CUT; }
+        return restart;
     }
 
     /** Root supplies actual post-scroll FG/BG/BG3 words; no global camera or position fence. */
@@ -957,6 +1000,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (queue.phase() != CdObjectDrawQueue.Phase.CLOSED_CUT) { throw new IllegalStateException("CD opening queue is not drained"); }
             frame.captureShared(); // Guard pending input/body entitlement without storing that partition.
         } catch (RuntimeException | Error failure) { failIdle(failure); throw failure; }
+    }
+    /** LevelStart clears levelRestart (Level/Main.asm:299) before Level_MainLoop's next VSync (:333-335). */
+    private void requireNoLevelRestart(String operation) {
+        if (levelGlobals.levelRestart() != 0) {
+            throw new IllegalStateException("No old-visit " + operation + " follows the LevelStart branch (levelRestart $"
+                    + Integer.toHexString(levelGlobals.levelRestart()) + ")");
+        }
     }
     private static void requireSupportedService(PlcLifecyclePhase phase) {
         if (phase != PlcLifecyclePhase.ORDINARY_LEVEL && phase != PlcLifecyclePhase.NORMAL_PAUSE && phase != PlcLifecyclePhase.LAG) {

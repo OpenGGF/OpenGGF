@@ -25,10 +25,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
+import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -1157,6 +1162,254 @@ class TestCdPlayerFrameRuntime {
         assertThrows(IllegalArgumentException.class,
                 () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0x100000000L));
         assertThrows(NullPointerException.class, () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(null, 0));
+    }
+
+    // U5-D restart ingress, written before production. Source pin 1ecc5f3a: sonicArtBuf rs.b $300 and sonicRecordBuf
+    // rs.b $100 (Level/_Definitions.inc:125-126), p1CtrlHold rs.b 1 (:185), debugAngle..debugFloorDist rs.b 1 each
+    // and debugCheat rs.w 1 (_Include/Main CPU Variables.inc:130-133,139); the $F000 resident window is $300 bytes.
+    @Test void restartIngressRejectsEveryNullAndNonNativeWidthBeforeAFrameExists() throws IOException {
+        var h = CdAssetBytes.copyOf(new byte[0x100]);
+        var c = CdAssetBytes.copyOf(new byte[0x300]);
+        var r = CdAssetBytes.copyOf(new byte[0x300]);
+        assertThrows(NullPointerException.class, () -> new CdPlayerFrameRuntime.RestartIngress(null, c, r, 0, 0, 0, 0, 0, 0));
+        assertThrows(NullPointerException.class, () -> new CdPlayerFrameRuntime.RestartIngress(h, null, r, 0, 0, 0, 0, 0, 0));
+        assertThrows(NullPointerException.class, () -> new CdPlayerFrameRuntime.RestartIngress(h, c, null, 0, 0, 0, 0, 0, 0));
+        for (int length : new int[]{0, 0xFF, 0x101, 0x300}) {
+            var bad = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdPlayerFrameRuntime.RestartIngress(bad, c, r, 0, 0, 0, 0, 0, 0), "history " + length);
+        }
+        for (int length : new int[]{0, 0x100, 0x2E0, 0x2FF, 0x301, 0x480}) {
+            var bad = CdAssetBytes.copyOf(new byte[length]);
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdPlayerFrameRuntime.RestartIngress(h, bad, r, 0, 0, 0, 0, 0, 0), "CPU " + length);
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdPlayerFrameRuntime.RestartIngress(h, c, bad, 0, 0, 0, 0, 0, 0), "resident " + length);
+        }
+        for (int bad : new int[]{-1, 0x100, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            for (int field : new int[]{0, 1, 2, 3, 5}) {
+                int[] v = new int[6];
+                v[field] = bad;
+                assertThrows(IllegalArgumentException.class,
+                        () -> new CdPlayerFrameRuntime.RestartIngress(h, c, r, v[0], v[1], v[2], v[3], v[4], v[5]),
+                        "byte field " + field + " = " + bad);
+            }
+        }
+        for (int bad : new int[]{-1, 0x10000, Integer.MIN_VALUE, Integer.MAX_VALUE}) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> new CdPlayerFrameRuntime.RestartIngress(h, c, r, 0, 0, 0, 0, bad, 0), "debugCheat " + bad);
+        }
+        var widest = new CdPlayerFrameRuntime.RestartIngress(h, c, r, 0xFF, 0xFF, 0xFF, 0xFF, 0xFFFF, 0xFF);
+        assertEquals(0xFFFF, widest.debugCheat());
+        var assets = new Fixture().assets();
+        assertThrows(NullPointerException.class, () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, null));
+        assertThrows(NullPointerException.class,
+                () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(null, 0, coldIngress()));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, -1, coldIngress()));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0x100000000L, coldIngress()));
+    }
+
+    // Catches a missing or extra carry: each of the nine components changes exactly its own observable field, and
+    // cold-valued ingress reproduces the cold DEV cut (fresh Body actor, physics/bounds/gates, controls, globals,
+    // art lastFrame/dirty, clock, display, pause). .ClearCamera clears sonicRecordIndex and the art flags
+    // (Level/Main.asm:210-216; _Definitions.inc:285-286,315); :278-279 clear the logical pair and tap.
+    @Test void restartFactoryCarriesExactlyItsNineDeclaredFieldsAndEveryOtherFieldIsTheColdCut() throws IOException {
+        var assets = new Fixture().assets();
+        try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var same = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, coldIngress())) {
+            assertEquals(observe(cold), observe(same), "cold-valued ingress is exactly the cold DEV cut");
+            assertSame(assets, same.assets());
+            assertNotSame(cold.captureShared().owner(), same.captureShared().owner());
+        }
+        var carried = carriedIngress(0x80);
+        String[] fields = {"history.bytes", "art.cpu", "art.resident", "debugAngle", "debugAngleShift", "debugQuadrant",
+                "debugFloorDistance", "debugCheat", "rawHeld"};
+        for (int component = 0; component < fields.length; component++) {
+            try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+                 var one = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, only(component, carried))) {
+                assertEquals(Set.of(fields[component]), differences(observe(cold), observe(one)), fields[component]);
+            }
+        }
+        try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, carried)) {
+            assertEquals(Set.of(fields), differences(observe(cold), observe(f)));
+            var s = f.state(); var e = f.environment(); var g = e.movement().globals();
+            assertEquals(new CdPlayerBody.History(carried.history(), 0), s.history(), "bytes carried, index zero");
+            assertEquals(List.of(0x81, 0x61, 0x40, 0x0E),
+                    List.of(g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance()));
+            assertEquals(0xBEEF, e.globals().debugCheat());
+            assertEquals(0, e.globals().debugMode(), "debugMode is SRC-cleared at :298, unlike debugCheat");
+            assertEquals(new CdPlayerBody.Controls(0x80, 0, 0, 0, 0), e.controls());
+            assertEquals(CdPlayerBody.DynamicSlots.UNIMPLEMENTED, e.dynamicSlots());
+            assertArrayEquals(carried.artCpu().copy(), f.artState().cpuBuffer().copy());
+            assertArrayEquals(carried.artResident().copy(), f.artState().residentBank().copy());
+            assertEquals(0, f.artState().lastFrame()); assertFalse(f.artState().dirty());
+            assertEquals(new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0), 0), f.vIntClock());
+            assertTrue(f.display().isEmpty()); assertFalse(f.paused()); assertFalse(f.closed());
+        }
+        try (var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0x12345678L, carried)) {
+            assertEquals(new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0x12345678L), 0), f.vIntClock(),
+                    "only the explicitly declared seed, never a carried or engine count");
+        }
+    }
+
+    // Catches an implicit art callback, a pending sample or entitlement before root binds the restart Frame, a cleared
+    // carry at Init, a RecordPos outside index 0, or a cue/DMA that overwrites the carried CPU or resident tails.
+    // LoadSonicDynPLC then VInt_Level's fixed $2E0 DMA (Sonic/Main.asm:3055-3100, Level/Main.asm:821-847).
+    @Test void restartFrameNeedsRootArtBindingAndKeepsCarriedHistoryAndArtTailsThroughInitMainAndDma() throws IOException {
+        var assets = new Fixture().assets();
+        var carried = carriedIngress(0);
+        var dmas = new ArrayList<CdPlayerArtRuntime.DmaRequest>();
+        try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, carried)) {
+            assertThrows(IllegalStateException.class, () -> f.runBody(1), "no entitlement before a service");
+            var before = f.captureShared();
+            f.prepareInput(0);
+            assertThrows(IllegalStateException.class, () -> f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL),
+                    "no art callback until root binds it");
+            assertSharedValues(before, f.captureShared()); assertFalse(f.closed());
+            f.bindArtPublication((dma, full) -> dmas.add(dma));
+            cold.bindArtPublication((dma, full) -> { });
+            var none = Optional.of(frameTouchContext(new CdObjectPool()));
+            service(f, 0); service(cold, 0);
+            assertTrue(dmas.isEmpty(), "lastFrame 0 equals the published frame and dirty is clear");
+            var init = f.runBody(1); var coldInit = cold.runBody(1);
+            assertEquals(CdPlayerBody.Boundary.INIT_RETURN, init.result().boundary());
+            assertEquals(coldInit.result().state().motion(), f.state().motion());
+            assertEquals(new CdPlayerBody.History(carried.history(), 0), f.state().history(), "Init records nothing");
+            service(f, 0); service(cold, 0);
+            assertEquals(CdPlayerBody.Boundary.MAIN_RETURN, f.runBody(2, none).result().boundary());
+            cold.runBody(2, none);
+            assertEquals(cold.state().motion(), f.state().motion()); assertEquals(cold.display(), f.display());
+            // RecordPos writes its first entry at index 0 (Sonic/Main.asm:447-456); the rest stays carried.
+            byte[] history = carried.history().copy();
+            System.arraycopy(cold.state().history().bytes().copy(), 0, history, 0, 4);
+            assertArrayEquals(history, f.state().history().bytes().copy());
+            assertEquals(4, f.state().history().index()); assertEquals(cold.state().history().index(), f.state().history().index());
+            var g = f.environment().movement().globals();
+            assertEquals(List.of(0x81, 0x61, 0x40, 0x0E),
+                    List.of(g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance()),
+                    "a standing Main writes no debug probe byte");
+            assertTrue(dmas.isEmpty());
+            service(f, 0);
+            assertEquals(1, dmas.size()); assertEquals(1, f.artState().lastFrame()); assertFalse(f.artState().dirty());
+            byte[] cpu = carried.artCpu().copy();
+            Arrays.fill(cpu, 0, 32, (byte) 0x5A);
+            assertArrayEquals(cpu, f.artState().cpuBuffer().copy(), "the one-tile cue leaves the carried CPU tail");
+            byte[] resident = carried.artResident().copy();
+            System.arraycopy(cpu, 0, resident, 0, 0x2E0);
+            assertArrayEquals(resident, f.artState().residentBank().copy(), "tile 24 ($2E0..$2FF) stays carried");
+            f.clearPendingInput(); cold.clearPendingInput();
+        }
+    }
+
+    // Catches a zeroed raw latch: Start held across the restart is no new tap (DEV for the fade V-ints' pad reads,
+    // Level/Main.asm:860-862,894-895,942-944), while the cold zero latch sees a tap and selects pause.
+    @Test void heldStartAcrossTheRestartIsNotANewTapWhileTheColdZeroLatchSeesOne() throws IOException {
+        var assets = new Fixture().assets();
+        try (var cold = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, carriedIngress(0x80))) {
+            f.bindArtPublication((dma, full) -> { });
+            assertEquals(new CdPlayerFrameRuntime.InputSelection(true, PlcLifecyclePhase.NORMAL_PAUSE), cold.prepareInput(0x80));
+            assertEquals(new CdPlayerFrameRuntime.InputSelection(false, PlcLifecyclePhase.ORDINARY_LEVEL), f.prepareInput(0x80));
+            f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+            assertEquals(new CdPlayerBody.Controls(0x80, 0, 0, 0, 0), f.environment().controls());
+            assertFalse(f.paused());
+            f.clearPendingInput();
+            service(f, 0);
+            f.clearPendingInput();
+            assertEquals(new CdPlayerFrameRuntime.InputSelection(true, PlcLifecyclePhase.NORMAL_PAUSE), f.prepareInput(0x80),
+                    "a released then pressed Start is an actual tap");
+            f.clearPendingInput(); cold.clearPendingInput();
+        }
+    }
+
+    // Catches a restart Frame that shares or accepts the previous visit's capture owner, or a replay that loses a
+    // carried field: only its own captures restore, exactly, and forward replay repeats the same publications.
+    @Test void restartFrameHasAFreshOwnerAndReplaysFromItsOwnCapturesOnly() throws IOException {
+        var assets = new Fixture().assets();
+        var carried = carriedIngress(0x80);
+        try (var old = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0);
+             var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, carried);
+             var twin = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0, carried)) {
+            for (var foreign : List.of(old, twin)) {
+                var actor = foreign.captureActor(); var shared = foreign.captureShared();
+                assertThrows(IllegalArgumentException.class, () -> f.validateActorRestore(actor));
+                assertThrows(IllegalArgumentException.class, () -> f.validateSharedRestore(shared));
+                assertThrows(IllegalArgumentException.class, () -> f.restoreActor(actor));
+                assertThrows(IllegalArgumentException.class, () -> f.restoreShared(shared));
+                var own = f.captureActor();
+                assertThrows(IllegalArgumentException.class, () -> foreign.restoreActor(own));
+            }
+            assertEquals(observe(twin), observe(f), "foreign rejections changed nothing");
+            f.bindArtPublication((dma, full) -> { });
+            var none = Optional.of(frameTouchContext(new CdObjectPool()));
+            var actor = f.captureActor(); var shared = f.captureShared();
+            service(f, 0x80); var init = f.runBody(1);
+            service(f, 0); var main = f.runBody(2, none);
+            service(f, 0); var after = observe(f); f.clearPendingInput();
+            f.restoreActor(actor); f.restoreShared(shared);
+            assertEquals(observe(twin), observe(f), "the admitted restart cut restores exactly, carried fields included");
+            service(f, 0x80); assertEquals(init, f.runBody(1));
+            service(f, 0); assertEquals(main, f.runBody(2, none));
+            service(f, 0); assertEquals(after, observe(f));
+            f.clearPendingInput();
+        }
+    }
+
+    private static CdPlayerFrameRuntime.RestartIngress coldIngress() {
+        return new CdPlayerFrameRuntime.RestartIngress(CdAssetBytes.copyOf(new byte[0x100]),
+                CdAssetBytes.copyOf(new byte[0x300]), CdAssetBytes.copyOf(new byte[0x300]), 0, 0, 0, 0, 0, 0);
+    }
+    /** Constructed nonzero carry values; explicit ingress, not a route to a native restart. */
+    private static CdPlayerFrameRuntime.RestartIngress carriedIngress(int rawHeld) {
+        return new CdPlayerFrameRuntime.RestartIngress(CdAssetBytes.copyOf(pattern(0x100, 0x11)),
+                CdAssetBytes.copyOf(pattern(0x300, 0x22)), CdAssetBytes.copyOf(pattern(0x300, 0x33)),
+                0x81, 0x61, 0x40, 0x0E, 0xBEEF, rawHeld);
+    }
+    private static CdPlayerFrameRuntime.RestartIngress only(int component, CdPlayerFrameRuntime.RestartIngress from) {
+        var c = coldIngress();
+        return new CdPlayerFrameRuntime.RestartIngress(component == 0 ? from.history() : c.history(),
+                component == 1 ? from.artCpu() : c.artCpu(), component == 2 ? from.artResident() : c.artResident(),
+                component == 3 ? from.debugAngle() : 0, component == 4 ? from.debugAngleShift() : 0,
+                component == 5 ? from.debugQuadrant() : 0, component == 6 ? from.debugFloorDistance() : 0,
+                component == 7 ? from.debugCheat() : 0, component == 8 ? from.rawHeld() : 0);
+    }
+    private static byte[] pattern(int count, int seed) {
+        byte[] bytes = new byte[count];
+        for (int i = 0; i < count; i++) bytes[i] = (byte) (seed + i * 29);
+        return bytes;
+    }
+    /** Every represented Frame field by name; byte windows compare by content. */
+    private static Map<String, Object> observe(CdPlayerFrameRuntime f) {
+        var s = f.state(); var e = f.environment(); var m = e.movement(); var g = m.globals();
+        var c = e.controls(); var b = e.globals(); var art = f.artState(); var v = new LinkedHashMap<String, Object>();
+        v.put("motion", s.motion()); v.put("animation", s.animation()); v.put("header", s.header()); v.put("timers", s.timers());
+        v.put("history.bytes", HexFormat.of().formatHex(s.history().bytes().copy())); v.put("history.index", s.history().index());
+        v.put("rotationDistance", s.rotationDistance());
+        v.put("physics", m.physics()); v.put("bounds", m.bounds()); v.put("gates", m.gates());
+        v.put("lookMode", g.lookMode()); v.put("cameraYCentre", g.cameraYCentre()); v.put("primaryAngle", g.primaryAngle());
+        v.put("secondaryAngle", g.secondaryAngle()); v.put("boredTimer", g.boredTimer()); v.put("scoreChain", g.scoreChain());
+        v.put("debugAngle", g.debugAngle()); v.put("debugAngleShift", g.debugAngleShift());
+        v.put("debugQuadrant", g.debugQuadrant()); v.put("debugFloorDistance", g.debugFloorDistance());
+        v.put("rawHeld", c.rawHeld()); v.put("rawTap", c.rawTap()); v.put("logicalHeld", c.logicalHeld());
+        v.put("logicalTap", c.logicalTap()); v.put("controlLocked", c.controlLocked());
+        v.put("levelFrames", b.levelFrames()); v.put("cameraXCentre", b.cameraXCentre()); v.put("timeAttackMode", b.timeAttackMode());
+        v.put("debugMode", b.debugMode()); v.put("debugCheat", b.debugCheat()); v.put("timeWarpTimer", b.timeWarpTimer());
+        v.put("invincible", b.invincible()); v.put("bossMusic", b.bossMusic()); v.put("dynamicSlots", e.dynamicSlots());
+        v.put("art.cpu", HexFormat.of().formatHex(art.cpuBuffer().copy()));
+        v.put("art.resident", HexFormat.of().formatHex(art.residentBank().copy()));
+        v.put("art.lastFrame", art.lastFrame()); v.put("art.dirty", art.dirty());
+        v.put("vIntClock", f.vIntClock()); v.put("display", f.display()); v.put("paused", f.paused()); v.put("closed", f.closed());
+        return v;
+    }
+    private static Set<String> differences(Map<String, Object> a, Map<String, Object> b) {
+        assertEquals(a.keySet(), b.keySet());
+        var keys = new TreeSet<String>();
+        for (var key : a.keySet()) if (!a.get(key).equals(b.get(key))) keys.add(key);
+        return keys;
     }
 
     private static final class Fixture {

@@ -435,6 +435,172 @@ class TestSonicCdOpeningWorldLoad {
         assertSame(foreign, h.mode().getSpriteManager().getSprite("sonic"));
     }
 
+    @Test void normalControllerRestartKeepsCarriedStateAndBeginsExactlyOneNewRewindEpoch() throws Exception {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_DETERMINISM_AUDIT, false);
+        var h = opening(); var old = objects(h); var oldFrame = h.module().requirePlayerFrame();
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        var oldActor = h.module().requirePlayerActor();
+        var oldPlc = h.module().getGameService(PlcLifecycleService.class);
+        var level = h.mode().getLevelManager(); long generation = level.getCompletedProductionLoadGeneration();
+        var boundaries = new java.util.ArrayList<com.openggf.game.rewind.RewindBoundary>();
+        com.openggf.level.LevelRewindBoundaryAccess.bind(level, boundary -> {
+            boundaries.add(boundary);
+            if (h.mode().getLevelManager() == level) h.mode().markRewindBoundary(boundary);
+        });
+        var log = com.openggf.tools.InputScriptCompiler.compileToInputLog(
+                "2 -;108 R;500 -;77 R;230 -;100 R;120 -");
+        var movie = new com.openggf.debug.playback.Bk2MovieLoader().parseInputLogText(
+                Path.of("restart-controller-recipe"), log.lines().toList());
+        for (int call = 1; call <= 1111; call++) {
+            var row = movie.getFrame(call - 1);
+            // A held Start across restart distinguishes carried rawHeld from a cold zero latch.
+            step(h, input(row.p1InputMask(), row.p1ActionMask(), call >= 1110 || row.p1StartPressed()));
+        }
+        assertEquals(2, old.ringGlobals().lives()); assertEquals(1, oldFrame.state().timers().reset());
+        assertEquals(8, oldFrame.state().motion().routine()); assertEquals(0, old.levelGlobals().levelRestart());
+        var previous = state(h); var beforeRings = old.ringGlobals(); var beforeSpill = old.spillGlobals();
+        step(h, input(0, 0, true)); // Row1112: source Restart zero call; old token must finish on old owners.
+        assertEquals(1, old.levelGlobals().levelRestart());
+        assertEquals(new CdLevelGlobals(1, 0, 0, 0, 1, 0, 0, 8, 0), old.levelGlobals());
+        assertEquals(0, oldFrame.state().timers().reset()); assertFalse(old.closed());
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, old.phase());
+        oldActor.requireCompletedNativeFrame();
+        var cut = state(h); var registry = h.mode().getRewindRegistry();
+        var oldFull = registry.capture(); var oldCourse = registry.captureCourse();
+        assertArrayEquals(previous.cpu().bytes(), cut.cpu().bytes());
+        assertEquals(previous.cpu().spriteCount(), cut.cpu().spriteCount());
+        assertEquals(previous.cpu().provenance(), cut.cpu().provenance());
+        assertEquals(previous.camera(), cut.camera()); assertEquals(previous.scroll(), cut.scroll());
+        assertEquals(previous.publication().prepared(), cut.publication().prepared());
+        assertEquals(beforeRings, old.ringGlobals()); assertEquals(beforeSpill, old.spillGlobals());
+        assertTrue(boundaries.isEmpty()); assertEquals(generation, level.getCompletedProductionLoadGeneration());
+        assertNotNull(h.mode().getRewindController());
+        assertEquals(1112, h.mode().getRewindController().currentFrame());
+        long audioAtCut = GameServices.audio().commandTimeline().currentFrame();
+
+        step(h, input(0, 0, true)); // Row1113: rebuild BEFORE new admission, then run the new Init row.
+        var next = objects(h); var nextFrame = h.module().requirePlayerFrame();
+        assertNotSame(old, next); assertNotSame(oldFrame, nextFrame);
+        assertNotSame(oldActor, h.module().requirePlayerActor());
+        assertNotSame(oldPlc, h.module().getGameService(PlcLifecycleService.class));
+        assertTrue(old.closed()); assertTrue(oldFrame.closed()); assertFalse(next.closed());
+        assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+        assertEquals(List.of(com.openggf.game.rewind.RewindBoundary.LEVEL_LOAD), boundaries);
+        assertEquals(1, h.mode().getRewindController().currentFrame());
+        assertEquals(1, level.getFrameCounter()); assertEquals(1, nextFrame.environment().globals().levelFrames());
+        assertEquals(java.util.OptionalLong.of(0), nextFrame.vIntClock().absoluteSeed());
+        assertEquals(1, nextFrame.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(audioAtCut + 1, GameServices.audio().commandTimeline().currentFrame());
+        assertFalse(nextFrame.paused(), "Held Start must not become a fresh pause edge after reconstruction");
+        assertEquals(0x80, nextFrame.environment().controls().rawHeld());
+        assertEquals(0, nextFrame.environment().controls().rawTap());
+        assertEquals(2, next.ringGlobals().lives()); assertEquals(0, next.ringGlobals().rings());
+        assertEquals(new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0, 0), next.levelGlobals());
+        assertEquals(cut.objects().scoreGlobals().score(), next.scoreGlobals().score());
+        assertEquals(cut.objects().scoreGlobals().nextLifeScore(), next.scoreGlobals().nextLifeScore());
+        assertArrayEquals(cut.actor().state().history().bytes().copy(), nextFrame.state().history().bytes().copy());
+        assertEquals(0, nextFrame.state().history().index());
+        assertArrayEquals(cut.shared().artState().cpuBuffer().copy(), nextFrame.artState().cpuBuffer().copy());
+        assertArrayEquals(cut.shared().artState().residentBank().copy(), nextFrame.artState().residentBank().copy());
+        assertArrayEquals(new byte[0x480], next.powerupArtState().cpuBuffer().copy());
+        assertArrayEquals(cut.objects().powerupArtState().residentBank().copy(), next.powerupArtState().residentBank().copy());
+        assertEquals(64, nextFrame.state().motion().centreX16_16() >> 16);
+        assertEquals(0x76B, nextFrame.state().motion().centreY16_16() >> 16);
+        assertEquals(0x70B, h.mode().getCamera().getY());
+        assertEquals(List.of(0x10, 0x10, 0x3D), List.of(next.placement().pool().state(32).id(),
+                next.placement().pool().state(33).id(), next.placement().pool().state(34).id()));
+        assertEquals(0x26F, next.placement().pool().state(34).centreX());
+        assertTrue(next.displayedFrame().tiles().isEmpty()); assertObjectRangeExactlyOnce();
+
+        var first = state(h);
+        assertThrows(IllegalStateException.class, () -> oldPlc.serviceVBlank(PlcLifecyclePhase.LAG));
+        assertThrows(IllegalStateException.class, () -> oldPlc.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL));
+        assertThrows(IllegalArgumentException.class, () -> registry.restore(oldFull));
+        assertThrows(IllegalArgumentException.class, () -> registry.restoreCourse(oldCourse));
+        assertState(first, h); assertFalse(next.closed());
+
+        // Inspect the new epoch's real frame-zero capture, before SpawnObjects rewrites bank headers/BSETs.
+        var rewind = h.mode().getRewindController(); rewind.seekTo(0);
+        assertEquals(0, level.getFrameCounter()); assertEquals(0, nextFrame.environment().globals().levelFrames());
+        assertArrayEquals(cut.objects().placement().savedFlags().copy(), next.placement().capture().savedFlags().copy());
+        assertEquals(0, next.placement().pool().state(32).id());
+        rewind.seekTo(1); assertState(first, h);
+
+        var full = registry.capture(); var course = registry.captureCourse();
+        var rows = List.of(LogicalInputSnapshot.neutral(), LogicalInputSnapshot.neutral(), input(8, 0, false));
+        for (var row : rows) step(h, row);
+        var after = state(h);
+        registry.restore(full); assertState(first, h);
+        for (var row : rows) step(h, row); assertState(after, h);
+        registry.restoreCourse(course); assertState(first, h);
+        for (var row : rows) step(h, row); assertState(after, h);
+        assertEquals(List.of(com.openggf.game.rewind.RewindBoundary.LEVEL_LOAD), boundaries);
+        assertObjectRangeExactlyOnce();
+    }
+
+    @Test void restartPreflightClosesItsOldVisitWithoutDeletingAnUnknownRosterMember() throws Exception {
+        var h = opening(); step(h, LogicalInputSnapshot.neutral()); constructedRestartCut(h);
+        var old = objects(h); var frame = h.module().requirePlayerFrame();
+        long generation = h.mode().getLevelManager().getCompletedProductionLoadGeneration();
+        int levelFrames = h.mode().getLevelManager().getFrameCounter();
+        var clock = frame.vIntClock();
+        Sprite foreign = mock(Sprite.class); when(foreign.getCode()).thenReturn("foreign");
+        h.mode().getSpriteManager().addSprite(foreign);
+        assertThrows(UnsupportedOperationException.class, () -> step(h, LogicalInputSnapshot.neutral()));
+        assertTrue(old.closed()); assertTrue(frame.closed());
+        assertSame(foreign, h.mode().getSpriteManager().getSprite("foreign"));
+        assertEquals(generation, h.mode().getLevelManager().getCompletedProductionLoadGeneration());
+        assertEquals(levelFrames, h.mode().getLevelManager().getFrameCounter()); assertEquals(clock, frame.vIntClock());
+        assertFalse(h.module().restartStaged());
+    }
+
+    @Test void admittedRestartLoadFailureClosesBothVisitsAndNeverPublishesALoadBoundary() throws Exception {
+        var h = opening(); step(h, LogicalInputSnapshot.neutral()); constructedRestartCut(h);
+        var old = objects(h); var oldFrame = h.module().requirePlayerFrame();
+        var level = h.mode().getLevelManager(); long generation = level.getCompletedProductionLoadGeneration();
+        var boundaries = new java.util.ArrayList<com.openggf.game.rewind.RewindBoundary>();
+        com.openggf.level.LevelRewindBoundaryAccess.bind(level, boundary -> {
+            boundaries.add(boundary); h.mode().markRewindBoundary(boundary);
+        });
+        try (var failure = org.mockito.Mockito.mockStatic(SonicCdStaticPresentation.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            failure.when(() -> SonicCdStaticPresentation.initializeCamera(
+                    org.mockito.ArgumentMatchers.any(SonicCdLevel.class),
+                    org.mockito.ArgumentMatchers.any(com.openggf.camera.Camera.class)))
+                    .thenThrow(new IllegalStateException("constructed post-Admit camera failure"));
+            assertThrows(RuntimeException.class, () -> step(h, LogicalInputSnapshot.neutral()));
+        }
+        assertTrue(old.closed()); assertTrue(oldFrame.closed()); assertFalse(h.module().restartStaged());
+        assertNull(h.module().getGameService(PlcLifecycleService.class));
+        assertNull(h.module().getGameService(NativeDynamicObjectPass.class));
+        assertEquals(generation, level.getCompletedProductionLoadGeneration()); assertTrue(boundaries.isEmpty());
+        assertThrows(IllegalStateException.class, h.module()::requirePlayerFrame);
+        level.loadLevel(0, LevelLoadMode.FULL, SonicCdPlayerInitProfile.openingObjectsContext());
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(generation + 1, level.getCompletedProductionLoadGeneration());
+        assertEquals(List.of(com.openggf.game.rewind.RewindBoundary.LEVEL_LOAD), boundaries);
+        assertEquals(3, objects(h).ringGlobals().lives()); assertFalse(objects(h).closed());
+    }
+
+    /** Explicit component ingress for failure paths; the separate natural test supplies only controllers. */
+    private static void constructedRestartCut(Harness h) {
+        var frame = h.module().requirePlayerFrame(); var captured = frame.captureActor();
+        var old = captured.state(); var m = old.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), 8, m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var timers = old.timers();
+        var state = new CdPlayerBody.State(motion, old.animation(), old.header(), new CdPlayerBody.Timers(
+                timers.hurt(), timers.invincibility(), timers.speedShoes(), 1), old.history(), old.rotationDistance());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), state, Optional.empty()));
+        h.module().requirePlayerActor().rebindAfterRestore();
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(1, objects(h).levelGlobals().levelRestart());
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, objects(h).phase());
+    }
+
     private record Harness(SonicCdGameModule module, GameplayModeContext mode, GameLoop loop) { }
     private static Harness opening() throws Exception { return load(SonicCdGameModule.openingObjectsDevelopmentPlayer(), source(CdReleaseVariant.USA), true); }
     private static Harness load(SonicCdGameModule module, CdGameDataSource source, boolean player) throws Exception {
