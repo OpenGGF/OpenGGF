@@ -120,7 +120,15 @@ in an owned external directory. It uses the original S2 REV01 ROM and CPZ2 BK2,
 explicit-installation preflight, build leases and ordinary shared admission.
 It never rebuilds the optional checkout or uses an unverified existing harness
 binary. Supply an absent external task root; later `run` reuses only that root's
-matching ownership marker and prepared source/binary fingerprints.
+matching ownership marker and prepared source/binary fingerprints. Preparation
+also binds the canonical installation path, required preflight files, every file
+under its `dll/` tree and potentially shadowing staged runtime dependencies.
+`run` rejects changed/different dependencies and repeats the unmodified strict
+installation preflight under build leases **before** native admission. It checks
+the binding again after queue waiting and native execution. Older preparation
+records without this binding require preparation in a new owned directory;
+their existing observations remain evidence, without being treated as a launch
+authorization for changed inputs.
 
 ```bash
 python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase prepare \
@@ -136,6 +144,20 @@ All paths must be absolute. The six cases are `live-last`, `empty-last`,
 selects an explicit subset. Each fresh core replays original inputs/sync settings
 for at most 11,000 ingress frames, then observes 360 frames after setup. There
 is a 180-second process timeout. No display or sound device is opened.
+During preparation `MONO_PATH` contains only the existing runtime DLL directory;
+the built host directory is added for `run`. This avoids Mono warnings from an
+absent build directory interfering with the exact compiler-version check.
+
+This Linux launcher starts each command in its own session/process group. It
+uses the existing TERM/KILL cleanup helper and a scoped child subreaper to reap
+adopted compiler descendants in that group, including on timeout, cancellation
+or a parent exiting before its helpers. Cleanup completes before build/admission
+leases release. It never sweeps other process groups or queue state. Focused
+harmless-process/runtime-selection controls run with:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py -v
+```
 
 `setup-manifest.json` declares the constructed parent SSTs, original positions,
 synthetic unused remember entries, optional fixed-tail clear and separately

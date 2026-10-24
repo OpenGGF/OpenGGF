@@ -3191,6 +3191,133 @@ justified. Production blob `583a6d6822d4f50f6f9bb6e15b6fcd4808cbd02e`, all ten
 count-one bridges, 119 store records, tests, APIs, pins and the known-bug entry
 remain unchanged. No storage-owner implementation begins here.
 
+### Launcher runtime binding and compiler ownership follow-up
+
+Independent review accepted the six native cases above but found two launcher
+failure paths at `41131c29fbc3718d67ed40a4195b3f01a64f270a` (tree
+`a1fc67111533143b3dbad2fb711ebff86943f9c2`). Source inspection confirmed both:
+`run` checked prepared probe/host hashes without checking its newly selected
+installation, and `subprocess.run(timeout=...)` could kill only the immediate
+build shell while compiler descendants retained execution and inherited leases.
+Neither finding invalidates the successful recorded run, and no compiler orphan
+was observed from that run. This bounded follow-up leaves that base/history,
+the C# probe and every engine/Java/API/store/guard byte intact; no upstream merge
+or rebase participates.
+
+Preparation now fingerprints the canonical selected installation, all required
+strict-preflight files, every file under its DLL tree and potentially shadowing
+staged dependencies. `run` compares that binding and repeats the **unmodified**
+explicit-installation preflight under worktree/build-activity leases before
+requesting native admission. Those leases release before ordinary admission;
+the binding is checked again after waiting and after execution. Changed or
+different selected installations, changed/added DLLs, changed staged dependencies
+and failed preflight cannot obtain native execution. A legacy preparation record
+without the binding requires a new owned preparation directory; accepted old
+observations are preserved, rather than retroactively given new launch authority.
+The actual installation records **125 files**, with no staged dependency DLLs
+in this build. Installer locks/version/capability checks are not edited or relaxed.
+
+Every command now starts in an owned session/process group. The existing
+`category_artifacts.stop_process_tree` supplies TERM/KILL escalation and leader
+wait; a scoped Linux child subreaper adopts orphaned compiler descendants and
+`waitpid` reaps only that owned group before `command` returns or unwinds. SIGINT
+and SIGTERM are masked only during cleanup, then restored. The same cleanup
+also covers a successful parent that leaves helpers. There is no process/queue
+sweep or foreign-group kill. The caller retains both build leases throughout
+cleanup, and inherited descriptors stay with compiler children until they exit.
+
+Focused command:
+
+```bash
+python3 -B tools/bizhawk/test_s2_fixed_tail_pressure.py -v
+```
+
+The final **11 cases pass in 1.174 s**, with no skips. Exact IDs in
+`test_s2_fixed_tail_pressure.py` are:
+
+| Class | Case IDs |
+| --- | --- |
+| `RuntimeBindingTests` | `test_matching_runtime_revalidates_before_admission`; `test_different_selected_installation_rejected_before_admission`; `test_changed_installation_dependency_rejected_before_admission`; `test_new_installation_dependency_rejected_before_admission`; `test_changed_staged_dependency_rejected_before_admission`; `test_failed_strict_preflight_rejected_before_admission`; `test_runtime_change_while_queued_rejected_before_native`; `test_fresh_prepare_does_not_inject_absent_mono_search_directory` |
+| `OwnedCompilerCleanupTests` | `test_timeout_reaps_descendants_before_build_leases_release`; `test_cancellation_reaps_descendants_before_build_leases_release`; `test_successful_parent_cannot_leave_compiler_descendants` |
+
+Runtime controls exercise launcher ordering and rejection before admission or
+native launch. Process controls use harmless, owned Python compiler-like trees,
+including a grandchild that ignores TERM. Real timeout and SIGTERM cancellation,
+plus normal parent exit, establish that both parent/grandchild PIDs are gone and
+the owned group is reaped **while both fixture lease locks remain held**. A
+separate owned peer group remains alive as the negative kill-scope control.
+Fixture cleanup itself adopts/reaps only these known groups if an assertion
+fails. The first test fixture omitted two files used by legacy provenance
+serialization; completing that fixture fixed its two setup errors without
+changing product expectations.
+
+**Complete supported path, one native case.** The first fresh preparation under
+the external task root's `launcher-followup` stopped before host compilation:
+its nonexistent future host directory in `MONO_PATH` made Mono print a warning
+alongside the otherwise correct compiler version, correctly failing the pinned
+exact-version check. This was another previously unexecuted fresh-path launcher
+issue, not a native observation or a reason to relax that check. Preparation now
+uses only the existing runtime DLL directory in `MONO_PATH`; `run` adds the built
+host directory. The focused fresh-prepare control covers this correction. The
+failed preparation records/logs remain external and no native job ran from it.
+
+An absent, separately owned `launcher-followup-supported` directory then
+exercised the actual final prepare/run CLI pair, with the same verified original
+ROM/movie and exactly **one** `reinstall-two` case:
+
+```bash
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase prepare \
+  --task-root "$TASK_ROOT/launcher-followup-supported" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2" --case reinstall-two
+python3 -B tools/bizhawk/run_s2_fixed_tail_pressure.py --phase run \
+  --task-root "$TASK_ROOT/launcher-followup-supported" --bizhawk-home "$BIZHAWK_HOME" \
+  --rom "$S2_ROM" --movie "$MAIN_CHECKOUT/src/test/resources/traces/s2/cpz2/s2-lvl-select-CPZ.bk2" --case reinstall-two
+```
+
+Both preparation and pre-admission preflight report 2.11.0.0 and **30 verified
+capabilities**. The pinned host/probe build succeeds, retaining the existing
+xbuild v4.8 warnings, without changing hashes/version checks. Preparation took
+0.164 s preflight, 3.571 s host build and 0.866 s probe compile; its build-lease
+wait was 0.003 s. Run preflight took 0.215 s with a separate 0.013 s build-lease
+wait. Ordinary native admission then waited **39.389 s**, separate from **4.800 s**
+of admitted execution/verification (**4.622 s** Mono command). No engine Maven
+test, broad/full run or performance lane is used. The test assembly is compiled
+by the unchanged host build script, without executing its test suite.
+
+Run `launcher-followup-supported/run-20261024T164347Z` has host/case/output-check
+`execution_status=completed`, native exit zero and no unmet assertion. Inspection
+finds **1,594 events**, 361 uninterrupted frame-end observations and fixed walks,
+setup/end rows 8791/9151, two exact exhausted returns (PC `$18014`, caller
+`$2940C`, A1 `$FFFFD000`, SR `$2300`), two post-failure pointer/bounds/X writes
+with other target bytes retained, one real installation/Obj05 init on row 8792,
+152 Obj05 main/DPLC decisions and 16 accepted DMA requests. Two physical clears
+occur at rows 8944/8965: the first deletes ID05 currently parented to `$B040`,
+the second clears already-empty storage. Complete SST clearing, synthetic
+remember-bit release, event sequences, required files and provenance are checked.
+The binding remains equal after execution. Request acceptance is **CPU-RAM DMA
+queue acceptance**, not published VRAM or pixel proof.
+
+The observation SHA-256 is
+`c839bd9ef42d3801decdd8f2b37aad729eefc378efe62e2bd5a29447b5826b13`, exactly
+the accepted original `reinstall-two` case. The original six observation hashes
+remain unchanged; they were inspected, not rerun. New provenance identifies
+executed launcher SHA-256
+`2130e8db10d52b41a4eb7e67ae0850cff6b379557d29949c9bf62bc978490a89`;
+the focused test source is
+`a5932bd68d3c6d93bb4f3f4483416354f7767cee12d2afe4e63f4929cee14076`.
+Host/probe executable hashes remain `2a919f1c…` / `8dc21cf2…`, and the unchanged
+C# source remains `84ddbac1…` (full hashes above). Runtime/archive mismatches
+remain disclosed compatibility/provenance facts, not lock verification.
+
+This closes the prior limitation about the complete launcher flow being
+unexecuted, for this one supported input/runtime/case. The bounded storage owner
+remains **unqualified and unauthorized**. Natural placement/respawn, arbitrary
+dormant residue, nonzero-cache retirement, other reset paths and Java
+manager/controller/timeline/rewind ownership remain unproved or source-derived.
+The open bug, 119 frozen records and all ten bridges remain unchanged. Python
+syntax/source, usage links, pinned citations and `git diff --check` accompany
+the focused checks; all owned process/job handles are terminal before handoff.
+
 ## S3K monitor contents admission
 
 Bounded worker base: `591c679b39c61f162a839cde6baaedd387135bc4`, branch

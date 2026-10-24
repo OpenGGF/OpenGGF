@@ -6,11 +6,14 @@ All generated sources, binaries and observations stay in an owned external root.
 No engine hydration, canonical publication, desktop, native patch or lock changes.
 """
 import argparse
+from contextlib import contextmanager
+import ctypes
 import hashlib
 import io
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tarfile
@@ -21,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools/testing'))
 from maven_activity import build_activity_slot
 from maven_queue import handle_termination, inherited_slot, maven_slot, worktree_build_slot
+from category_artifacts import stop_process_tree
 
 PIN = '322851cbfa2e1c1803332142e11ab74b4eb34eea'
 NATIVE = '34fc7f130a96db171e1a1c43e28e0bad81cd6ca7'
@@ -39,14 +43,98 @@ def save(path, value):
     path.write_text(json.dumps(value, indent=2) + '\n')
 
 
+@contextmanager
+def owned_child_reaper():
+    """Adopt orphaned compiler children so this Linux launcher can reap its group."""
+    if sys.platform != 'linux':
+        raise RuntimeError('This native launcher requires Linux child-subreaper support')
+    libc = ctypes.CDLL(None, use_errno=True)
+    previous = ctypes.c_int()
+    if libc.prctl(37, ctypes.byref(previous), 0, 0, 0) or libc.prctl(36, 1, 0, 0, 0):
+        raise OSError(ctypes.get_errno(), 'Cannot acquire owned child-subreaper scope')
+    try:
+        yield
+    finally:
+        if libc.prctl(36, previous.value, 0, 0, 0):
+            raise OSError(ctypes.get_errno(), 'Cannot restore child-subreaper scope')
+
+
+def finish_owned_group(process):
+    # Cleanup must finish before command() unwinds its caller's build/admission leases.
+    previous = {s: signal.signal(s, signal.SIG_IGN) for s in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        stop_process_tree(process)  # Existing TERM/KILL escalation and leader wait.
+        while True:
+            try:
+                os.waitpid(-process.pid, 0)  # Only adopted children in this owned session's group.
+            except ChildProcessError:
+                break
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def command(args, env, log, leases, cwd, timeout=180):
     start = time.monotonic()
-    with log.open('w') as output:
-        result = subprocess.run(args, cwd=cwd, env=env, stdout=output,
-                                stderr=subprocess.STDOUT, timeout=timeout,
-                                **inherited_slot(leases))
-    return dict(command=list(map(str, args)), exit_code=result.returncode,
+    with owned_child_reaper(), log.open('w') as output:
+        process = subprocess.Popen(args, cwd=cwd, env=env, stdout=output,
+                                   stderr=subprocess.STDOUT, start_new_session=True,
+                                   **inherited_slot(leases))
+        try:
+            code = process.wait(timeout=timeout)
+        finally:
+            # Includes timeout, SIGTERM/Ctrl-C and a successful parent leaving helpers.
+            finish_owned_group(process)
+    return dict(command=list(map(str, args)), exit_code=code,
                 execution_seconds=time.monotonic() - start, log=str(log))
+
+
+def file_fingerprints(root, paths):
+    result = {}
+    for relative in sorted(paths):
+        path = root / relative
+        if not path.is_file():
+            raise ValueError('Required runtime/dependency file missing: ' + str(path))
+        result[relative] = dict(sha256=sha(path), resolved=str(path.resolve()))
+    return result
+
+
+def runtime_binding(home, stage):
+    """Bind the selected installation and every potentially shadowing staged dependency."""
+    lock = json.loads((stage / 'dependencies/bizhawk-2.11-linux-x64.lock.json').read_text())
+    paths = set(lock['required_files'])
+    for path in (home / 'dll').rglob('*'):
+        if path.is_symlink() and path.is_dir():
+            raise ValueError('Runtime directory symlink cannot be fingerprinted: ' + str(path))
+        if path.is_file():
+            paths.add(str(path.relative_to(home)))
+    binary = stage / 'bizhawk-headless/bin/Release'
+    dependencies = {str(path.relative_to(binary)) for path in binary.rglob('*')
+                    if path.is_file() and path.suffix.lower() in ('.dll', '.config', '.so', '.zst', '.wbx')}
+    return dict(home=str(home.resolve()), installation=file_fingerprints(home, paths),
+                staged_dependencies=file_fingerprints(binary, dependencies))
+
+
+def require_runtime_binding(prepared, home, stage):
+    if 'runtime_binding' not in prepared or runtime_binding(home, stage) != prepared['runtime_binding']:
+        raise ValueError('Selected installation/dependencies do not match prepared runtime; prepare a new owned root')
+
+
+def validate_launch_runtime(prepared, home, stage, task, env):
+    """Reject mismatches and run unmodified strict preflight before native admission."""
+    require_runtime_binding(prepared, home, stage)
+    timings = {}; started = time.monotonic()
+    with handle_termination(), worktree_build_slot(ROOT) as tree:
+        with build_activity_slot(ROOT, timings=timings) as activity:
+            timings['lease_wait_seconds'] = time.monotonic() - started
+            record = command(['bash', str(stage / 'bizhawk/preflight_bizhawk_2_11.sh'),
+                              '--bizhawk-home', str(home)], env, task / 'run-preflight.log',
+                             (tree,) + tuple(activity), stage)
+            save(task / 'run-preflight.json', dict(command=record, timings=timings))
+            if record['exit_code']:
+                raise ValueError('Selected installation failed strict run preflight; native admission refused')
+            require_runtime_binding(prepared, home, stage)
+    return dict(command=record, timings=timings)
 
 
 def verify_output(output, case, rom):
@@ -118,7 +206,7 @@ def verify_output(output, case, rom):
     return dict(execution_status='completed', observations_sha256=sha(data), events=len(events), frames=len(frames))
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--task-root', required=True, type=Path)
     parser.add_argument('--bizhawk-home', required=True, type=Path)
@@ -126,7 +214,7 @@ def main():
     parser.add_argument('--movie', required=True, type=Path)
     parser.add_argument('--phase', choices=('prepare', 'run'), required=True)
     parser.add_argument('--case', action='append', choices=CASES)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     for path in (args.task_root, args.bizhawk_home, args.rom, args.movie):
         if not path.is_absolute() or path.is_symlink():
             parser.error('Inputs/root must be absolute, nonsymlink paths')
@@ -150,7 +238,8 @@ def main():
         env.pop(name, None)
     stage = task / 'tracechaser'
     env.update(BIZHAWK_HOME=str(args.bizhawk_home), PYTHONDONTWRITEBYTECODE='1',
-               MONO_PATH=str(stage / 'bizhawk-headless/bin/Release') + ':' + str(args.bizhawk_home / 'dll'),
+               MONO_PATH=(str(args.bizhawk_home / 'dll') if args.phase == 'prepare' else
+                          str(stage / 'bizhawk-headless/bin/Release') + ':' + str(args.bizhawk_home / 'dll')),
                LD_LIBRARY_PATH=str(args.bizhawk_home / 'dll'))
     source = ROOT / 'tools/bizhawk/S2FixedTailPressureProbe.cs'
     exe = task / 'S2FixedTailPressureProbe.exe'
@@ -167,6 +256,7 @@ def main():
                 timings['lease_wait_seconds'] = time.monotonic() - started
                 leases = (tree,) + tuple(activity)
                 records = []
+                selected_before_build = runtime_binding(args.bizhawk_home, stage)['installation']
                 for name, cmd in (
                     ('explicit-preflight', ['bash', str(stage / 'bizhawk/preflight_bizhawk_2_11.sh'), '--bizhawk-home', str(args.bizhawk_home)]),
                     ('pinned-host-build', ['bash', str(stage / 'bizhawk-headless/build.sh')]),
@@ -181,15 +271,22 @@ def main():
                     if record['exit_code']:
                         save(task / 'prepare.json', dict(execution_status='failed', timings=timings, commands=records))
                         return record['exit_code']
+                binding = runtime_binding(args.bizhawk_home, stage)
+                if binding['installation'] != selected_before_build:
+                    raise ValueError('Runtime changed during preparation; no prepared authority published')
         save(task / 'prepare.json', dict(execution_status='completed', timings=timings, commands=records,
              source_sha256=sha(source), host_sha256=sha(stage / 'bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe'),
-             probe_sha256=sha(exe), tracechaser=PIN, native=NATIVE))
+             probe_sha256=sha(exe), tracechaser=PIN, native=NATIVE, runtime_binding=binding))
         return 0
     prepared = json.loads((task / 'prepare.json').read_text())
     if (prepared['execution_status'] != 'completed' or prepared['source_sha256'] != sha(source)
             or prepared['probe_sha256'] != sha(exe)
             or prepared['host_sha256'] != sha(stage / 'bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe')):
         parser.error('Prepared probe fingerprint does not match current source/binary')
+    try:
+        run_preflight = validate_launch_runtime(prepared, args.bizhawk_home, stage, task, env)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
     run = task / time.strftime('run-%Y%m%dT%H%M%SZ', time.gmtime())
     run.mkdir()  # no reuse of an existing output
     save(run / 'setup-manifest.json', dict(
@@ -215,7 +312,7 @@ def main():
         rom_sha1=sha(args.rom, 'sha1'), movie_sha256=sha(args.movie),
         runtime={name: sha(args.bizhawk_home / 'dll' / name) for name in
                  ('BizHawk.Common.dll', 'BizHawk.Emulation.Cores.dll', 'gpgx.wbx.zst', 'libwaterboxhost.so')},
-        launcher_sha256=sha(Path(__file__)), cases=args.case or CASES))
+        launcher_sha256=sha(Path(__file__)), run_preflight=run_preflight, cases=args.case or CASES))
     started = time.monotonic(); records = []
     with handle_termination(), maven_slot(ROOT, kind='native:s2-fixed-tail-pressure', estimate=600) as leases:
         admitted = time.monotonic()
@@ -223,7 +320,9 @@ def main():
             argv = ['mono', str(exe), str(args.rom), str(args.movie), str(run / case), case]
             record = dict(command=argv, exit_code=None)
             try:
+                require_runtime_binding(prepared, args.bizhawk_home, stage)
                 record = command(argv, env, run / (case + '.launch.log'), leases, task, timeout=180)
+                require_runtime_binding(prepared, args.bizhawk_home, stage)
                 record['output_check'] = verify_output(run / case, case, args.rom)
             except (subprocess.TimeoutExpired, OSError, ValueError, KeyError) as error:
                 record.update(execution_status='incomplete', error=str(error))
