@@ -5380,3 +5380,87 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
   "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
   "-Dsonic.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
 ```
+
+### Palette-owner follow-up: mod pattern-window fixture receiver
+
+The palette implementation branch was clean and had no own-checkout Maven/test
+processes before it was fast-forwarded, without edits, to composed source
+`8f34cad77297663523100fb7fdbf120cd9b259c1` (tree
+`1afc31b8e75ac0d40faa4c792a1d658cf9e53723`). Main, the parent's smoke source,
+foreign build outputs and jobs were not accessed or changed. This follow-up owns
+only `TestLevelManagerModPatternWindows` and this appendix.
+
+The parent reported a new composed-smoke error in
+`TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching`:
+`PaletteUploadPresentation.release:64` → `LevelEditorViewPreparation.prepare:20`
+→ `LevelManager.restoreEditorLevelView:890` → `EditorSessionFactory.create:47`
+→ the fixture's editor creation. Source inspection confirms why: the fixture's
+plain Mockito `GraphicsManager` bypasses construction and stubs only
+`getPatternAtlas()`. Before the owner transfer, release invoked the mocked
+package-local `setPaletteUploadLatched(false)`, doing nothing. The complete owner
+now performs release, so the constructor-bypassed fake has no component to receive
+it. The parent subsequently verified the unchanged pre-task `97eb86f1` exact
+identity passed 1/0/0/0, with XML showing Java25.0.5.0.2, surfaceless EGL and all
+four absolute ROM properties. Parent-reported admission wait was22s and Maven
+execution27.086s; its reports were consumed. Together with the current composed
+smoke error this attributes the fixture regression to the owner-transfer path.
+These baseline/smoke observations are parent-verified evidence; this worker does
+not duplicate or independently claim execution of those jobs.
+
+The correction constructs a real, GL-free anonymous `GraphicsManager` and
+overrides only its existing virtual atlas getter to return the same
+`RecordingPatternAtlas`. The constructor initializes the concrete palette owner
+with this actual receiver; no spy copies an owner pointing to another host.
+Editor preparation now executes real publication release and fade clearing on
+initial, empty state. That path needs no GPU upload, GL initialization, headless
+platform setup, ROM or native-effect stub. All four art-initialization cycles,
+every ordered event, real `cachePatternHeadless` assertion, total-window assertion,
+private gameplay/editor/resumed contexts and editor destruction remain unchanged.
+No production dispatch or lifetime defect was established; production null/lazy
+rescue and a facade restoration are unjustified.
+
+The original fixture SHA-256 at `8f34cad77` is
+`eae6022311b56c54d0e42041e73acfe9c62fdfc56d10b2b4b0542e14784a5724`;
+the corrected fixture is
+`bf146f2833211c89a40b8d080909856336ea01b4d0729c53e7f1f2fe673bb6cf`.
+The exact production/test delta from `8f34cad77`, including the tested patch, is
+`be99725e99829a64bc03aa258221f7f613156c3f4eb9504a736a5232429fec9f`
+(`git diff 8f34cad77297663523100fb7fdbf120cd9b259c1 -- src/main src/test | sha256sum`).
+The diff contains only the fixture receiver and its explanatory comment. The
+current 119-record frozen store, six keys, API/pins/descriptor and permission
+state are inherited unchanged from the fast-forwarded composition; this patch
+never restores the earlier 121 checkpoint.
+
+The worker's corrected exact identity passed 1 test, zero failures/errors/skips.
+XML confirmed `com.openggf.level.TestLevelManagerModPatternWindows` and
+`everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching`, actual
+Java/runtime25.0.5.0.2, surfaceless EGL and this implementation checkout as
+`project.basedir`. Source/test hashes remained fixed throughout the request.
+Admission waited696s (the wrapper's acquisition line); Maven execution reported
+1:25, including compilation of4,346 production and4,456 test sources. These are
+separate intervals, not a performance comparison with the parent's baseline;
+other delivery time is unmeasured. The only JUnit selection was this method.
+
+The exact command ran from `${TASK_CHECKOUT}` using its current wrapper. The
+portable `${MAIN_CHECKOUT}` convention still denotes the existing main checkout
+in the surrounding evidence; this request invokes no wrapper or target there.
+No ROM properties are needed by this logic-only fixture, which has no ROM/display
+prerequisite or skip. Selecting the existing offscreen flag is not a claim that
+this test creates a GL context or provides pixel/native coverage.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLevelManagerModPatternWindows#everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching' test -B
+```
+
+The matching XML/text reports and invocation log were inspected and consumed,
+with no pass receipt/archive. No old palette groups, broad/full suite, or guards
+were rerun. This supplies a narrow corrected-fixture result, not a composed
+smoke pass or independent baseline execution. Parent owns the combined baseline
+attribution, remaining smoke, review, integration, push and checkout cleanup.
+The follow-up stops at a local commit with a clean retained checkout and no
+live validation handles; no production/API/policy edit or new scope judgment
+is needed.
