@@ -42,6 +42,112 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
+    private static final String SUSPENSION_PATH = "com/openggf/GameLoopSuspension.java";
+    private static final List<String> SUSPENSION_FIELDS = List.of(
+            "private SuspendedGame suspendedGame;", "private SuspendedGame.Pending pendingSuspend;",
+            "private SuspendedGame.Thumbnail pendingSuspendThumbnail;", "private boolean suspendThumbnailRequested;",
+            "private boolean parked;", "private boolean preparing;", "private boolean userPausedWhenParked;",
+            "private com.openggf.game.session.GameplayModeContext parkedOwner;");
+    private static final Map<String, String> SUSPENSION_EFFECT_CONTRACTS = Map.of(
+            "CaptureEffects", """
+                WorldSession publishedWorld(); boolean editorPlaytestActive(); AudioLogicalSnapshot captureAudioIfEnabled();
+                void fadeMusic(); RgbaImage captureViewportThumbnail(); int thumbnailWidth(); int thumbnailHeight();
+                SuspendedSettings suspendSettings(); SuspendedGame.CameraPosition captureCameraPosition();
+                void resumeSettings(SuspendedSettings settings, MasterTitleScreen.GameEntry entry, boolean inLevel);
+                void restoreCamera(SuspendedGame.CameraPosition position); void restoreAudio(AudioLogicalSnapshot snapshot);
+                """,
+            "HubEffects", """
+                MasterTitleScreen currentScreen(); void publishScreen(MasterTitleScreen screen); MasterTitleScreen createScreen();
+                void refreshCachedConfig(); void applyDisplayDimensions(); void cancelBootstrapFade();
+                """,
+            "RetirementEffects", """
+                void resetForGameplayFromMasterTitle(); void clearGameplayReference(); void ensureTitleAudioBackend();
+                """);
+    private static final Set<String> SUSPENSION_METHODS = Set.of("leave", "suspendable", "modOwnsEscapeTap",
+            "completePreparedSuspend", "park", "unpark", "discard", "routeResume", "betweenFrames", "prepareSuspend",
+            "afterScene", "suspendToMasterTitle", "resumeSuspendedGame", "installCard", "discardSuspendedGame", "retireGameplay");
+
+    @Test
+    void suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects() throws IOException {
+        assertNoViolations("Suspended visit ownership boundary failed", suspensionOwnershipViolations(
+                Files.readString(SRC_MAIN.resolve(ENGINE_PATH)), Files.readString(SRC_MAIN.resolve(SUSPENSION_PATH))));
+    }
+
+    @Test
+    void suspendedVisitSamplesPermitTheKnownLoopButRejectMirrorsFacadesAndEagerBinding() throws IOException {
+        String root = Files.readString(SRC_MAIN.resolve(ENGINE_PATH));
+        String owner = Files.readString(SRC_MAIN.resolve(SUSPENSION_PATH));
+        assertTrue(suspensionOwnershipViolations(root, owner).isEmpty(), "the established GameLoop reference is deliberate");
+        for (String field : SUSPENSION_FIELDS) {
+            assertFalse(suspensionOwnershipViolations(root, owner.replace(field, "")).isEmpty(), field);
+        }
+        for (String field : List.of("private SuspendedGame mirror;", "private SuspendedGame.Pending pending;",
+                "private SuspendedGame.Thumbnail picture;", "private boolean suspendThumbnailRequested;")) {
+            assertFalse(suspensionOwnershipViolations(root.replace("public class Engine implements com.openggf.graphics.RenderProjection {",
+                    "public class Engine implements com.openggf.graphics.RenderProjection { " + field), owner).isEmpty(), field);
+        }
+        for (String forbidden : List.of("private Engine engine;", "private EngineContext context;",
+                "void locate() { EngineServices.current(); }", "void locate() { Engine.currentGameLoop(); }",
+                "EngineContext context() { return null; }", "Object lookup(Class key) { return null; }")) {
+            assertFalse(suspensionOwnershipViolations(root, owner.replace("final class GameLoopSuspension {",
+                    "final class GameLoopSuspension { " + forbidden)).isEmpty(), forbidden);
+        }
+        assertFalse(suspensionOwnershipViolations(root, owner.replace("void fadeMusic();", "void suspend();")).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root, owner.replace("void fadeMusic();", "void execute(Runnable action);")).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root, owner.replace("this.effects = effects;",
+                "this.effects = effects; effects.capture().publishedWorld();")).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root, owner.replace("this.loop = Objects.requireNonNull(loop, \"loop\");",
+                "this.loop = Objects.requireNonNull(loop, \"loop\"); loop.getCurrentGameMode();")).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root, owner.replace("void retireGameplay()", "void forgetVisit()")).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root.replace("suspension.betweenFrames(suspensionEffects);",
+                "if (suspension.parked()) suspension.betweenFrames(suspensionEffects);"), owner).isEmpty());
+        assertFalse(suspensionOwnershipViolations(root.replace("private final GameLoopSuspension suspension;",
+                "private final GameLoopSuspension suspension; private void resumeSuspendedGame() {}"), owner).isEmpty());
+    }
+
+    private static List<String> suspensionOwnershipViolations(String root, String owner) {
+        List<String> violations = new ArrayList<>();
+        String rootCode = stripCommentsAndStrings(root), ownerCode = stripCommentsAndStrings(owner);
+        String compactOwner = ownerCode.replaceAll("\\s+", "");
+        if (!rootCode.contains("private final GameLoopSuspension suspension;")
+                || !rootCode.contains("this.suspension = gameLoop.suspension;")) violations.add("same loop owner alias");
+        if (Pattern.compile("private\\s+(?:final\\s+)?SuspendedGame(?:\\.Pending|\\.Thumbnail)?\\s+\\w+\\s*[;=]").matcher(rootCode).find())
+            violations.add("root retains visit data or a mirror");
+        for (String field : SUSPENSION_FIELDS) {
+            if (!compactOwner.contains(field.replaceAll("\\s+", ""))) violations.add("missing visit state: " + field);
+            String name = field.substring(field.lastIndexOf(' ') + 1, field.length() - 1);
+            if (Pattern.compile("\\b" + name + "\\b").matcher(rootCode).find()) violations.add("root retains visit decision: " + name);
+        }
+        long fields = Pattern.compile("private\\s+(?:(?:static|final)\\s+)*[\\w.<>]+\\s+\\w+\\s*[;=]").matcher(ownerCode).results().count();
+        if (fields != 11) violations.add("eight visit values, Loop, replaceable effects and logger only");
+        if (Pattern.compile("\\b(?:Engine|EngineContext)\\b|\\b(?:SonicConfigurationService|AudioManager|GraphicsManager)\\s+\\w+\\s*[;,)=]"
+                + "|(?:EngineServices|GameServices)\\s*\\.|\\bObject\\s+\\w+\\s*\\(").matcher(ownerCode).find())
+            violations.add("no application/context/manager backreference or erased/global locator");
+        Set<String> rootMethods = SourceFile.fromText(root).methods().stream().filter(method -> method.identity().startsWith("Engine#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        for (String method : List.of("prepareSuspend", "captureSuspendThumbnailIfRequested", "suspendToMasterTitle", "resumeSuspendedGame", "discardSuspendedGame"))
+            if (rootMethods.contains(method)) violations.add("whole visit operation remains on Engine: " + method);
+        Set<String> methods = SourceFile.fromText(owner).methods().stream().filter(method -> method.identity().startsWith("GameLoopSuspension#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        if (!methods.containsAll(SUSPENSION_METHODS)) violations.add("complete visit choreography belongs to owner");
+        Set<String> rootEntries = Set.of("setEffects", "retireGameplay", "discardSuspendedGame", "installCard", "betweenFrames", "afterScene");
+        Matcher entries = Pattern.compile("\\bsuspension\\.(\\w+)\\(").matcher(rootCode);
+        while (entries.find()) if (!rootEntries.contains(entries.group(1))) violations.add("root retains decision: " + entries.group(1));
+        for (var contract : SUSPENSION_EFFECT_CONTRACTS.entrySet()) {
+            Matcher group = Pattern.compile("interface\\s+" + contract.getKey() + "\\s*\\{([^}]*)}").matcher(ownerCode);
+            if (!group.find() || !group.group(1).replaceAll("\\s+", "").equals(contract.getValue().replaceAll("\\s+", "")))
+                violations.add("narrow typed effects only: " + contract.getKey());
+        }
+        Matcher constructor = Pattern.compile("GameLoopSuspension\\(GameLoop loop\\)\\s*\\{([^}]*)}").matcher(stripComments(owner));
+        if (!constructor.find() || !constructor.group(1).replaceAll("\\s+", "").equals("this.loop=Objects.requireNonNull(loop,\"loop\");"))
+            violations.add("construction stores Loop only");
+        Matcher binding = Pattern.compile("void setEffects\\(Effects effects\\)\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!binding.find() || !binding.group(1).replaceAll("\\s+", "").equals("this.effects=effects;")) violations.add("effect installation stores only");
+        if (!Pattern.compile("record Effects\\(CaptureEffects capture, HubEffects hub, RetirementEffects retirement\\)\\s*\\{\\s*}").matcher(ownerCode).find())
+            violations.add("bundle constructor stores references only");
+        return violations;
+    }
+
     private static final String TITLE_CARD_LIFECYCLE_PATH = "com/openggf/GameLoopTitleCardLifecycle.java";
     private static final String TITLE_CARD_HOST_CONTRACT = """
         LevelManager level(); SpriteManager sprites(); Camera camera(); InputHandler input();
@@ -594,7 +700,7 @@ class TestArchitecturalSourceGuard {
             // phase-1 HUD-overlay task; not re-ratcheted at the time.
             // The profiling wrappers must not conceal growth in the actual dispatchers.
             new MethodBudget(ENGINE_PATH, "display", 4),
-            new MethodBudget(ENGINE_PATH, "displayFrame", 229),
+            new MethodBudget(ENGINE_PATH, "displayFrame", 224),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
             new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 131),

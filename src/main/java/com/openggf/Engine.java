@@ -38,7 +38,6 @@ import com.openggf.configuration.FrameRateResolver;
 import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameId;
-import com.openggf.game.launch.SuspendedSettings;
 import com.openggf.graphics.ScreenshotCapture;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
@@ -299,10 +298,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
-	private SuspendedGame suspendedGame;
-	private SuspendedGame.Pending pendingSuspend;
-	private SuspendedGame.Thumbnail pendingSuspendThumbnail;
-	private boolean suspendThumbnailRequested;
+	private final GameLoopSuspension suspension;
+	private final GameLoopSuspension.Effects suspensionEffects;
 
 	// Legal disclaimer screen (pre-ROM disclaimer)
 	private LegalDisclaimerScreen legalDisclaimerScreen;
@@ -384,11 +381,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.gameLoop.setCharacterAvailabilitySupplier(() -> modRuntime.characterAvailability());
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
 		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
-		this.gameLoop.suspension.setHost(new GameLoopSuspension.Host() {
-			@Override public boolean prepareSuspend(GameMode mode) { return Engine.this.prepareSuspend(mode); }
-			@Override public void suspend() { suspendToMasterTitle(); }
-			@Override public void resume() { resumeSuspendedGame(); }
-		});
+		this.suspension = gameLoop.suspension;
+		this.suspensionEffects = new GameLoopSuspension.Effects(
+				new SuspensionCaptureEffects(), new SuspensionHubEffects(), new SuspensionRetirementEffects());
+		this.suspension.setEffects(suspensionEffects);
 		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
 		this.gameLoop.setStandaloneMasterTitleExitHandler(this::exitStandaloneMasterTitle);
 		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
@@ -1740,10 +1736,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	/** Clears a game's runtime while retaining the scene that owns a hosted run. */
 	private void resetGameplayRuntime() {
 		nativeEditorSession = null;
-		if (suspendedGame != null) {
-			suspendedGame = null;
-			gameLoop.suspension.discard();
-		}
+		suspension.retireGameplay();
 		if (editorProjectPlaytestActive) {
 			gameLoop.stopEditorHostedRun();
 			editorProjectPlaytestActive = false;
@@ -1764,95 +1757,42 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		gameLoop.resetModuleScopedProviders();
 	}
 
-	// ==================== Suspended game (hold Escape) ====================
-
-	/** Captures what resuming needs while the game's last frame and music are still intact. */
-	private boolean prepareSuspend(GameMode mode) {
-		var world = SessionManager.getCurrentWorldSession();
-		if (editorProjectPlaytestActive || suspendedGame != null || world == null) return false;
-		if (com.openggf.game.GameModuleRouting.isStandalone(world.getGameModule())) return false;
-		GameId game = world.getGameModule().getGameId();
-		com.openggf.audio.rewind.AudioLogicalSnapshot audio = null;
-		String zone = null;
-		try {
-			if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) audio = audioManager.captureLogicalSnapshot();
-			zone = world.getGameModule().getZoneRegistry().getZoneName(world.getCurrentZone());
-		} catch (RuntimeException failure) {
-			LOGGER.warning("Suspending without part of its state: " + failure.getMessage());
+	/** Narrow, live effects; the visit owner retains every suspension decision and ordering step. */
+	private final class SuspensionCaptureEffects implements GameLoopSuspension.CaptureEffects {
+		@Override public com.openggf.game.session.WorldSession publishedWorld() { return SessionManager.getCurrentWorldSession(); }
+		@Override public boolean editorPlaytestActive() { return editorProjectPlaytestActive; }
+		@Override public com.openggf.audio.rewind.AudioLogicalSnapshot captureAudioIfEnabled() {
+			return configService.getBoolean(SonicConfiguration.AUDIO_ENABLED) ? audioManager.captureLogicalSnapshot() : null;
 		}
-		pendingSuspend = new SuspendedGame.Pending(audio,
-				SuspendedGame.card(game.code(), mode, SuspendedGame.location(mode, zone, world.getApparentAct() + 1)));
-		pendingSuspendThumbnail = null;
-		suspendThumbnailRequested = true;
-		audioManager.fadeOutMusic();
-		return true;
+		@Override public void fadeMusic() { audioManager.fadeOutMusic(); }
+		@Override public com.openggf.graphics.RgbaImage captureViewportThumbnail() {
+			return ScreenshotCapture.captureFramebufferRegion(viewportX, viewportY, viewportWidth, viewportHeight);
+		}
+		@Override public int thumbnailWidth() { return (int) projectionWidth; }
+		@Override public int thumbnailHeight() { return (int) realHeight; }
+		@Override public com.openggf.game.launch.SuspendedSettings suspendSettings() {
+			return com.openggf.game.launch.SuspendedSettings.suspend(configService);
+		}
+		@Override public SuspendedGame.CameraPosition captureCameraPosition() { return SuspendedGame.CameraPosition.of(camera); }
+		@Override public void resumeSettings(com.openggf.game.launch.SuspendedSettings settings,
+				MasterTitleScreen.GameEntry entry, boolean inLevel) { settings.resume(configService, entry, inLevel); }
+		@Override public void restoreCamera(SuspendedGame.CameraPosition position) { position.restore(camera); }
+		@Override public void restoreAudio(com.openggf.audio.rewind.AudioLogicalSnapshot snapshot) { audioManager.restoreLogicalSnapshot(snapshot); }
 	}
 
-	/** Reads this frame's game picture before the fade pass and post-fade overlays draw over it. */
-	private void captureSuspendThumbnailIfRequested() {
-		if (!suspendThumbnailRequested) return;
-		suspendThumbnailRequested = false;
-		try {
-			pendingSuspendThumbnail = SuspendedGame.thumbnail(ScreenshotCapture.captureFramebufferRegion(
-					viewportX, viewportY, viewportWidth, viewportHeight), (int) projectionWidth, (int) realHeight);
-		} catch (RuntimeException failure) {
-			LOGGER.warning("Suspended game has no picture: " + failure.getMessage());
-		}
+	private final class SuspensionHubEffects implements GameLoopSuspension.HubEffects {
+		@Override public MasterTitleScreen currentScreen() { return masterTitleScreen; }
+		@Override public void publishScreen(MasterTitleScreen screen) { masterTitleScreen = screen; }
+		@Override public MasterTitleScreen createScreen() { return createMasterTitleScreen(); }
+		@Override public void refreshCachedConfig() { refreshLaunchSessionCachedConfig(); }
+		@Override public void applyDisplayDimensions() { applyResolvedDisplayDimensions(); }
+		@Override public void cancelBootstrapFade() { graphicsManager.getFadeManager().cancel(); }
 	}
 
-	/** After capturing the frozen frame: park its session and animate the picture into the hub. */
-	private void suspendToMasterTitle() {
-		SuspendedGame.Pending pending = pendingSuspend;
-		pendingSuspend = null;
-		if (pending == null) { gameLoop.returnToMasterTitle(); return; }
-		SuspendedSettings settings = SuspendedSettings.suspend(configService);
-		SuspendedGame.CameraPosition position = SuspendedGame.CameraPosition.of(camera);
-		suspendedGame = new SuspendedGame(gameLoop.suspension.park(), pending, pendingSuspendThumbnail,
-				settings, position);
-		pendingSuspendThumbnail = null;
-		refreshLaunchSessionCachedConfig();
-		applyResolvedDisplayDimensions();
-		if (masterTitleScreen != null) masterTitleScreen.cleanup();
-		masterTitleScreen = createMasterTitleScreen();
-		masterTitleScreen.initialize();
-		graphicsManager.getFadeManager().cancel();
-		masterTitleScreen.animateSuspendedGame();
-		LOGGER.info("Suspended " + pending.card().menuLabel() + " to the master title");
-	}
-
-	/**
-	 * After the picture has zoomed back in: restore the settings (live ones take their new values, see
-	 * {@code LiveSettings}), then the picture size, camera and music.
-	 */
-	private void resumeSuspendedGame() {
-		SuspendedGame game = suspendedGame;
-		if (game == null) return;
-		suspendedGame = null;
-		if (masterTitleScreen != null) {
-			masterTitleScreen.cleanup();
-			masterTitleScreen = null;
-		}
-		game.settings().resume(configService, game.card().game().game(), game.mode() == GameMode.LEVEL);
-		refreshLaunchSessionCachedConfig();
-		gameLoop.suspension.unpark(game.mode());
-		applyResolvedDisplayDimensions();
-		if (game.camera() != null) game.camera().restore(camera);
-		try {
-			if (game.audio() != null) audioManager.restoreLogicalSnapshot(game.audio());
-		} catch (RuntimeException failure) {
-			LOGGER.warning("Resumed without its music state: " + failure.getMessage());
-		}
-		gameLoop.resolveFadeManager().cancel();
-		LOGGER.info("Resumed " + game.card().menuLabel());
-	}
-
-	/** Ends a suspended game from the hub with the same teardown as a launch, keeping the hub up. */
-	private void discardSuspendedGame() {
-		if (suspendedGame == null) return;
-		resetForGameplayFromMasterTitle();
-		gameLoop.setGameplayMode(null);
-		gameplayMode = null;
-		ensureMasterTitleAudioBackend();
+	private final class SuspensionRetirementEffects implements GameLoopSuspension.RetirementEffects {
+		@Override public void resetForGameplayFromMasterTitle() { Engine.this.resetForGameplayFromMasterTitle(); }
+		@Override public void clearGameplayReference() { gameplayMode = null; }
+		@Override public void ensureTitleAudioBackend() { ensureMasterTitleAudioBackend(); }
 	}
 
 	/**
@@ -2270,7 +2210,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** Rebuilds the catalog and code owners while the title owns no gameplay session. */
 	private void reloadExternalContentAtTitle() {
-		discardSuspendedGame();
+		suspension.discardSuspendedGame(suspensionEffects);
 		ModSubsystem candidate = ModSubsystem.normalBootLoader(
 				() -> Path.of("mods").toAbsolutePath().normalize(),
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
@@ -2331,12 +2271,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
-		if (suspendedGame != null) {
-			SuspendedGame.Thumbnail thumbnail = suspendedGame.thumbnail();
-			screen.setSuspendedGame(suspendedGame.card(), thumbnail == null ? 0 : thumbnail.width(),
-					thumbnail == null ? 0 : thumbnail.height(), thumbnail == null ? null : thumbnail.rgba());
-		}
-		screen.setSuspendedGameEndHandler(this::discardSuspendedGame);
+		suspension.installCard(screen, suspensionEffects);
 		if (ModSubsystem.current().policy().mayScanAtBoot())
 			TitleContentImportAccess.bind(screen, this::openContentImport);
 		screen.setEnabledModsByGame(enabledTitleModsByGame());
@@ -3055,12 +2990,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void displayFrame() {
-		if (gameLoop.suspension.parked()) gameLoop.suspension.routeResume(masterTitleScreen);
-		// Complete between frames: no gameplay update may follow the captured picture, and
-		// the hub's dimensions/projection must be installed before this frame starts drawing.
-		if (gameLoop.suspension.preparing() && !suspendThumbnailRequested) {
-			gameLoop.suspension.completePreparedSuspend();
-		}
+		suspension.betweenFrames(suspensionEffects);
 		boolean performanceOverlayEnabled =
 				debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE);
 		profiler.setEnabled(shouldEnablePerformanceProfiler(
@@ -3143,7 +3073,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		if (!userRecordingSceneSuppressed) {
 			applyDisplayShaderPhase(ShaderPhase.SCENE);
 		}
-		captureSuspendThumbnailIfRequested();
+		suspension.afterScene(suspensionEffects.capture());
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline

@@ -617,7 +617,10 @@ Unreleased. The earlier development themes remain in
   Silent headless boots also retire inherited audio backends before playback, keeping
   reused capture processes off desktop audio devices.
 
-- **Runtime ownership:** Live rewind retains its gameplay owner and outgoing
+- **Runtime ownership:** A loop-lifetime suspended visit keeps admission, picture
+  readiness, parking, saved state, resume and retirement under one authority;
+  the title keeps its card, textures and zoom presentation. Live rewind retains
+  its gameplay owner and outgoing
   input, audio and fade cleanup through suspension and replacement. Native lock-on
   rewind publications keep their selected module owner across fresh service
   incarnations, while both exposed and suppressed native services remain protected
