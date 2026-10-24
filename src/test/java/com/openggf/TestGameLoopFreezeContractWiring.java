@@ -33,11 +33,13 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -94,44 +96,93 @@ class TestGameLoopFreezeContractWiring {
 
     @Test
     void specialStageTerminalBoundaryWaitsForTheClosureBridge() {
+        var fixture = terminalSpecialStageFixture();
+
+        fixture.update(true);
+
+        assertEquals(0, fixture.resultsEntries().get(),
+                "the terminal owner must remain in SPECIAL_STAGE across the deferred row");
+        assertEquals(GameMode.SPECIAL_STAGE, fixture.host().currentMode());
+        verify(fixture.host(), never()).doEnterResultsScreen();
+        verify(fixture.provider(), never()).getRingsCollected();
+        assertTrue(TraceSessionLauncher.commitDeferredRunModeBoundary(
+                fixture.host().currentMode(), fixture.provider(), fixture.lifecycle()::enterResultsScreen));
+        assertEquals(1, fixture.resultsEntries().get(),
+                "the closure bridge must make the actual lifecycle results-entry request exactly once");
+        assertEquals(GameMode.SPECIAL_STAGE_RESULTS, fixture.host().currentMode());
+        assertEquals(2, fixture.lifecycle().recordedSpecialStageIdentity(GameMode.SPECIAL_STAGE_RESULTS));
+        assertFalse(TraceSessionLauncher.commitDeferredRunModeBoundary(
+                fixture.host().currentMode(), fixture.provider(), fixture.lifecycle()::enterResultsScreen));
+        assertEquals(1, fixture.resultsEntries().get());
+        verify(fixture.host(), times(1)).doEnterResultsScreen();
+    }
+
+    @Test
+    void specialStageTerminalOwnerRequestsResultsWhenBoundaryIsNotDeferred() {
+        var fixture = terminalSpecialStageFixture();
+
+        fixture.update(false);
+
+        verify(fixture.host(), times(1)).doEnterResultsScreen();
+        verify(fixture.provider(), times(1)).getRingsCollected();
+        verify(fixture.provider(), times(1)).getCurrentStage();
+        assertEquals(GameMode.SPECIAL_STAGE_RESULTS, fixture.host().currentMode());
+        assertEquals(2, fixture.lifecycle().recordedSpecialStageIdentity(GameMode.SPECIAL_STAGE_RESULTS));
+        assertEquals(1, fixture.resultsEntries().get(),
+                "the same observer must detect entry through the actual non-deferred lifecycle path");
+    }
+
+    private static TerminalSpecialStageFixture terminalSpecialStageFixture() {
         GameplayModeContext gameplay = install(new Sonic2GameModule());
         TraceRunFrameDriver driver = new TraceRunFrameDriver();
         gameplay.installTraceRunFrameDriver(driver);
         SpecialStageProvider provider = mock(SpecialStageProvider.class);
         when(provider.isFinished()).thenReturn(true);
         when(provider.isEmeraldCollected()).thenReturn(true);
+        when(provider.getRingsCollected()).thenReturn(37);
+        when(provider.getCurrentStage()).thenReturn(2);
         AtomicInteger resultsEntries = new AtomicInteger();
-
-        gameplay.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
-            executeDriverRow(driver,
-                    new TraceRunFrameDriver.Step(
-                            TraceRunFrameDriver.Disposition.SPECIAL_LOCAL,
-                            0, true, true),
-                    () -> {
-                        var host = mock(GameLoopSpecialStageLifecycle.Host.class);
-                        when(host.activeProvider()).thenReturn(provider);
-                        when(host.config()).thenReturn(mock(SonicConfigurationService.class));
-                        when(host.input()).thenReturn(new InputHandler());
-                        when(host.boundGameplayContext()).thenReturn(gameplay);
-                        when(host.resolvedGameplayContext()).thenReturn(gameplay);
-                        when(host.pacingInput()).thenReturn(new GameLoopSpecialStageInput());
-                        when(host.plcFrame()).thenReturn(frame);
-                        when(host.fade()).thenReturn(gameplay.getFadeManager());
-                        when(host.rewind()).thenReturn(mock(LiveRewindManager.class));
-                        when(host.currentMode()).thenReturn(GameMode.SPECIAL_STAGE);
-                        new GameLoopSpecialStageLifecycle(host, mock(com.openggf.audio.AudioManager.class))
-                                .updateSpecialStageMode();
-                    });
+        var mode = new AtomicReference<>(GameMode.SPECIAL_STAGE);
+        var host = mock(GameLoopSpecialStageLifecycle.Host.class);
+        when(host.activeProvider()).thenReturn(provider);
+        when(host.config()).thenReturn(mock(SonicConfigurationService.class));
+        when(host.input()).thenReturn(new InputHandler());
+        when(host.boundGameplayContext()).thenReturn(gameplay);
+        when(host.resolvedGameplayContext()).thenReturn(gameplay);
+        when(host.pacingInput()).thenReturn(new GameLoopSpecialStageInput());
+        when(host.fade()).thenReturn(gameplay.getFadeManager());
+        when(host.gameState()).thenReturn(GameServices.gameState());
+        when(host.rewind()).thenReturn(mock(LiveRewindManager.class));
+        when(host.currentMode()).thenAnswer(ignored -> mode.get());
+        // A completed entry fade lets a genuine request reach the observed compatibility seam.
+        // Without this valid entry state an unrelated fixture failure could hide an eager call.
+        gameplay.getFadeManager().holdWhite();
+        doAnswer(ignored -> {
+            resultsEntries.incrementAndGet();
+            mode.set(GameMode.SPECIAL_STAGE_RESULTS);
             return null;
-        });
+        }).when(host).doEnterResultsScreen();
+        var lifecycle = new GameLoopSpecialStageLifecycle(host, mock(com.openggf.audio.AudioManager.class));
+        return new TerminalSpecialStageFixture(gameplay, driver, provider, host, lifecycle, resultsEntries);
+    }
 
-        assertEquals(0, resultsEntries.get(),
-                "the terminal owner must remain in SPECIAL_STAGE across the deferred row");
-        assertTrue(TraceSessionLauncher.commitDeferredRunModeBoundary(
-                GameMode.SPECIAL_STAGE, provider,
-                ignored -> resultsEntries.incrementAndGet()));
-        assertEquals(1, resultsEntries.get(),
-                "the closure bridge is the single owner that commits the boundary");
+    private record TerminalSpecialStageFixture(
+            GameplayModeContext gameplay,
+            TraceRunFrameDriver driver,
+            SpecialStageProvider provider,
+            GameLoopSpecialStageLifecycle.Host host,
+            GameLoopSpecialStageLifecycle lifecycle,
+            AtomicInteger resultsEntries) {
+        void update(boolean deferBoundaryCommit) {
+            gameplay.plcFrameLifecycle().runLogicalIteration(() -> { }, frame -> {
+                when(host.plcFrame()).thenReturn(frame);
+                executeDriverRow(driver,
+                        new TraceRunFrameDriver.Step(TraceRunFrameDriver.Disposition.SPECIAL_LOCAL,
+                                0, true, deferBoundaryCommit),
+                        lifecycle::updateSpecialStageMode);
+                return null;
+            });
+        }
     }
 
     @Test

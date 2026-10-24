@@ -6002,3 +6002,121 @@ can move into the existing title lifecycle. The completed SS return seam
 retains its own state and restoration; BONUS-first release precedence and
 shared frame admission remain explicit. That future code is not validated
 by either this component evidence or the preceding live smoke request.
+### Special-stage terminal observer review correction (2026-10-24)
+
+Independent source review found a P2 in the migrated terminal-closure control at
+`34faee3a8cc60ec7bb8194312bec9027cfba25a9`. Its `resultsEntries` counter was only
+incremented by the separately supplied closure callback; the actual lifecycle
+entry path never reached that observer. Thus the earlier passing zero assertion
+and the 13-case correction checkpoint above were executions, but not
+sufficient discriminating evidence against eager results entry. This follow-up
+supersedes that weak-observer qualification honestly; it finds no production
+correctness defect and changes no runtime source.
+
+Only `TestGameLoopFreezeContractWiring` and this continuation evidence are owned.
+The fixture now supplies valid current mode, actual game state and a held-white
+completed fade, so the real `enterResultsScreen` path can capture the original
+provider's rings/stage and reach `Host.doEnterResultsScreen`. That compatibility
+seam owns the observer increment and publishes results mode in the fixture.
+The original real driver/PLC terminal row still defers boundary commit. Its
+closure now calls the actual lifecycle entry method through
+`TraceSessionLauncher.commitDeferredRunModeBoundary`, rather than incrementing
+a disconnected test counter. The results mode rejects a second closure request,
+leaving exactly one observed entry. A matched positive control changes only the
+driver row's deferral flag and requires the actual non-deferred owner update to
+reach that same observer once, with the captured stage identity intact.
+
+The committed 34fa test file SHA-256 is
+`c9f6a3a2f1d6866bf957d06fd6dd44e976e1670da074e9f03da5c447b1ce0c04`.
+The corrected fixture hash is recorded after the focused run. For bounded
+baseline discrimination, the new positive control is first run with only the
+observer increment temporarily disconnected, while retaining valid entry state
+and mode publication. It must fail on count1 versus0 after verifying the actual
+compatibility seam and provider capture, not on a null fixture error. Production
+is never modified for this negative control. The final run restores the observer
+and selects only the affected deferred method and its new matched positive.
+
+All commands use the existing quoted `MAIN_CHECKOUT`/`ROM_ARGS` environment above,
+Java25/Lua5.4, cleared display/launcher variables, `-Dmse=off` and surfaceless EGL:
+
+```bash
+NEGATIVE='TestGameLoopFreezeContractWiring#specialStageTerminalOwnerRequestsResultsWhenBoundaryIsNotDeferred'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$NEGATIVE" "${ROM_ARGS[@]}" test -B
+FOCUSED='TestGameLoopFreezeContractWiring#specialStageTerminalBoundaryWaitsForTheClosureBridge+specialStageTerminalOwnerRequestsResultsWhenBoundaryIsNotDeferred'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" "${ROM_ARGS[@]}" test -B
+```
+
+Checkpoint: HEAD is still 34fa, the weak-observer negative-control request is live
+in this worktree and no other job has been submitted. Runtime pair remains
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`.
+No production/cap/store/ambient/pin, provider-authority, exception-policy or native
+timing edit is made. The inherited KiS2 error and complete-return gap remain
+attributed to the earlier source; the independent repair is outside this scope.
+No unchanged controller/guard/native rerun, broad/full validation, subdelegation,
+push, integration, amendment or worktree cleanup is part of this correction.
+
+The weak-observer negative fixture (test-file SHA-256
+`7aea0c7b98ee1d9418843284c46f4d32f9b85978d38b96b507b9b3bbece87e95`)
+executed exactly the new non-deferred positive control. It failed as intended:
+`AssertionFailedError: the same observer must detect entry through the actual
+non-deferred lifecycle path ==> expected: <1> but was: <0>` at the final counter
+assertion. The preceding actual Host entry, provider-ring/stage capture, results
+mode and recorded-stage assertions passed. There were no errors or skips; this
+was not a null fixture failure. Admission waited 467 seconds; Maven execution was
+28.893 seconds. XML confirmed the exact identity, Java25.0.5.0.2, EGL and all four
+absolute original-ROM properties. Its reports were inspected and consumed.
+
+The observer increment is restored, producing corrected test-file SHA-256
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+The production pair is byte-identical before and after the negative control.
+The final two-method selection is now live in the same worktree. No other test
+selection or production mutation is required by this discrimination.
+
+The final exact two-method run passed 2/0/0/0: both named JUnit identities
+executed, with no errors, failures or skips. The deferred row observes zero real
+entry requests, its genuine closure makes one, and a second results-mode closure
+is rejected. The matched non-deferred row observes one actual lifecycle request
+through the same seam. The positive control's preceding disconnected-observer
+failure makes this observation falsifiable. Admission waited 139 seconds;
+Maven execution was 28.928 seconds. Exact XML identities, Java25.0.5.0.2, EGL,
+all four absolute ROM properties and skipped/failure nodes were inspected.
+
+The tested corrected test-file SHA-256 remains
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+Its scoped test diff over 34fa has SHA-256 `60bc7118735750133617f1f37ad89d95044bf41ca052cecf62604be0e8e03eb5`
+(`git diff --binary 34faee3a8 -- src/test/java/com/openggf/TestGameLoopFreezeContractWiring.java`).
+Only subsequent evidence prose follows the tested fixture. Production pair
+`e9c1523eac6104281f7c97fb09c86f6cab14bb7bc9c4e0c090b474c928f8b42b`,
+root/lifecycle caps 2443/571, 119 low-level records, six ambient keys and API pins
+are unchanged by byte/scope comparison; no unchanged runtime/guard/native rerun
+is claimed. The inherited KiS2 gap remains as previously attributed and untested
+by this correction. Both owned command handles are terminal; inspected reports
+are consumed without archives or receipts. The local follow-up preserves 34fa
+as direct history, keeps hooks and the parsed required co-author trailer, and
+retains the worktree without push, integration or branch/worktree cleanup.
+
+
+### Deferred-boundary observer review closure
+
+Follow-up `1c66bfe7b27eed67541c9ccc7919559f9f6ca742` addresses the sole
+SS source-review P2. The parent performed a fresh read-only review of the two
+changed controls: the actual lifecycle reaches the Host entry observer, the
+real closure invokes lifecycle entry, and a second closure in results mode is
+rejected. A matched non-deferred row independently demonstrates the observer.
+The worker's disconnected-observer control failed at count1 versus0 after the
+actual entry/provider/mode/identity checks; the restored two controls passed
+with no failures/errors/skips. These executions remain worker observations.
+
+Parent byte checks match the committed test SHA-256
+`b3ee3e4c8921fc468d9e401d5f08e27cd973d70fd1c4dac4c5451ed2a6f0bd02`.
+Reconstructing the previously reviewed file produces the independent review's
+11,195-file aggregate
+`c965c8aec76a83c1faaaff7b92384841fa3082374819acab623beb49e3a5cdbe`;
+with this sole scoped test delta, the committed aggregate is
+`ae37c1ece7780d1abc4e775165647c50d4460eecdc9d09b938c48af8e8a09a0d`.
+Encoding is sorted path UTF-8, NUL, decimal content-byte length, NUL, then raw
+SHA-256 of content. Production remains the reviewed pair unchanged. No complete
+runtime selection was repeated for this test-only correction. The inherited
+KiS2 gate and final composed validation/delivery remain outstanding.
