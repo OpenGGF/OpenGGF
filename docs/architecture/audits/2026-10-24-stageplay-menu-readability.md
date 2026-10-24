@@ -344,3 +344,11 @@ The gallery retains 169 comparisons and the desktop branch remains at `4aa6c06`.
 No controls, authoring instructions, policies or release themes change in this
 spacing-only follow-up. Both worktrees are left clean, with a local engine commit
 and no merge or push.
+
+
+The [Day Off taste follow-up](2026-10-24-stageplay-dayoff-bugs.md#lead-taste-review-shared-f1-details-follow-up)
+replaces the legacy F1 reader that remained after this review. Shared details now
+use the compact panel, small title, yellow headings, value column, buttons and one
+arrow footer. Route meaning/advice/settings/counts are structured separately;
+More retains the original engineering text. Earlier capture/check results above
+remain evidence for their stated source commits.

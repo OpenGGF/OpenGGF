@@ -10,6 +10,15 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
+    @Test void resultMarksAndSeparatorsUseNativeGeometryRatherThanQuestionMarks() throws Exception {
+        var fixture=new Fixture();fixture.font.drawText("✓✗·•",0,0,.6f,1,1,1,1);
+        assertTrue(fixture.renderer.draws.stream().mapToInt(Draw::quads).sum()>4);
+        for(var draw:fixture.renderer.draws) for(int i=0;i<draw.vertices().length;i+=8) {
+            assertEquals(MenuGlyphs.SOLID_U,draw.vertices()[i+2]);
+            assertEquals(MenuGlyphs.SOLID_V,draw.vertices()[i+3]);
+        }
+    }
+
     @Test
     void directionHintsDrawActualArrowGeometryAtBothNativeSizes() throws Exception {
         for(float scale : new float[]{.6f, 1, 2}) {

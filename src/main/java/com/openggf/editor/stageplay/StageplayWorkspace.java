@@ -3,6 +3,7 @@ package com.openggf.editor.stageplay;
 import com.openggf.stageplay.StageplayDocument.Facing;
 
 import com.openggf.control.InputHandler;
+import com.openggf.game.MenuDetailsScreen;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
 import com.openggf.stageplay.StageplayController;
@@ -1694,8 +1695,76 @@ public final class StageplayWorkspace {
         var result = routeUpdate.result();
         var overlay=result==null?null:new com.openggf.stageplay.editor.StageplayRouteOverlay(result,false);
         String summary=result==null?routeUpdate.phase()==StageplayRouteJob.Phase.CHECKING?"Checking route inputs.":"Finding a route.":overlay.summary();
-        menu.setHelp("Review the path before applying it.",result==null?routeUpdate.message():overlay.reason()+"\n"+overlay.motionSummary()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks. Apply replaces commands in the requested window.");
+        menu.setHelp("Review the path before applying it.",result==null?routeUpdate.message():result.message()+"\n"+overlay.motionSummary()+"\n"+result.path().size()+" samples, "+result.expandedNodes()+" nodes, "+result.simulatedTicks()+" ticks.");
         menu.setStatusLine(summary,result==null?EditorProjectMenu.Tone.INFO:result.success()?EditorProjectMenu.Tone.SUCCESS:EditorProjectMenu.Tone.WARNING);
+        if(result!=null) configureRouteDetails(result,overlay);
+    }
+
+    private void configureRouteDetails(com.openggf.stageplay.route.StageplayRouteResult result,
+                                       com.openggf.stageplay.editor.StageplayRouteOverlay overlay) {
+        String who=controller.document().actors().stream().filter(a->a.id().equals(result.request().actorId()))
+                .map(Actor::name).findFirst().orElseGet(()->controller.document().objectActors().stream()
+                        .filter(a->a.id().equals(result.request().actorId())).map(ObjectActor::name).findFirst().orElse("This actor"));
+        String meaning=switch(result.status()) {
+            case BUDGET_EXCEEDED -> who+" might reach the goal, but the search ran out of budget before confirming it.";
+            case SEARCH_EXHAUSTED -> "The search did not find a route with these settings.";
+            case VERIFIED -> who+" reached the goal in a fresh playback check.";
+            case VISUAL_TERRAIN -> "This object can follow the terrain; its native behavior stays paused.";
+            case UNSUPPORTED -> "The planner cannot check this actor or starting point.";
+            case CANCELLED -> "Route planning was cancelled.";
+            case VERIFICATION_FAILED -> "Playback did not confirm the proposed route.";
+            case STALE_INPUT -> "The scene or its assets changed. Plan the route again.";
+        };
+        String status=switch(result.status()) {
+            case BUDGET_EXCEEDED -> "Search limit reached";
+            case SEARCH_EXHAUSTED -> "No route found";
+            case VERIFIED -> "Route found";
+            case VISUAL_TERRAIN -> "Object route found";
+            case UNSUPPORTED -> "Route unsupported";
+            case CANCELLED -> "Route cancelled";
+            case VERIFICATION_FAILED -> "Playback check failed";
+            case STALE_INPUT -> "Route needs replanning";
+        };
+        if(result.success()) {
+            long jumps=result.commands().stream().filter(c->c.kind()==PuppetCommandKind.JUMP).count();
+            status+=" · "+String.format(java.util.Locale.ROOT,"%.1f",overlay.performanceFrames()/60.0)
+                    +" s · "+jumps+(jumps==1?" jump":" jumps");
+        }
+        var sections=new ArrayList<MenuDetailsScreen.Section>();
+        var advice=new ArrayList<MenuDetailsScreen.Row>();
+        String diagnosis=result.message().toLowerCase(java.util.Locale.ROOT);
+        if(java.util.regex.Pattern.compile("(needs|try|use|switch to) run\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Run"));
+        if(java.util.regex.Pattern.compile("more (attempt )?frames").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Allow more frames"));
+        if(java.util.regex.Pattern.compile("(needs|try|use) spindash\\b").matcher(diagnosis).find())
+            advice.add(new MenuDetailsScreen.Row("","• Use Spindash"));
+        if(!advice.isEmpty())sections.add(new MenuDetailsScreen.Section("Try",advice,false));
+        var motion=result.request().motion();
+        String settings=result.request().footprint()==null?"Start "+routeSetting(motion.startingAction())
+                +" · Speed "+routeSetting(motion.travelSpeed())+" · Stop "+routeSetting(motion.endingAction())
+                +" · Face "+routeSetting(motion.endingFacing()):"Walk · Speed "+result.request().objectSpeed()+" px/frame";
+        sections.add(new MenuDetailsScreen.Section("Settings",List.of(new MenuDetailsScreen.Row("",settings)),false));
+        sections.add(new MenuDetailsScreen.Section("Search",List.of(new MenuDetailsScreen.Row("",
+                result.path().size()+" samples · "+result.expandedNodes()+" nodes · "+result.simulatedTicks()+" ticks")),true));
+        var buttons=new ArrayList<MenuDetailsScreen.Action>();
+        var actions=menu.actionEntries();
+        for(String label:List.of("Plan another route","Check inputs and apply route","Cancel route"))
+            for(int i=0;i<actions.size();i++) if(actions.get(i).label().equals(label)) {
+                int index=i;buttons.add(new MenuDetailsScreen.Action(label.startsWith("Check inputs")?"Apply":label,
+                        ()->menu.runAction(index),label.equals("Plan another route")));
+            }
+        boolean apply=routeUpdate.phase()==StageplayRouteJob.Phase.READY;
+        menu.setDetailsContent(new MenuDetailsScreen.Content("Route details",status,meaning,
+                result.success()?MenuDetailsScreen.Tone.SUCCESS:MenuDetailsScreen.Tone.WARNING,sections,
+                menu.helpText(),buttons,apply?"Apply replaces commands in the requested window":""));
+    }
+
+    private static String routeSetting(Enum<?> value) {
+        return switch(value.name()) {
+            case "INHERIT" -> "Keep"; case "GENTLE_STOP" -> "Gentle"; case "HARD_STOP" -> "Hard";
+            default -> value.name().charAt(0)+value.name().substring(1).toLowerCase(java.util.Locale.ROOT);
+        };
     }
 
     private void routeForm() {

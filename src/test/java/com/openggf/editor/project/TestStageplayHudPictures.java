@@ -59,6 +59,7 @@ class TestStageplayHudPictures {
                 var workspace = new StageplayWorkspace(() -> scene); workspace.activate();
                 workspace.invoke(StageplayWorkspace.Action.AUDIO); workspace.menu().runAction(1); workspace.menu().runAction(0);
                 renderObjectMenu(renderer,workspace); capture("dayoff-audio",1280,720);
+                workspace.menu().openDetails();renderObjectMenu(renderer,workspace);capture("dayoff-audio-details",1280,720);
             } finally { com.openggf.game.session.EngineServices.current().graphics().cleanup(); }
         }
     }

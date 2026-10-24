@@ -96,8 +96,8 @@ public final class MenuPixelFont extends PixelFont {
                 column = 0; line++; continue;
             }
             int glyphColumn = column++;
-            if (source >= '\u2190' && source <= '\u2193') {
-                drawArrow(source, originX + glyphColumn * cellWidth * multiplier,
+            if (source >= '\u2190' && source <= '\u2193' || source == '✓' || source == '✗' || source == '·' || source == '•') {
+                drawSymbol(source, originX + glyphColumn * cellWidth * multiplier,
                         originY + line * cellHeight * multiplier, cellWidth, cellHeight, multiplier, r, g, b, a);
                 selectBatch(full ? Batch.FULL : Batch.COMPACT);
                 continue;
@@ -123,14 +123,18 @@ public final class MenuPixelFont extends PixelFont {
     }
 
     /** Native arrow heads and stems; never route control icons through ASCII substitutions. */
-    private void drawArrow(char arrow, int x, int y, int cellWidth, int cellHeight, int scale,
+    private void drawSymbol(char arrow, int x, int y, int cellWidth, int cellHeight, int scale,
                            float r, float g, float b, float a) {
         int[] rows = switch (arrow) {
             case '\u2190' -> new int[]{0, 4, 8, 31, 8, 4, 0};
             case '\u2191' -> new int[]{4, 10, 21, 4, 4, 4, 4};
             case '\u2192' -> new int[]{0, 4, 2, 31, 2, 4, 0};
             case '\u2193' -> new int[]{4, 4, 4, 4, 21, 10, 4};
-            default -> throw new IllegalArgumentException("Unsupported arrow");
+            case '✓' -> new int[]{0, 1, 2, 20, 8, 0, 0};
+            case '✗' -> new int[]{0, 17, 10, 4, 10, 17, 0};
+            case '·' -> new int[]{0, 0, 0, 4, 0, 0, 0};
+            case '•' -> new int[]{0, 0, 14, 14, 14, 0, 0};
+            default -> throw new IllegalArgumentException("Unsupported menu symbol");
         };
         int left = x + (cellWidth - 5) * scale / 2;
         int top = y + (cellHeight - 7) * scale / 2;

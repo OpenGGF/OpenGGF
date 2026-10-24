@@ -125,6 +125,11 @@ Confirming a pick writes only form values; Apply performs the normal undoable ed
 Camera keys, actor/object keys and destinations use world picking; panel positions
 and relative offsets remain numeric. Verify proposed floor placements in playback.
 
+Route F1 details show the result, plain meaning, evidence-backed Try advice,
+Settings and dim Search counts. Buttons retain replan/cancel/fresh Apply actions;
+More keeps the original engineering diagnosis. Shared help uses the same compact
+panel and arrow footer.
+
 For player route motion, choose starting action Walk/Jump/Spindash (capability-gated),
 travel Walk/Run, ending Gentle Stop/Hard Stop/Overshoot and facing Inherit/Left/Right.
 Planned defaults stroll at 1.5 px/tick and coast without a skid; Run reads native

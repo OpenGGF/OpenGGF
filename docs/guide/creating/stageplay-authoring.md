@@ -695,7 +695,9 @@ unchanged. The helper never inserts position keys or changes an actor's mode.
 Both editors use the same compact forms: a short hint, named choices, grouped rows
 and one **Advanced** section. Advanced keeps search limits, object footprints,
 follow tuning and optional assets out of the main view without resetting them.
-**F1 Help** retains full field descriptions, ranges and diagnostics; status lines
+**F1 Help** opens compact details with section headings and buttons. Route details
+separate the result, plain meaning, available advice, settings and search counts;
+a dim **More** toggle retains full field descriptions, ranges and diagnostics. Status lines
 and colour swatches summarize the current result. Text previews preserve actual
 line breaks. At the standard HUD size, default forms show their common fields,
 Advanced and primary action together; expanded Advanced settings can scroll.

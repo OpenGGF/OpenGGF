@@ -7,7 +7,8 @@ Unreleased. The earlier development themes remain in
 
 - **OpenGGF Stageplay:** shared directing documents power the in-engine HUD and
   OpenGGF Editor's Stageplay workspace. Both editors share compact grouped forms,
-  named choices, collapsed Advanced settings and full F1 diagnostics without repeated route diagnoses. In-level
+  named choices, collapsed Advanced settings and structured F1 details with buttons,
+  plain route advice and a dim More toggle for full diagnostics. In-level
   position picking pans through the level with coordinate tags and optional queried
   floor snapping, marked by a yellow floor line and dashed guide; placement pickers
   start snapped and numeric entry stays available. Uniform HUD rows keep primary actions visible at the standard size;

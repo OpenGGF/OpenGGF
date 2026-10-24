@@ -110,6 +110,9 @@ class TestStageplayRouteOverlayPictures {
                 draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
                 modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
                 video.frame(output.resolve("engine-route-ready-menu.png"));
+                workspace.menu().openDetails();draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-found-details.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-proposed.png"):null);}
                 // The film renderer owns no route state. Redrawing its opaque view removes every
@@ -154,6 +157,13 @@ class TestStageplayRouteOverlayPictures {
                 draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
                 modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
                 video.frame(output.resolve("engine-route-details.png"));
+                var detailInput=new InputHandler();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP,1);detailInput.refreshLogicalSnapshot();workspace.menu().update(detailInput);detailInput.update();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP,0);detailInput.update();
+                detailInput.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER,1);detailInput.refreshLogicalSnapshot();workspace.menu().update(detailInput);detailInput.update();
+                draw(chrome,session,workspace);glViewport(0,0,WIDTH,HEIGHT);
+                modal.render(workspace.menu(),new org.joml.Matrix4f().ortho2D(0,WIDTH*224f/HEIGHT,0,224).get(new float[16]),Math.round(WIDTH*224f/HEIGHT));
+                video.frame(output.resolve("engine-route-more-details.png"));
                 workspace.menu().close();
                 for(int i=0;i<60;i++){draw(chrome,session,workspace);video.frame(i==0?output.resolve("engine-failed.png"):null);}
                 var panel = com.openggf.editor.hud.EditorHudLayout.of(WIDTH,HEIGHT,source.width(),source.height(),true).workbench();

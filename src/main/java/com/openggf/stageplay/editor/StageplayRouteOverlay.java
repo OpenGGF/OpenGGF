@@ -68,6 +68,14 @@ public final class StageplayRouteOverlay {
         return readable(m.startingAction().name()) + " / " + readable(m.travelSpeed().name())
                 + " / " + readable(m.endingAction().name()) + " / " + readable(m.endingFacing().name());
     }
+    /** Performance duration follows its authored commands, not the full search work count. */
+    public int performanceFrames() {
+        int end=java.util.stream.Stream.concat(result.commands().stream().map(com.openggf.stageplay.StageplayDocument.PuppetCommand::frame),
+                result.objectCommands().stream().map(com.openggf.stageplay.StageplayDocument.ObjectCommand::frame))
+                .max(Integer::compareTo).orElse(path().isEmpty()?result.request().startFrame():path().getLast().frame());
+        return Math.max(0,end-result.request().startFrame()+1);
+    }
+
     public String reason() { return reason; }
     public String summary(){return switch(result.status()){
         case VERIFIED->applied?"Route applied.":"Route found; review it before applying.";
