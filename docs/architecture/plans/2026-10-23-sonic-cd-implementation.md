@@ -3994,3 +3994,35 @@ those images show source-ordered BG scroll through development planes, not
 native PlaneB integration. The opt-in component case proves source binding,
 not a native plane-image/PLC oracle. Complete native video, section residency,
 full act/game and regional gameplay parity remain unclaimed.
+
+### Normal native Spring execution component — 24 October 2026
+
+CdSpring ports normal up/side/down routines0..18 and the routine2==5 player
+mirror. Exactly five dynamic-slot aliases name speed30,parent34,anchor36 and
+signed byte offsets38/39. Init returns before Main; reached Solid calls publish
+a0 and borrow one real pool cut, then require synchronous a0/a2 publication.
+A distinct immutable launch patch names exact native stores, preserving both
+fractions and all undeclared actor/slot fields. Move lock is word3E, not timer32.
+Down's returning sound call falls into Animate in the same dispatch; up/side
+return directly to the wrapper. Real script FC occurs on animation call11; reset
+runs on the next dispatch. DrawObject precedes live parent following and unsigned
+anchor-window deletion, with post-draw flags reloaded. ID-zero dynamic parents
+remain actual live images. Diagonal selector15/routines, MovingSpring execution
+and other reserved/unaligned parent reads remain named unsupported boundaries.
+No collision, probe, KillPlayer or animator implementation is duplicated.
+Native owners: Spring Main:98-409, Object Solid and Object Animate, pin1ecc5f3a.
+
+Root22580 passed231/0/0/0: Spring65, Solid88, Animation28, Mapping13, Pool12,
+ObjectAssets22, ObjectRetail3. Java25 and actual supplied media for inherited
+opt-in consumers; Spring's65 constructed invocations have no media skip. Lean
+4GiB/4core admission,330squeue/94sMaven, exit0 at22:53:33BST. All seven completed
+XML identities and skips were inspected. Command used the named selectors through
+maven_queue.py --lean -Dmse=off with soniccd.media.root. Three Java files match
+the external freeze exactly; tests were authored before production.
+Independent bounded source review found noP1/P2 or wrong expected assertions.
+One nonblocking oracle gap remains: the dedicated parent/draw case does not
+set parent ID0 or assert complete post-draw flags/returned-pool equality; source
+handles those correctly. These are component passes, not a World Spring claim.
+Root still owns launch/solid phase-CAS, typed sound forwarding,400patternbank
+and cleanup, ID0A live dispatch, actual contacts/SAT/replay, PLC residency and
+later regional admission. Fixed-ac4 broad smoke remains independent/pending.

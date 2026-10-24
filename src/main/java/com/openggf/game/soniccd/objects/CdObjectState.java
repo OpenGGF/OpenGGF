@@ -33,7 +33,9 @@ public final class CdObjectState {
         // Obj3DRamp_Main (3D Ramp/Main.asm:230,294,326): launch timer byte at oVar2E. Storage only.
         RAMP_TIMER(0x2E),
         // ObjPoints (HUD and Points/Main.asm:11,40,47): oPntsTimer EQU oVar2A, a byte lifetime. Storage only.
-        POINTS_TIMER(0x2A);
+        POINTS_TIMER(0x2A),
+        // ObjSpring .DisplayOnly (Spring/Main.asm:156-159): signed parent-relative bytes. Storage only.
+        SPRING_PARENT_X_OFFSET(0x38), SPRING_PARENT_Y_OFFSET(0x39);
         private final int offset;
         ByteField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
@@ -53,7 +55,9 @@ public final class CdObjectState {
         // (Player Object Collision.asm:165,170). Its low byte selects the points frame. Storage only.
         EXPLOSION_POINTS_FRAME(0x3E),
         // oGmOverDestX EQU oVar2A (Game Over/Main.asm:7,34,83,94): the text's destination X word. Overlapping storage only.
-        GAME_OVER_DEST_X(0x2A);
+        GAME_OVER_DEST_X(0x2A),
+        // ObjSpring (Spring/Main.asm:151,162,238): signed launch speed, parent low address, original X. Storage only.
+        SPRING_SPEED(0x30), SPRING_PARENT(0x34), SPRING_ANCHOR_X(0x36);
         private final int offset;
         WordField(int offset) { this.offset = offset; }
         public int byteOffset() { return offset; }
