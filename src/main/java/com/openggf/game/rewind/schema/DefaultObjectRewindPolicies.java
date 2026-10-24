@@ -108,6 +108,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance", "bodySegments"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.bosses.CPZBossPipe", "segments"), RewindFieldPolicy.TRANSIENT),
+            // Settled child identities rebuild these inventories, including flying Sol fireballs.
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.RexonBadnikInstance", "heads"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic2.objects.badniks.SolBadnikInstance", "fireballs"), RewindFieldPolicy.TRANSIENT),
             // The captured spawn selects the mapping frame/piece from the current art owner.
             Map.entry(new FieldKey("com.openggf.game.sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance", "pieceList"), RewindFieldPolicy.TRANSIENT),
             // The SLZ cache re-scans the restored seesaws before its next gameplay dispatch.
