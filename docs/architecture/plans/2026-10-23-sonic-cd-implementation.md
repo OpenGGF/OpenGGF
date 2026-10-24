@@ -1756,3 +1756,45 @@ That resolves the bounded source ingress question, not engine initialization:
 no cold-art factory or lifecycle hook has been added. In-program restart,
 checkpoint, carry and restore must retain their own state and never reuse that
 cold clear. Native timing and live player/render integration remain open.
+
+## Native player math and paired ground collision — 24 October 2026
+
+At parent `d075b8633` plus four new files, the source-reviewed finite math and
+ground-collision owners compiled and passed the complete selected checks:
+110 tests across six classes, zero failures/errors/skips. Session3193 waited
+157 seconds; Maven execution was1m37s. Its completed command returned exit0;
+a later attempt to poll the already-closed session found no process. All six
+current XML reports, counts and Java25 properties were inspected. This run
+contains68 new math/ground cases and42 affected dependency regressions; do not
+add repeated dependency counts to earlier coverage as new unique tests.
+
+From the private cwd, with DISPLAY/WAYLAND_DISPLAY unset and
+LUA_BIN=/usr/bin/lua5.4 (`OPENGGF_MAIN` denotes the original checkout):
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdPlayerMath,TestCdPlayerGroundCollision,TestCdPlayerTerrain,TestCdTerrainCollision,TestCdR11aTerrain,TestCdR11aPlayerAssets' test -B
+```
+
+`CdPlayerMath` consumes the actual supplied player's sine/arctangent views.
+It retains low-byte/word input widths, unsigned magnitudes after NEG.W,
+quotient256 and the returned angle word, including0100; byte projection is
+explicit. Shared trig tables and byte-return behavior were rejected as different
+asset/return contracts. No shared math implementation changed.
+
+`CdPlayerGroundCollision` models one Player_GroundCol call over the actual native
+probes: object bypass, signed quadrant rounding, four paired sensor orders,
+secondary-on-tie selection, optional angle writes, signed radius bytes,
+14-pixel alignment/stick/detach branches, and integer-word position writes that
+retain all fraction bits. Unknown backing throws without a partially published
+actor. The interleaved unused movement routines were excluded. Both owners are
+immutable/pure and neither advances a player frame, clock or resource service.
+
+Source labels are CalcSine/CalcAngle (Level/Functions (Misc).asm:69-219) and
+Player_GroundCol/Player_PickSensor/walking routines (Level/Collision Floor.asm:
+30-146,227-454), at `1ecc5f3a`. External handoffs and independent bounded reviews
+retain exact source hashes in `research/player-math*.md` and
+`research/player-ground-collision*.md` in the private task bundle. The tests use
+constructed admitted asset/terrain bytes, with no runtime disassembly, media,
+emulator or reference-state input. No exhaustive4billion-input or native timing
+claim is made. Normal locomotion, actual actor/render binding and complete-game
+parity remain open; these components leave the stock entry held and static.
