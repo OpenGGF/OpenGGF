@@ -25,7 +25,7 @@ obligation is not a passing test claim.
 
 | # | Field | Reconstruction and disposition | Evidence or remaining obligation |
 | --- | --- | --- | --- |
-| 1 | [`sonic1.objects.Sonic1RingInstance#childRingSpawns`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingInstance.java) | Retained. The layout constructor expands a ring group, but `recreateForRewind` takes the child constructor and creates an empty list. The state enum is captured separately. | Prove restoration before the INIT dispatch can still expand the exact group, then replay spawning and collection with canonical RingManager identities. Post-spawn scalar or child-ring tests do not settle that boundary. |
+| 1 | [`sonic1.objects.Sonic1RingInstance#childRingSpawns`](../../../src/main/java/com/openggf/game/sonic1/objects/Sonic1RingInstance.java) | Retained with narrower debt. Placed parents restore through `Sonic1ObjectRegistry.create(spawn)`, which rebuilds the canonical recipe from the current level mapping, including before INIT. Progressed dynamic children correctly recreate with an empty recipe. A field-wide exclusion still needs a contract for public caller-supplied parent recipes. | [`TestS1RingGroupGraphRewind`](../../../src/test/java/com/openggf/game/rewind/TestS1RingGroupGraphRewind.java) passes six destructive managed controls on unchanged runtime: real GHZ1 pre-INIT placement, exact allocation/collection/respawn replay, canonical RingManager identities, and progressed child sparkle retirement without duplication. See the bounded S1 follow-up below for construction inventory, recipe alternatives and residual limits. |
 | 2 | [`sonic1.objects.bosses.FZPlasmaLauncher#activeBalls`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/FZPlasmaLauncher.java) | Closed with central `TRANSIENT`. Each recreated FZPlasmaBall adopts itself through `adoptPlasmaBallForRewind`; the launcher prunes destroyed entries and derives its active count. The native encounter has one launcher group. | [`TestS1FzBossGraphRewind.fzBossGraphRestoresChildrenLauncherBallsAndParentSideLinks`](../../../src/test/java/com/openggf/game/rewind/TestS1FzBossGraphRewind.java) removes children, creates a divergent launcher/ball, restores fresh identities, checks the exact list and count, then advances the launcher without duplicating balls. |
 | 3 | [`sonic1.objects.bosses.Sonic1FalseFloorInstance#childBlocks`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java) | Closed in the bounded follow-up below with central `TRANSIENT`. Recreation rebuilds the surviving managed inventory. Dispatch resolves the captured original `blockIndex` instead of a compacted list position, and advances the native break count on each timer borrow. | [`TestFalseFloorBlockRewindGenericRestore.partialCollapseReplaysThroughCleanupAfterDestructiveRestore`](../../../src/test/java/com/openggf/game/sonic1/objects/TestFalseFloorBlockRewindGenericRestore.java) fails on the original runtime in all four partial-collapse cases and passes with the fix. An event-style dynamic master and its surviving children restore as fresh objects with exact identities and order. Every forward timer, width and fragment state matches uninterrupted execution through master cleanup and fragment retirement. The complete eight-child test remains green. |
 | 4 | [`sonic1.objects.bosses.Sonic1SLZBossInstance#seesaws`](../../../src/main/java/com/openggf/game/sonic1/objects/bosses/Sonic1SLZBossInstance.java) | Closed with central `TRANSIENT`. Recreation starts the list empty. `updateBossLogic` calls `scanForSeesaws` before consuming the cache on the next forward dispatch. | [`TestS1SlzBossSpikeballGraphRewind.restoreRebuildsTheBossSeesawScanCacheSoAlignmentCanStillMatch`](../../../src/test/java/com/openggf/game/rewind/TestS1SlzBossSpikeballGraphRewind.java) forces fresh reconstruction and verifies that the next update repopulates the cache. Other tests in the class check spikeball origin matching rather than first-live-seesaw matching. This is bounded encounter evidence, not a full SLZ route replay. |
@@ -869,3 +869,118 @@ stability selection or release-only full suite ran here. Only the positively
 verified `LbzMinibossInstance#panels` baseline key is removed; other rows, totals
 and obligations are unchanged by this follow-up. Parent composition and delivery
 remain pending.
+
+## Bounded S1 ring recipe follow-up, 2026-10-24
+
+This follow-up starts from local `develop` at
+`2020d2e57a4b3a4cece9083730c89eb9c71d29a4`, on
+`bugfix/ai-s1-ring-rewind-disposition-20261024` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-bdfa5c84/.worktrees/s1-ring-rewind-disposition-20261024`.
+Only the S1 ring audit row and focused tests change. Runtime, policy and the
+`Sonic1RingInstance#childRingSpawns` baseline entry remain unchanged. The parent
+owns composed totals, broad validation and delivery.
+
+The earlier row conflated placed and dynamic reconstruction. A placed parent's
+`ObjectManagerSnapshot.PerSlotEntry` recreates through
+`Sonic1ObjectRegistry.create(spawn)`. The factory reads the **current level's**
+`RingObjectPlacementMapping`, falling back to its locally supplied mapping only
+without that provider. `Sonic1RingPlacement.extract` supplies immutable canonical
+group lists with individual `RingSpawn.placementId` values. The parent constructor
+retains those canonical objects. Its INIT recipe therefore survives destructive
+placed restoration without capturing this list. Dynamic entries instead use
+`recreateForRewind`; an ordinary progressed child has no children to reconstruct.
+
+Construction and producer inventory, including direct callers:
+
+- The public `(ObjectSpawn, List<RingSpawn>)` parent constructor starts in INIT.
+  The registry is its only production caller. It also supports direct tests in
+  [`com.openggf.tests.TestSonic1RingInstance`](../../../src/test/java/com/openggf/tests/TestSonic1RingInstance.java)
+  (including unmanaged updates with no ObjectManager),
+  [`com.openggf.game.sonic1.objects.TestSonic1RingInstance`](../../../src/test/java/com/openggf/game/sonic1/objects/TestSonic1RingInstance.java)
+  (public parent construction registered dynamically), and
+  [`TestStageplayObjectRingProvenance`](../../../src/test/java/com/openggf/level/objects/TestStageplayObjectRingProvenance.java)
+  (a dynamically registered singleton recipe). These tests do not establish
+  destructive pre-INIT restoration of an arbitrary caller-supplied group.
+- The package-private `(ObjectSpawn, RingSpawn, int)` child constructor starts
+  in ANIMATE with an empty recipe. `spawnChildren` calls it through both managed
+  reserved-slot allocation and the unmanaged `spawnChild` fallback;
+  `recreateForRewind` also calls it. The package-local sparkle test constructs it
+  directly. The private no-argument constructor delegates to this shape for the
+  generic recreation probe. A repository-wide Java search found no other
+  constructor or subclass producer.
+
+[`TestS1RingGroupGraphRewind`](../../../src/test/java/com/openggf/game/rewind/TestS1RingGroupGraphRewind.java)
+loads GHZ1 from the verified S1 World REV01 ROM, selects a real three-ring layout
+entry and retains the current level's canonical mapping. A deliberately stale
+registry-local mapping is a positive control for current-level ownership. The
+test isolates that real placement in a managed ObjectManager, enables S1
+counter-based respawn, disables in-place restore and composes ObjectManager and
+RingManager in a RewindRegistry. It asserts the actual pre-INIT parent is a
+placed entry, there are no dynamic entries yet and production capture has a
+non-null compact field blob.
+
+Four cases collect no rings, the parent, one child, or the complete group before
+INIT. Destructive restore rebuilds the exact canonical parent/child recipe;
+forward dispatch matches the uninterrupted allocation order, slots, rewind IDs,
+collection bits and complete respawn bytes. Collected children consume no slot;
+only the fully collected group retains its respawn-block bit. These expectations
+follow `Ring_Main`, `Ring_MakeRings` and `Ring_SpawningDone` in the shipped
+`FixBugs = 0` ring routine. Two more cases touch a live child, capture progressed
+state, erase and diverge the managed graph, then restore fresh objects. Every
+frame through sparkle retirement matches the uninterrupted graph, including
+stable rewind identities, canonical RingManager references, the parent anchor,
+slot occupancy and the dynamic identity counter. No duplicate children appear.
+
+The field-wide decision remains **retained**. Constructor-owned canonical recipes
+are sufficient for the tested stock placed path. A blanket `TRANSIENT` policy
+would also cover the public constructor's caller-supplied recipe: it accepts an
+arbitrary list and retains a `subList` view, without requiring canonical placement
+IDs, matching subtype expansion, or immutable caller ownership. No current
+production producer uses a dynamic pre-INIT group, and this follow-up does not
+claim one as a normal layout gameplay defect.
+
+A captured immutable recipe is a different contract: it would need to retain the
+exact supplied sequence and individual placement identities, then rebind to the
+correct canonical RingManager objects. Default capture currently drops this
+`List<RingSpawn>`; changing its policy alone supplies no list codec. Capturing
+only coordinates/subtype would discard caller recipe and placement identity.
+Capturing record values alone would also require canonical rebinding, since a
+new value-equal record is not the identity-keyed placement owner. The current
+dynamic resolver selects by coordinates, so duplicate-coordinate identities are
+an additional unqualified case. No generic codec, custom capture override,
+allowance or new exclusion was added to evade the actual field audit. The
+remaining evidence/design boundary is arbitrary public/unmanaged recipe
+restoration and its canonical identity contract; the baseline key stays visible.
+
+The first focused request used the following environment and exact selection.
+`MAIN_CHECKOUT` and `ROM_ROOT` identify the existing main checkout and ROM
+directory, as above; no machine-local home path is required in these commands.
+
+```bash
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS1RingGroupGraphRewind' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=com.openggf.tests.TestSonic1RingInstance,com.openggf.game.sonic1.objects.TestSonic1RingInstance,com.openggf.game.sonic1.TestSonic1RingPlacement' "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+The first completed invocation passed all six parameterized cases, with zero
+failures, errors or skips; exact XML testcase identities and skip elements were
+inspected. It waited 64 seconds for admission and Maven reported 78 seconds of
+execution including initial compilation. Runtime source was unchanged at the
+base SHA; the new graph test was the executable source delta. ROM identity was
+CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
+
+The second invocation passed all 15 existing constructor/collection/placement
+controls: 12 in `com.openggf.tests.TestSonic1RingInstance`, two in the package-local
+object test and one placement-mapping test. Exact XML identities confirmed zero
+failures, errors and skips. It waited 38 seconds for admission and Maven reported
+27.662 seconds of execution. These are separate queue/execution intervals, not
+combined delivery elapsed time. All 21 distinct focused cases passed across the
+two selections; no single 21-case invocation was run. Consumed Surefire reports
+were inspected and removed before handoff. No category diagnostics were created.
+
+This is bounded graph evidence for a real GHZ1 three-ring placement and ordinary
+progressed children. It does not certify arbitrary public recipes, overlapping
+placement identities, allocation exhaustion, every orientation/group size,
+offscreen respawn routes, GPU pixels, or the complete S1 route matrix. No broad
+smoke, complete guard profile, API/S3K selection or release-only full suite ran.
