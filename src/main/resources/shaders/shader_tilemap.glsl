@@ -261,10 +261,12 @@ void main()
     }
 
     float paletteX = (index + 0.5) / 16.0;
-    float paletteY = (paletteIndex + 0.5) / TotalPaletteLines;
+    // Each sampler owns its capacity; normal and underwater textures can differ.
+    float paletteY = (paletteIndex + 0.5) / float(textureSize(Palette, 0).y);
+    float underwaterPaletteY = (paletteIndex + 0.5) / float(textureSize(UnderwaterPalette, 0).y);
     vec4 color;
     if (UseUnderwaterPalette == 1 && pixelYFromTop >= WaterlineScreenY) {
-        color = texture(UnderwaterPalette, vec2(paletteX, paletteY));
+        color = texture(UnderwaterPalette, vec2(paletteX, underwaterPaletteY));
     } else {
         color = texture(Palette, vec2(paletteX, paletteY));
     }

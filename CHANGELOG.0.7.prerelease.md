@@ -240,7 +240,9 @@ Unreleased. The earlier development themes remain in
   Limited caps palette RGB at 238 after fades and profile conversion, including
   creator colours, with live normal and underwater palette refresh. The palette
   backdrop and headless gameplay captures use the same saved setting. Underwater
-  donor, appearance and texture colours share one tint policy.
+  donor, appearance and texture colours share one tint policy. Palette sampling
+  follows each texture's own row capacity when sidekick banks are reclaimed or
+  independent graphics hosts retain different texture sizes.
 
 - **Main menu:** Compact and bold lettering now share one pixel-font family,
   with clear navy lettering on gold launch buttons. Holding Escape freezes a
