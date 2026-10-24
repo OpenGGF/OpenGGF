@@ -223,7 +223,7 @@ class TestGameLoopSpecialStageRewindGate {
     void heldRewindEngagesWhileSupportedSpecialStageIsActive() throws Exception {
         var provider = new RewindableSpecialStageProvider();
         SessionManager.getCurrentGameplayMode().registerSpecialStageAdapter(provider);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
 
         LiveRewindManager liveRewindManager = (LiveRewindManager) getField(loop, "liveRewindManager");

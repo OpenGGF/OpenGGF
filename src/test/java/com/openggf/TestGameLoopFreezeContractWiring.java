@@ -65,8 +65,8 @@ class TestGameLoopFreezeContractWiring {
         GameLoop loop = new GameLoop(new InputHandler());
         LevelManager level = mock(LevelManager.class);
         setField(loop, "levelManager", level);
-        setField(loop, "activeSpecialStageProvider", mock(SpecialStageProvider.class));
-        setField(loop, "resultsScreen", mock(ResultsScreen.class));
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", mock(SpecialStageProvider.class));
+        SpecialStageLifecycleTestAccess.write(loop, "resultsScreen", mock(ResultsScreen.class));
         loop.setGameMode(GameMode.SPECIAL_STAGE_RESULTS);
 
         invoke(loop, "exitResultsScreen");
@@ -107,24 +107,21 @@ class TestGameLoopFreezeContractWiring {
                     new TraceRunFrameDriver.Step(
                             TraceRunFrameDriver.Disposition.SPECIAL_LOCAL,
                             0, true, true),
-                    () -> GameLoopSpecialStageLifecycle.update(
-                            provider,
-                            mock(SonicConfigurationService.class),
-                            key -> false,
-                            () -> { },
-                            () -> { },
-                            new InputHandler(),
-                            gameplay,
-                            frame,
-                            null,
-                            () -> { },
-                            new SpecialStageEntryPresentationController(),
-                            gameplay.getFadeManager(),
-                            () -> { },
-                            () -> false,
-                            mock(LiveRewindManager.class),
-                            GameMode.SPECIAL_STAGE,
-                            ignored -> resultsEntries.incrementAndGet()));
+                    () -> {
+                        var host = mock(GameLoopSpecialStageLifecycle.Host.class);
+                        when(host.activeProvider()).thenReturn(provider);
+                        when(host.config()).thenReturn(mock(SonicConfigurationService.class));
+                        when(host.input()).thenReturn(new InputHandler());
+                        when(host.boundGameplayContext()).thenReturn(gameplay);
+                        when(host.resolvedGameplayContext()).thenReturn(gameplay);
+                        when(host.pacingInput()).thenReturn(new GameLoopSpecialStageInput());
+                        when(host.plcFrame()).thenReturn(frame);
+                        when(host.fade()).thenReturn(gameplay.getFadeManager());
+                        when(host.rewind()).thenReturn(mock(LiveRewindManager.class));
+                        when(host.currentMode()).thenReturn(GameMode.SPECIAL_STAGE);
+                        new GameLoopSpecialStageLifecycle(host, mock(com.openggf.audio.AudioManager.class))
+                                .updateSpecialStageMode();
+                    });
             return null;
         });
 
@@ -361,6 +358,9 @@ class TestGameLoopFreezeContractWiring {
     }
 
     private static void invoke(GameLoop loop, String name) throws Exception {
+        if (SpecialStageLifecycleTestAccess.isOwnerMethod(name)) {
+            SpecialStageLifecycleTestAccess.invoke(loop, name, new Class<?>[0]); return;
+        }
         Method method = GameLoop.class.getDeclaredMethod(name);
         method.setAccessible(true);
         try {

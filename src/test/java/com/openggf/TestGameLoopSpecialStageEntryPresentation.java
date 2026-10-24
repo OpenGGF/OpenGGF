@@ -60,12 +60,15 @@ class TestGameLoopSpecialStageEntryPresentation {
         // context, which aborts the whole forked JVM rather than failing a test.
         GraphicsManager.getInstance().resetState();
         GraphicsManager.getInstance().initHeadless();
-        loop = new GameLoop(new InputHandler());
         fade = mock(FadeManager.class);
         audio = mock(AudioManager.class);
         when(audio.playMusic(any(GameMusic.class))).thenReturn(true);
+        var old = com.openggf.game.session.EngineServices.current();
+        var engine = new com.openggf.game.session.EngineContext(old.configuration(), old.graphics(), audio,
+                old.roms(), old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
+                old.crossGameFeatures(), old.moduleResolutionService());
+        loop = new GameLoop(engine, new InputHandler());
         setField(loop, "fadeManager", fade);
-        setField(loop, "audioManager", audio);
     }
 
     @AfterEach
@@ -301,7 +304,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     private boolean entryPresentationPending() throws Exception {
-        Object controller = getField(loop, "specialStageEntryPresentation");
+        Object controller = SpecialStageLifecycleTestAccess.read(loop, "specialStageEntryPresentation");
         Method method = controller.getClass().getMethod("isPending");
         return (boolean) method.invoke(controller);
     }

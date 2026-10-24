@@ -470,7 +470,7 @@ public class TestGameLoop {
             completion.set(invocation.getArgument(0));
             return null;
         }).when(fade).startFadeToWhite(any());
-        setPrivateField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         setPrivateField(loop, "currentGameMode", GameMode.SPECIAL_STAGE);
         setPrivateField(loop, "fadeManager", fade);
         var shortcuts = (GameLoopDebugShortcuts) getPrivateField(loop, "debugShortcuts");
@@ -479,8 +479,8 @@ public class TestGameLoop {
 
         verify(provider).setEmeraldCollected(true);
         verify(provider, never()).publishEmeraldReward(any(), anyInt(), any());
-        assertEquals(120, getPrivateField(loop, "ssRingsCollected"));
-        assertEquals(true, getPrivateField(loop, "ssEmeraldCollected"));
+        assertEquals(120, SpecialStageLifecycleTestAccess.read(loop, "ssRingsCollected"));
+        assertEquals(true, SpecialStageLifecycleTestAccess.read(loop, "ssEmeraldCollected"));
         assertFalse(enteredResults.get());
         verify(fade).deferFirstStepToNextVint();
         assertNotNull(completion.get());
@@ -490,7 +490,7 @@ public class TestGameLoop {
         when(fade.isActive()).thenReturn(true);
         shortcuts.debugFailSpecialStage();
         verify(fade, times(1)).startFadeToWhite(any());
-        assertEquals(120, getPrivateField(loop, "ssRingsCollected"),
+        assertEquals(120, SpecialStageLifecycleTestAccess.read(loop, "ssRingsCollected"),
                 "an active fade must not be overwritten by another debug result request");
     }
 
@@ -854,7 +854,7 @@ public class TestGameLoop {
         int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
         assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
         String outerFrameBody = source.substring(stepInternal, admission);
-        int admissionEnd = source.indexOf("private void updateSpecialStageMode()", admission);
+        int admissionEnd = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", admission);
         String admissionBody = source.substring(admission, admissionEnd);
 
         assertTrue(admissionBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
@@ -867,7 +867,7 @@ public class TestGameLoop {
         // Admission, boundary completion and trace-camera input now sit in
         // prepareAdmittedIteration, which stepInternal calls.
         int step = source.indexOf("private boolean prepareAdmittedIteration(");
-        int end = source.indexOf("private void updateSpecialStageMode()", step);
+        int end = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()", step);
         String body = source.substring(step, end);
 
         int admission = body.indexOf("levelIterationAdmission.admit(");
@@ -900,7 +900,7 @@ public class TestGameLoop {
 
         // The screen-update body must no longer be inlined in the dispatcher.
         int stepStart = source.indexOf("private void stepInternal()");
-        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        int firstHandler = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()");
         assertTrue(stepStart >= 0 && firstHandler > stepStart,
                 "stepInternal and the extracted handlers must both exist");
         String stepBody = source.substring(stepStart, firstHandler);
@@ -917,8 +917,8 @@ public class TestGameLoop {
         // Each large mode group is owned by a dedicated extracted handler rather
         // than the monolithic dispatcher.
         for (String handler : new String[] {
-                "private void updateSpecialStageMode()",
-                "private void updateSpecialStageResultsMode()",
+                "specialStageLifecycle.updateSpecialStageMode()",
+                "specialStageLifecycle.updateSpecialStageResultsMode()",
                 "private boolean updateTitleCardMode(",
                 "private void updateTitleScreenMode()",
                 "private void updateLevelSelectMode()",
@@ -932,7 +932,7 @@ public class TestGameLoop {
         // The canonical gameplay frame step and bonus-stage glowing-sphere
         // bootstrap must no longer be inlined inside stepInternal itself.
         int stepStart = source.indexOf("private void stepInternal()");
-        int firstHandler = source.indexOf("private void updateSpecialStageMode()");
+        int firstHandler = source.indexOf("public boolean commitDeferredTraceRunModeBoundaryIfReady()");
         String stepBody = source.substring(stepStart, firstHandler);
         assertFalse(stepBody.contains("LevelFrameStep.execute("),
                 "stepInternal must route the gameplay frame step through extracted mode handlers");
@@ -1516,9 +1516,7 @@ public class TestGameLoop {
     @Test
     void resultsReturnInstallsFreshLevelTitleOwner() throws Exception {
         TitleCardProvider titleCard = installBonusStageReturnMocks(mock(FadeManager.class));
-        Method method = GameLoop.class.getDeclaredMethod("enterTitleCardFromResults", int.class, int.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, 0, 0);
+        SpecialStageLifecycleTestAccess.invoke(gameLoop, "enterTitleCardFromResults", new Class<?>[]{int.class, int.class}, 0, 0);
         verify(titleCard).initializeFreshLevelTransition(0, 0);
         verify(titleCard, never()).initialize(anyInt(), anyInt());
     }
@@ -1532,11 +1530,9 @@ public class TestGameLoop {
         when(((com.openggf.game.internal.SpecialStageResultsEntry) provider)
                 .hasCompletedResultsEntryFade()).thenReturn(true);
         when(provider.getResultsMusicId()).thenReturn(-1);
-        setPrivateField(gameLoop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(gameLoop, "activeSpecialStageProvider", provider);
         setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE);
-        Method method = GameLoop.class.getDeclaredMethod("enterResultsScreen", boolean.class);
-        method.setAccessible(true);
-        method.invoke(gameLoop, false);
+        SpecialStageLifecycleTestAccess.invoke(gameLoop, "enterResultsScreen", new Class<?>[]{boolean.class}, false);
         assertEquals(GameMode.SPECIAL_STAGE_RESULTS, gameLoop.getCurrentGameMode());
         verify(fade, never()).startFadeToWhite(any());
     }
@@ -1986,7 +1982,7 @@ public class TestGameLoop {
         setPrivateField(gameLoop, "spriteManager", spriteManager);
         setPrivateField(gameLoop, "camera", mock(com.openggf.camera.Camera.class));
         setPrivateField(gameLoop, "fadeManager", mock(FadeManager.class));
-        setPrivateField(gameLoop, "resultsScreen", mock(com.openggf.game.ResultsScreen.class));
+        SpecialStageLifecycleTestAccess.write(gameLoop, "resultsScreen", mock(com.openggf.game.ResultsScreen.class));
         setPrivateField(gameLoop, "currentGameMode", GameMode.SPECIAL_STAGE_RESULTS);
 
         invokePrivateMethod(gameLoop, "doExitResultsScreen");
@@ -2928,6 +2924,9 @@ public class TestGameLoop {
     }
 
     private static void invokePrivateMethod(Object target, String methodName) throws Exception {
+        if (target instanceof GameLoop loop && SpecialStageLifecycleTestAccess.isOwnerMethod(methodName)) {
+            SpecialStageLifecycleTestAccess.invoke(loop, methodName, new Class<?>[0]); return;
+        }
         Method method = target.getClass().getDeclaredMethod(methodName);
         method.setAccessible(true);
         method.invoke(target);
@@ -2935,6 +2934,9 @@ public class TestGameLoop {
 
     private static void invokePrivateMethod(Object target, String methodName, Class<?>[] parameterTypes, Object... args)
             throws Exception {
+        if (target instanceof GameLoop loop && SpecialStageLifecycleTestAccess.isOwnerMethod(methodName)) {
+            SpecialStageLifecycleTestAccess.invoke(loop, methodName, parameterTypes, args); return;
+        }
         Method method = target.getClass().getDeclaredMethod(methodName, parameterTypes);
         method.setAccessible(true);
         method.invoke(target, args);

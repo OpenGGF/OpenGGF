@@ -203,7 +203,7 @@ class TestGameLoopNativeStageMutatorPacing {
         when(context.getWorldSession()).thenReturn(world);
         when(context.isGameplayRuntimeReady()).thenReturn(true);
         var input = new InputHandler(); var loop = new PumpLoop(input); var audio = mock(AudioManager.class);
-        install(loop, context, audio); set(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
+        install(loop, context, audio); SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider); set(loop, "camera", null);
         loop.setGameMode(GameMode.SPECIAL_STAGE);
         var nativeInput = (GameLoopSpecialStageInput) get(loop, "specialStagePacingInput");
         loop.body = () -> NativeSpecialStageFrame.step(provider, world, () -> {

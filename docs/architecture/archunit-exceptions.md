@@ -118,11 +118,17 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 2811 (`GameLoop`, reduced from 3085 by the complete bonus-visit extraction).
+and 2443 (`GameLoop`, reduced from the accepted bonus owner's 2811 by the complete
+special-stage/results lifecycle transfer).
 The loop-owned bonus session is capped at 357 effective lines, including its
 typed live host and six meaningful visit fields. It retains the coordinator,
 provider/deferred identity and pending obligations while shared frame, PLC,
-audio, playback and rewind execution stay in the root. The complete ending
+audio, playback and rewind execution stay in the root. The special-stage/results lifecycle is capped at 571 effective lines, including
+its fifteen state fields, captured-frame algorithm and typed live Host. Its
+constructor only retains collaborators; boundary admission, pacing input and
+shared title release stay in the root. Its results-title span falls from 62 to
+60 physical lines because listener notification is a narrow Host effect.
+The complete ending
 session is capped at 320 effective lines, including its typed live host, provider/pending ownership, phase selection
 and ending-only cleanup. The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
@@ -135,7 +141,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 | Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
-| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoopBonusStageSession.doExitBonusStage`: 111, `GameLoop.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoopBonusStageSession.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
+| Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 276, `GameLoopBonusStageSession.doExitBonusStage`: 111, `GameLoopSpecialStageLifecycle.updateSpecialStageInput`: 9, `GameLoopEndingSession.loadEndingDemoZone`: 84, `GameLoopSpecialStageLifecycle.enterTitleCardFromResults`: 60, `GameLoopBonusStageSession.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
 | Raw child-spawn patterns in `OBJECT_CHILD_SPAWN_MIGRATED_FILES` | 0 matches per listed file | 0 | Migrated object-owned child creation stays on `spawnChild(...)` / `spawnFreeChild(...)` helpers |
 
 `TestObjectPhysicsStandardizationGuard` now compares parsed lifecycle calls with

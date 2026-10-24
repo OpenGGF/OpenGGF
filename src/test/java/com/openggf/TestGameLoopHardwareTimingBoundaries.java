@@ -52,7 +52,7 @@ class TestGameLoopHardwareTimingBoundaries {
             return null;
         }).when(provider).update();
         when(provider.isFinished()).thenReturn(false);
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
 
         loop.step();

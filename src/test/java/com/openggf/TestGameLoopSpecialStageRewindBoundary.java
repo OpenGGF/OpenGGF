@@ -137,7 +137,7 @@ class TestGameLoopSpecialStageRewindBoundary {
         RewindableProvider provider = new RewindableProvider();
         context.registerSpecialStageAdapter(provider);
         assertTrue(context.getRewindRegistry().capture().containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY));
-        setField(loop, "activeSpecialStageProvider", provider);
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE_RESULTS);
 
         LevelManager levelManager = mock(LevelManager.class);
@@ -153,7 +153,7 @@ class TestGameLoopSpecialStageRewindBoundary {
 
     @Test
     void unsupportedSpecialStageEntryEmitsOnlyExitAndDoesNotInstallSpecialStageRewind() {
-        setField(loop, "activeSpecialStageProvider", new UnsupportedProvider());
+        SpecialStageLifecycleTestAccess.write(loop, "activeSpecialStageProvider", new UnsupportedProvider());
 
         loop.changeGameModeForBoundary(GameMode.SPECIAL_STAGE);
 
@@ -167,9 +167,7 @@ class TestGameLoopSpecialStageRewindBoundary {
     }
 
     private void doExitResultsScreen() throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod("doExitResultsScreen");
-        method.setAccessible(true);
-        method.invoke(loop);
+        SpecialStageLifecycleTestAccess.invoke(loop, "doExitResultsScreen", new Class<?>[0]);
     }
 
     private void completeActiveFade() {
