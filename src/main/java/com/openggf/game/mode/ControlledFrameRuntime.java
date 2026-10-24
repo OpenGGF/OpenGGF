@@ -5,6 +5,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.game.GameServices;
 import com.openggf.game.internal.ControlledVBlankOnlyOwner;
+import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.EngineTiming;
 import com.openggf.game.session.GameplayModeContext;
@@ -49,11 +50,21 @@ public final class ControlledFrameRuntime {
             boolean transition = serviceLevelTransition(context);
             if (transition) advance = false;
             if (advance) {
+                // execute's local guard is too late for this caller's represented V-int,
+                // fade/PLC lifecycle and timers. Resolve the exact owner before callbacks.
+                var admission = NativeDynamicObjectPass.admit(context.getWorldSession().getGameModule(),
+                        context.getLevelManager(), PlcLifecyclePhase.ORDINARY_LEVEL);
                 beforeGameplay.run();
+                var admittedCycle = admission.revalidate(context.getWorldSession().getGameModule(),
+                        context.getLevelManager(), PlcLifecyclePhase.ORDINARY_LEVEL);
                 EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
                 context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
                         frame -> {
                             var frameContext = LevelFrameContext.from(context);
+                            // Fade completion may replace the world/managers. Keep this fresh
+                            // context and reject a stale bound admission before incoming timers.
+                            var currentAdmission = admittedCycle.revalidate(frameContext.gameModule(),
+                                    context.getLevelManager(), PlcLifecyclePhase.ORDINARY_LEVEL);
                             LevelFrameStep.updateTimers(frameContext);
                             boolean overrideOwned = input.hasLogicalOverride();
                             var previousOverride = input.logical();
@@ -63,7 +74,8 @@ public final class ControlledFrameRuntime {
                                 context.getSpriteManager().publishHeldInputForLevelEvents(input);
                                 return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
                                         context.getLevelManager(), context.getCamera(),
-                                        () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
+                                        () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER,
+                                        currentAdmission);
                             } finally {
                                 input.setLogicalOverride(previousOverride);
                                 if (!overrideOwned) input.clearLogicalOverride();

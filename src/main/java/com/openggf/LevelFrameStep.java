@@ -6,6 +6,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.LevelEventProvider;
+import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -235,6 +236,17 @@ public final class LevelFrameStep {
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
             LevelManager levelManager, Camera camera,
             Runnable spriteUpdate, StepWrapper wrapper) {
+        return execute(context, frame, phase, levelManager, camera, spriteUpdate, wrapper, null);
+    }
+
+    /**
+     * Internal controlled-caller entry retaining its pre-clock native admission. A null value
+     * means this direct caller has not resolved the service yet, not that it resolved no owner.
+     */
+    public static LevelFrameResult execute(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
+            LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate, StepWrapper wrapper, NativeDynamicObjectPass.Admission admission) {
         if (context == null) {
             throw new NullPointerException("context");
         }
@@ -248,6 +260,10 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
+        var nativeAdmission = admission == null
+                ? NativeDynamicObjectPass.admit(context.gameModule(), levelManager, phase)
+                : admission.revalidate(context.gameModule(), levelManager, phase);
+        var nativeDynamicPass = nativeAdmission.owner();
         if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
             com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
         frame.claim(phase);
@@ -332,10 +348,15 @@ public final class LevelFrameStep {
                                 .shouldRunLevelOnlyFixedSlotsDuringLockedPhase())
                 ? spriteManager
                 : null;
+        if (nativeDynamicPass != null) {
+            // Native placement can precede reserved/player dispatch while dynamic
+            // execution follows it. Resolve the owner once, before any service.
+            wrapper.wrap("native-dynamic-spawn", nativeDynamicPass::spawnBeforeReservedSlots);
+        }
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch
             //    state because player-slot ReactToItem runs before ExecuteObjects.
-            levelManager.prepareTouchResponseSnapshots();
+            if (nativeDynamicPass == null) levelManager.prepareTouchResponseSnapshots();
 
             // 2. Inline solid-resolution path: player physics first. Touch responses
             //    run per-player inside tickPlayablePhysics after movement, matching
@@ -350,15 +371,19 @@ public final class LevelFrameStep {
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
-            Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
-                    ? () -> {
-                        levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
-                        levelManager.updateZoneFeaturesAfterObjectExecution();
-                    }
-                    : levelManager::updateZoneFeaturesAfterObjectExecution;
-            wrapper.wrap("objects",
-                    () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                            afterExecBeforePlacement, false));
+            if (nativeDynamicPass != null) {
+                wrapper.wrap("native-dynamic-objects", nativeDynamicPass::runDynamicSlotsAfterReservedSlots);
+            } else {
+                Runnable afterExecBeforePlacement = levelOnlyFixedSlots != null
+                        ? () -> {
+                            levelOnlyFixedSlots.advancePlayableFixedSlotsAfterObjectExecution();
+                            levelManager.updateZoneFeaturesAfterObjectExecution();
+                        }
+                        : levelManager::updateZoneFeaturesAfterObjectExecution;
+                wrapper.wrap("objects",
+                        () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
+                                afterExecBeforePlacement, false));
+            }
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {

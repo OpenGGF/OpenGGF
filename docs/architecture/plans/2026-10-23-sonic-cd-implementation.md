@@ -2244,3 +2244,47 @@ Ephemeral player-touch integration and actual Mosqui execution also remain
 separate work. Next-VInt publication, art admission, real Ring pickup and
 rewind through the complete world loop are still unverified. Full USA MVP
 continues to mean the entire game, followed by regional certification.
+
+
+### Native dynamic phases and pre-clock admission, 24 October 2026
+
+Added the internal `NativeDynamicObjectPass` service without changing GameModule
+or the pinned public Mod API. One resolved owner spans placement before reserved
+slots and live dynamic execution after reserved slots, before the actual camera.
+A bound native owner rejects legacy ordering, nonordinary phases and competing
+generic object/ring managers. Unbound loops retain their existing execution.
+
+The initial source review found a caller-level P2: ControlledFrameRuntime could
+advance the represented V-int before LevelFrameStep rejected an invalid binding.
+The actual two-case regression compiled and failed with V-int99 becoming100 and
+the ordinary timer9 becoming8. The fix admits before beforeGameplay/clock work,
+retains resolved absence, and revalidates callback-driven module/manager/load
+replacement without a second lookup in an unchanged world. A valid earlier
+service is not rolled back after a later fade replacement. Setup/hold/pause/lag
+do not acquire an ordinary dynamic owner. No static or thread-local admission
+cache, source-name branch or new timing-data authority was added.
+
+Focused parent27844 ran159 tests: zero assertion failures, three fixture errors,
+zero skips. All three positive controlled paths reached the real Camera without
+a focused actor. Root attached the fixture's actual NativeProbe to that camera;
+no production Camera change was made. Affected rerun20020 then passed all12
+TestControlledNativeDynamicAdmission cases with zero failures/errors/skips.
+The unchanged other147 checks from27844 passed, including direct phase order,
+PLC, represented clocks, hardware boundaries, pause, Mod API and maintained
+S3K loading/bootstrap/decoding consumers. XML verified Java25.0.5.0.2, actual
+CD media and the surfaceless-EGL property; the actual unbound CD controller
+movement check executed. These overlapping selections are not a broad pass.
+
+Commands, worktree HEAD a5b01f073 plus the six uncommitted phase paths:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestControlledNativeDynamicAdmission#legacyOrderRejectsBeforeRepresentedVIntAndGameplayEffects+competingRingManagerRejectsBeforeRepresentedVIntAndGameplayEffects' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestControlledNativeDynamicAdmission,TestNativeDynamicObjectFrameOrder,TestNativeDynamicObjectPass,TestControlledFrameRuntime,TestControlledVBlankOnlyOwner,TestVIntRunCounter,TestGameLoopVIntRunCounter,TestPlcVBlankOrdering,TestLevelFrameHardwareTimingBoundaries,TestModApiSignatureSurface,TestNativeFixedLevelObjectPass,TestInGamePause,TestFbzFramePhaseOrdering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" "-Dsonic1.rom.path=$OPENGGF_MAIN/s1.gen" "-Dsonic2.rom.path=$OPENGGF_MAIN/s2.gen" "-Ds3k.rom.path=$OPENGGF_MAIN/s3k.gen" -Dopenggf.headless.gl=surfaceless-egl test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestControlledNativeDynamicAdmission' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+Separate primary9598 smoke45011 completed red (all74ordinary batches and guards):
+ordinary38921 tests,2 failures,2 errors,176 skips; guards722 tests,8 failures.
+Attribution and required corrections remain open; no clean delivery is claimed.
+Actual Ring pickup, Mosqui execution, shared displayed SAT and composite rewind
+remain the next private-world integration, separate from this internal phase.
