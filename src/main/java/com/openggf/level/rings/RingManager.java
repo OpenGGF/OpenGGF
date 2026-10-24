@@ -911,6 +911,23 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return index >= 0 ? placement.getAllSpawns().get(index) : null;
     }
 
+    int spawnIndexForRewind(RingSpawn spawn) {
+        return placement.getSpawnIndex(spawn);
+    }
+
+    RingSpawn resolveSpawnForRewind(RingSpawn value, int index) {
+        List<RingSpawn> spawns = placement.getAllSpawns();
+        if (index >= 0 && index < spawns.size() && spawns.get(index).equals(value)) {
+            return spawns.get(index);
+        }
+        // Unregistered recipes and capture without a manager remain supported.
+        // Full placement values include persisted IDs; coordinate lookup would
+        // collapse distinct placements. The normal collection lookup also defines
+        // compatibility for caller-supplied equal, noncanonical records.
+        int reboundIndex = placement.getSpawnIndex(value);
+        return reboundIndex >= 0 ? spawns.get(reboundIndex) : value;
+    }
+
     private boolean addAttractedRing(int sourceIndex, int x, int y) {
         for (AttractedRing ar : attractedRings) {
             if (!ar.active) {

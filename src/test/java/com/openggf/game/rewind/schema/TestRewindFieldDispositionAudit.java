@@ -23,6 +23,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
     @Test
+    void s1RingRecipeUsesDefaultCaptureWithoutAnExclusion() {
+        Class<?> owner = com.openggf.game.sonic1.objects.Sonic1RingInstance.class;
+        assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
+        assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(owner));
+        Set<String> captured = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(owner).capturedFields()
+                .stream().map(plan -> plan.field().getName()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(captured.containsAll(Set.of("ringSpawn", "childRingSpawns")), captured::toString);
+        List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
+        RewindFieldDispositionAudit.auditClass(owner, gaps);
+        assertEquals(List.of(), gaps);
+    }
+
+    @Test
     void wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath() {
         Class<?> owner = com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance.class;
         assertTrue(com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
