@@ -3802,3 +3802,35 @@ planes/PLC/timing/pixel/act/game parity is claimed. ACTIVE_3D_RAMP_BACKGROUND,
 Spring$0A, background tile streaming and section residency remain real owners.
 The fixed-ac4 broad smoke runs independently; it does not cover this later
 source revision and is not promoted to a pass before its result is inspected.
+
+### R11A background arithmetic component — 24 October 2026
+
+The pure background owner now binds the existing authenticated cloud-size and
+water-section views. Its one immutable State holds all six camera longs, full
+crossing/padding/flags,512-byte cloud and deformation RAM,1024-byte HScroll RAM
+and VScroll. Init takes explicit complete RAM and incoming d0/d1 bits; step
+takes completed foreground words/diff, actual signed player X velocity and
+control. No actor, World, callback, renderer, clock or snapshot is retained.
+Native cloud ticks, signed arithmetic, flag high bytes, fractional carries,
+borrow/halving and FixBugs0 water-block accounting are preserved. A $281 BGY
+case intentionally writes247 HScroll longs, not a generic240; unwritten bytes
+remain supplied values. Invalid adjacent reads stop at their actual boundary.
+Native owners: InitLevelScroll/LevelScroll/ApplyBGHScroll (PP Scroll:135-534)
+and BG flag helpers (Level/Scroll Flag Set.asm:102-224), pin1ecc5f3a.
+
+First actual queued component run45832 passed118/0/0/0: Background54, Foreground61,
+RetailAssets3, with actual supplied media, Java25 and lean4GiB/4core admission;
+exit0 at21:52:40BST,5squeue/86sMaven. Command selected those three named classes
+through maven_queue.py --lean -Dmse=off with soniccd.media.root. Compilation
+explicitly included the new owner; all three completed XML files/skips were
+inspected. Independent Codex review found noP1/P2. Its two P3 coverage limits
+remain explicit: the detachment case does not mutate caller table arrays, and
+some water-exit suffixes cannot distinguish wrong cursors because their bands
+coincide. Source assessment found neither a production escape nor cursor bug.
+
+This commit is the arithmetic component only. Existing World background stays
+static until one retained BG State is integrated with justified load/restart
+RAM/register ingress, source-order stepping, capture/restore and publication.
+BGCameraSectIDs/BGCameraSects runtime joins, native tile-plane streaming and
+section PLC residency remain separate work. No live ramp, new plane picture,
+render/native timing/parity, act completion or full-game claim follows.
