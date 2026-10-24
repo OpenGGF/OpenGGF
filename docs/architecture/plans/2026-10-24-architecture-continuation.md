@@ -4210,3 +4210,151 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
   "-Dkis2.rom.path=${MAIN_CHECKOUT}/kis2.gen" \
   '-Dtest=AudioRegressionTest,TestCrossGameSegaDac*,TestSingletonLifecycleGuard' test -B
 ```
+
+
+### GameLoop caller-complete per-test fixture owner
+
+This separate slice starts from parent
+`a8c45ef09d720d8d7078fd0dcfa5890ec2baa963` (tree
+`2fbd6a5236413f6d21c82993195c6ead5ce0c596`) on new local branch
+`bugfix/ai-gameloop-fixture-owner-20261024`. The same isolated worktree was clean
+with no owned Maven jobs; the new branch was created at accepted `d088d69ec`
+then normally fast-forwarded to the parent. All earlier task branch tips remain
+preserved. Main/develop and the parent's fixed API/domain job remain untouched.
+The terminal report in
+`thread:delegated-task:command%3Amcp%3Abfce8369-f928-47e0-b4f5-2a80db4c0ef3%3Adelegate-task%3Aarch-autoloop-per-test-fixture-contract-ground-20261024-r1`
+was read once; its source-only qualification is not runtime evidence.
+
+The bounded migration preserves GameLoop setup's first four statements exactly:
+raw legacy engine configuration, clear session overrides, resolve display,
+then write S2 bootstrap. Only the subsequent `activeGameplayMode()` call becomes
+`resetPerTest()`. The initial raw configuration preserves the original first
+construction/sampling/failure boundary before preferences and module writes.
+The later central owner configures services again, lazily ensures gameplay and
+uses `GameModuleRegistry.getCurrent()` to select the incoming live-world
+profile. This is an intentional second EngineContext construction, not unchanged
+sampling count and not deletion of every raw root call.
+
+The change adds real cleanup. Native leads reset S1 events/switches/conveyors/
+SBZ3 door, S2 events/vines, or S3K intro state (not the full S3K event manager).
+Shared per-test steps clear donors, parallax, sprites, collision, camera, fade,
+game state, timers, water and debug state. They retain base
+preferences and existing world/gameplay/module/manager/loaded-data ownership.
+Loaded-water refresh can now consult the source or fail where the old setup did
+not; no helper or production behavior is changed to suppress that work/failure.
+The two new ordinary controls call the actual `setUp()` after seeding their
+state rather than copying its sequence:
+
+- `setupPreservesBasePreferencesForFreshGameplay` seeds nondefault base display,
+  window and FPS preferences with conflicting session overrides, clears the
+  world, then checks that setup retains the complete base map, clears overrides,
+  resolves 400-by-224 display from the preserved wide preset and constructs a
+  camera with those dimensions. It snapshots/restores the real base map and
+  re-resolves caches in finally; it writes no user configuration file.
+- `setupPreservesIncomingWorldAndLoadedDataWhileResettingItsProfile` uses a real
+  S1 module/world and existing `initializeCollisionOnly()` with a minimal
+  reconstructible AbstractLevel terrain probe and immutable named-asset source.
+  It checks identical world/gameplay/module and nine managers, loaded level and
+  data-source identities, zone/act metadata, native 256-pixel block lookup at
+  (0x130,0x40), chunk descriptor 0x3001 and source bytes. S2 remains bootstrap
+  only. A seeded S1 switch must clear while the separately seeded S2 vine trigger
+  survives, discriminating the incoming profile from an accidental bootstrap
+  profile. Camera coordinates, sprite roster and score deliberately reset;
+  they are transient, not preserved loaded-data coordinates. A source-read probe
+  checks that loaded-water reconstruction consults the retained source without
+  opening a ROM. Control-owned vine state is restored and its world disposed.
+
+Mechanical comparison before characterization verifies that all 99 original
+source test methods, assertions, helpers, setup and teardown are unchanged;
+only the two controls, minimal terrain probe and their imports are added.
+Original accounting is 97 ordinary methods plus two two-case parameterized
+methods (101 invocations). The controls bring the expected final class count to
+103 invocations. Characterization source-diff SHA-256, relative to the pinned
+base over `src/main src/test pom.xml`, is
+`395eabc5f9e5eb852aca8e8fb3597165f8f10915b7ec8034ba7f647b0ce62026`.
+
+
+Characterization ran only the two new controls against the unchanged original
+setup: two cases, one pass, one failure, zero errors/skips. Preference preservation
+already passed. The incoming-world control passed identity/data checks and the
+S2-vine preservation check, then failed exactly at "the incoming S1 profile must
+clear its switch state" (switch remained pressed). This is the intended old
+transient leak, not a harness error or a forced-red preference assertion. Queue
+wait was zero; Maven reported execution as 01:23 min. Exact XML names, failure,
+Java/EGL selector and fixed source fingerprint were inspected; both reports were
+consumed before migration.
+
+Only then was the one setup call changed and the exact
+`src/test/java/com/openggf/TestGameLoop.java#setUp` allowance removed. The current
+architecture count prose changes 7 methods/6 files to 6 methods/5 files and
+explicitly records the retained initial raw call plus stronger cleanup. PLC-art,
+trace preference snapshot and the four legacy GLFW visual keys stay unchanged.
+The final submitted source-diff SHA-256 over `src/main src/test pom.xml` is
+`ab5a9cf93a714f953e8cb361c6b77e8703880e56988ef146c8234601e59b66ca`.
+
+Exact commands, from this isolated worktree via the current absolute main queue
+wrapper (`OPENGGF_MAIN_WORKSPACE` denotes that checkout):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestGameLoop#setupPreservesBasePreferencesForFreshGameplay+setupPreservesIncomingWorldAndLoadedDataWhileResettingItsProfile' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestGameLoop' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+
+After the sole owner-call migration, full `com.openggf.TestGameLoop` passed all
+103 invocations with zero failures, errors or skips. Both new controls passed,
+including loaded-water source access and native-profile discrimination. XML
+contains all 101 distinct method identities: 99 ordinary methods (including the
+two controls) and both original parameterized methods with indices [1]/[2]
+(`bonus`/`ending` from their unchanged ValueSource annotations). Java was
+25.0.5.0.2 and explicit EGL reached the test JVM. Queue wait was zero; Maven
+execution was 27.297 seconds. Fresh identities, counts, skips, selector and source
+fingerprint were inspected; both reports were consumed before the exact guard.
+No ROM property was needed or supplied for these synthetic controls.
+
+
+The exact singleton guard passed all eight original identities with zero
+failures, errors or skips. Queue wait was zero; Maven execution was 29.481
+seconds. Java/EGL/selector properties and every identity were inspected in fresh
+XML, then both reports consumed. Lua was 5.4.9. All three submitted jobs kept
+their own source fingerprint fixed; queue wait and execution are per-command
+intervals, not elapsed delivery time. Other work time is unmeasured.
+
+The sole removed key is `src/test/java/com/openggf/TestGameLoop.java#setUp`.
+Exactly six keys across five files remain: PLC-art, the trace-bootstrap
+preference snapshot and four GLFW visual setup keys. InstaShield owns two visual
+setup methods in one file. The guard's exact identities own the count. No shared helper, production code, scanner or other allowance
+was changed. Full baseline 101-case runtime, complete guards, wet/ROM-loaded
+world permutations, pixel checks and broad/full suites were not run. This slice
+ends at a clean local review-ready commit; parent review, joint guards,
+integration, push and cleanup remain separate.
+
+Parent integration of GameLoop257de1a3 preserves both independent appendices.
+Mechanical byte comparison recovered the complete old TestGameLoop source after
+removing only added imports/controls and reverting the sole setup-call change;
+all99 original source methods/assertions/helpers and teardown are unchanged.
+The parent35-selector late fixture group at01d57eba8 passed458 exact cases
+(38 XML reports), zero failures/errors/skips, including the PLC nested case
+and both donor integration cases. Admission wait1s; Maven execution29.474s.
+Java25/EGL and all four absolute ROM properties were inspected;76 XML/text
+files consumed. Source remained fixed throughout that request.
+
+Current composed counts are121 low-level records,151 permitted package pairs,
+and6 ambient methods across5 files. The descriptor and exact40-name API delta
+remain unchanged. Final creator packaging/API and fresh guards are pending.
