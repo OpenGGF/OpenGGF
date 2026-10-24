@@ -127,7 +127,7 @@ class TestCdOpeningObjectRuntime {
             f.runtime.placement().pool().write(f.slot(32).moveLong(MAPPINGS, s.header().mappingAddress())
                     .moveWord(TILE, 0x780).moveByte(MAP_FRAME, 7));
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
-                    new CdPlayerBody.State(absolute, s.animation(), s.header(), s.timers(), s.history()), Optional.empty()));
+                    new CdPlayerBody.State(absolute, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance()), Optional.empty()));
             f.runtime.finishAfterCamera(POST);
             f.runtime.finishOrdinaryTail();
             var shared = f.frame.captureShared();
@@ -164,7 +164,7 @@ class TestCdOpeningObjectRuntime {
                     m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(absolute, new CdPlayerBody.AnimationCursor(0, 0, 7),
-                            s.header(), s.timers(), s.history()), token.display()));
+                            s.header(), s.timers(), s.history(), s.rotationDistance()), token.display()));
             var sat = f.runtime.finishAfterCamera(POST);
             int index = -1;
             for (int i = 0; i < sat.provenance().size(); i++) {
@@ -196,7 +196,7 @@ class TestCdOpeningObjectRuntime {
                         m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                         m.previousPrimaryAngle(), m.previousSecondaryAngle());
                 f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
-                        new CdPlayerBody.State(near, s.animation(), s.header(), s.timers(), s.history()), Optional.empty()));
+                        new CdPlayerBody.State(near, s.animation(), s.header(), s.timers(), s.history(), s.rotationDistance()), Optional.empty()));
                 var shared = f.frame.captureShared();
                 var e = shared.environment();
                 var g = e.globals();
@@ -356,7 +356,7 @@ class TestCdOpeningObjectRuntime {
             s = f.frame.state();
             f.frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(s.motion(), s.animation(), s.header(), s.timers(),
-                            new CdPlayerBody.History(s.history().bytes(), 0x100)), token.display()));
+                            new CdPlayerBody.History(s.history().bytes(), 0x100), s.rotationDistance()), token.display()));
             // A prematurely scanned/committed item would change this routine before
             // the real Body rejects its later-than-Display history address.
             f.runtime.placement().pool().write(f.slot(32)
@@ -873,7 +873,7 @@ class TestCdOpeningObjectRuntime {
             frame.restoreActor(new CdPlayerFrameRuntime.ActorState(token.owner(),
                     new CdPlayerBody.State(s.motion(), s.animation(),
                             new CdPlayerBody.Header(0, s.header().mappingAddress(), s.header().tile(),
-                                    s.header().priority(), s.header().width()), s.timers(), s.history()), Optional.empty()));
+                                    s.header().priority(), s.header().width()), s.timers(), s.history(), s.rotationDistance()), Optional.empty()));
         }
         @Override public void close() { runtime.close(); }
     }

@@ -2793,3 +2793,31 @@ contacts suppressed and no full-pool allocation silently omitted. Current World
 render verification still covers the normal-input first Ring, not full act play.
 Enemy hurt/defeat/death consequences, solid objects, native player ramp mode,
 section PLC before camera680 and complete USA/regional parity remain open.
+
+
+### Explicit player rotation byte before contact response, 24 October 2026
+
+Body.State now requires native oPlayerRotDist ($39) explicitly, independent of
+motion.stick ($38). There is no implicit five-argument zero default. Cold Frame
+ingress supplies zero from ClearObjects, while every Body/Frame reconstruction,
+projection and owned actor capture preserves dirty values. Native KillPlayer's
+word write to oPlayerStick also writes this adjacent byte; the future response
+must adopt it rather than dropping half the native store. Ordinary Main/MODE
+do not write it. PP SpinningDisc and WWZ writers remain future owners.
+
+Six new Frame invocations exercise 0/1/128/255 through Init, Main, V-int,
+projection, narrow object writes and actor/shared restore replay, plus invalid
+byte bounds. All existing constructors now supply an explicit ingress value.
+No contact response or KillPlayer gameplay admission is added by this change.
+
+The combined byte39/U3 command completed at13:07:28 BST with298 tests, zero
+failures/errors/skips:78Body,88Frame,23Runtime,24Explosion,18Points,14Flower,
+7pool,19touch-scan,15World,1realEGL pickup/replay and11API. All11selected XML
+confirm Java25.0.5.0.2, actual supplied media and explicit surfaceless EGL.
+Queue wait371s and Maven execution1m33 are separate. Source/test compilation
+covered4289/4406 classes. The U3 results are for its exact concurrent source
+inputs, not an implication of runtime dispatch or a full-suite certificate.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdOpeningObjectRuntime,TestCdExplosion,TestCdPoints,TestCdFlower,TestCdObjectPool,TestCdPlayerObjectTouch,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+```

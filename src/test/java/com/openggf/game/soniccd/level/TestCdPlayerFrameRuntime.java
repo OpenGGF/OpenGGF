@@ -43,6 +43,7 @@ class TestCdPlayerFrameRuntime {
         assertEquals(new CdPlayerBody.Header(1, 0, 0, 0, 0), s.header());
         assertEquals(new CdPlayerBody.AnimationCursor(0, 0, 0), s.animation());
         assertEquals(new CdPlayerBody.Timers(0, 0, 0), s.timers());
+        assertEquals(0, s.rotationDistance(), "Explicit cold ClearObjects byte39");
         assertArrayEquals(new byte[256], s.history().bytes().copy()); assertEquals(0, s.history().index());
         assertEquals(new CdPlayerMovement.Physics(0, 0, 0), e.movement().physics(), "Init writes physics, not ingress");
         assertEquals(new CdPlayerMovement.Bounds(0, 0x2897, 0x710, 0), e.movement().bounds());
@@ -59,6 +60,41 @@ class TestCdPlayerFrameRuntime {
         assertEquals(0, f.captureShared().vIntClock().deltaSinceAdmittedCut());
         assertTrue(f.display().isEmpty()); assertFalse(f.paused()); assertFalse(f.closed());
         assertTrue(fixture.dmas.isEmpty()); assertThrows(IllegalStateException.class, () -> f.runBody(1));
+    }
+
+    @ParameterizedTest @ValueSource(ints = {0, 1, 128, 255})
+    void rotationByteSurvivesInitMainVIntProjectionObjectWritesAndActorReplay(int rotation) throws IOException {
+        var f = new Fixture().runtime();
+        var seeded = new Actor(f); seeded.rotationDistance = rotation; seeded.install(f);
+        service(f, 0); f.runBody(1);
+        assertEquals(rotation, f.state().rotationDistance(), "Init does not write oPlayerRotDist");
+        service(f, 0); f.runBody(2);
+        assertEquals(rotation, f.state().rotationDistance(), "Main/MODE/Animate preserve byte39");
+        service(f, 0); f.runBody(3);
+        assertEquals(rotation, f.state().rotationDistance(), "V-int art/input service preserves the actor byte");
+        var saved = f.captureActor(); var savedShared = f.captureShared();
+        f.publishDrawObjectOnScreen(true);
+        f.applyObjectYVelocity(-0xC00);
+        f.applyObjectPrimaryAngle(0x40);
+        assertEquals(rotation, f.state().rotationDistance(), "Projection/word write must not reset the adjacent byte");
+        var changed = new Actor(f); changed.rotationDistance = rotation ^ 0xFF; changed.install(f);
+        assertEquals(rotation ^ 0xFF, f.state().rotationDistance());
+        f.restoreActor(saved);
+        assertEquals(rotation, f.state().rotationDistance());
+        assertEquals(saved, f.captureActor());
+        f.restoreShared(savedShared);
+        service(f, 0); f.runBody(4);
+        var replay = f.captureActor();
+        f.restoreActor(saved); f.restoreShared(savedShared);
+        service(f, 0); f.runBody(4);
+        assertEquals(replay, f.captureActor(), "The byte belongs to actor replay, not shared state");
+    }
+
+    @ParameterizedTest @ValueSource(ints = {-1, 256})
+    void rotationByteRequiresExplicitUnsignedNativeStorage(int invalid) throws IOException {
+        var s = new Fixture().runtime().state();
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.State(s.motion(), s.animation(),
+                s.header(), s.timers(), s.history(), invalid));
     }
 
     @Test void serviceZeroInitOnlyServiceZeroThenMainPublishesForLaterArtService() throws IOException {
@@ -668,10 +704,10 @@ class TestCdPlayerFrameRuntime {
     /** Test edit of an explicit same-owner immutable capture, not another load/factory ingress. */
     private static final class Actor {
         final CdPlayerBody.State base;
-        int slot, charge, gv, invincibility, flags, y, routine, spriteFlags;
+        int slot, charge, gv, invincibility, flags, y, routine, spriteFlags, rotationDistance;
         Actor(CdPlayerFrameRuntime f) { base = f.state(); slot = base.header().slotId(); charge = base.motion().charge();
             gv = base.motion().groundVelocity(); invincibility = base.timers().invincibility(); flags = base.motion().flags();
-            y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); }
+            y = base.motion().centreY16_16(); routine = base.motion().routine(); spriteFlags = base.motion().spriteFlags(); rotationDistance = base.rotationDistance(); }
         void install(CdPlayerFrameRuntime f) {
             var a = f.captureActor(); var m = base.motion(); var h = base.header();
             var motion = new CdPlayerMotionState(m.centreX16_16(), y, m.xVelocity(), m.yVelocity(), gv,
@@ -679,7 +715,7 @@ class TestCdPlayerFrameRuntime {
                     m.previousAnimation(), m.playerJump(), charge, m.moveLock(), m.stick(), m.playerControl(),
                     m.previousPrimaryAngle(), m.previousSecondaryAngle());
             var state = new CdPlayerBody.State(motion, base.animation(), new CdPlayerBody.Header(slot, h.mappingAddress(), h.tile(), h.priority(), h.width()),
-                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes()), base.history());
+                    new CdPlayerBody.Timers(base.timers().hurt(), invincibility, base.timers().speedShoes()), base.history(), rotationDistance);
             var display = a.display().map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(), p.priority(),
                     p.width(), p.mapFrame(), spriteFlags, p.centreX16_16(), p.centreY16_16()));
             f.restoreActor(new CdPlayerFrameRuntime.ActorState(a.owner(), state, display));

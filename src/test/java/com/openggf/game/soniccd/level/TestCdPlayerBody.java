@@ -746,14 +746,14 @@ class TestCdPlayerBody {
 
     static final class Actor {
         int x = 64 << 16, y = 76 << 16, xv, yv, gv, routine = 2, angle, flags, spr = 4;
-        int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes;
+        int xr = 9, yr = 19, anim, prev, jump, charge, lock, stick, ctrl, pri, sec, hurt, invinc, shoes, rotationDistance;
         CdPlayerBody.Header header = new CdPlayerBody.Header(1, 0x21F200, 0x780, 2, 24);
         CdPlayerBody.AnimationCursor cursor = new CdPlayerBody.AnimationCursor(0, 0, 0);
         CdPlayerBody.History history = new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[256]), 0);
         CdPlayerBody.State state() {
             return new CdPlayerBody.State(new CdPlayerMotionState(x, y, xv, yv, gv, routine, angle, flags, spr, xr, yr,
                     anim, prev, jump, charge, lock, stick, ctrl, pri, sec), cursor, header,
-                    new CdPlayerBody.Timers(hurt, invinc, shoes), history);
+                    new CdPlayerBody.Timers(hurt, invinc, shoes), history, rotationDistance);
         }
     }
 

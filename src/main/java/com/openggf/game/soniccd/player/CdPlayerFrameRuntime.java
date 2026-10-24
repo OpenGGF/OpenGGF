@@ -221,7 +221,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         var state = new CdPlayerBody.State(motion, new CdPlayerBody.AnimationCursor(0, 0, 0),
                 new CdPlayerBody.Header(1, 0, 0, 0, 0), new CdPlayerBody.Timers(0, 0, 0),
-                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0));
+                new CdPlayerBody.History(CdAssetBytes.copyOf(new byte[0x100]), 0), 0); // Cold ClearObjects owns byte39.
         var movement = new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0, 0, 0),
                 new CdPlayerMovement.Bounds(bounds.left(), bounds.right(), bounds.bottom(), 0),
                 new CdPlayerMovement.Gates(0, 1, 0, 0, 0, 0, 0),
@@ -385,7 +385,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history());
+        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance());
     }
 
     /**
@@ -426,7 +426,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.routine(), m.angle(), m.flags(), (m.spriteFlags() & 0x7F) | bit, m.xRadius(), m.yRadius(),
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
-        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history());
+        var nextState = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance());
         var nextDisplay = display.map(p -> new CdPlayerBody.DisplayPublication(p.queued(), p.mappingAddress(), p.tile(),
                 p.priority(), p.width(), p.mapFrame(), (p.spriteFlags() & 0x7F) | bit, p.centreX16_16(), p.centreY16_16()));
         state = nextState; display = nextDisplay;

@@ -69,12 +69,15 @@ public final class CdPlayerBody {
     /**
      * Body-owned capture, including native-global history whose only admitted writer is RecordPos.
      * Shared physics, look, angle buffers and controls are exclusively in Environment.
+     * rotationDistance is native byte39 (oPlayerRotDist), adjacent to motion.stick at38.
+     * Main/MODE do not write it; KillPlayer's word38 and later object owners do.
+     * There is no implicit zero/default overload: the actor ingress/capture supplies it.
      */
     public record State(CdPlayerMotionState motion, AnimationCursor animation, Header header,
-                        Timers timers, History history) {
+                        Timers timers, History history, int rotationDistance) {
         public State {
             Objects.requireNonNull(motion); Objects.requireNonNull(animation); Objects.requireNonNull(header);
-            Objects.requireNonNull(timers); Objects.requireNonNull(history);
+            Objects.requireNonNull(timers); Objects.requireNonNull(history); byteValue(rotationDistance);
         }
     }
 
@@ -496,12 +499,13 @@ public final class CdPlayerBody {
         Environment env;
         Controls controls;
         final int levelFrames, timeAttack, debugMode, debugCheat, timeWarpTimer, bossMusic;
-        int camX, invincible, hurt, invincibilityTimer, shoesTimer;
+        int camX, invincible, hurt, invincibilityTimer, shoesTimer, rotationDistance;
         boolean displayEligible;
         Optional<CdPlayerMovement.Boundary> modeBoundary = Optional.empty();
         final List<Effect> effects = new ArrayList<>();
         Cursor(State state, Environment environment) {
             motion = state.motion(); animation = state.animation(); header = state.header(); history = state.history();
+            rotationDistance = state.rotationDistance();
             env = environment; controls = environment.controls(); var g = environment.globals();
             levelFrames = g.levelFrames(); camX = g.cameraXCentre(); timeAttack = g.timeAttackMode();
             debugMode = g.debugMode(); debugCheat = g.debugCheat(); timeWarpTimer = g.timeWarpTimer();
@@ -579,7 +583,7 @@ public final class CdPlayerBody {
             actor(ActorField.ANIMATION, value);
         }
         Result finish(Boundary boundary) {
-            var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer), history);
+            var state = new State(motion, animation, header, new Timers(hurt, invincibilityTimer, shoesTimer), history, rotationDistance);
             var globals = new Globals(levelFrames, camX, timeAttack, debugMode, debugCheat, timeWarpTimer, invincible, bossMusic);
             var environment = new Environment(env.movement(), controls, globals, env.dynamicSlots());
             Optional<DisplayPublication> display = boundary == Boundary.MAIN_RETURN
