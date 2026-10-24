@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayScriptCompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SCREENPLAY = """
-            {"version":6,"name":"Three locations","width":320,"height":224,
+            {"version":7,"name":"Three locations","width":320,"height":224,
              "cast":[{"id":"hero","name":"Hero","gameId":"s2","character":"sonic","puppet":false},
                      {"id":"friend","name":"Friend","gameId":"s2","character":"tails","puppet":false}],
              "shots":[
@@ -52,7 +52,7 @@ class TestStageplayScriptCompiler {
 
     private static ObjectNode puppetRecipe() throws IOException {
         return (ObjectNode) JSON.readTree("""
-                {"version":6,"name":"Real movement","cast":[
+                {"version":7,"name":"Real movement","cast":[
                   {"id":"hero","name":"Hero","gameId":"s2","character":"sonic"},
                   {"id":"prop","name":"Prop","gameId":"s2","character":"tails","puppet":false}],
                  "shots":[

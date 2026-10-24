@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -37,7 +38,10 @@ import java.util.List;
  * - Escape velocity: x=-0x200, y=-0x200 (flies up-left at 45°)
  * - Initial chase Y velocity: -0x100 (upward momentum)
  */
-public class WhispBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class WhispBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private enum State {
         INIT,              // Routine 0: Initialize

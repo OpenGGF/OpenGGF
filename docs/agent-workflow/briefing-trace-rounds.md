@@ -71,6 +71,17 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A Stageplay pixel oracle can compare two black S3K pictures while object art is
+still dormant or the native initial palette reveal is black (2026-10-24, facing
+correction, base `ac46111bc`). Require nonempty native sprite pixels and their
+absence control. Rhinobot needs its actual wait/sign-scan/release/Init dispatches;
+run them through `ObjectManager` so camera bounds publish too. For cinematic
+comparisons match `StageplayLiveWorld.draw`'s `withoutDisplayedFade` scope, because
+authored transitions own the reveal. Renderer allocation alone does not establish
+published enemy-art bytes. `TestStageplayObjectFacingRendering` checks these
+prerequisites before comparing both source flips and both logical directions.
+
+
 Stageplay native music requests may not appear in the logical command timeline
 until outer audio presentation drains the native mailbox (2026-10-24, promo
 bugfixes, base `632a5f8c3`). Simulation ticks alone made the uncontrolled positive

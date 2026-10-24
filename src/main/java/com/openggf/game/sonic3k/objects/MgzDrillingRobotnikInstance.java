@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameModule;
@@ -80,7 +81,12 @@ import java.util.logging.Logger;
  *       2 (hurt face) / 3 (defeated), at offset (0, -$1C) from the pod.</li>
  * </ol>
  */
-public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // enterAirApproach sets flipX with negative xVel; ground/end-boss variants share this direction owner.
+        return flipX ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final AtomicInteger NEXT_ZOOM_ATLAS_SLOT = new AtomicInteger();
     private static final int ZOOM_ATLAS_BASE = PatternAtlasRange.MGZ_ZOOM_CUES.base();
     private static final int ZOOM_ATLAS_SLOT_PATTERNS = 0x80;

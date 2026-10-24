@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -18,7 +19,12 @@ import java.util.List;
  * Moves vertically at a constant speed and flips horizontally each frame.
  */
 public class SpikerDrillObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable {
+        implements TouchResponseProvider, SpawnRenderFlipRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj93 travels vertically. Its per-frame X flip spins the drill; it is not logical horizontal facing.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x12; // From Obj92_SubObjData
     private static final int WIDTH_PIXELS = 0x10; // Obj92_Obj93 subObjData width_pixels
     private static final int APPROX_RENDER_Y_MARGIN = 0x20; // BuildSprites assumes 32px Y radius

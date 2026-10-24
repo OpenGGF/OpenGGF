@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -13,7 +14,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * S3K Obj $8C - Bloominator (AIZ).
  * Core routine mapping: Obj_Bloominator (sonic3k.asm loc_86D8A..loc_86E42).
  */
-public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x23; // ObjDat_Bloominator flags $23
     private static final int PRIORITY_BUCKET = 4;         // ObjDat_Bloominator priority $200
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;

@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +21,9 @@ import java.util.List;
  * recapture timer. Extra followers receive independent native-P2 equivalents.
  */
 public final class SozQuicksandObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native capture/slide direction belongs to an invisible sand region; it has no horizontal-facing art.
     @RewindTransient(reason = "Constructor-derived from the immutable spawn subtype.")
     private final int halfExtent;
     @RewindTransient(reason = "Constructor-derived from the immutable spawn subtype.")

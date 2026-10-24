@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SpawnCoordinateRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -39,7 +40,15 @@ import java.util.logging.Logger;
  * Reference: docs/s1disasm/_incObj/87 Ending Sequence Sonic.asm
  */
 public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance
-        implements SpawnCoordinateRewindRecreatable {
+        implements SpawnCoordinateRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // ESon_GoodEnding/ESon_BadEnding explicitly clear Sonic's status direction.
+        // Keep that right-facing logical owner through the confused look-backs
+        // and leap-at-screen poses; emerald/logo children add no facing owner.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
     private static final Logger LOGGER = Logger.getLogger(Sonic1EndingSonicObjectInstance.class.getName());
 
     // ========================================================================

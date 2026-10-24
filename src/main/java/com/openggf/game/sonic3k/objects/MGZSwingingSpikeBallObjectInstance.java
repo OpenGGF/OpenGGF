@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -31,7 +32,9 @@ import java.util.List;
  * geometry inline from the same object instance.
  */
 public class MGZSwingingSpikeBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native spin/swing state positions geometric platforms or radial balls and chain parts without facing.
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_SWINGING_SPIKE_BALL;
 

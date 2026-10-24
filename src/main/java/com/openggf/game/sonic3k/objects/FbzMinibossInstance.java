@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -31,7 +32,12 @@ import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 /** Locked-on S3KL object {@code $AA}, {@code Obj_FBZMiniboss}. */
 public final class FbzMinibossInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomWorldPositionedObject,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal plunger/cover machine and its left/right arm geometry have no logical facing.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int[] ACTIVATION_BOUNDS = {0x240, 0x600, 0x2D20, 0x2F20};
     private static final int[] LOCK_BOUNDS = {0x540, 0x540, 0x2E20, 0x2EA0};
     private static final String[] INITIAL_ROLES = {

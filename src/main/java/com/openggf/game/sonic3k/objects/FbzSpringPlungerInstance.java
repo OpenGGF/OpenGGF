@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -15,7 +17,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZSpringPlunger} ($D0), {@code loc_89C86-loc_89CDE}. */
 public final class FbzSpringPlungerInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private int mappingFrame = 5;
 
     public FbzSpringPlungerInstance(ObjectSpawn spawn) { super(spawn, "FBZSpringPlunger"); }

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -56,7 +58,7 @@ import java.util.logging.Logger;
  *   <li>Priority: $0100</li>
  * </ul>
  */
-public class GumballMachineObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class GumballMachineObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOGGER = Logger.getLogger(GumballMachineObjectInstance.class.getName());
 

@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
 import com.openggf.editor.project.EditorProjectMenu;
 import com.openggf.game.MenuTextEditor;
@@ -322,9 +324,10 @@ public final class StageplayWorkspace {
         var draft = takeDocument(takeKeys);
         var pose = StageplayTimeline.sample(draft, frame).actors().stream()
                 .filter(a -> a.actorId().equals(takeActor)).findFirst().orElseThrow();
+        var held = draft.actors().stream().filter(a -> a.id().equals(takeActor)).findFirst().orElseThrow()
+                .keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
         var key = new ActorKey(frame, pose.x() + (right ? 2 : 0) - (left ? 2 : 0),
-                pose.y() + (down ? 2 : 0) - (up ? 2 : 0), pose.animation(), pose.pose(),
-                left || (!right && pose.flipX()), pose.visible(), pose.scale(), Interpolation.HOLD);
+                pose.y() + (down ? 2 : 0) - (up ? 2 : 0), pose.animation(), pose.pose(), (left ? Facing.LEFT : right ? Facing.RIGHT : held.facing()), pose.visible(), pose.scale(), Interpolation.HOLD);
         var keys = new ArrayList<>(takeKeys);
         keys.removeIf(k -> k.frame() == frame); keys.add(key); keys.sort(Comparator.comparingInt(ActorKey::frame));
         // Validate the whole scene budget before publishing a draft that either frontend can draw.
@@ -752,7 +755,7 @@ public final class StageplayWorkspace {
                     var camera=StageplayTimeline.sample(controller.document(),frame).baseCamera();
                     keys.add(new ActorKey(frame,frame==0?decimal(v,"x"):camera.x()+controller.document().width()/2.0,
                             frame==0?decimal(v,"y"):camera.y()+controller.document().height()/2.0,
-                            0,-1,false,true,1,Interpolation.HOLD));
+                            0,-1, Facing.RIGHT,true,1,Interpolation.HOLD));
                 }
             } else keys.addAll(actor.keys());
             var value=new Actor(id,v.get("name"),v.get("game"),v.get("character"),keys);
@@ -789,7 +792,7 @@ public final class StageplayWorkspace {
         var keys=new ArrayList<ActorKey>(); ActorKey anchor=actor.keys().getFirst();
         for (var key:actor.keys()) {
             if (boundaries.contains(key.frame())) anchor=key;
-            keys.add(new ActorKey(key.frame(),anchor.x(),anchor.y(),0,-1,anchor.flipX(),key.visible(),1,Interpolation.HOLD));
+            keys.add(new ActorKey(key.frame(),anchor.x(),anchor.y(),0,-1, anchor.facing(),key.visible(),1,Interpolation.HOLD));
         }
         return new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),keys);
     }
@@ -874,8 +877,8 @@ public final class StageplayWorkspace {
         int frame=controller.document().sceneChanges().stream().filter(c -> c.frame()<=controller.frame()).mapToInt(SceneChange::frame).max().orElse(0);
         var key=actor.keys().stream().filter(k -> k.frame()==frame).findFirst().orElseThrow();
         menu.showForm("Shot placement at frame "+frame,List.of(number("x","World centre X",key.x()),number("y","World centre Y / floor search",key.y()),
-                text("flip","Face left: true / false",Boolean.toString(key.flipX()))),"Apply placement",v -> edit(d -> {
-            var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1,bool(v,"flip"),key.visible(),1,Interpolation.HOLD);
+                new EditorProjectMenu.Field("facing","Facing",display(key.facing()),List.of("Left","Right"))),"Apply placement",v -> edit(d -> {
+            var replacement=new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),0,-1, Facing.valueOf(v.get("facing").toUpperCase(java.util.Locale.ROOT)),key.visible(),1,Interpolation.HOLD);
             var candidate=new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),replacement));
             var normalized=physicalKeys(candidate,d.sceneChanges());
             return d.withActors(d.actors().stream().map(a -> a.id().equals(actor.id())?normalized:a).toList());
@@ -887,7 +890,7 @@ public final class StageplayWorkspace {
         int frame=controller.frame();
         var key=actor.keys().stream().filter(k -> k.frame()<=frame).reduce((a,b)->b).orElseThrow();
         menu.showForm("Visibility at frame "+frame,List.of(text("visible","Visible: true / false",Boolean.toString(key.visible()))),"Apply visibility",v -> edit(d ->
-                replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1,key.flipX(),bool(v,"visible"),1,Interpolation.HOLD)))));
+                replaceActor(d,actor,withKey(actor.keys(),new ActorKey(frame,key.x(),key.y(),0,-1, key.facing(),bool(v,"visible"),1,Interpolation.HOLD)))));
     }
 
     private Actor selectedActor() {
@@ -898,12 +901,13 @@ public final class StageplayWorkspace {
     private void keyForm() {
         Actor actor = selectedActor(); int frame = controller.frame();
         var pose = StageplayTimeline.sample(controller.document(), frame).actors().stream().filter(a -> a.actorId().equals(actor.id())).findFirst().orElseThrow();
-        var interpolation = actor.keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow().interpolation();
+        var held = actor.keys().stream().filter(k -> k.frame() <= frame).reduce((a,b) -> b).orElseThrow();
+        var interpolation = held.interpolation();
         menu.showForm("Actor key at frame " + frame, List.of(number("x","World centre X",pose.x()),number("y","World centre Y",pose.y()),
                 number("animation","Animation",pose.animation()),number("pose","Pose frame (-1 = animation)",pose.pose()),
-                text("flip","Flip X: true / false",Boolean.toString(pose.flipX())), text("visible","Visible: true / false",Boolean.toString(pose.visible())),
+                new EditorProjectMenu.Field("facing","Facing",display(held.facing()),List.of("Left","Right")), text("visible","Visible: true / false",Boolean.toString(pose.visible())),
                 number("scale","Scale",pose.scale()),text("interpolation","HOLD / LINEAR / SMOOTH",interpolation.name())), "Set key", v -> {
-            var key = new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),integer(v,"animation"),integer(v,"pose"),bool(v,"flip"),bool(v,"visible"),decimal(v,"scale"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)));
+            var key = new ActorKey(frame,decimal(v,"x"),decimal(v,"y"),integer(v,"animation"),integer(v,"pose"), Facing.valueOf(v.get("facing").toUpperCase(java.util.Locale.ROOT)),bool(v,"visible"),decimal(v,"scale"),Interpolation.valueOf(v.get("interpolation").toUpperCase(java.util.Locale.ROOT)));
             edit(d -> replaceActor(d,actor,withKey(actor.keys(),key)));
         });
     }
@@ -1070,7 +1074,8 @@ public final class StageplayWorkspace {
                 var actor = actors.get(i);
                 if (actor.keys().stream().anyMatch(k -> k.frame() == change.frame())) continue;
                 var pose = sample.actors().stream().filter(p -> p.actorId().equals(actor.id())).findFirst().orElseThrow();
-                var key = new ActorKey(change.frame(),pose.x(),pose.y(),pose.animation(),pose.pose(),pose.flipX(),pose.visible(),pose.scale(),Interpolation.HOLD);
+                var held = actor.keys().stream().filter(k -> k.frame() <= change.frame()).reduce((a,b) -> b).orElseThrow();
+                var key = new ActorKey(change.frame(),pose.x(),pose.y(),pose.animation(),pose.pose(), held.facing(),pose.visible(),pose.scale(),Interpolation.HOLD);
                 actors.set(i,new Actor(actor.id(),actor.name(),actor.gameId(),actor.character(),withKey(actor.keys(),key)));
             }
         }
@@ -1081,7 +1086,7 @@ public final class StageplayWorkspace {
             var keys = new ArrayList<>(object.keys());
             for (var change : changes) if (keys.stream().noneMatch(k -> k.frame() == change.frame())) {
                 var key = object.keys().stream().filter(k -> k.frame() <= change.frame()).reduce((a,b) -> b).orElseThrow();
-                keys.add(new ObjectKey(change.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                keys.add(new ObjectKey(change.frame(), key.x(), key.y(), key.animation(), key.pose(), key.facing(),
                         key.visible(), key.interpolation(), key.mode(), key.parts()));
             }
             keys.sort(Comparator.comparingInt(ObjectKey::frame));
@@ -1091,7 +1096,7 @@ public final class StageplayWorkspace {
                     for (var change : changes) if (change.frame() <= key.frame()) incoming = change.set();
                     boolean matches = object.gameId().equals(incoming.gameId()) && object.zone() == incoming.zone()
                             && object.act() == incoming.act();
-                    return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.flipX(),
+                    return new ObjectKey(key.frame(), key.x(), key.y(), key.animation(), key.pose(), key.facing(),
                             key.visible() && matches, key.interpolation(), key.mode(), key.parts());
                 }).toList());
             }
@@ -1444,8 +1449,7 @@ public final class StageplayWorkspace {
                 int end = StageplayRouteContract.shotEnd(document, context.frame());
                 // Every visibility key holds the shot-entry centre; moving only the boundary is invalid.
                 var keys = actor.get().keys().stream().map(key -> key.frame() < context.frame() || key.frame() >= end ? key
-                        : new ActorKey(key.frame(), placement.x(), placement.y(), key.animation(), key.pose(),
-                        key.flipX(), key.visible(), key.scale(), key.interpolation())).toList();
+                        : new ActorKey(key.frame(), placement.x(), placement.y(), key.animation(), key.pose(), key.facing(), key.visible(), key.scale(), key.interpolation())).toList();
                 return replaceActor(document, actor.get(), keys);
             }
             return document.withObjectActors(document.objectActors().stream().map(object -> {
@@ -1453,8 +1457,7 @@ public final class StageplayWorkspace {
                 var key = groundObjectKey(object, context.frame());
                 var keys = new ArrayList<>(object.keys());
                 keys.removeIf(k -> k.frame() == context.frame());
-                keys.add(new ObjectKey(context.frame(), placement.x(), placement.y(), key.animation(), key.pose(),
-                        key.flipX(), key.visible(), key.interpolation(), key.mode(), key.parts()));
+                keys.add(new ObjectKey(context.frame(), placement.x(), placement.y(), key.animation(), key.pose(), key.facing(), key.visible(), key.interpolation(), key.mode(), key.parts()));
                 keys.sort(Comparator.comparingInt(ObjectKey::frame));
                 return new ObjectActor(object.id(), object.name(), object.gameId(), object.zone(), object.act(),
                         object.objectId(), object.subtype(), object.layoutIndex(), keys, object.commands(), object.sourceKind());

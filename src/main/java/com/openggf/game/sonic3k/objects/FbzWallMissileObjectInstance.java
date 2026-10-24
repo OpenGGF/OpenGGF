@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -8,7 +10,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 /** Locked-on Obj_FBZWallMissile ($E0), sonic3k.asm $3C7EC-$3C904. */
 public final class FbzWallMissileObjectInstance
-    extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
   private final int interval;
   private int timer, muzzleTimer, frame;
   private boolean muzzle;

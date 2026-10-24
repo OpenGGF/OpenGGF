@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
 
@@ -15,7 +16,9 @@ import java.util.List;
 
 /** SKL $52, Obj_DEZLightning / loc_478BE..loc_4791A (sonic3k.asm:93613-93657). */
 public final class S3kDezLightningObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider {
+        implements SpawnRewindRecreatable, TouchResponseProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native lightning frames and placement flips orient an electrical effect without logical facing.
     private boolean initialized;
     private boolean waiting;
     private boolean renderedOnScreen;

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -28,7 +30,7 @@ import java.util.List;
  * {@code Map_HCZConveyorSpike}, {@code ArtTile_HCZSpikeBall}.</p>
  */
 public class HCZConveyorSpikeObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider {
+        implements RewindRecreatable, TouchResponseProvider, ObjectVisualFacing.NonDirectional {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_CONVEYOR_SPIKE;
 

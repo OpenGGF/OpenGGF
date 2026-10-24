@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.SpringHelper;
 
@@ -47,7 +49,8 @@ import java.util.List;
  * </ul>
  */
 public class SteamSpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Container {
+    // Obj42 piston moves vertically; its two outward steam plumes face independently at their own anchors.
 
     // ROM: move.w #-$A00,y_vel(a1) at loc_26798
     private static final int SPRING_VELOCITY = SpringBounceHelper.STRENGTH_YELLOW;

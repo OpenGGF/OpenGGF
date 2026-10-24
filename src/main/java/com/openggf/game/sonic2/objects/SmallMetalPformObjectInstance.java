@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -53,7 +55,8 @@ import java.util.List;
  *   </li>
  * </ul>
  */
-public class SmallMetalPformObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class SmallMetalPformObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjBD owns unfolding platforms moving vertically; their mirrored hinge geometry is not facing.
 
     // ========================================================================
     // ROM Constants

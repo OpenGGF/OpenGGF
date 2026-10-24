@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -28,7 +30,9 @@ import java.util.logging.Logger;
  * they traverse it.
  * Effectively creates a "wave" motion and sprite twisting effect.
  */
-public class SpiralObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook, RewindRecreatable {
+public class SpiralObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj06 is an invisible path/rotation controller; the player owns its own facing.
+
     private static final Logger LOGGER = Logger.getLogger(SpiralObjectInstance.class.getName());
 
     // Obj06_FlipAngleTable (sloopdirtbl)

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -31,7 +33,7 @@ import java.util.List;
  * from the chain and slide after the early-swing release threshold.
  */
 public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, RewindRecreatable {
+        implements MultiPieceSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private enum Phase { IDLE, SWING_PENDING, SWINGING, FALLING, SLIDING, STOPPED }
 

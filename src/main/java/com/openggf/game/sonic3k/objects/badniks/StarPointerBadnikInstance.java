@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -36,7 +37,10 @@ import java.util.List;
  * player using a subtype-selected speed. Four child points orbit the body, then
  * launch horizontally after the parent passes the player.
  */
-public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ObjDat_StarPointer: collision_flags = $0B.
     private static final int COLLISION_SIZE_INDEX = 0x0B;

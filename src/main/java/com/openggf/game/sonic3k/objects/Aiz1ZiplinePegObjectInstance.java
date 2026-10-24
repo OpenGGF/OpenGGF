@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -19,7 +21,7 @@ import java.util.List;
  * Uses level patterns (art_tile base 0x324, palette 2).
  * ROM priority: 0x380 → bucket 7.
  */
-public class Aiz1ZiplinePegObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Aiz1ZiplinePegObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private PlaceholderObjectInstance placeholder;
 
     public Aiz1ZiplinePegObjectInstance(ObjectSpawn spawn) {

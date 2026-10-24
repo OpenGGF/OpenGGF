@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -85,9 +87,9 @@ class TestStageplayTool {
                         new StageplayDocument.CameraKey(3, 500, 0, 1, linear),
                         new StageplayDocument.CameraKey(6, 530, 0, 2, linear)))
                 .withActors(List.of(new StageplayDocument.Actor("hero", "Hero", "s2", "sonic", List.of(
-                        new StageplayDocument.ActorKey(0, 0, 100, 1, -1, false, true, 1, linear),
-                        new StageplayDocument.ActorKey(3, 900, 100, 1, -1, false, true, 1, linear),
-                        new StageplayDocument.ActorKey(6, 930, 100, 1, -1, false, true, 1, linear)))))
+                        new StageplayDocument.ActorKey(0, 0, 100, 1, -1, Facing.RIGHT, true, 1, linear),
+                        new StageplayDocument.ActorKey(3, 900, 100, 1, -1, Facing.RIGHT, true, 1, linear),
+                        new StageplayDocument.ActorKey(6, 930, 100, 1, -1, Facing.RIGHT, true, 1, linear)))))
                 .withCaptions(List.of(new StageplayDocument.Caption("line", 2, 4, "At the boundary", 0, 0, -1)))
                 .withAudio(List.of(
                         new StageplayDocument.AudioCue("first", 0, StageplayDocument.AudioKind.ROM_SFX, "s2", 10, "", 1),
@@ -230,7 +232,7 @@ class TestStageplayTool {
         byte[] original = Files.readAllBytes(scene);
         var result = execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString());
         assertEquals(0, result.status());
-        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(StageplayScriptCompiler.VERSION, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(document, StageplayScriptCompiler.compile(Files.readAllBytes(screenplay)));
         byte[] exported = Files.readAllBytes(screenplay);
         assertEquals(2, execute("decompile", "--scene", scene.toString(), "--out", screenplay.toString()).status());
@@ -376,7 +378,7 @@ class TestStageplayTool {
     @Test void helpDocumentsMachineReadableExitCodesAndCurrentSchemaWithoutRomAccess() throws Exception {
         var result = execute();
         assertEquals(0, result.status());
-        assertEquals(6, result.json().path("result").path("screenplayVersion").intValue());
+        assertEquals(StageplayScriptCompiler.VERSION, result.json().path("result").path("screenplayVersion").intValue());
         assertEquals(StageplayDocument.VERSION, result.json().path("result").path("stageplayVersion").intValue());
         assertEquals(60, result.json().path("result").path("fps").intValue());
         assertTrue(result.json().path("result").path("commands").toString().contains("route --scene"));

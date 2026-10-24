@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -29,7 +31,7 @@ class TestStageplayObjectDirection {
                 fixture.objects.createDynamicObject(
                         () -> new TestObject(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)));
         TestObject child = root.child();
-        direction.direct(root, heldTemplate(), new Direction(900, 400, true, true, 0, -1));
+        direction.direct(root, heldTemplate(), new Direction(900, 400, Basis.LEFT, true, 0, -1));
         assertTrue(direction.suspended(root));
         assertTrue(direction.suspended(child));
         new ObjectExecutionController(fixture.objects).execute(root, null, List.of(), false, false);
@@ -164,7 +166,7 @@ class TestStageplayObjectDirection {
                 default -> setField(object, "grabbedPlayer", player);
             }
             if (remove) direction.removeDynamic(object);
-            else direction.direct(object, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            else direction.direct(object, heldTemplate(), new Direction(200, 100, Basis.RIGHT, true, 0, -1));
             if (kind.equals("pulley")) verify(player).releaseFromObjectControl(0);
             else verify(player, atLeastOnce()).applyObjectControlState(com.openggf.sprites.playable.ObjectControlState.NONE);
             if (!remove) assertTrue(direction.suspended(object));
@@ -182,7 +184,7 @@ class TestStageplayObjectDirection {
             fixture.objects.solidContacts().forceRidingObjectForBootstrap(player, lift);
             clearInvocations(player);
             if (remove) direction.removeDynamic(lift);
-            else direction.direct(lift, heldTemplate(), new Direction(200, 100, false, true, 0, -1));
+            else direction.direct(lift, heldTemplate(), new Direction(200, 100, Basis.RIGHT, true, 0, -1));
             assertFalse(fixture.objects.solidContacts().isPlayerRiding(player, lift));
             verify(player).setOnObject(false);
             verify(player).setAir(true);
@@ -222,9 +224,9 @@ class TestStageplayObjectDirection {
         var picture = direction.captureDynamic(root);
         var part = picture.parts().getFirst();
         assertEquals(List.of(0, 1), part.animations().getFirst().frames());
-        direction.direct(root, picture, new Direction(100, 80, false, true, 0, -1));
-        assertNotEquals(StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 0)),
-                StageplayObjectDirection.selectedPose(part, new Direction(100, 80, false, true, 0, -1, java.util.Map.of(), 2)));
+        direction.direct(root, picture, new Direction(100, 80, Basis.RIGHT, true, 0, -1));
+        assertNotEquals(StageplayObjectDirection.selectedPose(part, new Direction(100, 80, Basis.RIGHT, true, 0, -1, java.util.Map.of(), 0)),
+                StageplayObjectDirection.selectedPose(part, new Direction(100, 80, Basis.RIGHT, true, 0, -1, java.util.Map.of(), 2)));
         fixture.objects.update(20, null, List.of(), 0, false);
         assertEquals(0, root.updates);
     }
@@ -394,12 +396,12 @@ class TestStageplayObjectDirection {
         var direction = ObjectDirectionAccess.forManager(fixture.objects);
         ObjectInstance visual =
                 direction.installVisual(
-                        "cast-robot", heldTemplate(), new Direction(5, 7, false, true, 0, -1));
+                        "cast-robot", heldTemplate(), new Direction(5, 7, Basis.RIGHT, true, 0, -1));
         var adapter = direction.rewindSnapshottable();
         var saved = adapter.capture();
         var policy = (StageplayObjectLoadPolicy) fieldValue(direction, "loadPolicy");
         var policySaved = policy.rewindAdapter().capture();
-        direction.setDirection(visual, new Direction(100, 200, true, false, 0, -1));
+        direction.setDirection(visual, new Direction(100, 200, Basis.LEFT, false, 0, -1));
         direction.clearObjects();
         policy.rewindAdapter().restore(policySaved);
         adapter.restore(saved);
@@ -491,7 +493,7 @@ class TestStageplayObjectDirection {
                         4,
                         false,
                         0,
-                        0,
+                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                         List.of(
                                 new VisualPose(0, List.of(), List.of()),
                                 new VisualPose(1, List.of(), List.of()),
@@ -500,28 +502,28 @@ class TestStageplayObjectDirection {
         assertEquals(
                 1,
                 StageplayObjectDirection.selectedPose(
-                                part, new Direction(0, 0, false, true, 999, 1))
+                                part, new Direction(0, 0, Basis.RIGHT, true, 999, 1))
                         .pose());
         assertEquals(
                 2,
                 StageplayObjectDirection.selectedPose(
-                                part, new Direction(0, 0, false, true, 1, -1, Map.of(), 1))
+                                part, new Direction(0, 0, Basis.RIGHT, true, 1, -1, Map.of(), 1))
                         .pose());
         assertEquals(
                 0,
                 StageplayObjectDirection.selectedPose(
-                                part, new Direction(0, 0, false, true, 1, -1, Map.of(), 2))
+                                part, new Direction(0, 0, Basis.RIGHT, true, 1, -1, Map.of(), 2))
                         .pose());
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
                         StageplayObjectDirection.selectedPose(
-                                part, new Direction(0, 0, false, true, 999, -1)));
+                                part, new Direction(0, 0, Basis.RIGHT, true, 999, -1)));
         assertEquals(
                 0,
                 StageplayObjectDirection.selectedPose(
                                 heldTemplate().parts().getFirst(),
-                                new Direction(0, 0, false, true, 0, -1))
+                                new Direction(0, 0, Basis.RIGHT, true, 0, -1))
                         .pose());
     }
 
@@ -603,21 +605,21 @@ class TestStageplayObjectDirection {
         var template =
                 new VisualTemplate(
                         0,
-                        0,
+                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT,
                         List.of(
                                 new VisualPart(
                                         "root/0",
                                         4,
                                         false,
                                         0,
-                                        0,
+                                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                                         List.of(new VisualPose(0, List.of(tile), List.of())))),
                         List.of(new PatternPixels(3, 0, 0, 0)),
                         List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))),
                         List.of());
         ObjectInstance visual =
                 direction.installVisual(
-                        "clipped", template, new Direction(100, 80, false, true, 0, -1));
+                        "clipped", template, new Direction(100, 80, Basis.RIGHT, true, 0, -1));
         try {
             var painter =
                     com.openggf.level.render.SpritePresentationRenderer.prepare(
@@ -669,14 +671,14 @@ class TestStageplayObjectDirection {
                 var template =
                         new VisualTemplate(
                                 0,
-                                0,
+                                0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT,
                                 List.of(
                                         new VisualPart(
                                                 "root/0",
                                                 4,
                                                 false,
                                                 0,
-                                                0,
+                                                0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                                                 List.of(
                                                         new VisualPose(
                                                                 0, List.of(tile), List.of())))),
@@ -687,7 +689,7 @@ class TestStageplayObjectDirection {
                         direction.installVisual(
                                 "ensemble-" + i,
                                 template,
-                                new Direction(i * 8, 80, false, true, 0, -1)));
+                                new Direction(i * 8, 80, Basis.RIGHT, true, 0, -1)));
             }
             var frame =
                     com.openggf.level.render.SpritePresentationRenderer.prepare(
@@ -759,26 +761,26 @@ class TestStageplayObjectDirection {
         var template =
                 new VisualTemplate(
                         0,
-                        0,
+                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT,
                         List.of(
                                 new VisualPart(
                                         "root/0",
                                         4,
                                         false,
                                         root.getSlotIndex(),
-                                        0,
+                                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                                         List.of(new VisualPose(0, List.of(first), List.of()))),
                                 new VisualPart(
                                         "root/1",
                                         4,
                                         false,
                                         child.getSlotIndex(),
-                                        0,
+                                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                                         List.of(new VisualPose(0, List.of(second), List.of())))),
                         List.of(new PatternPixels(1, 0, 0, 0)),
                         List.of(palette),
                         List.of());
-        direction.direct(root, template, new Direction(0, 80, false, true, 0, -1));
+        direction.direct(root, template, new Direction(0, 80, Basis.RIGHT, true, 0, -1));
         try {
             var frame =
                     com.openggf.level.render.SpritePresentationRenderer.prepare(
@@ -859,13 +861,13 @@ class TestStageplayObjectDirection {
                         4,
                         false,
                         0,
-                        0,
+                        0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                         List.of(new VisualPose(0, List.of(), List.of(primitive))));
         var failure =
                 assertThrows(
                         UnsupportedRenderOrderException.class,
                         () ->
-                                new VisualTemplate( 0, 0, List.of(part), List.of(), List.of(), List.of()));
+                                new VisualTemplate( 0, 0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, List.of(part), List.of(), List.of(), List.of()));
         assertTrue(failure.getMessage().contains("use Free mode"));
         assertTrue(failure.getMessage().contains("Puppet/Pose cannot preserve this render order"));
     }
@@ -957,7 +959,7 @@ class TestStageplayObjectDirection {
                 direction.installVisual(
                         "frozen-scoped-palette",
                         template,
-                        new Direction(100, 80, false, true, 0, -1));
+                        new Direction(100, 80, Basis.RIGHT, true, 0, -1));
         try {
             var frame =
                     com.openggf.level.render.SpritePresentationRenderer.prepare(
@@ -982,6 +984,47 @@ class TestStageplayObjectDirection {
     }
 
     @Test
+    void containerChildrenFaceIndependentlyAroundTheirOwnAnchors() {
+        var fixture = new Fixture(List.of());
+        var renderer = visualRenderer(fixture, 0);
+        var direction = ObjectDirectionAccess.forManager(fixture.objects);
+        class Body extends TestObject {
+            private final ObjectVisualFacing.Basis facing;
+            Body(int x, ObjectVisualFacing.Basis facing) {
+                super(new ObjectSpawn(x, 80, 1, 0, 0, false, 80));
+                this.facing = facing;
+            }
+            @Override public ObjectVisualFacing.Basis nativeFacing() { return facing; }
+            @Override public void appendRenderCommands(List<GLCommand> commands) {
+                renderer.drawFrameIndex(0, getX(), getY(), facing == ObjectVisualFacing.Basis.LEFT, false);
+            }
+        }
+        class Container extends TestObject implements ObjectVisualFacing.Container {
+            Container() { super(new ObjectSpawn(100, 80, 1, 0, 0, false, 80)); }
+            void children() {
+                spawnChild(() -> new Body(120, ObjectVisualFacing.Basis.LEFT));
+                spawnChild(() -> new Body(160, ObjectVisualFacing.Basis.RIGHT));
+            }
+        }
+        var root = fixture.objects.createDynamicObject(Container::new);
+        root.children();
+        var template = direction.captureDynamic(root);
+        assertEquals(java.util.Set.of(20f, 60f), template.parts().stream()
+                .map(VisualPart::facingPivotX).collect(java.util.stream.Collectors.toSet()));
+        assertEquals(java.util.Set.of(ObjectVisualFacing.Basis.LEFT, ObjectVisualFacing.Basis.RIGHT),
+                template.parts().stream().map(VisualPart::facing).collect(java.util.stream.Collectors.toSet()));
+        for (var facing : java.util.List.of(Basis.LEFT, Basis.RIGHT)) {
+            direction.direct(root, template, new Direction(100, 80, facing, true, 0, -1));
+            var picture = com.openggf.level.render.SpritePresentationRenderer.prepare(fixture.graphics, 0, 0,
+                    () -> fixture.objects.drawUnifiedBucketWithPriority(template.parts().getFirst().bucket(), fixture.graphics));
+            assertEquals(facing == Basis.LEFT ? List.of(112f, 152f) : List.of(120f, 160f),
+                    picture.tiles().stream().map(com.openggf.graphics.SpritePresentation.Tile::x).sorted().toList());
+            assertTrue(picture.tiles().stream().allMatch(t -> t.hFlip() == (facing == Basis.LEFT)));
+        }
+        direction.close();
+    }
+
+    @Test
     void childCreationPathsKeepNonlexicalOrderAcrossRewindAndFreeRecapture() {
         Fixture fixture = new Fixture(List.of());
         var direction = ObjectDirectionAccess.forManager(fixture.objects);
@@ -993,7 +1036,7 @@ class TestStageplayObjectDirection {
             root.visualChild(renderer);
         }
         var before = direction.captureDynamic(root);
-        direction.direct(root, before, new Direction(200, 80, false, true, 0, -1));
+        direction.direct(root, before, new Direction(200, 80, Basis.RIGHT, true, 0, -1));
         var adapter = direction.rewindSnapshottable();
         adapter.restore(adapter.capture());
         direction.releaseToFree(root);
@@ -1165,7 +1208,7 @@ class TestStageplayObjectDirection {
             switch (action) {
                 case "remove" -> direction.removeDynamic(prison);
                 case "clear" -> direction.clearObjects();
-                default -> direction.direct(prison, heldTemplate(), new Direction(100, 80, false, true, 0, -1));
+                default -> direction.direct(prison, heldTemplate(), new Direction(100, 80, Basis.RIGHT, true, 0, -1));
             }
             verify(player).setControlLocked(false);
             verify(player).clearForcedInputMask();
@@ -1180,14 +1223,14 @@ class TestStageplayObjectDirection {
     private static VisualTemplate heldTemplate() {
         return new VisualTemplate(
                 100,
-                80,
+                80, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT,
                 List.of(
                         new VisualPart(
                                 "root/0",
                                 4,
                                 false,
                                 0,
-                                0,
+                                0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                                 List.of(new VisualPose(0, List.of(), List.of())))),
                 List.of(),
                 List.of(),
@@ -1243,7 +1286,8 @@ class TestStageplayObjectDirection {
     }
 
     private static class TestObject extends AbstractObjectInstance
-            implements SolidObjectProvider, TouchResponseProvider {
+            implements SolidObjectProvider, TouchResponseProvider, ObjectVisualFacing.Source {
+        @Override public ObjectVisualFacing.Basis nativeFacing() { return ObjectVisualFacing.Basis.NON_DIRECTIONAL; }
         int updates, snapshots, refreshes, unloads;
 
         TestObject(ObjectSpawn spawn) {

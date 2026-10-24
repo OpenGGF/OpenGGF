@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -41,7 +43,7 @@ import java.util.List;
  * <p>
  * ROM reference: Obj_WaterDrop (sonic3k.asm:75186-75280).
  */
-public class HCZWaterDropObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HCZWaterDropObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.HCZ_WATER_DROP;
 

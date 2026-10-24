@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -57,7 +58,9 @@ import java.util.List;
  * {@code 4} -- sixty-four frames a loop.
  */
 public final class LrzTurbineSpritesObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZTurbineSprites animates mechanical turbine phases; captured players retain their own direction owners.
 
     /** {@code move.w #$200,priority(a0)} (sonic3k.asm:89659). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0200);

@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.level.Level;
 import com.openggf.io.PngCodec;
 import com.openggf.stageplay.StageplayDialogue;
@@ -169,7 +171,7 @@ public final class StageplayResources implements AutoCloseable {
                 nativePixel(anchor.y(), false),
                 track.collisionPath(),
                 track.snapToFloor(),
-                anchor.flipX());
+                (anchor.facing() == Facing.LEFT));
     }
 
     /** Foreground query from an explicitly owned, initialized native route visit. */
@@ -298,7 +300,7 @@ public final class StageplayResources implements AutoCloseable {
                 if (key.pose() < 0 && art.animationFrames(key.animation()).length == 0)
                     throw new IllegalArgumentException("Missing animation " + key.animation() + " for " + actor.name());
                 rom(actor.gameId()).characterAccessoryPose(actor.character(), key.animation(), key.pose(),
-                        0, key.flipX(), 0, 0);
+                        0, (key.facing() == Facing.LEFT), 0, 0);
             }
         }
         if (!document.puppets().isEmpty()) {

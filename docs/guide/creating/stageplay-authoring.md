@@ -56,8 +56,8 @@ use the capture host's hidden native context; macOS uses Java's first thread.
 
 ## Return editor changes to a screenplay
 
-`decompile --scene PATH --out PATH` reads the current version-seven canonical scene,
-then writes deterministic version-six shot-local JSON. Recompile it to recover the
+`decompile --scene PATH --out PATH` reads the current version-eight canonical scene,
+then writes deterministic version-seven shot-local JSON. Recompile it to recover the
 same complete document, including unused profiles, object parts,
 cue ordering and exact IDs. Decompilation changes the source layout and formatting;
 it does not reconstruct comments or the original shot names. It does not need ROMs.
@@ -92,7 +92,7 @@ continuous performance and compares a single changed setting.
 
 ## Screenplay format
 
-Only screenplay `version:6` and canonical document `version:7` are accepted.
+Only screenplay `version:7` and canonical document `version:8` are accepted.
 These formats and the candidate API are unpublished; examples are authored directly
 in the current shape, with no migration or compatibility modes. The API version
 follows the engine release version. Every shot uses the same native `LIVE` world.
@@ -103,7 +103,7 @@ lossless shot-local expansion of an 8-MiB canonical document.
 
 ```json
 {
-  "version": 6,
+  "version": 7,
   "name": "A change of scenery",
   "width": 400,
   "height": 224,
@@ -149,7 +149,7 @@ A shot is an explicit cut even when it reuses the preceding set.
 | Track | Fields and defaults |
 | --- | --- |
 | Camera key | `frame,x,y`; `zoom:1`, `interpolation:"LINEAR"` |
-| Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,flipX:false,visible:true,scale:1`; interpolation defaults to `HOLD` for puppets, `LINEAR` for Poser actors |
+| Actor key | `frame`; `x:0,y:0,animation:0,pose:-1,facing:RIGHT,visible:true,scale:1`; interpolation defaults to `HOLD` for puppets, `LINEAR` for Poser actors |
 | Dialogue | `startFrame,endFrame,text` and `speakerActor` or `speakerName`; optional profiles, timing and panel fields below |
 | Caption | `startFrame,endFrame,text`; `x:12,y:12,argb:-1`, optional `id` |
 | Audio | `frame,kind`; `gameId` defaults to the shot's game, `soundId:0,asset:"",gain:1`, optional `id` |
@@ -286,7 +286,7 @@ each view. A larger export `--scale` cannot repair aliasing already present
 in the authored frame. Stage entrances, exits, turns and listener reactions, then
 review the entire movie in motion at its intended output size.
 
-## Native ROM worlds (screenplay 6, document 7)
+## Native ROM worlds (screenplay 7, document 8)
 
 Every scene uses a native world. A shot selects a populated native level with
 `"set":{"gameId":"s3k","zone":11,"act":1}`.
@@ -398,7 +398,7 @@ This applies to live playback and offline export; native SFX and direct native
 event/boss music requests retain their existing routes. The isolated preview
 worker transports native SFX while the parent plays authored cues.
 
-## Object cast (screenplay 6, document 7)
+## Object cast (screenplay 7, document 8)
 
 Object roles are separate from player controller tracks. Declare their native
 source context in `objectCast`, then use shot-local object keys and actions:
@@ -428,7 +428,7 @@ source context in `objectCast`, then use shot-local object keys and actions:
 }
 ```
 
-This fragment belongs inside a version-six screenplay with its normal name,
+This fragment belongs inside a version-seven screenplay with its normal name,
 size and player cast fields. Mapping/part IDs are object-specific: inspect the
 captured graph and coverage before selecting a frame; the sample numbers are
 syntax, not a guarantee of that boss's mapping layout.
@@ -441,7 +441,7 @@ portable identities. `sourceKind:RELEASED_ANIMAL` addresses the existing release
 animal factory, with `objectId:0` and `layoutIndex:-1`; the source set supplies the
 ROM species/art. S1 layout animals remain ordinary native object IDs.
 
-Keys expose `frame,x,y,mode,animation,pose,flipX,visible,interpolation,parts`.
+Keys expose `frame,x,y,mode,animation,pose,facing,visible,interpolation,parts`.
 `parts` contains stable parent/creation paths with independent animation/frame
 selection. `pose:-1` selects pure animation where available, otherwise the captured
 held frame. Native timer-owned bird flap cycles also run in Puppet/Pose. Walking
@@ -472,10 +472,18 @@ frozen; only acquired-player references/latches and the native release cooldowns
 are cleared or advanced. Returning to Free resumes that native state with players
 released. Helper handoffs and queued ending poses retain ownership
 through rewind; interruption does not complete a cutscene or change the world.
-Visual parts retain their native relative transforms. In directed modes, `flipX`
-mirrors the captured graph around its visual anchor; it is an additional visual
-transform, rather than a controller-facing input. In Free mode the initial flag
-is passed to the native spawn. Puppet `MOVE_TO` drives its
+Player and object keys use `facing: LEFT` or `RIGHT` in screen terms (default
+`RIGHT`), the same vocabulary as route Ending facing. Facing is the native
+performer's logical direction: native turns, skids and look-back poses keep their
+ROM art. Directors never specify a render flip. Directed objects capture their
+native facing with their picture, then mirror the whole assembly, including child
+offsets, only when requested direction differs. Containers without a shared face
+turn independently owned child groups around each child's anchor; geometric and
+pose-owned direction remains native. Free mode retains native initialization and
+AI; new Free entry facing uses a declared native constructor mapping where one
+exists. Existing placements retain their literal flags. Use Puppet/Pose for held
+authored facing. Native facing metadata belongs to
+the native object owner; an unresolved basis is an explicit preflight error. Puppet `MOVE_TO` drives its
 visual anchor at the requested pixels per frame; `STOP` ends that displacement.
 It is not controller input or a relocated native arena. Pose keys directly author
 position/mapping frames. Returning an existing graph to Free resumes its frozen

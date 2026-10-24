@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -30,7 +31,9 @@ import java.util.Map;
  */
 public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native flips orient a sloped geometric surface, not a logical horizontal-facing performer.
     // Obj_MHZCurledVine installs its main code pointer loc_3E8A2 (and display
     // child loc_3E9A6) at 0x0003Exxx, so word 0 of the stood-on object SST is
     // high word 0x0003 (docs/skdisasm/sonic3k.asm:82819-82838). S3K sub_13EFC

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -35,7 +36,12 @@ import java.util.logging.Logger;
  * - loc_68646/loc_68690 exit + cleanup
  */
 public class AizMinibossCutsceneInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This encounter owns the ship/pilot horizontal direction in its native render-status bit 0.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final Logger LOG = Logger.getLogger(AizMinibossCutsceneInstance.class.getName());
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_TRIGGER = 2;

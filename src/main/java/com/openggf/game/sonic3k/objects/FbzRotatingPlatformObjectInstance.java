@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -14,7 +16,7 @@ import java.util.List;
 /** Locked-on {@code Obj_FBZRotatingPlatform} ($77), sonic3k.asm $3B776-$3B91A. */
 public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable,
-        RomWorldPositionedObject {
+        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
     // byte_3B780: count-minus-one, special-member bit mask, then radius bytes.
     private static final int[][] RADII = {
             {0x5C,0x44,0x2C,0xD4,0xBC,0xA4}, {0x5C,0x44,0x2C,0xD4,0xBC,0xA4},

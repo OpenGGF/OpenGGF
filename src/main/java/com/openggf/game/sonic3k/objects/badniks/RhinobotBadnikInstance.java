@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -18,7 +19,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * S3K Obj $8D - Rhinobot (AIZ).
  * Core routine mapping: Obj_Rhinobot (sonic3k.asm loc_86E7E..loc_8714A).
  */
-public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     @Override public boolean supportsGroundedFieldMotion() { return true; }
 
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjSlot_Rhinobot flags $0B

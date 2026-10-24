@@ -5,6 +5,7 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ZeroArgRewindRecreatable;
@@ -32,7 +33,9 @@ import java.util.logging.Logger;
  * Reference: docs/s1disasm/_incObj/89 Ending Sequence STH.asm
  */
 public class Sonic1EndingSTHObjectInstance extends AbstractObjectInstance
-        implements ZeroArgRewindRecreatable {
+        implements ZeroArgRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// ESth_Move slides a text logo; text travel does not give the lettering a horizontal facing.
     private static final Logger LOGGER = Logger.getLogger(Sonic1EndingSTHObjectInstance.class.getName());
 
     // ========================================================================

@@ -13,7 +13,9 @@ import java.util.List;
 /** SKL $3F, Obj_SOZSpringVine ($40786): shared tension, pixel slope and one display SST. */
 public final class SozSpringVineObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native vine/platform display segments deform or swing as geometry without horizontal-facing bodies.
     // ROM word_408D4; the +/-1 entries deliberately keep the oscillation alive.
     private static final int[] REBOUND = {
         -256,-192,-128,-64,-1,64,128,192,256,192,128,64,1,-32,-64,-96,

@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -37,7 +38,9 @@ import java.util.Set;
  * animation-frame gated bounce response.
  */
 public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native mushroom caps compress and bounce; their cap geometry has no horizontal-facing owner.
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_BOUNCE = 1;
     private static final int BOUNCE_MAPPING_FRAME = 3;

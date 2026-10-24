@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.PlayableEntity;
@@ -36,7 +37,11 @@ import java.util.List;
  * ROM reference: s1disasm, Obj82 (ScrapStomp / SEgg)
  */
 public class Sonic1ScrapEggmanInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // SEgg walks/leaps left to the button; the fixed native draw has no independently mirrored state.
+        return ObjectVisualFacing.Basis.LEFT;
+    }
 
     // ---- Position constants from disassembly ----
     private static final int BOSS_SBZ2_X = Sonic1Constants.BOSS_SBZ2_X;

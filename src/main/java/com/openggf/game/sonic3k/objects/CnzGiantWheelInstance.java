@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -21,7 +23,7 @@ import java.util.Map;
  * the grounded player enters, and clamps {@code ground_vel} while the player
  * remains grounded inside the wheel.
  */
-public final class CnzGiantWheelInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class CnzGiantWheelInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int RANGE = 0x60;
     private static final int MIN_SPEED = 0x0400;

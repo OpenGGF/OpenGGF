@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayStore;
 import com.openggf.stageplay.StageplayTimeline;
@@ -26,7 +28,7 @@ class TestStageplayWorkspace {
     private Path screenplay(String name) throws IOException {
         Path source = directory.resolve(name);
         java.nio.file.Files.writeString(source, """
-                {"version":6,"name":"Imported take","width":320,"height":224,
+                {"version":7,"name":"Imported take","width":320,"height":224,
                  "cast":[{"id":"lead","name":"Lead","gameId":"s2","character":"tails","puppet":false}],
                  "shots":[{"id":"first","durationFrames":120,"set":{"gameId":"s2","zone":0,"act":0},
                  "camera":[{"frame":0,"x":100,"y":200}],"actors":{"lead":[{"frame":0,"x":150,"y":350}]}}]}
@@ -238,7 +240,7 @@ class TestStageplayWorkspace {
         var camera=java.util.stream.IntStream.range(0,33_333).mapToObj(frame ->
                 new StageplayDocument.CameraKey(frame,0,0,1,StageplayDocument.Interpolation.HOLD)).toList();
         var denseKeys=java.util.stream.IntStream.range(0,33_333).mapToObj(frame ->
-                new StageplayDocument.ActorKey(frame,100,200,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)).toList();
+                new StageplayDocument.ActorKey(frame,100,200,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD)).toList();
         var before=workspace.controller().document().withDurationFrames(36_000).withCamera(camera).withActors(List.of(
                 new StageplayDocument.Actor("take","Take","s2","sonic",List.of(denseKeys.getFirst())),
                 new StageplayDocument.Actor("cast1","Cast 1","s2","sonic",denseKeys),

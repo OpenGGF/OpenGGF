@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -28,7 +30,7 @@ import java.util.List;
  * <p>
  * ROM reference: sonic3k.asm lines 60470-60622
  */
-public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AizForegroundPlantInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private int origX;
     private int origY;

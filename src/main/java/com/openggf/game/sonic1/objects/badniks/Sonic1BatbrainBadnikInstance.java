@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.AudioManager;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -53,7 +54,10 @@ import java.util.List;
  *   <li>2 (.fly): frames 1, 2, 3, 2 at speed 3 - wing flapping cycle</li>
  * </ul>
  */
-public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType = $B (enemy category 0x00, size index $0B)
     private static final int COLLISION_SIZE_INDEX = 0x0B;

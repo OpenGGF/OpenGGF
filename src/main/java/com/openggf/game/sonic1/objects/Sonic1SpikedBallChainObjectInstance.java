@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRomZoneRewindRecreatable;
@@ -56,7 +57,9 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/57 Spiked Ball and Chain.asm
  */
 public class Sonic1SpikedBallChainObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRomZoneRewindRecreatable {
+        implements TouchResponseProvider, SpawnRomZoneRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// SBall angular phase positions radial balls and a mounting base; none has horizontal facing.
 
     // Display priority: move.b #4,obPriority(a0)
     private static final int DISPLAY_PRIORITY = 4;

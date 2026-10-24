@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.level.objects.AbstractPointsObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -11,7 +13,8 @@ import com.openggf.level.objects.ObjectSpawn;
  * Frame 0: "100", Frame 1: "200", Frame 2: "500",
  * Frame 3: "1000", Frame 4: "10", Frame 5: "1000" alt (chain bonus max).
  */
-public class PointsObjectInstance extends AbstractPointsObjectInstance {
+public class PointsObjectInstance extends AbstractPointsObjectInstance implements ObjectVisualFacing.NonDirectional {
+    // Obj29 raises score digits; neither the numeric mapping nor upward drift has horizontal body facing.
 
     public PointsObjectInstance(ObjectSpawn spawn, ObjectServices services, int points) {
         super(spawn, "Points", services, points);

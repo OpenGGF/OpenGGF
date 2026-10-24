@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.OscillationManager;
@@ -64,7 +66,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class SwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj15 owns platforms, anchors and chains; swing/flight phase does not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(SwingingPlatformObjectInstance.class.getName());
 

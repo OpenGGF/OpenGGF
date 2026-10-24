@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -42,7 +43,9 @@ import java.util.List;
  */
 public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
-        SpawnRewindRecreatable {
+        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_MGZTriggerPlatform reverses platform travel, not a horizontal-facing body.
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM;
     private static final int PRIORITY_BUCKET = 5; // ROM: priority = $280

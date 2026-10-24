@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -28,7 +30,7 @@ import java.util.logging.Logger;
  * via the shared static reference (ROM equivalent: _unkFAA4).
  */
 public class Hcz2CutsceneButtonInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final Logger LOG = Logger.getLogger(Hcz2CutsceneButtonInstance.class.getName());
 
     private static final int INIT_Y_OFFSET = 4;

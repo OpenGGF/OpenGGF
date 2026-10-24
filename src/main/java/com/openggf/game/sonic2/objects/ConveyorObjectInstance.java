@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -50,7 +52,8 @@ import java.util.logging.Logger;
  * <b>Art:</b> ArtNem_LavaCup, palette line 3, single 32x16 frame.
  */
 public class ConveyorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj6C owns pulley-path platforms, including spawned copies; path direction is not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(ConveyorObjectInstance.class.getName());
 

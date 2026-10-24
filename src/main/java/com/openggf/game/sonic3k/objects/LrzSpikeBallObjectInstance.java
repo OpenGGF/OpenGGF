@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -66,7 +67,9 @@ import java.util.List;
  * {@code $30} set, when the ROM draws it unconditionally (:88938-88940, :89012-89018).
  */
 public final class LrzSpikeBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZSpikeBall draws the radial boulder and rock chips unflipped; swing/fall state is not facing.
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88890). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

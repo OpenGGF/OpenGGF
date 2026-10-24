@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -63,7 +65,7 @@ import java.util.List;
  * frame 112, matching ROM's own bounce-response frame for that contact.
  */
 public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int BOUNCE_X_SPEED = 0x300;
     private static final int BOUNCE_Y_SPEED = -0x600;

@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import static com.openggf.stageplay.StageplayDocument.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,12 +37,12 @@ class TestStageplayObjectCaptureRom {
              var world = SessionManager.getCurrentGameplayMode() == null ? StageplayLiveWorld.openOffline(library)
                      : StageplayLiveWorld.adoptOffline(library, SessionManager.getCurrentGameplayMode())) {
             var role = new ObjectActor("animal", "Animal", "s2", 0, 0, 0, 0, -1,
-                    List.of(new ObjectKey(0, 564, 624, 0, -1, false, true, Interpolation.HOLD, ObjectMode.FREE),
-                            new ObjectKey(switchFrame, 564, 624, 0, -1, false, true, Interpolation.HOLD, mode)),
+                    List.of(new ObjectKey(0, 564, 624, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.FREE),
+                            new ObjectKey(switchFrame, 564, 624, 0, -1, Facing.LEFT, true, Interpolation.HOLD, mode)),
                     List.of(), ObjectSourceKind.RELEASED_ANIMAL);
             var scene = StageplayDocument.empty("s2", 0, 0, 0, 480, 480, 270)
                     .withActors(List.of(new Actor("lead", "Lead", "s2", "sonic", List.of(
-                            new ActorKey(0, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD)))))
+                            new ActorKey(0, 100, 656, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)))))
                     .withPuppets(List.of(new PuppetTrack("lead", true, 0, List.of())))
                     .withDurationFrames(switchFrame + 12).withObjectActors(List.of(role))
                     .withWorldCommands(List.of(new WorldCommand("empty", 0, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
@@ -108,8 +110,7 @@ class TestStageplayObjectCaptureRom {
                             10704,
                             1062,
                             0,
-                            -1,
-                            false,
+                            -1, Facing.LEFT,
                             true,
                             Interpolation.HOLD,
                             ObjectMode.POSE);
@@ -186,8 +187,7 @@ class TestStageplayObjectCaptureRom {
                                             x,
                                             y,
                                             0,
-                                            -1,
-                                            false,
+                                            -1, Facing.LEFT,
                                             true,
                                             Interpolation.HOLD,
                                             ObjectMode.FREE),
@@ -196,8 +196,7 @@ class TestStageplayObjectCaptureRom {
                                             x + 20,
                                             y,
                                             0,
-                                            -1,
-                                            false,
+                                            -1, Facing.LEFT,
                                             true,
                                             Interpolation.HOLD,
                                             mode)),

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -44,7 +45,11 @@ import java.util.List;
  * - RETREAT: Flee off-screen
  */
 public class Sonic2CPZBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable {
+        implements SpawnConstructionContextRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This routine owns bit 0: its target/turn and escape code set it for logical right.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Boss routine states
     private static final int MAIN_DESCEND = 0x00;

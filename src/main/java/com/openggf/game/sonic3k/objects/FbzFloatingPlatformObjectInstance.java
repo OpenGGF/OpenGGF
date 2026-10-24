@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -12,7 +14,7 @@ import java.util.List;
 /** Locked-on {@code Obj_FBZFloatingPlatform} ($71), sonic3k.asm $3A56C-$3A742. */
 public final class FbzFloatingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, TouchResponseProvider,
-        SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
     // OscillationManager addresses the data after Oscillating_table's two-byte
     // control word, so ROM offsets $0A/$1E become engine offsets $08/$1C.
     private static final int MODE_1_OSCILLATION_DATA_OFFSET = 0x08;

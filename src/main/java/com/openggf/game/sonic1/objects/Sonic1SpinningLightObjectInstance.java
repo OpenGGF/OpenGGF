@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
@@ -37,7 +38,9 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/12 Light.asm
  */
-public class Sonic1SpinningLightObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1SpinningLightObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Light_Animate cycles a decorative lamp; its light frames have no logical horizontal facing.
 
     // From disassembly: move.b #6,obPriority(a0)
     private static final int PRIORITY = 6;

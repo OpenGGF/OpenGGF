@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -43,7 +44,12 @@ import java.util.function.IntConsumer;
  * the body.
  */
 public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.Container {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The cap has no shared horizontal direction. Its body/drills own
+        // separate native facing groups around their own anchors.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.
@@ -294,7 +300,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
      * (sonic3k.asm:193241-193315). It owns its SST slot, rises, pauses, drills,
      * sinks, clears the cap's busy bit and deletes through Go_Delete_Sprite.
      */
-    static final class MadmoleBodyChild extends AbstractS3kBadnikInstance implements RewindRecreatable {
+    static final class MadmoleBodyChild extends AbstractS3kBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+        @Override public ObjectVisualFacing.Basis nativeFacing() {
+            return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+        }
+
 
         /** Body routine: 2 = loc_8D636, 4 = loc_8D656, 6 = loc_8D67A, 8 = loc_8D6CA. */
         private enum BodyState {
@@ -540,7 +550,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     static final class SideDrillChild extends AbstractObjectInstance
-            implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+            implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.Source {
+        @Override public ObjectVisualFacing.Basis nativeFacing() {
+            return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+        }
+
         private static final int RENDER_HALF_WIDTH = 0x08;
         private static final int RENDER_HALF_HEIGHT = 0x08;
         private static final int PRIORITY_BUCKET = 5;

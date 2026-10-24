@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -47,7 +49,8 @@ import java.util.List;
  * (the tooth appears thinner when rotated to top/bottom position).
  */
 public class CogObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, RewindRecreatable {
+        implements MultiPieceSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj70 owns eight teeth and structural slot children; clockwise/anticlockwise is not facing.
 
     // Number of teeth on the cog
     private static final int NUM_TEETH = 8;

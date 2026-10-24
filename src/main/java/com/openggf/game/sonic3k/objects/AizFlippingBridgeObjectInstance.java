@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -39,7 +41,7 @@ import java.util.List;
  * sub_2AA7E, sub_2ABF2, sub_2AC08, SolidObjSloped2.
  */
 public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Constants =====
     private static final int SEGMENT_COUNT = 8;

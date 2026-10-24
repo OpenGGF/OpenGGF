@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -31,7 +32,10 @@ import com.openggf.physics.SwingMotion;
  * {@code $12} (ENEMY, size $12) — defeatable by attack. During pogo mapping_frame 4
  * (extended body), becomes {@code $86} (HURT, size $06) — damages player on contact.
  */
-public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly (sonic3k.asm:184703-184706):
     //   move.b #$12,collision_flags(a0)          ; default: attackable, size $12

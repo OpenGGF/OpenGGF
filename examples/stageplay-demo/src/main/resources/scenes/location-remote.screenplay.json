@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "name": "Location, Location, Location",
   "width": 400,
   "height": 224,
@@ -114,7 +114,7 @@
             "frame": 0,
             "x": 32,
             "y": 655,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -122,7 +122,7 @@
             "frame": 0,
             "x": 330,
             "y": 648,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },
@@ -260,7 +260,7 @@
             "frame": 0,
             "x": 485,
             "y": 622,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -268,7 +268,7 @@
             "frame": 0,
             "x": 670,
             "y": 624,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },
@@ -386,7 +386,7 @@
             "frame": 0,
             "x": 145,
             "y": 687,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -394,7 +394,7 @@
             "frame": 0,
             "x": 275,
             "y": 687,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },
@@ -527,7 +527,7 @@
             "frame": 0,
             "x": 32,
             "y": 944,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -535,7 +535,7 @@
             "frame": 0,
             "x": 90,
             "y": 944,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ]
       },
@@ -673,7 +673,7 @@
             "frame": 0,
             "x": 5035,
             "y": 1050,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -681,7 +681,7 @@
             "frame": 0,
             "x": 5110,
             "y": 1052,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "knuckles": [
@@ -689,7 +689,7 @@
             "frame": 0,
             "x": 5290,
             "y": 1046,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },
@@ -845,7 +845,7 @@
             "frame": 0,
             "x": 170,
             "y": 648,
-            "flipX": true
+            "facing": "LEFT"
           }
         ],
         "tails": [
@@ -853,7 +853,7 @@
             "frame": 0,
             "x": 285,
             "y": 648,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },
@@ -968,7 +968,7 @@
             "frame": 0,
             "x": 130,
             "y": 944,
-            "flipX": false
+            "facing": "RIGHT"
           }
         ],
         "tails": [
@@ -976,7 +976,7 @@
             "frame": 0,
             "x": 240,
             "y": 944,
-            "flipX": true
+            "facing": "LEFT"
           }
         ]
       },

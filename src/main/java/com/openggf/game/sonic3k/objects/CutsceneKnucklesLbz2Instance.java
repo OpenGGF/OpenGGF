@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -36,7 +37,12 @@ import java.util.List;
  * ({@code Screen_shake_flag}), and is flung off when the swing children
  * finish their six anchor crossings ({@code $38} bit 3).
  */
-public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_62932 clears renderXFlip to face right; the current pose does not redefine this direction.
+        return renderXFlip ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int SUBTYPE_LBZ2 = 0x18;
     private static final int SUPPORT_PILLAR_DX = -0xC8;
     private static final int SUPPORT_PILLAR_DY = 0x14;

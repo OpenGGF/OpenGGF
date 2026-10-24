@@ -111,9 +111,11 @@ public final class ModApiVersion {
      * Creator reconstruction uses ObjectReconstructionContext; host dynamic-entry
      * queues and whole-object-manager snapshot shapes remain engine internals.
      * Stageplay v6 unifies native and initially cleared worlds, donor performers and
-     * directed framing; v1-v5 documents retain explicit compatibility execution policies.
+     * directed framing. Unpublished Stageplay formats are replaced directly, without migrations.
      * Stageplay route motion settings and actor-declared movement abilities remain in candidate 0.7.
-     * Stageplay v7 adds object source/mode keys, visual child-part frames and timed world commands;
+     * Stageplay v8 uses semantic Left/Right facing for player and object keys. Native logical
+     * direction owns pixel mirroring, including deliberate turn/skid art and child offsets.
+     * Stageplay v7 added object source/mode keys, visual child-part frames and timed world commands;
      * registry/graph/ROM presentation owners remain internal. Stable placement targets, bounded
      * native intents and native observations remain portable.
      * Stageplay adds immutable directing documents, pure timeline evaluation,

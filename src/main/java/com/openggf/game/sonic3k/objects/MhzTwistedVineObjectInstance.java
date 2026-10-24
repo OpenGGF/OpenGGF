@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -26,7 +27,9 @@ import java.util.Set;
  * lower/upper vine entry windows and RideObject_SetRide side effects from
  * {@code sub_3DCD0/sub_3DE80}.
  */
-public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native bar/vine controls separately owned riders; its fixed geometry has no horizontal facing.
     private static final int LOWER_RIGHT_ENTRY_MIN_DX = -0x40;
     private static final int LOWER_RIGHT_ENTRY_MAX_DX = -0x30;
     private static final int LOWER_RIGHT_ENTRY_Y_BIAS = 0x30;

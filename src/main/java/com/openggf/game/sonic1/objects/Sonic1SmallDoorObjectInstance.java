@@ -6,6 +6,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -42,7 +43,9 @@ import java.util.List;
  * ROM reference: docs/s1disasm/_incObj/2A SBZ Small Door.asm
  */
 public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Door approach-side detection does not give its vertically opening halves a horizontal facing.
 
     // Detection range for door opening: move.w #$40,d1
     private static final int DETECTION_RANGE = 0x40;

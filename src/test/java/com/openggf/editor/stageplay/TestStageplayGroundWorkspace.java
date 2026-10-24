@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.StageplayGround;
@@ -32,11 +34,11 @@ class TestStageplayGroundWorkspace {
     }
 
     private static ActorKey playerKey(int frame, double x, double y, boolean flip, boolean visible) {
-        return new ActorKey(frame, x, y, 0, -1, flip, visible, 1, Interpolation.HOLD);
+        return new ActorKey(frame, x, y, 0, -1, (flip ? Facing.LEFT : Facing.RIGHT), visible, 1, Interpolation.HOLD);
     }
 
     private static ObjectKey objectKey(int frame, ObjectMode mode, boolean visible) {
-        return new ObjectKey(frame, 100, 200, 0, -1, false, visible, Interpolation.HOLD, mode);
+        return new ObjectKey(frame, 100, 200, 0, -1, Facing.LEFT, visible, Interpolation.HOLD, mode);
     }
 
     private static ObjectActor object(String id, int layout, List<ObjectKey> keys) {
@@ -110,7 +112,7 @@ class TestStageplayGroundWorkspace {
         var original = before.actors().getFirst().keys(); var actual = after.actors().getFirst().keys();
         for (int i = 0; i < actual.size(); i++) {
             var key = original.get(i);
-            assertEquals(key.frame() < 60 ? playerKey(key.frame(), 120, 198, key.flipX(), key.visible()) : key, actual.get(i));
+            assertEquals(key.frame() < 60 ? playerKey(key.frame(), 120, 198, key.facing() == Facing.LEFT, key.visible()) : key, actual.get(i));
         }
         assertEquals(before.puppets(), after.puppets()); assertTrue(workspace.controller().canUndo());
         workspace.invoke(UNDO); assertEquals(before, workspace.controller().document()); assertFalse(workspace.controller().canUndo());
@@ -182,8 +184,8 @@ class TestStageplayGroundWorkspace {
 
     @Test void objectPlacementTransmitsExplicitFootprintAndPreservesPartsSourceKindAndCommands() {
         var parts = List.of(new ObjectPartPose("body/child", 3, 4));
-        var key = new ObjectKey(0, 100, 200, 2, 5, true, true, Interpolation.LINEAR, ObjectMode.PUPPET, parts);
-        var next = new ObjectKey(30, 120, 220, 6, 7, false, false, Interpolation.HOLD, ObjectMode.POSE, parts);
+        var key = new ObjectKey(0, 100, 200, 2, 5, Facing.RIGHT, true, Interpolation.LINEAR, ObjectMode.PUPPET, parts);
+        var next = new ObjectKey(30, 120, 220, 6, 7, Facing.LEFT, false, Interpolation.HOLD, ObjectMode.POSE, parts);
         var commands = List.of(new ObjectCommand("move", 0, ObjectCommandKind.MOVE_TO, 300, 400, 1));
         var object = new ObjectActor("bird", "Bird", "s2", 0, 0, 0, 0, -1, List.of(key, next), commands, ObjectSourceKind.RELEASED_ANIMAL);
         var host = new Host(objects(object)); var workspace = workspace(host, "bird"); workspace.seek(10);
@@ -198,7 +200,7 @@ class TestStageplayGroundWorkspace {
         var actual = workspace.controller().document().objectActors().getFirst();
         assertEquals(new ObjectActor(object.id(), object.name(), object.gameId(), object.zone(), object.act(),
                 object.objectId(), object.subtype(), object.layoutIndex(), List.of(key,
-                new ObjectKey(10, 100, 198, 2, 5, true, true, Interpolation.LINEAR, ObjectMode.PUPPET, parts), next),
+                new ObjectKey(10, 100, 198, 2, 5, Facing.RIGHT, true, Interpolation.LINEAR, ObjectMode.PUPPET, parts), next),
                 commands, ObjectSourceKind.RELEASED_ANIMAL), actual);
         workspace.invoke(UNDO); assertEquals(host.document, workspace.controller().document());
         assertFalse(workspace.controller().canUndo());

@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -32,7 +33,14 @@ import java.util.List;
  * Based on Sonic 2 disassembly s2.asm lines 47117-47271.
  */
 public class SeesawBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj14_SetSolToFaceMainCharacter owns Sol's turn independently of
+        // the plank's tilt, the ball's travel velocity and its palette pose.
+        return nativeFacingRight() ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // Ball Y offsets per seesaw frame (Obj14_YOffsets)
     // ROM: dc.w -8, -28, -47, -28, -8 ; low, balanced, high, balanced, low
@@ -529,11 +537,7 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
                 parent.getCurrentAngle());
     }
 
-    @Override
-    public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.SEESAW_BALL);
-        if (renderer == null) return;
-
+    private boolean nativeFacingRight() {
         // ROM: Obj14_SetSolToFaceMainCharacter
         // Face toward main character: x-flip if player is to the right of the ball
         // ROM: andi.b #~(1<<render_flags.x_flip),render_flags(a0)
@@ -541,19 +545,21 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
         //      sub.w x_pos(a0),d0
         //      bcs.s return_21C8C  ; if player X < ball X, skip (face left = no flip)
         //      ori.b #1<<render_flags.x_flip,render_flags(a0)  ; player X >= ball X, face right = flip
-        boolean hFlip = false;
-        // Get the main character from the sprites (the update() player parameter)
-        // We use LevelManager to get access to it since we're in the render method
-        {
-            // Get main playable sprite from all sprites
-            for (Sprite sprite : services().spriteManager().getAllSprites()) {
-                if (sprite instanceof AbstractPlayableSprite mainChar) {
-                    // x-flip when player is to the right of the ball (face toward player)
-                    hFlip = mainChar.getCentreX() >= (xPos >> 16);
-                    break; // Only use first (main) playable sprite
-                }
+        for (Sprite sprite : services().spriteManager().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite mainChar) {
+                return mainChar.getCentreX() >= (xPos >> 16);
             }
         }
+        // Preserve the existing native unflipped picture when no player is present.
+        return false;
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.SEESAW_BALL);
+        if (renderer == null) return;
+
+        boolean hFlip = nativeFacingRight();
 
         // Use paletteFrame to select mapping frame (0 or 1 for palette toggle)
         renderer.drawFrameIndex(paletteFrame, xPos >> 16, yPos >> 16, hFlip, false);

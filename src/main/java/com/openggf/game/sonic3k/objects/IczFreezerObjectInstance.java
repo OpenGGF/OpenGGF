@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
@@ -47,7 +49,7 @@ import java.util.List;
  * active frame, and creates a delayed capture cloud that freezes nearby players.
  */
 public class IczFreezerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_FREEZER;

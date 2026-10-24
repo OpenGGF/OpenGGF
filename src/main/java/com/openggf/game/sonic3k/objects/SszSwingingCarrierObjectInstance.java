@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -36,7 +37,9 @@ import java.util.List;
  * 7 of its respawn entry, so the whole three-object chain reloads from the placement.
  */
 public final class SszSwingingCarrierObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native post/arm/carrier phases rotate geometric parts; captured players own their own facing.
     /** {@code move.w #$180,priority(a0)}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
     /** {@code make_art_tile(ArtTile_SSZMisc+$74,2,0)}. */

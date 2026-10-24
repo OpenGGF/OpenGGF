@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -35,7 +37,7 @@ import java.util.List;
  * is applied here.
  */
 public final class CnzTrapDoorInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider {
+        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
 
     /** ROM {@code move.w #$80,priority(a0)} at Obj_CNZTrapDoor init: bucket 1. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);

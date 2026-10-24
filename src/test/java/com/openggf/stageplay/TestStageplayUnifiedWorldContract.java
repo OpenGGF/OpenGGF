@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +43,7 @@ class TestStageplayUnifiedWorldContract {
         return new StageplayDocument(VERSION, "Unified", 120, 640, 448,
                 new SetSource("s2", 0, 0, "", project),
                 List.of(new Actor("donor", "Donor", "s3k", "tails", List.of(
-                        new ActorKey(0, 96, 655, 0, -1, false, true, 1, Interpolation.HOLD)))),
+                        new ActorKey(0, 96, 655, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)))),
                 List.of(new CameraKey(0, 0, 500, .75, Interpolation.LINEAR,
                         new CameraFollow(List.of("donor"), 0, 0, 0, 1, 0, 0))), List.of(), List.of(), List.of(), List.of(),
                 List.of(), List.of(), List.of(), List.of(new PuppetTrack("donor", true, 0, List.of(

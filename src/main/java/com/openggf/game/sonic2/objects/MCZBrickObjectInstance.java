@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.PlayableEntity;
@@ -51,7 +53,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MCZBrickObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj75 owns brick/chain/spike-ball geometry; orbital phase does not face a creature.
 
     private static final Logger LOGGER = Logger.getLogger(MCZBrickObjectInstance.class.getName());
 

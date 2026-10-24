@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindTransient;
@@ -45,7 +46,12 @@ import java.util.List;
  */
 public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
-        MultiBucketRenderable {
+        MultiBucketRenderable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This legacy-named field is the Robotnik ship X flip; the bit set points the ship right.
+        return facingLeft ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_APPROACH_HOVER = 0x02;
     private static final int ROUTINE_FIRST_RISE = 0x04;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
@@ -43,7 +44,12 @@ import java.util.List;
  * arena setup, weather-machine gate, alternating dash loop, final defeat,
  * capsule handoff, and Robotnik ship escape onto the shared boss path.
  */
-public final class MhzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class MhzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This encounter owns the ship/pilot horizontal direction in its native render-status bit 0.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

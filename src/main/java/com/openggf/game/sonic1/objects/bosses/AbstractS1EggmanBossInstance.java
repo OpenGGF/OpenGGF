@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -34,7 +35,13 @@ import java.util.List;
  *   <li>{@link #runCameraExpandEscape(int)} — camera unlock + boundary expansion + off-screen destroy</li>
  * </ul>
  */
-public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance {
+public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance implements ObjectVisualFacing.Source {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The five standard S1 ships share this status/render owner; the general
+        // AbstractBossInstance does not. Ship bit 0 set means logical right.
+        return (state.renderFlags & 1) == 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     /** Face animation state — set by subclass in updateFaceAnimation(). */
     protected int faceAnim;

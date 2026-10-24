@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -43,7 +44,9 @@ import java.util.List;
  * positions three child sprites, each drawing mapping frame zero at X-$40, X and X+$40.
  */
 public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider {
+        implements RewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native cutscene bridge/button art is geometric scenery; the cutscene character is separately owned.
     /** {@code move.w #$C0,$2E(a0)}. */
     static final int START_OFFSET = 0xC0;
     /** {@code cmpi.w #$68,d1} before the subtraction. */

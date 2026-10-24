@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import static com.openggf.stageplay.StageplayDocument.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,7 +62,7 @@ class TestStageplayPlayerRouteRom {
                 assertTrue(highest < 560, "The probe must run over the top of the loop, reached y=" + highest);
             }
             var actor = new Actor("hero", "Sonic", "s1", "sonic",
-                    List.of(new ActorKey(0, 5100, 686, 0, -1, false, true, 1, Interpolation.HOLD)));
+                    List.of(new ActorKey(0, 5100, 686, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
             var scene = StageplayDocument.empty("s1", 0, 0, 5260, 470, 480, 270)
                     .withSet(source)
                     .withDurationFrames(420)
@@ -187,8 +189,8 @@ class TestStageplayPlayerRouteRom {
                         "s2",
                         "sonic",
                         List.of(
-                                new ActorKey(0, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD),
-                                new ActorKey(30, 100, 656, 0, -1, false, true, 1, Interpolation.HOLD)));
+                                new ActorKey(0, 100, 656, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD),
+                                new ActorKey(30, 100, 656, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
         return StageplayDocument.empty("s2", 0, 0, 0, 528, 640, 224)
                 .withSet(source)
                 .withDurationFrames(330)
@@ -236,7 +238,7 @@ class TestStageplayPlayerRouteRom {
                             "sonic",
                             List.of(
                                     new ActorKey(
-                                            0, anchor.x(), anchor.y(), 0, -1, false, true, 1, Interpolation.HOLD)));
+                                            0, anchor.x(), anchor.y(), 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
             var after = new PuppetCommand("outside", 160, PuppetCommandKind.STOP, 0, 0, 0, 0);
             var replaced =
                     new PuppetCommand(

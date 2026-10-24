@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -50,7 +51,9 @@ import java.util.List;
  * bar costs 60.
  */
 public final class SszElevatorBarObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native vertical swing/dip moves bar/platform geometry without a horizontal-facing owner.
     /** {@code move.w #$180,priority(a0)} and the {@code $80} the left-hand release leaves. */
     private static final int PRIORITY_BEHIND = 0x180;
     private static final int PRIORITY_IN_FRONT = 0x80;

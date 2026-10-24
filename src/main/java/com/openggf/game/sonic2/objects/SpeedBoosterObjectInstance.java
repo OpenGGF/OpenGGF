@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -21,7 +23,12 @@ import java.util.List;
  * Yellow arrow pads that boost Sonic's horizontal velocity when he runs over them.
  * Based on obj1B.asm from the Sonic 2 disassembly.
  */
-public class SpeedBoosterObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class SpeedBoosterObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj1B_GiveBoost negates the positive boost speed when x_flip is set.
+        return isFlippedHorizontal() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // Boost speed values from ROM (Obj1B_BoosterSpeeds)
     private static final int FAST_SPEED = 0x1000;

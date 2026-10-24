@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
@@ -62,7 +64,9 @@ import java.util.logging.Logger;
  * - When none remain, calls Load_EndOfAct
  */
 public class EggPrisonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Container {
+    // Obj3E capsule/lock geometry has no shared facing; released animals own independent child anchors and directions.
+
     private static final Logger LOGGER = Logger.getLogger(EggPrisonObjectInstance.class.getName());
 
     // === ROM Constants ===
@@ -866,7 +870,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     private static final class EggPrisonLockSlotChild extends AbstractObjectInstance
-            implements RewindRecreatable {
+            implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
         @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
         private final EggPrisonObjectInstance parent;
 
@@ -913,7 +917,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     private static final class EggPrisonBrokenSlotChild extends AbstractObjectInstance
-            implements RewindRecreatable {
+            implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
         @RewindTransient(reason = "structural Obj3E component link is restored by parent lookup")
         private final EggPrisonObjectInstance parent;
 

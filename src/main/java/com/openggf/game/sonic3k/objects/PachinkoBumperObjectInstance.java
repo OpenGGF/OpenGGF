@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -36,7 +37,9 @@ import java.util.List;
  * {@link CnzBumperObjectInstance}'s stationary-bumper touch handling.
  */
 public class PachinkoBumperObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native bumper/orb/platform geometry has no horizontal facing; contact and orbit affect separate players.
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int BOUNCE_VELOCITY = 0x700;

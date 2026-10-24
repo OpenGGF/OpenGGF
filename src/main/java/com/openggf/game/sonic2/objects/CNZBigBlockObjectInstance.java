@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -31,7 +33,8 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 58279-58366 (ObjD4)
  */
 public class CNZBigBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD4 translates a block; placement flips select its travel offset, not body facing.
 
     // Constants from disassembly
     private static final int INITIAL_OFFSET = 0x60;      // 96 pixels initial offset from spawn

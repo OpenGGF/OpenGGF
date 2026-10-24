@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
@@ -47,7 +48,9 @@ import java.util.List;
  * frame of the ride. The vertical body reads the flag nowhere.
  */
 public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
     /** ROM {@code andi.w #$3F,d0 / lsl.w #3,d0} (:95218-95219, :95226-95227). */
     private static final int SPAN_SHIFT = 3;

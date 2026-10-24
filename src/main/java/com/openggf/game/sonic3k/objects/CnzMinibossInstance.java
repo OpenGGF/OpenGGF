@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
@@ -95,7 +96,12 @@ import java.util.logging.Logger;
  * written by a {@code $34} callback now decrements the first time on
  * the subsequent frame, not the same frame it was set.
  */
-public final class CnzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class CnzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The spinning top, radial coils and sparks have no native logical horizontal facing.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final Logger LOG = Logger.getLogger(CnzMinibossInstance.class.getName());
 
     /**

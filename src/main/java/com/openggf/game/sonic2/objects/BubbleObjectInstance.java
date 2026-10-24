@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -29,7 +31,8 @@ import java.util.List;
  * - When touched, restores player's air and plays inhaling sound
  */
 public class BubbleObjectInstance extends AbstractObjectInstance
-        implements SpawnCoordinateZeroPairRewindRecreatable {
+        implements SpawnCoordinateZeroPairRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj24 bubbles rise and wobble without a logical horizontal front.
 
     // Rise velocity in 8.8 fixed point (-0x88 = ~-0.53 pixels/frame upward)
     private static final int RISE_VELOCITY = -0x88;

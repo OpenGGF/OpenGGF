@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
@@ -16,7 +17,11 @@ import java.util.List;
 
 /** Locked-on S3KL {@code Obj_Blaster} ($A8), {@code loc_894B6-loc_896FA}. */
 public final class BlasterBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int[] PATROL_ANIMATION = {0, 0x17, 1, 2, 0xFC};
     private static final int[] ATTACK_ANIMATION = {0, 1, 0, 1, 2, 5, 0, 0x1F, 0xF4};
     private static final int COLLISION_SIZE = 0x0A;

@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -41,7 +42,14 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/35 Burning Grass.asm
  */
 public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // GFire_Spread (subtype 0) advances X by $10000 and lays stationary flame
+        // children behind it. Animation H-flips shimmer, not propagation direction.
+        return isWalker ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // ========================================================================
     // ROM Constants

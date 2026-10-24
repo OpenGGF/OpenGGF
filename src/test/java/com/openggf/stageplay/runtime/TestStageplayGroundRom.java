@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -79,7 +81,7 @@ class TestStageplayGroundRom {
                 var evidence = assertInstanceOf(PlayerTerrainProposal.class,proposal.evidence());
                 assertEquals(0,evidence.distance());
                 assertEquals(proposal.y()+evidence.yRadius(),proposal.surfaceY());
-                var actor = new Actor("hero","Hero",game,character,List.of(new ActorKey(0,proposal.x(),proposal.y(),0,-1,false,true,1,Interpolation.HOLD)));
+                var actor = new Actor("hero","Hero",game,character,List.of(new ActorKey(0,proposal.x(),proposal.y(),0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)));
                 var scene = StageplayDocument.empty(game,0,0,proposal.x()-100,proposal.y()-100,320,224).withDurationFrames(12)
                         .withActors(List.of(actor)).withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())))
                         .withWorldCommands(List.of(new WorldCommand("clear",0,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none())));

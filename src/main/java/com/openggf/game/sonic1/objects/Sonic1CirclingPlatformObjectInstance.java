@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -39,7 +40,9 @@ import java.util.List;
  * <b>Disassembly reference:</b> docs/s1disasm/_incObj/5A SLZ Circling Platform.asm
  */
 public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Circ platform subtype selects orbital phase, not a horizontal-facing body.
 
     // From disassembly: move.b #$18,obActWid(a0)
     private static final int HALF_WIDTH = 0x18;

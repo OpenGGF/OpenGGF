@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.io.PixelImage;
 import com.openggf.io.PngCodec;
 import com.openggf.mods.scene.*;
@@ -79,7 +81,7 @@ class TestStageplayDialogueRendering {
     private StageplayDocument scene() {
         return legacyScene("s2", 0, 0, 0, 0, 320, 224)
                 .withActors(List.of(new Actor("tails", "TAILS", "s2", "tails", List.of(
-                        new ActorKey(0, 160, 80, 5, 1, false, true, 1, Interpolation.HOLD)))))
+                        new ActorKey(0, 160, 80, 5, 1, Facing.RIGHT, true, 1, Interpolation.HOLD)))))
                 .withCamera(List.of(new CameraKey(0, 0, 0, 1, Interpolation.LINEAR),
                         new CameraKey(20, 40, 0, 1, Interpolation.HOLD)))
                 .withCaptions(List.of(new Caption("caption", 0, 180, "CAPTION", 12, 12, 0xff66ff66)))

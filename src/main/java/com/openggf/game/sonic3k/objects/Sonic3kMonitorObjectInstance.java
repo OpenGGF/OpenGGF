@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -59,7 +60,9 @@ import java.util.logging.Logger;
 public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         implements TouchResponseProvider, TouchResponseListener,
         SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable,
-        RomWorldPositionedObject {
+        RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // Obj_Monitor draws box/icon frames and explosion effects without a native horizontal-facing owner.
     private static final Logger LOGGER = Logger.getLogger(Sonic3kMonitorObjectInstance.class.getName());
 
     // From disassembly: solid params d1=$19, d2=$10, d3=$11

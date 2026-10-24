@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -44,7 +45,9 @@ import java.util.List;
  */
 public class TensionBridgeObjectInstance extends AbstractObjectInstance
         implements SlopedSolidProvider, SolidObjectListener, RomObjectCodePointerProvider,
-        SpawnRewindRecreatable {
+        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native bridge logs and falling fragment pieces form terrain geometry without logical horizontal facing.
 
     private enum Variant { NORMAL, TRIGGER_COLLAPSE, ICZ_ROPE }
 

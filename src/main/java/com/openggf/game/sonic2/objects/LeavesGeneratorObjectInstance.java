@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -37,7 +39,8 @@ import java.util.List;
  * - Uses Obj2C's collision_property bits and objoff_2E frame phase
  */
 public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj2C scatters tumbling leaf particles; their velocity/angle is geometric, not body facing.
 
     // Minimum speed required to trigger leaves (0x200 in either axis)
     private static final int MIN_TRIGGER_SPEED = 0x200;

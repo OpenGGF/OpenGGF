@@ -12,7 +12,10 @@ import java.util.List;
 
 /** SKL $AC, Obj_SOZHyudoroCapsule and the shared loc_89C14 prison opening prefix. */
 public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider,SpawnRewindRecreatable {
+        implements SolidObjectProvider,SpawnRewindRecreatable, ObjectVisualFacing.Container {
+
+    // Escaping ghosts own opposite native directions; capsule/button/fragment
+    // geometry stays native rather than borrowing one ghost's direction.
     private boolean initialized,triggered,opened;
     private int entries;
     public SozHyudoroCapsuleObjectInstance(ObjectSpawn spawn){super(spawn,"SOZHyudoroCapsule");}
@@ -57,7 +60,8 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         var r=getRenderer(Sonic3kObjectArtKeys.SOZ_GHOST_CAPSULE);
         if(r!=null&&r.isReady())r.drawFrameIndexForcedPriority(opened?1:0,getX(),getY(),false,false,-1,true);
     }
-    public static final class Button extends AbstractObjectInstance implements SolidObjectProvider,SolidObjectListener,SpawnRewindRecreatable {
+    public static final class Button extends AbstractObjectInstance implements SolidObjectProvider,SolidObjectListener,SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // The capsule button only depresses; it has no native horizontal-facing body.
         private SozHyudoroCapsuleObjectInstance parentRef;private boolean recessed;private int entries;
         public Button(ObjectSpawn spawn){this(spawn,null,false);}
         private Button(ObjectSpawn spawn,SozHyudoroCapsuleObjectInstance parent,boolean recessed){super(spawn,"SOZHyudoroCapsuleButton");parentRef=parent;this.recessed=recessed;}
@@ -71,7 +75,14 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         @Override public int getOnScreenHalfHeight(){return 8;}
         @Override public void appendRenderCommands(List<GLCommand> commands){var r=getRenderer(Sonic3kObjectArtKeys.SOZ_GHOST_CAPSULE);if(r!=null&&r.isReady())r.drawFrameIndexForcedPriority(recessed?12:5,getX(),getY(),false,false,-1,true);}
     }
-    public static final class EscapeGhost extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    public static final class EscapeGhost extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+        @Override public ObjectVisualFacing.Basis nativeFacing() {
+            // The capsule's direction table writes the same SOZ_GHOSTS mirror as
+            // Hyudoro_body (!facingLeft): positive entries set the rightward mirror.
+            // Read the native immutable direction entry, not a fitted flight velocity.
+            return SPEED[spawn.subtype() >>> 1] >= 0
+                    ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+        }
         private static final int[] SPEED={-0x200,0x200,-0x280,0x280,-0x300,0x300};
         private static final int[] ACCEL={-0x20,-0x20,-0x18,-0x18,-0x10,-0x10};
         private byte[] animation;
@@ -91,7 +102,8 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         @Override public int getPriorityBucket(){return spawn.subtype()==0?0:4;}
         @Override public void appendRenderCommands(List<GLCommand> commands){var r=getRenderer(Sonic3kObjectArtKeys.SOZ_GHOSTS);if(r!=null&&r.isReady())r.drawFrameIndexForcedPriority(frame,getX(),getY(),SPEED[spawn.subtype()>>>1]>=0,false,-1,true);}
     }
-    public static final class Fragment extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    public static final class Fragment extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Capsule mapping-piece debris keeps its native shard geometry in either flight direction.
         private static final int[][] VELOCITY={{0x100,-0x100},{-0x200,-0x200},{0x200,-0x200},{-0x300,-0x200},{0x300,-0x200}};
         private static final int[] FRAME={2,3,10,4,11};
         private int xFixed,yFixed,yVelocity;private boolean initialized,visible=true;

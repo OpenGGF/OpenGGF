@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.level.objects.StageplayObjectDirection.*;
 import com.openggf.physics.RouteTerrainProbe;
 import com.openggf.stageplay.StageplayDocument;
@@ -19,7 +21,7 @@ class TestStageplayObjectRoutePlanner {
     private static StageplayDocument scene() {
         return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withDurationFrames(180).withObjectActors(List.of(
                 new ObjectActor("walker", "Walker", "s2", 0, 0, 0x9F, 0, -1, List.of(
-                        new ObjectKey(0, 20, 80, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of())));
+                        new ObjectKey(0, 20, 80, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of())));
     }
     private static StageplayRouteRequest request(double x, double y, double speed) {
         return new StageplayRouteRequest("walker", 0, x, y, 150, 1024, 2000, 10000, 1, FOOT, speed);
@@ -80,7 +82,7 @@ class TestStageplayObjectRoutePlanner {
     @Test void slopedFloorsAndSecondaryPathAreQueriedForTheWholeFootprint() {
         var terrain = new Terrain(); terrain.heights = x -> 100 + Math.floorDiv(x - 20, 2); terrain.expectedPath = 1;
         var actor = new ObjectActor("walker", "Walker", "s2", 0, 0, 1, 0, -1, List.of(
-                new ObjectKey(0, 20, 79, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+                new ObjectKey(0, 20, 79, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         var document = scene().withObjectActors(List.of(actor));
         var request = new StageplayRouteRequest("walker", 0, 40, 89, 150, 1024, 2000, 10000, 1,
                 new StageplayRouteFootprint(2, 20, 20, 1), .375);
@@ -153,7 +155,7 @@ class TestStageplayObjectRoutePlanner {
         assertEquals(UNSUPPORTED, plan(scene(), request(60, 80, 1), unsupported).status());
         var actor = scene().objectActors().getFirst();
         var airborne = new ObjectActor(actor.id(), actor.name(), actor.gameId(), 0, 0, actor.objectId(), 0, -1,
-                List.of(new ObjectKey(0, 20, 10, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+                List.of(new ObjectKey(0, 20, 10, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         assertTrue(plan(scene().withObjectActors(List.of(airborne)), request(60, 80, 1), new Terrain()).message().contains("START_NOT_GROUNDED"));
     }
 
@@ -180,7 +182,7 @@ class TestStageplayObjectRoutePlanner {
     @Test void keysCastClearsAndBudgetsBoundTheWholeReplacementWindow() {
         var actor = scene().objectActors().getFirst();
         var keyed = new ObjectActor(actor.id(), actor.name(), "s2", 0, 0, 1, 0, -1,
-                List.of(actor.keys().getFirst(), new ObjectKey(10, 20, 80, 0, -1, false, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
+                List.of(actor.keys().getFirst(), new ObjectKey(10, 20, 80, 0, -1, Facing.LEFT, true, Interpolation.HOLD, ObjectMode.PUPPET)), List.of());
         assertEquals(UNSUPPORTED, plan(scene().withObjectActors(List.of(keyed)), request(60, 80, 1), new Terrain()).status());
         var commanded = new ObjectActor(actor.id(), actor.name(), "s2", 0, 0, 1, 0, -1, actor.keys(),
                 List.of(new ObjectCommand("existing", 0, ObjectCommandKind.STOP, 0, 0, 0)));
@@ -227,7 +229,7 @@ class TestStageplayObjectRoutePlanner {
     @Test void multipartVisualEnvelopeIsConservativeAndCannotFitThroughANarrowPassage() {
         var tile = new VisualTile(0, 0, false, false, false, -8, -8, 8, 8, false, 0, 0, 8);
         var distant = new VisualTile(0, 0, false, false, false, 40, -8, 8, 8, false, 0, 0, 8);
-        var template = new VisualTemplate(0, 0, List.of(new VisualPart("root", 1, false, 0, 0,
+        var template = new VisualTemplate(0, 0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, List.of(new VisualPart("root", 1, false, 0, 0, com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT, 0,
                 List.of(new VisualPose(0, List.of(tile, distant), List.of())), List.of())),
                 List.of(new PatternPixels(0, 0, 0, 0)), List.of(new PaletteColors(java.util.Collections.nCopies(16, 0))), List.of());
         var footprint = StageplayObjectRoutePlanner.visualFootprint(template, 0);

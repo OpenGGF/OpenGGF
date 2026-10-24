@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -59,7 +61,13 @@ import java.util.Set;
  * </ul>
  */
 public class SpeedLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjC0_Init sets the launch destination/acceleration LEFT with x_flip
+        // clear and RIGHT when set. The later return trip does not turn the launcher.
+        return xFlipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // ========================================================================
     // ROM Constants (s2.asm lines 80259-80373)

@@ -10,6 +10,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -57,7 +58,9 @@ import java.util.List;
  * immediately when {@code object_control(a1)} is non-zero.
  */
 public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native pressure-pad animation toggles gravity; the pad has no horizontal-facing body.
 
     /** ROM {@code SolidObjectFull} arguments at :94856-94859: {@code d1 = $1B, d2 = 8, d3 = 9}. */
     private static final SolidObjectParams SOLID_PARAMS = SolidObjectParams.of(0x1B, 8, 9);

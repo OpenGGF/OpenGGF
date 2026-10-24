@@ -266,6 +266,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 | --- | --- |
 | Headless boot selects no-device audio even when synthesis is disabled; callers must not rely on a fresh JVM. | `HeadlessGameBoot.installAudioBackend()`; ROM-free `TestHeadlessAudioOwnership` in ordinary CI and ROM-backed `TestHeadlessGameBootAudioIdentity`. |
 | Directed Puppet/Pose object pictures retain native sprite priority and tile occlusion through the cinematic draw. | `StageplayObjectDraw` owns its sprite batch; ROM-backed EGL `TestStageplayObjectPriorityRendering` compares native, frozen and baked pixels at the GHZ loop and rejects a non-occluding control. |
+| Stageplay authors use native logical Left/Right; pixel flips and source orientation belong to the native presentation owner. | Typed `Facing` keys and strict screenplay fields; `ObjectVisualFacing` native contracts; `TestStageplayFacingGuard`, exhaustive factory-bytecode `TestNativeObjectFacingGuard`, and native both-direction pixel checks. |
 
 ## Level test coverage
 

@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -53,7 +54,20 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/4E MZ Wall of Lava.asm
  */
 public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable {
+        implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // LWall_ChkSonic advances +$180; LWall_BackChild keeps the trailing body at
+        // main X-$80. This is a rightward leading-edge assembly even while idle.
+        if (role == Role.TRAIL) {
+            if (mainWall == null) {
+                throw new IllegalStateException("Lava wall trail has no initialized native owner");
+            }
+            return mainWall.nativeFacing();
+        }
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ========================================================================
     // Role enum

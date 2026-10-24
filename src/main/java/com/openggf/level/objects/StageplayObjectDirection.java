@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
+
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.graphics.GLCommand;
@@ -97,10 +99,14 @@ public final class StageplayObjectDirection implements AutoCloseable {
             boolean highPriority,
             int slotOrder,
             int defaultPose,
+            ObjectVisualFacing.Basis facing,
+            float facingPivotX,
             List<VisualPose> poses,
             List<VisualAnimation> animations) {
         public VisualPart {
             Objects.requireNonNull(partId);
+            Objects.requireNonNull(facing, "part native facing");
+            if (!Float.isFinite(facingPivotX)) throw new IllegalArgumentException("Invalid facing pivot");
             poses = List.copyOf(poses);
             animations = List.copyOf(animations);
             if (poses.isEmpty() || poses.size() > MAX_POSES) {
@@ -114,19 +120,23 @@ public final class StageplayObjectDirection implements AutoCloseable {
                 boolean highPriority,
                 int slotOrder,
                 int defaultPose,
+                ObjectVisualFacing.Basis facing,
+                float facingPivotX,
                 List<VisualPose> poses) {
-            this(partId, bucket, highPriority, slotOrder, defaultPose, poses, List.of());
+            this(partId, bucket, highPriority, slotOrder, defaultPose, facing, facingPivotX, poses, List.of());
         }
     }
 
     public record VisualTemplate(
             int anchorX,
             int anchorY,
+            ObjectVisualFacing.Basis facing,
             List<VisualPart> parts,
             List<PatternPixels> patterns,
             List<PaletteColors> palettes,
             List<String> limitations) {
         public VisualTemplate {
+            Objects.requireNonNull(facing, "native facing basis");
             parts = List.copyOf(parts);
             patterns = List.copyOf(patterns);
             palettes = List.copyOf(palettes);
@@ -194,13 +204,16 @@ public final class StageplayObjectDirection implements AutoCloseable {
     public record Direction(
             double x,
             double y,
-            boolean flipX,
+            Basis facing,
             boolean visible,
             int animation,
             int pose,
             Map<String, PartSelection> parts,
             int animationFrame) {
         public Direction {
+            Objects.requireNonNull(facing, "facing");
+            if (facing == ObjectVisualFacing.Basis.NON_DIRECTIONAL)
+                throw new IllegalArgumentException("Directed logical facing requires LEFT or RIGHT");
             parts = Map.copyOf(parts);
             if (!Double.isFinite(x) || !Double.isFinite(y) || animationFrame < 0) {
                 throw new IllegalArgumentException("Invalid visual direction");
@@ -208,8 +221,8 @@ public final class StageplayObjectDirection implements AutoCloseable {
         }
 
         public Direction(
-                double x, double y, boolean flipX, boolean visible, int animation, int pose) {
-            this(x, y, flipX, visible, animation, pose, Map.of(), 0);
+                double x, double y, Basis facing, boolean visible, int animation, int pose) {
+            this(x, y, facing, visible, animation, pose, Map.of(), 0);
         }
     }
 

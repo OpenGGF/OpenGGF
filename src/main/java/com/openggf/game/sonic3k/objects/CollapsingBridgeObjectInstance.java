@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -74,7 +76,7 @@ import java.util.logging.Logger;
  */
 public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
-        SpawnRewindRecreatable {
+        SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(CollapsingBridgeObjectInstance.class.getName());
 

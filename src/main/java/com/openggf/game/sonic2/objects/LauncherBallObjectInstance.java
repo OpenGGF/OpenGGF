@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
@@ -41,7 +43,18 @@ import java.util.logging.Logger;
  *   <li>6 - COOLDOWN: Brief cooldown before returning to detection</li>
  * </ul>
  */
-public class LauncherBallObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class LauncherBallObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_25408/word_25464 own the exit direction. Render flips and the
+        // opening/closing animation do not independently change that logical direction.
+        int direction = ((spawn.subtype() & 0xF) + 1
+                - ((spawn.renderFlags() & 1) != 0 ? 2 : 0)) & 3;
+        int xVelocity = VELOCITY_TABLE[direction][0];
+        return xVelocity < 0 ? ObjectVisualFacing.Basis.LEFT
+                : xVelocity > 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(LauncherBallObjectInstance.class.getName());
 
     // Player states (matches ROM objoff_2C/objoff_36 values)

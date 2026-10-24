@@ -17,7 +17,17 @@ import java.util.ArrayList;
 
 /** Hyudoro_body, its nine routines and away animation ($8F11E..$8F37A). */
 public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable,TouchResponseProvider,TouchResponseListener {
+        implements SpawnRewindRecreatable,TouchResponseProvider,TouchResponseListener, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Hyudoro's own init/bounce/attack routines own facingLeft independently
+        // of its bob and transformation poses; drawing uses !facingLeft.
+        if (!initialized) {
+            throw new IllegalStateException("Hyudoro native facing is not initialized");
+        }
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
     private static final int ANIM_BASE=0x8F682;
     private static final int[] APPEAR={0x8F682,0x8F695,0x8F6AA};
     private HyudoroContext controller;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -32,7 +33,11 @@ import java.util.List;
  * parent paces horizontally, raises status byte {@code $38} bit 1 when ready to
  * fire, and waits until the child nozzle clears that bit after the shot cycle.
  */
-public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Corkey collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Corkey priority $280.
     private static final int NOZZLE_Y_OFFSET = 0x0C;      // ChildObjDat_8C90E.

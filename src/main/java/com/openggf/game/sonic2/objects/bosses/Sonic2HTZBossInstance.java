@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -34,7 +35,11 @@ import java.util.List;
  * - SUB6: Descending and spawning lava balls
  * - SUB8: Defeated (explosion sequence)
  */
-public class Sonic2HTZBossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class Sonic2HTZBossInstance extends AbstractBossInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The arena side flag, not BossStateContext.renderFlags, owns the direction into the arena.
+        return getCustomFlag(OBJOFF_SIDE_FLAG) == 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
 
     // State machine constants (ROM: boss_routine values)
     private static final int SUB0_RISING = 0x00;

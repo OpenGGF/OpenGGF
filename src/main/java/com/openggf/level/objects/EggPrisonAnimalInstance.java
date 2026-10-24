@@ -30,7 +30,15 @@ import java.util.List;
  * </ul>
  */
 public class EggPrisonAnimalInstance extends AbstractObjectInstance
-        implements ObjectVisualAnimationSource, SpawnTrailingZeroIntsRewindRecreatable {
+        implements ObjectVisualAnimationSource, SpawnTrailingZeroIntsRewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // This is appendRenderCommands' exact native hFlip owner: xVelocity < 0.
+        // Raw prison-animal art faces RIGHT, including zero-speed/wait poses;
+        // use that established render rule rather than guessing from travel.
+        return xVelocity < 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // Physics constants from s2.asm
     private static final int GRAVITY = 0x38;        // Standard gravity
     private static final int FLY_GRAVITY = 0x18;    // Reduced gravity for flying animals

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindStateful;
@@ -35,7 +37,7 @@ import java.util.List;
  * end-sign handoff once the camera descends past {@code $A7C}.
  */
 public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable,
-        MultiBucketRenderable {
+        MultiBucketRenderable, ObjectVisualFacing.Container {
     /** ROM word_8CF70 row 1: activation camera range (yMin,yMax,xMin,xMax). */
     private static final int RANGE_Y_MIN = 0x7B6;
     private static final int RANGE_Y_MAX = 0x9C0;

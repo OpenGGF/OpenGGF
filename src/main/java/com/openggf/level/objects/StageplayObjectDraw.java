@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
+
 import com.openggf.graphics.*;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.render.*;
@@ -220,12 +222,16 @@ final class StageplayObjectDraw {
                         index += graphics.isSpriteSatCollectionActive() ? -1 : 1) {
                     VisualTile tile = tiles.get(index);
                     graphics.setCurrentSpriteTileOcclusionPaletteMask(tile.occlusionMask());
-                    boolean flip = state.direction.flipX();
+                    boolean flip = switch (part.facing()) {
+                        case LEFT -> state.direction.facing() == Basis.RIGHT;
+                        case RIGHT -> state.direction.facing() == Basis.LEFT;
+                        case NON_DIRECTIONAL -> false;
+                    };
                     int x =
                             (int)
                                     Math.round(
                                             state.direction.x()
-                                                    + (flip ? -tile.x() - tile.width() : tile.x()));
+                                                    + (flip ? 2 * part.facingPivotX() - tile.x() - tile.width() : tile.x()));
                     int y = (int) Math.round(state.direction.y() + tile.y());
                     int pattern = patternBase + tile.pattern(),
                             palette = paletteBase + tile.palette();

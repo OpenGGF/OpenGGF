@@ -5,6 +5,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -36,7 +37,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/44 GHZ Edge Walls.asm
  */
 public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider {
+        implements SpawnRewindRecreatable, SolidObjectProvider, ObjectVisualFacing.NonDirectional {
+
+// Edge-wall light/shadow mapping sections are static terrain geometry without horizontal facing.
 
     // From disassembly: move.w #$13,d1
     private static final int HALF_WIDTH = 0x13;

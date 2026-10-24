@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.OscillationManager;
@@ -54,7 +56,7 @@ import java.util.List;
  * Bits 4-5: (When bit 7 set) Platform slide distance: ($00/$40/$80/$C0)
  * </pre>
  */
-public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HCZCGZFanObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Subtype bit masks =====
     private static final int MASK_STRENGTH = 0x0F;

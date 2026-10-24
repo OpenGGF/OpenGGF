@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
@@ -37,7 +39,8 @@ import java.util.List;
  * <p>
  * Disassembly Reference: s2.asm lines 52718-52741
  */
-public class MTZLongPlatformCogInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class MTZLongPlatformCogInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj65 cog rotation is geometric; neither standalone nor parent-driven cogs face horizontally.
 
     // byte_26EBA: cog animation frame lookup (s2.asm line 52727)
     private static final int[] COG_FRAMES = {0, 0, 2, 2, 2, 1, 1, 1};

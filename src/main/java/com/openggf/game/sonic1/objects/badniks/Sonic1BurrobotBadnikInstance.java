@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -22,7 +23,10 @@ import java.util.List;
  * <p>
  * ROM reference: docs/s1disasm/_incObj/2D Burrobot.asm
  */
-public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1BurrobotBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x05;
     private static final int Y_RADIUS = 0x13;

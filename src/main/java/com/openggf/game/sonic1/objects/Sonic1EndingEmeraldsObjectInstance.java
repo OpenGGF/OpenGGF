@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SpawnCoordinateZeroPairRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -39,7 +40,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/88 Ending Sequence Emeralds.asm
  */
 public class Sonic1EndingEmeraldsObjectInstance extends AbstractObjectInstance
-        implements SpawnCoordinateZeroPairRewindRecreatable {
+        implements SpawnCoordinateZeroPairRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// ECha_Move orbits gem children; the gems have no logical horizontal facing.
 
     // ========================================================================
     // ROM Constants

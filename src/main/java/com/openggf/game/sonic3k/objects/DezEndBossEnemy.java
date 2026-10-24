@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -10,7 +11,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** loc_7F398: released enemy, its gravity/roll response and three-shot death burst. */
 final class DezEndBossEnemy extends DezEndBossSprite
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned {
     interface Owner {
         DezEndBossDamageState.Contact enemyContact(int x, int y, boolean flipY, int yVelocity);
         void enemyRetired();
@@ -238,7 +239,7 @@ final class DezEndBossEnemy extends DezEndBossSprite
     int routineForTest() { return routine; }
     DezEndBossSprite parentForTest() { return parent; }
 
-    static final class Shot extends DezEndBossSprite implements RewindRecreatable,TouchResponseProvider {
+    static final class Shot extends DezEndBossSprite implements RewindRecreatable,TouchResponseProvider, ObjectVisualFacing.PoseOwned {
         private DezEndBossSprite parent;
         private boolean initialized;
         private Shot(ObjectSpawn spawn) { super(spawn,"DEZEndBossShot"); }

@@ -19,21 +19,21 @@ class TestStageplayScriptDecompiler {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String MINIMAL =
             """
-            {"version":6,"name":"A small scene","cast":[],"shots":[
+            {"version":7,"name":"A small scene","cast":[],"shots":[
               {"id":"opening","durationFrames":60,"set":{"gameId":"s2","zone":0,"act":0},
                "camera":[{"frame":0,"x":0,"y":0}]}]}
             """;
 
     @Test
-    void screenplayVersionSixAloneAdmitsTheLargerSourceBudget() throws Exception {
-        byte[] versionSix = padded(MINIMAL, StageplayStore.MAX_BYTES + 1);
+    void screenplayVersionSevenAloneAdmitsTheLargerSourceBudget() throws Exception {
+        byte[] versionSeven = padded(MINIMAL, StageplayStore.MAX_BYTES + 1);
         assertEquals(
                 StageplayScriptCompiler.compile(MINIMAL.getBytes(StandardCharsets.UTF_8)),
-                StageplayScriptCompiler.compile(versionSix));
-        for (int version = 1; version <= 5; version++) {
+                StageplayScriptCompiler.compile(versionSeven));
+        for (int version = 1; version <= 6; version++) {
             byte[] legacy =
                     padded(
-                            MINIMAL.replace("\"version\":6", "\"version\":" + version),
+                            MINIMAL.replace("\"version\":7", "\"version\":" + version),
                             StageplayStore.MAX_BYTES + 1);
             assertThrows(IOException.class, () -> StageplayScriptCompiler.compile(legacy));
         }

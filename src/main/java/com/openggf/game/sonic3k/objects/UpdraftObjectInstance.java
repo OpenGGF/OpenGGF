@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -23,7 +24,9 @@ import java.util.List;
  * from {@code sub_3FBC4} and the object-controlled mushroom-parachute path at
  * {@code loc_3FC76}.
  */
-public final class UpdraftObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class UpdraftObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native invisible vertical airflow owner affects separate players/parachutes and has no facing body.
     private static final int X_BIAS = 0x40;
     private static final int X_RANGE = 0x80;
     private static final int MAIN_Y_BIAS = 0x40;

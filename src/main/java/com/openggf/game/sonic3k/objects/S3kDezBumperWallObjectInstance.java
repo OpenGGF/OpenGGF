@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -58,7 +59,9 @@ import java.util.List;
  * off-screen handling.
  */
 public final class S3kDezBumperWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Obj_DEZBumperWall mounting/contact faces describe collision geometry, not a logical facing body.
 
     /** {@code move.w #$17,d1 / #$20,d2 / #$21,d3} (:96029-96031). */
     private static final int WALL_HALF_WIDTH = 0x17;

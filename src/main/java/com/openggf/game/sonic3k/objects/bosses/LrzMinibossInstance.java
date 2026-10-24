@@ -49,9 +49,11 @@ import java.util.List;
  * {@code loc_7A100}.
  */
 public final class LrzMinibossInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider,
+        implements com.openggf.level.objects.ObjectVisualFacing.PoseOwned, SpawnRewindRecreatable, SolidObjectProvider,
         com.openggf.level.objects.RomWorldPositionedObject {
 
+    // Native vertical jaw/slam direction belongs to mappingFrame; rendering always passes false/false.
+    // Preserve those poses rather than inventing horizontal facing from movement or status.
     private final LrzMinibossArtState art = new LrzMinibossArtState();
 
     /**

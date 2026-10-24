@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.level.objects.*;
@@ -8,7 +9,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** loc_7F336: native-slot tracking bumper; contact is latched until its own SST pass. */
 final class DezEndBossBumper extends DezEndBossSprite
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, PoweredScreenAttackSpecial, ObjectVisualFacing.PoseOwned {
     private DezEndBossSprite parent;
     private int angle;
     private int animation;

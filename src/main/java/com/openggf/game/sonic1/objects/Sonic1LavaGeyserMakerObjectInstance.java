@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -45,7 +46,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/4C &amp; 4D Lava Geyser Maker.asm
  */
 public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// GeyserMaker owns vertical bubbles/columns and their vertical body children, without horizontal facing.
 
     // ========================================================================
     // Animation Data (from Ani_Geyser)

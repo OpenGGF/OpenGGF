@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -31,7 +33,7 @@ import java.util.Map;
  * instance keeps those child coordinates as local state because the child only
  * renders and supplies the held-player handle position.
  */
-public final class LbzRideGrappleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzRideGrappleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int ROM_CHILD_SLOT_COUNT = 1;
     private static final int[][] PATH_RANGES = {
             {0x0A08, 0x0C78},

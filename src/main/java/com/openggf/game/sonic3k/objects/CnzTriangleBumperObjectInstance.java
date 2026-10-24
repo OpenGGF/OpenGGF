@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -22,7 +24,7 @@ import java.util.List;
  * the ROM stores it at {@code $34(a0)} and stores twice that value at
  * {@code $32(a0)} for the unsigned range check.
  */
-public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int VERTICAL_HALF_HEIGHT = 0x14;
     private static final int BOUNCE_SPEED = 0x800;

@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
@@ -24,7 +25,9 @@ import java.util.List;
  * driven by the parent button's switch bits in the following routines.
  */
 public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native door child slides vertically and renders fixed geometry without a horizontal-facing body.
     private static final int INITIAL_X = 0x0390;
     private static final int INITIAL_Y = 0x0620;
     private static final int PRIORITY = 1;

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.*;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -11,7 +12,12 @@ import java.io.IOException;
 import java.util.List;
 
 /** CutsceneKnux_LRZ2 ($63A6A): Knuckles pushes the boulder after the camera rises. */
-public final class CutsceneKnucklesLrz2Instance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class CutsceneKnucklesLrz2Instance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native boulder-push actor permanently sets the cutscene X-flip bit.
+        return ObjectVisualFacing.Basis.LEFT;
+    }
+
     private int routine;
     private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
     private transient S3kRawAnimation scripts;

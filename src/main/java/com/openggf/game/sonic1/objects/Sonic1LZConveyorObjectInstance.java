@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -53,7 +54,9 @@ import java.util.logging.Logger;
  * Reference: docs/s1disasm/_incObj/63 LZ Conveyor.asm
  */
 public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, SolidObjectProvider, SolidObjectListener {
+        implements SpawnRewindRecreatable, SolidObjectProvider, SolidObjectListener, ObjectVisualFacing.NonDirectional {
+
+// LCon roots and children are waypoint platforms or rotating wheels, without horizontal-facing bodies.
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1LZConveyorObjectInstance.class.getName());
 

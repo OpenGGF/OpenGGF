@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.mods.scene.*;
 import com.openggf.mods.scene.host.SceneSurface;
 import com.openggf.stageplay.*;
@@ -28,7 +30,7 @@ class TestStageplayRenderer {
         var document=scene("s2",0,0,128,0,320,224)
                 .withCamera(List.of(new CameraKey(0,128,0,2,Interpolation.HOLD)))
                 .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(
-                        new ActorKey(0,148,60,0,-1,false,true,1,Interpolation.HOLD)))));
+                        new ActorKey(0,148,60,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))));
         try(var resources=new StageplayResources(game->art,List.of("s2"));var surface=new SceneSurface()) {
             var renderer=new StageplayRenderer(resources);resources.validate(document);
             var sample=StageplayTimeline.sample(document,3);
@@ -118,9 +120,9 @@ class TestStageplayRenderer {
                 .thenReturn(new SceneAccessoryPose(tail, false, true));
         var scene = scene("s2", 0, 0, 0, 0, 320, 224).withActors(List.of(
                 new Actor("tails", "Tails", "s2", "tails", List.of(
-                        new ActorKey(0, 100, 100, 2, 1, false, true, 1, Interpolation.LINEAR),
-                        new ActorKey(2, 104, 100, 2, 1, true, true, 1, Interpolation.LINEAR),
-                        new ActorKey(4, 104, 104, 2, 1, true, true, 1, Interpolation.HOLD)))));
+                        new ActorKey(0, 100, 100, 2, 1, Facing.RIGHT, true, 1, Interpolation.LINEAR),
+                        new ActorKey(2, 104, 100, 2, 1, Facing.LEFT, true, 1, Interpolation.LINEAR),
+                        new ActorKey(4, 104, 104, 2, 1, Facing.LEFT, true, 1, Interpolation.HOLD)))));
         try (var resources = new StageplayResources(game -> art, List.of("s2")); var surface = new SceneSurface()) {
             var renderer = new StageplayRenderer(resources);
             surface.record(320, 224, canvas -> renderer.drawLivePosers(scene, StageplayTimeline.sample(scene, 3), canvas, StageplayTimeline.sample(scene, 3).camera()));

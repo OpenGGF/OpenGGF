@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -33,7 +34,10 @@ import java.util.List;
  * that follows the body.
  * Based on disassembly Obj50 (lines 60044-60310).
  */
-public class AquisBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class AquisBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private enum State {
         WAIT_FOR_SCREEN,  // routine_secondary 0: idle until on-screen

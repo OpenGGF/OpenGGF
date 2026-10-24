@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.GroundMode;
 import com.openggf.graphics.GLCommand;
@@ -17,7 +19,7 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZWireCage} ($6F), sonic3k.asm $39F2E-$3A220. */
-public final class FbzWireCageObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, RomObjectCodePointerProvider {
+public final class FbzWireCageObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
     private static final com.openggf.level.objects.ObjectPlayerQuery.PlayerVisitor<FbzWireCageObjectInstance> UPDATE_PLAYER=(cage,entity)->{if(entity instanceof AbstractPlayableSprite player)cage.updatePlayer(player,cage.participants.slot(player));};
     private static final int[] VERTICAL_FRAMES = {
             0x6D,0x6D,0x6E,0x6E,0x6F,0x6F,0x70,0x70,0x71,0x71,0x72,0x72,0x73,

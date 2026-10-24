@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -12,7 +14,16 @@ import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
-public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements RewindRecreatable {
+public class SpikeObjectInstance extends AbstractSpikeObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj36 sideways frames use ArtNem_HorizSpike: its unflipped tips point LEFT.
+        // Upright/ceiling spikes have no horizontal front, regardless of travel direction.
+        if (!isSideways()) return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        return (spawn.renderFlags() & 1) != 0
+                ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private boolean mainRoutineReached;
 
     public SpikeObjectInstance(ObjectSpawn spawn, String name) {

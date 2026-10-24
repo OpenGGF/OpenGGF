@@ -1,5 +1,7 @@
 package com.openggf.editor.project;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.Engine;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -72,10 +74,10 @@ class TestStageplayHudPictures {
     }
     private static StageplayDocument routeFormScene() {
         return StageplayDocument.empty("s2",0,0,0,500,320,224).withActors(List.of(
-                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1,false,true,1,StageplayDocument.Interpolation.HOLD)))))
+                new StageplayDocument.Actor("hero","Sonic","s2","sonic",List.of(new StageplayDocument.ActorKey(0,128,648,0,-1, Facing.RIGHT,true,1,StageplayDocument.Interpolation.HOLD)))))
                 .withPuppets(List.of(new StageplayDocument.PuppetTrack("hero",true,0,List.of())))
                 .withObjectActors(List.of(new StageplayDocument.ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,
-                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1,false,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
+                        List.of(new StageplayDocument.ObjectKey(0,128,648,0,-1, Facing.LEFT,true,StageplayDocument.Interpolation.HOLD,StageplayDocument.ObjectMode.PUPPET)),List.of())));
     }
 
     @Test
@@ -89,7 +91,7 @@ class TestStageplayHudPictures {
             Path output = Path.of("target", "stageplay-hud").toAbsolutePath(); Files.createDirectories(output);
             Path source = output.resolve("screenplay-source.json");
             Files.writeString(source, """
-                    {"version":6,"name":"Two-way take","width":320,"height":224,
+                    {"version":7,"name":"Two-way take","width":320,"height":224,
                      "cast":[{"id":"hero","name":"Sonic","gameId":"s2","character":"sonic","puppet":false}],
                      "shots":[{"id":"opening","durationFrames":120,
                      "set":{"gameId":"s2","zone":0,"act":0},
@@ -285,7 +287,7 @@ class TestStageplayHudPictures {
 
     private static StageplayDocument.ActorKey key(int frame, double x, double y, int pose) {
         // S2 mapping frame zero is empty. WAIT (5) resolves the shipped standing frames.
-        return new StageplayDocument.ActorKey(frame, x, y, 5, pose, false, true, 1, StageplayDocument.Interpolation.LINEAR);
+        return new StageplayDocument.ActorKey(frame, x, y, 5, pose, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.LINEAR);
     }
 
     private static void render(EditorHudRuntime chrome, SceneSurface surface, StageplayDocument scene, int width, int height) {

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -47,7 +48,12 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
  * {@code collision_property} points. The fight ends in {@code loc_64310}.
  */
 public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Native Knuckles render bit 0 is logical left; animation-specific look-backs keep their art.
+        return flipX ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     /** {@code byte_6669A} scripts, read once per instance; ROM bytes, not state. */
     private transient S3kRawAnimation rawScripts;
 

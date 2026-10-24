@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.*;
@@ -16,7 +18,7 @@ import java.util.List;
 
 /** Obj_LRZ3Autoscroll ($9E), including the native flash, missiles and target/debris graph. */
 public final class LrzAutoscrollObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, RomObjectCodePointerProvider {
+        implements RewindRecreatable, TouchResponseProvider, RomObjectCodePointerProvider, ObjectVisualFacing.PoseOwned {
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();
 
     @Override public void releasePlayersForVisualDirection() {

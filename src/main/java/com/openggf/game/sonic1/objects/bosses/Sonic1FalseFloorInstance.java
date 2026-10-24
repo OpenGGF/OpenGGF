@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -47,7 +48,11 @@ import java.util.logging.Logger;
  */
 public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         implements SolidObjectProvider,
-        Sonic1ScrapEggmanInstance.Disintegratable, SpawnRewindRecreatable {
+        Sonic1ScrapEggmanInstance.Disintegratable, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The invisible master and its floor fragments have no native horizontal direction.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1FalseFloorInstance.class.getName());
 

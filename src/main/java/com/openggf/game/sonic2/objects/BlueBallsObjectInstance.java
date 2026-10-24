@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -60,7 +62,8 @@ import java.util.List;
  *
  * @see SpeedBoosterObjectInstance Another CPZ-specific object
  */
-public class BlueBallsObjectInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable {
+public class BlueBallsObjectInstance extends AbstractObjectInstance implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj1D_InitBall resets render_flags; radial droplets/siblings have no facing body. Signed arc/offset data selects trajectory only.
 
     // ========================================================================
     // ROM Constants

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -58,7 +60,8 @@ import java.util.logging.Logger;
  * the parent's first phase load).
  */
 public class MCZRotPformsObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj6A owns orbiting platform copies; clockwise/anticlockwise travel is not horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(MCZRotPformsObjectInstance.class.getName());
 

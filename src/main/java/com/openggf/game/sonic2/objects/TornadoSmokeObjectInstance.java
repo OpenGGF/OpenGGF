@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
@@ -24,7 +26,9 @@ import java.util.List;
  * routine. The smoke uses explosion mappings/art, drifts up-left at -$100/-$100,
  * advances frames every eight ticks, then deletes after frame 4.
  */
-public class TornadoSmokeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class TornadoSmokeObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjC3/ObjC4 are dispersing smoke; drift does not define a horizontal-facing body.
+
     private static final int ANIM_DELAY = 7;
     private static final int MAX_FRAME = 4;
     private static final int PRIORITY = 5;

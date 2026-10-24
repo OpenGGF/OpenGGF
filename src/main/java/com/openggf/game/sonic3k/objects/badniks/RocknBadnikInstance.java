@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -11,7 +12,11 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.Tails;
 
 /** SKL $96 Obj_Rockn, loc_8EDC0–loc_8F042, with independently solid shell. */
-public final class RocknBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class RocknBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private int routine;
     private int leftLimit;
     private int rightLimit;

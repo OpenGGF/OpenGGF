@@ -4,6 +4,7 @@ import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 
@@ -27,7 +28,9 @@ import com.openggf.level.objects.SolidObjectListener;
  * <p>
  * ROM: Obj_InvisibleHurtBlockHorizontal / sub_1F58C (sonic3k.asm:43313, 43467-43478)
  */
-public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBlockObjectInstance implements SolidObjectListener {
+public class Sonic3kInvisibleHurtBlockHObjectInstance extends Sonic3kInvisibleBlockObjectInstance implements SolidObjectListener, ObjectVisualFacing.NonDirectional {
+
+    // The native hurt/solid face selector belongs to invisible collision geometry, not a facing performer.
 
     /** {@code Status_FireShield}: {@code bset #4,shield_reaction(a0)} in {@code Obj_InvisibleLavaBlock}. */
     public static final int REACTION_FIRE_SHIELD = 1 << 4;

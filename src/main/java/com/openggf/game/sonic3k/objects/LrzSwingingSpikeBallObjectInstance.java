@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -46,7 +47,9 @@ import java.util.List;
  * invent a value.
  */
 public final class LrzSwingingSpikeBallObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native angular phase places radial balls and chain geometry; rotation is not logical horizontal facing.
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88704). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

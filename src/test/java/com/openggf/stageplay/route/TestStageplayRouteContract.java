@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.stageplay.StageplayDocument;
 import org.junit.jupiter.api.Test;
 
@@ -14,8 +16,8 @@ class TestStageplayRouteContract {
                 key(0,ObjectMode.FREE,true),key(30,ObjectMode.PUPPET,true),key(50,ObjectMode.POSE,true),
                 key(60,ObjectMode.FREE,true),key(70,ObjectMode.PUPPET,false),key(80,ObjectMode.PUPPET,true)),List.of());
         var player = new Actor("hero","Hero","s2","sonic",List.of(
-                new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD),
-                new ActorKey(80,100,200,0,-1,false,true,1,Interpolation.HOLD)));
+                new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD),
+                new ActorKey(80,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)));
         return StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120)
                 .withCamera(List.of(new CameraKey(0,0,0,1,Interpolation.HOLD),new CameraKey(80,0,0,1,Interpolation.HOLD)))
                 .withActors(List.of(player)).withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())))
@@ -23,7 +25,7 @@ class TestStageplayRouteContract {
                         new SetSource("s2",0,1,"",""),Transition.CUT,0)));
     }
     private static ObjectKey key(int frame,ObjectMode mode,boolean visible) {
-        return new ObjectKey(frame,100,200,0,-1,false,visible,Interpolation.HOLD,mode);
+        return new ObjectKey(frame,100,200,0,-1, Facing.LEFT,visible,Interpolation.HOLD,mode);
     }
     @Test void objectPuppetEntryPreservesEarlierFreeInitializationWithinTheSameShot() {
         var document=source();

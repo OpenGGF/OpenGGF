@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
@@ -49,7 +51,8 @@ import java.util.logging.Logger;
  *   <li>objoff_30 != 0: Frame 1 (either player grabbed)</li>
  * </ul>
  */
-public class VineSwitchObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class VineSwitchObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj7F owns a hanging switch; grabbed players retain their separate facing owners.
 
     private static final Logger LOGGER = Logger.getLogger(VineSwitchObjectInstance.class.getName());
 

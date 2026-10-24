@@ -6,6 +6,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -25,7 +26,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/3B Purple Rock.asm
  */
 public class Sonic1RockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Rock is static collision geometry without a directional body or child.
 
     // From disassembly: move.w #$10+sonic_solid_width,d1 = $10 + $B = $1B
     private static final int HALF_WIDTH = 0x1B;

@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -58,7 +59,9 @@ import java.util.List;
  * applies and no custom out-of-range check is declared.
  */
 public final class LrzWallRideObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomObjectCodePointerProvider {
+        implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native ride logic controls the separately owned player; this invisible path controller has no facing body.
 
     /** {@code move.b #$D0,width_pixels(a0)} (sonic3k.asm:87740). */
     private static final int WIDTH_PIXELS = 0xD0;

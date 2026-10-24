@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
@@ -18,7 +19,9 @@ import java.util.List;
 
 /** The ordinary six-byte placement-list form of S3K {@code Obj_Ring} ($00). */
 public final class Sonic3kPlacedRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native ring rotation/formation and collection flashes have no logical horizontal-facing owner.
     public static final int COLLISION_FLAGS = 0x47;
     private static final int SPARKLE_FRAME_DELAY = 6; // Ani_RingSparkle delay 5 => 6 ticks/frame
     private static final int SPARKLE_FRAMES = 4;

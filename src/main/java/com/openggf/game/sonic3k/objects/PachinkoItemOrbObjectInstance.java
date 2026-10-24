@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
@@ -36,7 +37,9 @@ import java.util.List;
  * ({@code loc_4A274}) and only proceeds once it reads clear.
  */
 public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native orb/reward icon animation has no horizontal-facing owner.
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -33,7 +34,11 @@ import java.util.List;
  * downward legs ({@code 0}), side legs ({@code 2}), or a single top appendage
  * ({@code >= 4}). Children use the ROM hurt collision byte {@code $97}.
  */
-public final class RibotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class RibotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Ribot collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Ribot priority $280.

@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
@@ -69,7 +71,8 @@ import java.util.logging.Logger;
  * </ol>
  */
 public class RivetObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjC2 owns a rivet and explosion; neither has logical horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(RivetObjectInstance.class.getName());
 

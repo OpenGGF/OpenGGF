@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.camera.Camera;
@@ -49,7 +50,12 @@ import java.util.List;
  * 153341-154205. This owns only the local object graph; registry/profile wiring
  * is intentionally left to the integration task.
  */
-public final class LbzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class LbzEndBossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal machine has no native horizontal direction; its subparts do not turn it.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int HIT_COUNT = 8;
     private static final int COLLISION_INIT = 0x18;
     private static final int COLLISION_RISEN = 0x0F;

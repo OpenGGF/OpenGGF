@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -18,6 +19,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -39,7 +41,25 @@ import java.util.List;
  * No flip/twirl subtype bit (S2-only feature).
  */
 public class Sonic1SpringObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Spring_LR keeps the negative spring power only when status bit 0
+        // is set. Upright/downward springs have no horizontal launch direction.
+        if (springType != TYPE_HORIZONTAL) {
+            return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        }
+        return isFlippedHorizontal() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(Basis facing, int sourceFlags) {
+        if (springType != TYPE_HORIZONTAL) {
+            return sourceFlags;
+        }
+        return facing == Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 1;

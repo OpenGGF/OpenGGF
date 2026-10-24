@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindStateful;
@@ -43,7 +44,12 @@ import java.util.List;
  */
 public final class LbzMinibossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
-        MultiBucketRenderable {
+        MultiBucketRenderable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal cylinder and independently moving panels have no logical horizontal facing.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_INIT_WAIT = 0x02;
     private static final int ROUTINE_RISE_WAIT = 0x04;

@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestStageplayPuppets {
     private static ActorKey key(int frame, double x, boolean visible) {
-        return new ActorKey(frame, x, 200, 0, -1, false, visible, 1, Interpolation.HOLD);
+        return new ActorKey(frame, x, 200, 0, -1, Facing.RIGHT, visible, 1, Interpolation.HOLD);
     }
     private static StageplayDocument manual() {
         return StageplayDocument.empty("s2", 0, 0, 0, 0, 320, 224).withSet(new SetSource("s2",0,0,"","")).withActors(List.of(
@@ -28,8 +30,8 @@ class TestStageplayPuppets {
 
     @Test void manualChoreographyRoundTripsWithoutCreatingPhysicsTracks() throws IOException {
         var scene = manual().withActors(List.of(new Actor("hero", "Hero", "s2", "sonic", List.of(
-                new ActorKey(0, 100, 200, 2, -1, false, true, 1, Interpolation.LINEAR),
-                new ActorKey(30, 200, 50, 2, -1, false, true, 1, Interpolation.LINEAR)))));
+                new ActorKey(0, 100, 200, 2, -1, Facing.RIGHT, true, 1, Interpolation.LINEAR),
+                new ActorKey(30, 200, 50, 2, -1, Facing.RIGHT, true, 1, Interpolation.LINEAR)))));
         var decoded = StageplayStore.decode(StageplayStore.encode(scene));
         assertTrue(decoded.puppets().isEmpty());
         assertEquals(125, StageplayTimeline.sample(decoded, 15).actors().getFirst().y());

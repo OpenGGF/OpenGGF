@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -34,7 +35,9 @@ import java.util.List;
  */
 public class Sonic3kInvisibleBlockObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable,
-        RomWorldPositionedObject, RomObjectCodePointerProvider {
+        RomWorldPositionedObject, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // The native hurt/solid face selector belongs to invisible collision geometry, not a facing performer.
 
     /**
      * Word 0 of this object's S3K SST holds its live ROM code pointer.

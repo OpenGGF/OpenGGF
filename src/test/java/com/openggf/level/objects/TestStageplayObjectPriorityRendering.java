@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing.Basis;
+
 import com.openggf.capture.GlReadPixelsGrabber;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
@@ -51,7 +53,7 @@ class TestStageplayObjectPriorityRendering {
                     var template = direction.captureDynamic(root);
                     RgbaImage nativeImage = draw(presentation, grabber);
                     visible += differences(empty, nativeImage);
-                    var pose = new Direction(x, 680, false, true, 0, -1);
+                    var pose = new Direction(x, 680, Basis.LEFT, true, 0, -1);
                     direction.direct(root, template, pose);
                     assertPicture(nativeImage, draw(presentation, grabber), "frozen native graph at X=" + x);
                     direction.removeDynamic(root);
@@ -70,11 +72,11 @@ class TestStageplayObjectPriorityRendering {
 
     private static VisualTemplate withoutOcclusion(VisualTemplate source) {
         var parts = source.parts().stream().map(part -> new VisualPart(part.partId(), part.bucket(), true,
-                part.slotOrder(), part.defaultPose(), part.poses().stream().map(pose -> new VisualPose(pose.pose(),
+                part.slotOrder(), part.defaultPose(), part.facing(), part.facingPivotX(), part.poses().stream().map(pose -> new VisualPose(pose.pose(),
                         pose.tiles().stream().map(t -> new VisualTile(t.pattern(), t.palette(), t.flipX(), t.flipY(),
                                 true, t.x(), t.y(), t.width(), t.height(), t.priorityShader(), 0,
                                 t.rowStart(), t.rowEnd())).toList(), pose.primitives())).toList(), part.animations())).toList();
-        return new VisualTemplate(source.anchorX(), source.anchorY(), parts, source.patterns(), source.palettes(), source.limitations());
+        return new VisualTemplate(source.anchorX(), source.anchorY(), source.facing(), parts, source.patterns(), source.palettes(), source.limitations());
     }
 
     private static int differences(RgbaImage a, RgbaImage b) {

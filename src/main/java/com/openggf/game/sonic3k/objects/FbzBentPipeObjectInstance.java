@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -10,7 +12,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZBentPipe} ($76), a static full-solid. */
 public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int[][] SIZE={{0x18,0x10},{0x10,0x08},{0x18,0x10}};
     private final int frame;
     private final int sizeIndex;

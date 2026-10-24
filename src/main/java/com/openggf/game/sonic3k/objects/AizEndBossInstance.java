@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 
@@ -60,7 +61,12 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class AizEndBossInstance extends AbstractBossInstance
-        implements SpawnConstructionContextRewindRecreatable {
+        implements SpawnConstructionContextRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native target/turn routine owns facingRight independently of the selected mapping frame.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final Logger LOG = Logger.getLogger(AizEndBossInstance.class.getName());
 
     // ===== Routine constants (ROM: AIZ_EndBossIndex, stride 2) =====

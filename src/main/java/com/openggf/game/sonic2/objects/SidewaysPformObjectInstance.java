@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
@@ -45,7 +47,8 @@ import java.util.logging.Logger;
  * - Subtype 0x12: Single platform, offset right
  */
 public class SidewaysPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj7A owns paired sliding platforms; travel direction does not turn a facing body.
 
     private static final Logger LOGGER = Logger.getLogger(SidewaysPformObjectInstance.class.getName());
 

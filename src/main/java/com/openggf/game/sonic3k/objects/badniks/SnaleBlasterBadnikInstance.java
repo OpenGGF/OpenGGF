@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -38,7 +39,11 @@ import java.util.List;
  * when its animation completes.
  */
 public final class SnaleBlasterBadnikInstance extends AbstractS3kBadnikInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int COLLISION_SIZE_INDEX = 0x1A; // loc_8BFF2 / loc_8C052.
     private static final int PRIORITY_BUCKET = 4;         // ObjDat_SnaleBlaster priority $200.
     private static final int CLOSED_WAIT_FRAMES = 0x20;   // loc_8BFD4: move.w #$20,$2E.

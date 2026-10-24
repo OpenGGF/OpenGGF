@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.GameServices;
 import com.openggf.mods.scene.*;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
@@ -59,7 +61,7 @@ class TestStageplayTailsRom {
                 var document = scene(game, 0, 0, 100, 50, 320, 224)
                         .withCamera(List.of(new CameraKey(0, 100, 50, 2, Interpolation.HOLD)))
                         .withActors(List.of(new Actor("tails", "Tails", game, "tails", List.of(
-                                new ActorKey(0, 160, 100, 5, idleBody, flip, true, 1.5, Interpolation.HOLD)))));
+                                new ActorKey(0, 160, 100, 5, idleBody, (flip ? Facing.LEFT : Facing.RIGHT), true, 1.5, Interpolation.HOLD)))));
                 resources.validate(document);
                 surface.record(320, 224, canvas -> renderer.drawLivePosers(document, StageplayTimeline.sample(document, 0), canvas,
                         new StageplayTimeline.CameraPose(100, 50, 1)));

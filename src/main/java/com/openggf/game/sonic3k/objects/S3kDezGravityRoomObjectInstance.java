@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.CollisionSystem;
@@ -46,7 +47,9 @@ import java.util.List;
  * <p>It reads {@code Reverse_gravity_flag} nowhere, and act 1 has no gravity flip in it.
  */
 public final class S3kDezGravityRoomObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
     /** {@code cmpi.w #$500,d0 / bhs} (:95895, :95921): the corridor's length. */
     private static final int CORRIDOR_LENGTH = 0x500;

@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
@@ -47,7 +48,9 @@ import java.util.List;
  * {@link SszCarriedPlayerPose}. Any A/B/C press releases with {@code y_vel -$680} and a roll.
  */
 public final class SszRotatingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native post/arm/carrier phases rotate geometric parts; captured players own their own facing.
     /** {@code move.w #$100,priority(a0)}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
     /** {@code make_art_tile(ArtTile_SSZMisc+$AA,2,0)}. */

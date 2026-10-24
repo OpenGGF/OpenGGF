@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -52,7 +54,7 @@ import java.util.logging.Logger;
  * loc_1EDB0 (vertical update), loc_1EF64 (horizontal update), sub_1EDEC (vertical capture),
  * sub_1EFA0 (horizontal capture), loc_1EEEC (vertical break), loc_1F09A (horizontal break).
  */
-public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(HCZBreakableBarObjectInstance.class.getName());
 

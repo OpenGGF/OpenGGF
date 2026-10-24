@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -32,7 +34,8 @@ import java.util.logging.Logger;
  * - Plays SLOW_SMASH sound effect (0xCB)
  */
 public class BreakableBlockObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj32 owns a block, debris and score popup; debris velocity is not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(BreakableBlockObjectInstance.class.getName());
 

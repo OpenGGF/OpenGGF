@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -37,7 +39,19 @@ import java.util.logging.Logger;
  * mappings = ObjB8_Obj98_MapUnc_3BA46, art_tile = ArtTile_ArtNem_WfzWallTurret (palette 0),
  * render_flags = level_fg, priority = 4, width_pixels = 0x10, collision_flags = 0.
  */
-public class WallTurretObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class WallTurretObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_3B9AA stores the semantic barrel aim in mapping_frame; byte_3BA2A
+        // uses the same index for shot X velocity (0, -1, +1). This is aim state,
+        // not an animation-frame normalization or a placement-flip convention.
+        return switch (mappingFrame) {
+            case 1 -> ObjectVisualFacing.Basis.LEFT;
+            case 2 -> ObjectVisualFacing.Basis.RIGHT;
+            default -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        };
+    }
+
     private static final Logger LOGGER = Logger.getLogger(WallTurretObjectInstance.class.getName());
 
     // From ObjB8_SubObjData: priority = 4, width_pixels = $10

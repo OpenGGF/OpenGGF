@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.*;
@@ -18,7 +19,12 @@ import java.util.List;
 
 /** SKL $98, Obj_SOZEndBoss ($7764A). Shell, pilot and arena remain separate native owners. */
 public final class SozEndBossInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable {
+        implements SpawnRewindRecreatable, TouchResponseProvider, TouchResponseAttackable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The frontal walking machine has no horizontal direction. The dismantled pilot escape owns flipped, set for rightward flight.
+        return escapePhase == 0 ? ObjectVisualFacing.Basis.NON_DIRECTIONAL : (flipped ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT);
+    }
+
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

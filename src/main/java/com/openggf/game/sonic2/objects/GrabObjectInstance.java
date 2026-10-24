@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
@@ -47,7 +49,8 @@ import java.util.logging.Logger;
  * <b>Per-player state:</b> Uses objoff_30 (P1 grab flag), objoff_31 (P2 grab flag),
  * objoff_32 (P1 release delay), objoff_33 (P2 release delay).
  */
-public class GrabObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class GrabObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjD9 is an invisible hang point with an upward release; held players own their own facing.
 
     private static final Logger LOGGER = Logger.getLogger(GrabObjectInstance.class.getName());
 

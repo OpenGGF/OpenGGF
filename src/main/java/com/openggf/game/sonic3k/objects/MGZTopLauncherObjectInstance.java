@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -17,7 +18,20 @@ import java.util.List;
  * Object 0x5C — MGZ Top Launcher.
  * Owns the visible base and a passive Obj_MGZTopPlatform child until release.
  */
-public class MGZTopLauncherObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class MGZTopLauncherObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // The launcher's native hFlip selects +$C00 versus -$C00 release and
+        // mirrors its directional base; the radial top child has no body facing.
+        return hFlip ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
     private static final String ART_KEY = Sonic3kObjectArtKeys.MGZ_TOP_LAUNCHER;
     private static final int PRIORITY_BUCKET = 4;
     private static final int BASE_FRAME = 2;

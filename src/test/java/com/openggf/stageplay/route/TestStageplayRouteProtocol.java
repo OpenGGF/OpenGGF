@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.stageplay.StageplayDocument;
 import org.junit.jupiter.api.Test;
@@ -14,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayRouteProtocol {
     public static StageplayDocument source() {
         return StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120)
-                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
+                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of(new PuppetCommand("later",90,PuppetCommandKind.STOP,0,0,0,0)))));
     }
     public static StageplayRouteResult result(StageplayDocument source,StageplayRouteRequest request,String fingerprint) {
@@ -53,8 +55,8 @@ class TestStageplayRouteProtocol {
         assertThrows(IOException.class,()->StageplayRouteProtocol.decodeResult(response.toString()));
     }
     @Test void objectPatchAtAnInteriorPuppetKeyCannotRewriteItsNativeFreePrefix() throws Exception {
-        var keys=List.of(new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.FREE),
-                new ObjectKey(30,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET));
+        var keys=List.of(new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.FREE),
+                new ObjectKey(30,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET));
         var later=new ObjectCommand("later",90,ObjectCommandKind.STOP,0,0,0);
         var actor=new ObjectActor("prop","Prop","s2",0,0,65,0,-1,keys,List.of(later));
         var source=StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120).withObjectActors(List.of(actor));
@@ -67,7 +69,7 @@ class TestStageplayRouteProtocol {
         var result=new StageplayRouteResult(StageplayRouteResult.Status.VISUAL_TERRAIN,"visual only","0".repeat(64),request,candidate,
                 List.of(),generated,List.of(),1,10,false);
         StageplayRouteProtocol.validatePatch(source,request,result.fingerprint(),result);
-        var wrongKeys=List.of(new ObjectKey(0,101,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.FREE),keys.getLast());
+        var wrongKeys=List.of(new ObjectKey(0,101,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.FREE),keys.getLast());
         var wrongActor=new ObjectActor(actor.id(),actor.name(),actor.gameId(),actor.zone(),actor.act(),actor.objectId(),actor.subtype(),actor.layoutIndex(),wrongKeys,commands);
         var forged=new StageplayRouteResult(result.status(),result.message(),result.fingerprint(),request,source.withObjectActors(List.of(wrongActor)),
                 List.of(),generated,List.of(),1,10,false);

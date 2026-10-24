@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -22,7 +23,12 @@ import java.util.List;
  * {@code ArtKosM_MHZKnuxPeer}, not the shared cutscene Knuckles DPLC sheet.
  */
 public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This native cutscene actor keeps the unmirrored Knuckles direction; motion and reaction poses do not turn its logical facing.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int INITIAL_X = 0x0374;
     private static final int INITIAL_Y = 0x066C;
     private static final int INITIAL_FRAME = 4;

@@ -1,4 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 
@@ -61,7 +63,10 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
-        implements CaterkillerParentState, RewindRecreatable {
+        implements CaterkillerParentState, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType = $B (enemy, collision size index $B)
     private static final int COLLISION_SIZE_INDEX = 0x0B;

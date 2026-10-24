@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -28,7 +29,11 @@ import java.util.List;
  * orbit angle reaches 0x40 during the body animation frame 2.
  * Based on disassembly Obj95.
  */
-public class SolBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class SolBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private enum State {
         WAIT_FOR_PLAYER, // Routine 2
         AFTER_FIRE       // Routine 4

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -50,7 +51,10 @@ import java.util.List;
  *   <li>Walking: Frames 2,3,4, duration 3</li>
  * </ul>
  */
-public class GrounderBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class GrounderBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // Touch collision size index from subObjData. Obj8D_SubObjData (s2.asm:73505)
     //   subObjData Obj8D_MapUnc_36CF0, make_art_tile(...), 1<<level_fg, 5, $10, 2

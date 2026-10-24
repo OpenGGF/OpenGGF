@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 
@@ -11,7 +12,9 @@ import java.util.List;
 
 /** SKL $50, Obj_DEZConveyorBelt / sub_47854 (sonic3k.asm:93561-93605). */
 public final class S3kDezConveyorBeltObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
     public S3kDezConveyorBeltObjectInstance(ObjectSpawn spawn) {
         super(spawn, "DEZConveyorBelt");
     }

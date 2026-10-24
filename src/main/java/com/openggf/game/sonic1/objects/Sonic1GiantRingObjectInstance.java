@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseListener;
@@ -38,7 +39,9 @@ import java.util.logging.Logger;
  * Collision type $52: SPECIAL category (0x40), size index 0x12 (8x16 from center).
  */
 public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// GRing rotates a ring and spawns a flash; neither has a logical horizontal facing.
 
     private static final Logger LOGGER = Logger.getLogger(Sonic1GiantRingObjectInstance.class.getName());
 

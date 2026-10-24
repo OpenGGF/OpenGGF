@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -42,7 +44,9 @@ import java.util.List;
  *   <li>After burst completes, add 128-255 frame delay before next burst</li>
  * </ol>
  */
-public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BubbleGeneratorObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj24 owns the maker and rising bubbles; wobble and burst phase do not define a facing.
+
     private static final int GENERATOR_ANIMATION_TICKS = 16;
     private static final int[] GENERATOR_FRAMES = {14, 15};
 

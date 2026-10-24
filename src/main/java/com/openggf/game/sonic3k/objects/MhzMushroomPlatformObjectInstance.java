@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidContact;
@@ -29,7 +30,9 @@ import java.util.List;
  * {@code MoveSprite2 + addi.w #$28,y_vel}.
  */
 public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native flips orient a sloped geometric surface, not a logical horizontal-facing performer.
     private static final int ANIM_IDLE = 0;
     private static final int ANIM_PRESSED = 1;
     private static final int HALF_WIDTH = 0x20;

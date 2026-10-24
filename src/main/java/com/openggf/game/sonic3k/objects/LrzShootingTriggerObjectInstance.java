@@ -12,6 +12,7 @@ import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -54,7 +55,20 @@ import java.util.List;
  */
 public final class LrzShootingTriggerObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseListener, RewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // loc_42E00 copies this semantic shot side: +$200 X unless flipped.
+        // The target picture itself stays native through its touch/explosion pose.
+        return flipped ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
 
     /** {@code move.w #$280,priority(a0)} (sonic3k.asm:88331). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -41,7 +43,7 @@ import java.util.List;
  * the balloon color variant, matching the SonLVL CNZ definition.
  */
 public final class CnzBalloonInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int COLLISION_FLAGS = 0xC0 | 0x17;
     private static final int PRIORITY_BUCKET = 5; // Obj_CNZBalloon: priority $280.

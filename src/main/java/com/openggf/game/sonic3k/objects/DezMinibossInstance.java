@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -15,7 +16,12 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** Obj_DEZMiniboss $A6: independent eye publishes both eight-hit phases. */
-public final class DezMinibossInstance extends DezMinibossSprite implements SpawnRewindRecreatable {
+public final class DezMinibossInstance extends DezMinibossSprite implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The eye and its radial ring/phase geometry have no native logical horizontal facing.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private final S3kSharedBossCameraGate cameraGate=new S3kSharedBossCameraGate();
     private final DezMinibossArtState art=new DezMinibossArtState();
     private final DezMinibossPaletteState palette=new DezMinibossPaletteState();

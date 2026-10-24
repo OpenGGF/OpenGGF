@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -39,7 +41,9 @@ import java.util.logging.Logger;
  * - Solid collision enabled while visible
  */
 public class BarrierObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj2D raises a gate; xFlip selects its trigger side, not a horizontal-facing body.
+
     private static final Logger LOGGER = Logger.getLogger(BarrierObjectInstance.class.getName());
 
     // Movement constants (from disassembly)

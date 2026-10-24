@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -27,7 +28,9 @@ import java.util.Map;
  * release path for the horizontal bar.
  */
 public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native bar/vine controls separately owned riders; its fixed geometry has no horizontal facing.
     private static final int PRIORITY_BUCKET = 5;
     private static final int HALF_WIDTH = 0x20;
     private static final int HALF_HEIGHT = 4;

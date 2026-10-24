@@ -15,7 +15,9 @@ import com.openggf.sprites.playable.ObjectControlState;
 import java.util.List;
 
 /** loc_63C3E: pushed boulder, light-gravity bounce, and sub_65EFE's orbiting riders. */
-public final class LrzCutsceneBoulderObjectInstance extends AbstractObjectInstance implements ZeroArgRewindRecreatable {
+public final class LrzCutsceneBoulderObjectInstance extends AbstractObjectInstance implements ZeroArgRewindRecreatable, ObjectVisualFacing.PoseOwned {
+
+    // The native rolling frame bits own the rock pose; ballistic motion and captured riders do not define rock facing.
     // Player-only native control tail; directing must not advance this controller's
     // routine, timers, world flags, camera or level transition.
     private final PlayerControlOwners visualControlOwners = new PlayerControlOwners();

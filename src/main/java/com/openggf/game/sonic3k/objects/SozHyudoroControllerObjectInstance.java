@@ -9,7 +9,9 @@ import com.openggf.sprites.playable.Knuckles;
 import java.util.List;
 
 /** Dynamic title-completion owner, Obj_Hyudoro/Hyudoro_ctr ($8F0B8). */
-public final class SozHyudoroControllerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, HyudoroContext {
+public final class SozHyudoroControllerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, HyudoroContext, ObjectVisualFacing.Container {
+
+    // Each native Hyudoro body owns its own facingLeft state; the invisible spawner has no shared direction.
     private static final int[] COUNTS={0,1,2,2,3,3};
     private int count,timer;
     public SozHyudoroControllerObjectInstance(ObjectSpawn spawn){super(spawn,"SOZHyudoroController");}

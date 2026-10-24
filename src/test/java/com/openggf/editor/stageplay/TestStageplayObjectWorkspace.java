@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.control.InputHandler;
 import static org.lwjgl.glfw.GLFW.*;
@@ -208,10 +210,10 @@ class TestStageplayObjectWorkspace {
         return new ObjectActor(id,id,"s2",0,0,86,0,layout,keys,List.of());
     }
     private static ObjectKey key(int frame,boolean visible,ObjectMode mode,List<ObjectPartPose> parts) {
-        return new ObjectKey(frame,96,96,0,-1,false,visible,Interpolation.HOLD,mode,parts);
+        return new ObjectKey(frame,96,96,0,-1, Facing.LEFT,visible,Interpolation.HOLD,mode,parts);
     }
     private static ObjectKey withVisible(ObjectKey key,boolean visible) {
-        return new ObjectKey(key.frame(),key.x(),key.y(),key.animation(),key.pose(),key.flipX(),visible,key.interpolation(),key.mode(),key.parts());
+        return new ObjectKey(key.frame(),key.x(),key.y(),key.animation(),key.pose(), key.facing(),visible,key.interpolation(),key.mode(),key.parts());
     }
     private static void assertOrder(StageplayWorkspace workspace,ObjectActor second) {
         var actors=workspace.controller().document().objectActors();

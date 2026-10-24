@@ -6,13 +6,16 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /** SKL $56, Obj_DEZEnergyBridgeCurved / sub_47F9C (sonic3k.asm:94038-94130). */
 public final class S3kDezCurvedEnergyBridgeObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native energy-bridge phase and mounting flips describe a geometric surface without logical facing.
     private boolean initialized;
     private boolean activeRoutine;
     private int remaining;

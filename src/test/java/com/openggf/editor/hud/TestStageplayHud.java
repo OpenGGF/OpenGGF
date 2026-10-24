@@ -1,5 +1,7 @@
 package com.openggf.editor.hud;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.InputBindingFactory;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
@@ -107,8 +109,8 @@ class TestStageplayHud {
     void timelineContainsActorKeysCameraCaptionsAndAudioInFrameOrder() {
         var base = workspace.controller().document();
         var actor = new StageplayDocument.Actor("hero", "Hero", "s2", "sonic", List.of(
-                new StageplayDocument.ActorKey(0, 50, 60, 0, -1, false, true, 1, StageplayDocument.Interpolation.LINEAR),
-                new StageplayDocument.ActorKey(40, 90, 60, 0, 3, false, true, 1, StageplayDocument.Interpolation.HOLD)));
+                new StageplayDocument.ActorKey(0, 50, 60, 0, -1, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.LINEAR),
+                new StageplayDocument.ActorKey(40, 90, 60, 0, 3, Facing.RIGHT, true, 1, StageplayDocument.Interpolation.HOLD)));
         workspace.controller().replace(base.withActors(List.of(actor))
                 .withCaptions(List.of(new StageplayDocument.Caption("line", 15, 25, "Hello", 0, 0, -1)))
                 .withAudio(List.of(new StageplayDocument.AudioCue("sound", 10, StageplayDocument.AudioKind.ROM_SFX, "s2", 1, "", 1))));

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -23,7 +25,7 @@ import java.util.List;
 
 /** ROM {@code Obj_HPZMasterEmerald} (SKL object $B0). */
 public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int X = 0x1640;
     private static final int Y = 0x340;
     private static final int MAPPING_FRAME = 0xB;

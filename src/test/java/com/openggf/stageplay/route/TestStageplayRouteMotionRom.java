@@ -1,5 +1,7 @@
 package com.openggf.stageplay.route;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.session.SessionManager;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.stageplay.*;
@@ -39,7 +41,7 @@ class TestStageplayRouteMotionRom {
                 boolean downhill=entry.getKey().endsWith("downhill") || entry.getKey().endsWith("-slope");
                 if(downhill) source=source.withActors(List.of(new Actor("hero","Sonic","s2","sonic",
                         List.of(new ActorKey(0,entry.getKey().equals("spindash-downhill")?340:400,
-                                entry.getKey().equals("spindash-downhill")?628:624,0,-1,true,true,1,Interpolation.HOLD)))));
+                                entry.getKey().equals("spindash-downhill")?628:624,0,-1, Facing.LEFT,true,1,Interpolation.HOLD)))));
                 var request=new StageplayRouteRequest("hero",0,downhill?100:400,downhill?656:624,420,1024,120000,60000,1,null,1,motion);
                 StageplayRouteResult result;
                 try(var resources=new StageplayResources(library,false)) {
@@ -119,7 +121,7 @@ class TestStageplayRouteMotionRom {
 
     static StageplayDocument scene(String name) {
         return StageplayDocument.empty("s2",0,0,0,480,480,270).withName("Motion: "+name).withDurationFrames(420)
-                .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(new ActorKey(0,100,656,0,-1,false,true,1,Interpolation.HOLD)))))
+                .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(new ActorKey(0,100,656,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",true,0,List.of())))
                 .withWorldCommands(List.of(new WorldCommand("clear",0,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none())));
     }

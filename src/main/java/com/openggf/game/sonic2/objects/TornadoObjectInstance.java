@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.save.SaveReason;
@@ -55,7 +57,21 @@ import java.util.Map;
  */
 public class TornadoObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, TouchResponseListener,
-        RewindRecreatable {
+        RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // ObjB2's plane and thruster have native forward RIGHT; leftward exhaust
+        // is deliberate relative art. appendRenderCommands draws these components
+        // unflipped even with parent=null, so facing does not require a parent link.
+        // Existing renderThisFrame/parent lifetime rules still own visual readiness.
+        return switch (subtype) {
+            case SUBTYPE_SCZ_MAIN, SUBTYPE_WFZ_START, SUBTYPE_WFZ_END -> ObjectVisualFacing.Basis.RIGHT;
+            // The unused mover draws CLOUDS; the grabber is only a control point.
+            case SUBTYPE_UNUSED_MOVER, SUBTYPE_INVISIBLE_GRABBER -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+            case SUBTYPE_BLINKER, SUBTYPE_THRUSTER -> ObjectVisualFacing.Basis.RIGHT;
+            default -> throw new IllegalStateException("Unknown native Tornado subtype: " + subtype);
+        };
+    }
 
     // ------------------------------------------------------------------------
     // Subtypes / routines (routine = subtype - 0x4E)

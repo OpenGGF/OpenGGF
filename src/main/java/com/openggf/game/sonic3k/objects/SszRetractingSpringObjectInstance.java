@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
@@ -52,7 +53,20 @@ import java.util.logging.Logger;
  * frame 3 and clears the state. A player who approaches from the wrong side is ignored outright.
  */
 public final class SszRetractingSpringObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // sub_46536 uses d2=(status&1)^1: clear launches left, set launches right.
+        // Retraction, extension and recoil mapping frames do not reverse facing.
+        return isRenderFlipped() ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
     private static final Logger LOGGER =
             Logger.getLogger(SszRetractingSpringObjectInstance.class.getName());
 

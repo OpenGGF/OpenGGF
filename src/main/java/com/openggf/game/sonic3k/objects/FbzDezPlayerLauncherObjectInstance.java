@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -13,7 +15,15 @@ import java.util.List;
 /** Locked-on {@code Obj_FBZDEZPlayerLauncher} ($78), sonic3k.asm $3B942-$3BA8A. */
 public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable,
-        RomObjectCodePointerProvider {
+        RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The same direction that the native rider/launch routine installs on the player.
+        return ((spawn.renderFlags() & 1) != 0) ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
+
     private final int anchorX;
     private int x,xFixed,xVelocity,launchTimer,doubleTimer;
     private boolean returning,terminalOutwardEjectThisFrame;

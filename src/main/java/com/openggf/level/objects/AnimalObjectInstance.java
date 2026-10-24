@@ -14,7 +14,7 @@ import com.openggf.game.PlayableEntity;
 import java.util.List;
 
 public class AnimalObjectInstance extends AbstractObjectInstance
-        implements ObjectVisualAnimationSource, SpawnServicesDefaultArgsRewindRecreatable {
+        implements ObjectVisualAnimationSource, SpawnServicesDefaultArgsRewindRecreatable, ObjectVisualFacing.Source {
     private static final int GRAVITY = 0x38;
     private static final int FLY_GRAVITY = 0x18;
     private static final int INITIAL_POP_VEL = -0x400;
@@ -51,6 +51,12 @@ public class AnimalObjectInstance extends AbstractObjectInstance
     private boolean deferArtVariantRng;
     private boolean romRenderOnScreen;
     private transient DestructionEffects.PointsFactory pointsFactory;
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // appendRenderCommands uses this exact sign test; zero keeps the raw
+        // right-facing picture during the initial pop, before walking starts.
+        return xVelocity < 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     /**
      * Probe/rewind-compatible constructor with the same deferred ownership as

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
@@ -49,7 +51,9 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class RisingPillarObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj2B owns pillar/debris geometry; fragment velocities are not body facing.
+
     private static final Logger LOGGER = Logger.getLogger(RisingPillarObjectInstance.class.getName());
 
     // art_tile palette from disassembly: make_art_tile(ArtTile_ArtKos_LevelArt,1,0)

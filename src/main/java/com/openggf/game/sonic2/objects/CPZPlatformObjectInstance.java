@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -40,7 +42,9 @@ import java.util.logging.Logger;
  * - C-F: Circular motion reversed (variants)
  */
 public class CPZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj19 moves a platform; xFlip selects oscillation/height phase, not body facing.
+
     private static final Logger LOGGER = Logger.getLogger(CPZPlatformObjectInstance.class.getName());
 
     // Subtype properties: width_pixels, mapping_frame (from

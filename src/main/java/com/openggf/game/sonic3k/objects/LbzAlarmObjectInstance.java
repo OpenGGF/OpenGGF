@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -37,7 +39,7 @@ import java.util.List;
  * {@code $41}; subtype bit 1 chooses the spawn side.
  */
 public final class LbzAlarmObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.Container {
 
     private static final int COLLISION_FLAGS = 0xD7;
     private static final int COLLISION_SIZE_INDEX = 0x17;

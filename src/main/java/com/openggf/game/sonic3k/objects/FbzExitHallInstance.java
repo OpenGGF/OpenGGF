@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -12,7 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /** Locked-on {@code Obj_FBZExitHall} ($8A), placed longword-offset subtypes $00/$04. */
-public final class FbzExitHallInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class FbzExitHallInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private final boolean hallRecord;
     private boolean destroyedByOffscreen;
 

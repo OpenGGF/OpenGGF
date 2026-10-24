@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -47,7 +49,9 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class FallingPillarObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj23 owns upper/lower pillar sections; shaking and vertical falling do not define facing.
+
     private static final Logger LOGGER = Logger.getLogger(FallingPillarObjectInstance.class.getName());
 
     private static final int PALETTE_INDEX = 1;

@@ -1,5 +1,7 @@
 package com.openggf.editor.project;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
@@ -182,8 +184,8 @@ class TestStageplayRouteOverlayPictures {
                 .withWorldCommands(List.of(new WorldCommand("clear0",0,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none()),
                         new WorldCommand("clear30",30,WorldCommandKind.CLEAR_OBJECTS,"",ObjectTarget.none())))
                 .withActors(List.of(new Actor("hero","Sonic","s2","sonic",List.of(
-                        new ActorKey(0,100,656,0,-1,false,true,1,Interpolation.HOLD),
-                        new ActorKey(30,100,656,0,-1,false,true,1,Interpolation.HOLD)))))
+                        new ActorKey(0,100,656,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD),
+                        new ActorKey(30,100,656,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",true,0,List.of())));
     }
     private static byte[] read(int[] v){

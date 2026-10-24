@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.NativePositionOps;
@@ -38,7 +39,9 @@ import java.util.List;
  * <p>
  * Reference: docs/s1disasm/_incObj/72 Teleporter.asm
  */
-public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Teleporter paths move the separately owned player; the invisible controller has no facing body.
 
     // ---- Trigger detection constants ----
     // From disassembly: cmpi.w #$10,d0 (X range check)

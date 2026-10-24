@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -21,7 +23,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZMagneticPlatform} ($74), $3B25C-$3B4DC. */
 public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private final int maximumRise;
     private int y;

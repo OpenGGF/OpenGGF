@@ -20,7 +20,7 @@ import java.util.Set;
  * Compiles shot-local directing recipes into the portable Stageplay contract. No ROM or UI needed.
  */
 public final class StageplayScriptCompiler {
-    public static final int VERSION = 6;
+    public static final int VERSION = 7;
     public static final int MAX_BYTES = 32 * 1024 * 1024;
     private static final ObjectMapper JSON =
             new ObjectMapper(
@@ -376,7 +376,7 @@ public final class StageplayScriptCompiler {
                                             "y",
                                             "animation",
                                             "pose",
-                                            "flipX",
+                                            "facing",
                                             "visible",
                                             "interpolation",
                                             "mode",
@@ -408,7 +408,7 @@ public final class StageplayScriptCompiler {
         defaults(key, "y", 0);
         defaults(key, "animation", 0);
         defaults(key, "pose", -1);
-        defaults(key, "flipX", false);
+        defaults(key, "facing", "RIGHT");
         defaults(key, "visible", true);
         defaults(key, "mode", "FREE");
         defaults(key, "interpolation", text(key, "mode").equals("FREE") ? "HOLD" : "LINEAR");
@@ -700,7 +700,7 @@ public final class StageplayScriptCompiler {
                                                 "y",
                                                 "animation",
                                                 "pose",
-                                                "flipX",
+                                                "facing",
                                                 "visible",
                                                 "scale",
                                                 "interpolation"
@@ -729,7 +729,7 @@ public final class StageplayScriptCompiler {
         defaults(key, "y", 0);
         defaults(key, "animation", 0);
         defaults(key, "pose", -1);
-        defaults(key, "flipX", false);
+        defaults(key, "facing", "RIGHT");
         defaults(key, "visible", true);
         defaults(key, "scale", 1);
         defaults(key, "interpolation", puppet ? "HOLD" : "LINEAR");
@@ -852,6 +852,8 @@ public final class StageplayScriptCompiler {
             throws IOException {
         if (!(value instanceof ObjectNode node))
             throw new IOException(label + " must be an object");
+        if ((label.equals("actor key") || label.equals("object key")) && node.has("flipX"))
+            throw new IOException("Raw flipX is not facing; use facing: LEFT or RIGHT for " + label);
         if (allowed.length != 0) {
             Set<String> names = Set.of(allowed);
             var fields = node.fieldNames();

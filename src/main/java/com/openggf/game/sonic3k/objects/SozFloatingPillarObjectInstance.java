@@ -17,7 +17,9 @@ import java.util.List;
 
 /** Obj_SOZFloatingPillar ($41176), including the top/bottom spike variants. */
 public final class SozFloatingPillarObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native sliding/rising door, pillar or sand-wall frames are geometric surfaces without horizontal facing.
     private boolean initialized;
     private int x,y,width,height,mappingFrame,hurtMask;
     public SozFloatingPillarObjectInstance(ObjectSpawn spawn) { super(spawn,"SOZFloatingPillar"); x=spawn.x(); y=spawn.y(); }

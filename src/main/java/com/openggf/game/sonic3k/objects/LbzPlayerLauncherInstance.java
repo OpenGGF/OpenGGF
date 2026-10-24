@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -27,7 +29,15 @@ import java.util.Map;
  *
  * <p>ROM reference: {@code Obj_LBZPlayerLauncher} (sonic3k.asm:51851-52079).
  */
-public final class LbzPlayerLauncherInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzPlayerLauncherInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The same direction that the native rider/launch routine installs on the player.
+        return (facingLeft) ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.LEFT ? 1 : 0);
+    }
+
     private static final int FAST_LAUNCH_SPEED = 0x1000;
     private static final int SLOW_LAUNCH_SPEED = 0x0A00;
     private static final int DETECT_HALF_SIZE = 0x10;

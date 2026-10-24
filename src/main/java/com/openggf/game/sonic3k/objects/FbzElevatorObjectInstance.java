@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -22,7 +24,7 @@ import java.util.List;
  * controller.
  */
 public final class FbzElevatorObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int SPAWN_RELOAD = 0x5F;
 
     /** ROM word {@code $30(a0)}; zeroed placement RAM makes the first predecrement spawn immediately. */

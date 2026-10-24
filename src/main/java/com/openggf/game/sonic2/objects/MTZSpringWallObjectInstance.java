@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.SpringHelper;
 
@@ -45,7 +47,12 @@ import java.util.List;
  * </ul>
  */
 public class MTZSpringWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj66's side-bounce owner writes +$800 with x_flip clear, -$800 when set.
+        return xFlip ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: move.w #$13,d1
     private static final int SOLID_HALF_WIDTH = 0x13;

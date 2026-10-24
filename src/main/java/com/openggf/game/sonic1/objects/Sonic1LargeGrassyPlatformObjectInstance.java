@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -53,7 +54,21 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/2F MZ Large Grassy Platforms.asm
  */
 public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // LGrass geometry has no horizontal facing. When Type05 creates GFire,
+        // the live walking flame owns the whole assembly's propagation direction;
+        // its stationary flame children add no other horizontal direction.
+        if (walkerFire != null && !walkerFire.isDestroyed()) {
+            return walkerFire.nativeFacing();
+        }
+        if (fireSpawned && walkerFire == null) {
+            throw new IllegalStateException("Burning platform has no initialized native flame owner");
+        }
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // From disassembly: move.b #5,obPriority(a0)
     private static final int PRIORITY = 5;

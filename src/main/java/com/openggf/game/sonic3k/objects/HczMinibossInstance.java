@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -49,7 +50,12 @@ import java.util.logging.Logger;
  * loop with orbiting rockets, the suction phase, custom palette flashing, and
  * a signpost-style defeat handoff.
  */
-public class HczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public class HczMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // setFacingLeft writes this bit from storedHorizontalVelocity < 0; its polarity differs from the Eggman ship bosses.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final Logger LOG = Logger.getLogger(HczMinibossInstance.class.getName());
 
     private static final int ROUTINE_INIT = 0;

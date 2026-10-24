@@ -120,8 +120,8 @@ python3 tools/stageplay/stageplay.py render \
 ```
 
 Build the current engine first (`--build help`), choose a new output for each take,
-and keep media outside the checkout. Every bundled screenplay is version six;
-canonical scenes are version seven and open directly in the current engine.
+and keep media outside the checkout. Every bundled screenplay is version seven;
+canonical scenes are version eight and open directly in the current engine.
 Inspect the simulated native positions, velocities and goal statuses before
 rendering: the authored timeline alone cannot resolve Puppet movement.
 
@@ -201,7 +201,7 @@ unnecessary objects or split the shot if that budget is exhausted.
 ## Unified native world sample
 
 [Screenplay](unified-world.script.json) and [canonical scene](unified-world.stageplay)
-show the current version-seven canonical model (screenplay six): S1 Sonic, S2 Tails and S3K Knuckles perform
+show the current version-eight canonical model (screenplay seven): S1 Sonic, S2 Tails and S3K Knuckles perform
 native movement together, beside a posed actor. The 384×216 film holds fractional
 zoom 1.2 in both a populated world and the same world after `CLEAR_OBJECTS`.
 Rings remain separately owned. Supply all three ROMs to simulate or render it

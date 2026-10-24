@@ -1,5 +1,7 @@
 package com.openggf.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.game.ModApi;
 
 import java.util.ArrayList;
@@ -51,7 +53,7 @@ public final class StageplayTimeline {
             }
             actors.add(new ActorPose(actor.id(), actor.gameId(), actor.character(),
                     lerp(key.x(), next.x(), weight), lerp(key.y(), next.y(), weight), key.animation(),
-                    frame - keys.get(phaseStart).frame(), key.pose(), key.flipX(), key.visible(),
+                    frame - keys.get(phaseStart).frame(), key.pose(), (key.facing() == Facing.LEFT), key.visible(),
                     lerp(key.scale(), next.scale(), weight)));
         }
         List<CameraKey> cameraKeys = document.camera();
@@ -148,6 +150,7 @@ public final class StageplayTimeline {
         }
     }
 
+    /** Resolved pixel pose. Author logical direction with ActorKey.facing, never these render flip bits. */
     @ModApi
     public record ActorPose(String actorId, String gameId, String character, double x, double y,
             int animation, int animationTick, int pose, boolean flipX, boolean visible, double scale, boolean flipY) {

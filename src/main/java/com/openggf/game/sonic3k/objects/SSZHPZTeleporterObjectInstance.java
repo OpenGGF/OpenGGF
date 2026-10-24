@@ -20,6 +20,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -64,7 +65,9 @@ import java.util.List;
  * {@code sub_45866} cycles those colours from {@code word_4670C} while a transport is active.
  */
 public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SlopedSolidProvider, TeleporterBeamOwner {
+        implements RewindRecreatable, SlopedSolidProvider, TeleporterBeamOwner, ObjectVisualFacing.Container {
+
+    // Pad/beam geometry has no shared facing; the Mecha Sonic encounter child owns its independent direction.
     private static final int HPZ_MAPPING_FRAME = 0xA;
     private static final int HPZ_PALETTE_LINE = 0;
     /** {@code byte_466E8}. */

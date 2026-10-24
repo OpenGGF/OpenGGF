@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 
 import com.openggf.game.CheckpointState;
@@ -34,7 +36,9 @@ import java.util.logging.Logger;
  * - Anim 2: frames 0,4 alternating (blinking after dongle expires)
  * </p>
  */
-public class CheckpointObjectInstance extends BoxObjectInstance implements RewindRecreatable {
+public class CheckpointObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj79 owns a post, orbiting dongle and stars; their orbital phase is not horizontal facing.
+
     private static final Logger LOGGER = Logger.getLogger(CheckpointObjectInstance.class.getName());
 
     // Activation zone dimensions (ROM: x_delta + 8 < $10, y_delta + $40 < $68)

@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -91,7 +92,9 @@ import java.util.List;
  * is 0 and this class reproduces the ROM's inert read by not modelling bit 6 at all.
  */
 public final class LrzRockCrusherObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable, RomObjectCodePointerProvider {
+        implements TouchResponseProvider, TouchResponseAttackable, RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZRockCrusher and its rock pieces/explosions form a vertical crushing assembly without horizontal facing.
 
     /** {@code ObjDat_LRZRockCrusher}: {@code dc.w $180} (sonic3k.asm:197534). */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0180);

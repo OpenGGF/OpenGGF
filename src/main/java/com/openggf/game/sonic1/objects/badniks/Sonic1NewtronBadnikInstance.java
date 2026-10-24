@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -45,7 +46,10 @@ import java.util.List;
  *   <li>4 (A_Newt_Fires): frames 0,1,1,2,1,1,0 at speed $13 with afRoutine - firing</li>
  * </ul>
  */
-public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1NewtronBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType values used during different phases
     private static final int COLLISION_SIZE_FALLING = 0x0C;

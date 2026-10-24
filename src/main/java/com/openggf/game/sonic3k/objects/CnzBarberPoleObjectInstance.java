@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -30,7 +32,7 @@ import java.util.Map;
  * {@code GetSineCosine}.
  */
 public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
-        implements RomObjectCodePointerProvider, RewindRecreatable {
+        implements RomObjectCodePointerProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int TRACK_LIMIT = 0xA0;
     private static final int TRACK_FRACTION_MASK = 0xFFFF;

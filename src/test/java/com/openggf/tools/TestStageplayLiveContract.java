@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestStageplayLiveContract {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final String SOURCE = """
-            {"version":6,"name":"Native intent","width":320,"height":224,
+            {"version":7,"name":"Native intent","width":320,"height":224,
              "cast":[{"id":"pilot","name":"Tails","gameId":"s3k","character":"tails"}],
              "shots":[{"id":"flight","durationFrames":600,
                "set":{"gameId":"s3k","zone":0,"act":0},

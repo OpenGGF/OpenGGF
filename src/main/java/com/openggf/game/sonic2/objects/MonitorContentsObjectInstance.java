@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
@@ -19,7 +21,9 @@ import java.util.List;
  * allocation from Obj26_Break.
  */
 public final class MonitorContentsObjectInstance extends AbstractMonitorObjectInstance
-        implements SpawnNullableReferenceRewindRecreatable {
+        implements SpawnNullableReferenceRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj2E raises a reward icon vertically; the portrait/icon is not a facing body.
+
     private static final int ICON_FRAME_OFFSET = 1;
 
     private int subtype;

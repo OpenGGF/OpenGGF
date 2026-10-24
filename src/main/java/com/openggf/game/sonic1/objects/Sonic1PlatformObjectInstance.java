@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
@@ -48,7 +49,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/18 Platforms.asm
  */
 public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Ptfm oscillation/fall states move platform geometry without horizontal facing.
 
     // From disassembly: move.b #$20,obActWid(a0)
     private static final int HALF_WIDTH = 0x20;

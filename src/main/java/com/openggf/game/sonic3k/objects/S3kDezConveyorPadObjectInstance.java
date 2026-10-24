@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -19,7 +20,9 @@ import java.util.List;
 
 /** SKL $53, Obj_DEZConveyorPad / loc_479F0..sub_47B58 (sonic3k.asm:93665-93911). */
 public final class S3kDezConveyorPadObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native travel and reverse-gravity transforms move pad/platform geometry without logical horizontal facing.
     private int currentX;
     private int yFixed;
     private int yVelocity;

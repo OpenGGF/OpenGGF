@@ -8,12 +8,15 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
 /** SKL $B3, Obj_StartNewLevel ($863EC): Check_InMyRange and a packed zone/act request. */
-public final class S3kStartNewLevelObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class S3kStartNewLevelObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // The native destination trigger is invisible and has no visual child or horizontal-facing body.
     private boolean requested;
 
     public S3kStartNewLevelObjectInstance(ObjectSpawn spawn) {

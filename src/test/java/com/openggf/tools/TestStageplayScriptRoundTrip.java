@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -47,7 +49,7 @@ class TestStageplayScriptRoundTrip {
         StageplayDocument document = refinedDocument();
         byte[] screenplay = roundTrip(document);
         var tree = (ObjectNode) JSON.readTree(screenplay);
-        assertEquals(6, tree.path("version").intValue());
+        assertEquals(StageplayScriptCompiler.VERSION, tree.path("version").intValue());
         assertEquals(List.of(B, A), strings(tree.path("order").path("puppets")));
         assertEquals(document.sceneChanges().getFirst().id(), tree.path("shots").get(1).path("transition").path("id").textValue());
         assertEquals(64, document.sceneChanges().getFirst().id().length());
@@ -56,7 +58,7 @@ class TestStageplayScriptRoundTrip {
                 "The shot containing an interval's start owns the complete unsplit interval");
     }
 
-    @TestFactory Stream<DynamicTest> strictVersionSixOrderRejectsAnythingExceptAnExactTypedPermutation() throws Exception {
+    @TestFactory Stream<DynamicTest> strictVersionSevenOrderRejectsAnythingExceptAnExactTypedPermutation() throws Exception {
         var cases = new ArrayList<DynamicTest>();
         for (String track : List.of("puppets", "captions", "audio", "cameraEffects", "dialogue")) {
             cases.add(reject("missing " + track, root -> order(root, track).remove(0)));
@@ -71,27 +73,27 @@ class TestStageplayScriptRoundTrip {
         return cases.stream();
     }
 
-    @Test void versionSixRemainsStrictAboutUnknownDuplicateTrailingAndMalformedFields() throws Exception {
+    @Test void versionSevenRemainsStrictAboutUnknownDuplicateTrailingAndMalformedFields() throws Exception {
         for (Consumer<ObjectNode> edit : List.<Consumer<ObjectNode>>of(
                 root -> root.put("unexpected", true),
                 root -> shot(root, 0).put("canonical", "hidden payload"),
                 root -> ((ObjectNode) shot(root, 0).path("camera").get(0)).put("unused", 4),
                 root -> ((ObjectNode) shot(root, 1).path("transition")).put("unused", true),
                 root -> ((ObjectNode) shot(root, 1).path("transition")).put("id", "bad id"),
-                root -> root.put("version", 6.5), root -> root.put("version", 7))) {
+                root -> root.put("version", 6.5), root -> root.put("version", 6))) {
             var root = recipe(); edit.accept(root);
             assertThrows(IOException.class, () -> compile(root));
         }
         String encoded = new String(StageplayScriptDecompiler.decompile(refinedDocument()), StandardCharsets.UTF_8);
         assertThrows(IOException.class, () -> StageplayScriptCompiler.compile((encoded + " {}").getBytes(StandardCharsets.UTF_8)));
         assertThrows(IOException.class, () -> StageplayScriptCompiler.compile(
-                encoded.replaceFirst("\\{", "{\"version\":6,").getBytes(StandardCharsets.UTF_8)), "Duplicate version must fail");
+                encoded.replaceFirst("\\{", "{\"version\":7,").getBytes(StandardCharsets.UTF_8)), "Duplicate version must fail");
         assertThrows(IOException.class, () -> StageplayScriptCompiler.compile(
                 encoded.replaceFirst("\\\"order\\\"\\s*:", "\"order\":{},\"order\":").getBytes(StandardCharsets.UTF_8)), "Duplicate nested order must fail");
     }
 
     @Test void rejectsUnsupportedScreenplayVersionsWithoutMigration() throws Exception {
-        for (int version : new int[]{0, 1, 2, 3, 4, 5, 7}) {
+        for (int version : new int[]{0, 1, 2, 3, 4, 5, 6, 8}) {
             var script = minimalTwoShots(version);
             assertThrows(IOException.class, () -> compile(script));
         }
@@ -137,13 +139,13 @@ class TestStageplayScriptRoundTrip {
         var thirdSet = new SetSource("s2", 0, 0, "", "");
         var actors = List.of(actor(A, "Alpha", "sonic"), actor(B, "Beta", "tails"),
                 new Actor(MANUAL, "Manual", "s3k", "knuckles", List.of(
-                        new ActorKey(0, -17.25, 101.5, 18, 4, false, true, 2.25, Interpolation.SMOOTH),
-                        new ActorKey(60, 233.75, -4.5, 2, 7, true, true, .5, Interpolation.LINEAR),
-                        new ActorKey(120, 11, 12, 1, -1, false, false, 1, Interpolation.HOLD))));
+                        new ActorKey(0, -17.25, 101.5, 18, 4, Facing.RIGHT, true, 2.25, Interpolation.SMOOTH),
+                        new ActorKey(60, 233.75, -4.5, 2, 7, Facing.LEFT, true, .5, Interpolation.LINEAR),
+                        new ActorKey(120, 11, 12, 1, -1, Facing.RIGHT, false, 1, Interpolation.HOLD))));
         var part = new ObjectPartPose("root/child0/inline1", 65535, 65535);
-        var keys = List.of(new ObjectKey(0, 80.25, 130.5, 8, 4, true, true, Interpolation.SMOOTH, ObjectMode.POSE, List.of(part)),
-                new ObjectKey(60, 100.75, 131.5, 2, -1, false, true, Interpolation.LINEAR, ObjectMode.PUPPET, List.of(part)),
-                new ObjectKey(120, 130, 132, 0, 0, false, false, Interpolation.HOLD, ObjectMode.POSE));
+        var keys = List.of(new ObjectKey(0, 80.25, 130.5, 8, 4, Facing.RIGHT, true, Interpolation.SMOOTH, ObjectMode.POSE, List.of(part)),
+                new ObjectKey(60, 100.75, 131.5, 2, -1, Facing.LEFT, true, Interpolation.LINEAR, ObjectMode.PUPPET, List.of(part)),
+                new ObjectKey(120, 130, 132, 0, 0, Facing.LEFT, false, Interpolation.HOLD, ObjectMode.POSE));
         var objects = List.of(new ObjectActor(id("animal"), "Released animal", "s3k", 0, 0, 0, 0, -1, keys,
                         List.of(new ObjectCommand(id("objectmove"), 62, ObjectCommandKind.MOVE_TO, -8.25, 97.5, .375),
                                 new ObjectCommand(id("objectstop"), 90, ObjectCommandKind.STOP, 0, 0, 0)), ObjectSourceKind.RELEASED_ANIMAL),
@@ -181,9 +183,9 @@ class TestStageplayScriptRoundTrip {
                         new WorldCommand(id("clearObjects"), 60, WorldCommandKind.CLEAR_OBJECTS, "", ObjectTarget.none())));
     }
     private static Actor actor(String id, String name, String character) {
-        return new Actor(id, name, "s2", character, List.of(new ActorKey(0, 30, 144, 0, -1, false, true, 1, Interpolation.HOLD),
-                new ActorKey(60, 35, 145, 0, -1, true, true, 1, Interpolation.HOLD),
-                new ActorKey(120, 40, 146, 0, -1, false, true, 1, Interpolation.HOLD)));
+        return new Actor(id, name, "s2", character, List.of(new ActorKey(0, 30, 144, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD),
+                new ActorKey(60, 35, 145, 0, -1, Facing.LEFT, true, 1, Interpolation.HOLD),
+                new ActorKey(120, 40, 146, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)));
     }
     private static DialogueCue dialogue(String id, int start, int end) {
         return new DialogueCue(id, start, end, A, "", "Hi!", "usedSkin", "usedTyper", 8, 170, 384, 48,

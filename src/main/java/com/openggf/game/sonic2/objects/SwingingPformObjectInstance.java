@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -63,7 +65,8 @@ import java.util.logging.Logger;
  * decreases it. Max angle is 0x40 (90 degrees), giving ~4 pixels of Y offset.
  */
 public class SwingingPformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj82 moves a geometric platform; rotation/vertical motion does not face a body.
 
     private static final Logger LOGGER = Logger.getLogger(SwingingPformObjectInstance.class.getName());
 

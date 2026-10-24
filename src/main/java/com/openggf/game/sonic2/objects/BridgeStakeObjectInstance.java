@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -29,7 +31,8 @@ import java.util.List;
  * </ul>
  * No collision/physics (pure scenery).
  */
-public class BridgeStakeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BridgeStakeObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj1C is a scenery stake; placement mirroring preserves its native attachment geometry.
 
     public BridgeStakeObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);

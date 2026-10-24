@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugRenderContext;
@@ -44,7 +46,8 @@ import java.util.List;
  * Shares art with Object 0x6B (CPZ Elevator/Platform).
  */
 public class CPZStaircaseObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable {
+        implements MultiPieceSolidProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj78 mirrors the height order of four blocks; the staircase has no logical horizontal front.
 
     // Constants from disassembly
     /** Obj78 allocates parent + 3 children (s2.asm:55967-55995). */

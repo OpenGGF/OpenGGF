@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.GameServices;
@@ -43,7 +45,7 @@ class TestStageplayOfflineSimulationRom {
         var document = StageplayDocument.empty(game, 0, 0, x, y, 320, 224)
                 .withDurationFrames(180)
                 .withActors(List.of(new Actor("hero", "Hero", game, character, List.of(
-                        new ActorKey(0, x, y, 0, -1, false, true, 1, Interpolation.HOLD)))))
+                        new ActorKey(0, x, y, 0, -1, Facing.RIGHT, true, 1, Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero", true, 0, List.of(
                         new PuppetCommand("jump", 10, PuppetCommandKind.JUMP, 0, 0, 0, 12),
                         new PuppetCommand("move", 80, PuppetCommandKind.MOVE_TO, x + 80, y, .5, 0),

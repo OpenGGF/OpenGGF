@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -26,7 +27,12 @@ import java.util.List;
  * the subtype $1C object itself.
  */
 public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This native cutscene actor keeps the unmirrored Knuckles direction; motion and reaction poses do not turn its logical facing.
+        return ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private static final int INITIAL_X = 0x02B0;
     private static final int INITIAL_Y = 0x066C;
     private static final int WALK_TARGET_X = 0x0360;

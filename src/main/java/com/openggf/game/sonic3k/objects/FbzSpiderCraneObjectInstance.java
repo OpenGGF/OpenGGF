@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -16,7 +18,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZSpiderCrane} ($E5), $3D0A2-$3D2F6. */
 public final class FbzSpiderCraneObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private enum State { WAIT, DESCEND, CAPTURE, RETRACT, TRAVEL, INERT }
 
     private State state = State.WAIT;

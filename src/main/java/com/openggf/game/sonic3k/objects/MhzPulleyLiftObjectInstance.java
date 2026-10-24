@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -27,7 +28,9 @@ import java.util.List;
  * PLC art ({@code Map_MHZPulleyLift / ArtTile_MHZMisc+$DD}).
  */
 public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native pulley wheels, rope and opposing handle poses are mechanical geometry without a shared facing.
     private static final int LEFT_HANDLE_X_OFFSET = -0x32;
     private static final int RIGHT_HANDLE_X_OFFSET = 0x32;
     private static final int HANDLE_Y_BIAS = -6;

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
@@ -41,7 +42,9 @@ import java.util.List;
  * {@code $20} half-height and is modelled as a constant rather than a field.
  */
 public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native invisible field/path logic controls separately owned players; it has no facing body or visual children.
 
     /** ROM {@code move.w #$20,$30(a0)} (sonic3k.asm:95519): half-height of the active Y band. */
     private static final int Y_BAND_HALF_HEIGHT = 0x20;

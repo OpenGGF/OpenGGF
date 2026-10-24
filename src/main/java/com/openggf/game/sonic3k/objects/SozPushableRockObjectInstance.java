@@ -17,7 +17,9 @@ import java.util.List;
 
 /** SKL $3E, Obj_SOZPushableRock ($40546), shipped FixBugs=0 behavior. */
 public final class SozPushableRockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native rock/terrain frames and break pieces have no horizontal-facing body; placement flips retain geometry.
     private static final int PUSH = 0, FALL = 1, RIDE = 2, STOP = 3;
     // Native object status pushing bits. The provider callback preserves the bit
     // when SolidObjectFull skips offscreen P2 without returning fresh contact.

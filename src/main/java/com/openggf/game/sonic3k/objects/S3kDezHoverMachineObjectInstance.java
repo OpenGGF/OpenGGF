@@ -5,13 +5,16 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 
 import java.util.List;
 
 /** SKL $5E, Obj_DEZHoverMachine / loc_494DA (sonic3k.asm:95745-95779). */
 public final class S3kDezHoverMachineObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native machine and independently allocated rotor are symmetric mechanical parts without horizontal facing.
     private boolean initialized;
     private int mappingFrame;
 

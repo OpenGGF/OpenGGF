@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -39,7 +41,8 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Container {
+    // Obj68 block has no horizontal front; its rotating spike owns a separate native direction pose and anchor.
 
     // From disassembly: move.w #$1B,d1 / move.w #$10,d2 / move.w #$11,d3
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 0x10, 0x11);

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
@@ -49,7 +51,8 @@ import static org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN;
  * @see HtzRuntimeState#cameraBgYOffset() For earthquake Y offset
  */
 public class RisingLavaObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj30 is terrain-aligned collision geometry; its slope is not a logical body facing.
 
     // ========================================================================
     // ROM Constants - Width table from Obj30_Widths (line 49042)

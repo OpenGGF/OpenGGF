@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -40,7 +41,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/32 Button.asm
  */
 public class Sonic1ButtonObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// But_Action depresses a floor switch; its frame/flash state has no horizontal facing.
 
     // From disassembly: move.w #$1B,d1 / move.w #5,d2 / move.w #5,d3
     private static final int SOLID_HALF_WIDTH = 0x1B; // 27 pixels

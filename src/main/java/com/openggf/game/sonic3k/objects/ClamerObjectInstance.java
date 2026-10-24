@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -45,7 +46,12 @@ import java.util.List;
  * the parent close flag.
  */
 public final class ClamerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, TouchResponseAttackable, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, TouchResponseAttackable, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // updateIdle selects player-right when this bit is set, and auto-close mirrors its shot to positive X. Spring launches intentionally go the other way.
+        return facingRight ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
 
     /*
      * ROM Clamer spring child collision_flags = $D7 ($C0 | $17), set once at

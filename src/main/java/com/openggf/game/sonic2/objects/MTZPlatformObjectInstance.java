@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.OscillationManager;
@@ -55,7 +57,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class MTZPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj6B moves a geometric platform; quadrant and oscillation flips are not body facing.
 
     private static final Logger LOGGER = Logger.getLogger(MTZPlatformObjectInstance.class.getName());
 

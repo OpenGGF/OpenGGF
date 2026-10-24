@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -33,7 +34,11 @@ import java.util.List;
  * - Body stays stationary as anchor after spawning heads
  */
 public class RexonBadnikInstance extends AbstractBadnikInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     // Collision size from Obj94_SubObjData (s2.asm:74061)
     // Body has collision 0, not 0x0B - heads have their own collision
     private static final int COLLISION_SIZE_INDEX = 0x00;

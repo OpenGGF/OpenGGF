@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -38,7 +40,7 @@ import java.util.Objects;
  * {@code Wait_Draw} for four frames and creates an {@code Obj_CreateBossExplosion} subtype 6. A
  * launcher missile whose launcher was destroyed explodes the same way.
  */
-public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance {
+public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance implements ObjectVisualFacing.PoseOwned {
     /** Launcher interface the boss's {@code loc_81F94} provides. */
     public interface Launcher {
         int launcherX();

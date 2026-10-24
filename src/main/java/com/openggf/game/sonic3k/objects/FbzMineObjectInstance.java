@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -17,7 +19,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZMine} ($E1), $3C93E-$3CA08. */
 public final class FbzMineObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
     private enum State { IDLE, BLINK, ARMED, EXPLODED }
 
     private State state = State.IDLE;

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -39,7 +41,8 @@ import java.util.List;
  * </ul>
  */
 public class VPropellerObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjB4 animates a propeller; yFlipped controls hazard activation, not horizontal facing.
 
     // From disassembly: collision_flags = $A8
     // Upper 2 bits 0x80 = HURT category, lower 6 bits = 0x28 = size index 40

@@ -11,7 +11,9 @@ import java.util.List;
 
 /** SKL $40, Obj_SOZRisingSandWall ($40B16), loc_40B48 through loc_40D0A. */
 public final class SozRisingSandWallObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native sliding/rising door, pillar or sand-wall frames are geometric surfaces without horizontal facing.
     private final FbzParticipantStateTable pushing = new FbzParticipantStateTable(1);
     private int phase, riseTimer = 0x19, animationTimer, frame, plumeFrame = 9;
     private int x, y;

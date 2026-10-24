@@ -18,7 +18,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         List<AudioCue> audio, List<CameraEffect> cameraEffects, List<SceneChange> sceneChanges,
         List<DialogueTyper> dialogueTypers, List<DialogueSkin> dialogueSkins, List<DialogueCue> dialogue,
         List<PuppetTrack> puppets, List<ObjectActor> objectActors, List<WorldCommand> worldCommands) {
-    public static final int VERSION = 7;
+    public static final int VERSION = 8;
     public static final int FRAMES_PER_SECOND = 60;
     public static final int MAX_DURATION_FRAMES = 36_000;
     private static final int MAX_KEYS = 100_000;
@@ -126,7 +126,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                                 && key.scale() == 1,
                         "Physics puppets require held unit-scale keys and native animation: " + actor.id());
                 if (boundaries.contains(key.frame())) anchor = key;
-                else require(key.x() == anchor.x() && key.y() == anchor.y() && key.flipX() == anchor.flipX(),
+                else require(key.x() == anchor.x() && key.y() == anchor.y() && key.facing() == anchor.facing(),
                         "Physics puppet position/facing keys are only allowed at shot boundaries: " + actor.id());
             }
             for (PuppetCommand command : puppet.commands()) {
@@ -160,7 +160,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
                                 "Placed object belongs to another set: " + actor.id());
                 }
                 if (key.mode() == ObjectMode.FREE)
-                    require(key.x() == anchor.x() && key.y() == anchor.y() && key.flipX() == anchor.flipX(),
+                    require(key.x() == anchor.x() && key.y() == anchor.y() && key.facing() == anchor.facing(),
                             "Free object keys must retain the shot's native anchor: " + actor.id());
             }
             for (ObjectCommand command : actor.commands()) {
@@ -359,9 +359,12 @@ public record StageplayDocument(int version, String name, int durationFrames, in
         }
     }
 
+    /** Native logical horizontal direction; deliberate turn/skid/look-back poses retain their art. */
+    @ModApi public enum Facing { LEFT, RIGHT }
+
     /** Interpolation applies from this key to the next; discrete properties change at the key. */
     @ModApi
-    public record ActorKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+    public record ActorKey(int frame, double x, double y, int animation, int pose, Facing facing,
             boolean visible, double scale, Interpolation interpolation) {
         public ActorKey {
             range(frame, 0, MAX_DURATION_FRAMES - 1, "actor frame");
@@ -370,7 +373,7 @@ public record StageplayDocument(int version, String name, int durationFrames, in
             range(animation, 0, 65535, "animation");
             range(pose, -1, 65535, "pose");
             finiteRange(scale, .01, 64, "scale");
-            require(interpolation != null, "interpolation is required");
+            require(interpolation != null && facing != null, "interpolation and facing are required");
         }
     }
 
@@ -410,17 +413,17 @@ public record StageplayDocument(int version, String name, int durationFrames, in
 
     /** Discrete mode/animation changes apply at the key; only directed visual modes interpolate position. */
     @ModApi
-    public record ObjectKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+    public record ObjectKey(int frame, double x, double y, int animation, int pose, Facing facing,
                             boolean visible, Interpolation interpolation, ObjectMode mode, List<ObjectPartPose> parts) {
-        public ObjectKey(int frame, double x, double y, int animation, int pose, boolean flipX,
+        public ObjectKey(int frame, double x, double y, int animation, int pose, Facing facing,
                          boolean visible, Interpolation interpolation, ObjectMode mode) {
-            this(frame, x, y, animation, pose, flipX, visible, interpolation, mode, List.of());
+            this(frame, x, y, animation, pose, facing, visible, interpolation, mode, List.of());
         }
         public ObjectKey {
             range(frame, 0, MAX_DURATION_FRAMES - 1, "object frame");
             coordinate(x, "object x"); coordinate(y, "object y");
             range(animation, 0, 65535, "object animation"); range(pose, -1, 65535, "object pose");
-            require(interpolation != null && mode != null, "Object interpolation and mode are required");
+            require(interpolation != null && mode != null && facing != null, "Object interpolation, mode and facing are required");
             parts = boundedCopy(parts, 256, "object parts");
             Set<String> partIds = new HashSet<>();
             for (ObjectPartPose part : parts) require(partIds.add(part.partId()), "Duplicate object part: " + part.partId());

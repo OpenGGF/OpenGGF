@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -32,7 +33,9 @@ import java.util.List;
  * applies.
  */
 public final class LrzLavaFallObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomObjectCodePointerProvider {
+        implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Obj_LRZLavaFall animates a vertical lava curtain without a horizontal-facing body.
 
     /** {@code move.b #5,anim_frame_timer(a0)} (sonic3k.asm:88830). */
     private static final int DROP_PERIOD_RELOAD = 5;

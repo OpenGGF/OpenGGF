@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -74,7 +75,10 @@ import java.util.List;
  *   <li>Frame 3: Impact (player in air)</li>
  * </ul>
  */
-public class CrawlBadnikInstance extends AbstractBadnikInstance implements TouchResponseListener, RewindRecreatable {
+public class CrawlBadnikInstance extends AbstractBadnikInstance implements TouchResponseListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // ========================================================================
     // ROM Constants

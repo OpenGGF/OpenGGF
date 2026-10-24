@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -33,7 +34,23 @@ import java.util.List;
  * </ul>
  */
 public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance
-        implements RomObjectCodePointerProvider, RewindRecreatable {
+        implements RomObjectCodePointerProvider, RewindRecreatable, ObjectVisualFacing.PlacementSource {
+
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj_Spikes frames 4..7 use the horizontal SpikesSprings tiles: the
+        // unmirrored points face left, as in S2's ArtNem_HorizSpike. Movement
+        // phase and reverse-gravity collision selection do not turn those tips.
+        if (!isSideways()) return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        return (spawn.renderFlags() & 1) != 0
+                ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
+    @Override
+    public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        if (nativeFacing() == ObjectVisualFacing.Basis.NON_DIRECTIONAL) return sourceFlags;
+        return facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? sourceFlags | 1 : sourceFlags & ~1;
+    }
     // Push mode constants (ROM: sub_2438A)
     private static final int PUSH_RATE_PERIOD = 0x10;   // $3A reset value: every 17 frames
     private static final int PUSH_MAX_DISTANCE = 0x20;  // $3C init: 32 pixels total

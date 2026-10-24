@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -47,7 +48,9 @@ import java.util.List;
  * (part 2).asm
  */
 public class Sonic1SwingingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, TouchResponseProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Swing pendulum phase positions platforms/radial balls and chain children, without body facing.
 
     // Oscillation data offset: v_oscillate+$1A → data offset 0x18
     private static final int OSC_OFFSET = 0x18;

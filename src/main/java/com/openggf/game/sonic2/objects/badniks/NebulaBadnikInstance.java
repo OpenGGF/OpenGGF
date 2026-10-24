@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
@@ -36,7 +37,12 @@ import java.util.List;
  *
  * SCZ objects also have Tornado_Velocity_X/Y added each frame (loc_36776).
  */
-public class NebulaBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class NebulaBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native routine always flies left, including its stationary attack pause; facing is not velocity-at-this-instant.
+        return ObjectVisualFacing.Basis.LEFT;
+    }
+
     // Obj99_SubObjData2: collision_flags = 6
     private static final int COLLISION_SIZE_INDEX = 6;
 

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.*;
@@ -7,7 +8,11 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TrigLookupTable;
 
 /** SKL $94, Obj_Skorp / loc_8E670–sub_8EA1C. Six actual linked tail slots. */
-public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
     private int routine;
     private int timer;
     private int patrolPeriod;

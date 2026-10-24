@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -34,7 +35,10 @@ import java.util.Objects;
  * then runs the raw breath animation. Wind pressure starts once the mapping
  * frame reaches 7 and breath child particles are emitted every 8 frames.
  */
-public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x1A;
     private static final int PRIORITY_BUCKET = 5;

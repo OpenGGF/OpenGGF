@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.ObjectRefId;
@@ -48,7 +49,16 @@ import java.util.List;
  */
 public final class ToxomisterBadnikInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable,
-        RewindRecreatable, RomObjectCodePointerProvider {
+        RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.PlacementSource {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return !facingRight ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        // The constructor owns this mapping; it differs from other native badniks.
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? 1 : 0);
+    }
 
     /** {@code ObjDat_Toxomister}: {@code dc.w $280}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x0280);

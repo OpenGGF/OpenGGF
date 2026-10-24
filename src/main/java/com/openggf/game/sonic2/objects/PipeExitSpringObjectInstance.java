@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.SpringHelper;
 import com.openggf.level.objects.BoxObjectInstance;
@@ -45,7 +47,8 @@ import java.util.List;
  * as the player passes underneath through the tube.
  */
 public class PipeExitSpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj7B is always upright and launches vertically; it has no horizontal facing.
 
     // Animation IDs matching Ani_obj7B in the disassembly
     private static final int ANIM_IDLE = 0;

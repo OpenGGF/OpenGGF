@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -38,7 +39,9 @@ import java.util.List;
  * Each log is 16 pixels wide. The bridge is centered on the spawn X position.
  */
 public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
-        implements SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Bridge logs sag independently; neither the logs nor their reserved child slots have a facing.
 
     private static final int LOG_WIDTH = 16;  // pixels per log segment
     private static final int LOG_HALF_HEIGHT = 8; // platform surface is 8px above segment center

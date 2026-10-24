@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -47,7 +49,8 @@ import java.util.logging.Logger;
  * </ul>
  */
 public class HTZLiftObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj16 owns a lift and zipline stake; sliding direction does not turn a facing body.
 
     private static final Logger LOGGER = Logger.getLogger(HTZLiftObjectInstance.class.getName());
 

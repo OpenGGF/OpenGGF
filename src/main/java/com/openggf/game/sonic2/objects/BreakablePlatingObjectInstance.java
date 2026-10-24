@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -84,7 +86,8 @@ import java.util.List;
  * Anim 0: delay 3, frames {2, 3, 4, 5, 1}, $FF (loop to frame 1)
  */
 public class BreakablePlatingObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjC1 owns plating and falling fragments; horizontal debris drift is not body facing.
 
     // ========================================================================
     // ROM Constants

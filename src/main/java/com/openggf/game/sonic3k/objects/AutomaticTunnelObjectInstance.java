@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -45,7 +47,7 @@ import java.util.logging.Logger;
  *   <li>State 4 (LAST_MOVE): 2-frame gravity exit, then release</li>
  * </ul>
  */
-public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final Logger LOG = Logger.getLogger(AutomaticTunnelObjectInstance.class.getName());
 
     // =========================================================================

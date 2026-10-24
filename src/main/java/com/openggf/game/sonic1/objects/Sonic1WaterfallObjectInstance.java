@@ -9,6 +9,7 @@ import com.openggf.level.Map;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -19,7 +20,9 @@ import java.util.List;
  * <p>
  * ROM reference: docs/s1disasm/_incObj/65 Waterfalls.asm
  */
-public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Waterfall segment frames/flips describe falling water and its mounting, not horizontal facing.
 
     private static final int ROUTINE_ANIMATE = 2;
     private static final int ROUTINE_CHECK_DELETE = 4;

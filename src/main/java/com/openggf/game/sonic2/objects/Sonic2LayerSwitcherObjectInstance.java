@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -19,7 +21,9 @@ import java.util.List;
  * preserves native slot layout for Tails' interact slot and other SST-indexed
  * state without rendering or duplicating the behavior manager.
  */
-public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj03 is an invisible plane-switch controller; its placement bits do not face a performer.
+
     public Sonic2LayerSwitcherObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
     }

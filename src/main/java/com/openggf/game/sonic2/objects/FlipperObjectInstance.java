@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -33,7 +35,22 @@ import java.util.List;
  * <b>Disassembly Reference:</b> s2.asm lines 57800-58058
  */
 public class FlipperObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj86's upward lever uses the native slope/slide orientation. The
+        // horizontal punch instead owns its direction in anim (loc_2B35C),
+        // independently of placement mirroring; its idle pose has no horizontal aim.
+        if (!isHorizontal()) {
+            return isFlippedHorizontal() ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+        }
+        int anim = animationState == null ? idleAnimId : animationState.getAnimId();
+        return switch (anim) {
+            case ANIM_HORIZONTAL_TRIGGER_LEFT -> ObjectVisualFacing.Basis.LEFT;
+            case ANIM_HORIZONTAL_TRIGGER_RIGHT -> ObjectVisualFacing.Basis.RIGHT;
+            default -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        };
+    }
 
     private static final int TYPE_VERTICAL = 0;
     private static final int TYPE_HORIZONTAL = 1;

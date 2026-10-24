@@ -13,7 +13,9 @@ import java.util.List;
 
 /** Obj_SOZPushSwitch ($4187C): analog push displacement in Level_trigger_array. */
 public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native switch/handle poses and mounting sides describe geometric controls without logical facing.
     private final FbzParticipantStateTable participants=new FbzParticipantStateTable(1);
     private int x;
     private int charge;

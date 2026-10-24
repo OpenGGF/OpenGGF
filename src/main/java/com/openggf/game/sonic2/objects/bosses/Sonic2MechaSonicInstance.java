@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
@@ -44,7 +45,12 @@ import java.util.function.Supplier;
  * it only in specific routines/phases: idle (routine 8 at loc_3986A) and
  * specific attack sub-phases. Descent (routine 6) does not animate at all.
  */
-public class Sonic2MechaSonicInstance extends AbstractBossInstance implements RewindRecreatable {
+public class Sonic2MechaSonicInstance extends AbstractBossInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // Native facingLeft owns this boss; BossStateContext.renderFlags does not.
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // State machine routine constants
     private static final int ROUTINE_INIT = 0x00;

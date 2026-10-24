@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomWorldPositionedObject;
@@ -26,7 +27,9 @@ import java.util.logging.Logger;
  * <p>Subtype encodes the monitor contents type.
  */
 public class S3kHiddenMonitorInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomWorldPositionedObject {
+        implements RewindRecreatable, RomWorldPositionedObject, ObjectVisualFacing.NonDirectional {
+
+    // The hidden marker reveals a monitor/icon body without logical horizontal facing.
     private static final Logger LOG = Logger.getLogger(S3kHiddenMonitorInstance.class.getName());
 
     // ROM word_8379E = -$E, $1C, -$80, $C0 (docs/skdisasm/sonic3k.asm:176189).

@@ -1,4 +1,6 @@
 package com.openggf.game.sonic3k.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -9,7 +11,7 @@ import java.util.List;
 public final class FbzDisappearingPlatformObjectInstance
     extends AbstractObjectInstance
     implements SolidObjectProvider, SolidObjectListener,
-               SpawnRewindRecreatable {
+               SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
   private static final int[] PHASE_MASKS = {0x7F, 0xFF, 0x1FF, 0x3FF};
   private static final int[] SOLID_DURATIONS = {0x3C, 0x78, 0xB4, 0xF0};
   private static final ObjectPlayerQuery

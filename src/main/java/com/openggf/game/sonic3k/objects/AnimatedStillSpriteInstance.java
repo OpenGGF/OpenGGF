@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
@@ -32,7 +34,7 @@ import java.util.List;
  * ROM reference: sonic3k.asm lines 60417-60467
  */
 public class AnimatedStillSpriteInstance extends AbstractObjectInstance
-        implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider {
+        implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider, ObjectVisualFacing.PoseOwned {
 
     @Override
     public int romObjectCodePointerHighWord() {

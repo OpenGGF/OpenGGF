@@ -1,4 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 
@@ -39,7 +41,15 @@ import java.util.List;
  *   <li>6 (Moto_Delete): Cleanup</li>
  * </ul>
  */
-public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.PlacementSource {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+    @Override public int initialPlacementFlags(com.openggf.level.objects.ObjectVisualFacing.Basis facing, int sourceFlags) {
+        // Moto_Main: placement status bit 0 set means logical right.
+        return (sourceFlags & ~1) | (facing == com.openggf.level.objects.ObjectVisualFacing.Basis.RIGHT ? 1 : 0);
+    }
 
     // From disassembly: obColType = $C (enemy, collision size index $C)
     private static final int COLLISION_SIZE_INDEX = 0x0C;

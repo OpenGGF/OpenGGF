@@ -1,10 +1,12 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 
-public class PlatformObjectInstance extends BoxObjectInstance implements RewindRecreatable {
+public class PlatformObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int[] WIDTH_PIXELS = {
             0x20, 0x20, 0x20, 0x40, 0x30
     };

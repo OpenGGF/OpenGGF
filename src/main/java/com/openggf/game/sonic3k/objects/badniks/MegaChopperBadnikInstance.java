@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -24,7 +25,10 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * (loc_87F88..sub_881FE).
  */
 public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
-        implements TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     private static final int COLLISION_SIZE_INDEX = 0x17;   // ObjDat_MegaChopper flags $D7
     // Engine-special category equivalent of the ROM's $D7 Touch_Special route.

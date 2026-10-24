@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
@@ -32,7 +34,8 @@ import java.util.List;
  * </ul>
  */
 public class SpikyBlockSpikeInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnRewindRecreatable {
+        implements TouchResponseProvider, SpawnRewindRecreatable, ObjectVisualFacing.PoseOwned {
+    // Obj68_Spike_Directions selects complete Up/Right/Down/Left mapping poses from routine_secondary, with no separate horizontal flip owner.
 
     // From disassembly: Obj68_CollisionFlags (s2.asm line 53386-53390)
     // Direction 0=Up ($84), 1=Right ($A6), 2=Down ($84), 3=Left ($A6)

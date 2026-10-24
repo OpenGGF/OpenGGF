@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
@@ -21,7 +22,12 @@ import java.util.logging.Logger;
 /** Locked-on object {@code $AB}, {@code Obj_FBZ2Subboss} (sonic3k.asm:148033-148695). */
 public final class Fbz2SubbossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable,
-        SpawnRewindRecreatable, RomWorldPositionedObject {
+        SpawnRewindRecreatable, RomWorldPositionedObject, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The fixed frontal machine and its radial laser parts do not own a horizontal-facing direction.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final int[] ACTIVATION_BOUNDS = {0x560, 0x660, 0x2900, 0x2C00};
     private static final int[] FLASH_INDICES = {12, 13, 14};
     private static final int[] FLASH_DARK = {0x866, 0x644, 0x020};

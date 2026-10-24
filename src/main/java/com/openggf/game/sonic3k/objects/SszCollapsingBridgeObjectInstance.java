@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -38,7 +39,9 @@ import java.util.List;
  * throughout.
  */
 public final class SszCollapsingBridgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native walkway/column shape and falling debris are terrain geometry without logical horizontal facing.
     /** {@code move.w #$180,priority(a0)}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
     /** {@code make_art_tile(ArtTile_SSZMisc+$20,2,1)}. */

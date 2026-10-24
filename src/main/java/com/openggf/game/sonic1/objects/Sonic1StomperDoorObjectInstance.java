@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -64,7 +65,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/6B SBZ Stomper and Door.asm
  */
 public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRomZoneRewindRecreatable {
+        implements SolidObjectProvider, SpawnRomZoneRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Sto slide/stomp directions move door geometry; neither mounting nor travel defines body facing.
 
     // ---- v_obj6B: singleton slot for SBZ3 instances (lines 38-65 in disasm) ----
     // Only one SBZ3 StomperDoor may exist at a time. The first instance to run

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
@@ -28,7 +30,9 @@ import java.util.logging.Logger;
  * Players roll through entry paths (curved sections) and then through main
  * tube paths (level-specific routes).
  */
-public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class CPZSpinTubeObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj1E is an invisible path controller; a transported player retains its own facing owner.
+
     private static final Logger LOGGER = Logger.getLogger(CPZSpinTubeObjectInstance.class.getName());
 
     // Fixed rolling speed through tube (0x800 in ROM)

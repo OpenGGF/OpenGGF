@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.DamageCause;
 import com.openggf.game.GameRng;
 import com.openggf.game.PlayableEntity;
@@ -39,7 +41,7 @@ import java.util.List;
  * {@code loc_8B230} ice debris children and delete.
  */
 public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener, ObjectVisualFacing.NonDirectional {
 
     private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
     private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_HARMFUL_ICE;

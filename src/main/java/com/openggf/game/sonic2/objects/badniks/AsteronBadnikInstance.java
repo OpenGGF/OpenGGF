@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.debug.DebugRenderContext;
@@ -37,7 +38,12 @@ import java.util.List;
  *
  * SubObjData: collision_flags=$0B, priority=4, width_pixels=$10.
  */
-public class AsteronBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
+public class AsteronBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // The native starfish and radial spikes have no logical horizontal facing; shard flips are radial geometry.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     // From ObjA4_SubObjData: collision_flags = $0B
     private static final int COLLISION_SIZE_INDEX = 0x0B;
 

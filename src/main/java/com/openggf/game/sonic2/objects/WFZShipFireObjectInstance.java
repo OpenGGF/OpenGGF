@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -42,7 +44,8 @@ import java.util.List;
  * <p>
  * <b>Disassembly Reference:</b> s2.asm lines 79894-79932 (ObjBC)
  */
-public class WFZShipFireObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class WFZShipFireObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjBC is flickering ship-fire scenery; background drift is not horizontal facing.
 
     /**
      * BG X offset threshold at which the ship fire is deleted.

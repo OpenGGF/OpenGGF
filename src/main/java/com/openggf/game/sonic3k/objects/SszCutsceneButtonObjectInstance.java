@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -26,7 +27,9 @@ import java.util.List;
  * that is the S3KL name, and this class is registered for the SKL set in zone {@code $0A} only.
  */
 public final class SszCutsceneButtonObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native cutscene bridge/button art is geometric scenery; the cutscene character is separately owned.
     /** {@code ObjDat_SSZCutsceneButton}: {@code dc.w $180}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
     /** {@code dc.b $10, 8, 1, 0}: height, width, mapping frame, render flags. */

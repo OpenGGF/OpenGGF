@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -42,7 +43,12 @@ import java.util.logging.Logger;
  * - loc_68ACC/loc_68AFE attack cycle
  * - loc_68B34/loc_68B92 movement variants
  */
-public class AizMinibossInstance extends AbstractBossInstance implements RewindRecreatable {
+public class AizMinibossInstance extends AbstractBossInstance implements RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // This encounter owns the ship/pilot horizontal direction in its native render-status bit 0.
+        return (state.renderFlags & 1) != 0 ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.LEFT;
+    }
+
     private static final Logger LOG = Logger.getLogger(AizMinibossInstance.class.getName());
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_WAIT_TRIGGER = 2;

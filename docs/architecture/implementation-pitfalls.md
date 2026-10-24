@@ -164,6 +164,18 @@ means its art must depict the old travel direction. Inspect decoded ROM pixels,
 then test complete poses in both directions (including accessories and offsets).
 See [the mod audit](audits/2026-10-20-super-sonic-bros-facing.md).
 
+Day Off repeated the raw-flip mistake in its rightward Motobug drive (2026-10-24,
+base `ac46111bc`): `flipX=false` means left for Motobug and right for Sonic.
+Stageplay now accepts only `Facing.LEFT/RIGHT` in performer keys. Native owners
+resolve the captured logical direction through `ObjectVisualFacing`; factory
+coverage rejects undeclared owners. Preserve deliberate native turn/skid/look-back
+mapping poses. A grouping root such as an animal capsule does not impose one
+mirror on independently directed children: capture each native facing group and
+turn around its own anchor. Placement flags remain source data, with explicit
+constructor mappings only where the native owner defines them. See the
+[Stageplay facing/priority audit](audits/2026-10-24-stageplay-facing-priority.md).
+
+
 **A scene kit's zone number is not its decoder level index.** When re-encoding
 S1 kit blocks into an additive act, use the decoder's level table, not the public
 SceneLevelKit zone ordering. Starpost Real Ruins (base `3da4cd930`, 2026-10-10)

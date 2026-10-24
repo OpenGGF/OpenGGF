@@ -1,4 +1,6 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -20,7 +22,18 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 public class SpringObjectInstance extends BoxObjectInstance
-        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj41_Horizontal/DiagonallyUp/DiagonallyDown negate the negative
+        // launch strength only with x_flip clear. Vertical springs have no horizontal front.
+        return switch (getType()) {
+            case TYPE_HORIZONTAL, TYPE_DIAGONAL_UP, TYPE_DIAGONAL_DOWN -> isFlippedHorizontal()
+                    ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+            default -> ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+        };
+    }
+
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj41_Index
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 2;

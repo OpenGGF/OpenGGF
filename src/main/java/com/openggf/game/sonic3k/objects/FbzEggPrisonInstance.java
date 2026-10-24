@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -14,7 +16,7 @@ import java.util.List;
 
 /** Locked-on placed loot prison {@code Obj_FBZEggPrison} ($CF). */
 public final class FbzEggPrisonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, ObjectVisualFacing.Container {
     private static final int[] ANIMAL_X = {0, 16, -16, 28, -28};
     private static final int[] RING_X = {-8, 8, 16, -16, 24, -24};
     private static final int[] BLASTER_X = {-24, 24};

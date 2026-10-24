@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
@@ -31,7 +33,9 @@ import java.util.logging.Logger;
  * 4. TRANSITION: Load next level
  */
 public class ResultsScreenObjectInstance extends AbstractResultsScreen
-        implements ZeroScalarArgsRewindRecreatable {
+        implements ZeroScalarArgsRewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj3A owns text and tally digits; slide-in offsets are layout, not horizontal body facing.
+
     private static final Logger LOGGER = Logger.getLogger(ResultsScreenObjectInstance.class.getName());
 
     // Time bonus table from s2.asm (TimeBonuses), indexed by (seconds / 15)

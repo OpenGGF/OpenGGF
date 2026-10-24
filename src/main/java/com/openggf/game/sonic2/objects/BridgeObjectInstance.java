@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -35,7 +37,8 @@ import java.util.Map;
  * one log at a time toward the sidekick index while Tails is standing.
  */
 public class BridgeObjectInstance extends BoxObjectInstance
-        implements SlopedSolidProvider, RewindRecreatable {
+        implements SlopedSolidProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj11 owns bridge logs and log-segment children; sag is geometric, not facing.
 
     private static final int LOG_WIDTH = 16;
     private static final int LOG_HALF_HEIGHT = 8;

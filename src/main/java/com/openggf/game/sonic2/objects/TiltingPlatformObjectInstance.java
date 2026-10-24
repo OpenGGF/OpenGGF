@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
@@ -45,7 +47,8 @@ import java.util.List;
  * - Frame 3: Tilted left (16x24 px, two 2x3 pieces)
  */
 public class TiltingPlatformObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjB6 owns tilting platform geometry and a vertical laser; neither faces horizontally.
 
     // ==================== Behavior Types ====================
     // From ObjB6_Init: andi.b #6,d0 / addq.b #2,d0

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.audio.GameSound;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
@@ -43,7 +45,7 @@ import java.util.logging.Logger;
  *   <li>Flipped: crossing R→L / bottom→top enables spin (-0x580 ground_vel)</li>
  * </ul>
  */
-public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable {
+public class AutoSpinObjectInstance extends BoxObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(AutoSpinObjectInstance.class.getName());
 

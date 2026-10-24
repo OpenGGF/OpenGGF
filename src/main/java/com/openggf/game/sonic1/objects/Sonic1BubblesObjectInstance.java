@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -33,7 +34,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/64 Bubbles.asm
  */
 public class Sonic1BubblesObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Bub maker vents and rising bubble children only grow/wobble; neither has a horizontal facing.
 
     // ========================================================================
     // Routine IDs (from Bub_Index dispatch table)

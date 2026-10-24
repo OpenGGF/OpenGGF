@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.graphics.GLCommand;
@@ -57,7 +58,10 @@ import java.util.List;
  * </ul>
  */
 public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
-        implements TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseListener, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType = $CC
     // Upper 2 bits ($C0) = collision category, lower 6 bits ($0C) = size index

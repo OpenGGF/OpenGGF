@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugRenderContext;
@@ -47,7 +49,8 @@ import java.util.logging.Logger;
  *   <li>WFZ: Hook on chain - max extension 0xA0 (or 0x60), frame = extension/16 + 1, palette 1</li>
  * </ul>
  */
-public class MovingVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class MovingVineObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // Obj80 owns vine/chain geometry moving vertically; held players own their own facing.
 
     private static final Logger LOGGER = Logger.getLogger(MovingVineObjectInstance.class.getName());
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =

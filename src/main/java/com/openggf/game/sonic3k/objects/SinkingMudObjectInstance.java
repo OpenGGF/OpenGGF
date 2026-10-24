@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -42,7 +43,9 @@ import java.util.Set;
  */
 public class SinkingMudObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider,
-        RewindRecreatable {
+        RewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native per-player sink depths belong to an invisible collision volume without horizontal-facing art.
 
     private static final int PRIORITY = 4;
     private static final int MAX_RAW_SURFACE = 0x30;

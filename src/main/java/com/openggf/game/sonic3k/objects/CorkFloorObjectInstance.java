@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -41,7 +43,7 @@ import java.util.logging.Logger;
  */
 public class CorkFloorObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SlopedSolidProvider,
-        RomObjectCodePointerProvider, RewindRecreatable {
+        RomObjectCodePointerProvider, RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final Logger LOG = Logger.getLogger(CorkFloorObjectInstance.class.getName());
 

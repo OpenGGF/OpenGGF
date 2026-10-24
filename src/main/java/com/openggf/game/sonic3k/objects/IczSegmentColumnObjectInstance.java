@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -35,7 +37,7 @@ import java.util.List;
  * {@code CreateChild8_TreeListRepeated}; the root object only owns the cascade.
  */
 public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     private static final int OBJECT_ID = 0xB3;
     private static final int NORMAL_SEGMENT_COUNT = 3;

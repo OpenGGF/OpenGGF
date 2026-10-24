@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -32,7 +34,7 @@ import java.util.List;
  * ROM references: Obj_AIZDisappearingFloor (sonic3k.asm:58360).
  */
 public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
 
     // ===== Period lookup table (word_2A232) =====
     private static final int[] PERIOD_TABLE = {

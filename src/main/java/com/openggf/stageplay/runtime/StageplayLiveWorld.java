@@ -1,5 +1,7 @@
 package com.openggf.stageplay.runtime;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.audio.NullAudioBackend;
@@ -164,6 +166,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
         List<com.openggf.level.objects.ObjectSpawn> preparationPlacements = null;
         var suppressedPlacements = new HashSet<com.openggf.level.objects.StageplayObjectDirection.PlacementIdentity>();
         var objectTemplates = new LinkedHashMap<String, com.openggf.level.objects.StageplayObjectDirection.VisualTemplate>();
+        var objectInitialFlags = new LinkedHashMap<String, Integer>();
         for (var actor : document.objectActors()) {
             check.run();
             var anchor = actor.keys().stream().filter(key -> key.frame() == first).findFirst().orElseThrow();
@@ -176,7 +179,10 @@ public final class StageplayLiveWorld implements AutoCloseable {
             if (firstVisible == null) continue;
             for (var key : actor.keys()) if (key.frame() >= first && key.frame() < end && key.visible() && key.mode() == ObjectMode.FREE)
                 StageplayObjectCast.requireNativeContext(actor, set);
-            if (firstVisible.mode() != ObjectMode.FREE) {
+            boolean picture = firstVisible.mode() != ObjectMode.FREE;
+            boolean freeFacing = actor.layoutIndex() < 0 && actor.keys().stream().anyMatch(key ->
+                    key.frame() >= first && key.frame() < end && key.visible() && key.mode() == ObjectMode.FREE);
+            if (picture || freeFacing) {
                 com.openggf.level.objects.ObjectSpawn originalPlacement = null;
                 if (actor.layoutIndex() >= 0) {
                     if (preparationPlacements == null) preparationPlacements = List.copyOf((authoredTerrain == null
@@ -185,7 +191,9 @@ public final class StageplayLiveWorld implements AutoCloseable {
                             && spawn.objectId() == actor.objectId() && spawn.subtype() == actor.subtype()).findFirst()
                             .orElseThrow(() -> new IllegalArgumentException("Unknown portable placed object for " + actor.id()));
                 }
-                objectTemplates.put(actor.id(), StageplayObjectTemplateBake.prepare(library, actor, anchor, originalPlacement));
+                var prepared = StageplayObjectTemplateBake.prepareSource(library, actor, anchor, originalPlacement, picture, freeFacing);
+                if (picture) objectTemplates.put(actor.id(), prepared.picture());
+                if (freeFacing) objectInitialFlags.put(actor.id(), prepared.initialPlacementFlags());
             }
         }
         var services = EngineServices.current();
@@ -245,7 +253,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
                 sprite.setCpuController(null); // each participant has its own scripted controller, never follow AI
                 NativePositionOps.writeXPosResetSubpixel(sprite, nativePixel(performer.anchor.x(), true));
                 NativePositionOps.writeYPosResetSubpixel(sprite, nativePixel(performer.anchor.y(), false));
-                sprite.setDirection(performer.anchor.flipX() ? Direction.LEFT : Direction.RIGHT);
+                sprite.setDirection((performer.anchor.facing() == Facing.LEFT) ? Direction.LEFT : Direction.RIGHT);
                 sprite.setTopSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0C : 0x0E));
                 sprite.setLrbSolidBit((byte) (performer.track.collisionPath() == 0 ? 0x0D : 0x0F));
                 sprite.setAir(true);
@@ -261,7 +269,7 @@ public final class StageplayLiveWorld implements AutoCloseable {
             director = boundedCamera(StageplayTimeline.sample(document, first).baseCamera());
             validateTargets();
             if (!document.objectActors().isEmpty() || !document.worldCommands().isEmpty())
-                objectCast = new StageplayObjectCast(owned, document, set, first, end, originalObjects, objectTemplates);
+                objectCast = new StageplayObjectCast(owned, document, set, first, end, originalObjects, objectTemplates, objectInitialFlags);
             checkpoints.put(cursor, capture());
         } catch (IOException error) { closeOwned(); throw new UncheckedIOException("Cannot load live Stageplay world", error); }
         catch (RuntimeException | Error failure) { closeOwned(); throw failure; }

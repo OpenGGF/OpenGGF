@@ -1,5 +1,7 @@
 package com.openggf.editor.stageplay;
 
+import com.openggf.stageplay.StageplayDocument.Facing;
+
 import com.openggf.control.InputHandler;
 import com.openggf.stageplay.StageplayDocument;
 import com.openggf.stageplay.editor.StageplayRouteJob;
@@ -19,7 +21,7 @@ class TestStageplayRouteWorkspace {
     @TempDir Path root;
     private StageplayDocument source() {
         return StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120)
-                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1,false,true,1,Interpolation.HOLD)))))
+                .withActors(List.of(new Actor("hero","Hero","s2","sonic",List.of(new ActorKey(0,100,200,0,-1, Facing.RIGHT,true,1,Interpolation.HOLD)))))
                 .withPuppets(List.of(new PuppetTrack("hero",false,0,List.of())));
     }
     private class Host implements StageplayWorkspace.Host {
@@ -77,7 +79,7 @@ class TestStageplayRouteWorkspace {
     }
     @Test void objectFormTransmitsExplicitVisualFootprintAndDoesNotPretendNativeInput(){
         var captured=new java.util.concurrent.atomic.AtomicReference<StageplayRouteRequest>();
-        var object=new ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,List.of(new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+        var object=new ObjectActor("prop","Walking prop","s2",0,0,65,0,-1,List.of(new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
             public StageplayDocument initialDocument(){return StageplayDocument.empty("s2",0,0,0,0,320,224).withObjectActors(List.of(object));}
             public Path initialAssetRoot(){return root;}
@@ -91,8 +93,8 @@ class TestStageplayRouteWorkspace {
     @Test void interiorObjectKeyOpensTheFormButChangingItsIdToAPlayerStillRejectsTheRequest(){
         var captured=new java.util.concurrent.atomic.AtomicReference<StageplayRouteRequest>();
         var object=new ObjectActor("prop","Initialized prop","s2",0,0,65,0,-1,List.of(
-                new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.FREE),
-                new ObjectKey(30,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+                new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.FREE),
+                new ObjectKey(30,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var document=source().withObjectActors(List.of(object));
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){
             public StageplayDocument initialDocument(){return document;}
@@ -127,7 +129,7 @@ class TestStageplayRouteWorkspace {
 
     @Test void walkingObjectUsesTheSameProposedAndAppliedOverlayModel() {
         var actor=new ObjectActor("walker","Walker","s2",0,0,65,0,-1,List.of(
-                new ObjectKey(0,100,200,0,-1,false,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
+                new ObjectKey(0,100,200,0,-1, Facing.LEFT,true,Interpolation.HOLD,ObjectMode.PUPPET)),List.of());
         var document=StageplayDocument.empty("s2",0,0,0,0,320,224).withDurationFrames(120).withObjectActors(List.of(actor));
         var update=new java.util.concurrent.atomic.AtomicReference<StageplayRouteJob.Update>();
         var workspace=new StageplayWorkspace(new StageplayWorkspace.Host(){

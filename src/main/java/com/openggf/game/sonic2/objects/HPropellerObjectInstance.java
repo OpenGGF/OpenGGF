@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
@@ -42,7 +44,8 @@ import java.util.List;
  *   <li>0x68: SCZ mode - animates only, no player interaction (routine 4 = ObjB5_Animate)</li>
  * </ul>
  */
-public class HPropellerObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class HPropellerObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
+    // ObjB5 blows vertically; propeller spin and spin-up/down do not define horizontal facing.
 
     // ========== Subtype constants ==========
 

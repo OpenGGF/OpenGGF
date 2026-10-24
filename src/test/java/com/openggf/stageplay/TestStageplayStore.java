@@ -72,7 +72,7 @@ class TestStageplayStore {
     @Test
     void rejectsEveryUnsupportedVersionAndRequiresTheCompleteCurrentShape() throws IOException {
         var mapper = new JsonMapper();
-        for (int version : new int[]{-1, 0, 1, 2, 3, 4, 5, 6, VERSION + 1}) {
+        for (int version : new int[]{-1, 0, 1, 2, 3, 4, 5, 6, 7, VERSION + 1}) {
             var tree = (ObjectNode) mapper.readTree(StageplayStore.encode(scene()));
             tree.put("version", version);
             assertThrows(IOException.class, () -> StageplayStore.decode(mapper.writeValueAsBytes(tree)));

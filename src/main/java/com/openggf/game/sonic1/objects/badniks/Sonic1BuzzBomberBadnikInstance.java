@@ -1,4 +1,6 @@
 package com.openggf.game.sonic1.objects.badniks;
+
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -27,7 +29,10 @@ import java.util.List;
  *   <li>ob2ndRout=2 (.chknearsonic): Flying, checking proximity. Stop on timer expire or Sonic detect.</li>
  * </ul>
  */
-public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable {
+public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance implements SpawnRewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        return facingLeft ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
 
     // From disassembly: obColType = 8 (enemy, collision size index 8)
     // Collision size 8: width=$18 (24px), height=$0C (12px)

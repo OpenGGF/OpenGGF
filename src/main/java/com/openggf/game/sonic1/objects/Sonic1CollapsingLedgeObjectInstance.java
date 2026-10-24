@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -51,7 +52,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/1A Collapsing Ledge (part 1).asm
  */
 public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Ledge slopes and fragment layout are terrain geometry, not a horizontal-facing performer.
 
     // From disassembly: move.w #$30,d1 (half-width for platform collision)
     private static final int PLATFORM_HALF_WIDTH = 0x30;

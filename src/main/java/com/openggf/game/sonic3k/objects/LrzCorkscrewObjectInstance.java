@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
@@ -68,7 +69,9 @@ import java.util.List;
  * bit is kept per player here rather than derived from a shared register.
  */
 public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, RomObjectCodePointerProvider {
+        implements RewindRecreatable, RomObjectCodePointerProvider, ObjectVisualFacing.NonDirectional {
+
+    // Native ride logic controls the separately owned player; this invisible path controller has no facing body.
 
     /** {@code move.b #$D0,width_pixels(a0)} (sonic3k.asm:87541). */
     private static final int WIDTH_PIXELS = 0xD0;

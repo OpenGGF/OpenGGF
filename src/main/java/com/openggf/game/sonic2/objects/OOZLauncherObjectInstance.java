@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
@@ -52,7 +54,14 @@ import java.util.logging.Logger;
  * </table>
  */
 public class OOZLauncherObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override
+    public ObjectVisualFacing.Basis nativeFacing() {
+        // Obj3D's wall block (subtype 0) launches RIGHT at loc_24FF0;
+        // its floor block launches UP. The child launcher shares this subtype.
+        return isVertical ? ObjectVisualFacing.Basis.RIGHT : ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
+
     private static final Logger LOGGER = Logger.getLogger(OOZLauncherObjectInstance.class.getName());
 
     // ========================================================================

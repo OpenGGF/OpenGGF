@@ -17,7 +17,8 @@ import java.util.List;
  * automatic subclass rewind capture; camera/player/audio/service state stays with its normal
  * registered owner. Spawn recreation retains the immutable typed placement properties.
  */
-public final class AuthoredGizmoInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class AuthoredGizmoInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, com.openggf.level.objects.ObjectVisualFacing.NonDirectional {
+    // Invisible region behavior has no sprite, horizontal body or directional children.
     private final AuthoredObjectProperties properties;
     private boolean inside;
     private boolean fired;

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CharacterKey;
 import com.openggf.game.GameRng;
@@ -28,7 +30,7 @@ import java.util.List;
  * <p>
  * ROM: Obj_Bubbler (sonic3k.asm:64486-64776)
  */
-public class BubblerObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class BubblerObjectInstance extends AbstractObjectInstance implements RewindRecreatable, ObjectVisualFacing.NonDirectional {
     private static final int ROUTINE_INIT = 0;
     private static final int ROUTINE_ANIMATE = 2;
     private static final int ROUTINE_CHK_WATER = 4;

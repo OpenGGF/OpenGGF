@@ -16,7 +16,9 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** SKL $48, Obj_SOZRapelWire ($4A9A8)..sub_4AF80: ratchet and 17 real linked SSTs. */
-public final class SozRapelWireObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class SozRapelWireObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+    // Native ratchet and linked wire segments form mechanical geometry; angular phase is not horizontal facing.
     private static final int IDLE=0, EXTEND=1, WAIT=2, VERTICAL=3, FINAL_VERTICAL_INIT=4,
             FINAL_VERTICAL=5, HORIZONTAL=6, FINAL_HORIZONTAL=7, FINAL_SWING=8, RETRACT=9;
     private int routine, length=0x30, remaining, angle, tailAngle, flipAngle, mode, timer, extra;

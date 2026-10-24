@@ -9,6 +9,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -49,7 +50,9 @@ import java.util.List;
  * Reference: docs/s1disasm/_incObj/5B Staircase.asm
  */
 public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable {
+        implements MultiPieceSolidProvider, SolidObjectListener, SpawnRewindRecreatable, ObjectVisualFacing.NonDirectional {
+
+// Stair xFlip reverses block-height order; the four geometric blocks have no logical facing.
 
     // From disassembly: NUM_PIECES = dbf loop count (3) + 1
     private static final int NUM_PIECES = 4;

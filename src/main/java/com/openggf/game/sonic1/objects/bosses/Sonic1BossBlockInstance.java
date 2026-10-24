@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects.bosses;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -35,7 +36,11 @@ import java.util.List;
  * Art: Map_BossBlock, make_art_tile(ArtTile_Level,2,0) — level art, palette line 2
  */
 public class Sonic1BossBlockInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RewindRecreatable, ObjectVisualFacing.Source {
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // SYZ blocks and their fragments have no native horizontal direction.
+        return ObjectVisualFacing.Basis.NON_DIRECTIONAL;
+    }
 
     // Block states
     private static final int STATE_SOLID = 0;

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.AnimalType;
 import com.openggf.graphics.GLCommand;
@@ -29,7 +31,14 @@ import java.util.List;
  *   <li>Subtype 0x0A-0x14: ending animals ("Anml_Ending" subtype path)</li>
  * </ul>
  */
-public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable {
+public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implements com.openggf.level.objects.ObjectVisualAnimationSource, SpawnRewindRecreatable, ObjectVisualFacing.Source {
+
+    @Override public ObjectVisualFacing.Basis nativeFacing() {
+        // facePlayer owns hFlip independently of velocity (including the ending routines).
+        return hFlip ? ObjectVisualFacing.Basis.LEFT : ObjectVisualFacing.Basis.RIGHT;
+    }
+
+
     private static final int OBJECT_FALL_GRAVITY = 0x38;
     private static final int FLIGHT_GRAVITY = 0x18;
     private static final int FLOOR_CHECK_HEIGHT = 12;

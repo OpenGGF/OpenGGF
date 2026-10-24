@@ -29,7 +29,7 @@ editors and can be registered by a mod.
   Registry presence alone does not mean that a detached set can be decoded.
   All frame/zone/act numbers are zero-based. Never invent art or copy ROMs to satisfy
   a command. Sprite positions use the sprite origin, not its top-left corner.
-- Author current version-six screenplay JSON, which compiles to a version-seven
+- Author current version-seven screenplay JSON, which compiles to a version-eight
   canonical document. These unpublished formats accept only the current version;
   there are no migration or compatibility modes. Candidate API versions follow the
   engine version. Cast members default to physical puppets; use `puppet:false`
@@ -40,7 +40,7 @@ editors and can be registered by a mod.
   across a set switch. An incoming transition straddles the boundary, so leave enough
   room on both sides and avoid dialogue under its opaque midpoint.
 - After editor refinements, use `decompile --scene PATH --out PATH` or either editor's
-  **Export screenplay**, then recompile version-six JSON to preserve every supported
+  **Export screenplay**, then recompile version-seven JSON to preserve every supported
   canonical field and exact ID/order. Import starts an unsaved canonical scene; export
   preserves save/undo state. Decompile beside the scene when assets are relative.
   Do not hand-edit generated IDs or split cross-shot intervals to fit a shot: version

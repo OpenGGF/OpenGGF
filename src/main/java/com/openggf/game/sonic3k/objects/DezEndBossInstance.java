@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectVisualFacing;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -14,7 +15,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /** Obj_DEZEndBoss $7F06C: the released enemies, never player attacks, own damage publication. */
-public final class DezEndBossInstance extends DezEndBossSprite implements SpawnRewindRecreatable,DezEndBossEnemy.Owner {
+public final class DezEndBossInstance extends DezEndBossSprite implements SpawnRewindRecreatable,DezEndBossEnemy.Owner, ObjectVisualFacing.Container {
+
     private final S3kSharedBossCameraGate cameraGate=new S3kSharedBossCameraGate();
     private final DezEndBossArtState art=new DezEndBossArtState();
     private final DezEndBossDamageState damage=new DezEndBossDamageState();

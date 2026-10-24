@@ -161,7 +161,7 @@ For agent-driven authoring, [the screenplay tool](stageplay-authoring.md) discov
 ROM resources, compiles shot-local scripts, samples frames and renders without
 opening editor menus. Both editors offer **Import screenplay** and **Export screenplay**.
 Import creates an unsaved canonical scene; refine it, save the `.stageplay`, then
-export a version-six screenplay and recompile without losing supported document
+export a version-seven screenplay and recompile without losing supported document
 data. Export leaves the current save state and undo history intact.
 
 ## Speakers, typing and dialogue skins
@@ -201,7 +201,7 @@ and after the chosen playhead. Start at frame zero for the complete soundtrack.
 Stopping restores the borrowed soundtrack; imported voices share the existing
 final PCM mix without replacing other installed audio sources.
 
-The version-7 JSON document stores resource references, player and object keys,
+The version-8 JSON document stores resource references, player and object keys,
 puppet commands, world clear/removal commands and presentation cues.
 Only the current document version is accepted. The unpublished format has no
 migration or compatibility modes. ROM data
@@ -313,7 +313,7 @@ before a later directed key can capture it; missing visuals fail clearly.
 commands. Their placement suppression persists within the shot; a fresh shot starts
 with its own population. Players, attached character effects and rings are separate
 owners. Object properties, mode keys, visual move/stop commands, part overrides and
-clear/removal cues are saved in document version seven and screenplay version six.
+clear/removal cues are saved in document version eight and screenplay version seven.
 See the [authoring reference](stageplay-authoring.md#object-cast-screenplay-6-document-7)
 for exact fields and the coverage-report command.
 
