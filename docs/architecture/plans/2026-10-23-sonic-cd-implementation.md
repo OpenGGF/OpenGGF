@@ -3959,3 +3959,38 @@ No image artifact was retained by this run. Native PlaneB name-table streaming,
 copied-camera/VInt service, PLC residency, natural controller ramp traversal and
 pixel/act/game parity remain separate owners. Fixed-ac4 broad smoke is still
 pending and has a GLFW-startup failure awaiting matched baseline attribution.
+
+### Finite native Plane B transformation component — 24 October 2026
+
+The new pure PlaneB owner binds the existing authenticated section ID/live
+pointer views and retained terrain. Its explicit immutable4096-byte seed
+represents64x32 raw tile words at VRAM E000..EFFF. Init draws16rows with native
+7F0 lookup wrap; incremental row/column work keeps signed finite lookup, live
+BG1 selection and separately supplied copied cameras. Static CCR gating, top
+priority, right-mask flag consumption, blank A0 metadata provenance, real
+layout crossing, all raw pattern attributes/flips and VDP rings are preserved.
+BG2/3 draw helpers are native no-ops. Actual finite reads throw typed boundaries
+without a partial Result or seed mutation. There is no implicit clear/service,
+World state, renderer upload, clock, pointer-memory emulation or PLC owner.
+Native owners: PP Scroll:892-995,1092-1198 and Block Draw:20-68,111-234,376-395,
+pin1ecc5f3a. Result metadata describes completed writes; callers never replay it.
+
+Independent review found noP1/P2 and two oracle gaps. Root's test-onlyR2 adds
+an initial selector8 pointer-read failure at byte16 and makes the second
+chunk's block137 use asymmetric raw tiles A2AB/42AC/12AD/E2AE. The ring-wrap
+case asserts these exact four destination words, defeating the old periodic
+fixture alias. Production is byte-identical to the reviewed freeze.
+
+Root84398 passed58/0/0/0: Plane43 (including actual USA post-close view binding),
+Terrain5, RetailAssets9 and one fresh actual-EGL Ring/pickup/full-course-replay
+case. Java25, supplied regional media/S2 donor and surfaceless EGL, normal
+7GiB/8core admission; exit0 at22:43:31BST,1squeue/88sMaven. All four completed
+XML counts/identities and zero skips were inspected. Exact selectors used the
+queued wrapper with the same media/EGL flags and a fresh external output.
+The route retained94PNGs, controller log, state CSV and a successful outcome
+in its explicit external task directory. It ran at0e4e6d055 plus these two
+new component files; the World does not yet call this PlaneB owner. Therefore
+those images show source-ordered BG scroll through development planes, not
+native PlaneB integration. The opt-in component case proves source binding,
+not a native plane-image/PLC oracle. Complete native video, section residency,
+full act/game and regional gameplay parity remain unclaimed.
