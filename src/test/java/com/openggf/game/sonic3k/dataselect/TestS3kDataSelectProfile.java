@@ -1,11 +1,9 @@
 package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.ZoneKey;
 import com.openggf.game.ZoneRegistry;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.NoOpDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.dataselect.DataSelectExitTransition;
@@ -14,6 +12,7 @@ import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -31,7 +30,7 @@ class TestS3kDataSelectProfile {
 
     @BeforeAll
     static void configureEngineServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach

@@ -35,7 +35,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic1/dataselect/TestS1DataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic1/events/TestSonic1SBZEvents.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
@@ -44,7 +43,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2PlcArtRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic2/dataselect/TestS2DataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic2/objects/TestTodo4_MCZBossCollision.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestTornadoObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
@@ -52,9 +50,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectManager.java#setUp
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectPresentation.java#configureEngineServices
-            src/test/java/com/openggf/game/sonic3k/dataselect/TestS3kDataSelectProfile.java#configureEngineServices
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp

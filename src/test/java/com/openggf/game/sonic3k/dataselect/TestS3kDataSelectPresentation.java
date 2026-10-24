@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.dataselect;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.DataSelectProvider;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.dataselect.AbstractDataSelectProvider;
@@ -75,7 +74,7 @@ class TestS3kDataSelectPresentation {
 
     @BeforeAll
     static void configureEngineServices() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
