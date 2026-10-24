@@ -103,6 +103,13 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
   preflight protects all registered checkouts of the producer repository. Exact
   player/V-int instruction phase remains unknown; rows never drive engine state.
   Origin: 2026-10-24 CD-08.
+- [Native CD enemy-contact reference](../../tools/soniccd/contact_reference.py)
+  captures controller-only defeat/hurt routes with independent retained specimens;
+  its [checker](../../tools/soniccd/contact_reference_check.py) pins imports and
+  enforces checkpoint/end-state comparisons. The [secondary corroborator](../../tools/soniccd/corroborate.py)
+  compares constants from the static report, not an independent source oracle.
+  Origin: private USA R11A contact work, 2026-10-24; full hurt state and native
+  poll phase remain unresolved.
 - [CD Sonic visual conversion](../../src/main/java/com/openggf/game/soniccd/resources/CdPlayerVisualAdapter.java)
   binds five-byte native mappings, source tiles and complete explicit residency to
   existing renderer data. `TestCdPlayerVisualRendering` checks selected poses over

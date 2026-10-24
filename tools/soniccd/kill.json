@@ -1,0 +1,90 @@
+{
+ "frames": 2790,
+ "inputs": [
+  {
+   "first": 600,
+   "last": 600,
+   "button": "Start"
+  },
+  {
+   "first": 900,
+   "last": 900,
+   "button": "Start"
+  },
+  {
+   "first": 1200,
+   "last": 1200,
+   "button": "Start"
+  },
+  {
+   "first": 1800,
+   "last": 1800,
+   "button": "Start"
+  },
+  {
+   "first": 1900,
+   "last": 1900,
+   "button": "A"
+  },
+  {
+   "first": 2100,
+   "last": 2100,
+   "button": "Start"
+  },
+  {
+   "first": 2400,
+   "last": 2400,
+   "button": "Start"
+  },
+  {
+   "first": 2600,
+   "last": 2910,
+   "button": "Right"
+  },
+  {
+   "first": 2720,
+   "last": 2720,
+   "button": "A"
+  },
+  {
+   "first": 2750,
+   "last": 2750,
+   "button": "A"
+  },
+  {
+   "first": 2780,
+   "last": 2780,
+   "button": "A"
+  },
+  {
+   "first": 2810,
+   "last": 2810,
+   "button": "A"
+  },
+  {
+   "first": 2840,
+   "last": 2840,
+   "button": "A"
+  },
+  {
+   "first": 2870,
+   "last": 2870,
+   "button": "A"
+  },
+  {
+   "first": 2900,
+   "last": 2900,
+   "button": "A"
+  }
+ ],
+ "screenshots": [
+  2790
+ ],
+ "continuation_screenshots": [
+  2796,
+  2799,
+  2810,
+  2830
+ ],
+ "note": "Discovery-1 walk_jump route truncated to its 120-call continuation; natural jump kill; fixed controller schedule."
+}

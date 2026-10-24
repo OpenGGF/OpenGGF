@@ -1,0 +1,60 @@
+{
+ "frames": 2992,
+ "inputs": [
+  {
+   "first": 600,
+   "last": 600,
+   "button": "Start"
+  },
+  {
+   "first": 900,
+   "last": 900,
+   "button": "Start"
+  },
+  {
+   "first": 1200,
+   "last": 1200,
+   "button": "Start"
+  },
+  {
+   "first": 1800,
+   "last": 1800,
+   "button": "Start"
+  },
+  {
+   "first": 1900,
+   "last": 1900,
+   "button": "A"
+  },
+  {
+   "first": 2100,
+   "last": 2100,
+   "button": "Start"
+  },
+  {
+   "first": 2400,
+   "last": 2400,
+   "button": "Start"
+  },
+  {
+   "first": 2600,
+   "last": 2707,
+   "button": "Right"
+  },
+  {
+   "first": 2960,
+   "last": 3112,
+   "button": "Right"
+  }
+ ],
+ "screenshots": [
+  2992
+ ],
+ "continuation_screenshots": [
+  2998,
+  3002,
+  3012,
+  3046
+ ],
+ "note": "Discovery-2 walk2960 route: coast stop, then ordinary walk from rest into the diving first Mosqui with 3 rings."
+}

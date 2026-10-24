@@ -3033,3 +3033,41 @@ source unit. No complete ordinary-smoke/full-suite/native-pixel parity claim.
 ```bash
 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdOpeningObjectRuntime,TestSonicCdOpeningWorldEgl' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test
 ```
+
+
+### Independent native contact controls and retained tooling, 24 October 2026
+
+Promoted the bounded controller-only native Mosqui kill/hurt producer, probe,
+checker, recipes, secondary corroborator and lossless picture converter. All
+producer/probe/checker/recipe bytes equal the independently reviewed R2 freeze;
+only the installed-layout test changes to assert sys.path preservation for both
+an absent and already-present dependency path. Unittest discovery legitimately
+adds the same tools directory before loading tests. The first promoted-path
+run exposed that test assumption; after the bounded test-only correction all40
+controls pass. Root also corrected a patch-helper naming error during that test
+edit. No native process or tool algorithm changed during promotion.
+
+The original R1 duplicate artifacts were hard-linked after validation and cannot
+reprove independent repeats. R2 runs six fresh sequential fixed controls with
+50evidencefiles/50inodes per route,64comparisonpairs,18786totalFrameAdvancecalls
+(no discovery/newrecipe). Checkpoint equality and complete end-state comparison
+are enforced; the imports are hash-pinned and media/research/explicit earlier
+roots protected before scenario/preparation/output work. Independent source/
+evidence review confirmed all four originalP2 fixes and byte-reproduced the
+117-file inventory af804c0b…f60e, both event reports, and19secondary constant
+comparisons. Its report-only unsafe recomputation command was corrected to a
+read-only inventory exclusion check; no evidence file was edited. Root observed
+40/40external and40/40promoted-path Python checks, not new native captures.
+
+Native kill full raw difference is0; native hurt retains31unmasked differing
+bytes in every mode, still unattributed. Eight offsets overlap the historical
+player-referenceR1 ten-byte specimen; this does not prove a common cause. The
+five V-int mod4 bounce matches are consistency only, not phase authority.
+Control player/contact/dynamic placeholder categories are NOTOBSERVED, not
+passes. The corroborator transcribes static expectations; it is not an independent
+source reader. The tools produce comparison data only and never hydrate engine
+state or grant timing/gameplay authority. Raw media/captures remain external.
+
+```bash
+python3 -I -B -m unittest discover -s tools/soniccd -p test_contact_reference.py
+```
