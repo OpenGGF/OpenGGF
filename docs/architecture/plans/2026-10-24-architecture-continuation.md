@@ -921,3 +921,56 @@ with queue wait separate and unbounded. Finish the selected invocation, inspect
 all exact identities/failures/skips, repair regressions narrowly, and expand only
 for new evidence or unresolved coupling. Do not repeat unchanged broad coverage.
 Later Knuckles, freezer and initialized-box-rig work stays outside this candidate.
+
+
+### Sixth-loop exact-policy hygiene
+
+The next coordinator is `bugfix/ai-architecture-loop6-20261024` in
+`.worktrees/ai-architecture-loop6-20261024`, created from delivered `a236a1276`
+then advanced to fifth-loop composition `e849ed5a4`. Its initial owned slice is
+independent of the pending AIZ correction and later graph-family merges.
+
+The CAPTURED reachability guard resolves only CAPTURED keys. An obsolete DEFERRED
+entry for `IczMinibossInstance#defeatExplosionController` therefore survived after
+that field disappeared. A new exact-policy guard resolves every disposition's
+actual declaring field without initializing production owners. Controls cover
+all five disposition values, missing owners, missing fields, inherited fields
+at the wrong declaring owner, and an owner whose initializer would fail. This
+checks stale permissions, not whether each surviving disposition is semantically
+correct or every encounter is rewind-complete.
+
+The first attempt stopped at test compilation because the coordinator omitted
+`FieldKey`'s import: zero tests executed, 73 seconds Maven time and no admission
+wait. After the test-only import correction, unchanged production ran 14 cases:
+13 controls passed and the production census failed only for the ICZ key, with
+zero errors/skips. Admission took six seconds and Maven 25.997 seconds. The fix
+removes exactly that unreachable key, leaving every other field-policy identity
+and value unchanged. No frozen allowance or field-debt baseline changes.
+
+The subclass capture Javadoc also incorrectly required every stateful boss or
+badnik to add manual capture overrides, conflicting with the automatic schema
+and exact override ratchet. It now describes the actual compact/generic routes,
+explicit helper and identity dispositions, existing manual paths and the distinct
+no-context contract. No runtime method body or supported signature changes.
+
+Focused verification then passed 26 cases across four reports, zero failures,
+errors or skips: 14 exact-policy controls, seven CAPTURED reachability checks,
+four rewind architecture checks and one field-disposition guard. Admission was
+zero and Maven reported 1 minute 19 seconds. The generated field census matches
+this seven-key baseline. Reports and the inspected inventory were consumed and
+removed. This does not certify the later AIZ fix or unmerged graph work.
+
+Both test commands ran in this coordinator with the display/JVM-option variables
+unset, Java 25 and Lua 5.4, using the absolute current main-checkout wrapper:
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
+  '-Dtest=TestExactRewindPolicyGuard' test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards \
+  '-Dtest=TestExactRewindPolicyGuard,TestCapturedPolicyCompactReachabilityGuard,TestRewindFieldDispositionGuard,TestRewindArchitectureGuard' test -B
+```
+
+`MAIN_CHECKOUT` is the existing absolute main checkout documented above. The new
+class follows the existing guards-profile name convention; its actual complete
+profile inclusion remains part of the eventual composed sixth-loop guard run.
+No full suite or duplicate broad run was launched for this metadata/Javadoc edit.
