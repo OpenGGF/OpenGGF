@@ -4710,3 +4710,75 @@ no third, broad/manualCI/Main/PR/native/passive action follows automatically.
 Consumed own XML/text/log/message output is removed, compiled outputs and useful
 unmerged source retained. The folded prerelease text and existing measurement
 hazard catalogue preserve the result without raw archives or pass receipts.
+
+
+### EggSky menu entry waits for its real surface phase — 2026-10-24
+
+Root receives shared successor `0bbbb672` once by ancestry. The only executable
+change in this slice is the existing
+`TestEggmansSkyScene#productionMenusRememberSelectionAndJournalDoesNotChangeExpedition`.
+The production/example/harness and resource pool stay unchanged. The source gate
+allows the menu only with no modal dialog and `SurfaceMode.phase == PLAY`.
+The original 240 neutral ticks were an unchecked descent prerequisite, not a
+readiness assertion; the scene's descent depends on the actual terrain and has
+its own later fallback. Setting the existing tutorial/menu preferences does not
+advance that phase. Source identity across the earlier pins does not establish
+runtime newness or a native gameplay cause.
+
+First request46297 keeps the original 240 ticks, setup and both Enter presses.
+It adds read-only SurfaceMode/dialog/PLAY assertions before the first Enter and
+an intermediate MenuMode assertion after the original first press. On original
+setup it runs one exact method and fails once: expected PLAY1, actual DESCEND0,
+`phaseTicks=236`. Surface identity and dialog-null assertions passed; neither
+original Enter has executed. Actual1 test/1 failure/0 errors/skips, queue3s
+separate from Maven35.507s. Diagnostic test SHA256
+`6011f1e89665dce5a4882b338dc52aed2563948d6cd3407f549b840db022232e`.
+
+Only after that observation, a bounded loop advances up to500 neutral real
+single-tick updates while the current phase is not PLAY. It checks that the
+same surface stays current and no modal dialog appears on each update, then
+requires PLAY before the original first Enter. There is no phase/dialog write,
+warp, fitted target tick, forced biome or resource choice. The original240ticks,
+player preference setup, both Enter presses, BatchMode/recipe pin, remembered
+tab and complete journal/expedition invariants remain; the first actual menu is
+also asserted. The cap is a failing bound, not a promised readiness time.
+
+Both requests use the current absolute Main queue wrapper from the owned Root
+cwd/target, normal admission, Java25/Lua5.4/null audio, explicit surfaceless EGL,
+ambient JVM/display/library overrides unset, and the original absolute three
+stock ROM properties. The existing `kis2.gen` property from the original common
+launch is retained without a new identity certification. Portable command shape:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_DIR}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_DIR}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${OPENGGF_ROM_DIR}/kis2.gen" \
+  "-Dtest=$EGGSKY_SELECTOR" test -B
+```
+
+The first selector is exactly
+`com.openggf.mods.code.TestEggmansSkyScene#productionMenusRememberSelectionAndJournalDoesNotChangeExpedition`;
+the final selector is the entire `com.openggf.mods.code.TestEggmansSkyScene`.
+The final command's durable native activity ID is
+`exec-1a6e7e9d-d076-4c30-824c-839df0e5e949`; its ephemeral session number was
+not retained across compaction, and no replacement was submitted. The original
+command completes at05:10:00Z and Maven reports BUILD SUCCESS:12 distinct
+identities/one XML,0 failures/errors/skips, suite17.063s. Queue25s remains
+separate from Maven44.848s. All12 identities, Java25.0.5.0.2/EGL/owned cwd and
+classpath/exact selector/absolute ROM properties, text report and24 recursive
+streams8513B are read. Streams contain zero-finding package validation, actual
+biome reports and FAST/NONE warnings; compiler deprecations remain in the command
+log. No report dumps. Final test SHA256
+`7a6258ea2187fb5a6d744df95ea4cd89a1db829f2e8a1f823253e9018ee8b2ba`
+remains unchanged through terminal readback.
+
+This qualifies the current fixture prerequisite and the whole12-case class,
+not all resource environments, native descent timing, disputed routes or a new
+common smoke. The complete f340189 failed identities/108 skips keep their
+original epoch. Two ordinary requests are exhausted; no guard/broad/manualCI,
+Main/PR push, native/passive or automatic retry follows. Consumed owned reports,
+logs and the prepared commit message are removed after readback; compiled
+outputs and useful local source/worktree are retained.
