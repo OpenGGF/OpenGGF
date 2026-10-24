@@ -854,6 +854,53 @@ class TestCdPlayerFrameRuntime {
     }
 
     private static final class PublicationFailure extends RuntimeException { }
+    @Test void explicitDevelopmentVIntSeedDoesNotChangeAnyColdPlayerOrArtIngress() throws IOException {
+        var assets = new Fixture().assets();
+        try (var unknown = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets);
+             var seeded = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0x12345678L)) {
+            assertEquals(OptionalLong.empty(), unknown.vIntClock().absoluteValue());
+            assertEquals(new CdPlayerFrameRuntime.VIntClock(OptionalLong.of(0x12345678L), 0), seeded.vIntClock());
+            assertEquals(unknown.state(), seeded.state()); assertEquals(unknown.environment(), seeded.environment());
+            assertArrayEquals(unknown.artState().cpuBuffer().copy(), seeded.artState().cpuBuffer().copy());
+            assertArrayEquals(unknown.artState().residentBank().copy(), seeded.artState().residentBank().copy());
+            assertEquals(unknown.artState().lastFrame(), seeded.artState().lastFrame());
+            assertEquals(unknown.artState().dirty(), seeded.artState().dirty());
+            assertEquals(unknown.display(), seeded.display());
+            assertThrows(IllegalStateException.class, () -> seeded.serviceVBlank(PlcLifecyclePhase.LAG));
+            assertEquals(0x12345678L, seeded.vIntClock().absoluteValue().orElseThrow());
+        }
+    }
+
+    @Test void explicitNativeClockWrapsOnServiceAndRestoresThroughItsExistingSharedPartition() throws IOException {
+        var assets = new Fixture().assets();
+        try (var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0xFFFFFFFEL)) {
+            f.bindArtPublication((request, state) -> fail("PP LAG cannot publish art"));
+            var initialActor = f.state();
+            f.prepareInput(0x10); f.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertEquals(0xFFFFFFFFL, f.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+            var saved = f.captureShared();
+            f.prepareInput(0); f.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertEquals(0, f.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(2, f.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(initialActor, f.state());
+            f.restoreShared(saved);
+            assertEquals(saved.vIntClock(), f.vIntClock());
+            f.prepareInput(0); f.serviceVBlank(PlcLifecyclePhase.LAG);
+            assertEquals(0, f.vIntClock().absoluteValue().orElseThrow());
+            assertEquals(2, f.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(OptionalLong.of(0xFFFFFFFEL), f.vIntClock().absoluteSeed());
+        }
+    }
+
+    @Test void declaredVIntSeedRequiresUnsignedLongwordAndAnActualAggregate() throws IOException {
+        var assets = new Fixture().assets();
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, -1));
+        assertThrows(IllegalArgumentException.class,
+                () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets, 0x100000000L));
+        assertThrows(NullPointerException.class, () -> CdPlayerFrameRuntime.externalTouchRequiredDevelopment(null, 0));
+    }
+
     private static final class Fixture {
         CdReleaseVariant variant = CdReleaseVariant.USA;
         boolean failPublication;

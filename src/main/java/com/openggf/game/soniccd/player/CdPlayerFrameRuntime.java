@@ -219,6 +219,19 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return createDevelopment(assets, null, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
     }
 
+    /**
+     * Explicit finite DEV clock policy at the admitted cut, required by owners such as LostRing.
+     * This is not a measured retail-entry seed. The original factory retains an unknown seed;
+     * no engine frame count, represented delta or comparison observation selects this value.
+     * Only the existing Frame service increments and shared partition restores this clock.
+     */
+    public static CdPlayerFrameRuntime externalTouchRequiredDevelopment(CdR11aAssets assets, long declaredNativeVIntSeed) {
+        var declaredClock = new VIntClock(OptionalLong.of(declaredNativeVIntSeed), 0);
+        var frame = createDevelopment(assets, null, CdPlayerBody.DynamicSlots.UNIMPLEMENTED);
+        frame.vIntClock = declaredClock;
+        return frame;
+    }
+
     private static CdPlayerFrameRuntime createDevelopment(CdR11aAssets assets, ArtPublication publication,
                                                            CdPlayerBody.DynamicSlots dynamicSlots) {
         Objects.requireNonNull(assets, "assets");
@@ -246,6 +259,8 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     /** Source eligibility/current pose; root's explicit object-queue port supplies bit7 independently of GPU drawing. */
     public Optional<CdPlayerBody.DisplayPublication> display() { return display; }
     public CdPlayerArtRuntime.State artState() { return art.capture(); }
+    /** Read-only represented native clock; an absent absolute seed never means the delta is absolute. */
+    public VIntClock vIntClock() { return vIntClock; }
     public boolean paused() { return paused; }
     public boolean closed() { return closed; }
 

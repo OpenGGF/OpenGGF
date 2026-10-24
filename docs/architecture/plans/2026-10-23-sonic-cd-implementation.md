@@ -3109,3 +3109,23 @@ all48velocity rows and actual floor probes, found noP1/P2 in these bodies/tests,
 and confirmed d7 survives the native callees. MMZ and the dirty standing-object
 branch remain explicit finite boundaries, and native phase is uncertified.
 These device cases are not yet a normal-input hurt/landing gameplay claim.
+
+
+### Explicit development V-int seed, 24 October 2026
+
+The new external-touch factory overload accepts a declared unsigned native
+longword seed at the admitted cut. The original factories keep an unknown seed.
+No delta, engine frame or comparison observation substitutes for unknown time.
+Only the existing service increments and shared snapshot restores the clock;
+the getter exposes its immutable value and creates no second clock owner.
+Cold actor, controls, art and cue state remain unchanged by a seed declaration.
+
+Root39416 found one authored test error: record equality compared identity-based
+CdAssetBytes wrappers between two separate runtimes. The test now compares both
+complete buffers and scalar fields, with production untouched. The exactfailed
+case passedalone in Root38507,1/0/0/0 at15:14:37BST (190squeue/26.846sexecution).
+All96Frame cases subsequently passed in Root98350's149-case liveRuntime/World/
+actualEGL selection at15:31:15BST,0skips; allfreshXMLJava25/media/EGL verified.
+Independent Opus review found only that same testP2; source behavior is sound.
+The eventual module's seed0 is an explicit DEV policy, not retail title/fade or
+native phase proof. Hurt's additive Frame changes are a separate next unit.
