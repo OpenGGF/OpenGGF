@@ -7183,3 +7183,62 @@ above. Parent retains fresh independent code review, combined change-based smoke
 integration and delivery; this child retains its clean local branch/worktree for
 that handoff. Commit hooks and commit-range policy are the final local checks;
 no unchanged runtime selection will be repeated solely for review.
+
+### Parent acceptance and preparation of capture-lifetime composition
+
+The parent mapped the eight-file change from `0396a4581` to reviewed extraction
+`d53bd5b8c598c178c3d65703228448bc9c9eea78`, including characterization commit
+`b1b5358e479f3268ed7ff5746cd56047aa285d86`. Its sorted
+`path<TAB>Git-blob-id<LF>` mapping hashes to
+`8ef8f6a41ffd2a80d1f31efa43d5f7da08edd47535439e68055b818dc14db695`.
+AudioManager's accepted production blob is
+`899549538e1f9d96a45a4fd8b4649dc76807ece6`. Independent source review found no
+actionable issue: all seven fields and capture decisions move together, while
+all 116 public/protected declaration lines, producer authority, monitor regions,
+virtual dispatch, reentrant observations and failure partial effects remain.
+
+The ordinary/diagnostic rebind-attachment catch branches remain an explicit
+unexecuted coverage limit. The existing final producer exposes no supported,
+deterministic callback to force that window. Review accepted mechanical branch
+and propagation-order preservation without adding an artificial producer or
+injection framework. The corrected real-subclass virtual-rate control also
+passed against unchanged production before the final focused run. Worker 43
+baseline, 114 focused, 6 native and 91 guard outcomes above remain worker-observed;
+this source acceptance does not independently certify their runtime artifacts.
+
+The new parent composition starts at the reviewed extraction and merges audit
+`c008b4d209f7e3a7b930f243f075c9837d970729`. That commit adds only 196 lines to the
+existing disposition audit, preserving the fixed-tail source findings and the
+still-unexecuted probe obligation. Its audit file SHA-256 is
+`8d06fb4c3b9d54b788c6e00bd711f346fa310bbe8d6e1e15ba9827a80a40d3b7`.
+No storage-owner or engine behavior change is included. The separate reference
+probe must satisfy installation provenance and execute under owned admission
+before observations can qualify a later implementation.
+
+The inspected capture-only change-based plan against pre-capture composition
+`0396a4581` selects audio, common, rewind and tooling: 1,348 candidate classes in 27
+ordinary batches, then fresh guards. This is provisional planning, not completed
+coverage. The lead will inspect the actual destination diff when the preceding
+deliveries finish, and run the complete appropriate selection without manually
+narrowing it. The two earlier smoke trees stay frozen and independent. No native
+trace campaign, performance measurement or release-only full suite is planned.
+
+### Reserve scene boundary retained by authority
+
+A completed Git-object study of `0396a4581` and `fc520ae0b` recommends retaining
+LevelManager's scene boundary. Its three cache fields select the current level
+identity and successful FULL-load generation. There is no separate driven
+lifecycle or disposal obligation: reset/null-level rejection and lazy replacement
+remain loading policy. LoadedLevelScene already owns art residency/projection,
+and callers own independently surviving presenter resources. A new owner would
+mainly interpose between those established authorities.
+
+The maintained caller census found 55 direct capture/presenter expressions in
+five files, including Putt-Putt Paradise's actual GolfMode/GolfOnline production
+consumers and its presentation, mod and peer-probe tests. Thus absence of an
+external engine-src/main caller is not absence of supported use. Both capture
+overloads and presenter creation are recursively supported and pinned. Retention
+changes zero API/frozen identities and avoids inventing cache invalidation,
+revocation, close or rewind behavior. This is an authority-placement finding,
+not a rejection based on class size, migration cost or lack of a reproduced bug.
+No tests or runtime observations were made by that research.
