@@ -531,3 +531,127 @@ These are bounded schema, object-graph and manager checks, not route/viewport/
 donor/team certification or a full-suite pass. Complete composed guards,
 change-based smoke, integration and delivery belong to the parent; no full-suite
 or duplicate complete-guards run was submitted. No live job remains.
+
+## Root orchestration owner slice — 2026-10-24
+
+Worker branch `bugfix/ai-root-orchestration-owners-20261024` starts at integrated
+develop `2020d2e57a4b3a4cece9083730c89eb9c71d29a4`, in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-9220cd9e/.worktrees/ai-root-orchestration-owners-20261024`.
+This bounded slice owns Engine/GameLoop routing, native registry/coordinator
+capabilities, relevant behavior controls and exact root source budgets. It does
+not own other workers' rewind policies/audit rows, the changelog, exception guide,
+composed S3K/complete guards, integration, push or worktree cleanup.
+
+Usage-first comparison: a bounded editor-project helper could remove Engine's
+references, but would keep the native registry test and enum conversion in shared
+code. A registry-owned optional `ObjectTableNameProvider`, analogous to the
+existing property/preview providers, gives that interpretation to its owner.
+Engine keeps the decorated base registry for editing and default names, querying
+the root registry capability only for non-null explicit table metadata. The native
+registry converts `ModObjectZoneSet`; explicit S3KL/SKL selection must ignore the
+active level. ObjectRegistry and GameModule remain pinned and unchanged.
+
+A separate bonus orchestration service would duplicate the existing lifecycle
+and installer. Instead, `BonusStageFrameLifecycle` can ensure the active provider's
+declared bootstrap through `BonusStageBootstrapInstaller`. Entry already calls
+`onEnter(type)` then loads `getZoneId(type)`; startup bootstrap installation remains
+at the existing title-card boundary. Ordinary-frame repair uses the active type,
+not a second zone-to-type inference. Native Gumball/Slots declare no bootstrap;
+Pachinko's existing spawn/factory and presence test remain unchanged. A provider
+with a remapped zone or a different declared bootstrap supplies its own semantics.
+Null/NONE providers must not request a bootstrap. No extra native allocation or
+clock/frame/update-order change is intended.
+
+The separate unpinned `BonusStageDebugControls` capability owns the two diagnostic
+actions. The host keeps F11/Insert, debug-view, fresh-press and all modifier gates.
+Native S3K dispatch retains the gumball filter effects in all three native bonus
+types. Keep the executing provider through the frame tail so a completion handoff
+does not drop an already admitted diagnostic action. No pinned provider methods
+or creator API expansion is needed.
+
+Before runtime edits, naming controls passed all four cases, installer controls
+all three and existing gumball controls both cases. Native debug gating passed
+three parameterized cases (each checks both keys, debug on/off, all eight modifier
+sides, and held keys). The frozen-frame repair/order control then passed separately.
+The initial new harness omitted the selected source key and frame context/token;
+its three assertion failures and context/frame errors were fixture defects, fixed
+without changing runtime source. These are bounded characterization results, not
+a single all-green invocation. Subsequent validation and exact commands follow.
+
+The selected implementation removes Engine's two and GameLoop's four concrete
+references. Both caps are now exactly zero. Engine remains 3,942 effective source
+lines; GameLoop falls from 3,307 to 3,305, and its class budget is tightened to
+3,305. No other source allowance, pinned signature or rewind policy is changed.
+
+Here `MAIN_CHECKOUT` denotes the existing absolute main checkout discovered by
+`git worktree list`, as in the earlier command record. All worker Maven commands
+ran from the worker directory above through
+`python3 $MAIN_CHECKOUT/tools/testing/maven_queue.py`.
+The launch environment was `JAVA_HOME=/usr/lib/jvm/java-25-openjdk`,
+`LUA_BIN=/usr/bin/lua5.4`, with `DISPLAY`, `WAYLAND_DISPLAY`, `JAVA_TOOL_OPTIONS`
+and `JDK_JAVA_OPTIONS` unset. The leased `-v` probe reported Java 25.0.5.0.2
+(76 seconds admission). Every test command used the following common arguments,
+followed by the exact selectors recorded below and `test -B`:
+
+```text
+-Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+```
+
+Characterization/negative-control command history, on the pinned base plus new
+controls (runtime routing still unchanged):
+
+- `-Dtest=TestEngineEditorProjectObjectNames,TestGameLoopBonusStageOwnership,TestBonusStageBootstrapInstaller,TestGumballDebugVisibilityFilter`:
+  13 cases; the three new debug cases failed because the visibility assertion
+  omitted its source, and the repair case errored on its missing context.
+- `-Dtest=TestGameLoopBonusStageOwnership`: four cases; debug's three passed,
+  repair errored on its missing frame token.
+- `-Dtest=TestGameLoopBonusStageOwnership#pachinkoRepairFollowsOverlayAndPrecedesTheFrozenFrameTailWithoutDuplicating`:
+  the corrected repair case passed, no skips.
+- `-Dtest=TestEngineEditorProjectObjectNames#explicitTableUsesTheInternalRootCapabilityWithoutRequiringANativeConcreteClass,TestGameLoopBonusStageOwnership#activeProviderRepairsItsDeclaredBootstrapWithoutInferringTypeFromTheLoadedZone+diagnosticActionsBelongToTheProviderCapabilityAndDoNotChangeOtherStagesGlobals`:
+  all three failed as intended, with no errors/skips: decorated instead of selected
+  root names; no declared-bootstrap query; no provider-owned diagnostic dispatch.
+  The two interfaces existed for this run, but root/native routing was unchanged.
+
+On the implementation above, the exact behavior selection was:
+
+```text
+-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen
+-Dtest=TestEngineEditorProjectObjectNames,TestGameLoopBonusStageOwnership,TestGameLoop,TestGameLoopBonusPlayerPriority,TestBonusStageBootstrapInstaller,TestGumballDebugVisibilityFilter,TestS3kBonusStageHeadlessBoot,TestEditorProjectLifecycle#s3kObjectFamilyPropertiesRefreshLabelsAndUndoToTheDocumentSavepoint
+```
+
+Each `-D` line is one quoted shell argument. All three existing absolute ROMs
+matched the documented CRC32/SHA-1 identities. Result: 134 distinct cases across
+eight reports, zero failures/errors/skips; Maven 77 seconds, no admission wait.
+The case counts were names 5, GameLoop 101, priority 3, editor projection 1,
+bootstrap installer 7, new bonus controls 12, existing gumball controls 2 and
+native S3K bonus boot 3. The new controls also cover null/NONE providers,
+unsupported diagnostics, no Gumball/Slots bootstrap allocation, actual declared
+factory use, and provider retirement during the debug tail. XML identities and
+all skip/failure elements were inspected, then consumed reports removed.
+
+The affected source/API selection uses the same launch environment/common
+arguments, plus:
+
+```text
+-Pguards
+-Dtest=TestArchitecturalSourceGuard#rootGameLoopAndEngineDoNotGainConcreteSonicDependencies+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+engineDoesNotGainNewLargeMethods,TestModApiSignatureSurface,TestModApiPinPolicy
+```
+
+It is a targeted guard/API selection, not complete guards. This worker runs no
+broad categories, exhaustive/full suite or trace sweep. The coordinator retains
+composed S3K/complete-guard, changelog/exception-guide, integration and delivery
+obligations. No runtime changes followed the 134-case behavior result.
+
+The targeted guard/API invocation passed 19 distinct cases across three reports:
+four exact root/source-budget checks, eleven API-surface checks and four API-pin
+policy checks. There were zero failures/errors/skips. Admission was 39 seconds;
+Maven execution was 29 seconds. XML identities and skips were inspected and
+consumed reports removed. The API descriptors, signature pins, ObjectRegistry,
+GameModule and BonusStageProvider remain byte-for-byte unchanged. These results
+cover the same runtime/test sources as the 134-case behavior invocation; only
+this evidence prose changed afterwards. No task-owned Maven job remains live.
+The worker retains its clean committed branch/worktree for parent composition;
+it does not push or remove it. Full native routes, pixels, exhaustive traces and
+complete guards are outside this worker's validation claim.

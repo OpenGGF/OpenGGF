@@ -161,6 +161,9 @@ class TestModApiSignatureSurface {
     @Test
     void engineOnlyRuntimeHelpersDoNotLeakIntoTheZeroSevenSurface() {
         Set<String> current = ModApiSignatureSurface.snapshotLines();
+        assertFalse(current.stream().anyMatch(line -> line.contains("ObjectTableNameProvider")
+                        || line.contains("BonusStageDebugControls")),
+                "Native editor table names and bonus diagnostics remain internal capabilities");
         assertFalse(current.stream().anyMatch(line -> line.startsWith(
                         "METHOD com.openggf.sprites.playable.PlayableSpriteController ")
                         && (line.contains(" captureFrameStartState(")

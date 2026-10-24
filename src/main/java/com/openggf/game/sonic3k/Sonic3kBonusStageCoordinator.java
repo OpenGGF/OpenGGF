@@ -3,11 +3,13 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.AbstractBonusStageCoordinator;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStagePlayerPriorityPolicy;
+import com.openggf.game.BonusStageDebugControls;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 
 /**
@@ -30,7 +32,7 @@ import com.openggf.level.objects.ObjectSpawn;
  * of Gumball (ROM loc_2D47E lines 61897, 61910-61912).
  */
 public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
-        implements BonusStagePlayerPriorityPolicy {
+        implements BonusStagePlayerPriorityPolicy, BonusStageDebugControls {
 
     private static final int ZONE_GUMBALL  = 0x1300;
     private static final int ZONE_PACHINKO = 0x1400;
@@ -90,6 +92,17 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator
     @Override
     public BonusStageProvider.BootstrapObject bootstrapObject(BonusStageType type) {
         return type == BonusStageType.GLOWING_SPHERE ? PACHINKO_BOOTSTRAP : null;
+    }
+
+    @Override
+    public void cycleObjectRenderFilter() {
+        // These diagnostics retain their effects while any native bonus type is active.
+        GumballMachineObjectInstance.cycleDebugFilter();
+    }
+
+    @Override
+    public void cycleObjectSourceFilter() {
+        GumballMachineObjectInstance.cycleDebugSourceFilter();
     }
 
     @Override

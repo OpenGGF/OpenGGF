@@ -88,7 +88,7 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry , com.openggf.level.metadata.ObjectPropertyProvider, com.openggf.level.metadata.EditorPalettePolicyProvider, com.openggf.level.metadata.ObjectPreviewProvider, com.openggf.level.metadata.ObjectTableNameProvider {
     @Override public boolean isPaletteCellEditable(int line, int color) {
         return com.openggf.game.sonic3k.Sonic3kEditorPalettePolicy.isEditable(line, color);
     }
@@ -2028,6 +2028,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
             return getSklName(objectId);
         }
         return getPrimaryName(objectId);
+    }
+
+    @Override
+    public String objectTableName(int stockObjectId, com.openggf.game.modzone.ModObjectZoneSet table) {
+        return getPrimaryName(stockObjectId, S3kZoneSet.valueOf(table.name()));
     }
 
     /**

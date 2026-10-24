@@ -2147,11 +2147,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void configureEditorProjectSpawnEditing(EditorProjectDocument document) {
 		var registry = editorProjectBaseModule.createObjectRegistry();
+		var table = document.metadata().objectZoneSet();
 		java.util.function.IntFunction<String> names = registry::getPrimaryName;
-		if (document.metadata().objectZoneSet() != null
-				&& editorProjectRootModule.createObjectRegistry() instanceof com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry nativeRegistry) {
-			var family = com.openggf.game.sonic3k.constants.S3kZoneSet.valueOf(document.metadata().objectZoneSet().name());
-			names = id -> nativeRegistry.getPrimaryName(id, family);
+		if (table != null
+				&& editorProjectRootModule.createObjectRegistry() instanceof com.openggf.level.metadata.ObjectTableNameProvider tables) {
+			names = id -> tables.objectTableName(id, table);
 		}
 		levelEditorController.configureSpawnEditing(registry, editorProjectBaseModule.getObjectPlacementEncoding(),
 				names);
