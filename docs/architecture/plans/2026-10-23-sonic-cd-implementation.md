@@ -4026,3 +4026,46 @@ handles those correctly. These are component passes, not a World Spring claim.
 Root still owns launch/solid phase-CAS, typed sound forwarding,400patternbank
 and cleanup, ID0A live dispatch, actual contacts/SAT/replay, PLC residency and
 later regional admission. Fixed-ac4 broad smoke remains independent/pending.
+
+### Guarded Spring launch, level-plane cut and normal picture policy — 24 October 2026
+
+Frame now validates current player/globals and every Spring launch store at an
+open/idle/closed cut, then adopts checked motion once. Both fractions and all
+other actor/slot fields, animation cursor, display cut, timers/history/links and
+shared/art/clock state survive. MoveLock word3E remains separate from timer32.
+Spring actions have no global-write authority. These are value checks, not
+proof a call ran; Runtime still owns live identity/phase/source-prefix binding.
+The Runtime's ephemeral two-argument V-int service calls the supplied level-plane
+service after powerup art and before Finish/count on ordinary and every paused
+selector8; lag skips it. Null leaves prepared input intact; source failure closes
+the existing owners without rollback. The old one-argument entry delegates to
+a no-op. No extra clock/callback retention or stricter swallowed-reentry promise
+is introduced. Native Main:829-847 and Spring Main:257-396 own these cuts.
+
+A separate explicit Spring picture factory validates all11spans/400patterns even
+for empty SAT, using actual normal36tiles520..543 and adjacent powerup544..567.
+All old factories/helpers/convert are byte-identical. New tests cover all400joins,
+both source families/all6frames/rawattributes, gaps and all logical span overlap
+pairs. Runtime is still364 and has no Spring dispatch in this commit; its
+400-pattern reservation/logicalbanks/cleanup/client work remains next.
+
+Tests were authored before production. Root79344 test-compile exited1 at absent
+launch APIs: compileRED only, no JUnit execution. Root73735 completed298/0failures/
+1error/0skips: Frame165, Runtime66, picture19, WorldLoad29, EGL8, API11. The only
+error was Root's new failure test reading displayedFrame after correct terminal
+closure. Existing requireReadable correctly rejects it. Test-onlyR2 removes the
+unused old-picture capture, checks rendering rejection and names that behavior;
+all source/art/count/closure assertions stay. Production unchanged. Root53533
+reran fullRuntime66:66/0/0/0, exit0 at23:11:29BST,451squeue/30.365sMaven. The
+original298 run remains red, and overlapping counts are not added as distinct
+coverage. All completed XML identities/skips were inspected. Both runs used
+queued exact selectors and actual supplied media/Java25; the298 run enabled
+actual surfaceless EGL and S2 donor, normal7GiB/8core,147squeue/105sMaven.
+The corrected narrow run used lean4GiB/4core.
+
+Independent review confirmed R1's P2 and exactR2 correction, with no remaining
+P1/P2 in these six files. Nonblocking oracle limits remain: positive launch
+preservation starts after Init with empty display/mostlyzero history/cursor,
+and picture raw bases/flips are paired rather than Cartesian. No live Spring
+contact, native PlaneB World service, PLC residency, native timing/pixels or
+complete-game/region result follows from these port/component checks.

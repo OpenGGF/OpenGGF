@@ -8,6 +8,7 @@ import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
 import com.openggf.game.soniccd.objects.CdLevelGlobals;
 import com.openggf.game.soniccd.objects.CdSolidObject;
+import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
@@ -70,6 +71,135 @@ class TestCdPlayerFrameRuntime {
         assertEquals(0, f.captureShared().vIntClock().deltaSinceAdmittedCut());
         assertTrue(f.display().isEmpty()); assertFalse(f.paused()); assertFalse(f.closed());
         assertTrue(fixture.dmas.isEmpty()); assertThrows(IllegalStateException.class, () -> f.runBody(1));
+    }
+
+    // Spring action writes are a separate native call cut from shared solidity.
+    @Test void springLaunchProjectsNativeWordsOnceAndReplaysWithoutTouchingOtherPartitions() throws IOException {
+        var f = new Fixture().runtime(); service(f, 0); f.runBody(1);
+        var captured = f.captureActor(); var s = captured.state(); var m = s.motion();
+        var seededMotion = new CdPlayerMotionState(m.centreX16_16() | 0x1234, m.centreY16_16() | 0x5678,
+                m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(), m.angle(), m.flags(), m.spriteFlags(),
+                m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(), m.playerJump(), m.charge(),
+                0x4567, m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var seeded = new CdPlayerBody.State(seededMotion, s.animation(), s.header(),
+                new CdPlayerBody.Timers(0x55, 0x2233, 0x4455, 0x6677), s.history(), 0xAA,
+                new CdPlayerBody.ObjectLinks(47, 63));
+        f.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), seeded, captured.display()));
+        var player = solidPlayer(f); var globals = solidGlobals(f);
+        var next = player;
+        for (var field : CdSpring.LaunchPlayerField.values()) next = springChanged(next, field.name());
+        var call = springLaunch(player, globals, next, globals,
+                java.util.EnumSet.allOf(CdSpring.LaunchPlayerField.class), Set.of());
+        var before = f.captureActor(); var shared = f.captureShared(); var display = f.display();
+        f.validateObjectSpringLaunch(call);
+        assertEquals(before, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.applyObjectSpringLaunch(call);
+        assertEquals(new CdPlayerBody.State(next.actor().motion(), seeded.animation(), seeded.header(), seeded.timers(),
+                seeded.history(), seeded.rotationDistance(), seeded.objectLinks()), f.state());
+        assertEquals(0x1234, f.state().motion().centreX16_16() & 0xFFFF);
+        assertEquals(0x5678, f.state().motion().centreY16_16() & 0xFFFF);
+        assertEquals(0x4566, f.state().motion().moveLock());
+        assertEquals(0x2233, f.state().timers().invincibility(), "Move-lock is word3E, never timer32");
+        assertEquals(shared, f.captureShared()); assertEquals(display, f.display());
+        var after = f.captureActor();
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(call));
+        assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.restoreActor(before); f.restoreShared(shared); f.applyObjectSpringLaunch(call);
+        assertEquals(after, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @ParameterizedTest @EnumSource(CdSpring.LaunchPlayerField.class)
+    void springLaunchRejectsEachUndeclaredNativeStore(CdSpring.LaunchPlayerField field) throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var call = springLaunch(player, globals, springChanged(player, field.name()), globals, Set.of(), Set.of());
+        assertThrows(IllegalArgumentException.class, () -> f.validateObjectSpringLaunch(call));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(call));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "X_FRACTION", "Y_FRACTION", "ROUTINE", "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "PREVIOUS_ANIMATION",
+            "PLAYER_JUMP", "CHARGE", "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY", "PREVIOUS_SECONDARY",
+            "TILE", "PRIORITY", "HURT", "ROTATION_DISTANCE", "SLOT_ID", "PUSH_OBJECT", "STAND_OBJECT"})
+    void springLaunchCannotAuthorizeAnyOtherActorOrSlotField(String field) throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var call = springLaunch(player, globals, springChanged(player, field), globals,
+                java.util.EnumSet.allOf(CdSpring.LaunchPlayerField.class), Set.of());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(call));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void springLaunchRejectsStaleExpectedPlayerAndGlobalsWithoutAnyWrite() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var changed = springChanged(player, "FLAGS");
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(
+                springLaunch(changed, globals, changed, globals, Set.of(), Set.of())));
+        var stale = new CdSolidObject.Globals(globals.invincible() ^ 1, globals.scoreChain(), globals.primaryAngle(), globals.secondaryAngle());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(
+                springLaunch(player, stale, player, stale, Set.of(), Set.of())));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void springLaunchHasNoAuthorityForGlobalWritesEvenWhenTheyKeepTheSameValue() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var actor = f.captureActor(); var shared = f.captureShared();
+        var changed = new CdSolidObject.Globals(globals.invincible(), globals.scoreChain() ^ 2, globals.primaryAngle(), globals.secondaryAngle());
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(
+                springLaunch(player, globals, player, changed, Set.of(), Set.of())));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectSpringLaunch(
+                springLaunch(player, globals, player, globals, Set.of(), Set.of(CdSolidObject.GlobalField.SCORE_CHAIN))));
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+    }
+
+    @Test void springLaunchRequiresAnOpenOwnerAtAClosedFrameCut() throws IOException {
+        var f = new Fixture().runtime(); var player = solidPlayer(f); var globals = solidGlobals(f);
+        var call = springLaunch(player, globals, player, globals, Set.of(), Set.of());
+        var actor = f.captureActor(); var shared = f.captureShared();
+        assertThrows(NullPointerException.class, () -> f.validateObjectSpringLaunch(null));
+        f.validateObjectSpringLaunch(call); f.applyObjectSpringLaunch(call);
+        assertEquals(actor, f.captureActor()); assertEquals(shared, f.captureShared());
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, () -> f.validateObjectSpringLaunch(call));
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSpringLaunch(call));
+        f.clearPendingInput(); f.close();
+        assertThrows(IllegalStateException.class, () -> f.applyObjectSpringLaunch(call));
+    }
+
+    private static CdSpring.LaunchCall springLaunch(CdSolidObject.Player before, CdSolidObject.Globals globals,
+            CdSolidObject.Player after, CdSolidObject.Globals nextGlobals, Set<CdSpring.LaunchPlayerField> writes,
+            Set<CdSolidObject.GlobalField> globalWrites) {
+        return new CdSpring.LaunchCall(new CdObjectPool().state(32).identity(), before, globals, after, nextGlobals, writes, globalWrites);
+    }
+    private static CdSolidObject.Player springChanged(CdSolidObject.Player player, String field) {
+        var a = player.actor(); var m = a.motion();
+        int[] v = {m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(), m.groundVelocity(), m.routine(),
+                m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(), m.animation(), m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle()};
+        String[] keys = {"CENTRE_X", "CENTRE_Y", "X_VELOCITY", "Y_VELOCITY", "GROUND_VELOCITY", "ROUTINE", "ANGLE", "FLAGS",
+                "SPRITE_FLAGS", "X_RADIUS", "Y_RADIUS", "ANIMATION", "PREVIOUS_ANIMATION", "PLAYER_JUMP", "CHARGE", "MOVE_LOCK",
+                "STICK", "PLAYER_CONTROL", "PREVIOUS_PRIMARY", "PREVIOUS_SECONDARY"};
+        boolean found = false;
+        for (int i = 0; i < keys.length; i++) if (keys[i].equals(field)) { v[i] ^= i < 2 ? 0x10000 : 1; found = true; }
+        if (field.equals("X_FRACTION")) { v[0] ^= 1; found = true; }
+        if (field.equals("Y_FRACTION")) { v[1] ^= 1; found = true; }
+        var next = new CdPlayerMotionState(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9],
+                v[10], v[11], v[12], v[13], v[14], v[15], v[16], v[17], v[18], v[19]);
+        int tile = a.tile(), priority = a.priority(), hurt = a.hurt(), rotation = a.rotationDistance();
+        int id = player.slotId(), push = player.pushObject(), stand = player.standObject();
+        switch (field) {
+            case "TILE" -> { tile ^= 1; found = true; }
+            case "PRIORITY" -> { priority ^= 1; found = true; }
+            case "HURT" -> { hurt ^= 1; found = true; }
+            case "ROTATION_DISTANCE" -> { rotation ^= 1; found = true; }
+            case "SLOT_ID" -> { id ^= 1; found = true; }
+            case "PUSH_OBJECT" -> { push ^= 1; found = true; }
+            case "STAND_OBJECT" -> { stand ^= 1; found = true; }
+        }
+        if (!found) throw new IllegalArgumentException("Unknown Spring test mutation " + field);
+        return new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(next, tile, priority, hurt, rotation), id, push, stand);
     }
 
     // S3 validates a pure call's final values before the pool owner commits that call.

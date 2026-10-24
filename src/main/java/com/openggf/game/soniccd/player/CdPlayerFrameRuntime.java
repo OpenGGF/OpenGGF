@@ -6,6 +6,7 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.level.CdAssetBytes;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.objects.CdSolidObject;
+import com.openggf.game.soniccd.objects.CdSpring;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 
 import java.util.ArrayList;
@@ -538,6 +539,72 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                 m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
                 m.previousPrimaryAngle(), m.previousSecondaryAngle());
         state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history(), state.rotationDistance(), state.objectLinks());
+    }
+
+    /**
+     * Pure value-CAS preflight for one native Spring action after its shared Solid return.
+     * Root owns the live object identity/phase and source prefix; values do not prove a call ran.
+     * Spring writes integer centre WORDs, nine motion fields at most, and no globals.
+     * Both fractions and every actor/slot field outside those exact stores must survive.
+     */
+    public void validateObjectSpringLaunch(CdSpring.LaunchCall call) {
+        requireOpenIdle(); requireClosedFrame(); Objects.requireNonNull(call, "Spring launch call");
+        var s = state; var h = s.header(); var g = environment.movement().globals();
+        var currentPlayer = new CdSolidObject.Player(new CdPlayerTouchResponse.Actor(s.motion(), h.tile(), h.priority(),
+                s.timers().hurt(), s.rotationDistance()), h.slotId(), s.objectLinks().pushObject(), s.objectLinks().standObject());
+        var currentGlobals = new CdSolidObject.Globals(environment.globals().invincible(), g.scoreChain(),
+                g.primaryAngle(), g.secondaryAngle());
+        if (!call.expectedPlayer().equals(currentPlayer) || !call.expectedGlobals().equals(currentGlobals)) {
+            throw new IllegalArgumentException("Stale Spring player/global call cut");
+        }
+        if (!call.globalWrites().isEmpty() || !call.finalGlobals().equals(call.expectedGlobals())) {
+            throw new IllegalArgumentException("Spring action has no native global-write authority");
+        }
+        var before = call.expectedPlayer(); var next = call.finalPlayer();
+        var a = before.actor(); var b = next.actor(); var m = a.motion(); var n = b.motion();
+        if (before.slotId() != next.slotId() || before.pushObject() != next.pushObject() || before.standObject() != next.standObject()
+                || a.tile() != b.tile() || a.priority() != b.priority() || a.hurt() != b.hurt() || a.rotationDistance() != b.rotationDistance()
+                || (m.centreX16_16() & 0xFFFF) != (n.centreX16_16() & 0xFFFF)
+                || (m.centreY16_16() & 0xFFFF) != (n.centreY16_16() & 0xFFFF)
+                || m.routine() != n.routine() || m.spriteFlags() != n.spriteFlags()
+                || m.xRadius() != n.xRadius() || m.yRadius() != n.yRadius()
+                || m.previousAnimation() != n.previousAnimation() || m.playerJump() != n.playerJump()
+                || m.charge() != n.charge() || m.stick() != n.stick() || m.playerControl() != n.playerControl()
+                || m.previousPrimaryAngle() != n.previousPrimaryAngle() || m.previousSecondaryAngle() != n.previousSecondaryAngle()) {
+            throw new IllegalArgumentException("Spring launch changes an unowned player field");
+        }
+        for (var field : CdSpring.LaunchPlayerField.values()) {
+            if (!call.playerWrites().contains(field) && springLaunchValue(before, field) != springLaunchValue(next, field)) {
+                throw new IllegalArgumentException("Undeclared Spring launch store: " + field);
+            }
+        }
+    }
+
+    /**
+     * Adopt the checked motion once at a closed post-Body object cut. MOVE_LOCK is motion's WORD3E;
+     * invincibility timer32, the earlier DrawObject projection, animation cursor and all service state stay owned.
+     * No pool mutation, sound, source routine, input, art, clock or display publication occurs here.
+     */
+    public void applyObjectSpringLaunch(CdSpring.LaunchCall call) {
+        validateObjectSpringLaunch(call);
+        var next = new CdPlayerBody.State(call.finalPlayer().actor().motion(), state.animation(), state.header(), state.timers(),
+                state.history(), state.rotationDistance(), state.objectLinks());
+        state = next;
+    }
+
+    private static int springLaunchValue(CdSolidObject.Player player, CdSpring.LaunchPlayerField field) {
+        var m = player.actor().motion();
+        return switch (field) {
+            case CENTRE_X -> m.centreX16_16() >>> 16;
+            case CENTRE_Y -> m.centreY16_16() >>> 16;
+            case X_VELOCITY -> m.xVelocity();
+            case Y_VELOCITY -> m.yVelocity();
+            case GROUND_VELOCITY -> m.groundVelocity();
+            case ANIMATION -> m.animation();
+            case FLAGS -> m.flags();
+            case ANGLE -> m.angle();
+            case MOVE_LOCK -> m.moveLock();
+        };
     }
 
     /**

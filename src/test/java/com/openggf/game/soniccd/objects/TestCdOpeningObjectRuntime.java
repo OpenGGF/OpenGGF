@@ -56,6 +56,69 @@ class TestCdOpeningObjectRuntime {
     private static final CdLevelGlobals RESTART_LEVEL = new CdLevelGlobals(0, 1, 0, 0, 3, 0x112233, 0x80, 8, 0);
     private static CdR11aAssets mediaAssets;
 
+    @Test void planeServiceCutRunsAfterPowerupArtAndBeforeFinishWithoutASecondInputOrClock() throws Exception {
+        var level = new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x88, 0);
+        try (var f = new Fixture(level)) {
+            f.runtime.setPreScrollForeground(PRE); var selection = f.frame.prepareInput(1);
+            var calls = new ArrayList<Integer>();
+            f.runtime.serviceVBlank(selection.phase(), () -> {
+                assertEquals(CdOpeningObjectRuntime.Phase.SERVICING, f.runtime.phase());
+                assertEquals(8, f.runtime.levelGlobals().powerup(), "LoadShieldArt completed before plane service");
+                assertNotEquals(new CdPowerupArtRuntime.State(new byte[0x480], new byte[0x480]), f.runtime.powerupArtState());
+                assertEquals(1, f.frame.environment().controls().rawHeld(), "ReadController already committed");
+                assertEquals(0, f.frame.vIntClock().deltaSinceAdmittedCut(), "Finish/count has not run");
+                calls.add(1);
+            });
+            assertEquals(List.of(1), calls); assertEquals(1, f.frame.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(CdOpeningObjectRuntime.Phase.SERVICED, f.runtime.phase());
+        }
+    }
+
+    @Test void planeServiceCutRunsOnEveryPausedSelectorEightButNeverLag() throws Exception {
+        try (var f = new Fixture()) {
+            var calls = new ArrayList<Long>();
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0x80);
+            assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, selected.phase());
+            f.runtime.serviceVBlank(selected.phase(), () -> calls.add(f.frame.vIntClock().deltaSinceAdmittedCut()));
+            assertTrue(f.frame.paused());
+            selected = f.frame.prepareInput(0);
+            assertEquals(PlcLifecyclePhase.NORMAL_PAUSE, selected.phase());
+            f.runtime.serviceVBlank(selected.phase(), () -> calls.add(f.frame.vIntClock().deltaSinceAdmittedCut()));
+            assertTrue(f.frame.paused());
+            f.frame.prepareInput(0);
+            f.runtime.serviceVBlank(PlcLifecyclePhase.LAG, () -> fail("PP lag has no plane copy/draw service"));
+            assertEquals(List.of(0L, 1L), calls);
+            assertEquals(3, f.frame.vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
+    @Test void nullPlaneServiceDoesNotConsumeThePreparedInputOrCloseEitherOwner() throws Exception {
+        try (var f = new Fixture()) {
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0);
+            assertThrows(NullPointerException.class, () -> f.runtime.serviceVBlank(selected.phase(), null));
+            assertFalse(f.runtime.closed()); assertFalse(f.frame.closed());
+            assertEquals(0, f.frame.vIntClock().deltaSinceAdmittedCut());
+            f.runtime.serviceVBlank(selected.phase(), () -> { });
+            assertEquals(1, f.frame.vIntClock().deltaSinceAdmittedCut());
+            assertEquals(CdOpeningObjectRuntime.Phase.SERVICED, f.runtime.phase());
+        }
+    }
+
+    @Test void planeServiceFailureRetainsCompletedArtButClosesBeforeFinishAndRejectsRendering() throws Exception {
+        var level = new CdLevelGlobals(0, 0, 0, 0, 3, 0, 2, 0x88, 0);
+        try (var f = new Fixture(level)) {
+            f.runtime.setPreScrollForeground(PRE); var selected = f.frame.prepareInput(0x80);
+            var failure = new IllegalStateException("constructed plane boundary");
+            assertSame(failure, assertThrows(IllegalStateException.class,
+                    () -> f.runtime.serviceVBlank(selected.phase(), () -> { throw failure; })));
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertEquals(8, f.runtime.levelGlobals().powerup(), "Completed source work is not rolled back");
+            assertEquals(0, f.frame.vIntClock().deltaSinceAdmittedCut());
+            assertFalse(f.frame.paused(), "Start toggles only after Finish");
+            assertThrows(IllegalStateException.class, f.runtime::displayedFrame);
+        }
+    }
+
     // Catches snapshot-of-active-list dispatch, omitted offscreen Mosqui, premature tail,
     // wrong ring child ordering, player Init enqueue, or use of the wrong camera cut.
     @Test void unrunFirstCycleExecutesLiveLaterChildrenAndBuildsBeforeTheOneGlobalTail() throws Exception {

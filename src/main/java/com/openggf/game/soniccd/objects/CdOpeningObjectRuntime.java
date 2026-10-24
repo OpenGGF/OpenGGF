@@ -438,6 +438,18 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
      * dispositions run LoadShieldArt at the Frame's level-art cut; lag retains the powerup byte and window.
      */
     @Override public void serviceVBlank(PlcLifecyclePhase servicePhase) {
+        serviceVBlank(servicePhase, () -> { });
+    }
+
+    /**
+     * Ephemeral CD level-plane service at VInt_Level's camera-copy/DrawLevel cut (Main:840-844),
+     * after UpdateAnimTiles/LoadShieldArt and before Finish/count. Ordinary and pause invoke it;
+     * PP lag does not. The source owner supplies no extra clock or retained callback.
+     * Null rejects before consuming prepared input. Failure closes the existing composition;
+     * completed input/art writes are retained and neither retried nor rolled back.
+     */
+    public void serviceVBlank(PlcLifecyclePhase servicePhase, Runnable afterLevelArt) {
+        Objects.requireNonNull(afterLevelArt, "level-plane service after UpdateAnimTiles");
         boolean ordinary = servicePhase == PlcLifecyclePhase.ORDINARY_LEVEL;
         perform(Phase.CLOSED_CUT, Phase.SERVICING, ordinary ? Phase.SERVICED : Phase.CLOSED_CUT, () -> {
             requireSupportedService(servicePhase);
@@ -445,7 +457,10 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (ordinary && !cameraPrepared) {
                 throw new IllegalStateException("Root must supply the next ordinary pre-scroll camera at a closed cut");
             }
-            frame.serviceVBlank(servicePhase, this::servicePowerupArtAtVInt);
+            frame.serviceVBlank(servicePhase, () -> {
+                servicePowerupArtAtVInt();
+                afterLevelArt.run();
+            });
             checkActive(Phase.SERVICING); // Also detects a swallowed callback's reentrant failure.
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA, then :829-837 Sonic art and LoadShieldArt. At the completed boundary,

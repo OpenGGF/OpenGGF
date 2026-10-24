@@ -277,6 +277,61 @@ public final class CdObjectPresentation {
                 new PixelSpan(block.firstTileId(), floatBlockLogicalBase, block.bytes())));
     }
 
+    /**
+     * Explicit USA_R11A_SPRING_DEV_PRELOADED_ART policy: all ten FloatBlock spans plus the owner's separate
+     * 36-tile normal Art_Springs decode, giving eleven spans / 400 patterns. PLC_Std row 7 places this source at
+     * VRAM $A400 (Palmtree Panic/Data (Act 1 Present).asm:70-71); ObjSpring_Init writes raw $0520
+     * (Spring/Main.asm:188-190). Binding metadata and bytes supply native tiles $520..$543; diagonal art is absent.
+     * Both player and powerup windows are immutable NOW-serviced snapshots. All spans are validated at bank
+     * construction, even before an empty SAT. This services nothing and establishes no executed PLC residency;
+     * the caller owns service order, world/source identity and every logical base.
+     */
+    public static PatternSource usaR11aSpringDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                                 CdPowerupArtRuntime.State nowServicedPowerup,
+                                                                 CdR11aObjectAssets objects,
+                                                                 CdR11aObjectAssets.FrontierArtBank frontier,
+                                                                 CdR11aObjectAssets.ContactArtBank contact,
+                                                                 CdR11aObjectAssets.FloatBlockArtBank floatBlock,
+                                                                 CdR11aObjectAssets.SpringArtBank spring,
+                                                                 int playerLogicalBase, int ringLogicalBase,
+                                                                 int mosquiLogicalBase, int plantLogicalBase,
+                                                                 int rampLogicalBase, int explosionLogicalBase,
+                                                                 int pointsLogicalBase, int flowerLogicalBase,
+                                                                 int powerupLogicalBase, int floatBlockLogicalBase,
+                                                                 int springLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        Objects.requireNonNull(contact, "the owner's decoded contact art bank");
+        Objects.requireNonNull(floatBlock, "the owner's decoded FloatBlock art bank");
+        Objects.requireNonNull(spring, "the owner\'s decoded normal Spring art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var explosion = contact.binding(CdR11aAsset.ART_EXPLOSIONS);
+        var points = contact.binding(CdR11aAsset.ART_POINTS);
+        var flower = contact.binding(CdR11aAsset.ART_FLOWER);
+        var block = floatBlock.binding(CdR11aAsset.ART_FLOAT_BLOCK);
+        var normalSpring = spring.binding(CdR11aAsset.ART_SPRINGS);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, nowServicedPlayer.residentBank()),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes()),
+                new PixelSpan(explosion.firstTileId(), explosionLogicalBase, explosion.bytes()),
+                new PixelSpan(points.firstTileId(), pointsLogicalBase, points.bytes()),
+                new PixelSpan(flower.firstTileId(), flowerLogicalBase, flower.bytes()),
+                powerupResidentSpan(nowServicedPowerup, powerupLogicalBase),
+                new PixelSpan(block.firstTileId(), floatBlockLogicalBase, block.bytes()),
+                new PixelSpan(normalSpring.firstTileId(), springLogicalBase, normalSpring.bytes())));
+    }
+
     /** The complete $480-byte resident window as 36 tiles from $544; package-private for the pure test. */
     static PixelSpan powerupResidentSpan(CdPowerupArtRuntime.State nowServicedPowerup, int logicalBase) {
         Objects.requireNonNull(nowServicedPowerup, "now-serviced powerup art");

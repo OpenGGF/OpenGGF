@@ -13,6 +13,19 @@ import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpritePresentationRenderer;
 import org.junit.jupiter.api.Test;
+import com.openggf.game.soniccd.level.CdR11aAssetLoader;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.level.CdR11aObjectAssets;
+import com.openggf.game.soniccd.media.CdProgramAssets;
+import org.junit.jupiter.api.Assumptions;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Optional;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -343,6 +356,348 @@ class TestCdObjectPresentation {
         assertThrows(IllegalArgumentException.class, () -> new CdObjectPresentation.PixelSpan(2034, 0, span.bytes()));
         assertThrows(IllegalArgumentException.class,
                 () -> new CdObjectPresentation.PixelSpan(0x334, Integer.MAX_VALUE - 13, span.bytes()));
+    }
+
+    @Test void declaredNormalSpringSpanHasExactlyThirtySixTilesAndRejectsBothKindsOfOverlapBeforeDrawing() {
+        // Constructed PixelSpan input only, never authenticated Spring art or executed PLC residency.
+        byte[] raw = new byte[36 * 32];
+        for (int i = 0; i < raw.length; i++) raw[i] = (byte) (i * 11 + 3);
+        var spring = new CdObjectPresentation.PixelSpan(0x520, 12326, CdAssetBytes.copyOf(raw));
+        var alone = CdObjectPresentation.declaredPixelBank(List.of(spring));
+        for (int tile = 0; tile < 36; tile++) {
+            assertEquals(12326 + tile, alone.resolve(0x520 + tile).logicalPatternId());
+            assertEquals(engineVersion(spring.bytes(), tile), alone.resolve(0x520 + tile).version());
+        }
+        assertThrows(UnsupportedOperationException.class, () -> alone.resolve(0x51F));
+        assertThrows(UnsupportedOperationException.class, () -> alone.resolve(0x544));
+        var one = CdAssetBytes.copyOf(new byte[32]);
+        var adjacent = CdObjectPresentation.declaredPixelBank(List.of(
+                new CdObjectPresentation.PixelSpan(0x51F, 12325, one), spring,
+                new CdObjectPresentation.PixelSpan(0x544, 12362, one)));
+        assertEquals(12325, adjacent.resolve(0x51F).logicalPatternId());
+        assertEquals(12361, adjacent.resolve(0x543).logicalPatternId());
+        assertEquals(12362, adjacent.resolve(0x544).logicalPatternId());
+        for (var conflict : List.of(new CdObjectPresentation.PixelSpan(0x520, 15000, one),
+                new CdObjectPresentation.PixelSpan(0x543, 15000, one),
+                new CdObjectPresentation.PixelSpan(0x51F, 15000, CdAssetBytes.copyOf(new byte[64])),
+                new CdObjectPresentation.PixelSpan(0x600, 12326, one),
+                new CdObjectPresentation.PixelSpan(0x600, 12361, one))) {
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(spring, conflict)));
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.declaredPixelBank(List.of(conflict, spring)));
+        }
+        var maximum = CdObjectPresentation.declaredPixelBank(List.of(
+                new CdObjectPresentation.PixelSpan(0x7DC, Integer.MAX_VALUE - 35, spring.bytes())));
+        assertEquals(Integer.MAX_VALUE, maximum.resolve(0x7FF).logicalPatternId());
+        assertThrows(IllegalArgumentException.class, () -> new CdObjectPresentation.PixelSpan(0x7DD, 0, spring.bytes()));
+        assertThrows(IllegalArgumentException.class,
+                () -> new CdObjectPresentation.PixelSpan(0x520, Integer.MAX_VALUE - 34, spring.bytes()));
+    }
+
+    @Test void actualUsaSpringPolicyBindsAll400PixelsKeepsOld364AndRetainsBothServicedSnapshots() throws Exception {
+        var a = springMedia();
+        var binding = a.spring().binding(CdR11aAsset.ART_SPRINGS);
+        assertEquals(0x520, binding.firstTileId()); assertEquals(36, binding.tileCount());
+        assertEquals(0x0520, binding.baseWord());
+        assertEquals("8e3c6d91a395d24872b4ae5da293cd21d8e68230687ef9f07feb62ec2612f416",
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(binding.bytes().copy())));
+        var before = springBank(a, a.player(), a.powerup(), springBases());
+        assertAllSpringPixels(a, a.player(), a.powerup(), before);
+        var old = oldFloatBlockBank(a, a.player(), a.powerup());
+        var allIds = springNativeIds();
+        int unchanged = 0;
+        for (int id = 0; id <= 0x7FF; id++) {
+            int nativeId = id;
+            if (id >= 0x520 && id <= 0x543) {
+                assertThrows(UnsupportedOperationException.class, () -> old.resolve(nativeId));
+            } else if (allIds.contains(id)) {
+                assertEquals(old.resolve(id), before.resolve(id)); unchanged++;
+            } else {
+                assertThrows(UnsupportedOperationException.class, () -> old.resolve(nativeId));
+            }
+        }
+        assertEquals(364, unchanged);
+        assertThrows(UnsupportedOperationException.class, () -> a.spring().tile(0x51F));
+        assertThrows(UnsupportedOperationException.class, () -> a.spring().tile(0x544));
+        assertEquals(engineVersion(a.powerup().residentBank(), 0), before.resolve(0x544).version());
+
+        var playerSlots = new Fixture();
+        playerSlots.add(32, 0, 0, 128, 128, 0x780,
+                List.of(new RawPiece(0, 14, 0, 0), new RawPiece(0, 14, 12, 32)));
+        var playerSat = playerSlots.build(32);
+        var gameSat = new GameOverSlots(GAME_MAP, 0, 1).draw();
+        var earlierPlayer = CdObjectPresentation.convert(playerSat, before);
+        var earlierGame = CdObjectPresentation.convert(gameSat, before);
+        assertEquals(24, earlierPlayer.patternVersions().size()); assertEquals(32, earlierGame.patternVersions().size());
+        var playerService = new CdPlayerArtRuntime(a.assets().sonic(), a.player());
+        CdPlayerArtRuntime.State nextPlayer = null;
+        for (int frame = 1; frame < a.assets().sonic().dplcFrames().size(); frame++) {
+            if (a.assets().sonic().dplcFrames().get(frame).pieces().isEmpty()) continue;
+            playerService.serviceVInt(frame);
+            if (!Arrays.equals(a.player().residentBank().copy(), playerService.capture().residentBank().copy())) {
+                nextPlayer = playerService.capture(); break;
+            }
+        }
+        assertNotNull(nextPlayer, "actual DPLC frames must distinguish the two supplied resident snapshots");
+        var game = new CdPowerupArtRuntime(a.assets().shield()).service(a.powerup(), 0x88).state();
+        var after = springBank(a, nextPlayer, game, springBases());
+        assertAllSpringPixels(a, nextPlayer, game, after);
+        var laterPlayer = CdObjectPresentation.convert(playerSat, after);
+        var laterGame = CdObjectPresentation.convert(gameSat, after);
+        assertNotEquals(earlierPlayer.patternVersions(), laterPlayer.patternVersions());
+        assertNotEquals(earlierGame.patternVersions(), laterGame.patternVersions());
+        assertEquals(earlierPlayer.tiles(), laterPlayer.tiles()); assertEquals(earlierGame.tiles(), laterGame.tiles());
+        assertEquals(earlierPlayer, CdObjectPresentation.convert(playerSat, before));
+        assertEquals(earlierGame, CdObjectPresentation.convert(gameSat, before));
+        assertAllSpringPixels(a, a.player(), a.powerup(), before);
+        for (int tile = 0; tile < 36; tile++) assertEquals(before.resolve(0x520 + tile), after.resolve(0x520 + tile));
+        var detached = binding.bytes().copy(); Arrays.fill(detached, (byte) 0xEE);
+        assertEquals(engineVersion(binding.bytes(), 35), before.resolve(0x543).version());
+        assertThrows(UnsupportedOperationException.class, () -> earlierPlayer.patternVersions().clear());
+        assertThrows(UnsupportedOperationException.class, () -> earlierGame.patternVersions().clear());
+    }
+
+    @Test void actualUsaSpringPolicyValidatesEveryLogicalSpanBeforeEvenAnEmptySat() throws Exception {
+        var a = springMedia();
+        var empty = new Fixture().build(); assertEquals(0, empty.spriteCount());
+        int[] sizes = springSizes();
+        int[] nativeFirst = springFirstTiles();
+        for (int span = 0; span < 11; span++) {
+            var negative = springBases(); negative[span] = -1;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    springBank(a, a.player(), a.powerup(), negative)));
+            var overflow = springBases(); overflow[span] = Integer.MAX_VALUE - sizes[span] + 2;
+            assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                    springBank(a, a.player(), a.powerup(), overflow)));
+            for (int base : new int[]{0, Integer.MAX_VALUE - sizes[span] + 1}) {
+                var bounds = springBases(); bounds[span] = base;
+                var bank = springBank(a, a.player(), a.powerup(), bounds);
+                assertEquals(base, bank.resolve(nativeFirst[span]).logicalPatternId());
+                assertEquals(base + sizes[span] - 1, bank.resolve(nativeFirst[span] + sizes[span] - 1).logicalPatternId());
+                assertEquals(SpritePresentation.Frame.empty(), CdObjectPresentation.convert(empty, bank));
+            }
+        }
+        // Every pair, including all ten inherited spans; both boundary-overlap directions fail at construction.
+        for (int first = 0; first < 11; first++) {
+            for (int second = first + 1; second < 11; second++) {
+                var overlapEnd = springBases(); overlapEnd[second] = overlapEnd[first] + sizes[first] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        springBank(a, a.player(), a.powerup(), overlapEnd)));
+                var overlapStart = springBases(); overlapStart[first] = overlapStart[second] + sizes[second] - 1;
+                assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.convert(empty,
+                        springBank(a, a.player(), a.powerup(), overlapStart)));
+            }
+        }
+        assertThrows(NullPointerException.class, () -> springBank(a, null, a.powerup(), springBases()));
+        assertThrows(NullPointerException.class, () -> springBank(a, a.player(), null, springBases()));
+        int[] b = springBases();
+        assertThrows(NullPointerException.class, () -> CdObjectPresentation.usaR11aSpringDevPreloadedArt(
+                a.player(), a.powerup(), a.objects(), a.frontier(), a.contact(), a.floatBlock(), null,
+                b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10]));
+    }
+
+    @Test void actualUsaNormalSpringFamiliesKeepSixFramesRawAttributesAndExactly36TilesThroughTheQueue() throws Exception {
+        var a = springMedia();
+        var resolver = CdObjectMappings.fromOpeningAssets(a.assets(), a.objects());
+        var bank = springBank(a, a.player(), a.powerup(), springBases());
+        var old = oldFloatBlockBank(a, a.player(), a.powerup());
+        // Source literals, not a second decode of the resolver's result: Spring/Data/Mappings.asm:11-44, pin1ecc5f3af.
+        var pieces = List.of(
+                List.of(new RawPiece(-8, 12, 0, -16), new RawPiece(0, 12, 4, -16)),
+                List.of(new RawPiece(0, 12, 0, -16)),
+                List.of(new RawPiece(-32, 12, 0, -16), new RawPiece(-24, 6, 8, -8), new RawPiece(0, 12, 14, -16)),
+                List.of(new RawPiece(-16, 3, 18, 0), new RawPiece(-16, 3, 22, -8)),
+                List.of(new RawPiece(-16, 3, 18, -8)),
+                List.of(new RawPiece(-16, 3, 18, 24), new RawPiece(-8, 9, 26, 0), new RawPiece(-16, 3, 32, -8)));
+        var offsets = List.of(List.of(4, 5, 6, 7, 0, 1, 2, 3), List.of(0, 1, 2, 3),
+                List.of(14, 15, 16, 17, 8, 11, 9, 12, 10, 13, 0, 1, 2, 3),
+                List.of(22, 23, 24, 25, 18, 19, 20, 21), List.of(18, 19, 20, 21),
+                List.of(32, 33, 34, 35, 26, 28, 30, 27, 29, 31, 18, 19, 20, 21));
+        // $0520 and palette bit $2000: ObjSpring_Init:188-234. Priority $8520: ObjSpring2_Init:110-113.
+        // The combined $A520 and all flip states are explicit raw-attribute component inputs, no body admission.
+        int[] bases = {0x0520, 0x2520, 0x8520, 0xA520};
+        var allRequested = new TreeSet<Integer>();
+        for (int family = 0; family < 2; family++) {
+            int root = family == 0 ? 0x209BA0 : 0x209BA6;
+            for (int frame = 0; frame < 3; frame++) {
+                int index = family * 3 + frame;
+                assertEquals(new FrameMapping(pieces.get(index).size(), pieces.get(index)), resolver.resolve(root, false, frame));
+                for (int flips = 0; flips < 4; flips++) {
+                    var sat = drawNormalSpring(resolver, root, frame, bases[flips], 4 | flips);
+                    var requested = new TreeSet<Integer>();
+                    var picture = CdObjectPresentation.convert(sat, id -> { requested.add(id); return bank.resolve(id); });
+                    assertSpringSatAndPicture(sat, picture, pieces.get(index), offsets.get(index), bases[flips], flips,
+                            a.spring().binding(CdR11aAsset.ART_SPRINGS).bytes());
+                    var expectedIds = new TreeSet<Integer>();
+                    for (int offset : offsets.get(index)) expectedIds.add(0x520 + offset);
+                    assertEquals(expectedIds, requested); allRequested.addAll(requested);
+                    assertThrows(UnsupportedOperationException.class, () -> CdObjectPresentation.convert(sat, old));
+                }
+            }
+            for (int badFrame : new int[]{3, 255}) {
+                assertThrows(UnsupportedOperationException.class, () -> drawNormalSpring(resolver, root, badFrame, 0x0520, 4));
+            }
+        }
+        assertEquals(nativeRange(0x520, 0x544), allRequested);
+        for (int pointer : new int[]{0x209BF0, 0x209BA2, 0xFF209BA6}) {
+            assertThrows(UnsupportedOperationException.class, () -> drawNormalSpring(resolver, pointer, 0, 0x0520, 4));
+        }
+        for (int id = 0x490; id < 0x4BE; id++) { // PLC_Std's separate diagonal art is never bound.
+            int diagonalTile = id;
+            assertThrows(UnsupportedOperationException.class, () -> bank.resolve(diagonalTile));
+        }
+    }
+
+    private static int[] springBases() {
+        return new int[]{10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236, 12275, 12311, 12326};
+    }
+    private static int[] springFirstTiles() {
+        return new int[]{0x780, 0x7AE, 0x3A0, 0x424, 0x441, 0x680, 0x6C6, 0x6D7, 0x544, 0x334, 0x520};
+    }
+    private static int[] springSizes() { return new int[]{24, 14, 70, 28, 63, 70, 5, 39, 36, 15, 36}; }
+    private static TreeSet<Integer> springNativeIds() {
+        var ids = new TreeSet<Integer>();
+        int[] first = springFirstTiles(), count = springSizes();
+        for (int span = 0; span < 11; span++) ids.addAll(nativeRange(first[span], first[span] + count[span]));
+        assertEquals(400, ids.size()); return ids;
+    }
+
+    /** Engine Pattern conversion is the independent pixel oracle, rather than the factory's nibble packer. */
+    private static SpritePresentation.PatternVersion engineVersion(CdAssetBytes bytes, int tile) {
+        var pattern = new Pattern(); pattern.fromSegaFormat(bytes.slice(tile * 32, 32).copy());
+        return SpritePresentationRenderer.version(pattern);
+    }
+
+    private static void assertAllSpringPixels(UsaSpring a, CdPlayerArtRuntime.State player,
+                                              CdPowerupArtRuntime.State powerup, CdObjectPresentation.PatternSource bank) {
+        var pixels = List.of(player.residentBank(), a.objects().initialArtBank().binding(CdR11aAsset.ART_RINGS).bytes(),
+                a.objects().initialArtBank().binding(CdR11aAsset.ART_MOSQUI).bytes(),
+                a.frontier().binding(CdR11aAsset.ART_3D_PLANT).bytes(), a.frontier().binding(CdR11aAsset.ART_3D_RAMP_BOOST).bytes(),
+                a.contact().binding(CdR11aAsset.ART_EXPLOSIONS).bytes(), a.contact().binding(CdR11aAsset.ART_POINTS).bytes(),
+                a.contact().binding(CdR11aAsset.ART_FLOWER).bytes(), powerup.residentBank(),
+                a.floatBlock().binding(CdR11aAsset.ART_FLOAT_BLOCK).bytes(), a.spring().binding(CdR11aAsset.ART_SPRINGS).bytes());
+        int[] first = springFirstTiles(), count = springSizes(), bases = springBases();
+        var logical = new HashSet<Integer>();
+        for (int span = 0; span < 11; span++) {
+            assertEquals(count[span] * 32, pixels.get(span).length());
+            for (int tile = 0; tile < count[span]; tile++) {
+                var actual = bank.resolve(first[span] + tile);
+                assertEquals(bases[span] + tile, actual.logicalPatternId());
+                assertEquals(engineVersion(pixels.get(span), tile), actual.version());
+                assertTrue(logical.add(actual.logicalPatternId()));
+            }
+        }
+        assertEquals(400, logical.size());
+        var nativeIds = springNativeIds();
+        for (int tile = 0; tile <= 0x7FF; tile++) {
+            int id = tile;
+            if (!nativeIds.contains(tile)) assertThrows(UnsupportedOperationException.class, () -> bank.resolve(id));
+        }
+        assertThrows(IllegalArgumentException.class, () -> bank.resolve(-1));
+        assertThrows(IllegalArgumentException.class, () -> bank.resolve(0x800));
+    }
+
+    private static CdObjectPresentation.PatternSource springBank(UsaSpring a, CdPlayerArtRuntime.State player,
+                                                                 CdPowerupArtRuntime.State powerup, int[] b) {
+        return CdObjectPresentation.usaR11aSpringDevPreloadedArt(player, powerup, a.objects(), a.frontier(), a.contact(),
+                a.floatBlock(), a.spring(), b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10]);
+    }
+    private static CdObjectPresentation.PatternSource oldFloatBlockBank(UsaSpring a, CdPlayerArtRuntime.State player,
+                                                                        CdPowerupArtRuntime.State powerup) {
+        int[] b = springBases();
+        return CdObjectPresentation.usaR11aFloatBlockDevPreloadedArt(player, powerup, a.objects(), a.frontier(), a.contact(),
+                a.floatBlock(), b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9]);
+    }
+
+    private static void assertSpringSatAndPicture(CpuSat sat, SpritePresentation.Frame picture, List<RawPiece> pieces,
+                                                   List<Integer> offsets, int base, int flips, CdAssetBytes art) {
+        assertEquals(pieces.size(), sat.spriteCount());
+        byte[] raw = sat.bytes();
+        for (int index = 0; index < pieces.size(); index++) {
+            var p = pieces.get(index);
+            int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flips & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flips & 2) == 0 ? p.y() : -p.y() - height * 8;
+            assertEquals(256 + y, word(raw, index * 8));
+            assertEquals(p.sizeByte(), raw[index * 8 + 2] & 255); assertEquals(index + 1, raw[index * 8 + 3] & 255);
+            assertEquals((base + p.rawTileWord()) ^ (flips << 11), word(raw, index * 8 + 4));
+            assertEquals(384 + x, word(raw, index * 8 + 6));
+        }
+        assertEquals(offsets.size(), picture.tiles().size()); assertEquals(offsets.size(), picture.patternVersions().size());
+        assertEquals(offsets.stream().map(offset -> 12326 + offset).toList(),
+                picture.tiles().stream().map(SpritePresentation.Tile::patternId).toList());
+        int index = 0;
+        for (int piece = pieces.size() - 1; piece >= 0; piece--) {
+            var p = pieces.get(piece);
+            int width = (p.sizeByte() >>> 2) + 1, height = (p.sizeByte() & 3) + 1;
+            int x = (flips & 1) == 0 ? p.x() : -p.x() - width * 8;
+            int y = (flips & 2) == 0 ? p.y() : -p.y() - height * 8;
+            for (int row = 0; row < height; row++) {
+                for (int col = 0; col < width; col++) {
+                    var tile = picture.tiles().get(index);
+                    assertEquals(256 + x + ((flips & 1) == 0 ? col : width - 1 - col) * 8, tile.x());
+                    assertEquals(128 + y + ((flips & 2) == 0 ? row : height - 1 - row) * 8, tile.y());
+                    assertEquals((base >>> 13) & 3, tile.palette()); assertEquals((base & 0x8000) != 0, tile.priority());
+                    assertEquals((flips & 1) != 0, tile.hFlip()); assertEquals((flips & 2) != 0, tile.vFlip());
+                    assertEquals(engineVersion(art, offsets.get(index)), picture.patternVersions().get(tile.patternId()));
+                    index++;
+                }
+            }
+        }
+    }
+
+    /** Constructed normal $0A live slot; authenticated mapping bytes and the real queue own every emitted SAT piece. */
+    private static CpuSat drawNormalSpring(CdDrawMappings mappings, int pointer, int frame, int base, int flags) {
+        var slots = new CdDrawSlots() {
+            private LiveDrawSlot current = new LiveDrawSlot(0x0A, flags, 0x100, 0x80, 0x9999, pointer, frame, base);
+            @Override public LiveDrawSlot read(CdSlotRef ref) { assertEquals(32, ref.wholeIndex()); return current; }
+            @Override public void writeOnScreenBit(CdSlotRef ref, boolean on) {
+                assertEquals(32, ref.wholeIndex()); var s = current;
+                current = new LiveDrawSlot(s.idByte(), (s.spriteFlagsByte() & 127) | (on ? 128 : 0),
+                        s.xWord(), s.yWord(), s.screenYWord(), s.mappingAddressBits(), s.mapFrameByte(), s.baseTileWord());
+            }
+        };
+        var queue = new CdObjectDrawQueue(slots, mappings, new byte[SAT_BYTE_SIZE]);
+        var camera = new CameraWords(0, 0);
+        queue.beginPass();
+        assertEquals(EnqueueResult.QUEUED, queue.drawObject(new DrawCallCut(new CdSlotRef(32), flags,
+                0x100, 0x80, 0x10, 0x10, 4), camera));
+        return queue.finishAfterCamera(new DrawCameras(camera, camera, camera));
+    }
+
+    private record UsaSpring(CdR11aAssets assets, CdR11aObjectAssets objects,
+                             CdR11aObjectAssets.FrontierArtBank frontier, CdR11aObjectAssets.ContactArtBank contact,
+                             CdR11aObjectAssets.FloatBlockArtBank floatBlock, CdR11aObjectAssets.SpringArtBank spring,
+                             CdPlayerArtRuntime.State player, CdPowerupArtRuntime.State powerup) { }
+
+    /** Existing actual-media fixture pattern from TestCdObjectMappings:769-780; no generated media or public seams. */
+    private static UsaSpring springMedia() throws Exception {
+        String configured = System.getProperty("soniccd.media.root");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank(), "Set soniccd.media.root for supplied-media checks");
+        Path cue;
+        try (var files = Files.list(Path.of(configured).resolve("USA"))) {
+            var cues = files.filter(p -> p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".cue")).toList();
+            assertEquals(1, cues.size()); cue = cues.getFirst();
+        }
+        CdR11aAssets assets;
+        try (var source = CdProgramAssets.open(cue, Optional.of(CdReleaseVariant.USA), Optional.empty())) {
+            assets = CdR11aAssetLoader.load(source, CdReleaseVariant.USA, CdStageKey.parse("R11A"));
+        }
+        var objects = assets.openingObjects(); // First optional object/bank access is after source closure.
+        var service = new CdPlayerArtRuntime(assets.sonic(), new CdPlayerArtRuntime.State(
+                filled(0x300, 0xA5), filled(0x300, 0xCC), 0, false));
+        int frame = 1;
+        while (frame < assets.sonic().dplcFrames().size() && assets.sonic().dplcFrames().get(frame).pieces().isEmpty()) frame++;
+        assertTrue(frame < assets.sonic().dplcFrames().size());
+        service.serviceVInt(frame).orElseThrow();
+        var player = service.capture();
+        assertFalse(player.dirty()); assertEquals(frame, player.lastFrame());
+        assertArrayEquals(filled(32, 0xCC), player.residentBank().slice(0x2E0, 32).copy());
+        var shield = new CdPowerupArtRuntime(assets.shield()).service(new CdPowerupArtRuntime.State(
+                filled(0x480, 0xA5), filled(0x480, 0xCC)), 0x82).state();
+        assertArrayEquals(assets.shield().copy(0).bytes().copy(), shield.residentBank().slice(0, 0x400).copy());
+        assertArrayEquals(filled(0x80, 0xA5), shield.residentBank().slice(0x400, 0x80).copy());
+        return new UsaSpring(assets, objects, objects.frontierArtBank(), objects.contactArtBank(),
+                objects.floatBlockArtBank(), objects.springArtBank(), player, shield);
     }
 
     private static CdObjectPresentation.PatternSource powerupBank(CdPowerupArtRuntime.State state) {
