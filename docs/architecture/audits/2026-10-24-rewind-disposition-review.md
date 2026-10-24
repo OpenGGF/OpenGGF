@@ -32,8 +32,8 @@ obligation is not a passing test claim.
 | 5 | [`sonic2.objects.BreakableBlockObjectInstance$BreakableBlockFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java) | Closed by removing the redundant list and capturing an immutable `FragmentArt(artKey, piece)` value through the existing default compact schema. A null piece selects the existing frame fallback; a null recipe preserves artless construction. The piece constructor now requires explicit art provenance instead of a live renderer. | [`TestS2BreakableBlockFragmentGraphRewind.pieceFragmentRestoresItsDrawBeforeAndAfterMovement`](../../../src/test/java/com/openggf/game/rewind/TestS2BreakableBlockFragmentGraphRewind.java) checks exact nonempty submissions after destructive registry restore, immediately and after motion, through a replacement renderer. `frameFallbackPreservesArtPresenceAndRetirement` checks frame 3, artless construction and retirement replay. See the S2 fragment follow-up below for baseline failures and limits. |
 | 6 | [`sonic2.objects.OOZLauncherObjectInstance$LauncherFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/OOZLauncherObjectInstance.java) | Closed by removing the redundant list and capturing an immutable art-key/piece recipe. The production owner supplies the orientation-specific art key, and drawing resolves the current renderer. No renderer or inferred coordinate match enters the snapshot. | [`TestS2LauncherGraphRewind.producedFragmentsRestoreTheirDrawForBothOrientations`](../../../src/test/java/com/openggf/game/rewind/TestS2LauncherGraphRewind.java) breaks real managed parents for both orientations, captures before and after child motion, replaces the renderer, and checks exact submissions, piece zero, identities and allocation slots after destructive registry restore. `fragmentRestoresTheLatchedOffscreenRetirement` checks a custom art key and next-step deletion from a restored offscreen latch. See the S2 fragment follow-up below. |
 | 7 | [`sonic2.objects.SmashableGroundObjectInstance$SmashableGroundFragmentInstance#pieceList`](../../../src/main/java/com/openggf/game/sonic2/objects/SmashableGroundObjectInstance.java) | Closed with central `TRANSIENT`. The captured spawn packs frame and piece indices. Recreation fetches the matching sheet and renderer from `ObjectServices.renderManager()` and builds the one-piece list. | [`TestS2DebrisFragmentGraphRewind.smashableGroundFragmentRecreatesItsNonemptyMappingPieceAndReplaysTheDraw`](../../../src/test/java/com/openggf/game/rewind/TestS2DebrisFragmentGraphRewind.java) uses frame 1/piece 1 with a decoy, distinct offsets, dimensions, tile, flips, palette, and priority. It removes the source, verifies the exact nonempty draw after reconstruction, and compares the next moving draw with uninterrupted execution. This checks renderer input, not GPU pixels or every art variant. |
-| 8 | [`sonic2.objects.badniks.RexonBadnikInstance#heads`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/RexonBadnikInstance.java) | Retained pending broader owner evidence. Recreated heads attach through `nearestRexon`; the custom list rebuilds linked-head order during addition. | [`TestS2BadnikChildGraphRewind.s2BadnikChildGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2BadnikChildGraphRewind.java) checks five heads, restored parent references, and chain links in one Rexon family. Before excluding the list, exercise two nearby families, partial head retirement, restored indices, and forward chain behavior. The current nearest-owner recipe does not establish exact multi-family identity. |
-| 9 | [`sonic2.objects.badniks.SolBadnikInstance#fireballs`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/SolBadnikInstance.java) | Retained pending broader owner evidence. Recreated fireballs attach through `nearestSol`; detached flying fireballs may have no parent. | The same S2 badnik graph test checks four parent-owned restored fireballs. `detachedFlyingSolFireballRestoresWithoutLiveParent` checks the detached case. Add two nearby owners and mixed attached/flying retirement evidence before declaring this cache wholly reconstructible. |
+| 8 | [`sonic2.objects.badniks.RexonBadnikInstance#heads`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/RexonBadnikInstance.java) | Closed with central `TRANSIENT`. Each head captures optional exact owner and next-head identities. The settled callback rebuilds the live inventory by owner and captured head index. It never compacts a missing chain slot. | [`TestS2RexonSolOwnershipRewind.progressedRexonFamiliesRestoreExactOwnersSparseChainsAndDeathDropScope`](../../../src/test/java/com/openggf/game/rewind/TestS2RexonSolOwnershipRewind.java) destructively restores two nearby families after native neck movement and interior-head retirement, checks exact identities and inventories, replays every surviving head, and scopes attack-triggered death drop to its original family. The retired-parent check tolerates absent owner and next-head identities. |
+| 9 | [`sonic2.objects.badniks.SolBadnikInstance#fireballs`](../../../src/main/java/com/openggf/game/sonic2/objects/badniks/SolBadnikInstance.java) | Closed with central `TRANSIENT`. Each fireball captures its optional exact owner identity. The settled callback rebuilds the live inventory, including flying fireballs that retain their parent until unload. | [`TestS2RexonSolOwnershipRewind.solFamiliesRestoreMixedFlyingInventoriesCountersAndUnloadDetachment`](../../../src/test/java/com/openggf/game/rewind/TestS2RexonSolOwnershipRewind.java) advances real detection, animation, orbit and flight near another family, retires one child, restores fresh owners, compares exact inventories and forward movement, checks subsequent launch counters, and verifies family-specific unload detachment. The retired-parent flying check rejects adoption by a nearby live Sol. |
 | 10 | [`sonic2.objects.bosses.CPZBossPipe#segments`](../../../src/main/java/com/openggf/game/sonic2/objects/bosses/CPZBossPipe.java) | Closed with central `TRANSIENT`. CPZBossPipeSegment recreation calls `reregisterRestoredSegment` on the recreated pipe. | [`TestS2CpzBossGraphRewind.cpzBossGraphRestoresWithoutDropsDoublesOrStaleReferences`](../../../src/test/java/com/openggf/game/rewind/TestS2CpzBossGraphRewind.java) destructively replaces the graph and checks stable identities, fresh objects, parent links, and the pipe's exact live segment list. Its representative graph has one segment; sparse multi-segment retract ordering remains outside this check. |
 | 11 | [`sonic3k.objects.AizPlaneIntroInstance#activeWaves`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Retained. `tickWaveSpawn` appends managed waves. Child recreation restores parent links, but does not rebuild this parent list. The list is currently appended and cleared on unload, rather than read by the gameplay dispatch. | [`TestS3kAizIntroGraphRewind.aizIntroPlaneAndWaveChildrenRestoreFreshWithRestoredParentRefsAndScalars`](../../../src/test/java/com/openggf/game/rewind/TestS3kAizIntroGraphRewind.java) checks managed children and their parent links, not this list. Prove retirement/unload behavior and the absence of a live list consumer across the intro boundary before an explicit diagnostic-only exclusion. |
 | 12 | [`sonic3k.objects.AizPlaneIntroInstance#emeralds`](../../../src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java) | Retained. Emerald scattering appends managed children; unload clears the list. Recreation does not repopulate it. | The AIZ intro graph fixture does not exercise the seven scattered emeralds and their retirement boundary. Add that graph and a destructive restore/forward run before excluding the parent inventory. Emerald glow-child tests cover a different class. |
@@ -614,3 +614,139 @@ The commit policy rejected literal home-directory paths in the audit commands;
 and ROM directory used by the invocations. The recorded selectors, flags, ROM
 filenames and working directory are unchanged. No source or test changed after
 the final successful run.
+
+## Rexon and Sol owner follow-up
+
+This bounded follow-up starts from `624e95b4892533d23ae898d8127f277038777f70`
+in the `bugfix/ai-s2-badnik-rewind-owners-20261024` worktree. The parent owns
+reconciliation with subsequent develop changes and composed totals.
+
+Parent-owned child identities and child-owned optional identities were compared.
+Capturing the existing parent lists directly would retain retired entries and
+still need a representation for Rexon's sparse next-head links. The selected
+per-child snapshot records use the existing identity table and extra-state
+hooks. Rexon stores owner and next-head IDs. Sol stores its owner ID through
+flight. An unmanaged or retired target encodes no ID, and an unresolved target
+restores as null. Required-reference codecs keep their existing strict behavior.
+The parent inventories rebuild only after every reference and scalar has settled.
+No native movement, animation clock, allocation order, spawn, delete, respawn,
+attack or unload dispatch was changed. The unused nearest-owner recipes and
+Rexon's addition-time chain relinking were removed for these two families.
+
+The first reproduction accidentally recreated each dynamic parent immediately
+before its own children. That ordering masked Sol's ambiguous-owner defect.
+It still failed Rexon's sparse-chain and retired-owner checks. Creating both
+parents before either child family exposed both wrong-owner cases. On unchanged
+runtime `624e95b48`, the corrected five-test selection had five failures, zero
+errors and zero skips. Four failures were wrong ownership or retired-parent
+adoption. The fifth was the absent exact inventory policy. The initial sparse
+Rexon check also observed an incorrect link across the retired slot before the
+fixture ordering was corrected.
+
+The first fixed selection ran 32 tests with zero assertion failures, one error
+and zero skips. The new Rexon attack check reached the real points constructor,
+which exposed the fixture's missing render-manager service. The fixture now
+provides that service without changing runtime destruction. Sol setup was also
+strengthened to reach flight through real player detection, animation and orbit
+updates rather than a direct launch invocation. The final graph/object selection
+passed all 11 tests across four classes with zero failures, errors or skips.
+The 21 policy-registry checks passed in the preceding selection on the same
+policy implementation. Both inventory policies were proved before their two
+baseline keys were removed. In-place reuse remains disabled by the existing
+class safety policy for all four native classes, which the new test asserts.
+
+Commands use Java 25, Lua 5.4 and the updated main-checkout Maven wrapper from
+this worktree. The three existing absolute ROM paths are passed unchanged.
+`MAIN_CHECKOUT` and `ROM_ROOT` below name the existing main checkout and ROM
+directory. No category run or release-only full suite was submitted.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind,TestS2BadnikChildGraphRewind,TestRewindFixS2Batch3Codecs,TestRewindFixS2Batch5Codecs' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+These are bounded headless graph checks. They do not certify rendered pixels,
+the complete HTZ route, every viewport, character or team combination, or a
+trace frontier. Delivery-wide guard, API and S3K checks remain with the parent.
+
+After pruning, the bounded disposition and codec-metadata selection passed all
+seven tests with zero failures, errors or skips. The generated disposition
+report matched the remaining baseline exactly, with both owned keys absent.
+The request waited 336 seconds for admission and Maven reported 25.746 seconds
+of execution. The successful graph request waited 14 seconds and Maven reported
+80 seconds. The corrected baseline request waited 113 seconds and Maven reported
+25.204 seconds. These are separate intervals, not summed delivery time.
+
+```bash
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestRewindFieldDispositionGuard,TestRewindFieldDispositionAudit,TestScalarOnlyCodecDeletion#s2BadnikChildGraphClassesAllImplementRewindRecreatable+s2BadnikParentGraphClassesImplementRewindRecreatable' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The XML method identities and skips, Java 25.0.5.0.2 and surfaceless flag, and the
+generated disposition report were inspected. Consumed reports and diagnostics
+were removed. No validation receipt or retained log archive was created.
+
+## Rexon and Sol context-free compatibility correction
+
+Independent review of `db2afc6619a49e3a30a562e3d3ff497fc832cbd0` against
+`624e95b4892533d23ae898d8127f277038777f70` identified a bounded public API
+compatibility regression. The parent supplied review hash
+`3abbce1bf230304f96620bacf58f5caeb1fa35d53f39de04d5ec7b9791310f8f`, excluding
+the inherited dirty submodules. The original implementation conflated an absent
+identity table with a supplied table that authoritatively encoded absent links.
+`AbstractObjectInstance` delegates its public no-argument capture and restore
+methods through `RewindCaptureContext.none()`. The new child extras therefore
+cleared existing structural links on a same-instance context-free round trip.
+An orbiting Sol fireball then destroyed itself on its next update. The parent
+found no current production caller for this combination. This correction does
+not reclassify the managed registry checks as failing.
+
+The rejected `db2afc661` approach always emitted a custom link extra, even when
+capture had no identity table. The accepted correction adds an absent-table
+return to each child capture method. It returns the superclass snapshot intact,
+including its generic/scalar state and any existing extra. Table-backed capture
+and all restore code remain unchanged. A captured null ID remains authoritative.
+Rejecting the public no-argument API or skipping link restore whenever the
+receiving context lacks a table would change that contract. The expanded null-ID
+controls specifically cover table-backed snapshots consumed through context-free
+restore, so a restore-side guard would fail those controls.
+
+On unchanged runtime `db2afc661`, the new six-case selection ran with four
+failures, zero errors and zero skips. Both the no-argument and explicit
+`RewindCaptureContext.none()` cases lost Rexon's owner and next-head links.
+Both Sol cases lost their owner and destroyed the orbiting fireball on its next
+tick. Scalar capture and restoration succeeded, distinguishing lost links from
+an omitted entire snapshot. The two supplied-table null-ID controls passed.
+
+With only the two capture guards added, the affected graph/object selection
+passed all 17 tests across four classes with zero failures, errors or skips.
+That selection includes the existing exact managed owner, sparse retirement,
+chain/death-drop, native Sol launch, unload and forward-replay checks. The two
+null-ID controls were then expanded to cover both table-backed and context-free
+restore forms. Only those four parameter cases were run afterward; all passed
+with zero failures, errors or skips. The XML identities and skips were inspected,
+and consumed XML/text diagnostics were removed. No source was changed while a
+request was queued or running. No request was restarted or duplicated.
+
+All three commands below used Java 25.0.5.0.2, `LUA_BIN=/usr/bin/lua5.4`, the
+existing absolute ROM paths and the updated main-checkout wrapper from this
+worktree. Repository resource policy requires checkout locations to use
+variables. `MAIN_CHECKOUT` and `ROM_ROOT` stand for the existing main checkout
+and ROM directory used above; all other arguments are exact. `JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and its `bin` directory led
+`PATH`. The baseline acquired admission immediately and Maven reported
+24.839 seconds. The affected graph request waited 43 seconds and Maven reported
+1 minute 20 seconds. The expanded controls waited 34 seconds and Maven reported
+23.757 seconds. Queue and execution intervals are separate observations.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind#contextFreeRexonRoundTripKeepsOwnerAndNextHead+contextFreeSolRoundTripKeepsOrbitingOwnerAndNextTick+tableBackedNullRexonIdsClearExistingLinks+tableBackedNullSolIdClearsExistingOwner' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind,TestS2BadnikChildGraphRewind,TestRewindFixS2Batch3Codecs,TestRewindFixS2Batch5Codecs' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off '-Dtest=TestS2RexonSolOwnershipRewind#tableBackedNullRexonIdsClearExistingLinks+tableBackedNullSolIdClearsExistingOwner' -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+This follow-up changes no central policy, baseline key or audit row. Its field
+obligation delta is zero; the two managed inventory closures remain intact.
+No native movement, lifecycle, allocation or manager in-place reuse rule changed.
+The 21 policy-registry checks were not rerun. No broad suite or release-only full
+suite was submitted. Complete guards, Mod API, S3K, upstream reconciliation,
+integration and delivery remain with the parent. These direct API and headless
+graph checks do not certify rendered output or a complete HTZ route.

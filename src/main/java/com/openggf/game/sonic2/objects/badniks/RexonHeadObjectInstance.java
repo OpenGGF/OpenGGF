@@ -3,12 +3,15 @@ package com.openggf.game.sonic2.objects.badniks;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -121,7 +124,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         NORMAL,
         DEATH_DROP
     }
-    private final RexonBadnikInstance parent;
+    private RexonBadnikInstance parent;
     // headIndex/headNumber/xFlip are non-final so GenericFieldCapturer captures them and
     // restoreObjectRewindState reapplies them after the rewind recreate hook rebuilds this head
     // (the hook passes placeholders; these values are not derivable from the ObjectSpawn).
@@ -152,6 +155,9 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     // Head 0 (anchor) → Head 1 → Head 2 → Head 3 → Head 4 (tip)
     // Head 0 stays at base position; oscillation ripples toward tip
     private RexonHeadObjectInstance linkedHead;
+
+    private record RewindLinks(ObjectRefId parentId, ObjectRefId linkedHeadId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public RexonHeadObjectInstance(ObjectSpawn spawn,
                                    RexonBadnikInstance parent, int x, int y,
@@ -203,15 +209,34 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        RexonBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestRexon(ctx);
         ObjectSpawn spawn = ctx.spawn();
-        if (parent == null) {
-            return null;
+        return new RexonHeadObjectInstance(spawn, null, spawn.x(), spawn.y(), 0, false);
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        if (context.identityTable().isEmpty()) {
+            return super.captureRewindState(context);
         }
-        RexonHeadObjectInstance head =
-                new RexonHeadObjectInstance(spawn, parent, spawn.x(), spawn.y(), 0, false);
-        parent.attachHeadForRewind(head);
-        return head;
+        // Deleted SST slots may remain in the native chain. Capture only managed targets.
+        ObjectRefId parentId = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
+        ObjectRefId nextId = context.identityTable().map(table -> table.encodeObject(linkedHead)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewindLinks(parentId, nextId));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindLinks links) {
+            parent = links.parentId() == null ? null
+                    : (RexonBadnikInstance) context.requireIdentityTable().resolveObject(links.parentId(), false);
+            linkedHead = links.linkedHeadId() == null ? null
+                    : (RexonHeadObjectInstance) context.requireIdentityTable().resolveObject(links.linkedHeadId(), false);
+        }
+    }
+
+    boolean belongsTo(RexonBadnikInstance owner) {
+        return parent == owner;
     }
 
     /**

@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -144,9 +145,14 @@ public class SolBadnikInstance extends AbstractBadnikInstance implements RewindR
         }
     }
 
-    void attachFireballForRewind(SolFireballObjectInstance fireball) {
-        if (fireball != null && !fireballs.contains(fireball)) {
-            fireballs.add(fireball);
+    @Override
+    protected void afterRewindRestoreSettled() {
+        fireballs.clear();
+        for (ObjectInstance object : services().objectManager().getActiveObjects()) {
+            if (object instanceof SolFireballObjectInstance fireball
+                    && fireball.belongsTo(this) && !fireball.isDestroyed()) {
+                fireballs.add(fireball);
+            }
         }
     }
 

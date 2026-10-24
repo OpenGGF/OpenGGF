@@ -2,11 +2,14 @@ package com.openggf.game.sonic2.objects.badniks;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -41,6 +44,9 @@ public class SolFireballObjectInstance extends AbstractObjectInstance
     private int xVelocity;
     private final SubpixelMotion.State motionState;
 
+    private record RewindOwner(ObjectRefId parentId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
     public SolFireballObjectInstance(ObjectSpawn spawn, SolBadnikInstance parent, int angle) {
         super(spawn, "SolFireball");
         this.parent = parent;
@@ -58,12 +64,30 @@ public class SolFireballObjectInstance extends AbstractObjectInstance
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        SolBadnikInstance parent = Sonic2BadnikChildRewindLinks.nearestSol(ctx);
-        SolFireballObjectInstance fireball = new SolFireballObjectInstance(ctx.spawn(), parent, 0);
-        if (parent != null) {
-            parent.attachFireballForRewind(fireball);
+        return new SolFireballObjectInstance(ctx.spawn(), null, 0);
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        if (context.identityTable().isEmpty()) {
+            return super.captureRewindState(context);
         }
-        return fireball;
+        // Flying fireballs retain their owner until onUnload detaches them.
+        ObjectRefId parentId = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewindOwner(parentId));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindOwner owner) {
+            parent = owner.parentId() == null ? null
+                    : (SolBadnikInstance) context.requireIdentityTable().resolveObject(owner.parentId(), false);
+        }
+    }
+
+    boolean belongsTo(SolBadnikInstance owner) {
+        return parent == owner;
     }
 
     @Override
