@@ -131,6 +131,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         // ObjFloatBlock_Init stores MapSpr_FloatBlock (Floating Block/Main.asm:42,174-176).
         // Its six counted frames include the real empty frame 0 (Data/Mappings.asm:1-11).
         addObject(tables, objects, CdR11aObjectAssets.Table.FLOAT_BLOCK_MAPPINGS, objects.floatBlock());
+        // Spring/Main.asm:188/201: two real oMap roots in the SAME complete source include, not rebased tables.
+        addObject(tables, objects, CdR11aObjectAssets.Table.SPRING_MAPPINGS, objects.springVertical());
+        addObject(tables, objects, CdR11aObjectAssets.Table.SPRING_MAPPINGS, objects.springHorizontal());
         return new CdObjectMappings(tables, List.of());
     }
 
@@ -182,9 +185,11 @@ public final class CdObjectMappings implements CdDrawMappings {
         }
         requireEqualBytes(view.bytes(), visual.mappings());
         for (var frame : visual.mappingFrames()) {
-            requireEqualBytes(frame.bytes(), view.bytes().slice(frame.relativeOffset(), 1 + frame.pieces().size() * 5));
+            requireEqualBytes(frame.bytes(), view.bytes().slice(visual.mappingTableOffset() + frame.relativeOffset(),
+                    1 + frame.pieces().size() * 5));
         }
-        tables.add(new DeclaredTable(view.range().nativeAddress(), view.bytes(), 0, visual.mappingFrames().size()));
+        tables.add(new DeclaredTable(view.range().nativeAddress(), view.bytes(),
+                visual.mappingTableOffset(), visual.mappingFrames().size()));
     }
 
     /**

@@ -55,7 +55,9 @@ public final class CdR11aObjectAssets {
         // Spring/Main.asm:492-496; one real script and one shared include with three independent mapping bases.
         // Keep the mappings raw: the vertical/horizontal tables do not fit the uniform visual decoder.
         SPRING_ANIMATIONS("Ani_Spring", 0x9B92, 14),
-        SPRING_MAPPINGS("MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3", 0x9BA0, 200);
+        SPRING_MAPPINGS("MapSpr_Spring1/MapSpr_Spring2/MapSpr_Spring3", 0x9BA0, 200),
+        // ObjSpring_Init ANDI.W #2 / MOVE.W ObjSpring_Speeds(pc,d0.w) (Spring/Main.asm:237-244).
+        SPRING_SPEEDS("ObjSpring_Speeds", 0x98E8, 4);
 
         private final String nativeLabel;
         private final int offset;
@@ -235,6 +237,8 @@ public final class CdR11aObjectAssets {
     private CdObjectVisualAssets floatBlock;
     private FloatBlockArtBank floatBlockArtBank;
     private SpringArtBank springArtBank;
+    private CdObjectVisualAssets springVertical;
+    private CdObjectVisualAssets springHorizontal;
 
     private CdR11aObjectAssets(CdR11aAssets.Identity identity, Map<Table, View> views, List<Delta> deltas,
                                 List<TouchSize> dimensions, CdObjectVisualAssets rings,
@@ -432,6 +436,33 @@ public final class CdR11aObjectAssets {
         return floatBlockArtBank;
     }
 
+
+    /**
+     * Independent native Spring1 index at include+0; retain the complete authenticated shared mapping source.
+     * Spring/Main.asm:188 and Data/Mappings.asm:1-44. No normal-art decode, diagonal or body admission.
+     */
+    public synchronized CdObjectVisualAssets springVertical() {
+        if (springVertical == null) {
+            springVertical = CdObjectVisualAssets.decodeIndexed(read(Table.SPRING_MAPPINGS), 0, 3, 12, 46,
+                    read(Table.SPRING_ANIMATIONS), 1, 36);
+        }
+        return springVertical;
+    }
+
+    /** Independent Spring2 index at include+6, with native signed words relative to that root. */
+    public synchronized CdObjectVisualAssets springHorizontal() {
+        if (springHorizontal == null) {
+            springHorizontal = CdObjectVisualAssets.decodeIndexed(read(Table.SPRING_MAPPINGS), 6, 3, 46, 80,
+                    read(Table.SPRING_ANIMATIONS), 1, 36);
+        }
+        return springHorizontal;
+    }
+
+    /** ObjSpring_Init reads one signed native word through ANDI.W #2; unrelated subtype bits stay irrelevant. */
+    public synchronized int springSpeedWord(int subtypeByte) {
+        if ((subtypeByte & ~0xFF) != 0) throw new IllegalArgumentException("Spring subtype exceeds its native byte");
+        return (short) view(Table.SPRING_SPEEDS).bytes().unsignedWord(subtypeByte & 2);
+    }
 
     /**
      * Explicit normal-art opt-in from the retained authenticated USA MMD, not an object or renderer admission.

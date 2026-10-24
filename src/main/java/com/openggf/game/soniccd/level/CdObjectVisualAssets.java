@@ -24,6 +24,7 @@ public final class CdObjectVisualAssets {
         public int heightTiles() { return (sizeByte & 3) + 1; }
         public int tileCount() { return widthTiles() * heightTiles(); }
     }
+    /** relativeOffset is the stored signed word, relative to mappingTableOffset(), not a rebased body offset. */
     public record MappingFrame(int relativeOffset, List<Piece> pieces, CdAssetBytes bytes) {
         public MappingFrame { pieces = List.copyOf(pieces); }
     }
@@ -33,13 +34,21 @@ public final class CdObjectVisualAssets {
         public AnimationScript { frameBytes = List.copyOf(frameBytes); }
     }
 
+    private record MappingWindow(int tableOffset, int bodyStart, int bodyEnd) { }
+
     private final CdAssetBytes mappings;
+    private final int mappingTableOffset;
     private final CdAssetBytes animationTable;
     private final List<MappingFrame> mappingFrames;
     private final List<AnimationScript> animations;
 
     private CdObjectVisualAssets(byte[] mappings, int frameCount, byte[] scripts, int animationCount, int artTileCount,
                                   Map<Integer, Integer> mappingTailBytes) {
+        this(mappings, frameCount, scripts, animationCount, artTileCount, mappingTailBytes, null);
+    }
+
+    private CdObjectVisualAssets(byte[] mappings, int frameCount, byte[] scripts, int animationCount, int artTileCount,
+                                  Map<Integer, Integer> mappingTailBytes, MappingWindow window) {
         // Script frame values have five bits; unscripted oMapFrame selection uses the full byte.
         // DrawObjects.DrawSprite (Object Functions.asm:333-335) zero-extends that native byte.
         int maximumFrames = animationCount == 0 ? 256 : 32;
@@ -55,11 +64,13 @@ public final class CdObjectVisualAssets {
         }
         this.mappings = table(mappings, frameCount);
         this.animationTable = animationCount == 0 ? CdAssetBytes.copyOf(new byte[0]) : table(scripts, animationCount);
-        int[] mapOffsets = offsets(this.mappings, frameCount);
+        mappingTableOffset = window == null ? 0 : window.tableOffset();
+        int[] mapOffsets = window == null ? offsets(this.mappings, frameCount)
+                : indexedOffsets(this.mappings, frameCount, window);
         var frames = new ArrayList<MappingFrame>();
         for (int frame = 0; frame < mapOffsets.length; frame++) {
             int offset = mapOffsets[frame];
-            int end = nextDistinct(mapOffsets, offset, this.mappings.length());
+            int end = nextDistinct(mapOffsets, offset, window == null ? this.mappings.length() : window.bodyEnd());
             int count = this.mappings.unsignedByte(offset);
             // Native SUBQ.B/BMI admits up to 128 pieces. Higher count bytes are unsupported here.
             int length = 1 + count * 5;
@@ -67,8 +78,14 @@ public final class CdObjectVisualAssets {
                 throw new IllegalArgumentException("Object mapping crosses its next distinct body or include end");
             }
             Integer declaredTail = tails.get(frame);
-            if (declaredTail == null) trailingZero(this.mappings, offset + length, end);
-            else if (end - offset - length != declaredTail) {
+            if (declaredTail == null) {
+                trailingZero(this.mappings, offset + length, end);
+                // EVEN adds a byte only at an odd source offset; counted bodies themselves may start odd.
+                // Existing entry points retain their original trailing-zero policy unchanged.
+                if (window != null && end != offset + length && ((offset + length) & 1) == 0) {
+                    throw new IllegalArgumentException("Object mapping zero is not an even-alignment byte");
+                }
+            } else if (end - offset - length != declaredTail) {
                 throw new IllegalArgumentException("Declared mapping tail does not match its distinct-body extent");
             }
             var pieces = new ArrayList<Piece>();
@@ -81,7 +98,7 @@ public final class CdObjectVisualAssets {
                 }
                 pieces.add(piece);
             }
-            frames.add(new MappingFrame(offset, pieces, this.mappings.slice(offset, length)));
+            frames.add(new MappingFrame(offset - mappingTableOffset, pieces, this.mappings.slice(offset, length)));
         }
         mappingFrames = List.copyOf(frames);
         int[] scriptOffsets = animationCount == 0 ? new int[0] : offsets(animationTable, animationCount);
@@ -142,6 +159,29 @@ public final class CdObjectVisualAssets {
     public static CdObjectVisualAssets decodeStatic(byte[] mappings, int frameCount, int artTileCount) {
         return new CdObjectVisualAssets(mappings, frameCount, new byte[0], 0, artTileCount, Map.of());
     }
+    /**
+     * One native counted index inside a complete, unmodified mapping include, with real scripts.
+     * Byte zero of the include is word-aligned; tableOffset must be even, but body targets need not be.
+     * Signed words are relative to tableOffset, including aliases and backwards references.
+     * The half-open [bodyStart, bodyEnd) window must be disjoint from this index, begin at its
+     * first distinct target and contain only counted bodies plus optional real zero EVEN bytes.
+     * Each body ends before the next distinct target or bodyEnd. Other indices and source bytes
+     * outside this window are retained, not parsed or treated as padding. No arbitrary tails are admitted.
+     *
+     * <p>mappings() retains the entire include (at most 0x7FFF bytes). MappingFrame.relativeOffset()
+     * retains the actual signed word; its consumed bytes begin at mappingTableOffset() + relativeOffset().
+     * Scripts retain the existing strict include/index/frame/FF-or-FC contract. This format declaration
+     * authenticates no media and admits no runtime object, animation synthesis or decoded art.</p>
+     */
+    public static CdObjectVisualAssets decodeIndexed(byte[] mappings, int tableOffset, int frameCount,
+                                                      int bodyStart, int bodyEnd, byte[] scripts,
+                                                      int animationCount, int artTileCount) {
+        if (animationCount < 1) throw new IllegalArgumentException("Animated object visuals require a script");
+        return new CdObjectVisualAssets(mappings, frameCount, scripts, animationCount, artTileCount, Map.of(),
+                new MappingWindow(tableOffset, bodyStart, bodyEnd));
+    }
+    /** Native index root within mappings(); zero for every original decoding entry point. */
+    public int mappingTableOffset() { return mappingTableOffset; }
     public CdAssetBytes mappings() { return mappings; }
     public CdAssetBytes animationTable() { return animationTable; }
     public List<MappingFrame> mappingFrames() { return mappingFrames; }
@@ -166,6 +206,30 @@ public final class CdObjectVisualAssets {
             minimum = Math.min(minimum, offset);
         }
         if (minimum != count * 2) { throw new IllegalArgumentException("Unreviewed gap after object visual index"); }
+        return offsets;
+    }
+    private static int[] indexedOffsets(CdAssetBytes bytes, int count, MappingWindow window) {
+        int tableOffset = window.tableOffset();
+        long indexEnd = (long) tableOffset + count * 2L;
+        if (tableOffset < 0 || (tableOffset & 1) != 0 || indexEnd > bytes.length()
+                || window.bodyStart() < 0 || window.bodyEnd() <= window.bodyStart() || window.bodyEnd() > bytes.length()
+                || (tableOffset < window.bodyEnd() && window.bodyStart() < indexEnd)) {
+            throw new IllegalArgumentException("Object indexed mapping header/window extent");
+        }
+        int[] offsets = new int[count];
+        int minimum = window.bodyEnd();
+        for (int i = 0; i < count; i++) {
+            int relative = (short) bytes.unsignedWord(tableOffset + i * 2);
+            long target = (long) tableOffset + relative;
+            if (target < window.bodyStart() || target >= window.bodyEnd()) {
+                throw new IllegalArgumentException("Object signed relative pointer is outside its declared mapping body window");
+            }
+            offsets[i] = (int) target;
+            minimum = Math.min(minimum, offsets[i]);
+        }
+        if (minimum != window.bodyStart()) {
+            throw new IllegalArgumentException("Unreviewed gap before indexed mapping bodies");
+        }
         return offsets;
     }
     private static int nextDistinct(int[] offsets, int start, int end) {

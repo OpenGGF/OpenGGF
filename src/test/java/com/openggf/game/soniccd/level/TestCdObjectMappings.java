@@ -388,6 +388,40 @@ class TestCdObjectMappings {
         assertThrows(UnsupportedOperationException.class, () -> CdObjectPresentation.convert(gameSat, contactPixels));
     }
 
+    // Source-literal pieces from Spring/Data/Mappings.asm:11-44. Actual media joins the complete include.
+    @Test void actualUsaSpringRootsKeepIndependentSignedIndicesAndExactlyThreeFrames() throws Exception {
+        var usa = usaMedia(); var objects = usa.objects();
+        var view = objects.view(CdR11aObjectAssets.Table.SPRING_MAPPINGS);
+        assertEquals(0x209BA0, view.range().nativeAddress());
+        assertEquals("09fbb070ca8ab3354808535b21668a1c6faeac9fa88fb78628753fe9c8f8377c", sha256(view.bytes().copy()));
+        var resolver = CdObjectMappings.fromOpeningAssets(usa.assets(), objects);
+        var expected = List.of(
+                List.of(new CdObjectDrawQueue.RawPiece(-8, 12, 0, -16), new CdObjectDrawQueue.RawPiece(0, 12, 4, -16)),
+                List.of(new CdObjectDrawQueue.RawPiece(0, 12, 0, -16)),
+                List.of(new CdObjectDrawQueue.RawPiece(-32, 12, 0, -16), new CdObjectDrawQueue.RawPiece(-24, 6, 8, -8),
+                        new CdObjectDrawQueue.RawPiece(0, 12, 14, -16)),
+                List.of(new CdObjectDrawQueue.RawPiece(-16, 3, 18, 0), new CdObjectDrawQueue.RawPiece(-16, 3, 22, -8)),
+                List.of(new CdObjectDrawQueue.RawPiece(-16, 3, 18, -8)),
+                List.of(new CdObjectDrawQueue.RawPiece(-16, 3, 18, 24), new CdObjectDrawQueue.RawPiece(-8, 9, 26, 0),
+                        new CdObjectDrawQueue.RawPiece(-16, 3, 32, -8)));
+        int family = 0;
+        for (int root : new int[]{0x209BA0, 0x209BA6}) {
+            for (int frame = 0; frame < 3; frame++) {
+                var pieces = expected.get(family * 3 + frame);
+                assertEquals(new CdObjectDrawQueue.FrameMapping(pieces.size(), pieces), resolver.resolve(root, false, frame));
+            }
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(root, false, 3));
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(root, false, 255));
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(root, true, 0));
+            family++;
+        }
+        for (int pointer : new int[]{0x209BF0, 0x209BA2, 0x209BAC, 0xFF209BA6}) {
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, 0));
+        }
+        assertGameOverRoots(resolver);
+        assertEquals(FLOAT_BLOCK_FRAMES.get(5), resolver.resolve(FLOAT_BLOCK_MAP, false, 5).pieces());
+    }
+
     @Test void actualUsaFloatBlockRegistersSixLiteralCountedFramesAndKeepsExistingRoots() throws Exception {
         var usa = usaMedia();
         var objects = usa.objects();

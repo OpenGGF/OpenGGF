@@ -193,6 +193,7 @@ class TestCdR11aObjectRetailAssets {
                 FLOAT_BLOCK_ANIMATIONS, FLOAT_BLOCK_ANIMATIONS_SHA256,
                 FLOAT_BLOCK_MAPPINGS, FLOAT_BLOCK_MAPPINGS_SHA256));
         hashes.putAll(Map.of(SPRING_ANIMATIONS, SPRING_ANIMATIONS_SHA256, SPRING_MAPPINGS, SPRING_MAPPINGS_SHA256));
+        hashes.put(SPRING_SPEEDS, "5eda02f69ae1d12606f936787ccebdac8133522694513985847a115cc00f2621"); // Native Spring/Main.asm:243-244: F000/F600.
         for (var table : CdR11aObjectAssets.Table.values()) {
             var view = objects.view(table);
             assertEquals(table, view.table());
@@ -763,6 +764,38 @@ class TestCdR11aObjectRetailAssets {
         byte[] changed = maps.bytes().copy();
         changed[1] ^= 1;
         assertEquals(12, maps.bytes().unsignedWord(0));
+
+        var vertical = objects.springVertical(); var horizontal = objects.springHorizontal();
+        assertSame(vertical, objects.springVertical()); assertSame(horizontal, objects.springHorizontal());
+        assertEquals(0, vertical.mappingTableOffset()); assertEquals(6, horizontal.mappingTableOffset());
+        assertArrayEquals(maps.bytes().copy(), vertical.mappings().copy());
+        assertArrayEquals(maps.bytes().copy(), horizontal.mappings().copy());
+        assertArrayEquals(scripts.bytes().copy(), vertical.animationTable().copy());
+        assertArrayEquals(scripts.bytes().copy(), horizontal.animationTable().copy());
+        assertEquals(List.of(12, 24, 30), vertical.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        assertEquals(List.of(40, 52, 58), horizontal.mappingFrames().stream()
+                .map(CdObjectVisualAssets.MappingFrame::relativeOffset).toList());
+        for (var visual : List.of(vertical, horizontal)) {
+            assertEquals(List.of(2, 1, 3), visual.mappingFrames().stream().map(f -> f.pieces().size()).toList());
+            for (var frame : visual.mappingFrames()) {
+                assertArrayEquals(maps.bytes().slice(visual.mappingTableOffset() + frame.relativeOffset(),
+                        1 + frame.pieces().size() * 5).copy(), frame.bytes().copy());
+            }
+            assertEquals(List.of(0, 1, 1, 2, 2, 2, 2, 2, 2, 1), visual.animations().getFirst().frameBytes());
+            assertEquals(CdObjectVisualAssets.Terminal.ADVANCE_ROUTINE_FC, visual.animations().getFirst().terminal());
+        }
+        var speeds = objects.view(SPRING_SPEEDS);
+        assertSame(speeds, objects.view(SPRING_SPEEDS));
+        assertEquals(SPRING_SPEEDS.range(), speeds.range());
+        assertArrayEquals(new byte[]{(byte) 0xF0, 0, (byte) 0xF6, 0}, speeds.bytes().copy());
+        // All byte subtypes read exactly (subtype & 2), including unrelated high bits.
+        for (int subtype = 0; subtype < 256; subtype++) {
+            assertEquals((subtype & 2) == 0 ? -0x1000 : -0xA00, objects.springSpeedWord(subtype));
+        }
+        assertThrows(IllegalArgumentException.class, () -> objects.springSpeedWord(-1));
+        assertThrows(IllegalArgumentException.class, () -> objects.springSpeedWord(256));
+        assertEquals(17, lastUsedTile(vertical)); assertEquals(35, lastUsedTile(horizontal));
 
         var bank = objects.springArtBank();
         assertSame(bank, objects.springArtBank());

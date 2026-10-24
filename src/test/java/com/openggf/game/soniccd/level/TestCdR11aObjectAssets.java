@@ -164,7 +164,7 @@ class TestCdR11aObjectAssets {
 
     @Test
     void metadataNamesOriginalUsaFileRangesWithoutChangingTheExistingAssetEnumeration() {
-        assertEquals(29, CdR11aObjectAssets.Table.values().length);
+        assertEquals(30, CdR11aObjectAssets.Table.values().length);
         for (var table : CdR11aObjectAssets.Table.values()) {
             assertEquals(CdNativeFile.R11A, table.range().file());
             assertEquals(CdMmdImage.Domain.ORIGINAL_WORD_RAM, table.range().domain());
@@ -388,7 +388,7 @@ class TestCdR11aObjectAssets {
         assertEquals(0x209BA0, maps.range().nativeAddress());
         assertEquals(scripts.range().endExclusive(), maps.range().fileOffset());
         assertEquals(0x9C68, maps.range().endExclusive(), "Ani_MovingSpring starts after the real final even byte");
-        assertEquals(List.of(scripts, maps), Arrays.stream(CdR11aObjectAssets.Table.values()).skip(27).toList());
+        assertEquals(List.of(scripts, maps), Arrays.stream(CdR11aObjectAssets.Table.values()).skip(27).limit(2).toList());
         for (var left : List.of(scripts, maps)) {
             for (var right : CdR11aObjectAssets.Table.values()) {
                 if (left == right) { continue; }
@@ -404,6 +404,17 @@ class TestCdR11aObjectAssets {
         for (CdReleaseVariant region : CdReleaseVariant.values()) { assertEquals(0x34918, art.fileOffset(region)); }
         assertEquals(0x34B3A, art.fileOffset(CdReleaseVariant.USA) + art.length());
         assertEquals(0x34B3A, CdR11aAsset.ART_MONITOR_TIME_POSTS.fileOffset(CdReleaseVariant.USA));
+    }
+
+    // ObjSpring_Speeds (Spring/Main.asm:237-244) is a distinct runtime word read, not an opcode constant.
+    @Test void springSpeedWordsHaveTheirOwnExactAuthenticatedView() {
+        var speeds = CdR11aObjectAssets.Table.SPRING_SPEEDS;
+        assertEquals("ObjSpring_Speeds", speeds.nativeLabel());
+        assertEquals(new CdR11aProfile.FileRange(CdNativeFile.R11A,
+                CdMmdImage.Domain.ORIGINAL_WORD_RAM, 0x98E8, 4), speeds.range());
+        assertEquals(0x2098E8, speeds.range().nativeAddress());
+        assertEquals(29, speeds.ordinal(), "append without changing any earlier object-view ordinal");
+        assertTrue(speeds.range().endExclusive() < CdR11aObjectAssets.Table.SPRING_ANIMATIONS.range().fileOffset());
     }
 
     @Test

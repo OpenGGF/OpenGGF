@@ -3878,3 +3878,41 @@ authenticated-owner accessor retry paths have no direct test seam.
 No Spring animation/object/collision/runtime admission, diagonal art, real PLC
 residency, BG tile streaming, new World route or native-plane/pixel/game parity
 is claimed. The full USA then regional task remains active.
+
+### Bounded shared indices and normal Spring visual families — 24 October 2026
+
+The explicit indexed decoder retains a complete mapping include, a signed-word
+index root and a disjoint declared body window. Native index aliases, negative
+relative words, nonmonotonic ordering and real EVEN padding remain bounded;
+old strict decode/static/tail APIs are unchanged. Root added two direct oracle
+checks for the reviewed strict-padding and adjacent-window gaps. Spring now
+has lazy vertical/horizontal getters over the same200-byte include at roots0/6
+and body windows12..46/46..80, each3frames/one real FC script/36tiles. The
+separate four-byte speed view reads signed F000/F600 by subtype bit1. Generic
+mapping joins retain each actual root, registering $209BA0/$209BA6; diagonal
+$209BF0 and frames>=3 remain rejected. Native Spring Main:237-244,492-496 and
+Mappings:1-44 at pin1ecc5f3a own these values. No Spring object is dispatched.
+
+Root7648 established a meaningful pointer RED: the new actual-media mapping
+case reached the old resolver and failed at unregistered $00209BA0 (1test,
+1error, no skip). Root89987 passed88/0/0/0 over Visual24, ObjectAssets21,
+ObjectRetail3, Animation28 and Mapping12. Root then added the two decoder
+oracles and the family composition. Root44673 completed193/1failure/0errors/
+0skips across Visual26, ObjectAssets22, ObjectRetail3, Animation28, Mapping13,
+Runtime62, WorldLoad20, EGL8 and API11. The sole failure was a missing expected
+SPRING_SPEEDS digest in the retail fixture's exhaustive table map; independent
+source bytes F000F600 hash to5eda02f69ae1d12606f936787ccebdac8133522694513985847a115cc00f2621.
+Root's one-line fixture-only correction changed no production. Root76885
+reran all3 regional retail invocations:3/0/0/0, exit0 at22:26:08BST,285squeue/
+30.165sMaven. XML identities and all skips were inspected; assertions below the
+former failure now execute. The original193-case run is not described as green
+and these overlapping counts are not summed as independent coverage.
+
+Commands used exact named selectors through the queued Maven wrapper, Java25
+and soniccd.media.root=<supplied-media-root>. The193-case run
+also enabled the existing opening EGL tests with surfaceless rendering. The
+independent decoder review found noP1/P2; the family review confirmed the
+fixture P2 and its exact R2 correction, with no productionP1/P2. Lazy-cache
+oracle limits remain disclosed. No Spring launch/collision/runtime bank,
+diagonal art, natural route, live PLC residency or native pixel/game parity
+is claimed. Fixed-ac4 broad smoke is independent and still pending.
