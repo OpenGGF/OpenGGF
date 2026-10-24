@@ -138,6 +138,30 @@ class TestCdObjectMappings {
             }
             assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, true, 0));
         }
+        // Frontier bodies store these exact longs (Obj3DPlant_Init / Obj3DRamp_Init); raw full-word pointers.
+        int plantPointer = objects.view(CdR11aObjectAssets.Table.PLANT_MAPPINGS).range().nativeAddress();
+        assertEquals(0x20E020, plantPointer);
+        assertEquals(4, resolver.resolve(plantPointer, false, 0).pieces().size());
+        assertEquals(2, resolver.resolve(plantPointer, false, 1).pieces().size());
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(plantPointer, false, 2));
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(plantPointer, true, 0));
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(plantPointer | 0xFF000000, false, 0));
+        int rampPointer = objects.view(CdR11aObjectAssets.Table.RAMP_BOOSTER_MAPPINGS).range().nativeAddress();
+        assertEquals(0x21FDBC, rampPointer);
+        assertEquals(8, resolver.resolve(rampPointer, false, 0).pieces().size());
+        assertEquals(12, resolver.resolve(rampPointer, false, 8).pieces().size(), "the count byte, not the declared tail");
+        assertEquals(12, resolver.resolve(rampPointer, false, 9).pieces().size());
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(rampPointer, false, 10));
+        assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(rampPointer, true, 0));
+        for (var frontierTable : List.of(CdR11aObjectAssets.Table.PLANT_MAPPINGS, CdR11aObjectAssets.Table.RAMP_BOOSTER_MAPPINGS)) {
+            var visual = frontierTable == CdR11aObjectAssets.Table.PLANT_MAPPINGS ? objects.plant() : objects.rampBooster();
+            int pointer = objects.view(frontierTable).range().nativeAddress();
+            for (int frame = 0; frame < visual.mappingFrames().size(); frame++) {
+                var expected = visual.mappingFrames().get(frame).pieces().stream()
+                        .map(p -> new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                assertEquals(expected, resolver.resolve(pointer, false, frame).pieces());
+            }
+        }
         var id = assets.identity();
         var foreign = new CdR11aAssets.Identity(id.variant(), id.stage(), id.file(), id.domain(), id.mmdSha256(), "foreign");
         // Existing package-private aggregate fixture access; no authenticated test constructor is introduced.
@@ -159,6 +183,37 @@ class TestCdObjectMappings {
         assertThrows(UnsupportedOperationException.class, () -> bank.resolve(0x798));
         assertThrows(IllegalArgumentException.class,
                 () -> CdObjectPresentation.usaR11aOpeningDevPreloadedArt(state, objects, 10000, 10000, 12000));
+        // The three-span opening policy stays strict: no frontier tile is admitted there.
+        assertThrows(UnsupportedOperationException.class, () -> bank.resolve(0x424));
+        assertThrows(UnsupportedOperationException.class, () -> bank.resolve(0x441));
+        var frontier = objects.frontierArtBank();
+        var full = CdObjectPresentation.usaR11aFrontierDevPreloadedArt(state, objects, frontier, 10000, 11000, 12000, 12070, 12098);
+        assertEquals(10000, full.resolve(0x780).logicalPatternId());
+        assertEquals(12000, full.resolve(0x3A0).logicalPatternId());
+        assertEquals(12069, full.resolve(0x3E5).logicalPatternId());
+        assertEquals(12070, full.resolve(0x424).logicalPatternId(), "Art_3DPlant at VRAM $8480");
+        assertEquals(12097, full.resolve(0x43F).logicalPatternId());
+        assertEquals(12098, full.resolve(0x441).logicalPatternId(), "Art_3DRampBoost at VRAM $8820");
+        assertEquals(12160, full.resolve(0x47F).logicalPatternId());
+        for (var source : List.of(CdR11aAsset.ART_3D_PLANT, CdR11aAsset.ART_3D_RAMP_BOOST)) {
+            var binding = frontier.binding(source);
+            int logical = source == CdR11aAsset.ART_3D_PLANT ? 12070 : 12098;
+            for (int tile = 0; tile < binding.tileCount(); tile++) {
+                var actual = full.resolve(binding.firstTileId() + tile);
+                assertEquals(logical + tile, actual.logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(binding.bytes().slice(tile * 32, 32)), actual.version());
+            }
+        }
+        assertThrows(UnsupportedOperationException.class, () -> full.resolve(0x440), "the one-tile gap before the booster");
+        assertThrows(UnsupportedOperationException.class, () -> full.resolve(0x423));
+        assertThrows(UnsupportedOperationException.class, () -> full.resolve(0x480));
+        assertThrows(UnsupportedOperationException.class, () -> full.resolve(0x388), "Animals are never bound: the inert path draws nothing");
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
+                state, objects, frontier, 10000, 11000, 12000, 12069, 12098), "plant base inside the Mosqui span");
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
+                state, objects, frontier, 10000, 11000, 12000, 12070, 12097), "booster base inside the plant span");
+        assertThrows(NullPointerException.class, () -> CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
+                state, objects, null, 10000, 11000, 12000, 12070, 12098));
     }
 
     private static CdObjectMappings declared(int start, byte[] bytes, int root, int frames) {

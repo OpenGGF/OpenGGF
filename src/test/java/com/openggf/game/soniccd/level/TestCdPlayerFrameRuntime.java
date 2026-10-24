@@ -612,6 +612,42 @@ class TestCdPlayerFrameRuntime {
         f.close(); assertThrows(IllegalStateException.class, () -> f.applyObjectPrimaryAngle(0));
     }
 
+    @Test void objectLaunchWriteUpdatesOnlyTheActorYVelocityAndRestoresWithoutSharedWrites() throws IOException {
+        var f = new Fixture().runtime();
+        var actor = f.captureActor(); var shared = f.captureShared(); var oldState = f.state(); var m = oldState.motion();
+        f.applyObjectYVelocity(-0xC00);
+        var next = f.state().motion();
+        assertEquals(-0xC00, next.yVelocity(), "Obj3DRamp .TimerSet: MOVE.W #-$C00,oYVel(a6)");
+        assertEquals(m.centreX16_16(), next.centreX16_16()); assertEquals(m.centreY16_16(), next.centreY16_16());
+        assertEquals(m.xVelocity(), next.xVelocity()); assertEquals(m.groundVelocity(), next.groundVelocity());
+        assertEquals(m.routine(), next.routine()); assertEquals(m.angle(), next.angle()); assertEquals(m.flags(), next.flags());
+        assertEquals(m.spriteFlags(), next.spriteFlags()); assertEquals(m.xRadius(), next.xRadius()); assertEquals(m.yRadius(), next.yRadius());
+        assertEquals(m.animation(), next.animation()); assertEquals(m.previousAnimation(), next.previousAnimation());
+        assertEquals(m.playerJump(), next.playerJump()); assertEquals(m.charge(), next.charge()); assertEquals(m.moveLock(), next.moveLock());
+        assertEquals(m.stick(), next.stick()); assertEquals(m.playerControl(), next.playerControl());
+        assertEquals(m.previousPrimaryAngle(), next.previousPrimaryAngle()); assertEquals(m.previousSecondaryAngle(), next.previousSecondaryAngle());
+        assertSame(oldState.animation(), f.state().animation()); assertSame(oldState.header(), f.state().header());
+        assertSame(oldState.timers(), f.state().timers()); assertSame(oldState.history(), f.state().history());
+        assertEquals(actor.display(), f.display(), "the optional display projection carries no velocity");
+        assertSharedValues(shared, f.captureShared());
+        f.applyObjectYVelocity(0xC00); assertEquals(0xC00, f.state().motion().yVelocity());
+        f.restoreActor(actor); assertEquals(m.yVelocity(), f.state().motion().yVelocity()); assertEquals(actor, f.captureActor());
+    }
+
+    @Test void objectLaunchWriteRequiresAnOpenClosedFrameCutAndASignedWord() throws IOException {
+        var f = new Fixture().runtime();
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectYVelocity(0x8000));
+        assertThrows(IllegalArgumentException.class, () -> f.applyObjectYVelocity(-0x8001));
+        f.prepareInput(0);
+        assertThrows(IllegalStateException.class, () -> f.applyObjectYVelocity(0xC00));
+        f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertThrows(IllegalStateException.class, () -> f.applyObjectYVelocity(0xC00), "an entitled body slot is not a closed cut");
+        f.runBody(1);
+        f.applyObjectYVelocity(-0x8000); assertEquals(-0x8000, f.state().motion().yVelocity());
+        f.applyObjectYVelocity(0x7FFF); assertEquals(0x7FFF, f.state().motion().yVelocity());
+        f.close(); assertThrows(IllegalStateException.class, () -> f.applyObjectYVelocity(0));
+    }
+
     private static void service(CdPlayerFrameRuntime f, int held) { f.serviceVBlank(f.prepareInput(held).phase()); }
     private static List<CdPlayerBody.NativeCall> calls(CdPlayerFrameRuntime.BodyPublication p) {
         return p.result().effects().stream().filter(CdPlayerBody.CallReturned.class::isInstance)

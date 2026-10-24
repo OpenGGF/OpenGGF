@@ -30,9 +30,12 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  * Level_MainLoop (Level/Main.asm:333-430), RunObjects (Object Functions.asm:11-33).
  * Authored external source; compilation and execution belong to the integrating root.
  *
- * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, absent reserved owners
- * 1..31, initially zero CPU SAT/empty picture, and preloaded actual Ring/Mosqui
- * art. The initial Ring globals are caller-declared ingress, never an entry proof.
+ * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
+ * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
+ * Ring/Mosqui/3D-plant/3D-ramp-booster art (the inert Animal path draws nothing).
+ * The initial Ring globals are caller-declared ingress, never an entry proof.
+ * Live dynamic IDs $10 Ring, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
+ * are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -51,10 +54,31 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its three disjoint subdivisions; this value neither
+     * Root reserves/binds its five disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
+     * The three-argument form derives the sequential frontier spans the production
+     * module uses: plant = mosqui + 70 and ramp = plant + 28, so the whole picture is
+     * 24 + 14 + 70 + 28 + 63 = 199 patterns after the player base.
      */
-    public record LogicalBanks(int player, int ring, int mosqui) { }
+    public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp) {
+        public LogicalBanks(int player, int ring, int mosqui) {
+            this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
+        }
+    }
+
+    /**
+     * Explicit DEV globals this composition owns because no native writer is admitted:
+     * goodFuture (Object Time Check.asm:12-44, Animal/Main.asm via CheckAnimalPrescence)
+     * and projDestroyed (_Include/Main CPU Variables.inc:122). Both are byte globals the
+     * bodies read every dispatch; they are captured and restored with this partition.
+     */
+    public record DevGlobals(int goodFuture, int projDestroyed) {
+        public DevGlobals {
+            if ((goodFuture & ~0xFF) != 0 || (projDestroyed & ~0xFF) != 0) {
+                throw new IllegalArgumentException("DEV globals are unsigned native bytes");
+            }
+        }
+    }
 
     /**
      * Required narrow port to the EXISTING shared primaryAngle byte, not oAngle.
@@ -93,19 +117,22 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         private final CdObjectDrawQueue.Snapshot queue;
         private final SpritePresentation.Frame displayedFrame;
         private final List<SoundRequest> sounds;
+        private final DevGlobals devGlobals;
 
         private Snapshot(Object owner, CdObjectPlacementRuntime.Snapshot placement, CdRingGlobals ringGlobals,
                          CdObjectDrawQueue.Snapshot queue, SpritePresentation.Frame displayedFrame,
-                         List<SoundRequest> sounds) {
+                         List<SoundRequest> sounds, DevGlobals devGlobals) {
             this.owner = owner;
             this.placement = placement;
             this.ringGlobals = ringGlobals;
             this.queue = queue;
             this.displayedFrame = displayedFrame;
             this.sounds = List.copyOf(sounds);
+            this.devGlobals = devGlobals;
         }
         public CdObjectPlacementRuntime.Snapshot placement() { return placement; }
         public CdRingGlobals ringGlobals() { return ringGlobals; }
+        public DevGlobals devGlobals() { return devGlobals; }
         public SpritePresentation.Frame displayedFrame() { return displayedFrame; }
         public List<SoundRequest> lastSoundRequests() { return sounds; }
     }
@@ -118,10 +145,15 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdPlayerObjectTouch scanner;
     private final CdRing ring;
     private final CdMosqui mosqui;
+    private final CdAnimal animal;
+    private final Cd3dPlant plant;
+    private final Cd3dRamp ramp;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
+    private final CdR11aObjectAssets.FrontierArtBank frontierArt;
     private CdRingGlobals ringGlobals;
+    private DevGlobals devGlobals = new DevGlobals(0, 0);
     private List<SoundRequest> sounds = List.of();
     private SpritePresentation.Frame displayed = SpritePresentation.Frame.empty();
     private CameraWords preScrollForeground;
@@ -166,22 +198,26 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (value != 0) { throw new IllegalArgumentException("Named DEV empty CPU/display ingress requires zero initial SAT bytes"); }
         }
         var objects = assets.openingObjects();
+        // The frontier art decodes once here (plant/booster pixels); an IO failure stops before construction.
+        var frontier = objects.frontierArtBank();
         var placement = CdObjectPlacementRuntime.fromAssets(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
         // Validate physical/logical bank extents and overlaps now, even for an empty picture.
-        CdObjectPresentation.usaR11aOpeningDevPreloadedArt(frame.artState(), objects,
-                banks.player(), banks.ring(), banks.mosqui());
+        CdObjectPresentation.usaR11aFrontierDevPreloadedArt(frame.artState(), objects, frontier,
+                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initial, banks,
-                preScrollForeground, primaryAngleWrite, objects, placement, mappings);
+                preScrollForeground, primaryAngleWrite, objects, frontier, placement, mappings);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
                                    byte[] initial, LogicalBanks banks, CameraWords camera,
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
+                                   CdR11aObjectAssets.FrontierArtBank frontier,
                                    CdObjectPlacementRuntime placement, CdObjectMappings mappings) {
         this.assets = assets;
         this.frame = frame;
         this.objects = objects;
+        this.frontierArt = frontier;
         this.placement = placement;
         this.banks = banks;
         this.primaryAngleWrite = primaryAngleWrite;
@@ -196,6 +232,13 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }, mappings, initial);
         mosqui = new CdMosqui(placement, CdMosqui.Assets.fromObjectAssets(objects),
                 new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        // Frontier bodies bind the same live placement/pool, the actual asset owner and the one shared
+        // DrawObject adapter. The Animal's admitted path reads no assets and never draws.
+        animal = new CdAnimal(placement);
+        plant = new Cd3dPlant(placement, Cd3dPlant.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        ramp = new Cd3dRamp(placement, Cd3dRamp.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
 
     public Phase phase() { return phase; }
@@ -204,6 +247,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     public CdObjectPlacementRuntime placement() { return placement; }
     /** Immutable diagnostic state; no reset, HUD acknowledgement or time-stop writer is invented. */
     public CdRingGlobals ringGlobals() { return ringGlobals; }
+    /** Explicit owned DEV globals read by the bodies; no native writer (projector, good-future) is admitted. */
+    public DevGlobals devGlobals() { return devGlobals; }
     public List<SoundRequest> lastSoundRequests() { return sounds; }
 
     /** Supply the NEXT ordinary cycle's actual pre-scroll camera before preparing Frame input. */
@@ -229,8 +274,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA then :829-834 art. At the completed boundary,
                 // convert PREVIOUS CPU SAT using NOW-serviced immutable resident pixels.
-                var pixels = CdObjectPresentation.usaR11aOpeningDevPreloadedArt(frame.artState(), objects,
-                        banks.player(), banks.ring(), banks.mosqui());
+                var pixels = CdObjectPresentation.usaR11aFrontierDevPreloadedArt(frame.artState(), objects,
+                        frontierArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -340,8 +385,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                     var player = frame.state().motion();
                     // goodFuture=0 is the named DEV world's explicit missing-global policy,
                     // not a caller-declared media certificate. All represented fields remain live.
-                    var result = mosqui.run(whole, new CdMosqui.Globals(0, gates.timeZone(), gates.timeWarpDirection(),
-                            environment.globals().debugMode(), preScrollForeground.xWord(),
+                    var result = mosqui.run(whole, new CdMosqui.Globals(devGlobals.goodFuture(), gates.timeZone(),
+                            gates.timeWarpDirection(), environment.globals().debugMode(), preScrollForeground.xWord(),
                             player.centreX16_16() >>> 16, player.centreY16_16() >>> 16));
                     for (var effect : result.effects()) {
                         if (effect instanceof CdMosqui.GlobalWrite write) {
@@ -352,6 +397,35 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                             checkActive(Phase.DYNAMIC_SLOTS);
                         } else if (effect instanceof CdMosqui.SoundRequest request) {
                             appendSound(new MosquiFm(request.sound()));
+                        }
+                        // CallReturned/Despawn describe already applied work; never replay them.
+                    }
+                } else if (id == CdAnimal.OBJECT_ID) {
+                    // Present/projector-intact path: CheckAnimalPrescence pops into CheckObjDespawn; no draw.
+                    animal.run(whole, new CdAnimal.Globals(gates.timeZone(), devGlobals.goodFuture(),
+                            devGlobals.projDestroyed(), gates.timeWarpDirection(), preScrollForeground.xWord()));
+                } else if (id == Cd3dPlant.OBJECT_ID) {
+                    // Completed player slot read at this physical dispatch: oX word and oPlayerCtrl (oVar2C).
+                    var player = frame.state().motion();
+                    plant.run(whole, new Cd3dPlant.Player(player.centreX16_16() >>> 16, player.playerControl()),
+                            new Cd3dPlant.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord()));
+                    // ChildCreated/CallReturned/Despawn describe committed pool work; the live walk reaches
+                    // later-slot children in this pass by reading their IDs at their own visit.
+                } else if (id == Cd3dRamp.OBJECT_ID) {
+                    var player = frame.state().motion();
+                    var result = ramp.run(whole, new Cd3dRamp.Player(player.centreX16_16() >>> 16,
+                            player.centreY16_16() >>> 16, player.yVelocity() & 0xFFFF, player.flags(),
+                            player.animation(), player.playerControl()),
+                            new Cd3dRamp.Globals(gates.timeZone(), gates.timeWarpDirection(), preScrollForeground.xWord()));
+                    for (var effect : result.effects()) {
+                        if (effect instanceof Cd3dRamp.PlayerWrite write) {
+                            if (write.field() != Cd3dRamp.PlayerField.Y_VELOCITY) {
+                                throw new UnsupportedOperationException("Unowned 3D ramp player field " + write.field());
+                            }
+                            // MOVE.W #+-$C00,oYVel(a6): applied exactly once after the body returned and before
+                            // the next physical dispatch, whether or not that booster despawned in this call.
+                            frame.applyObjectYVelocity(write.signedWord());
+                            checkActive(Phase.DYNAMIC_SLOTS);
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
                     }
@@ -393,7 +467,8 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     public Snapshot captureClosedCut() {
         requireCut();
-        return new Snapshot(captureOwner, placement.capture(), ringGlobals, queue.captureClosedCut(), displayed, sounds);
+        return new Snapshot(captureOwner, placement.capture(), ringGlobals, queue.captureClosedCut(), displayed, sounds,
+                devGlobals);
     }
 
     /** Pure partition preflight. A foreign snapshot rejects before any owned partition is changed. */
@@ -406,6 +481,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         Objects.requireNonNull(snapshot.ringGlobals, "captured Ring globals");
         Objects.requireNonNull(snapshot.displayedFrame, "captured immutable picture");
         Objects.requireNonNull(snapshot.sounds, "captured immutable sound requests");
+        Objects.requireNonNull(snapshot.devGlobals, "captured DEV globals");
     }
 
     /** Prevalidates ALL owned partitions; no service/body/queue draw/pixels/sound/initialization is replayed. */
@@ -418,6 +494,7 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             placement.restore(snapshot.placement);
             queue.restore(snapshot.queue);
             ringGlobals = snapshot.ringGlobals;
+            devGlobals = snapshot.devGlobals;
             displayed = snapshot.displayedFrame;
             sounds = snapshot.sounds;
             expectedPlayerCut = null;

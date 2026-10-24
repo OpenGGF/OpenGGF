@@ -371,6 +371,24 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /**
+     * Obj3DRamp_Main's staged player write, MOVE.W #-$C00 / #$C00,oYVel(a6) (3D Ramp/Main.asm:329-337),
+     * published by the dynamic object owner after that body returns and before the next physical dispatch.
+     * Changes ONLY the actor's oYVel word. No other motion field, the display projection, timers, history,
+     * art, input, clock or body step is touched, and nothing is pre-dispatched. Call at a closed post-Body
+     * boundary; semantic phase ownership remains with root.
+     */
+    public void applyObjectYVelocity(int signedWord) {
+        requireOpenIdle(); requireClosedFrame();
+        if (signedWord < -0x8000 || signedWord > 0x7FFF) throw new IllegalArgumentException("Object Y velocity requires a signed native word");
+        var m = state.motion();
+        var motion = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), signedWord, m.groundVelocity(),
+                m.routine(), m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(), m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        state = new CdPlayerBody.State(motion, state.animation(), state.header(), state.timers(), state.history());
+    }
+
+    /**
      * Source scroll/event owner feeds existing shared fields after Body. It owns
      * the camera algorithm and bound changes. No duplicate bounds/centre shadow,
      * source work, input read, level counter or renderer update is performed here.

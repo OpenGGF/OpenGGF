@@ -115,6 +115,11 @@ public final class CdObjectMappings implements CdDrawMappings {
         addObject(tables, objects, CdR11aObjectAssets.Table.RING_MAPPINGS, objects.rings());
         addObject(tables, objects, CdR11aObjectAssets.Table.MOSQUI_NORMAL_MAPPINGS, objects.normalMosqui());
         addObject(tables, objects, CdR11aObjectAssets.Table.MOSQUI_DAMAGED_MAPPINGS, objects.damagedMosqui());
+        // Frontier bodies store these exact longs: Obj3DPlant_Init MOVE.L #MapSpr_3DPlant ($20E020) and
+        // Obj3DRamp_Init MOVE.L #MapSpr_3DRamp ($21FDBC). The booster's declared frame 8/9 tails stay outside
+        // the consumed frame views; the counted resolve reads only each count byte and its pieces.
+        addObject(tables, objects, CdR11aObjectAssets.Table.PLANT_MAPPINGS, objects.plant());
+        addObject(tables, objects, CdR11aObjectAssets.Table.RAMP_BOOSTER_MAPPINGS, objects.rampBooster());
         return new CdObjectMappings(tables, List.of());
     }
 

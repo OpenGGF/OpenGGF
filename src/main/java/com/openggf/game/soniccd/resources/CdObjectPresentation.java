@@ -108,6 +108,39 @@ public final class CdObjectPresentation {
     }
 
     /**
+     * Explicit USA_R11A_FRONTIER_DEV_PRELOADED_ART policy: the three opening spans above plus the two frontier
+     * drawing sources, Art_3DPlant (PLC_Cam1_Full row 4, 28 tiles from VRAM $8480) and Art_3DRampBoost (row 5,
+     * 63 tiles from VRAM $8820), taken from the owner's separately decoded frontier bank. Animals are never
+     * bound: the admitted Present/projector-intact Animal path draws nothing. Native first IDs still come from
+     * binding metadata. This remains a declared cold preload, not executed PLC/section residency; the first
+     * section switch at cameraX $680 (PLC 9 over these destinations) is outside every DEV policy here.
+     */
+    public static PatternSource usaR11aFrontierDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                               CdR11aObjectAssets objects,
+                                                               CdR11aObjectAssets.FrontierArtBank frontier,
+                                                               int playerLogicalBase, int ringLogicalBase,
+                                                               int mosquiLogicalBase, int plantLogicalBase,
+                                                               int rampLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        CdAssetBytes playerPixels = nowServicedPlayer.residentBank();
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, playerPixels),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes())));
+    }
+
+    /**
      * Active SAT prefix only. Reverse complete native entry order for painter overlap; no ID,
      * player/object, bucket, priority, position or provenance sort. One 4x4 native piece expands
      * to sixteen tiles here AFTER queue capacity was decided. No second cull or admission pass.

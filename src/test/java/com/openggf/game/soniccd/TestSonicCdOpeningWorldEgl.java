@@ -145,11 +145,14 @@ class TestSonicCdOpeningWorldEgl {
                 var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aOpeningDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), source.assets().openingObjects(),
+                                source.assets().openingObjects().frontierArtBank(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 24,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 38));
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 38,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 108,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 136));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()
@@ -326,6 +329,7 @@ class TestSonicCdOpeningWorldEgl {
         assertEquals(expected.objects().placement().status(), actual.objects().placement().status());
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
+        assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().provenance(), actual.cpu().provenance());

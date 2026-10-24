@@ -421,6 +421,7 @@ class TestSonicCdOpeningWorldLoad {
         assertEquals(expected.objects().placement().status(), actual.objects().placement().status());
         assertArrayEquals(expected.objects().placement().savedFlags().copy(), actual.objects().placement().savedFlags().copy());
         assertEquals(expected.objects().ringGlobals(), actual.objects().ringGlobals());
+        assertEquals(expected.objects().devGlobals(), actual.objects().devGlobals());
         assertEquals(expected.objects().lastSoundRequests(), actual.objects().lastSoundRequests());
         assertArrayEquals(expected.cpu().bytes(), actual.cpu().bytes());
         assertEquals(expected.cpu().spriteCount(), actual.cpu().spriteCount());

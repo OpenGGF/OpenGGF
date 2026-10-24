@@ -2747,3 +2747,49 @@ python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=
 
 These bindings do not implement hurt, defeat, death, score/global writes or
 the missing aftermath bodies. The full USA and regional parity goal stays open.
+
+
+### Live frontier object composition, 24 October 2026
+
+The opening Runtime now dispatches the bounded Animal24, 3DPlant2C and ramp2A
+owners through the actual live physical-slot walk. Later-slot plant children
+run in the same pass; earlier slots wait. Each dispatch reads the completed
+player fields, and ramp's staged Y-velocity word is applied exactly once before
+the next slot, including after same-call despawn. No actor position, control or
+collision flag is fabricated. The narrow Frame setter preserves every other
+actor/shared/display/art/input field and enforces its open closed-frame cut.
+
+Explicit development globals goodFuture/projDestroyed are zero and captured once
+with the Runtime. Five logical picture spans now cover24/14/70/28/63 patterns;
+the old three-argument bank constructor derives the two appended bases. The
+Presenter reserves and retires199 patterns in its existing governed range.
+Mapping joins use the actual authenticated plant/booster tables, retaining
+unused counted tails. The old three-span pixel policy stays strict; the new
+named policy admits only its five disjoint physical/logical spans. Animal art
+is decoded by the frontier bank but deliberately absent from drawing admission.
+
+Independent Opus review found no production P1/P2 and one test-only P2: the
+plant fixture paused with Start, then released Start without unpausing before
+its next spawn. Root session25051 compiled and reproduced the exact phase
+error (1test/0failures/1error/0skips). The minimal fixture correction uses an
+ordinary service to publish before starting the next pass; production stayed
+unchanged. The restored ramp assertion now compares its actual pre-body capture.
+The World/EGL restore checks include the new single-owned globals, and the
+rendered expected-pixel check uses the five-span policy.
+
+Combined root1757 passed166 tests with zero failures/errors/skips:23Runtime,
+82Frame,7mappings,11picture,13constructed assets,3regional assets,15World,
+1actualEGL pickup/replay and11API. All nine XML confirm Java25.0.5.0.2, actual
+media and explicit surfaceless EGL. Queue wait115s, execution1m31. These checks
+are affected coverage of the combined working tree, not an exhaustive suite.
+The previous shared/S3K/guards checks are not repeated for unchanged owners.
+
+The camera200/380 tests are constructed service-contract inputs, not natural
+World-route proof. Camera200 runs the inert Animal without drawing; camera380
+commits the plant family then stops at the actual unowned FloatBlock12. The
+booster tests are explicit constructed ingress, because the natural route still
+has the earlier player ramp/contact owners. No object IDs are skipped, no
+contacts suppressed and no full-pool allocation silently omitted. Current World
+render verification still covers the normal-input first Ring, not full act play.
+Enemy hurt/defeat/death consequences, solid objects, native player ramp mode,
+section PLC before camera680 and complete USA/regional parity remain open.

@@ -618,6 +618,213 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    // Catches failing the camera-$200 Animal record, running an Animal body on the inert
+    // Present/projector-intact path, or drawing/touching an object that native never draws.
+    @Test void unrunCameraChunk200StreamsTheInertAnimalWhichNeverDrawsOrFails() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle();
+            var camera = new CameraWords(0x200, 0x70B);
+            f.service(0, camera);
+            f.runtime.spawnBeforeReservedSlots();
+            assertEquals(24, f.runtime.placement().status().rightRecordIndex(), "rows 0..23 consumed below $480");
+            assertEquals(0x3D, f.slot(38).id(), "common row 13: damaged Mosqui");
+            assertEquals(0x24, f.slot(39).id(), "common row 22: the Present Animal");
+            assertEquals(0x468, f.slot(39).centreX());
+            assertEquals(0x6E0, f.slot(39).centreY());
+            f.body(2);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            var animal = f.slot(39);
+            assertEquals(0x24, animal.id(), "CheckObjDespawn kept it: $400-$180 = $280");
+            assertEquals(0, animal.routine(), "the popped return address skips Init");
+            assertEquals(0, animal.longBits(MAPPINGS));
+            assertEquals(0, animal.word(TILE));
+            assertEquals(0, animal.spriteFlags() & 0x80);
+            assertEquals(0x34F, f.slot(38).centreX(), "damaged Mosqui Init falls into Main with the half-pixel delta");
+            var sat = f.runtime.finishAfterCamera(new DrawCameras(camera, camera, camera));
+            assertTrue(sat.provenance().stream().noneMatch(p -> p.slotRef().wholeIndex() == 39), "never drawn");
+            f.runtime.finishOrdinaryTail();
+            assertEquals(new CdOpeningObjectRuntime.DevGlobals(0, 0), f.runtime.devGlobals());
+            f.service(0x80, camera);
+            assertNotNull(f.runtime.displayedFrame());
+        }
+    }
+
+    // Catches skipping the unowned FloatBlock, failing at the plant instead, replaying
+    // ChildCreated effects, or snapshotting the pool before the plant's live allocations.
+    @Test void unrunCameraChunk380RunsThePlantFamilyThenFailsAtTheUnownedFloatBlock() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle();
+            var camera = new CameraWords(0x380, 0x70B);
+            f.service(0, camera);
+            f.runtime.spawnBeforeReservedSlots();
+            assertEquals(42, f.runtime.placement().status().rightRecordIndex(), "rows 0..41 consumed below $600");
+            assertEquals(List.of(0x3D, 0x24, 0x3D, 0x10, 0x2C, 0x12), List.of(f.slot(38).id(), f.slot(39).id(),
+                    f.slot(40).id(), f.slot(41).id(), f.slot(42).id(), f.slot(43).id()));
+            assertEquals(0x590, f.slot(42).centreX());
+            assertEquals(1, f.slot(42).subtype());
+            f.body(2);
+            var error = assertThrows(UnsupportedOperationException.class, f.runtime::runDynamicSlotsAfterReservedSlots);
+            assertTrue(error.getMessage().contains("$12") && error.getMessage().contains("43"), error.getMessage());
+            assertTrue(f.runtime.closed());
+            assertTrue(f.frame.closed());
+            var parent = f.slot(42);
+            assertEquals(2, parent.routine(), "Obj3DPlant_Init committed before the later FloatBlock dispatch failed");
+            assertEquals(0, parent.subtype(), "BCLR #0");
+            assertEquals(0x5D0, parent.centreX());
+            assertEquals(0x590, parent.word(PLANT_ANCHOR_X));
+            assertEquals(0x5D0, parent.word(PLANT_BASE_X));
+            assertEquals(0x20E020, parent.longBits(MAPPINGS));
+            assertEquals(0x4424, parent.word(TILE));
+            assertEquals(0x18, parent.unsignedByte(WIDTH));
+            assertEquals(0x14, parent.unsignedByte(Y_RADIUS));
+            var mains = new ArrayList<Integer>();
+            var smalls = new ArrayList<Integer>();
+            for (int whole = 32; whole < 128; whole++) {
+                var s = f.slot(whole);
+                if (whole == 42 || s.id() != 0x2C) { continue; }
+                assertEquals(2, s.routine(), "slot " + whole);
+                assertEquals(0x590, s.word(PLANT_ANCHOR_X), "shared original anchor");
+                assertTrue(whole < 42, "first-free children landed in slots freed earlier this pass and wait for the next pass");
+                if (s.subtype() == 0) { mains.add(whole); assertEquals(0x610, s.centreX()); }
+                else { smalls.add(whole); assertEquals(1, s.unsignedByte(MAP_FRAME)); assertEquals(4, s.unsignedByte(PRIORITY)); }
+            }
+            assertEquals(1, mains.size());
+            assertEquals(3, smalls.size());
+            assertEquals(List.of(0x590, 0x5F0, 0x530), smalls.stream().map(w -> f.slot(w).centreX()).toList());
+            // Derived from the pinned first cycle: 32/35 were drawn (bit 7 kept them), 33/36/37 and 34 despawned first.
+            assertEquals(List.of(33), mains);
+            assertEquals(List.of(34, 36, 37), smalls);
+            assertEquals(0x12, f.slot(43).id(), "the unowned FloatBlock record is untouched, not skipped");
+        }
+    }
+
+    // Catches applying the staged launch inside the body, deferring it past the next slot,
+    // omitting the booster from the queue, or publishing it without the frontier pixels.
+    @Test void unrunRampDeviceContractAppliesTheStagedLaunchOnceDrawsAndReplaysAfterRestore() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle();
+            var p = f.frame.state().motion();
+            int x = p.centreX16_16() >>> 16, y = p.centreY16_16() >>> 16;
+            // Constructed SpawnObject-equivalent ingress at the player's position: a device contract, not a route.
+            f.runtime.placement().pool().write(f.slot(38).moveByte(ID, 0x2A).moveWord(X, x).moveWord(Y, y));
+            var before = f.runtime.captureClosedCut();
+            var beforeActor = f.frame.captureActor();
+            var beforeShared = f.frame.captureShared();
+            f.service(0);
+            f.runtime.spawnBeforeReservedSlots();
+            f.body(2);
+            int restingVelocity = f.frame.state().motion().yVelocity();
+            assertNotEquals(0xC00, restingVelocity, "the launch is applied by the dynamic pass, never by Body");
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0xC00, f.frame.state().motion().yVelocity(), "MOVE.W #$C00,oYVel(a6): resting player launches down");
+            var ramp = f.slot(38);
+            assertEquals(2, ramp.routine());
+            assertEquals(60, ramp.unsignedByte(RAMP_TIMER));
+            assertEquals(x, ramp.word(RAMP_ANCHOR_X));
+            assertEquals(x, ramp.centreX());
+            assertEquals(0x21FDBC, ramp.longBits(MAPPINGS));
+            assertEquals(0x441, ramp.word(TILE));
+            assertEquals(0, ramp.unsignedByte(MAP_FRAME));
+            var sat = f.runtime.finishAfterCamera(POST);
+            assertEquals(8, sat.provenance().stream().filter(pr -> pr.slotRef().wholeIndex() == 38).count(),
+                    "MapSpr_3DRamp frame 0 has eight pieces");
+            f.runtime.finishOrdinaryTail();
+            assertEquals(0xC00, f.frame.state().motion().yVelocity(), "no second application at the tail");
+            var after = f.runtime.captureClosedCut();
+            var afterActor = f.frame.captureActor();
+            var cpu = f.runtime.cpuSat();
+            f.service(0x80);
+            var tiles = f.runtime.displayedFrame().tiles();
+            assertTrue(tiles.stream().anyMatch(t -> t.patternId() >= BANKS.ramp() && t.patternId() < BANKS.ramp() + 63),
+                    "booster pixels come from the frontier bank span");
+            f.runtime.validateRestore(before);
+            f.frame.validateActorRestore(beforeActor);
+            f.frame.validateSharedRestore(beforeShared);
+            f.runtime.restore(before);
+            f.frame.restoreActor(beforeActor);
+            f.frame.restoreShared(beforeShared);
+            assertEquals(beforeActor.state().motion().yVelocity(), f.frame.state().motion().yVelocity());
+            f.service(0);
+            f.runtime.spawnBeforeReservedSlots();
+            f.body(2);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            f.runtime.finishAfterCamera(POST);
+            f.runtime.finishOrdinaryTail();
+            assertEquals(afterActor, f.frame.captureActor(), "replayed launch reproduces the actor partition");
+            assertEquals(after.placement().pool().slots(), f.runtime.captureClosedCut().placement().pool().slots());
+            assertArrayEquals(cpu.bytes(), f.runtime.cpuSat().bytes());
+            assertEquals(after.devGlobals(), f.runtime.captureClosedCut().devGlobals());
+        }
+    }
+
+    // Catches dispatching children from a captured list, culling or omitting committed
+    // children in later slots, or publishing plant pieces without the frontier pixels.
+    @Test void unrunPlantDeviceContractExecutesLaterChildrenThisPassAndDrawsFromTheFrontierBank() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle();
+            // Constructed SpawnObject-equivalent ingress near the camera: a device contract, not a route.
+            f.runtime.placement().pool().write(f.slot(38).moveByte(ID, 0x2C).moveWord(X, 0x80).moveWord(Y, 0x7C4)
+                    .moveByte(SUBTYPE, 1));
+            f.service(0);
+            f.runtime.spawnBeforeReservedSlots();
+            f.body(2);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(List.of(0x2C, 0x2C, 0x2C, 0x2C, 0x2C),
+                    List.of(f.slot(38).id(), f.slot(39).id(), f.slot(40).id(), f.slot(41).id(), f.slot(42).id()));
+            assertEquals(List.of(0xC0, 0x100, 0x80, 0xE0, 0x20), List.of(f.slot(38).centreX(), f.slot(39).centreX(),
+                    f.slot(40).centreX(), f.slot(41).centreX(), f.slot(42).centreX()));
+            assertEquals(0, f.slot(43).id());
+            var sat = f.runtime.finishAfterCamera(POST);
+            for (int whole = 38; whole <= 42; whole++) {
+                int pieces = whole <= 39 ? 4 : 2;
+                int slot = whole;
+                assertEquals(pieces, sat.provenance().stream().filter(pr -> pr.slotRef().wholeIndex() == slot).count(),
+                        "later children ran and queued in the same pass: slot " + whole);
+            }
+            f.runtime.finishOrdinaryTail();
+            f.service(0);
+            var tiles = f.runtime.displayedFrame().tiles();
+            assertTrue(tiles.stream().anyMatch(t -> t.patternId() >= BANKS.plant() && t.patternId() < BANKS.plant() + 28));
+            assertTrue(tiles.stream().noneMatch(t -> t.patternId() >= BANKS.ramp() && t.patternId() < BANKS.ramp() + 63));
+            f.runtime.spawnBeforeReservedSlots();
+            f.body(3);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(List.of(0xC0, 0x100, 0x80, 0xE0, 0x20), List.of(f.slot(38).centreX(), f.slot(39).centreX(),
+                    f.slot(40).centreX(), f.slot(41).centreX(), f.slot(42).centreX()), "static while the player's ramp bit is clear");
+            f.runtime.finishAfterCamera(POST);
+            f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    // Catches deriving banks from declarations, dropping the sequential frontier policy,
+    // or letting the three-argument bases drift from the module's 24+14+70+28+63 picture.
+    @Test void unrunLogicalBanksDeriveTheSequentialFrontierSpansAndDevGlobalsAreExplicitZero() throws Exception {
+        assertEquals(12070, BANKS.plant());
+        assertEquals(12098, BANKS.ramp());
+        var explicit = new CdOpeningObjectRuntime.LogicalBanks(1, 2, 3, 4, 5);
+        assertEquals(4, explicit.plant());
+        assertEquals(5, explicit.ramp());
+        assertEquals(new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236),
+                new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138));
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.DevGlobals(0x100, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdOpeningObjectRuntime.DevGlobals(0, -1));
+        var assets = load();
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
+            // Plant base inside the Mosqui span: the frontier pixel policy rejects at construction.
+            assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                    assets, frame, INITIAL, new byte[640], new CdOpeningObjectRuntime.LogicalBanks(10000, 11000, 12000, 12069, 12098),
+                    PRE, value -> { }));
+        }
+        try (var f = new Fixture()) {
+            assertEquals(new CdOpeningObjectRuntime.DevGlobals(0, 0), f.runtime.devGlobals());
+            f.firstCycle();
+            var cut = f.runtime.captureClosedCut();
+            assertEquals(new CdOpeningObjectRuntime.DevGlobals(0, 0), cut.devGlobals());
+            f.runtime.restore(cut);
+            assertEquals(new CdOpeningObjectRuntime.DevGlobals(0, 0), f.runtime.devGlobals());
+        }
+    }
+
     private static final class Fixture implements AutoCloseable {
         final CdR11aAssets assets;
         final CdPlayerFrameRuntime frame;
@@ -634,8 +841,10 @@ class TestCdOpeningObjectRuntime {
             runtime = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(assets, frame, initial,
                     new byte[640], BANKS, PRE, value -> { angleWrites.add(value); onAngle.accept(value); });
         }
-        void service(int held) {
-            runtime.setPreScrollForeground(PRE);
+        void service(int held) { service(held, PRE); }
+        /** Constructed pre-scroll camera words test the device contract; they are not natural route evidence. */
+        void service(int held, CameraWords camera) {
+            runtime.setPreScrollForeground(camera);
             var selected = frame.prepareInput(held);
             runtime.serviceVBlank(selected.phase());
         }
