@@ -827,3 +827,69 @@ reference and naming reductions there are not delivered by this fourth loop.
 A final fetch found the destination still at `2020d2e57`; main's inherited dirty
 submodules and untracked files are preserved. Final prose/policy checks,
 integration, push and accounted-for worktree cleanup follow this checkpoint.
+
+
+## Level animation provider ownership worker (2026-10-24)
+
+The isolated T3 checkout `t3-d5767fb6`, branch
+`bugfix/ai-level-animation-provider-owners-20261024`, starts at `2020d2e57a`,
+matching main `develop` when inspected. This bounded follow-up moves the whole
+`AnimatedPaletteProvider` and `AnimatedPatternProvider` contracts from `data`
+to the existing `level.animation` package. Their `Level` parameters, manager
+returns and `IOException` declarations are unchanged. The three native game
+implementations, LevelManager and TestModZoneRuntimeProfile change imports only;
+all implementation bodies and custom-zone disable/error paths remain intact.
+No forwarding interface, factory, model, API pin, guard rule, store key or guard
+setting is introduced. The only frozen-record edits remove the two providers'
+existing parameter/return pairs; no replacement identities are admitted.
+
+Compatibility review checked all source references, the curated API roots,
+recursive public/protected signature traversal, signature pins and internal
+terminals. The annotated `data.Game`, `PlayerSpriteArtProvider` and
+`SpindashDustArtProvider` remain unchanged. `Game` does not expose these two
+unannotated animation providers through its signatures; native subclasses'
+implementation interfaces are outside the creator surface. The compiled exact
+candidate/recursive inventory check remains required before commit, so absence
+from the textual pin alone is not treated as proof.
+
+The change-based plan selects all smoke categories for these shared-package
+paths. Focused validation is proportionate here because the source change is
+exhaustively limited to package/import relocation and four record removals.
+Existing tests cover custom-zone animation disabling, S1 palette fallback,
+S2 production graph assembly/palette ownership, S3K tile VBlank publication and
+HCZ palette cycling/ownership, plus the complete compiled Mod API inventory.
+A separate strict TestArchUnitRules invocation covers layers, cycles and package
+edges with frozen updates disabled. The parent owns complete guards, mandatory
+S3K loading/bootstrap checks and composed delivery. These checks do not certify
+all zone routes, intermediate rendered frames or external clients of unsupported
+engine internals. No release-only full suite is selected.
+
+The unchanged runtime source described above passed 67 distinct cases across eight
+XML reports, zero failures/errors/skips (three seconds admission, 89 seconds Maven).
+This includes the exact dependency-complete candidate pin, annotation inventory
+and internal-terminal checks. The selection used:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestModZoneRuntimeProfile,TestSonic1PaletteOwnershipFallbackResolution,TestSonic2PatternAnimatorGraphAdapter,TestSonic2PaletteOwnershipIntegration,TestS3kZoneAnimateTilesPublication,TestS3kHczPaletteCycling,TestS3kPaletteOwnershipRegistryIntegration,TestModApiSignatureSurface' \
+  "-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+The strict structural invocation replaces only the selector with
+`-Dtest=TestArchUnitRules`. Tool preflight passed in this launch environment;
+all three existing absolute ROM paths match the documented CRC32/SHA-1 identities.
+`MAIN_CHECKOUT` and `ROM_ROOT` name the existing main checkout and its ROM directory,
+as in the coordinator command above; the wrapper was invoked by absolute path.
+
+The separate strict run passed all 33 distinct ArchUnit cases with zero
+failures/errors/skips (six seconds admission, 31.090 seconds Maven). Actual XML
+confirmed the low-level layer, package-cycle and top-level edge checks executed.
+Compiled providers exist only at their new locations. No runtime edit followed
+these checks; only this evidence append remained. The inspected nine XML and nine
+text reports are disposable diagnostics; no pass cache or receipt is retained.
