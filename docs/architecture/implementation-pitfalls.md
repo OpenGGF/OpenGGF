@@ -2235,7 +2235,7 @@ context-free same-instance round trips, an absent identity table must leave its
 links uncaptured. Encoding that absence as null owner IDs makes restore erase
 live constructor links; an orbiting Sol fireball then destroys itself. Table-backed
 null IDs remain authoritative, including through the context-free restore overload.
-The three Rexon/Sol native links now use exact CAPTURED field metadata and a private
+Rexon/Sol native links use exact CAPTURED field metadata and a private
 optional mode of the existing reference codec: an uncaptured marker preserves the
 current field, while a captured null clears it. Other reference codecs stay strict.
 For existing handwritten extras, omit the link extra when its capture table is
@@ -2244,3 +2244,14 @@ forms, explicit nulls, missing targets and wrong types. The [schema evidence](pl
 records why four new handwritten overrides were rejected and removed without
 growing the architecture baseline. In-place eligibility is a separate proof;
 compact reference capture alone does not satisfy the scalar-only safety audit.
+
+AIZ collector links instead use a context-compatible, managed-strict mode: no
+table leaves the field uncaptured, while table-present capture and restoration
+still require registered, correctly typed identities. Context-free compatibility
+does not justify optional missing managed targets. After a void SST allocation
+attempt rejects a candidate, its owner must stop retaining that unregistered
+handle before capture. Clear the rejected reference after the existing attempt;
+preserve native allocation order, routine advancement and lifecycle flags. The
+[AIZ correction evidence](plans/2026-10-24-architecture-continuation.md#fifth-loop-focused-results-correction-and-acceptance)
+distinguishes this admission boundary from arbitrary early collector retirement,
+which remains a separate unproven lifecycle contract.

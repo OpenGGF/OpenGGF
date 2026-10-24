@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -19,6 +20,7 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -78,7 +80,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     private int chunkSwapTimer = -1;
     private boolean maxYRaiseActive;
     private int maxYAccumulator;
-    private final List<S3kBossExplosionController> wallExplosions = new ArrayList<>();
+    private final WallExplosionState wallExplosions = new WallExplosionState();
 
     public LbzMinibossBoxKnuxInstance(ObjectSpawn spawn) {
         super(spawn, "LBZMinibossBoxKnux");
@@ -132,7 +134,7 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
             }
             case AWAIT_SIGNPOST_CAMERA -> updateAwaitSignpostCamera();
             case DONE -> {
-                boolean explosionsDone = wallExplosions.stream().allMatch(S3kBossExplosionController::isFinished);
+                boolean explosionsDone = wallExplosions.allFinished();
                 boolean piecesGone = leftRig == null
                         || (!leftRig.hasVisiblePieces() && !rightRig.hasVisiblePieces());
                 if (explosionsDone && piecesGone) {
@@ -289,6 +291,51 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
                     services().playSfx(Sonic3kSfx.EXPLODE.id);
                 }
                 spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+            }
+        }
+    }
+
+    /** Keeps the folded controllers on the default owner/base capture path. */
+    private final class WallExplosionState implements Iterable<S3kBossExplosionController>,
+            RewindStateful<WallExplosionState.Snapshot> {
+        private final List<S3kBossExplosionController> entries = new ArrayList<>();
+
+        private record Snapshot(S3kBossExplosionController.Snapshot[] controllers) {
+            private Snapshot {
+                controllers = controllers.clone();
+            }
+
+            @Override
+            public S3kBossExplosionController.Snapshot[] controllers() { return controllers.clone(); }
+        }
+
+        private void add(S3kBossExplosionController controller) { entries.add(controller); }
+
+        private boolean allFinished() {
+            return entries.stream().allMatch(S3kBossExplosionController::isFinished);
+        }
+
+        @Override
+        public Iterator<S3kBossExplosionController> iterator() { return entries.iterator(); }
+
+        @Override
+        public Snapshot captureRewindStateValue() {
+            return new Snapshot(entries.stream().map(S3kBossExplosionController::captureSnapshot)
+                    .toArray(S3kBossExplosionController.Snapshot[]::new));
+        }
+
+        @Override
+        public void restoreRewindStateValue(Snapshot state) {
+            entries.clear();
+            var controllers = state.controllers();
+            if (controllers.length == 0) {
+                return;
+            }
+            // The registry restores the session RNG separately. Every controller must
+            // share its current instance, in captured order, rather than clone its cursor.
+            var sharedRng = services().rng();
+            for (S3kBossExplosionController.Snapshot controller : controllers) {
+                entries.add(S3kBossExplosionController.fromSnapshot(controller, sharedRng));
             }
         }
     }

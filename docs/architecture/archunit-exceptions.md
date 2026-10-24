@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 151 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 records while the next ownership slice is designed | Next target: remove internal SAT-replay descriptor construction while retaining supported typed rendering ingress |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -116,7 +116,7 @@ truncate a body. The substantial `displayFrame`/`stepInternalBody` owners are
 budgeted alongside their profiling wrappers. `ObjectManager`'s effective-source
 cap is 3073, down from 3086. The other large-class caps are 2045
 (`Sonic1ObjectArtProvider`), 3257 (`AbstractPlayableSprite`), 3142 (`LevelManager`)
-and 3307 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
+and 3305 (`GameLoop`). The only allowed >=100-line `Engine` method owners are
 `Engine#init()` and `Engine#displayFrame()`. Overloads and nested owners cannot
 share these identities, and ambiguous dispatcher names fail. Exchanging one
 large method for another no longer
@@ -124,7 +124,7 @@ fits an aggregate slot. No gameplay behavior changed to obtain these reductions.
 
 | Rule | Enforced budget | Target | Trigger |
 |------|----------|--------|---------|
-| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 2, `GameLoop.java`: 4 | 0 | Mode startup, data-select, bonus-stage, and debug special cases move behind module/provider contracts |
+| Root `Engine` / `GameLoop` concrete Sonic references | `Engine.java`: 0, `GameLoop.java`: 0 | Hold at 0 | Registry metadata and bonus-stage capabilities own table selection, bootstrap repair and debug behavior |
 | `ObjectManager` concrete Sonic references | 0 | 0 | Rewind dynamic-object recreation moves to game/module-registered codecs and factories |
 | Low-level graphics/audio gameplay `GameServices` lookups | 0 | 0 | Camera/fade state is passed through render orchestration or explicit context objects |
 | Root dispatcher method sizes | `Engine.draw`: 3, `Engine.init`: 170, `Engine.display`: 4, `Engine.displayFrame`: 229, `GameLoop.stepInternal`: 58, `GameLoop.stepInternalBody`: 277, `GameLoop.doExitBonusStage`: 113, `GameLoop.updateSpecialStageInput`: 9, `GameLoop.loadEndingDemoZone`: 84, `GameLoop.enterTitleCardFromResults`: 62, `GameLoop.enterBonusStage`: 45 | Decrease each touched method | Mode/render responsibilities extract into focused controllers without growing the root dispatchers |
@@ -152,15 +152,21 @@ as distinct operations, so an approved direct call cannot authorize one.
 The ambient singleton-setup inventory now contains 98 methods across 97 files,
 down from 102/100 after direct manager construction and named module fixtures
 replaced four methods in three test classes. These count setup obligations,
-not demonstrated leaks. Four unused GameLoop imports are gone; the reduced
-four-reference budget still covers real bonus bootstrap/debug coupling and does
-not claim that ownership migration is complete.
+not demonstrated leaks. Removing four unused GameLoop imports first tightened
+stale accounting. The later registry metadata and bonus-stage capability migration
+removes the remaining root coupling; both concrete-reference caps are now zero.
+Sonic 1 music parsing now lives beside its game-owned loader, with its class body
+unchanged and the sole naming allowance removed. The naming store is empty.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
 records eight proven reconstruction policies, two captured fragment-art recipes,
-the ride ship's captured live inventory and codec-compatible ICZ helper state,
-leaving 11 exact obligations. False-floor surviving children dispatch by
+the ride ship's captured live inventory and codec-compatible ICZ helper state.
+Owner-bound LBZ panels and ordered wall-controller snapshots preserve progressed
+values and current shared RNG binding. Two unused AIZ histories are removed;
+exact captured actor links preserve finale triggering and emerald collection.
+Seven exact obligations remain, including the arbitrary S1 parent-ring recipe
+contract; stock placed recipes have bounded destructive-replay evidence. False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14
@@ -248,7 +254,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 151
+- `low_level_layers_do_not_depend_on_runtime_layers`: 147
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -553,3 +559,15 @@ When a frozen violation is removed:
 4. Update record counts, member-dependency counts, and affected exception prose
    in this document. Keep committed allowances separate from measured live
    violations and package-pair permissions.
+
+
+The level-animation provider contracts now live beside their managers in
+`level.animation`. All three game loaders and LevelManager keep the same method
+bodies and runtime selection; exactly four parameter/return records are removed,
+151 → 147 in this composition. The API pins and historical frozen-rule key are
+unchanged. This meets the prior <=150 target. The next ownership target is the
+internal SAT-replay descriptor construction, separately from supported typed
+ingress and canonical value placement. Its four field/construction/write records
+are candidates for a reviewed migration, not an automatic allowance deletion or a
+new measured result. Preserve expanded replay palettes and cached descriptor
+semantics; do not duplicate values or erase types to meet a count.

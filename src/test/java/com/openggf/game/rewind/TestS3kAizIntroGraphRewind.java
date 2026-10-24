@@ -4,6 +4,8 @@ import com.openggf.camera.Camera;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesAiz1Instance;
 import com.openggf.game.sonic3k.objects.AizIntroBoosterChild;
 import com.openggf.game.sonic3k.objects.AizIntroEmeraldGlowChild;
 import com.openggf.game.sonic3k.objects.AizIntroPlaneChild;
@@ -197,6 +199,69 @@ class TestS3kAizIntroGraphRewind {
                 new DynamicObjectRecreateContext(objectManager));
         assertNull(missingGlowResult,
                 "generic recreate must drop an AIZ intro glow child when no live plane exists");
+    }
+
+    @Test
+    void waveRecreationRequiresAManagedSelectedOrUnambiguousIntro() {
+        ObjectManager manager = Harness.create(List.of(PARENT_SPAWN,
+                new ObjectSpawn(0x80, 0x30, AIZ_INTRO_PARENT_TEST_ID, 0, 0, false, 301))).objectManager();
+        List<AizPlaneIntroInstance> parents = liveObjects(manager, AizPlaneIntroInstance.class);
+        assertEquals(2, parents.size());
+        AizPlaneIntroInstance selected = parents.getFirst();
+        AizPlaneIntroInstance.adoptActiveIntroInstance(selected);
+        ObjectInstance selectedWave = ObjectRewindDynamicCodecs.genericRecreate(
+                dynamicEntry(AizIntroWaveChild.class, spawn(0x120, 0x48, 440)),
+                new DynamicObjectRecreateContext(manager));
+        assertSame(selected, readObjectField(selectedWave, "parent"));
+
+        AizPlaneIntroInstance.adoptActiveIntroInstance(null);
+        assertNull(ObjectRewindDynamicCodecs.genericRecreate(
+                dynamicEntry(AizIntroWaveChild.class, spawn(0x120, 0x48, 441)),
+                new DynamicObjectRecreateContext(manager)), "ambiguous unmanaged selection must not guess an owner");
+        new AizPlaneIntroInstance(spawn(0x120, 0x48, 442));
+        assertNull(ObjectRewindDynamicCodecs.genericRecreate(
+                dynamicEntry(AizIntroWaveChild.class, spawn(0x120, 0x48, 443)),
+                new DynamicObjectRecreateContext(manager)), "a stale singleton cannot select a managed owner");
+    }
+
+    @Test
+    void emeraldCollectorIdentitySurvivesNearbyDecoysAndAllowsAnUnboundEmerald() {
+        ObjectManager manager = Harness.createWithoutPlacedParent().objectManager();
+        CutsceneKnucklesAiz1Instance decoy = manager.createDynamicObject(
+                () -> new CutsceneKnucklesAiz1Instance(spawn(0x500, 0x400, 450)));
+        CutsceneKnucklesAiz1Instance collector = manager.createDynamicObject(
+                () -> new CutsceneKnucklesAiz1Instance(spawn(0x500, 0x400, 451)));
+        setIntField(decoy, "xVel", 0x600);
+        setIntField(collector, "xVel", -0x600);
+        AizEmeraldScatterInstance bound = manager.createDynamicObject(
+                () -> new AizEmeraldScatterInstance(spawn(0x500, 0x400, 2, 452)));
+        bound.landOnGround(0x400);
+        bound.setKnuckles(collector);
+        AizEmeraldScatterInstance unbound = manager.createDynamicObject(
+                () -> new AizEmeraldScatterInstance(spawn(0x500, 0x400, 2, 453)));
+        unbound.landOnGround(0x400);
+        ObjectRefId boundId = objectId(manager, bound);
+        ObjectRefId unboundId = objectId(manager, unbound);
+        ObjectRefId collectorId = objectId(manager, collector);
+        RewindRegistry registry = registryFor(manager);
+        CompositeSnapshot snapshot = registry.capture();
+        bound.update(1, null);
+        unbound.update(1, null);
+        assertTrue(bound.isDestroyed(), "the exact collector permits pickup even beside an opposite-direction decoy");
+        assertFalse(unbound.isDestroyed(), "an unbound emerald must not adopt a nearby collector");
+        for (ObjectInstance object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+        registry.restore(snapshot);
+        RewindIdentityTable identities = manager.captureIdentityContext().requireIdentityTable();
+        AizEmeraldScatterInstance restored = (AizEmeraldScatterInstance) identities.resolve(boundId);
+        AizEmeraldScatterInstance restoredUnbound = (AizEmeraldScatterInstance) identities.resolve(unboundId);
+        assertNotSame(bound, restored);
+        assertNotSame(collector, identities.resolve(collectorId));
+        assertSame(identities.resolve(collectorId), readObjectField(restored, "knuckles"));
+        assertNull(readObjectField(restoredUnbound, "knuckles"));
+        restored.update(1, null);
+        restoredUnbound.update(1, null);
+        assertTrue(restored.isDestroyed(), "pickup must replay using the restored exact collector");
+        assertFalse(restoredUnbound.isDestroyed());
     }
 
     private record Harness(ObjectManager objectManager) {

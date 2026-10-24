@@ -1,7 +1,9 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -20,6 +22,33 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindFieldDispositionAudit {
+    @Test
+    void wallExplosionHolderRemainsCapturedByTheDefaultOwnerPath() {
+        Class<?> owner = com.openggf.game.sonic3k.objects.LbzMinibossBoxKnuxInstance.class;
+        assertTrue(com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(owner));
+        boolean captured = CompactFieldCapturer.supportsDefaultObjectSubclassScalars(owner)
+                ? RewindSchemaRegistry.defaultObjectSubclassSchemaFor(owner).capturedFields().stream()
+                        .anyMatch(plan -> plan.field().getName().equals("wallExplosions"))
+                : com.openggf.game.rewind.GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(owner)
+                        .stream().anyMatch(field -> field.getName().equals("wallExplosions"));
+        assertTrue(captured, "wallExplosions must be captured on the path this owner actually uses");
+        List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
+        RewindFieldDispositionAudit.auditClass(owner, gaps);
+        assertEquals(List.of(), gaps, "the holder must be captured, without excluding the owner from the audit");
+    }
+
+    @Test
+    void lbzPanelHolderIsCapturedWithoutDisablingTheDefaultOwnerPath() {
+        assertTrue(GenericRewindEligibility.usesDefaultObjectSubclassCapture(LbzMinibossInstance.class));
+        assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(LbzMinibossInstance.class));
+        assertTrue(RewindSchemaRegistry.defaultObjectSubclassSchemaFor(LbzMinibossInstance.class)
+                .capturedFields().stream().anyMatch(plan -> plan.field().getName().equals("panels")),
+                "panels must ride the actual compact capture route, not a transient/deferred policy");
+        List<RewindFieldDispositionAudit.Gap> gaps = new ArrayList<>();
+        RewindFieldDispositionAudit.auditClass(LbzMinibossInstance.class, gaps);
+        assertEquals(List.of(), gaps, "all existing LBZ parent fields retain their actual dispositions");
+    }
+
     @Test
     void unresolvedMutableStateIsStillReportedRatherThanClassifiedAsStructural() {
         assertEquals(Set.of(key("uncapturedChildren"), key("uncapturedHelper")), fixtureGaps().keySet());

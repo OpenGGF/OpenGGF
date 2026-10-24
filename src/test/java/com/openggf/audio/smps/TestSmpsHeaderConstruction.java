@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+import com.openggf.game.sonic1.audio.smps.Sonic1SmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsData;
 import org.junit.jupiter.api.Test;

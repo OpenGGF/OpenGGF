@@ -1,8 +1,6 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.audio.GameSound;
-import com.openggf.data.AnimatedPaletteProvider;
-import com.openggf.data.AnimatedPatternProvider;
 import com.openggf.data.Game;
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.SpindashDustArtProvider;
@@ -14,7 +12,9 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
+import com.openggf.level.animation.AnimatedPaletteProvider;
 import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.animation.AnimatedPatternProvider;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.rings.RingSpawn;
