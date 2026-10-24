@@ -8809,8 +8809,9 @@ exact blob `9a8da712962f904ba60922264522a39d5f3b28b9`. The original ROM companio
 blob `24d9b3561b9e41aed4234d997e3ecd0510262fa7` becomes
 `d73108eb8e10ae50aafa003cca16f3f3c4b75352`: its original private observer delegates
 to a package-visible overload adding explicit/distinct-manager fixture options;
-the golden accessor becomes package-visible. Original three test methods, inputs,
-assertions and pinned observations are unchanged. Separate loader caches remain.
+the golden accessor becomes package-visible. The original parameterized method
+and its three cases retain their inputs, assertions and pinned observations.
+Separate loader caches remain.
 The original 18 executed identities still hash to
 `4900ba63adaeb3690a250b8fad9d75e823661bc1ba2683bfd65e2d30e067d682`.
 
@@ -8909,3 +8910,57 @@ evidence and focused tests are durable. Baseline and composition remain in
 history; the worktree/branch remain local and retained for the parent's independent
 content-matched review and composed delivery. No push, integration into main,
 subdelegation or lifecycle cleanup occurred.
+
+### SMPS authority: parent review and composed validation
+
+Independent source review accepted implementation
+`ade6b66d2a9d1ce8499ac4719224bc0ed6a8db40` against composition
+`a56d871e9b45353d94ffdb4f7eb331841080a8f1`, with no blocking code findings.
+The sole prose correction distinguishes the original parameterized ROM method
+from its three executed cases; it is folded above. The parent independently
+reproduced the nine-file production manifest
+`aade7f37d9e202edbefc3b5d503ccb0ffa767c5abaf96d81f11fe64364f2c42e`.
+Production and test bytes remain those reviewed and tested by the worker.
+
+The change-based planner against the reviewed suspension composition
+`11db9f2945920804f308e9fa7d449b858c5e088f` selects all **3,775 smoke
+candidates** and guards because Engine is shared infrastructure. For this
+additive binding cut, bounded ordinary coverage is proportionate: the complete
+seven-site receiving census and native tool compile are accounted for; every
+existing constructor remains; only authority selection in the existing helper
+and the appended constructor forms change. Manager, factory, sequencer, frame,
+timing, physics, asset and snapshot algorithms remain unchanged. The worker's
+167 domain, 21 bounded boot/stability and 75 guard cases cover the direct new
+contract and existing consumers, with independently mapped source bytes.
+
+The parent adds a **combined suspension/SMPS lifecycle selection**, including
+all four complete required S3K stability classes, and then a separate complete
+fresh guard invocation. This exercises the combined source state through real
+park/resume, Engine installation, the configured pixel context and explicit
+authority behavior. It also broadens the worker's bounded S3K methods without
+selecting an exhaustive route matrix. The existing full smoke-category request
+for suspension remains tied to its frozen 11db9f2 inputs; its results do not
+certify the new SMPS bytes. No release-only full suite is selected.
+
+The exact ordinary selector is:
+
+```text
+TestGameLoopSuspensionOwnership,TestEngineSuspensionRendering,TestGameLoopSuspension,TestEngine#firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit+pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu+titleAudioBackendReinstallHonorsAudioEnabledLifecycle,TestSmpsExplicitConfigAuthorityContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+It is expected to execute 140 cases: the 55 temporal controls, one synthetic
+Engine pixel/phase control, seven S2 cases, three Engine cases, fourteen explicit
+authority cases and sixty S3K stability cases. Exact XML identities, counts and
+skips must establish the actual selection. Commands use this worktree's queue,
+Java 25, Lua 5.4, explicit surfaceless EGL and all four verified absolute original
+ROM properties, with desktop and Java-launcher option variables unset. The
+following fresh invocation uses `-Pguards test -B` without manual narrowing.
+
+Expected execution is 1–2 minutes for the ordinary selection and approximately
+six minutes for complete guards, with queue waiting additional and unknown.
+New or worsened failures block delivery; source mutation invalidates the
+affected evidence. Completed unchanged worker selections are reused only for
+their exact mapped source/coverage. Before integration, the parent will pin the
+then-current destination, reconcile upstream changes and verify the committed
+code mapping again. No composed result, integration, push or cleanup is claimed
+at this planning checkpoint.
