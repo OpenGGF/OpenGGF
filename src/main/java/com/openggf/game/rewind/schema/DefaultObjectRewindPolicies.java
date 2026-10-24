@@ -14,6 +14,13 @@ final class DefaultObjectRewindPolicies {
             "com.openggf.game.sonic2.objects.badniks.RexonHeadObjectInstance", "linkedHead");
     private static final FieldKey SOL_PARENT = new FieldKey(
             "com.openggf.game.sonic2.objects.badniks.SolFireballObjectInstance", "parent");
+    private static final FieldKey AIZ_INTRO_COLLECTOR = new FieldKey(
+            "com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "knuckles");
+    private static final FieldKey AIZ_EMERALD_COLLECTOR = new FieldKey(
+            "com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance", "knuckles");
+    // Public context-free forms leave these links alone; managed captures remain strict.
+    private static final Set<FieldKey> CONTEXT_COMPATIBLE_COLLECTORS = Set.of(
+            AIZ_INTRO_COLLECTOR, AIZ_EMERALD_COLLECTOR);
     // These native links may outlive a retired SST target. Reuse the exact-policy
     // keys so the existing field audit also rejects stale optional metadata.
     private static final Set<FieldKey> OPTIONAL_OBJECT_REFERENCES = Set.of(
@@ -124,8 +131,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
             // The finale triggers this exact Knuckles slot; emeralds keep collecting after the intro retires.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "knuckles"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance", "knuckles"), RewindFieldPolicy.CAPTURED),
+            Map.entry(AIZ_INTRO_COLLECTOR, RewindFieldPolicy.CAPTURED),
+            Map.entry(AIZ_EMERALD_COLLECTOR, RewindFieldPolicy.CAPTURED),
             // These lists rebuild from recreated managed children. Exact graph checks own the evidence.
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher", "activeBalls"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
@@ -950,6 +957,10 @@ final class DefaultObjectRewindPolicies {
 
     static boolean isOptionalObjectReference(Field field) {
         return OPTIONAL_OBJECT_REFERENCES.contains(FieldKey.of(field));
+    }
+
+    static boolean isContextCompatibleCollectorReference(Field field) {
+        return CONTEXT_COMPATIBLE_COLLECTORS.contains(FieldKey.of(field));
     }
 
     static RewindFieldPolicy policyFor(Field field) {

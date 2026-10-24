@@ -993,6 +993,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                     0, 0, 0, false, 0);
             knuckles = new CutsceneKnucklesAiz1Instance(knuxSpawn);
             spawnDynamicObject(knuckles);
+            // A failed SST admission destroys the candidate before identity registration.
+            // Keep the native attempt and routine advance, but never retain a rejected collector.
+            if (knuckles.isDestroyed()) {
+                knuckles = null;
+            }
             // Rock child is spawned by Knuckles' own routine0Init
 
             LOG.fine("Routine 22: spawned Knuckles");

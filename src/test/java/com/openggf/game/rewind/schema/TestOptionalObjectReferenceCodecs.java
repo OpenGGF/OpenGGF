@@ -112,6 +112,20 @@ class TestOptionalObjectReferenceCodecs {
         assertThrows(IllegalStateException.class, () -> restore(fixture, saved, context(wrongType)));
     }
 
+    @ParameterizedTest
+    @MethodSource("optionalLinks")
+    void optionalNativeWireKeepsItsExistingCapturedAndNullMarkers(Field field) throws Exception {
+        Fixture fixture = fixture(field);
+        assertArrayEquals(new byte[]{0}, capture(fixture, RewindCaptureContext.none()).data());
+        assertArrayEquals(new byte[]{1, 0}, capture(fixture, emptyContext()).data());
+        // The original optional encoding: captured marker, present marker, then five identity ints.
+        var expected = java.nio.ByteBuffer.allocate(22).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                .put((byte) 1).put((byte) 1)
+                .putInt(ID.kind().ordinal()).putInt(ID.slotIndex()).putInt(ID.generation())
+                .putInt(ID.spawnId()).putInt(ID.dynamicId()).array();
+        assertArrayEquals(expected, capture(fixture, context(fixture.reference())).data());
+    }
+
     private Fixture fixture(Field field) throws Exception {
         field.setAccessible(true);
         Object target = mocks.mock(field.getDeclaringClass());
