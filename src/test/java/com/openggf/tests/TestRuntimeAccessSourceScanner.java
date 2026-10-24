@@ -48,6 +48,29 @@ class TestRuntimeAccessSourceScanner {
     }
 
     @Test
+    void recordsMethodReferencesForInvocationShapedPatterns() throws IOException {
+        var counts = RuntimeAccessSourceScanner.scan(Map.of("Fixture.java", """
+                class Fixture {
+                    void update() {
+                        Object direct = LevelManager :: getInstance;
+                        Object qualified = com.openggf.level.LevelManager::getInstance;
+                        Object otherMethod = LevelManager::getInstanceElse;
+                        Object otherOwner = OtherLevelManager::getInstance;
+                        String example = "LevelManager::getInstance";
+                        // LevelManager::getInstance
+                    }
+                }
+                """), List.of("LevelManager.getInstance("));
+        Access reference = access("Fixture#update()", "LevelManager.getInstance::reference");
+        assertEquals(Map.of(reference, 2), counts);
+        var differences = RuntimeAccessSourceScanner.differences(counts,
+                Map.of(access("Fixture#update()", "LevelManager.getInstance()"), 2));
+        assertEquals(2, differences.size());
+        assertTrue(differences.stream().anyMatch(line -> line.contains("::reference observed=2 approved=0")));
+        assertTrue(differences.stream().anyMatch(line -> line.contains("getInstance() observed=0 approved=2")));
+    }
+
+    @Test
     void distinguishesOverloadsNestedLocalAnonymousTypesAndInitializers() throws IOException {
         var counts = scan("""
                 class Fixture {

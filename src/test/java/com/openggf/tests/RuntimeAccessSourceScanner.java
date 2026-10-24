@@ -102,7 +102,7 @@ public final class RuntimeAccessSourceScanner {
                     @Override
                     public Void visitMethodInvocation(MethodInvocationTree call, Void unused) {
                         record(compact(call.getMethodSelect().toString())
-                                + (call.getArguments().isEmpty() ? "()" : "(" + call.getArguments().size() + " args)"));
+                                + (call.getArguments().isEmpty() ? "()" : "(" + call.getArguments().size() + " args)"), false);
                         return super.visitMethodInvocation(call, unused);
                     }
 
@@ -110,7 +110,7 @@ public final class RuntimeAccessSourceScanner {
                     public Void visitMemberSelect(MemberSelectTree member, Void unused) {
                         var parent = getCurrentPath().getParentPath().getLeaf();
                         if (!(parent instanceof MethodInvocationTree call && call.getMethodSelect() == member)) {
-                            record(compact(member.toString()));
+                            record(compact(member.toString()), false);
                         }
                         return super.visitMemberSelect(member, unused);
                     }
@@ -118,16 +118,21 @@ public final class RuntimeAccessSourceScanner {
                     @Override
                     public Void visitMemberReference(MemberReferenceTree reference, Void unused) {
                         record(compact(reference.getQualifierExpression().toString()) + "."
-                                + reference.getName() + "::reference");
+                                + reference.getName() + "::reference", true);
                         return super.visitMemberReference(reference, unused);
                     }
 
-                    private void record(String expression) {
+                    private void record(String expression, boolean methodReference) {
                         // A fully qualified owner has the same policy identity as its imported short name.
                         for (String pattern : patterns) {
-                            int offset = expression.indexOf(pattern);
+                            boolean invocationPattern = methodReference && pattern.endsWith("(");
+                            String matchedPattern = invocationPattern
+                                    ? pattern.substring(0, pattern.length() - 1) : pattern;
+                            int offset = expression.indexOf(matchedPattern);
                             if (offset >= 0 && (offset == 0 || expression.charAt(offset - 1) == '.')
-                                    && !expression.substring(offset + pattern.length()).contains(".")) {
+                                    && (invocationPattern
+                                        ? expression.substring(offset + matchedPattern.length()).equals("::reference")
+                                        : !expression.substring(offset + matchedPattern.length()).contains("."))) {
                                 counts.merge(new Access(path, caller(getCurrentPath(), typeNames),
                                         expression.substring(offset)), 1, Integer::sum);
                                 break;
