@@ -123,6 +123,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCranePlayerRelease", "ownedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "directedHiddenPlayer"), RewindFieldPolicy.CAPTURED),
+            // The finale triggers this exact Knuckles slot; emeralds keep collecting after the intro retires.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizPlaneIntroInstance", "knuckles"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizEmeraldScatterInstance", "knuckles"), RewindFieldPolicy.CAPTURED),
             // These lists rebuild from recreated managed children. Exact graph checks own the evidence.
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.FZPlasmaLauncher", "activeBalls"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic1.objects.bosses.Sonic1FalseFloorInstance", "childBlocks"), RewindFieldPolicy.TRANSIENT),
