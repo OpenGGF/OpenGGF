@@ -12,6 +12,7 @@ import com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -494,6 +495,7 @@ class TestS3kSlotBonusStageRuntime {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.update(0);
+        assertFalse(runtime.activeVisibleCellsForTest().isEmpty(), "the layout render pass has staged cells");
         runtime.renderSlotLayout(GameServices.camera());
 
         assertEquals(0, renderer.drawCount);
@@ -600,10 +602,19 @@ class TestS3kSlotBonusStageRuntime {
     }
 
     private void installRenderer(RecordingRenderer renderer, String artKey) throws Exception {
+        LevelManager levelManager = TestEnvironment.activeGameplayMode().getLevelManager();
+        var services = TestEnvironment.objectServices();
+        ObjectManager objectManager = new ObjectManager(List.of(), null, 0, null, null,
+                services.graphicsManager(), services.camera(), services);
+        Field objectManagerField = LevelManager.class.getDeclaredField("objectManager");
+        objectManagerField.setAccessible(true);
+        objectManagerField.set(levelManager, objectManager);
+
         ObjectRenderManager renderManager = new ObjectRenderManager(new StubObjectArtProvider(renderer, artKey));
         Field objectRenderManagerField = LevelManager.class.getDeclaredField("objectRenderManager");
         objectRenderManagerField.setAccessible(true);
-        objectRenderManagerField.set(TestEnvironment.activeGameplayMode().getLevelManager(), renderManager);
+        objectRenderManagerField.set(levelManager, renderManager);
+        assertSame(services.graphicsManager(), levelManager.getObjectManager().getObjectServices().graphicsManager());
     }
 
     private static final class StubObjectArtProvider implements ObjectArtProvider {

@@ -4351,3 +4351,45 @@ only its consumed launch log. Compiled outputs and useful unmerged source remain
 No raw archive, pass cache or validation receipt is retained. PR223 is not green;
 Main/develop, draft status, manual CI and historical passive/native gates remain
 closed. This evidence-only follow-up does not change the tested executable inputs.
+
+### Slot runtime graphics-owner fixture correction — 2026-10-24
+
+After terminal readback, Root reserves only the Slot runtime fixture; the PR
+owner separately reserves catalogue/Starpost/ThreeIslands attribution. Start
+from docs-only6607c9902, preserving the tested f340 production source. The broad
+error is `lateRuntimeRenderPassDoesNotDrawMachineFacePanel`: the old helper
+installed an ObjectRenderManager, but omitted the ObjectManager required by the
+actual runtime's retained OM/services/graphics owner path.
+
+Change only `TestS3kSlotBonusStageRuntime` and this result record. Its helper now
+installs an empty real ObjectManager using TestEnvironment's actual object
+services, camera and graphics, alongside the existing render manager. Assert
+that the level's manager retains the supplied graphics owner. Before the
+unchanged zero-face-draw assertion, require nonempty staged layout cells. No
+production lookup/fallback, native layout order, budget, API, POM or resource
+changes. Test SHA256 is
+`eb763965ae91e82e4cb5236405352ff6d96f8b0aeb784f9126556e615aa3399d`.
+
+One focused request5077 uses the current absolute Main wrapper while retaining
+the owned cwd/target, with the same Java25/Lua5.4/EGL/null-audio environment and
+ambient JVM/display overrides unset. Both classes use synthetic ROM-free data;
+no ROM properties or native/GPU claim are required by this selection:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.game.sonic3k.bonusstage.slots.TestS3kSlotBonusStageRuntime,com.openggf.game.sonic3k.bonusstage.slots.TestS3kSlotLayoutRenderer' \
+  test -B
+```
+
+It exits0:32 unique identities in two XMLs, zero failures/errors/skips
+(runtime19, renderer13), queue60s separately from Maven30.237s. All identities,
+both property sets, recursive streams, text reports and unchanged source hash
+are inspected: Java25.0.5.0.2, owned cwd/classpath, exact selectors and EGL.
+Streams contain existing FAST-to-NONE and synthetic missing-WAV shadow warnings;
+no dumps. This is fixture qualification, not native timing/audio/pixel evidence
+or a replacement for the red f340 smoke. No structural/runtime inputs change,
+so no unchanged guard/broad repeat is submitted. The conditional second request
+is unused and closed. Consumed own reports/log/message are removed, compiled
+outputs and useful unmerged source retained; no push, Main, CI or passive gate
+change is opened by this local correction.
