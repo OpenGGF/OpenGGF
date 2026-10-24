@@ -8964,3 +8964,54 @@ their exact mapped source/coverage. Before integration, the parent will pin the
 then-current destination, reconcile upstream changes and verify the committed
 code mapping again. No composed result, integration, push or cleanup is claimed
 at this planning checkpoint.
+
+#### Parent combined controls and complete guards
+
+Against code-identical documentation child
+`1df6f36200be24f7782af41427538a76bac9bda4`, parent session 71661 passed
+**140/0/0/0** across ten physical reports. All 140 case identities were unique:
+55 suspension temporal controls, one configured Engine pixel/phase control,
+seven S2 cases, three Engine cases, fourteen explicit-authority cases and the
+complete sixty-case S3K stability selection. The two LevelLoading classes
+contributed 36 and 7, AIZ skip 8, BootstrapResolver 6 and DecodingUtils 3.
+Queue wait was 136s; Maven execution was 36.114s. Sorted
+`classname#name + newline` identities hash to
+`c80d2f7b7db67407894b9fd7c6fed265b355cbbbdd8558b9ac6e0822003d9da3`.
+
+The parent checked every XML failure/error/skip node, identity and property:
+Java 25.0.5.0.2, explicit surfaceless EGL and four absolute original-ROM paths.
+The first inspection script used the wrong package for the two resolver/decoder
+classes; its assertion stopped before report cleanup. Correcting those two
+inspection names confirmed the same completed run, without rerunning tests.
+The S2 report contains 82 FileChannel messages, preserving the independently
+recorded preload limitation; all other reports contain none. This is not an
+audio-preload repair or a claim that passing JUnit counts remove that limit.
+All consumed reports were deleted.
+
+Parent session 84622 then ran the complete fresh `-Pguards test -B` selection,
+without a method filter. It passed **793/0/0/0** across 95 physical reports,
+with 793 distinct identities. Queue wait was 341s; Maven execution was 5:24.
+Every report had the same Java/EGL/four-ROM properties, with no skipped or failed
+case. Its sorted identity hash is
+`d3b6d39568e7a1aa86eeeff983dd3deda837fe4840e6c4b26383dd7a5683053e`.
+All 13 frozen-store files were byte-compared with pre-injection composition
+a56d871e9 after completion; the manifest remains
+`ae4803e8096787ef94ca96320ea78432fb2c57ad068d5c20eb052b4b10166204`.
+Compiled API and accounting controls retain 22,541 rows / 1,250 types,
+119 low-level records, ambient 6/5 and 151 permissions. Reports were consumed.
+
+The exact common parent command environment unsets DISPLAY, WAYLAND_DISPLAY,
+XAUTHORITY, JAVA_TOOL_OPTIONS, JDK_JAVA_OPTIONS and MAVEN_ARGS, sets
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk and LUA_BIN=/usr/bin/lua5.4, and invokes
+the local `maven_queue.py --normal -Dmse=off` with explicit
+`-Dopenggf.headless.gl=surfaceless-egl` and the four verified original absolute
+ROM properties. The first invocation adds the selector above and `test -B`;
+the second adds `-Pguards test -B`. Tool preflight passed in that environment.
+No production/test/guard-policy input changed between these checks. Subsequent
+record edits are prose only. The source review, worker domain/compile evidence,
+parent combined controls and complete guards have distinct stated coverage;
+their overlapping cases are not added into a fabricated unique total.
+
+Both parent sessions are terminal exit 0. Integration into the updated main
+destination, push and owned-worktree cleanup remain pending; the independent
+suspension smoke-category request still certifies only its frozen 11db9f2 tree.
