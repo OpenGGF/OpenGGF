@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 126 records | Hold at 126 pending next composition checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 124 records | Hold at 124 pending next composition checks | GPU commands/backends consume scalars; decoded art providers and native SMPS readers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 126
+- `low_level_layers_do_not_depend_on_runtime_layers`: 124
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -632,10 +632,18 @@ unchanged. `data -> level` stays allowed while the separately reviewed `Game`
 contract still uses that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
 combined parent delivery remains separate.
 
-The current local composition has 126 low-level records. Decoder component
+The accepted parent composition has 126 low-level records. Decoder component
 qualification is complete; its joint composition checks and delivery remain
-pending. The earlier 846 focused / 769 guard results above stay attributed to
-the preceding 136-record executable state.
+separate. Native SMPS loaders now retain their own ROM references; the generic
+cache/hex-dispatch base has no ROM dependency. This removes exactly its constructor
+parameter and field records (126 → 124), without replacement records or permission
+removal: `audio -> data` still has six records. The local component has 124 records;
+its focused behavior and strict architecture/API/count qualification is recorded
+in the continuation plan, separately from parent composition and delivery. The
+earlier 846 focused / 769 guard results above stay attributed to the preceding
+136-record executable state. Unsupported external subclasses of the generic base
+must rebuild with its protected no-argument constructor and retain their own ROM;
+all three public native `(Rom)` constructors and supported API pins are unchanged.
 
 The next local fixture composition removes twenty additional setup identities:
 ten module/world keys, eight direct or engine-only keys, and two event/sensor

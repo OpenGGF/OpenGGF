@@ -3298,3 +3298,156 @@ additions. The independent grounding's retention limits above still apply. This
 is bounded fixture evidence, not a new native cross-game, local-manager registry
 registration, full-route or pixel guarantee. No broad smoke was rerun. The local
 branch remains for later composed validation, integration, push and cleanup.
+
+### Native SMPS retained-ROM ownership continuation
+
+This component starts at accepted local composition
+`48dbe26d014a30460a6784cfcefb1040aafe44ae`, on isolated branch
+`bugfix/ai-native-smps-rom-owner-20261024`. The completed residual grounding
+recommended only this two-record correction; its other qualified retentions and
+the closed SMPS restore-owner decision remain unchanged. The parent stays frozen
+for its own focused qualification. Component results do not inherit or supersede
+parent composition checks, integration, delivery or cleanup.
+
+`AbstractSmpsLoader` never reads its retained ROM. Its shared caches and hexadecimal
+dispatch now use an explicit protected no-argument constructor. Each native reader
+retains a private final `Rom`; public native `(Rom)` constructors, profile factories
+and callers keep their signatures. No close, snapshot, lookup, port, erasure or
+transfer of caller-owned ROM lifetime is introduced. A game-owned `RomSmpsLoader`
+superclass was rejected: it would preserve pre-initializer binding but add a type
+and hierarchy without a behavior requirement.
+
+Initializer inspection preceded that choice. S1 has only static logger/constants
+and default-null native instance fields. S2 allocates two stateless decoders and
+three maps; neither decoder has an instance initializer or constructor observing
+ROM. S3K allocates only its bank map. None observes `this.rom`, invokes a ROM
+callback or publishes the loader. Binding after initializers and before unchanged
+preparation therefore preserves observable order: S1 vector area then PSG
+envelopes; S2 names, eager SFX cache, then music/name mappings; S3K decompression,
+Z80 tables, S3 tables, modulation envelopes, PSG envelopes and global instruments.
+Null/closed/reader-backed behavior, reads and exception handling stay at existing
+sites. No validation or eager read is added. Complete native files are byte-identical
+after only field/constructor-edit normalization, preserving decoder, dispatch,
+mapping and cache bodies. Combined normalized native source SHA-256:
+`b38b4379e8cf6632dd06c2cee35b7f5de7b6840e77a55a4b5490c03f1db098ac`.
+
+The actual `ModApiSignatureSurface.recursiveTypes` visitor starts at curated roots
+and follows public/protected signatures, generic ancestors/interfaces, nested
+types, records and annotation references. It does not walk implementation bodies
+or enumerate concrete implementors of returned interfaces. Factory inheritance
+is native audio profile → `AbstractAudioProfile` → `GameAudioProfile`; the supported
+factory returns `SmpsLoader`, not a native implementation. Base/native loaders are
+unannotated and absent from curated roots, recursive signature and internal-terminal
+pins. Supported `Rom` use does not export every consumer. Unsupported external
+subclasses using the old protected base `(Rom)` constructor or field must rebuild
+with no-argument base construction and their own retained reference. This limited
+cost adds no supported compatibility promise. Candidate signature/terminal pins,
+`ModApiVersion` and release descriptor remain byte-identical to the parent.
+
+Delete exactly these records from frozen store
+`40afa018-d450-4b84-8cb9-d539d75d8062`:
+
+```text
+Constructor <com.openggf.audio.smps.AbstractSmpsLoader.<init>(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AbstractSmpsLoader.java:0)
+Field <com.openggf.audio.smps.AbstractSmpsLoader.rom> has type <com.openggf.data.Rom> in (AbstractSmpsLoader.java:0)
+```
+
+The inventory is **126 → 124**, zero additions; all retained records are
+byte-identical and ordered. Resulting store SHA-256:
+`4173fbdbadd154e0a8a0c20b99c440c5666ecaeaa0edaca3ec2430bb10ab6c7d`.
+Six directional `audio -> data` records remain. Top-level permissions, cycle
+ignores and rule source are unchanged. Both `SmpsSequencer` convenience
+constructors and their exact `GameServices.audio()` records stay unchanged.
+Game relocation is separate; no projected Game reduction is counted. Decoder,
+art, scalar and fixture decisions are inherited unchanged.
+
+The change-based planner selected all 3,747 smoke candidates because native paths
+and the frozen store trigger shared/unclassified rules. That is disproportionate
+for this mechanically bounded reference move; the user explicitly excludes broad/
+full suites. Use focused behavior and separate fresh strict architecture/API/count
+checks. Actual launch-environment preflight passed Java 25, Lua 5.4 and PowerShell.
+Existing absolute ROMs were verified in the main checkout (`MAIN_CHECKOUT`):
+
+| File | CRC32 | SHA-1 |
+| --- | --- | --- |
+| `s1.gen` | `AFE05EEE` | `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` |
+| `s2.gen` | `7B905383` | `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
+| `s3k.gen` | `63522553` | `cfbf98c36c776677290a872547ac47c53d2761d6` |
+
+KiS2 is not affected. No ROM files or links changed. Fresh `clean test-compile`
+succeeded: 4,336 production sources and 4,446 test/maintained-consumer sources
+compiled with release 25, including all four racing source roots. Maven execution
+was 1:22; this build-only command needed no test admission. Deprecation/unchecked
+warnings remained. Source/test inputs stay fixed from submission through exit.
+Source fingerprint (SHA-256 of
+`git diff --binary 48dbe26d014a30460a6784cfcefb1040aafe44ae -- src/main src/test pom.xml`):
+`d464bbe2a379b8c0ee642cefac570be92934b62f106943ff1e3264c30c9e484b`.
+
+The focused run passed **90 cases, zero failures/errors/skips**. XML identities
+match source methods, the three nested DAC chant cases and all 25 `zoneLoads`
+parameter rows. The simple loading selector reaches both maintained
+`com.openggf.game.sonic3k.TestSonic3kLevelLoading` (36) and
+`com.openggf.tests.TestSonic3kLevelLoading` (7). Other counts: S1 dispatch 2,
+S2 Saxman readiness 8, S3K voice resolution 5, native-profile production DAC
+factories 3, ROM audio integration 10, S3K profile 2, AIZ1 skip 8, bootstrap
+resolver 6 and decoding utilities 3. The production DAC path installs each native
+profile and ROM through AudioManager; its existing factory is exercised for all
+three games. S2 readiness also opens the verified file-backed ROM directly;
+`TestEnvironment.currentRom()` routes through RomManager's logical reader-backed
+catalogue for the `@RequiresRom` controls.
+
+Every XML reports Java `25.0.5.0.2`, explicit surfaceless EGL and all three exact
+absolute ROM properties. The live wrapper environment confirmed both display
+variables and both Java option variables unset, with Java 25 and `/usr/bin/lua5.4`
+selected; Lua reports 5.4.9. Queue wait was 126 seconds, Maven execution 30.199
+seconds. The 14 XML and 14 text reports, including the zero-case outer DAC
+container, were inspected and consumed; no raw output was archived. The submitted
+source fingerprint remained unchanged through exit. This is component behavior
+coverage, not inherited parent validation.
+
+Exact commands below use `MAIN_CHECKOUT` for the current main checkout and the
+verified ROM directory. All launch from this isolated checkout with its own
+`target/`:
+
+```bash
+QUEUE=(env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py")
+"${QUEUE[@]}" -Dmse=off clean test-compile -B
+"${QUEUE[@]}" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic1SmpsLoaderSfxDispatchBoundary,TestSonic2SaxmanLoadReadiness,TestS3kVoiceResolution,TestCrossGameSegaDac,TestRomAudioIntegration,TestSonic3kAudioProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/s1.gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/s2.gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/s3k.gen" test -B
+"${QUEUE[@]}" -Dmse=off -Pguards \
+  -Darchunit_freeze.store.default.allowStoreCreation=false \
+  -Darchunit_freeze.store.default.allowStoreUpdate=false \
+  -Darchunit_freeze.refreeze=false \
+  '-Dtest=com.openggf.tests.TestArchUnitRules,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.TestModApiPinPolicy,com.openggf.tests.TestArchitecturalReviewGuard,com.openggf.tests.TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups' test -B
+```
+
+Planning/preflight used the same unset variables, `JAVA_HOME` and `LUA_BIN`, with
+`python3 tools/testing/run_categories.py --base 48dbe26d014a30460a6784cfcefb1040aafe44ae`
+and its separate `--preflight` invocation. Neither command ran tests.
+
+The separate fresh strict invocation passed **58 checks, zero failures/errors/
+skips**: all 33 `TestArchUnitRules` identities, 11 signature checks, 4 pin-policy
+checks, all 9 architectural review guards (including published counts) and the
+selected low-level graphics/audio source guard. XML identities match the exact
+source selection, including the two temp-directory method signatures. Every XML
+reports Java `25.0.5.0.2` and all three explicit frozen store creation/update/
+refreeze properties `false`. The checked-in frozen configuration also remains
+unchanged with writes disabled. Precise inventory comparison after execution
+still gives exactly the two requested deletions and no replacements; all other
+frozen stores, keys, permissions, pins, version and descriptor are unchanged.
+Queue wait was 149 seconds, Maven execution 39.215 seconds. Five XML and five text
+reports were inspected and consumed. There are no live task-owned Maven jobs,
+pass caches or raw log archives. Queue and execution intervals are distinct;
+other task time is unmeasured, with no user-response wait.
+
+This is a clean local component for independent parent review and composed gates.
+Integration, push and worktree/branch cleanup belong to the parent. No remote
+push or broad/full suite was performed. No PCM references are regenerated; no performance, native-pixel,
+exhaustive trace or whole-route certification is claimed. Null/closed failure
+behavior is grounded by unchanged read/exception bodies and initializer inspection,
+not a new exhaustive invalid-ROM matrix.
