@@ -3361,3 +3361,21 @@ Frame106, Actor18, Movement115 and actual EGL/restore consumers. All selected
 XML, Java25/media/EGL and zero skips were inspected; this is not a single
 combined542green run. Independent Body source review is pending at this commit.
 The routine6/8 source and tests are byte-identical to the frozen Opus handoff.
+
+
+### Selector-eight level-art source cut — 24 October 2026
+
+The Frame accepts one ephemeral level-art call after Sonic DPLC/DMA and before
+VInt_Finish, clock increment and Start toggle. Ordinary and normal-pause service
+call it even when no Sonic DMA was pending; PP lag never calls it. The callback
+is not stored. Failure keeps completed controller/player-art writes, closes
+admission, and skips Finish, clock and Body entitlement. Existing terrain DEV
+retains its explicitly omitted level-art owner through the original overload.
+
+Root17600 at276cf1b6e plus the two exact port files and four camera files:
+`maven_queue.py --lean -Dmse=off -Dtest=TestCdPlayerFrameRuntime test`, with
+DISPLAY/WAYLAND_DISPLAY unset and Lua5.4.112/0/0/0, Java25.0.5.0.2 fresh XML
+inspected, no queue wait,87s execution. Six new cases pin selector8/pause/lag
+order, dirty Sonic DMA, no-DMA service, pre-Finish failure and null preflight.
+This is the call port only; the World's powerup-state/byte/service binding
+and real hardware timing remain pending.

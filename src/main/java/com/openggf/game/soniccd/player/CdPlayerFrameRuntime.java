@@ -309,6 +309,19 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
      * Main:333-349,704-712,738-766,821-847,971-995; General:86-105.
      */
     @Override public void serviceVBlank(PlcLifecyclePhase phase) {
+        // Existing terrain DEV owns no level-art globals; its declared omission remains explicit.
+        serviceVBlank(phase, () -> { });
+    }
+
+    /**
+     * Ephemeral source-position call after Sonic DPLC/DMA, before VInt_Finish/count and Start toggle.
+     * Selector eight (ordinary or normal pause) calls it once even without a player DMA; PP lag never
+     * calls it. The level owner supplies the actual powerup store/service and retains no callback here.
+     * A failure preserves completed input/art writes, closes admission and prevents Finish or retry.
+     * VInt_Level (Level/Main.asm:829-847), UpdateAnimTiles (Palmtree Panic/Animated Tiles Update.asm:7-8).
+     */
+    public void serviceVBlank(PlcLifecyclePhase phase, Runnable levelArtService) {
+        Objects.requireNonNull(levelArtService, "level-art service at the selector-eight source cut");
         requireOpenIdle();
         boolean advanced = false;
         bodyEntitled = false;
@@ -329,6 +342,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
                         controls.logicalHeld(), controls.logicalTap(), controls.controlLocked()));
                 var request = art.serviceVInt(state.header().slotId() != 0, state.animation().mapFrame());
                 if (request.isPresent()) artPublication.publish(request.orElseThrow(), art.capture());
+                levelArtService.run();
             }
             advanced = true;
             environment = finishTimers(environment, paused, state.motion().charge());

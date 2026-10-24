@@ -987,6 +987,70 @@ class TestCdPlayerFrameRuntime {
         f.close(); assertThrows(IllegalStateException.class, () -> f.applyObjectYVelocity(0));
     }
 
+    // VInt_Level:829-837 services Sonic art then LoadShieldArt before Finish/count (:844-847).
+    @ParameterizedTest @CsvSource({"ORDINARY_LEVEL,16", "NORMAL_PAUSE,128", "LAG,16"})
+    void levelArtCallUsesOnlySelectorEightAfterPlayerDmaBeforeFinishAndClock(
+            PlcLifecyclePhase phase, int held) throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime();
+        var env = new Env(f); env.bored = 10; env.warp = 20; env.install(f);
+        restoreArt(f, new CdPlayerArtRuntime.State(fill(0x300, 0x24), new byte[0x300], 0, true));
+        var calls = new ArrayList<String>();
+        f.prepareInput(held);
+        f.serviceVBlank(phase, () -> {
+            calls.add("level-art");
+            assertEquals(held, f.environment().controls().rawHeld());
+            assertEquals(1, fixture.dmas.size(), "Sonic's pending DMA already published");
+            assertFalse(f.artState().dirty());
+            assertEquals(10, f.environment().movement().globals().boredTimer());
+            assertEquals(20, f.environment().globals().timeWarpTimer());
+            assertEquals(0, f.vIntClock().deltaSinceAdmittedCut());
+            assertFalse(f.paused(), "Start toggle follows Finish");
+        });
+        assertEquals(phase == PlcLifecyclePhase.LAG ? List.of() : List.of("level-art"), calls);
+        assertEquals(1, f.vIntClock().deltaSinceAdmittedCut());
+        assertEquals(11, f.environment().movement().globals().boredTimer());
+        assertEquals(21, f.environment().globals().timeWarpTimer());
+        assertEquals(phase == PlcLifecyclePhase.NORMAL_PAUSE, f.paused());
+        if (phase == PlcLifecyclePhase.LAG) {
+            assertEquals(0, f.environment().controls().rawHeld());
+            assertTrue(f.artState().dirty()); assertTrue(fixture.dmas.isEmpty());
+        }
+        f.clearPendingInput();
+    }
+
+    @Test void selectorEightCallsLevelArtEvenWithoutAnyPlayerDma() throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime();
+        var calls = new ArrayList<String>(); f.prepareInput(0);
+        f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL, () -> calls.add("level-art"));
+        assertEquals(List.of("level-art"), calls); assertTrue(fixture.dmas.isEmpty());
+        f.clearPendingInput();
+    }
+
+    @Test void failedLevelArtKeepsReadControllerAndPlayerDmaButClosesBeforeFinishClockOrBody() throws IOException {
+        var fixture = new Fixture(); var f = fixture.runtime();
+        var env = new Env(f); env.bored = 10; env.warp = 20; env.install(f);
+        restoreArt(f, new CdPlayerArtRuntime.State(fill(0x300, 0x24), new byte[0x300], 0, true));
+        var failure = new PublicationFailure(); f.prepareInput(0x10);
+        assertSame(failure, assertThrows(PublicationFailure.class,
+                () -> f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL, () -> { throw failure; })));
+        assertEquals(0x10, f.environment().controls().rawHeld());
+        assertEquals(1, fixture.dmas.size()); assertFalse(f.artState().dirty());
+        assertEquals(10, f.environment().movement().globals().boredTimer());
+        assertEquals(20, f.environment().globals().timeWarpTimer());
+        assertEquals(0, f.vIntClock().deltaSinceAdmittedCut()); assertTrue(f.closed());
+        assertThrows(IllegalStateException.class, () -> f.runBody(1));
+        assertThrows(IllegalStateException.class, () -> f.prepareInput(0));
+    }
+
+    @Test void missingLevelArtCallbackRejectsBeforeConsumingPreparedInput() throws IOException {
+        var f = new Fixture().runtime(); var before = f.environment(); f.prepareInput(0x10);
+        assertThrows(NullPointerException.class, () -> f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL, null));
+        assertSame(before, f.environment()); assertEquals(0, f.vIntClock().deltaSinceAdmittedCut());
+        assertFalse(f.closed());
+        f.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        assertEquals(0x10, f.environment().controls().rawHeld()); f.clearPendingInput();
+    }
+
     private static void service(CdPlayerFrameRuntime f, int held) { f.serviceVBlank(f.prepareInput(held).phase()); }
     private static List<CdPlayerBody.NativeCall> calls(CdPlayerFrameRuntime.BodyPublication p) {
         return p.result().effects().stream().filter(CdPlayerBody.CallReturned.class::isInstance)
