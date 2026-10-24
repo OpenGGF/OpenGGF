@@ -265,6 +265,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 | Contract | Owner and regression enforcement |
 | --- | --- |
 | Headless boot selects no-device audio even when synthesis is disabled; callers must not rely on a fresh JVM. | `HeadlessGameBoot.installAudioBackend()`; ROM-free `TestHeadlessAudioOwnership` in ordinary CI and ROM-backed `TestHeadlessGameBootAudioIdentity`. |
+| Directed Puppet/Pose object pictures retain native sprite priority and tile occlusion through the cinematic draw. | `StageplayObjectDraw` owns its sprite batch; ROM-backed EGL `TestStageplayObjectPriorityRendering` compares native, frozen and baked pixels at the GHZ loop and rejects a non-occluding control. |
 
 ## Level test coverage
 

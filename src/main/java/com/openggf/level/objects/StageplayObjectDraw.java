@@ -202,6 +202,10 @@ final class StageplayObjectDraw {
         graphics.setCurrentSpriteHighPriority(high);
         graphics.setCurrentSpriteTileOcclusionPaletteMask(
                 MultiBucketRenderable.tileOcclusionPaletteMask(high));
+        // Own a batch while the sprite-priority shader and this part's mask are active.
+        // Direct tile commands resolve their shader later, after the enclosing sprite pass
+        // has disabled priority; flushing without reopening would draw through foreground.
+        graphics.beginPatternBatch();
         try {
             for (var part : state.template.parts()) {
                 if (part.bucket() != bucket
@@ -281,6 +285,7 @@ final class StageplayObjectDraw {
             graphics.flushPatternBatch();
             graphics.setCurrentSpriteHighPriority(previousHigh);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(previousMask);
+            graphics.beginPatternBatch();
         }
     }
 

@@ -12,7 +12,8 @@ Unreleased. The earlier development themes remain in
   Authored music control holds off automatic level playlists through deferred entry
   and shot changes in playback/export; ROM cue gain is checked during authoring.
   Free objects, including released animals outside the main view, retain native
-  appearances when switched to Puppet/Pose within their cast activation windows.
+  appearances when switched to Puppet/Pose within their cast activation windows,
+  including native sprite priority and foreground-wall occlusion in directed films.
   Puppet mode follows destinations and urgency through native acceleration, terrain
   collision and jump physics; floor snapping defaults on. Shared Place on floor
   direction and a batched ground CLI enumerate exact visual support and native player
