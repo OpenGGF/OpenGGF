@@ -488,6 +488,67 @@ class TestCdPlayerTouchResponse {
         }
     }
 
+    @Test void directKillCallNeedsNoEnemySelectionOrPoolAndPreservesUnwrittenActorFields() {
+        var p = new Player(); p.routine = 4; p.flags = 0x70; p.hurt = 120;
+        var result = CdPlayerTouchResponse.killPlayer(p.actor(), 0x80, 0, 0xBEEF, 0);
+        var expected = p.copy(); expected.routine = 6; expected.flags = 0x42;
+        expected.yv = -0x700; expected.xv = 0; expected.gv = 0; expected.jump = 0;
+        expected.stick = 7; expected.rotation = 0x6B; expected.anim = 0x18;
+        expected.tile = 0x8780; expected.priority = 0;
+        assertEquals(expected.actor(), result.actor());
+        assertEquals(0, result.invincible()); assertEquals(0, result.scoreChain());
+        assertEquals(Exit.KILL_PLAYER, result.exit());
+        assertEquals(List.of(new ResetOnFloor(), new PlayFm(FmSound.FM_HURT)), result.calls());
+    }
+
+    @ParameterizedTest @CsvSource({"0,9,19,1894,102", "1,5,10,1897,105"})
+    void directKillResetsNormalOrMiniRollBeforeWritingTheTwoStickBytes(
+            int mini, int xRadius, int yRadius, int y, int lowStickByte) {
+        var p = new Player(); p.routine = 4; p.flags = 0x74; p.xr = 7; p.yr = 14;
+        var result = CdPlayerTouchResponse.killPlayer(p.actor(), 1, 0, 0x1234, mini);
+        var expected = p.copy(); expected.routine = 6; expected.flags = 0x42;
+        expected.xr = xRadius; expected.yr = yRadius; expected.y = y;
+        expected.yv = -0x700; expected.xv = 0; expected.gv = 0; expected.jump = 0;
+        expected.stick = 7; expected.rotation = lowStickByte; expected.anim = 0x18;
+        expected.tile = 0x8780; expected.priority = 0;
+        assertEquals(expected.actor(), result.actor());
+        assertEquals(List.of(new ResetOnFloor(), new PlayFm(FmSound.FM_CHARGESTOP),
+                new PlayFm(FmSound.FM_HURT)), result.calls());
+        assertEquals(0, result.scoreChain()); assertEquals(0, result.invincible());
+    }
+
+    @ParameterizedTest @CsvSource({"1", "256", "32768"})
+    void directKillTestsTheWholeDebugWordAndLeavesEveryActorByteUntouched(int debug) {
+        var p = new Player(); p.flags = 0x74;
+        var result = CdPlayerTouchResponse.killPlayer(p.actor(), 0x80, debug, 0xBEEF, 1);
+        assertEquals(p.actor(), result.actor()); assertEquals(0x80, result.invincible());
+        assertEquals(0xBEEF, result.scoreChain()); assertTrue(result.calls().isEmpty());
+        assertEquals(Exit.KILL_PLAYER_DEBUG_NO_WRITE, result.exit());
+    }
+
+    @ParameterizedTest @CsvSource({"0", "1"})
+    void selectedHazardAndDirectKillReuseTheSameNativeCallResult(int debug) {
+        var w = World.mosqui(0xAB); w.rings = 0; w.debugMode = debug;
+        var p = new Player(); p.flags = 0x74;
+        var direct = CdPlayerTouchResponse.killPlayer(p.actor(), w.invincible, w.debugMode, w.scoreChain, w.mini);
+        var selected = w.respond(p);
+        assertEquals(direct.actor(), selected.actor());
+        assertEquals(direct.invincible(), selected.player().invincible());
+        assertEquals(direct.scoreChain(), selected.player().scoreChain());
+        assertEquals(direct.calls(), selected.calls()); assertEquals(direct.exit(), selected.exit());
+    }
+
+    @Test void directKillPortChecksNativeWidthsAndReturnsAnImmutableCallList() {
+        var p = new Player();
+        assertThrows(NullPointerException.class, () -> CdPlayerTouchResponse.killPlayer(null, 0, 0, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.killPlayer(p.actor(), 256, 0, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 65536, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 0, -1, 0));
+        assertThrows(IllegalArgumentException.class, () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 0, 0, -1));
+        assertThrows(UnsupportedOperationException.class,
+                () -> CdPlayerTouchResponse.killPlayer(p.actor(), 0, 0, 0, 0).calls().clear());
+    }
+
     private static void assertNoWrites(World w, Player p, Result r, Exit exit) {
         assertEquals(p.actor(), r.actor());
         assertEquals(w.playerGlobals(), r.player());

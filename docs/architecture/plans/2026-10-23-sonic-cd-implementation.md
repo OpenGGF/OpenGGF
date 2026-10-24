@@ -3071,3 +3071,18 @@ state or grant timing/gameplay authority. Raw media/captures remain external.
 ```bash
 python3 -I -B -m unittest discover -s tools/soniccd -p test_contact_reference.py
 ```
+
+
+### Shared native KillPlayer call, 24 October 2026
+
+The selected-touch cursor delegates to the same public pure KillPlayer call
+that Hurt can invoke. It needs actual Actor/invincible/debug-word/scoreChain/mini
+values, no fabricated selected object, world record, table or pool. Routine6
+precedes ResetOnFloor; the post-reset Y writes both stick bytes; the ordered
+reset/stop/Hurt calls and all unwritten fields match the former inline owner.
+The full-word debug branch returns unchanged. There is no new death admission.
+Root87184 passed336affected cases (99response,100Body,93Frame,33Runtime,11API),
+0failures/errors/skips, including the actualUSAEnemyPoints view. AllfreshXML
+Java25/media verified. Independent Opus review found noP1/P2 and confirmed
+all9newliteral invocations. The report's LevelBound citation is1705, not1704;
+the bored2B branch remains a distinct typed boundary in the collision port.

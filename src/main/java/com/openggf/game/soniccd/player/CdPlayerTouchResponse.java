@@ -287,21 +287,62 @@ public final class CdPlayerTouchResponse {
         c.minusOne(Exit.HURT);
     }
 
-    /** KillPlayer (:279-298). The debugMode WORD gates, although ObjSonic tests only its high byte. */
+    /** Complete pure KillPlayer call cut; no world, pool, selected object or asset table is involved. */
+    public record KillResult(Actor actor, int invincible, int scoreChain, List<Call> calls, Exit exit) {
+        public KillResult {
+            Objects.requireNonNull(actor); byteValue(invincible); wordValue(scoreChain);
+            calls = List.copyOf(calls); Objects.requireNonNull(exit);
+            if (exit != Exit.KILL_PLAYER && exit != Exit.KILL_PLAYER_DEBUG_NO_WRITE) {
+                throw new IllegalArgumentException("KillPlayer requires its native return site");
+            }
+        }
+    }
+
+    /**
+     * KillPlayer (Player Object Collision.asm:279-298), also called by the two Hurt boundary checks.
+     * debugMode is the complete word. The caller commits this result at the actual call position;
+     * this helper performs no routine dispatch, integration, camera freeze or continuation.
+     */
+    public static KillResult killPlayer(Actor actor, int invincible, int debugMode, int scoreChain, int miniSonic) {
+        Objects.requireNonNull(actor); byteValue(invincible); wordValue(debugMode);
+        wordValue(scoreChain); byteValue(miniSonic);
+        if (debugMode != 0) {
+            return new KillResult(actor, invincible, scoreChain, List.of(), Exit.KILL_PLAYER_DEBUG_NO_WRITE);
+        }
+        var m = actor.motion();
+        // Routine is 6 BEFORE Player_ResetOnFloor, exactly as at the native BSR call cut.
+        var dying = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), m.xVelocity(), m.yVelocity(),
+                m.groundVelocity(), 6, m.angle(), m.flags(), m.spriteFlags(), m.xRadius(), m.yRadius(),
+                m.animation(), m.previousAnimation(), m.playerJump(), m.charge(), m.moveLock(), m.stick(),
+                m.playerControl(), m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var reset = CdPlayerMovement.resetOnFloor(dying, miniSonic);
+        var calls = new ArrayList<Call>(); calls.add(new ResetOnFloor());
+        for (var sound : reset.sounds()) {
+            if (sound.sound() != CdPlayerMovement.Sound.FM_CHARGESTOP) {
+                throw new IllegalStateException("ResetOnFloor requests only FM_CHARGESTOP");
+            }
+            calls.add(new PlayFm(FmSound.FM_CHARGESTOP));
+        }
+        m = reset.motion();
+        int y = m.centreY16_16() >>> 16;
+        var killed = new CdPlayerMotionState(m.centreX16_16(), m.centreY16_16(), 0, -0x700, 0, m.routine(),
+                m.angle(), m.flags() | 2, m.spriteFlags(), m.xRadius(), m.yRadius(), 0x18, m.previousAnimation(),
+                m.playerJump(), m.charge(), m.moveLock(), y >>> 8, m.playerControl(),
+                m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var result = new Actor(killed, actor.tile() | 0x8000, 0, actor.hurt(), y & 0xFF);
+        calls.add(new PlayFm(FmSound.FM_HURT));
+        return new KillResult(result, 0, reset.scoreChain(), calls, Exit.KILL_PLAYER);
+    }
+
+    /** Selected touch calls the SAME KillPlayer owner; no duplicated kill algorithm. */
     private static void killPlayer(Cursor c) {
-        if (c.debugMode != 0) { c.minusOne(Exit.KILL_PLAYER_DEBUG_NO_WRITE); return; }
-        c.invincible = 0;
-        c.routine = 6;
-        c.resetOnFloor();
-        c.flags |= 2;
-        c.yv = -0x700; c.xv = 0; c.gv = 0;
-        int y = c.y(); // MOVE.W oY,oPlayerStick: post-reset Y into $38 (stick) and $39 (rotation distance).
-        c.stick = y >>> 8; c.rotationDistance = y & 0xFF;
-        c.anim = 0x18;
-        c.tile |= 0x8000; // BSET #7 on oTile's high byte.
-        c.priority = 0;
-        c.calls.add(new PlayFm(FmSound.FM_HURT));
-        c.minusOne(Exit.KILL_PLAYER);
+        var result = killPlayer(new Actor(c.motion(), c.tile, c.priority, c.hurt, c.rotationDistance),
+                c.invincible, c.debugMode, c.scoreChain, c.miniSonic);
+        c.motion(result.actor().motion());
+        c.tile = result.actor().tile(); c.priority = result.actor().priority();
+        c.hurt = result.actor().hurt(); c.rotationDistance = result.actor().rotationDistance();
+        c.invincible = result.invincible(); c.scoreChain = result.scoreChain();
+        c.calls.addAll(result.calls()); c.minusOne(result.exit());
     }
 
     private static void requireGroup(int group, int expected) {
