@@ -1,13 +1,11 @@
 package com.openggf.capture;
 
+import com.openggf.tools.PresentationOffscreenTestContext;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.ByteBuffer;
-
-import static org.lwjgl.glfw.GLFW.*;
+import static com.openggf.tools.PresentationOffscreenTestContext.LegacyProfile.DEFAULT;
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GlReadPixelsGrabberTest {
@@ -79,8 +77,8 @@ class GlReadPixelsGrabberTest {
 
     @Test
     void grabsOnlyNonZeroOriginViewportFromOffscreenBackBuffer() {
-        long window = createOffscreenContextOrAbort();
-        try {
+        try (var context = PresentationOffscreenTestContext.openConfigured(32, 24, DEFAULT);
+             var grabber = new GlReadPixelsGrabber(5, 4, 16, 12)) {
             glDisable(GL_SCISSOR_TEST);
             glClearColor(1f, 0f, 0f, 1f);
             glClear(GL_COLOR_BUFFER_BIT);
@@ -92,22 +90,28 @@ class GlReadPixelsGrabberTest {
             glDisable(GL_SCISSOR_TEST);
             glFinish();
 
-            byte[] pixels = new GlReadPixelsGrabber(5, 4, 16, 12).grab();
-            assertRgba(pixels, 0, 0, 255, 0, 255);
-            assertRgba(pixels, pixels.length - 4, 0, 255, 0, 255);
-        } finally {
-            glfwDestroyWindow(window);
-            glfwTerminate();
+            byte[] pixels = grabber.grab();
+            assertEquals(16 * 12 * 4, pixels.length);
+            for (int offset = 0; offset < pixels.length; offset += 4) {
+                assertRgba(pixels, offset, 0, 255, 0, 255);
+            }
+            assertEquals(GL_NO_ERROR, glGetError());
         }
     }
 
     @Test
     void pboReadbackPreservesBothFramesAndExternalPackBinding() {
-        long window = createOffscreenContextOrAbort();
-        try {
-            Assumptions.assumeTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21);
+        try (var context = PresentationOffscreenTestContext.openConfigured(32, 24, DEFAULT)) {
+            if (PresentationOffscreenTestContext.requested()) {
+                assertTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21,
+                        "explicit EGL must execute the PBO pixel path");
+            } else {
+                Assumptions.assumeTrue(org.lwjgl.opengl.GL.getCapabilities().OpenGL21,
+                        "PBO readback requires OpenGL 2.1");
+            }
             int external = org.lwjgl.opengl.GL15.glGenBuffers();
             try (VideoFrameGrabber grabber = GlPboFrameGrabber.create(new CaptureViewport(5, 4, 16, 12))) {
+                assertTrue(grabber.deferredReadback(), "exercise PBOs rather than synchronous fallback");
                 org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, external);
                 glClearColor(1f, 0f, 0f, 1f);
                 glClear(GL_COLOR_BUFFER_BIT);
@@ -117,46 +121,20 @@ class GlReadPixelsGrabberTest {
                 grabber.beginReadback();
                 byte[] pixels = new byte[16 * 12 * 4];
                 grabber.grabInto(pixels);
-                assertRgba(pixels, 0, 255, 0, 0, 255);
-                assertRgba(pixels, pixels.length - 4, 255, 0, 0, 255);
-                grabber.grabInto(pixels);
-                assertRgba(pixels, 0, 0, 255, 0, 255);
+                for (int offset = 0; offset < pixels.length; offset += 4) {
+                    assertRgba(pixels, offset, 255, 0, 0, 255);
+                }
                 assertEquals(external, glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING));
+                grabber.grabInto(pixels);
+                for (int offset = 0; offset < pixels.length; offset += 4) {
+                    assertRgba(pixels, offset, 0, 255, 0, 255);
+                }
+                assertEquals(external, glGetInteger(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER_BINDING));
+                assertEquals(GL_NO_ERROR, glGetError());
             } finally {
                 org.lwjgl.opengl.GL15.glBindBuffer(org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER, 0);
                 org.lwjgl.opengl.GL15.glDeleteBuffers(external);
             }
-        } finally {
-            glfwDestroyWindow(window);
-            glfwTerminate();
-        }
-    }
-
-    private static long createOffscreenContextOrAbort() {
-        boolean initialized;
-        try {
-            initialized = glfwInit();
-        } catch (Throwable unavailable) {
-            Assumptions.abort("GLFW is unavailable: " + unavailable.getMessage());
-            return NULL;
-        }
-        Assumptions.assumeTrue(initialized, "GLFW could not initialize");
-        glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        long window = glfwCreateWindow(32, 24, "GlReadPixelsGrabberTest", NULL, NULL);
-        if (window == NULL) {
-            glfwTerminate();
-            Assumptions.abort("An offscreen OpenGL context could not be created");
-        }
-        try {
-            glfwMakeContextCurrent(window);
-            org.lwjgl.opengl.GL.createCapabilities();
-            return window;
-        } catch (Throwable unavailable) {
-            glfwDestroyWindow(window);
-            glfwTerminate();
-            Assumptions.abort("OpenGL is unavailable: " + unavailable.getMessage());
-            return NULL;
         }
     }
 

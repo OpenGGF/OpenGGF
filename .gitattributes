@@ -3,6 +3,9 @@
 .github/workflows/*.yml text eol=lf
 .mvn/maven.config text eol=lf
 
+# Historical compiler-negative test inputs have pinned Git blob identities.
+src/test/resources/architecture/raw-glfw/*.java.txt text eol=lf
+
 # Preserve archived third-party research snapshots byte-for-byte.
 docs/architecture/research/audio/*.htm -whitespace
 
