@@ -638,7 +638,8 @@ Unreleased. The earlier development themes remain in
   Registry metadata and bonus-stage capabilities own
   root table selection, bootstrap repair and debug behavior. Sonic 1 music parsing
   lives beside its game-owned loader, and level-animation composition contracts
-  live with their managers.
+  live with their managers. Palette ROM and byte decoding lives beside the
+  canonical palette model without changing its input or color semantics.
   The unpublished art-provider candidate moves `PlayerSpriteArtProvider` and
   `SpindashDustArtProvider` from `com.openggf.data` to `com.openggf.sprites.art`,
   preserving game-owned construction and donation. This intentionally breaks

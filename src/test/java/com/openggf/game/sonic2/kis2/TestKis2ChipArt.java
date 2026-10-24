@@ -2,7 +2,7 @@ package com.openggf.game.sonic2.kis2;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.PaletteLoader;
+import com.openggf.level.PaletteLoader;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModuleRegistry;

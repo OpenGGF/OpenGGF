@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 136 records | Hold at 136 pending broad smoke completion | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 126 records | Hold at 126 pending next composition checks | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 136
+- `low_level_layers_do_not_depend_on_runtime_layers`: 126
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -605,7 +605,7 @@ typed allowances. The sampler-height correction is composed locally alongside th
 scalar GPU boundary; combined focused checks and fresh guards passed. The
 original broad smoke request remains incomplete.
 
-The locally verified composition contains 136 low-level records: the pooled command
+The preceding verified composition contains 136 low-level records: the pooled command
 boundary removes nine identities and adds five (147 → 143), both GPU backend
 boundaries remove twenty-one and add seventeen (143 → 139), and the complete
 art-provider contracts remove three (139 → 136). GraphicsManager retains its typed
@@ -624,3 +624,15 @@ with a retained backend owner would change lifetime semantics across104 callers.
 Existing explicit `MusicRestoreSink` overloads serve newly owned callers. No
 demonstrated restore defect justifies the broad migration here; allowance delta0.
 The continuation plan records the alternative and evidence needed to reopen it.
+
+The subsequent intact `PaletteLoader` move from `data` to `level` removes its ten
+canonical-palette decoding dependencies (136 → 126), with no replacement frozen
+records or supported API change. ROM reads and all decoding bodies remain
+unchanged. `data -> level` stays allowed while the separately reviewed `Game`
+contract still uses that edge. Focused decoder behavior, API signatures and strict frozen/count checks passed;
+combined parent delivery remains separate.
+
+The current local composition has 126 low-level records. Decoder component
+qualification is complete; its joint composition checks and delivery remain
+pending. The earlier 846 focused / 769 guard results above stay attributed to
+the preceding 136-record executable state.

@@ -2906,3 +2906,97 @@ claim that all audio architecture is exhausted.
 
 Integration/push and safe worktree accounting remain pending. Later local slices
 retain their own commits, tests and coverage limits.
+
+
+
+### Palette decoder ownership continuation
+
+This slice starts from composed parent `19619db8078530563baf973c8ec31dc576a067bc`
+in isolated branch `bugfix/ai-palette-decoder-owner-20261024`. The copy-on-write
+checkout cloned 14,596 tracked files with native FICLONE and no fallback; hooks
+were installed. The parent remains frozen for its independent validation.
+
+`PaletteLoader` constructs canonical `level.Palette` values from Sega-format
+bytes and owns the corresponding ROM reads. Move the complete utility beside
+that model in `com.openggf.level`; keep `Rom` as its explicit source. Five
+production consumers (all three water providers, KiS2 chip art and S3K results)
+and two test consumers need only the FQN substitution. The class body, constants,
+private constructor, four public methods, checked exceptions, short-input and
+extra-input behavior, allocation and failure order remain byte-identical.
+No wrapper, new model, cache, public overload or decoding policy is introduced.
+
+Source inspection finds no `@ModApi`, curated root, recursive signature-pin or
+internal-terminal identity for this utility. A supported returned `Palette` does
+not pull every utility consuming it into the recursive API closure. This move
+therefore predicts unchanged candidate pins and release descriptor, unlike the
+separately reviewed art-provider and Game candidate migrations. Retaining the
+utility in `data` would retain a runtime-model construction responsibility in
+the low-level layer; moving only its byte reads would split a small complete
+decoder and leave the same reverse dependency. Those alternatives are rejected.
+
+Exactly ten frozen records have `data.PaletteLoader` as owner. Removing them
+leaves the other 126 records byte-identical and ordered, with no replacements.
+The `data -> level` permission and cycle exception remain because `data.Game`
+still uses the edge in this slice. Rule names/settings and all other allowances
+remain unchanged. Published low-level count prose follows the exact store.
+
+Qualification will compile this fresh checkout, run the three water-provider
+classes, KiS2 chip-art and S3K results controls, water rewind and the four
+required S3K stability selectors. A separate fresh JVM will evaluate API pins,
+strict ArchUnit and published-count/source controls. No new tests mirror this
+intact relocation; independent existing ROM-word and behavior assertions are
+the useful checks. Source/body equality and exact frozen delta are checked
+separately. Results and limits remain pending until those commands finish.
+
+
+Decoder qualification completed against the unchanged implementation described
+above. The first command passed **146 cases, zero failures/errors/skips** in
+11 XML reports: S1 water19, S2 water22, S3K water28, KiS2 chip art6, S3K results2,
+water rewind9 and the required S3K selectors60 (including both level-loading
+classes). Java25, the explicit EGL flag and all four existing absolute ROM paths
+were inspected in every report. Queue admission waited115 seconds; Maven reported
+1:20 execution. Fresh compilation contains `level/PaletteLoader.class` and no
+`data/PaletteLoader.class`. The 22 XML/text reports were consumed.
+
+A separate fresh-JVM command passed **45 checks, zero failures/errors/skips**:
+33 ArchUnit rules with store updates disabled, 11 API signature controls and
+`archUnitPublishedBaselineCountsMatchFrozenStore`. Queue wait79 seconds; Maven
+execution36.745 seconds. The three exact XML reports and launch properties were
+inspected and their six XML/text outputs consumed. The generated candidate pin
+and release descriptor remain byte-identical to the base.
+
+Both commands used the following common environment and verified ROM arguments
+from this isolated checkout. `MAIN_CHECKOUT` and `ROM_ROOT` denote the actual
+absolute main checkout and existing ROM directory; no ROM was copied or relinked
+to satisfy a test:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestSonic1WaterDataProvider,TestSonic2WaterDataProvider,TestSonic3kWaterDataProvider,TestKis2ChipArt,TestS3kSpecialStageResultsBackdrop,TestWaterSystemRewindSnapshot,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dkis2.rom.path=${ROM_ROOT}/kis2.gen" test -B
+```
+
+The second command retained that environment, ROM and EGL argument set, replacing
+the test selector with
+`-Pguards '-Dtest=TestModApiSignatureSurface,TestArchUnitRules,TestArchitecturalReviewGuard#archUnitPublishedBaselineCountsMatchFrozenStore'`.
+
+Independent read-only review accepted the move at stable source fingerprint
+`6a34dfe2a16c18274e8789036520fc1b35b07c6748ba68012017d953e9c47a14`;
+its test statements were explicitly source-only, and the executed outcomes above
+are parent observations. Root also verified the complete decoder and seven
+consumers as raw bytes after only the specified package/import substitutions,
+and all126 retained frozen records in order. Review found no missed maintained
+consumer or supported closure; external users of this unsupported utility FQN
+need rebuilding. Historical design paths remain historical.
+
+This proves the intact bounded ownership move, not every native water route,
+malformed-input combination or GPU behavior. Existing S1/S2 water controls have
+limited successful-decoding breadth; body identity preserves their untested
+semantics without inventing duplicate implementation tests. No broad smoke was
+repeated for this slice. Parent composition, push and cleanup remain outstanding.
