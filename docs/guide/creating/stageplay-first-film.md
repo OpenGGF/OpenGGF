@@ -185,7 +185,8 @@ mod can play it as a cutscene.
 
 A screenplay describes the same scene as JSON, one shot at a time. This is the
 whole film from Part 1. It is also in the repository as
-[`first-take.screenplay.json`](../../../examples/stageplay-demo/first-take.screenplay.json).
+`first-take.screenplay.json` in the
+[Stageplay examples folder](../../../examples/stageplay-demo/).
 
 ```json
 {
