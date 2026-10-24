@@ -159,6 +159,11 @@ stale accounting. The later registry metadata and bonus-stage capability migrati
 removes the remaining root coupling; both concrete-reference caps are now zero.
 Sonic 1 music parsing now lives beside its game-owned loader, with its class body
 unchanged and the sole naming allowance removed. The naming store is empty.
+The S2 special-stage overlay, mappings and split-name messages now live together
+in `game.sonic2.specialstage`. `Sonic2SpecialStageResultsScreen` implements the
+existing ResultsScreen interface; it is not a managed level object. The sole
+object-base naming allowance is removed, without adding object inheritance.
+Its state machine and both public constructors remain unchanged.
 
 The rewind field-disposition census first pruned 41 already-resolved exemptions
 (64 → 23). The October 24 [field audit](audits/2026-10-24-rewind-disposition-review.md)
@@ -171,8 +176,8 @@ Ordered S1 ring recipes now preserve caller values and canonical placement indic
 including accepted null entries. Freezer and LBZ cameo histories are replaced by
 live managed observations; exact cameo links and saved anchors survive restoration.
 Initialized LBZ box rigs preserve absent/present helpers. Lightning sparks retain
-independent pixels and scripts while reacquiring atlas residency. Two exact boss
-inventory obligations remain. False-floor surviving children dispatch by
+independent pixels and scripts while reacquiring atlas residency. The field-disposition baseline is now empty; the two LBZ boss histories have no
+gameplay consumer and their unmanaged bootstrap behavior remains explicit. False-floor surviving children dispatch by
 their restored original index, preserving the native collapse counter. The
 guard fails stale keys as well as new gaps. The ICZ segment-column recreation
 exclusion is gone. The justified recreate-throw baseline remains 13 files / 14

@@ -2,7 +2,7 @@ package com.openggf.game.sonic2.kis2;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestEnvironment;
@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestKis2ResultsMessageHandoff {
-    private SpecialStageResultsScreenObjectInstance screen(boolean gotEmerald, int emeralds) {
+    private Sonic2SpecialStageResultsScreen screen(boolean gotEmerald, int emeralds) {
         var dump = Kis2TestRoms.lockOnDumpOrNull();
         assumeTrue(dump != null, "KiS2 lock-on dump required");
         var rom = TestEnvironment.currentRom();
@@ -33,7 +33,7 @@ class TestKis2ResultsMessageHandoff {
             }
         }.withGameModule(GameServices.module()).withGameState(new GameStateManager())
                 .withRom(rom).withRomManager(GameServices.rom());
-        return new SpecialStageResultsScreenObjectInstance(1,0,gotEmerald,6,emeralds,services);
+        return new Sonic2SpecialStageResultsScreen(1,0,gotEmerald,6,emeralds,services);
     }
 
     @ParameterizedTest
@@ -48,7 +48,7 @@ class TestKis2ResultsMessageHandoff {
             if (loadLateArt && pass == 25) {
                 // Exercise lazy CPU art loading after message movement has started;
                 // this must not recreate its clock or require a graphics context.
-                var loadArt = SpecialStageResultsScreenObjectInstance.class.getDeclaredMethod("loadArt");
+                var loadArt = Sonic2SpecialStageResultsScreen.class.getDeclaredMethod("loadArt");
                 loadArt.setAccessible(true);
                 loadArt.invoke(screen);
             }

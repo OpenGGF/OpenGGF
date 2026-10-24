@@ -1216,3 +1216,60 @@ abort their test invocation safely. Its original 93-case evidence does not
 qualify those pending corrections. Mutable donor-color rewind is a separate
 reproduction, with no runtime failure claimed yet. Parent combined validation,
 integration, push and cleanup remain outstanding for the seventh loop.
+
+### S2 special-stage overlay ownership
+
+The remaining object-base naming allowance described a standalone ResultsScreen,
+not a managed ObjectInstance. Its provider owns update/completion/presentation;
+it has no object slot, spawn or collision lifecycle. Making it inherit the object
+base would add a false lifecycle merely to satisfy its misleading name. Renaming
+inside `objects` was also rejected because it leaves the mode overlay misplaced.
+The chosen bounded migration moves the whole responsibility to existing
+`game.sonic2.specialstage`: Sonic2SpecialStageResultsScreen, its mappings and its
+split-name message clock helper. All three class bodies are identical after
+normalizing the screen's name. Constructors, ResultsScreen entry points and
+update/draw logic are unchanged. No forwarding class, service hierarchy or new
+public signature is added. These concrete helpers are absent from curated API
+roots and pins; implementing the unsealed ResultsScreen interface does not add
+its implementations to that surface. All maintained Java callers are migrated.
+
+One production results factory, two art loaders, seven test classes and S1's
+explanatory comments now name the new locations. Only the exact stored naming
+record in `09f6f5b4-f1d1-4f5b-b31a-a55517616ebe` is pruned, one to zero.
+The historical rule-description key and disabled freeze updates are unchanged.
+The 147 low-level records and API pins are byte-identical. This is responsibility
+placement and an honest name, not an algorithm or object-lifecycle migration.
+
+The unchanged overlay at `873e06478` passed 22 cases across its six existing test
+classes, zero failures/errors/skips. Admission took 28 seconds; Maven reported
+83 seconds. The first post-move attempt stopped during production compilation:
+SplitNameResultsMessages had relied on same-package visibility/import resolution.
+Zero tests ran; Maven reported 56.971 seconds after 44 seconds admission. Moving
+that helper with its sole overlay responsibility, and migrating its two loader
+imports plus unit test, corrected the complete owner boundary rather than adding
+an unrelated public seam. The final source passed 64 distinct cases across nine
+reports, zero failures/errors/skips: the same 22 screen cases, four existing
+message-clock cases, eleven API checks and 27 ArchUnit field checks. XML confirms
+the object-instance naming rule executed. Admission was ten seconds; Maven
+reported 96 seconds. Twelve baseline and eighteen final XML/text reports were
+inspected and removed. No source changed while a request was queued/running.
+
+Commands used this coordinator, the absolute current main wrapper, display and
+JVM-option variables unset, Java 25, Lua 5.4 and surfaceless EGL. The existing
+absolute S2 World REV01 ROM was supplied, without creating links:
+
+```bash
+SCREEN_CASES='TestKis2ResultsMessageHandoff,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsWidescreenCommands,TestSonic2SpecialStageSuperResults'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES,TestModApiSignatureSurface,TestArchUnitRules#object_instance_named_classes_extend_object_instance_base" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$SCREEN_CASES,TestSplitNameResultsMessages,TestModApiSignatureSurface,TestArchUnitRules#object_instance_named_classes_extend_object_instance_base" "-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+The final-boss change `c678ba49c` also has independent source-review acceptance
+and is merged as `85803e286`. Its constructor-local unmanaged bootstrap retains
+allocation expressions/order; managed turrets keep their deferred construction
+and existing link codecs. The assigned history key alone leaves the baseline,
+which is now empty. Its 58-case worker evidence remains bounded and separate;
+parent composed behavior/API/S3K and full guards have not yet run on this seventh
+candidate. The two accepted donor-palette changes are still unmerged at this
+checkpoint. No integration, push or cleanup is claimed here.

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageResultsScreen;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
@@ -54,8 +55,8 @@ class TestSonic2SpecialStageSuperResults {
         SessionManager.clear();
     }
 
-    private SpecialStageResultsScreenObjectInstance exhaustedTally(boolean gotEmerald, int count) {
-        var screen = new SpecialStageResultsScreenObjectInstance(0, 0, gotEmerald, 6, count, services);
+    private Sonic2SpecialStageResultsScreen exhaustedTally(boolean gotEmerald, int count) {
+        var screen = new Sonic2SpecialStageResultsScreen(0, 0, gotEmerald, 6, count, services);
         for (int frame = 1; frame < 1000; frame++) {
             screen.update(frame, null);
             if (screen.getState() != 0 && screen.getState() != 1 && screen.getState() != 2) {
@@ -103,7 +104,7 @@ class TestSonic2SpecialStageSuperResults {
         assertEquals(180, coordinate(screen, "superMsgTimer"), "arrival latches the timer on its following pass");
     }
 
-    private int coordinate(SpecialStageResultsScreenObjectInstance screen, String name) throws Exception {
+    private int coordinate(Sonic2SpecialStageResultsScreen screen, String name) throws Exception {
         Field field = screen.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(screen);
