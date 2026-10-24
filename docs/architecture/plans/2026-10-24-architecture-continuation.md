@@ -8469,3 +8469,94 @@ unchanged. Parent still owns content-matched independent review, composed
 upstream reconciliation, change-based smoke against a9d88d2c9, complete fresh
 composed guards and integration. This local commit claims none of those later
 gates and is not pushed or integrated. The worktree/branch remain for handoff.
+
+### Complete suspension visit: parent composition and upstream reconciliation
+
+The parent composed `43c590b03df352cf673ce09d58eb0392224eaf9c` with the
+updated destination `4eb8e8e1a8b5dd01474d9905fae2c85256582138` in merge
+`15befecb35e7ae9930632d1c619319963b278fb5`, using the isolated
+`bugfix/ai-suspension-visit-integration-20261024` checkout. There were no
+conflicts. The pre-task destination remains
+`a9d88d2c980c6562008e21c916d2b4d28362fd6f` for delivery-wide selection.
+Upstream's three commits change test context ownership and graphics-property
+restoration, with no production Java difference. The composed production tree
+is byte-identical to the reviewed suspension candidate.
+
+The independent source review found no production defect. Its initial S2
+fixture finding was resolved in the reviewed exit inputs and exercised by the
+worker's seven-case S2 run. The parent mapped the exit aggregate `f68d4112`
+to final worker aggregate `3ec8ac0b`: reversing only the documented source
+guard strengthening reproduces the exit aggregate exactly over 11,351 inputs.
+The parent inspected that bounded guard change, which rejects direct Engine
+and EngineContext lookups without changing production, and reused its two
+affected passing controls. This is an explicit mapping of the reviewed input
+and the separately inspected delta, rather than an assertion that the reviewer
+observed an unchanged whole-candidate aggregate.
+
+Upstream now requires new component pixel fixtures to use
+`PresentationOffscreenTestContext.openConfigured`. The parent therefore adapts
+only the new suspension rendering test to `LegacyProfile.CORE_41`, removes its
+hardcoded environment/backend admission assertions, and leaves every scene,
+crop, pixel, overlay, draw-count, zoom, state, timing and exact incoming-service
+restoration assertion intact. Explicit EGL still executes or fails through the
+shared context owner; an unconfigured platform follows its existing hidden
+context prerequisite policy. No raw GLFW setup or guard allowance is added.
+
+The parent focused reconciliation selects the new rendering test together with
+the upstream cleanup faults, migrated pixel fixtures, context ownership,
+headless service/audio checks, graphics-property restoration, historical
+polluter followed by the real wide boots, and raw-GLFW regression guard:
+
+```text
+-Dtest=TestEngineSuspensionRendering,TestPresentationOffscreenContextFailure,GlReadPixelsGrabberTest,TestCNZSlotMachineViewport,TestBackgroundRendererOwnership,TestHeadlessBackendPropertyIsolation,TestHeadlessStateTeardownExtension,TestHeadlessAudioOwnership,TestSurfacelessEglContext,TraceCaptureBootDimensionsTest,TestRawGlfwTestSetupGuard
+-Dsurefire.runOrder=alphabetical
+```
+
+This is one queued `test -B` command, session 48355, with `-Dmse=off`, Java 25,
+explicit surfaceless EGL and all four verified absolute original-ROM properties.
+DISPLAY, WAYLAND_DISPLAY and both Java launcher-option variables are unset.
+It completed **32/0/0/0** across eleven physical XML reports: one suspension
+rendering case, seven readback cases, one CNZ viewport case, three background
+ownership cases, two global teardown cases, two no-device audio cases, four
+property-restoration inputs, two context-cleanup faults, five raw-GLFW guard
+cases, three historical EGL cases and both real wide boots. All identities were
+unique; Java 25.0.5.0.2, explicit EGL and all four absolute original-ROM
+properties were present in every report. The parent independently rehashed the
+four ROMs against their documented SHA-1 values, then consumed the reports.
+Queue wait was **452s**; Maven execution, including fresh compilation, was
+**1:26**. The configured rendering fixture's final SHA-256 is
+`46b0a803815dad70d4bb884e460333bc007bbe8bf53829a1560c635a399a7355`.
+The other seven suspension Java inputs and all production bytes remain exact
+matches to `43c590b03`; only this context-factory adaptation differs within the
+owned Java scope.
+
+The actual change-based plan selects **3,772 smoke candidate classes**, all ten
+categories, **76 ordinary batches** of at most 50 candidates and a separate
+fresh complete guard invocation. It is not the release-only full suite. Java
+25, Lua 5.4 and PowerShell preflight passed. Before launch, the focused correction
+must pass and the final inputs must be committed. Expected active cost is about
+two hours, informed by the earlier 6,497.92-second ordinary and 311.16-second
+guard runs; queue time is additional and unknown. The launch will use a
+180-minute active timeout and the existing ten-minute no-output timeout.
+Source mutation, unsafe execution or timeout stops the run; new or worsened
+failures block delivery and require bounded identity-matched attribution.
+Upstream fixed the earlier graphics-property boot pollution, so the historical
+two boot errors are not carried forward as an accepted current failure.
+The combined command uses the existing main checkout only to discover original
+ROMs; `MAIN_CHECKOUT` denotes that checkout's absolute path. Its own worktree
+retains all compiled outputs and diagnostics. `MAVEN_ARGS` supplies the graphics
+property through Maven without Java-launcher stderr notices:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base a9d88d2c980c6562008e21c916d2b4d28362fd6f \
+  --rom-directory "${MAIN_CHECKOUT}" --max-minutes 180 --run
+```
+
+The same command with `--preflight` in place of `--run` checks the actual launch
+environment before submission. No combined result or delivery is claimed at
+this checkpoint.

@@ -33,18 +33,16 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.mockito.Mockito.*;
 
-/** Actual Engine display/capture handoff in an owned context; no desktop or phase substitute. */
+/** Actual Engine display/capture handoff through the shared configured context; no phase substitute. */
 @Isolated
 class TestEngineSuspensionRendering {
     @TempDir Path directory;
 
     @Test void capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom() throws Exception {
         var entryServices = EngineServices.current();
-        assertTrue(PresentationOffscreenTestContext.requested(), "explicit surfaceless EGL is required");
-        assertNull(System.getenv("DISPLAY"));
-        assertNull(System.getenv("WAYLAND_DISPLAY"));
-        try (var context = PresentationOffscreenTestContext.open(704, 512)) {
-            System.out.println("Owned suspension EGL: " + glGetString(GL_VENDOR) + " / " + glGetString(GL_RENDERER) + " / " + glGetString(GL_VERSION));
+        try (var context = PresentationOffscreenTestContext.openConfigured(
+                704, 512, PresentationOffscreenTestContext.LegacyProfile.CORE_41)) {
+            System.out.println("Owned suspension GL: " + glGetString(GL_VENDOR) + " / " + glGetString(GL_RENDERER) + " / " + glGetString(GL_VERSION));
             var config = SonicConfigurationService.createStandalone(directory);
             config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
             config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, false);
