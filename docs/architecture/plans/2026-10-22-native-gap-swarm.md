@@ -5446,3 +5446,106 @@ push, body/draft change, Main/develop mutation or manual CI dispatch. Root will
 receive the committed successor once by ancestry and prepare an updated smoke
 selection/count/cost/stopping-rule plan. Any new broad/manual-CI execution still
 requires explicit Farrell approval; the old f340 approval is not reusable.
+
+
+### Isolated live Stageplay fixture catalogue binding — 2026-10-24
+
+This is a test-only successor to `3da9b979538ece909ad5d39a82f58d2c9b417534`,
+prepared in the PR worktree while Root's original 3da smoke remained a separate,
+frozen source epoch. The supplied Root failure was
+`TestStageplayLivePlayback#realSceneHoldsTheWorldRendersAndSoundsThenRestoresEntryOnCompletionAndCancel`:
+`LIVE preview needs the configured logical s2 ROM`, at its first controlled
+frame and before the isolated preview's `ProcessBuilder.start`. No peer job,
+target or raw report was inspected by this slice. The original invocation's
+result remains attributed to 3da; this successor does not amend that result.
+
+Source explains the setup boundary: the ROM annotation and headless boot install
+an active ROM, whereas the isolated preview resolves the logical S2 image through
+the actual configuration-backed catalogue. Absolute test properties alone do not
+populate that base key. The inspected fixture/boot/admission paths were inherited
+from the receiving develop source; the transition from a terrain-only puppet to
+an isolated preview changes which prerequisite is reached. These are source
+reachability facts, not a matched baseline/runtime-newness claim.
+
+Only `src/test/java/com/openggf/game/mode/TestStageplayLivePlayback.java` changes:
+resolve one absolute normalized S2 path through the existing `RomTestUtils`, bind
+that exact path with the existing `RomCatalogueFixture` to the actual
+configuration and `RomManager`, and reuse it for boot. Binding occurs inside the
+original headless-boot resource body after the initial reset/overrides, before
+boot and preview materialization. There is no intervening defaults reset and no
+reapply. The binding spans both completion and cancellation attempts, headless
+boot closure, playback closure and the original session/detach cleanup. A narrow
+`finally` guarantees only the new catalogue close, before the original final
+reset/configuration/graphics statements. Path/binding failure remains within the
+existing boot resource and fixture-cleanup envelope. No borrowed annotation ROM
+is closed by the catalogue helper; no manager close, extra ROM open, alias,
+configuration file or runtime fallback was added.
+
+The test diff is 10 insertions / 2 deletions. Its whole-file inverse reconstructs
+the original 3da bytes exactly, preserving all 37 assertion tokens, the original
+assumption, 180 boot steps, three-frame scene, inputs, held clocks, actor pose,
+ROM mapping, changed GL pixels, nonzero PCM/music, completion/cancellation,
+player lease and entry-state restoration checks. Boot still closes before the
+outer playback cleanup; the original graphics restoration is unchanged. No
+production, helper, API pin, harness, timing or oracle changed.
+
+The frozen tested tree is `19a8f0e2dba84ecd2979c8081824558d1545924b`.
+Test SHA-256 is
+`dee6522c989d88e8c895c71e6670630e919c6f2ddfc41e1a4559b5ff9c30cd19`;
+Git blob is `79a8f922ff4b96549e2469553b4906cf518ab60c`.
+The unchanged catalogue helper is
+`dd3c8a1fd271074197975fd4c7e76bcc393e5fcff2132087a063713d08bafb47`.
+This worktree's conservative source/input frame is
+`2b2cc513154c63db61956e2bca4b9e06329385d413be86b2fe278fbb1a3578d4`
+(13,178 paths / 856,426,414 bytes), using the prior path/mode/mtime/content
+protocol. It is local timestamp attribution, not a portable cross-checkout hash.
+The frame, staged source and helper remained exact through terminal readback.
+
+Exactly one normal queued request, session 43951, ran from `<PR_WORKTREE>`:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  '-Dtest=com.openggf.game.mode.TestStageplayLivePlayback#realSceneHoldsTheWorldRendersAndSoundsThenRestoresEntryOnCompletionAndCancel' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+`OPENGGF_QUEUE_WRAPPER` denotes the reviewed absolute
+`<MAIN_WORKSPACE>/tools/testing/maven_queue.py`; its SHA-256 remains
+`77d3a3e53dfc213729a57b41d5d11dc1b2145a158a01fa0ca6313a61c3639720`,
+with all ten reviewed import/module pins unchanged. All three original stock
+ROMs were freshly CRC32/SHA-1 verified before launch. The same Java 25 / Lua 5.4 /
+null-audio / surfaceless-EGL environment and unset ambient launcher/display
+variables were used. No version probe, preflight, standalone build, guard,
+second request or overlapping observer was launched. An initial process-dedup
+substring scan matched its own enclosing shell text; exact argv matching with
+own-ancestor exclusion corrected that diagnostic without finding or launching a
+Maven/Java job. Final launch dedup was empty.
+
+Actual result: **1 distinct identity / 1 pass / 0 failures / 0 errors / 0 skips**,
+one XML, exit 0. Queue waiting was **255 seconds**, separately from Maven
+**31.742 seconds**; suite time was **3.044 seconds**, case time **2.814 seconds**.
+The normal lifecycle found main classes up to date and compiled 4,762 test
+sources. All 70 XML properties, both identical 79-entry owned/dependency
+classpaths, the exact test identity, recursive stream (1,099 bytes), text report
+and full 119-line / 15,309-byte console were read. Java 25.0.5.0.2, the actual
+owned cwd/target, EGL selector and all three absolute ROM properties match.
+Seven FAST/NONE warnings occur in XML, eight in the console; JOML Unsafe and
+18 test-compiler deprecation warnings remain. No unexpected caught runtime fault
+or fresh JVM/Surefire dump was observed in those outputs.
+
+The one-request budget is exhausted. This pass qualifies only the corrected
+fixture's original real rendering/audio/completion/cancellation controls. It is
+not a full Stageplay, native-waveform, whole-game, broad-smoke or aggregate PR
+pass; no matched runtime baseline or general secondary-cache retirement proof
+was obtained. The original f340 189 failed identities / 108 skips, 41 disputed
+route causes, inherited GHZ art-loading limitation and all other recorded epochs
+remain unchanged. Root receives no new executable bytes before its original 3da
+smoke reaches terminal/readback. Only this factual existing-Plan append and one
+normal-hook local test/Plan leaf are included; no push, PR-body/draft change,
+Main/develop mutation, extra policy invocation, CI, native observation or route
+profile follows. Consumed owned XML/text/log outputs are removed after readback;
+useful source, compiled outputs and the clean local branch/worktree are retained.
