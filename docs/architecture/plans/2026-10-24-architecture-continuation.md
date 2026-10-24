@@ -6870,3 +6870,116 @@ env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
   --base 97eb86f186b432722024ca419a00b901b38f5ec2 \
   --rom-directory "${MAIN_CHECKOUT}" --max-minutes 180 --run
 ```
+
+
+### Audio capture-lifetime characterization gate (owned 2026-10-24 worktree)
+
+The implementation child owns only
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-07f71851`, branch
+`bugfix/ai-audio-capture-lifetime-20261024`. Its clean initial `97eb86f18` was
+fast-forwarded **only** to accepted composition
+`0396a458181a0ca654846f8c82ac7a412ffa3cd5` (tree
+`946b11143af0a255a6cc488c04b9f6ac97a193a9`) before edits. Hooks were installed.
+No parent/foreign target or validation job was inspected. The main checkout was
+used only for the expressly authorized current queue wrapper and existing ROM
+inputs. No subdelegation, integration, push, broad/full suite or measurement was
+performed by this phase.
+
+The independent design review authorized alternative A after this gate: one
+private concrete `CaptureLeases` per manager, spanning producer generations and
+owning admission, accepted release, carry and retirement. Qualified retention B
+is coherent but leaves that policy dispersed. A state bag with decisions left in
+the manager, an added Host/service lookup, top-level producer caller, broadened
+catch or automatic API repinning are rejected: none transfers this complete
+responsibility within the existing authority. Producer clocks, packets and
+attachment mechanics remain producer-owned. This gate does not itself implement
+or certify the extraction.
+
+Unchanged production blobs throughout the gate:
+
+- `AudioManager.java`: `a6c82855fc765eb5a1448fa209b7e6172568e4f7`.
+- `AudioPresentationProducer.java`: `9826716a97c1fbb781e41a668f1016ce1d4362e8`.
+
+The exact command for both original and expanded controls, from the owned tree,
+with `MAIN_CHECKOUT` resolving to the existing main checkout (the executed
+wrapper argument was that absolute path):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestHeadlessAudioOwnership' test
+```
+
+The original control completed **29/29** (14 + 8 + 5 + 2); queue wait 156s,
+Maven execution 1:26. The expanded gate completed **43/43** (21 + 13 + 7 + 2);
+queue wait 46s, Maven execution 27.798s. Both had zero failures/errors/skips.
+Terminal command handles: `72837`, `91063`, both exit 0. The existing
+`profile_small_tests.source_fingerprint(Path.cwd())` function was used solely to
+hash build inputs, without launching a profiler or measurement. Original
+SHA-256: `e97faa1918eb2570e203d1e194c7882a74348585dcb6795e510376a211ba72ee`;
+expanded pre/post SHA-256:
+`c7e1e37de8fa86aade50f1c73c9d894d806640eb608e2b11e2da435b115beccc`.
+Every XML test identity, count, skip and Java/EGL/selector property was inspected;
+Java was `25.0.5.0.2`, EGL `surfaceless-egl`. No ROM properties were needed by
+these synthetic controls. The eight XML/text reports from each invocation were
+consumed; no category-run diagnostics or result caches were created.
+
+All 27 original characterization identities/assertions were retained. The
+additional executed identities are:
+
+- `AudioManagerCaptureModeTest`: `offlineValidationPrecedesRealizationButSampleValidationFollowsIt`,
+  `sampleRateMismatchPrecedesPositiveFrameRateMismatch`,
+  `offlineValidationUsesVirtualManagerSampleRateDispatch`,
+  `sampleRateCallbackAttachesToTheCurrentProducerAfterReentry`,
+  `acceptedCloseRetiresReferencesEvenWhenSinkTeardownThrows`,
+  `throwingReentrantCloseReconcilesTheCurrentlyPublishedProducer`,
+  `reentrantCloseThatClearsTheProducerPreservesFinallyFailurePrecedence`.
+- `AudioManagerLiveCaptureTest`: `invalidLiveRateIsValidatedOnlyAfterRealization`,
+  `closedMetadataDoesNotAcquireTheManagerMonitorAndClosedDrainWinsOverNull`,
+  `producerRealizationKeepsTheCallingEntryPointsMonitorCoverage`,
+  `pendingRealizationFailureKeepsAdmissionAndExplicitCloseCancelsTheCarry`,
+  `failedRebuildThenDestroyKeepsThePendingRecordingForLaterRealization`.
+- `TestLiveCaptureSurvivesBackendSwap`:
+  `fractionalClockAndCumulativeTotalsSurviveEveryRebuildTrigger`,
+  `incompatibleRebuildDegradesTheRecorderAtItsExistingFractionalPhase`.
+
+These use real producers, no-device sinks/backends and existing packet fixtures.
+One isolated real-manager spy intercepts only virtual `outputSampleRate()`:
+validation accepts its dispatched 44.1 kHz value while the actual producer still
+drains 800 frames at 48 kHz. Callback lock observations distinguish synchronized
+capture admission/rate access from unlocked realization, destroy and launch
+replacement. Closed metadata completes on another thread while the manager
+monitor is held; closed drain rejects before its null argument. Existing foreign
+thread checks retain both admission and owner-thread retry.
+
+Accepted close plus throwing teardown retires admission but leaves producer/sink
+references uncleared until a later lifecycle operation. Reentrant sink close
+can publish a replacement producer; its new leases survive the outer finally's
+**current** producer read. If reentry instead clears that producer, the current
+null read throws `NullPointerException`, superseding the sink exception. A failed
+launch rebuild followed by destroy preserves an already-pending wrapper for later
+realization. These source-derived predictions are now reproduced behavior,
+**not** newly claimed runtime defects and not targets for rescue in this cut.
+
+At 5 Hz / 2 fps, the same caller handle drains **2, 3, 2**, sums to **7**, and
+reports segment-local clock totals **2, 3, 2** with remainders **1, 0, 1**.
+Backend, launch-backend, reset, profile and ROM replacement are all exercised,
+including empty intermediate segments; offline admission retires independently.
+PCM is nonzero in each generation and the last independent offline packet
+matches the live packet. Incompatible rebuild through the real controller
+substitutes silence with packet counts **3 then 2** after the original two-frame
+packet, preserving the fractional phase.
+
+Coverage limits: ordinary failure *inside* rebind's attachment try and diagnostic
+observer escape from that try are not legitimately inducible through these real
+fixtures: `attachCapture` has no observer callback, and a newly published producer
+has no exposed pre-rebind capacity/owner hook. No fake producer, private-field
+mutation or new injection seam was added to pretend otherwise. The outside-try
+sample-rate mismatch, failed pre-publication realization, explicit close while
+pending and failure partial effects are covered. Receiver-before-arguments
+rebind evaluation, selected-wrapper retention and exact wrapper lock regions
+still require preservation review alongside these tests. No emulator-parity,
+ROM-backed, smoke, full-suite or performance result is implied by this gate.
