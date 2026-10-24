@@ -7,7 +7,6 @@ import com.openggf.game.sonic1.audio.Sonic1SmpsConstants;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.AbstractSmpsLoader;
 import com.openggf.audio.smps.DacData;
-import com.openggf.audio.smps.Sonic1SmpsData;
 import com.openggf.data.Rom;
 import com.openggf.data.compression.DcmDecoder;
 import com.openggf.data.compression.KosinskiReader;

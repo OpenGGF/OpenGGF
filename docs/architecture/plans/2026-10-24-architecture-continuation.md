@@ -655,3 +655,84 @@ this evidence prose changed afterwards. No task-owned Maven job remains live.
 The worker retains its clean committed branch/worktree for parent composition;
 it does not push or remove it. Full native routes, pixels, exhaustive traces and
 complete guards are outside this worker's validation claim.
+
+## Bounded S1 music parser ownership slice
+
+The implementation worktree is `/mnt/LinuxData/T3/worktrees/OpenGGF/t3-659c450e`,
+branch `bugfix/ai-s1-music-parser-owner-20261024`, based on the observed main
+`2020d2e57a4b3a4cece9083730c89eb9c71d29a4`. It was already isolated; this slice
+does not update its base or perform integration. The parser and loader at this
+base exactly match parent candidate `2de8b23d7a8f11bd1316f8b5cdcde2573bc41e53`.
+
+The complete production caller search finds only `Sonic1SmpsLoader`, already
+in `game.sonic1.audio.smps`. Shared audio neither constructs nor calls back into
+the concrete parser. The four test callers are `TestSmpsHeaderConstruction`,
+`TestSonic1SfxData`, `TestSmpsSequencerInstrumentLoading` and
+`TestSmpsDataEndianParsing`; all move their references together. Historical
+research/changelog mentions are not live callers. The candidate API pin names
+neither `Sonic1SmpsData` nor `SmpsHeaderDecoder` nor `FmVoiceOperatorOrder`.
+
+Moving the whole `Sonic1SmpsData` responsibility beside its loader and SFX
+parser gives its existing S1-only policy an S1 owner. Leaving it frozen in
+shared audio would retain the exception without a shared consumer. A factory
+hierarchy adds no missing boundary here. The move changes only package/imports:
+the entire parser javadoc and class body compare byte-for-byte with the base.
+Both public constructor shapes, construction dispatch, one-based PSG envelope
+lookup, operator normalization, endian/bounds/exception behavior and retained
+ROM/audio references are intact. Existing public shared helpers remain the
+lower-level dependencies; no facade, duplicate parser or new allowance is added.
+
+After checking the new package identity and absence of the old source, the sole
+exact record in `189a6718-1f70-4e38-8b78-fdb0af52fa74` is explicitly removed.
+Its store is now empty. The stored rule key/description and disabled store
+creation/updates are unchanged. Low-level allowance delta is zero: this supplied
+base retains its 156 records, while parent candidate `2de8b23d7` retains 151
+after its separate palette work. Published inventory prose, complete guards,
+required S3K checks and composition remain parent-owned. The obsolete generated
+old-package parser class was removed before post-move compilation, preventing a
+stale class from masking the naming result.
+
+Validation uses the existing tests, without adding tests that repeat the move.
+Commands run from this worktree with its own `target/`:
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+ROM_ROOT=$MAIN_CHECKOUT
+export JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4
+export PATH="$JAVA_HOME/bin:$PATH"
+unset DISPLAY WAYLAND_DISPLAY JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS
+FOCUSED='TestSmpsHeaderConstruction,TestSonic1SfxData,TestSmpsSequencerInstrumentLoading,TestSmpsDataEndianParsing,TestSmpsInstrumentParsing,TestSmpsFmVoiceWriteProfiles'
+ROM_BEHAVIOR='TestSonic1UnifiedAudioPresentationRomIntegration,TestSoundTestWavExport,TestHubMusicRomThemes#sonic1TitleThemeLoadsAndPresentsWithoutADevice'
+AFFECTED='sonic_named_classes_live_under_matching_game_packages+low_level_layers_do_not_depend_on_runtime_layers+per_game_packages_do_not_cross_depend+shared_layers_do_not_depend_on_game_specific_packages+shared_code_does_not_construct_concrete_sonic_provider_classes+package_slices_are_free_of_cycles+core_runtime_cycle_cluster_does_not_gain_top_level_edges+imported_classes_include_application_code'
+ROM_WAV='TestSoundTestWavExport$RomBackedSfxExport#renderToWavCompletesRomBackedElectricSfxWithAudiblePcm'
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED,$ROM_BEHAVIOR" "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" test -B
+python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards "-Dtest=TestModApiSignatureSurface,TestArchUnitRules#$AFFECTED,TestArchitecturalSourceGuard#lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups,TestArchitecturalReviewGuard#archUnitFrozenRulesDoNotAutoUpdateDuringNormalRuns,$ROM_WAV" "-Dsonic1.rom.path=$ROM_ROOT/s1.gen" test -B
+```
+
+The discovered existing S1 ROM is `$ROM_ROOT/s1.gen`, verified CRC32 `AFE05EEE`
+and SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`. No ROM/link is created or
+changed. Baseline at `2020d2e57` passed 18 cases, with zero failures/errors/skips;
+admission waited 157 seconds and Maven reported 1:15. The post-move run passed
+23 cases with zero failures/errors/skips, including the identical 18 baseline
+class/method identities, all three S1 final-PCM integration cases, the S1 hub
+theme and the outer WAV frame-count case. Admission waited 61 seconds and Maven
+reported 1:23. Exact XML inspection showed that the outer WAV selector omitted
+its nested ROM-backed case, so the final command explicitly selects that case
+without repeating the completed outer case.
+
+The staged `src/` diff SHA-256 is
+`be759896933caab22ac0d405b861859b6b91f92792eced52e3689c3372809007`;
+both post-move commands use this unchanged source/resource slice over the base.
+The final command passed 43 cases with zero failures/errors/skips: 11 API
+surface cases, 29 ArchUnit cases, the two source/update controls and the explicit
+ROM-backed WAV case. All eight requested architecture identities are present.
+The ArchUnit engine executes all 27 rule fields despite the field selector,
+plus the two selected methods; this is not a complete guard-profile run.
+Admission waited 12 seconds and Maven reported 37.393 seconds. The API pin
+remains byte-identical, and the naming rule passes against its empty store.
+All three Maven sessions are complete. Exact XML identities/failures/skips
+were inspected and consumed reports removed. No category-run diagnostics were
+created; no task-owned validation jobs or diagnostic files remain pending.
+These are bounded behavior/contract checks; no full suite, audio sweep, trace
+frontier or new zone certification is claimed.
