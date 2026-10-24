@@ -993,20 +993,43 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
-    @Test void zeroRingContactDeathClosesAtTheUnownedSameFrameCameraBoundary() throws Exception {
+    @Test void zeroRingContactDeathFinishesLaterSlotsAndKeepsItsSourceDrawCut() throws Exception {
         try (var f = new Fixture()) {
             f.firstCycle(); seedContactPlayer(f);
             var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
             pool.write(pool.state(40).moveByte(ID, CdMosqui.OBJECT_ID).moveByte(SPRITE_FLAGS, 0x84)
                     .moveByte(COLLISION_TYPE, 0xAB).moveWord(X, 64).moveWord(Y, 0x759));
-            var slots = pool.capture().slots();
-            f.service(0); f.runtime.spawnBeforeReservedSlots();
-            var failure = assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, () -> f.body(2));
-            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.DEAD_CAMERA_FREEZE, failure.boundary());
-            assertEquals(CdOpeningObjectRuntime.Phase.FAILED, f.runtime.phase()); assertTrue(f.frame.closed());
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
             assertEquals(6, f.frame.state().motion().routine());
-            assertTrue(f.runtime.lastSoundRequests().isEmpty(), "the death boundary precedes Runtime sound publication");
-            assertEquals(slots, pool.capture().slots()); assertEquals(SCORE, f.runtime.scoreGlobals());
+            assertEquals(CdOpeningObjectRuntime.Phase.PLAYER_DONE, f.runtime.phase());
+            assertEquals(SCORE, f.runtime.scoreGlobals());
+            assertEquals(List.of(new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(
+                            com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)),
+                    new CdOpeningObjectRuntime.PlayerSound(new CdPlayerFrameRuntime.ContactFmSound(
+                            com.openggf.game.soniccd.player.CdPlayerTouchResponse.FmSound.FM_HURT))),
+                    f.runtime.lastSoundRequests());
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(4, pool.state(40).routine(), "the later live slot still executes on a kill frame");
+            assertDoesNotThrow(f.runtime::beforeCameraStep);
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, f.runtime.phase());
+            assertFalse(f.frame.closed());
+            assertTrue(cpu.provenance().stream().anyMatch(piece -> piece.slotRef().wholeIndex() == 0));
+        }
+    }
+
+    @Test void levelRestartStopsAfterAllObjectSlotsBeforeCpuSatAndOrdinaryTail() throws Exception {
+        var initial = new CdLevelGlobals(1, 0, 0, 0, 3, 0, 2, 0, 0);
+        try (var f = new Fixture(initial)) {
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(1);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x26F, f.slot(34).centreX());
+            var rings = f.runtime.ringGlobals();
+            var failure = assertThrows(CdOpeningObjectRuntime.UnsupportedContact.class, f.runtime::beforeCameraStep);
+            assertEquals(CdOpeningObjectRuntime.UnsupportedContactBoundary.LEVEL_RESTART, failure.boundary());
+            assertTrue(f.runtime.closed()); assertTrue(f.frame.closed());
+            assertEquals(rings, f.runtime.ringGlobals(), "restart branches before the ordinary ring tail");
+            assertThrows(IllegalStateException.class, () -> f.runtime.finishAfterCamera(POST));
         }
     }
 

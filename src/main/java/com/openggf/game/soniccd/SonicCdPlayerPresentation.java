@@ -380,13 +380,24 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             try {
                 requireBound();
                 if (actId != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
+                if (openingObjects != null) openingObjects.beforeCameraStep();
                 var m = frame.state().motion(); var shared = frame.environment().movement();
-                var actorInput = new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
-                        m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl());
-                var next = CdR11aForegroundScroll.step(scrollState, new CdR11aForegroundScroll.Input(
-                        actorInput, shared.bounds(), assets.loadPlan().bounds().top(),
-                        frame.environment().globals().cameraXCentre(), shared.globals().cameraYCentre(),
-                        assets.profile().variant(), 0, 320, 224)); // DEV omission of the native HUD timer flag.
+                // The native branch is after ALL object slots. Death skips LevelScroll but still
+                // builds sprites and executes the ordinary loop tail (Level/Main.asm:409-424).
+                CdR11aForegroundScroll.Result next;
+                if (frame.environment().globals().debugMode() == 0 && m.routine() >= 6) {
+                    next = CdR11aForegroundScroll.deadCameraFreeze(scrollState, shared.bounds(),
+                            shared.globals().cameraYCentre());
+                } else {
+                    var actorInput = new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
+                            m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl());
+                    int hudTime = openingObjects == null ? 0 : openingObjects.levelGlobals().updateHudTime();
+                    // Terrain-only DEV still omits the HUD; the opening World owns its explicit byte.
+                    next = CdR11aForegroundScroll.step(scrollState, new CdR11aForegroundScroll.Input(
+                            actorInput, shared.bounds(), assets.loadPlan().bounds().top(),
+                            frame.environment().globals().cameraXCentre(), shared.globals().cameraYCentre(),
+                            assets.profile().variant(), hudTime, 320, 224));
+                }
                 frame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
                 scrollState = next.state();
                 projectCamera(camera);

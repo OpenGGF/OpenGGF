@@ -93,12 +93,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         }
     }
 
-    public enum UnsupportedContactBoundary { DEAD_CAMERA_FREEZE, LOST_RING_NATIVE_CLOCK }
+    public enum UnsupportedContactBoundary { LEVEL_RESTART, LOST_RING_NATIVE_CLOCK }
     public static final class UnsupportedContact extends UnsupportedOperationException {
         private final UnsupportedContactBoundary boundary;
         private UnsupportedContact(UnsupportedContactBoundary boundary) {
-            super(boundary + (boundary == UnsupportedContactBoundary.DEAD_CAMERA_FREEZE
-                    ? ": native Level_MainLoop death camera/scroll branch is not owned yet"
+            super(boundary + (boundary == UnsupportedContactBoundary.LEVEL_RESTART
+                    ? ": native level reconstruction is not owned yet"
                     : ": LostRing binding requires an explicitly represented absolute native V-int counter"));
             this.boundary = boundary;
         }
@@ -398,10 +398,6 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             var publication = frame.runBody(levelFrames,
                     Optional.of(new CdPlayerBody.TouchContext(scanner, callCut, context)));
             checkActive(Phase.PLAYER_BODY);
-            if (publication.result().state().motion().routine() >= 6
-                    && publication.result().environment().globals().debugMode() == 0) {
-                throw new UnsupportedContact(UnsupportedContactBoundary.DEAD_CAMERA_FREEZE);
-            }
             boolean displaySeen = false;
             boolean touchSeen = false;
             for (var effect : publication.result().effects()) {
@@ -600,6 +596,21 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 }
             }
             dispatchWholeIndex = -1;
+            return null;
+        });
+    }
+
+    /**
+     * Level_MainLoop's post-RunObjects, pre-scroll restart branch (Level/Main.asm:405-408).
+     * No ordinary camera, sprite construction or tail may run after this cut. Actual level
+     * reconstruction remains unowned; until then a restart closes this composition explicitly.
+     * The dead/debug/routine camera choice belongs to the World after this admission check.
+     */
+    public void beforeCameraStep() {
+        perform(Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, Phase.DYNAMIC_DONE, () -> {
+            if (levelGlobals.levelRestart() != 0) {
+                throw new UnsupportedContact(UnsupportedContactBoundary.LEVEL_RESTART);
+            }
             return null;
         });
     }

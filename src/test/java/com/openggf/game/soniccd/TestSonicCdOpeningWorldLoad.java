@@ -28,6 +28,8 @@ import com.openggf.game.soniccd.objects.CdObjectState;
 import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.objects.CdRingGlobals;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
+import com.openggf.game.soniccd.player.CdPlayerBody;
+import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.graphics.PatternAtlas;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.SpritePresentation;
@@ -42,12 +44,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -143,6 +147,58 @@ class TestSonicCdOpeningWorldLoad {
         h.module().requirePlayerActor().requireCompletedNativeFrame();
         assertTrue(objects.displayedFrame().patternVersions().keySet().stream().allMatch(PatternAtlasRange.OBJECTS::contains));
         assertObjectRangeExactlyOnce();
+    }
+
+    // Source Level/Main.asm:400-421: all object slots run before the dead-camera branch.
+    // Constructed actor/slot ingress tests the real World contract, not a natural death route.
+    @ParameterizedTest @CsvSource({"2,1899,0,2", "4,2040,-1024,0"})
+    void deathFinishesDynamicSlotsFreezesCameraAndReplaysTheCompletedWorldCut(
+            int routine, int y, int yVelocity, int drawBucket) throws Exception {
+        var h = opening();
+        step(h, LogicalInputSnapshot.neutral());
+        var frame = h.module().requirePlayerFrame();
+        var runtime = objects(h);
+        var captured = frame.captureActor();
+        var old = captured.state();
+        var m = old.motion();
+        var motion = new CdPlayerMotionState(64 << 16, y << 16, 0, yVelocity, 0, routine,
+                0, routine == 4 ? 2 : 0, 4, 9, 19, routine == 4 ? 0x1A : 0, m.previousAnimation(),
+                0, 0, 0, 0, 0, m.previousPrimaryAngle(), m.previousSecondaryAngle());
+        var actor = new CdPlayerBody.State(motion, old.animation(), old.header(),
+                new CdPlayerBody.Timers(0, 0, 0, old.timers().reset()), old.history(), old.rotationDistance());
+        frame.restoreActor(new CdPlayerFrameRuntime.ActorState(captured.owner(), actor, Optional.empty()));
+        h.module().requirePlayerActor().rebindAfterRestore();
+        var pool = runtime.placement().pool();
+        pool.clearDynamicSlots();
+        pool.write(pool.state(40).moveByte(CdObjectState.ByteField.ID, 0x3D)
+                .moveByte(CdObjectState.ByteField.SPRITE_FLAGS, 0x84)
+                .moveByte(CdObjectState.ByteField.COLLISION_TYPE, 0xAB)
+                .moveWord(CdObjectState.WordField.X, 64)
+                .moveWord(CdObjectState.WordField.Y, routine == 2 ? 0x759 : y));
+        int cameraX = h.mode().getCamera().getX(), cameraY = h.mode().getCamera().getY();
+        var rings = runtime.ringGlobals();
+        var before = h.mode().getRewindRegistry().capture();
+
+        step(h, LogicalInputSnapshot.neutral());
+        assertEquals(6, frame.state().motion().routine());
+        assertEquals(0, frame.state().header().priority());
+        assertEquals(CdOpeningObjectRuntime.Phase.CLOSED_CUT, runtime.phase());
+        assertFalse(frame.closed());
+        assertEquals(cameraX, h.mode().getCamera().getX());
+        assertEquals(cameraY, h.mode().getCamera().getY());
+        assertEquals(cameraY & 0xFFFF, frame.environment().movement().bounds().bottom());
+        assertEquals(4, pool.state(40).unsignedByte(CdObjectState.ByteField.ROUTINE),
+                "the later Mosqui initializes and runs after Sonic is killed");
+        assertEquals(rings.advanceGlobalRingAnimation(), runtime.ringGlobals(), "ordinary tail runs once");
+        var playerPieces = runtime.cpuSat().provenance().stream()
+                .filter(piece -> piece.slotRef().wholeIndex() == 0).toList();
+        assertFalse(playerPieces.isEmpty());
+        assertTrue(playerPieces.stream().allMatch(piece -> piece.queueBucket() == drawBucket),
+                "Main enqueues at its pre-touch cut; Hurt draws after its kill");
+        var completed = state(h);
+        h.mode().getRewindRegistry().restore(before);
+        step(h, LogicalInputSnapshot.neutral());
+        assertState(completed, h);
     }
 
     @Test void scrollPublicationPairsThePreviousCompletedLoopWithTheSharedCpuSat() throws Exception {

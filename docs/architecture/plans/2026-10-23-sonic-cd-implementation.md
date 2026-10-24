@@ -3379,3 +3379,23 @@ inspected, no queue wait,87s execution. Six new cases pin selector8/pause/lag
 order, dirty Sonic DMA, no-DMA service, pre-Finish failure and null preflight.
 This is the call port only; the World's powerup-state/byte/service binding
 and real hardware timing remain pending.
+
+
+### World death-camera cut — 24 October 2026
+
+The World now checks levelRestart after every object slot and before scroll.
+With debug off and the final player routine at least6, both bottom words take
+the current cameraY while the camera/scroll state is kept. Sprite construction
+and the ordinary loop tail still execute. The former post-player rejection
+is removed. A pending actual restart remains a typed stop before scroll/SAT.
+HUD-time input comes from the single level store; terrain DEV retains0.
+
+Two constructed actor/slot cases through the actual World distinguish Main's
+pre-contact draw bucket2 from Hurt's post-kill bucket0, run a later live Mosqui,
+freeze bottom/camera, execute the ring tail and restore/replay the whole cut.
+The original production rejected both (Root44257 negative control). They passed
+inRoot74991 with the other502non-Runtime cases, including actual EGL routes.
+Root's unrelated old Ring sound assertion edit was restored exactly in R2;
+all40Runtime cases then passed in82194. Independent review's sole finding
+was that same resolved test literal; no unaddressed P1/P2 remains. It was a
+static review, not execution. No natural-input death or native parity is claimed.
