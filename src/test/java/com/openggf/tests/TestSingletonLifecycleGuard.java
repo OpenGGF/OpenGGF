@@ -23,14 +23,12 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/editor/TestEditorRenderingSmoke.java#setUp
             src/test/java/com/openggf/editor/TestLevelEditorController.java#setUp
             src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
-            src/test/java/com/openggf/game/TestGameModuleProviderLifetimes.java#configureEngineServices
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
             src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
             src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java#resetCamera
             src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
             src/test/java/com/openggf/game/TestSpindashGating.java#setUp
-            src/test/java/com/openggf/game/TestZoneLayoutMutationPipeline.java#setUp
             src/test/java/com/openggf/game/rewind/TestLiveRewindManagerAudioCleanup.java#setUp
             src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
@@ -42,11 +40,9 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic1/objects/bosses/TestSonic1FzBossEscapeHitCue.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestSonic2PlcArtRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestTodo4_MCZBossCollision.java#setUp
             src/test/java/com/openggf/game/sonic2/objects/TestTornadoObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
-            src/test/java/com/openggf/game/sonic3k/TestSonic3kBootstrapResolver.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
@@ -67,16 +63,11 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
             src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
-            src/test/java/com/openggf/level/rings/TestRingManagerRewindSnapshot.java#setUp
             src/test/java/com/openggf/level/scroll/SwScrlArzTest.java#setUp
             src/test/java/com/openggf/level/scroll/SwScrlMczTest.java#setUp
             src/test/java/com/openggf/physics/TestGroundSensor.java#setUp
-            src/test/java/com/openggf/physics/TestTerrainCollisionManager.java#setUp
-            src/test/java/com/openggf/physics/TestTerrainCollisionManagerReset.java#setUp
             src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
-            src/test/java/com/openggf/sprites/managers/TestSpriteManagerUpdateOrder.java#configureRuntime
-            src/test/java/com/openggf/sprites/playable/TestOnObjectAtFrameStartSnapshot.java#configureRuntime
             src/test/java/com/openggf/sprites/playable/TestPlayableSubclassRewind.java#setUp
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
@@ -90,7 +81,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/tests/TestS3kIczFreezerObject.java#setUp
             src/test/java/com/openggf/tests/TestS3kMgzPulleyAndMantis.java#setUp
             src/test/java/com/openggf/tests/TestS3kMgzTwistingLoopObject.java#setUp
-            src/test/java/com/openggf/tests/TestTodo30_TimerErrorReporting.java#setUp
             src/test/java/com/openggf/trace/replay/TraceReplaySessionBootstrapConfigTest.java#setUp
             """);
     private static final Set<String> SCANNER_UTILITY_FILES = Set.of(

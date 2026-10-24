@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.save.SaveSessionContext;
@@ -25,7 +25,7 @@ public class TestSonic3kBootstrapResolver {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
