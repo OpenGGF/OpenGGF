@@ -8205,3 +8205,267 @@ section is terminal; reports were inspected and consumed, with no raw-log archiv
 pass cache, receipt, retained category-run directory or idle worker. The local
 branch and clean committed checkout remain for parent review, without integration,
 push, branch deletion or worktree cleanup.
+
+### Complete suspended visit: authorized implementation follow-up
+
+The original-production baseline is immutable commit
+`fac319355b77f205f2646e0cd82743ad8a16d415`, tree
+`8516dd6c858fb778a3e5a17bbb3ab77ddce39670`. It is the direct parent of this
+implementation slice, based on accepted develop a9d88d2c9. The parent authorized
+implementation only after the clean baseline handoff and committed-range policy
+check. This work stays in the retained bugfix/ai-suspension-visit-owner-20261024
+checkout. No fetch, rebase, subdelegation, integration, push, foreign output/lock
+access or worktree cleanup is part of this phase. Parent owns composed smoke and
+fresh complete guards after integration/review input is reconciled.
+
+The complete visit moves into the existing GameLoopSuspension. It now holds
+Engine's four visit values alongside the original parked/preparing/identity/pause
+state. Distinct fields intentionally retain the source's partial failures; saved
+payload existence is not a replacement for parked or preparing state. GameLoop
+remains the established backreference and its shared frame, admission, mode and
+rewind driving do not move. SuspendedGame stays data with no second owner
+reference. MasterTitleScreen's image/texture/zoom/confirmation algorithms and
+SuspendedSettings policy remain unchanged.
+
+Engine has only two final wiring aliases: its loop's exact suspension instance
+and its own fixed Effects bundle. The owner has the replaceable Effects binding.
+This is necessary receiver lifetime, not mirrored visit state. A loop admission
+selects the binding after admission guards but before the virtual mode argument;
+completion selects after clearing preparation, and resume selects after request
+consumption. Once an operation has entered a selected bundle it cannot switch to
+another Engine's ports halfway through. Each adapter still reads its Engine's
+current raw fields when called. The fixed Engine bundle also preserves the
+original receiver of Engine's direct capture event and its screen factory/end
+handler when loop bindings are replaced. It does not snapshot managers, camera,
+screen, listener or dimensions during construction/installation.
+
+The three typed groups are capture/restoration, hub/display and retirement.
+There is no whole-operation Host compatibility implementation. The only additions
+to the reviewed capability inventory are individually justified reads:
+
+- publishedWorld returns SessionManager's published WorldSession at the exact
+  original admission expression, independently of the loop's later parked
+  gameplay identity. Caching the loop's context or deriving card metadata from
+  the parked owner would fail the matched discriminator.
+- captureViewportThumbnail performs only the framebuffer read and evaluates its
+  raw viewport arguments there. thumbnailWidth/thumbnailHeight read the logical
+  dimensions afterward. Returning an already-resampled thumbnail from Engine
+  would leave part of the visit choreography there; capturing all dimensions
+  before readback would change callback evaluation order.
+
+CameraPosition.of(camera) and position.restore(camera) stay narrow adapter
+expressions, selecting the camera receiver once for all their reads/writes.
+Engine's audio dependency remains distinct from the loop's pause/fallback audio.
+No operation falls back to an ambient EngineServices root. The owner's logger
+uses the existing com.openggf.Engine category string and messages, avoiding a new
+Engine class dependency solely for logging.
+
+Engine's factory remains authoritative and calls installCard at the original
+location after the editor-project handler and before the remaining title bindings.
+Its display path emits betweenFrames at entry and afterScene after draw/flush/
+SCENE and before later overlays. The owner performs readiness, payload publication
+and handoff decisions internally. The reset hook follows nativeEditorSession=null,
+conditionally clears saved payload, then discards parked run state; Engine
+finishes its existing common teardown. The End path resumes its original final
+loop-binding clear, Engine gameplay-reference clear and title-audio effect after
+that reset returns. Repeated original retirement/virtual calls remain repeated.
+The reset hook cannot call application reset. Application cleanup has no new
+suspension discard.
+
+Rejected alternatives remain the reviewed method shuffle with three whole-operation
+Host callbacks, a state bag whose decisions remain in Engine, a generic LoopHost,
+a cached world/camera/screen/manager projection, and an atomic phase enum that
+repairs partial failures. None meets the complete responsibility/temporal contract.
+No general effect executor, context/Engine locator, hot-loop-replacement protocol,
+new retry, finally retirement, disposal or permission is introduced.
+
+Maintained private-layout fixtures now address the owner through a package-local
+test bridge and invoke its typed entry points, with no new root reflection
+wrappers. The S2 custom Host fixture is replaced by narrow mocked effects; the
+production owner runs the choreography. The original 55 behavioral case identities
+remain, with whole-operation mock assertions migrated to the corresponding narrow
+external consumption effect. The two Engine aspect controls migrate their payload
+access only. Both viewport contract fixtures remain unchanged.
+
+Two bounded source controls in the existing TestArchitecturalSourceGuard check
+complete state/method ownership, the deliberate Loop reference, cold constructor/
+binding, exact typed groups and absence of Engine mirrors, whole-operation root
+callbacks or erased/global/context locators. Their negative samples reject those
+specific regressions rather than granting a blanket allowance. The measured
+Engine displayFrame span decreases 229 to 224. GameLoop 2367, special-stage 571,
+bonus 357, ending 320 and title 253 envelopes remain unchanged. Pin/store/ambient/
+permission accounting and compiled dependency results are separate checks below;
+package-private visibility is not treated as evidence of a zero delta.
+
+The initial focused implementation request selects the matched 55 ROM-free
+controls, at source/test/example fingerprint
+`d531c6c63cc653798fb2cf6db2d0c2c5a9edf4ecd66a11feab4cccb2cb1dc223`.
+It uses the prior section's normal queued Java 25/EGL/unset-environment launch,
+selector TestGameLoopSuspensionOwnership, without ROM arguments. Owned session
+41929 is pending admission at this checkpoint; no passing result is inferred.
+
+#### Frozen implementation review input and focused progress
+
+The parent received review input
+`d531c6c63cc653798fb2cf6db2d0c2c5a9edf4ecd66a11feab4cccb2cb1dc223`
+and the exact eight-file Java scope. Production SHA-256 values are Engine.java
+`6b9741c3699c61a1f2e22bdab905f7d31b6379d1c7dfd838f1645de8e52350fe`
+and GameLoopSuspension.java
+`8d867c3480f22fc955f344c9f860dcffa6385f036f25ff31389d09575e91a1af`.
+The six test files are SuspensionTestAccess, TestEngine,
+TestEngineSuspensionRendering, TestGameLoopSuspension,
+TestGameLoopSuspensionOwnership and tests/TestArchitecturalSourceGuard.
+GameLoop, SuspendedGame, MasterTitleScreen, SuspendedSettings and both viewport
+fixtures were compared byte-for-byte with the immutable baseline and are unchanged.
+Tooling, policies, pins, stores and guard-accounting prose are unchanged.
+
+Source review found one fixture issue before the S2 class was submitted: its
+new hub refresh callback sampled saved payload to copy parkedFrom, but that
+same narrow effect runs after resume has consumed the payload. The observation
+slot/callback was removed and the original mode assertion now reads the owner's
+actual saved mode directly. This retains the behavioral assertion without a
+fixture mirror or conditional skip. No red runtime or unrelated source fix was
+needed. Only TestGameLoopSuspension.java changed; the parent was told to supersede
+the review hash with
+`f68d4112dad7b7832dbb697b43b72d548579f483f59c04abcf7ff7a588fb52ee`.
+All other Java/test/tooling/guard inputs remained frozen. The already-completed
+55 controls, EGL case and 87 consumer/API cases were not repeated for this one
+independent fixture correction.
+
+| Session | Completed selection (tests/failures/errors/skips) | Queue wait | Maven execution | JUnit time |
+| --- | --- | --- | --- | --- |
+| 41929 | matched original 55 ROM-free controls, 55/0/0/0 | 99s | 1:29 | 1.687s |
+| 75979 | actual synthetic EGL Engine-phase case, 1/0/0/0 | 65s | 29.200s | 1.566s |
+| 26790 | 56 maintained ROM-free consumers + 31 API controls, 87/0/0/0 | 9s | 33.853s | recorded by per-class XML |
+| 46097 | separate matched S2 ROM class, 7/0/0/0 | 43s | 29.836s | 1.581s |
+
+The first three selections used d531c6c6 inputs; 46097 used f68d4112 inputs.
+All actual identities/skips/Java/EGL properties and supplied absolute ROM paths
+were inspected before reports were consumed. Native identity remains AMD/Mesa
+4.6 Core Profile, with the exact incoming service root restored by the fixture.
+This is the same synthetic LevelSelectProvider scene and actual Engine/GL/title
+phase oracle as baseline, not ROM gameplay/pixel parity.
+
+S2 emitted the same 82 NullPointerException preload headlines: 81 failed SFX IDs
+and one DAC-data load failure, with no failing/skipped JUnit cases. Fast-throw
+stack omission shortened the raw diagnostic text, not the count or test identity.
+This limitation remains explicit; no unrelated audio repair or synthesis-parity
+claim follows from the logical snapshot assertions.
+
+The fresh focused guard invocation is session 55499, pending at this checkpoint.
+It selects five SourceGuard cases (two ownership/negative controls plus dispatcher,
+large-class and low-level-lookup ratchets), eight singleton controls, five
+architecture accounting controls and the two named ArchUnit targets. Known
+Surefire behavior expands the field-based ArchUnit part to 27 field rules plus
+the selected cycle method: 46 total cases are expected, with actual identities
+and skips inspected on completion. Expected execution is 2–4 minutes; queue
+waiting remains separate. Source/store updating is disabled, and any unexplained
+new/worsened failure or dependency/accounting delta stops this slice. No combined
+smoke or complete guard fleet is launched by this worker.
+
+#### Compiled contracts and bounded dependency accounting
+
+Session 55499 completed **46/0/0/0**: SourceGuard 5, SingletonLifecycleGuard 8,
+ArchitecturalReviewGuard 5, and ArchUnit 28. Queue wait was 212s; Maven execution
+35.723s. The actual 28 ArchUnit identities are the expected 27 field rules plus
+core_runtime_cycle_cluster_does_not_gain_top_level_edges, including the requested
+low-level rule. There was no hidden second guard fleet or incomplete/tag-excluded
+selection. Every testcase identity, failure/error/skip node and each report's
+Java 25.0.5.0.2, explicit EGL and four ROM properties was inspected; reports were
+consumed. Store updating remained disabled by the unchanged archunit.properties.
+
+The new source matcher was then strengthened after that invocation became
+terminal: declared Engine fields/global services were already rejected, but a
+direct Engine.currentGameLoop() lookup and an EngineContext-returning lookup also
+need explicit negative coverage. The matcher now rejects Engine/EngineContext
+references themselves, with comments/string literals removed. This adds no
+allowance and changes only TestArchitecturalSourceGuard.java. Parent review was
+told to supersede f68d4112 with final input
+`3ec8ac0b4cdabb4be0564a397e8e731024728cb2a290bd043756a6c70b5bec67`.
+Only the two affected positive/negative ownership controls are submitted again in
+a fresh guard JVM, session 50453. Runtime, fixture, API and other passed guards
+are unchanged, so those selections are not repeated.
+
+A read-only inventory of actual compiled constant-pool class references and typed
+descriptors explains the expanded boundary below. This inventory conservatively
+includes nest/type metadata; the executed ArchUnit rules, not text matching or
+package-private visibility, establish the dependency-rule result. Maven's current
+created-file list and target contain no obsolete GameLoopSuspension$Host.class;
+no stale-class deletion or alternate output tree was needed.
+
+| Emitted origin | References and purpose |
+| --- | --- |
+| GameLoopSuspension | Existing Loop, Escape controller, listener, mod-act/hosted/trace/recording eligibility, config and gameplay context/fade references remain. Saved payload/Pending/Thumbnail/CameraPosition, AudioLogicalSnapshot, SuspendedSettings, WorldSession, GameId/GameModule/ZoneRegistry, stock/suspended card types and RgbaImage now implement the complete visit sequence. The SonicConfigurationService reference is the existing loop.configService eligibility call, not a new retained manager. There is no Engine, EngineContext, EngineServices or GameServices class dependency. |
+| CaptureEffects | Only WorldSession, AudioLogicalSnapshot, RgbaImage, SuspendedSettings, CameraPosition and GameEntry payload types, plus owner/nest metadata. This admits no manager/context/registry return. |
+| HubEffects | MasterTitleScreen plus owner/nest metadata; no general application lookup or frame callback. |
+| RetirementEffects | No external engine type; only owner/nest metadata. The existing shared-reset boundary and two final retirement effects are explicit operations. |
+| Effects record | The three typed interfaces and owner/nest metadata. It stores references only, without sampled visit or application state. |
+| Engine.SuspensionCaptureEffects | Engine plus its existing AudioManager, Camera, configuration, SessionManager/WorldSession, screenshot/RgbaImage and settings/snapshot/position/card payload types. These are the original raw-field owners and the explicitly justified published-world read. |
+| Engine.SuspensionHubEffects | Engine, screen, GraphicsManager and FadeManager, forwarding the existing factory, current screen, dimensions/cache and bootstrap fade effects. |
+| Engine.SuspensionRetirementEffects | Engine and the GameplayModeContext field descriptor for its existing gameplay-reference clear, with no broader application capability. |
+
+The executed signature/policy controls establish exact recursive API equality:
+**22,541 rows / 1,250 TYPE rows**. All 13 frozen-store blobs, signature pins,
+engine-internal terminals, release descriptor and update-disabled properties
+were byte-compared with fac319355 and remain unchanged. Executed accounting and
+singleton controls retain **119 low-level frozen records**, **6 ambient methods
+across 5 files**, and **151 package-pair permissions**. The core-runtime edge
+ratchet and all emitted field rules pass without repinning, store updates,
+terminal additions, permission expansion or exemptions. Public/protected roots
+and LevelManager's pinned surface remain protected by the same API controls.
+
+#### Final focused closure and handoff
+
+The final two source controls passed **2/0/0/0**, session 50453: queue wait
+46s, Maven 28.056s, JUnit 1.282s. Both exact identities executed in a fresh
+guard JVM, with Java 25.0.5.0.2, explicit EGL, all four absolute ROM properties
+and no skips. Its reports were inspected and consumed. Final Java/test inputs
+remain 3ec8ac0b4cdabb4be0564a397e8e731024728cb2a290bd043756a6c70b5bec67.
+The runtime pair's SHA-256 values above remain unchanged across d531c6c6,
+f68d4112 and this final review input; only the documented S2 fixture and guard
+negative-control corrections changed between those fingerprints.
+
+The exact final selectors are recorded here, using the original-production
+section's common normal queued environment. The 55-control selection and 87-case
+selection carry no ROM arguments. EGL, S2 and guard selections carry all four
+verified absolute ROM properties. Guard invocations additionally use -Pguards.
+
+```text
+# Matched final original-production controls, 55:
+TestGameLoopSuspensionOwnership
+
+# Actual Engine-phase EGL control, synthetic scene, 1:
+TestEngineSuspensionRendering#capturesSceneBeforeOverlaysAndResumesAfterPublishedZoom
+
+# Maintained ROM-free closure plus API/policy, 87:
+TestSuspendedGame,TestMasterTitleSuspendedGame,TestSuspendedSettings,TestEngine#firstResumeUsesTheSavedAspectWithoutAnotherMenuVisit+pausedGameSetupAspectReachesTheFirstResumeThroughTheMenu+titleAudioBackendReinstallHonorsAudioEnabledLifecycle+failedMasterTitleLaunchRollsBackHostLaunchCachesAfterSessionOverridesClear,TestViewportLifecycleContract,TestSpecialStageViewportContract,TestMasterTitleQuitFlow,TestLiveRewindOwnerLifetime#parkingReleasesPresentationAndResumesTheSameHistoryWithoutAdvancingIt,TestGameLoopBonusStageSession#parkingRetainsVisitAndDeferredOrFadeObligationsWithoutSteppingWorld,TestGameLoopEndingSession#refreshProviderResetGenericModesAndParkResumeRetainEndingState,TestGameLoopTitleCardOwnership#cacheAndDestinationSurviveRealParkResumeAndTeardown,TestGameLoopSpecialStageLifecycle#modeChangesClearPresentationButRetainResultsAndTransitionLatches,TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiRuntimePolicy,TestModApiReleasePolicy
+
+# Separate S2 ROM class, 7:
+TestGameLoopSuspension
+
+# Separate fresh focused architecture JVM, 46 actual:
+TestArchitecturalSourceGuard#suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects+suspendedVisitSamplesPermitTheKnownLoopButRejectMirrorsFacadesAndEagerBinding+rootDispatchMethodsDoNotGrowBeyondCurrentBudgets+releaseCriticalLargeClassesDoNotGrowWithoutExtraction+lowLevelGraphicsAndAudioDoNotGainGameplayServiceLookups,TestSingletonLifecycleGuard,TestArchitecturalReviewGuard#archUnitFrozenRulesDoNotAutoUpdateDuringNormalRuns+archUnitPublishedBaselineCountsMatchFrozenStore+archUnitDocumentedCrossGameMemberCountMatchesGroupedRecords+archUnitDocumentedPackagePairPermissionsMatchExecutableAllowances+archUnitCycleClusterDocumentationHasMatchingRatchets,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers+core_runtime_cycle_cluster_does_not_gain_top_level_edges
+
+# Only the subsequently strengthened source controls, fresh JVM, 2:
+TestArchitecturalSourceGuard#suspendedVisitOwnsItsCompleteLifetimeWithColdNarrowEffects+suspendedVisitSamplesPermitTheKnownLoopButRejectMirrorsFacadesAndEagerBinding
+```
+
+Across the disjoint selections **196 unique final case identities passed,
+zero failures/errors/skips**: 55 matched temporal controls, one EGL phase case,
+63 maintained consumers, 31 API/policy controls and 46 architecture controls.
+The final two cases are affected replacements within the 46, not two additional
+unique cases. No red implementation run, weakened assertion, retry, exclusion,
+opt-in bypass or unchanged broad repetition was used. Queue waits are separate
+from Maven execution; other unmeasured intervals remain unknown. Prior
+39346/786/119 results do not certify this implementation.
+
+All owned Maven sessions (41929, 75979, 26790, 46097, 55499, 50453) are terminal
+exit 0. All consumed reports/diagnostics are removed; no raw archive, pass cache,
+receipt, category-run directory or idle worker is retained. Source scope is the
+two production files and six maintained test/guard files above; only the existing
+continuation record, engine map and folded 0.7 Runtime ownership prose accompany
+them. Public/protected surfaces and every protected accepted owner remain
+unchanged. Parent still owns content-matched independent review, composed
+upstream reconciliation, change-based smoke against a9d88d2c9, complete fresh
+composed guards and integration. This local commit claims none of those later
+gates and is not pushed or integrated. The worktree/branch remain for handoff.

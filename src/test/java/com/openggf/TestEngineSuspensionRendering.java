@@ -114,8 +114,8 @@ class TestEngineSuspensionRendering {
 
                 assertFalse(engine.getGameLoop().suspension.parked());
                 assertTrue(engine.getGameLoop().suspension.preparing());
-                assertFalse(SuspensionTestAccess.<Boolean>get(engine, "suspendThumbnailRequested"));
-                SuspendedGame.Thumbnail thumbnail = get(engine, "pendingSuspendThumbnail");
+                assertFalse(SuspensionTestAccess.<Boolean>get(visit(engine), "suspendThumbnailRequested"));
+                SuspendedGame.Thumbnail thumbnail = get(visit(engine), "pendingSuspendThumbnail");
                 assertNotNull(thumbnail);
                 assertEquals(320, thumbnail.width()); assertEquals(224, thumbnail.height());
                 assertThumbnail(thumbnail, 40, 30, 0x0000ff); // top-left red rotated to blue
@@ -157,7 +157,7 @@ class TestEngineSuspensionRendering {
                 assertTrue(engine.getGameLoop().suspension.parked());
                 call(engine, "displayFrame");
                 assertFalse(engine.getGameLoop().suspension.parked());
-                assertNull(get(engine, "suspendedGame"));
+                assertNull(get(visit(engine), "suspendedGame"));
                 assertEquals(GameMode.LEVEL_SELECT, engine.getCurrentGameMode());
                 assertEquals(2, draws.get(), "gameplay redraw starts only after that published opportunity");
             } finally {

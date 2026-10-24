@@ -80,7 +80,7 @@ class TestGameLoopSuspensionOwnership {
     }
 
     private boolean prepare(Engine engine) {
-        return call(engine, "prepareSuspend", new Class<?>[]{GameMode.class}, GameMode.LEVEL);
+        return prepareSuspend(engine, GameMode.LEVEL);
     }
 
     private SuspendedGame saved(Fixture fixture, AudioLogicalSnapshot audio) {
@@ -92,14 +92,15 @@ class TestGameLoopSuspensionOwnership {
     @Test void coldConstructionAndHostBindingReadNoCollaborators() {
         var loop = mock(GameLoop.class);
         var owner = new GameLoopSuspension(loop);
-        var first = mock(GameLoopSuspension.Host.class);
-        var replacement = mock(GameLoopSuspension.Host.class);
-        owner.setHost(first);
-        owner.setHost(replacement);
+        var first = effects();
+        var replacement = effects();
+        owner.setEffects(first.binding());
+        owner.setEffects(replacement.binding());
         assertFalse(owner.parked());
         assertFalse(owner.preparing());
         assertNull(owner.parkedOwner());
-        verifyNoInteractions(loop, first, replacement);
+        verifyNoInteractions(loop, first.capture(), first.hub(), first.retirement(),
+                replacement.capture(), replacement.hub(), replacement.retirement());
     }
 
     @ParameterizedTest @ValueSource(strings = {"no-host", "no-runtime", "not-ready", "preparing", "parked", "host-declines", "test-mode", "mod-scene"})
@@ -109,20 +110,20 @@ class TestGameLoopSuspensionOwnership {
         when(gameplay.isGameplayRuntimeReady()).thenReturn(!boundary.equals("not-ready"));
         doReturn(boundary.equals("no-runtime") ? null : gameplay).when(loop).resolveGameplayModeContext();
         loop.changeGameModeWithoutRewindBoundary(boundary.equals("mod-scene") ? GameMode.MOD_SCENE : GameMode.LEVEL);
-        var host = mock(GameLoopSuspension.Host.class);
-        when(host.prepareSuspend(any())).thenReturn(!boundary.equals("host-declines"));
-        loop.suspension.setHost(boundary.equals("no-host") ? null : host);
+        var host = effects();
+        when(host.capture().editorPlaytestActive()).thenReturn(boundary.equals("host-declines"));
+        loop.suspension.setEffects(boundary.equals("no-host") ? null : host.binding());
         if (boundary.equals("preparing")) set(loop.suspension, "preparing", true);
         if (boundary.equals("parked")) set(loop.suspension, "parked", true);
         if (boundary.equals("test-mode")) loop.configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
         doNothing().when(loop).fadeOutTo(any());
-        clearInvocations(loop, gameplay, host);
+        clearInvocations(loop, gameplay, host.capture(), host.hub(), host.retirement());
 
         loop.suspension.leave();
 
         verify(loop).fadeOutTo(any());
-        if (boundary.equals("host-declines")) verify(host).prepareSuspend(GameMode.LEVEL);
-        else verifyNoInteractions(host);
+        if (boundary.equals("host-declines")) verify(host.capture()).publishedWorld();
+        else verifyNoInteractions(host.capture(), host.hub(), host.retirement());
         if (boundary.equals("no-host")) verify(loop, never()).resolveGameplayModeContext();
         else verify(loop).resolveGameplayModeContext(); // even parked/preparing resolve first
         if (List.of("preparing", "parked", "no-runtime", "no-host").contains(boundary))
@@ -134,25 +135,24 @@ class TestGameLoopSuspensionOwnership {
         var gameplay = mock(GameplayModeContext.class);
         when(gameplay.isGameplayRuntimeReady()).thenReturn(true);
         doReturn(gameplay).when(loop).resolveGameplayModeContext();
-        var first = mock(GameLoopSuspension.Host.class);
-        var replacement = mock(GameLoopSuspension.Host.class);
-        when(first.prepareSuspend(GameMode.LEVEL)).thenReturn(true);
-        loop.suspension.setHost(first);
+        var first = effects();
+        var replacement = effects();
+        loop.suspension.setEffects(first.binding());
         var modeReads = new java.util.concurrent.atomic.AtomicInteger();
         doAnswer(invocation -> {
-            if (modeReads.incrementAndGet() == 2) loop.suspension.setHost(replacement);
+            if (modeReads.incrementAndGet() == 2) loop.suspension.setEffects(replacement.binding());
             return GameMode.LEVEL;
         }).when(loop).getCurrentGameMode();
         loop.suspension.leave();
         assertEquals(2, modeReads.get(), "guard and argument are distinct virtual observations");
-        verify(first).prepareSuspend(GameMode.LEVEL); // receiver selected BEFORE the argument replaces Host
-        verify(replacement, never()).prepareSuspend(any());
+        verify(first.capture()).publishedWorld(); // receiver selected BEFORE the argument replaces Host
+        verify(replacement.capture(), never()).publishedWorld();
         var failure = new IllegalStateException("completion");
-        doAnswer(invocation -> { assertFalse(loop.suspension.preparing()); throw failure; }).when(replacement).suspend();
+        doAnswer(invocation -> { assertFalse(loop.suspension.preparing()); throw failure; }).when(replacement.capture()).suspendSettings();
         assertSame(failure, assertThrows(IllegalStateException.class, loop.suspension::completePreparedSuspend));
         loop.suspension.completePreparedSuspend();
-        verify(replacement).suspend();
-        verify(first, never()).suspend();
+        verify(replacement.capture()).suspendSettings();
+        verify(first.capture(), never()).suspendSettings();
     }
 
     @Test void parkUsesVirtualAdmissionModeButReturnsRawParkingModeAndReadsLiveListener() {
@@ -162,9 +162,8 @@ class TestGameLoopSuspensionOwnership {
         var gameplay = mock(GameplayModeContext.class);
         when(gameplay.isGameplayRuntimeReady()).thenReturn(true);
         doReturn(gameplay).when(loop).resolveGameplayModeContext();
-        var host = mock(GameLoopSuspension.Host.class);
-        when(host.prepareSuspend(GameMode.LEVEL)).thenReturn(true);
-        loop.suspension.setHost(host);
+        var host = effects();
+        loop.suspension.setEffects(host.binding());
         loop.suspension.leave();
         var events = new ArrayList<String>();
         doReturn(true).when(loop).isUserPaused();
@@ -183,7 +182,7 @@ class TestGameLoopSuspensionOwnership {
         loop.gameModeChangeListener = (before, after) -> fail("stale listener");
         assertEquals(GameMode.BONUS_STAGE, loop.suspension.park());
         assertEquals(List.of("unpause", "bindings", "replacement-listener"), events);
-        verify(host).prepareSuspend(GameMode.LEVEL);
+        verify(host.capture()).publishedWorld();
     }
 
     @ParameterizedTest @ValueSource(strings = {"bindings", "notification", "set-gameplay", "pause"})
@@ -241,22 +240,25 @@ class TestGameLoopSuspensionOwnership {
         doReturn(fade).when(loop).resolveFadeManager();
         loop.suspension.routeResume(screen); // absent Host does not even evaluate fade
         verifyNoInteractions(fade, screen);
-        var first = mock(GameLoopSuspension.Host.class);
-        var replacement = mock(GameLoopSuspension.Host.class);
-        loop.suspension.setHost(first);
+        var first = effects();
+        var replacement = effects();
+        loop.suspension.setEffects(first.binding());
         when(fade.isActive()).thenReturn(true);
         loop.suspension.routeResume(screen);
         verifyNoInteractions(screen);
         when(fade.isActive()).thenReturn(false);
         when(screen.consumeResumeRequest()).thenReturn(false);
         loop.suspension.routeResume(screen);
-        verify(first, never()).resume();
-        when(screen.consumeResumeRequest()).thenAnswer(invocation -> { loop.suspension.setHost(replacement); return true; })
+        verify(first.capture(), never()).resumeSettings(any(), any(), anyBoolean());
+        set(loop.suspension, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+                new SuspendedGame.Pending(null, SuspendedGame.card("s2", GameMode.LEVEL, "admission")), null,
+                mock(SuspendedSettings.class), null));
+        when(screen.consumeResumeRequest()).thenAnswer(invocation -> { loop.suspension.setEffects(replacement.binding()); return true; })
                 .thenReturn(false);
         loop.suspension.routeResume(screen);
         loop.suspension.routeResume(screen);
-        verify(replacement).resume();
-        verify(first, never()).resume();
+        verify(replacement.capture()).resumeSettings(any(), any(), anyBoolean());
+        verify(first.capture(), never()).resumeSettings(any(), any(), anyBoolean());
     }
 
     @ParameterizedTest @ValueSource(strings = {"audio-runtime", "zone-runtime", "audio-error", "fade"})
@@ -271,9 +273,9 @@ class TestGameLoopSuspensionOwnership {
         if (boundary.equals("audio-error")) when(fixture.audio.captureLogicalSnapshot()).thenThrow(error);
         if (boundary.equals("zone-runtime")) when(world.getGameModule().getZoneRegistry().getZoneName(anyInt())).thenThrow(failure);
         if (boundary.equals("fade")) doAnswer(invocation -> {
-            assertNotNull(get(fixture.engine, "pendingSuspend"));
-            assertNull(get(fixture.engine, "pendingSuspendThumbnail"));
-            assertTrue(SuspensionTestAccess.<Boolean>get(fixture.engine, "suspendThumbnailRequested"));
+            assertNotNull(get(visit(fixture.engine), "pendingSuspend"));
+            assertNull(get(visit(fixture.engine), "pendingSuspendThumbnail"));
+            assertTrue(SuspensionTestAccess.<Boolean>get(visit(fixture.engine), "suspendThumbnailRequested"));
             assertFalse(fixture.engine.getGameLoop().suspension.preparing());
             throw failure;
         }).when(fixture.audio).fadeOutMusic();
@@ -281,12 +283,12 @@ class TestGameLoopSuspensionOwnership {
             sessions.when(SessionManager::getCurrentWorldSession).thenReturn(world);
             if (boundary.equals("audio-error")) {
                 assertSame(error, assertThrows(AssertionError.class, () -> prepare(fixture.engine)));
-                assertNull(get(fixture.engine, "pendingSuspend"));
+                assertNull(get(visit(fixture.engine), "pendingSuspend"));
                 verify(fixture.audio, never()).fadeOutMusic();
             } else {
                 if (boundary.equals("fade")) assertSame(failure, assertThrows(IllegalStateException.class, () -> prepare(fixture.engine)));
                 else assertTrue(prepare(fixture.engine));
-                SuspendedGame.Pending pending = get(fixture.engine, "pendingSuspend");
+                SuspendedGame.Pending pending = get(visit(fixture.engine), "pendingSuspend");
                 assertSame(boundary.equals("audio-runtime") ? null : snapshot, pending.audio());
                 assertEquals(boundary.equals("audio-runtime") || boundary.equals("zone-runtime") ? "" : "Emerald Hill, Act 1",
                         pending.card().location());
@@ -307,12 +309,12 @@ class TestGameLoopSuspensionOwnership {
             set(fixture.engine, "editorProjectPlaytestActive", true);
             assertFalse(prepare(fixture.engine));
             set(fixture.engine, "editorProjectPlaytestActive", false);
-            set(fixture.engine, "suspendedGame", saved(fixture, null));
+            set(visit(fixture.engine), "suspendedGame", saved(fixture, null));
             assertFalse(prepare(fixture.engine));
             verifyNoInteractions(fixture.audio);
             var returns = new java.util.concurrent.atomic.AtomicInteger();
             fixture.engine.getGameLoop().setReturnToMasterTitleHandler(returns::incrementAndGet);
-            call(fixture.engine, "suspendToMasterTitle");
+            suspendToMasterTitle(fixture.engine);
             assertEquals(1, returns.get());
         }
     }
@@ -320,14 +322,14 @@ class TestGameLoopSuspensionOwnership {
     @ParameterizedTest @ValueSource(strings = {"success", "runtime", "resampling", "error"})
     void pictureRequestIsConsumedBeforeCaptureAndDimensionsAreReadAfterIt(String boundary) {
         var fixture = engine();
-        set(fixture.engine, "suspendThumbnailRequested", true);
+        set(visit(fixture.engine), "suspendThumbnailRequested", true);
         set(fixture.engine, "viewportX", 7); set(fixture.engine, "viewportY", 11);
         set(fixture.engine, "viewportWidth", 6); set(fixture.engine, "viewportHeight", 4);
         var failure = new IllegalStateException("readback");
         var error = new AssertionError("readback");
         try (var capture = mockStatic(ScreenshotCapture.class)) {
             capture.when(() -> ScreenshotCapture.captureFramebufferRegion(7, 11, 6, 4)).thenAnswer(invocation -> {
-                assertFalse(SuspensionTestAccess.<Boolean>get(fixture.engine, "suspendThumbnailRequested"));
+                assertFalse(SuspensionTestAccess.<Boolean>get(visit(fixture.engine), "suspendThumbnailRequested"));
                 set(fixture.engine, "projectionWidth", 3.0); set(fixture.engine, "realHeight", 2.0);
                 if (boundary.equals("runtime")) throw failure;
                 if (boundary.equals("error")) throw error;
@@ -340,23 +342,25 @@ class TestGameLoopSuspensionOwnership {
                 return new RgbaImage(6, 4, new int[6 * 4]);
             });
             if (boundary.equals("error")) assertSame(error, assertThrows(AssertionError.class,
-                    () -> call(fixture.engine, "captureSuspendThumbnailIfRequested")));
-            else call(fixture.engine, "captureSuspendThumbnailIfRequested");
-            call(fixture.engine, "captureSuspendThumbnailIfRequested");
+                    () -> captureSuspendThumbnail(fixture.engine)));
+            else captureSuspendThumbnail(fixture.engine);
+            captureSuspendThumbnail(fixture.engine);
             capture.verify(() -> ScreenshotCapture.captureFramebufferRegion(7, 11, 6, 4));
-            SuspendedGame.Thumbnail thumbnail = get(fixture.engine, "pendingSuspendThumbnail");
+            SuspendedGame.Thumbnail thumbnail = get(visit(fixture.engine), "pendingSuspendThumbnail");
             if (boundary.equals("success")) { assertEquals(3, thumbnail.width()); assertEquals(2, thumbnail.height()); }
             else assertNull(thumbnail);
             assertFalse(fixture.engine.getGameLoop().suspension.parked(), "readback itself never parks");
             if (!boundary.equals("error")) {
-                var host = mock(GameLoopSuspension.Host.class);
-                fixture.engine.getGameLoop().suspension.setHost(host);
+                var host = effects();
+                fixture.engine.getGameLoop().suspension.setEffects(host.binding());
                 set(fixture.engine.getGameLoop().suspension, "preparing", true);
+                set(visit(fixture.engine), "pendingSuspend", new SuspendedGame.Pending(null,
+                        SuspendedGame.card("s2", GameMode.LEVEL, "admission")));
                 var stopBeforeGl = new IllegalStateException("after handoff");
                 PerformanceProfiler profiler = get(fixture.engine, "profiler");
                 doThrow(stopBeforeGl).when(profiler).setEnabled(anyBoolean());
                 assertSame(stopBeforeGl, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "displayFrame")));
-                verify(host).suspend(); // success and either caught RuntimeException release readiness
+                verify(host.capture()).suspendSettings(); // success and either caught RuntimeException release readiness
             }
         }
     }
@@ -375,17 +379,17 @@ class TestGameLoopSuspensionOwnership {
         }
         var camera = mock(Camera.class);
         set(fixture.engine, "camera", camera);
-        when(camera.getX()).thenAnswer(invocation -> { assertNull(get(fixture.engine, "pendingSuspend")); return (short) 12; });
+        when(camera.getX()).thenAnswer(invocation -> { assertNull(get(visit(fixture.engine), "pendingSuspend")); return (short) 12; });
         var thumbnail = new SuspendedGame.Thumbnail(1, 1, new byte[4]);
         var stop = new IllegalStateException("after publication");
         fixture.engine.getGameLoop().changeGameModeWithoutRewindBoundary(GameMode.BONUS_STAGE);
         fixture.engine.getGameLoop().gameModeChangeListener = (old, next) -> {
-            assertNull(get(fixture.engine, "suspendedGame"));
-            set(fixture.engine, "pendingSuspendThumbnail", thumbnail);
+            assertNull(get(visit(fixture.engine), "suspendedGame"));
+            set(visit(fixture.engine), "pendingSuspendThumbnail", thumbnail);
         };
         doThrow(stop).when(fixture.graphics).setProjectionWidth(anyInt());
-        assertSame(stop, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "suspendToMasterTitle")));
-        SuspendedGame saved = get(fixture.engine, "suspendedGame");
+        assertSame(stop, assertThrows(IllegalStateException.class, () -> suspendToMasterTitle(fixture.engine)));
+        SuspendedGame saved = get(visit(fixture.engine), "suspendedGame");
         assertSame(thumbnail, saved.thumbnail(), "argument is read after park's live callback");
         assertSame(parkingOwner, fixture.engine.getGameLoop().suspension.parkedOwner());
         assertEquals(MasterTitleScreen.GameEntry.SONIC_2, saved.card().game().game(),
@@ -393,7 +397,7 @@ class TestGameLoopSuspensionOwnership {
         assertEquals(GameMode.BONUS_STAGE, saved.mode());
         assertTrue(saved.card().inLevel(), "card retains admission, independently of parking mode");
         assertEquals((short) 12, saved.camera().x());
-        assertNull(get(fixture.engine, "pendingSuspendThumbnail"));
+        assertNull(get(visit(fixture.engine), "pendingSuspendThumbnail"));
     }
 
     @ParameterizedTest @ValueSource(strings = {"cleanup", "settings", "unpark", "dimensions", "camera", "audio-runtime", "audio-error"})
@@ -411,11 +415,11 @@ class TestGameLoopSuspensionOwnership {
         var game = new SuspendedGame(GameMode.BONUS_STAGE,
                 new SuspendedGame.Pending(audio, SuspendedGame.card("s2", GameMode.LEVEL, "admitted level")),
                 null, settings, new SuspendedGame.CameraPosition((short) 1, (short) 2, (short) 3, (short) 4));
-        set(fixture.engine, "suspendedGame", game);
+        set(visit(fixture.engine), "suspendedGame", game);
         var failure = new IllegalStateException(boundary);
         var error = new AssertionError(boundary);
         doAnswer(invocation -> {
-            assertNull(get(fixture.engine, "suspendedGame"));
+            assertNull(get(visit(fixture.engine), "suspendedGame"));
             assertSame(screen, get(fixture.engine, "masterTitleScreen"));
             if (boundary.equals("cleanup")) throw failure;
             return null;
@@ -426,17 +430,17 @@ class TestGameLoopSuspensionOwnership {
         if (boundary.equals("camera")) doThrow(failure).when(camera).setX((short) 1);
         if (boundary.equals("audio-runtime")) doThrow(failure).when(fixture.audio).restoreLogicalSnapshot(audio);
         if (boundary.equals("audio-error")) doThrow(error).when(fixture.audio).restoreLogicalSnapshot(audio);
-        if (boundary.equals("audio-runtime")) call(fixture.engine, "resumeSuspendedGame");
-        else if (boundary.equals("audio-error")) assertSame(error, assertThrows(AssertionError.class, () -> call(fixture.engine, "resumeSuspendedGame")));
-        else assertSame(failure, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "resumeSuspendedGame")));
-        assertNull(get(fixture.engine, "suspendedGame"));
+        if (boundary.equals("audio-runtime")) resumeSuspendedGame(fixture.engine);
+        else if (boundary.equals("audio-error")) assertSame(error, assertThrows(AssertionError.class, () -> resumeSuspendedGame(fixture.engine)));
+        else assertSame(failure, assertThrows(IllegalStateException.class, () -> resumeSuspendedGame(fixture.engine)));
+        assertNull(get(visit(fixture.engine), "suspendedGame"));
         assertSame(boundary.equals("cleanup") ? screen : null, get(fixture.engine, "masterTitleScreen"));
         if (!boundary.equals("cleanup")) verify(settings).resume(fixture.config, MasterTitleScreen.GameEntry.SONIC_2, false);
         else verifyNoInteractions(settings);
         if (List.of("cleanup", "settings", "unpark", "dimensions", "camera").contains(boundary))
             verify(fixture.audio, never()).restoreLogicalSnapshot(any());
         verify(fade, boundary.equals("audio-runtime") ? times(1) : never()).cancel();
-        call(fixture.engine, "resumeSuspendedGame"); // consumed payload means no retry
+        resumeSuspendedGame(fixture.engine); // consumed payload means no retry
         verify(screen).cleanup();
     }
 
@@ -444,12 +448,12 @@ class TestGameLoopSuspensionOwnership {
     void sharedRetirementClearsPayloadBeforeDiscardAndFailureSkipsSharedTeardown(String entry) {
         var fixture = engine();
         fixture.engine.getGameLoop().suspension.park();
-        set(fixture.engine, "suspendedGame", saved(fixture, null));
+        set(visit(fixture.engine), "suspendedGame", saved(fixture, null));
         var failure = new AssertionError("discard bindings");
         var world = world();
         var module = world.getGameModule();
         doAnswer(invocation -> {
-            assertNull(get(fixture.engine, "suspendedGame"));
+            assertNull(get(visit(fixture.engine), "suspendedGame"));
             assertFalse(fixture.engine.getGameLoop().suspension.parked());
             throw failure;
         }).when(module).resetModuleScopedState();
@@ -457,6 +461,7 @@ class TestGameLoopSuspensionOwnership {
             sessions.when(SessionManager::getCurrentWorldSession).thenReturn(world);
             assertSame(failure, assertThrows(AssertionError.class, () -> {
                 if (entry.equals("replacement-launch")) fixture.engine.exitMasterTitleScreen("s2");
+                else if (entry.equals("discardSuspendedGame")) discardSuspendedGame(fixture.engine);
                 else call(fixture.engine, entry);
             }));
         }
@@ -467,16 +472,18 @@ class TestGameLoopSuspensionOwnership {
     void betweenFrameHandoffNeedsPreparationAndAConsumedPictureRequest(String state) {
         var fixture = engine();
         var loop = fixture.engine.getGameLoop();
-        var host = mock(GameLoopSuspension.Host.class);
-        loop.suspension.setHost(host);
+        var host = effects();
+        loop.suspension.setEffects(host.binding());
         boolean preparing = state.equals("ready") || state.equals("awaiting-picture");
         set(loop.suspension, "preparing", preparing);
-        set(fixture.engine, "suspendThumbnailRequested", state.equals("request-only") || state.equals("awaiting-picture"));
+        set(loop.suspension, "pendingSuspend", new SuspendedGame.Pending(null,
+                SuspendedGame.card("s2", GameMode.LEVEL, "admission")));
+        set(visit(fixture.engine), "suspendThumbnailRequested", state.equals("request-only") || state.equals("awaiting-picture"));
         var stopBeforeGl = new IllegalStateException("boundary observed before GL");
         PerformanceProfiler profiler = get(fixture.engine, "profiler");
         doThrow(stopBeforeGl).when(profiler).setEnabled(anyBoolean());
         assertSame(stopBeforeGl, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "displayFrame")));
-        verify(host, state.equals("ready") ? times(1) : never()).suspend();
+        verify(host.capture(), state.equals("ready") ? times(1) : never()).suspendSettings();
         assertEquals(state.equals("awaiting-picture"), loop.suspension.preparing());
     }
 
@@ -484,7 +491,7 @@ class TestGameLoopSuspensionOwnership {
     void parkingFailureMatrixConsumesPendingAndKeepsOnlyAlreadyPublishedState(String boundary) {
         var fixture = engine();
         var pending = new SuspendedGame.Pending(null, SuspendedGame.card("s2", GameMode.LEVEL, "admission"));
-        set(fixture.engine, "pendingSuspend", pending);
+        set(visit(fixture.engine), "pendingSuspend", pending);
         var camera = mock(Camera.class);
         set(fixture.engine, "camera", camera);
         var oldScreen = mock(MasterTitleScreen.class);
@@ -503,12 +510,12 @@ class TestGameLoopSuspensionOwnership {
         try (var construction = mockConstruction(MasterTitleScreen.class, (screen, ignored) -> {
             if (boundary.equals("initialize")) doThrow(failure).when(screen).initialize();
         })) {
-            assertSame(failure, assertThrows(IllegalStateException.class, () -> call(fixture.engine, "suspendToMasterTitle")));
-            assertNull(get(fixture.engine, "pendingSuspend"));
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> suspendToMasterTitle(fixture.engine)));
+            assertNull(get(visit(fixture.engine), "pendingSuspend"));
             boolean parked = !List.of("settings", "camera").contains(boundary);
             boolean published = List.of("old-screen", "factory", "initialize").contains(boundary);
             assertEquals(parked, fixture.engine.getGameLoop().suspension.parked());
-            assertEquals(published, get(fixture.engine, "suspendedGame") != null);
+            assertEquals(published, get(visit(fixture.engine), "suspendedGame") != null);
             assertSame(boundary.equals("initialize") ? construction.constructed().getFirst() : oldScreen,
                     get(fixture.engine, "masterTitleScreen"));
             verify(oldScreen, published ? times(1) : never()).cleanup();
@@ -532,8 +539,8 @@ class TestGameLoopSuspensionOwnership {
         verify(loopAudio, never()).captureLogicalSnapshot();
         fixture.engine.getGameLoop().toggleUserPause();
         fixture.engine.getGameLoop().suspension.park();
-        set(fixture.engine, "suspendedGame", saved(fixture, snapshot));
-        call(fixture.engine, "resumeSuspendedGame");
+        set(visit(fixture.engine), "suspendedGame", saved(fixture, snapshot));
+        resumeSuspendedGame(fixture.engine);
         verify(fixture.audio).restoreLogicalSnapshot(snapshot);
         verify(loopAudio, never()).restoreLogicalSnapshot(any());
         assertTrue(fixture.engine.getGameLoop().isUserPaused());
@@ -551,10 +558,10 @@ class TestGameLoopSuspensionOwnership {
         call(fixture.engine, "resetGameplayRuntime");
         set(fixture.engine, "gameLoop", originalLoop);
         var saved = saved(fixture, null);
-        set(fixture.engine, "suspendedGame", saved);
+        set(visit(fixture.engine), "suspendedGame", saved);
         originalLoop.suspension.park();
         call(fixture.engine, "cleanup");
-        assertSame(saved, get(fixture.engine, "suspendedGame"), "exit has no explicit discard step");
+        assertSame(saved, get(visit(fixture.engine), "suspendedGame"), "exit has no explicit discard step");
         assertTrue(originalLoop.suspension.parked());
     }
 
@@ -606,12 +613,12 @@ class TestGameLoopSuspensionOwnership {
         fixture.engine.getGameLoop().suspension.park();
         set(fixture.engine, "masterTitleScreen", oldScreen);
         set(fixture.engine, "camera", oldCamera);
-        set(fixture.engine, "suspendedGame", new SuspendedGame(GameMode.LEVEL,
+        set(visit(fixture.engine), "suspendedGame", new SuspendedGame(GameMode.LEVEL,
                 new SuspendedGame.Pending(entryAudio, SuspendedGame.card("s2", GameMode.BONUS_STAGE, "admission")),
                 null, settings, new SuspendedGame.CameraPosition((short) 11, (short) 22, (short) 33, (short) 44)));
         doAnswer(invocation -> {
             set(fixture.engine, "masterTitleScreen", replacementScreen);
-            fixture.engine.getGameLoop().suspension.setHost(get(otherEngine.engine.getGameLoop().suspension, "host"));
+            fixture.engine.getGameLoop().suspension.setEffects(binding(otherEngine.engine));
             return null;
         }).when(oldScreen).cleanup();
         doAnswer(invocation -> {
@@ -633,7 +640,7 @@ class TestGameLoopSuspensionOwnership {
         verifyNoInteractions(oldCamera, replacementScreen, otherEngine.audio, otherEngine.graphics);
         verify(fixture.audio).restoreLogicalSnapshot(entryAudio);
         verify(fixture.graphics).setProjectionWidth(anyInt());
-        assertNull(get(fixture.engine, "suspendedGame"));
+        assertNull(get(visit(fixture.engine), "suspendedGame"));
     }
 
 }
