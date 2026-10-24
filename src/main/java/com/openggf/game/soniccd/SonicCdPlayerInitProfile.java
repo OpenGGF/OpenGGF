@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Explicit terrain-only development PLAYER assembly through the existing load owner.
- * Reuses the same module's STATIC terrain steps, then creates one native routine-0
- * actor. No Process_Sprites, pre-landing, generic player reset, animation prime,
- * title, executable placements, HUD timer or native driver is admitted here.
+ * Named development PLAYER assemblies through the existing load owner.
+ * Reuse the same module's STATIC terrain steps, then create one routine-0 actor
+ * and, only in opening mode, its bounded shared object pass. No setup dispatch,
+ * pre-landing, generic player reset, animation prime, title, HUD timer or driver.
+ * Placement executes later through the ordinary loop, never during assembly.
  */
 public final class SonicCdPlayerInitProfile implements LevelInitProfile {
     private final SonicCdGameModule module;
@@ -33,20 +34,25 @@ public final class SonicCdPlayerInitProfile implements LevelInitProfile {
         return SonicCdLevelInitProfile.staticStageContext();
     }
 
+    /** Same fresh terrain cut, explicitly named for the separately selected opening module. */
+    public static LevelLoadContext openingObjectsContext() {
+        return SonicCdLevelInitProfile.staticStageContext();
+    }
+
     @Override public List<InitStep> levelLoadSteps(LevelLoadContext context) {
         // A rejected replacement request must not cancel the already admitted actor.
         admittedAttempt = false;
         validateRequest(Objects.requireNonNull(context, "context"));
         module.validateTerrainPlayerRequest();
         var steps = new ArrayList<InitStep>();
-        steps.add(new InitStep("AdmitTerrainPlayer", "Validate the complete player request before any owner is reset", () -> {
+        steps.add(new InitStep(module.openingObjectsAdmission() ? "AdmitOpeningObjectsPlayer" : "AdmitTerrainPlayer", "Validate the complete player request before any owner is reset", () -> {
             validateRequest(context);
             module.validateTerrainPlayerRequest();
             admittedAttempt = true;
             module.closeTerrainPlayer();
         }));
         steps.addAll(terrain.levelLoadSteps(context));
-        steps.add(new InitStep("InstallTerrainPlayer", "Stage the source frame and exact registered Sonic factory after terrain/adapters",
+        steps.add(new InitStep(module.openingObjectsAdmission() ? "InstallOpeningObjectsPlayer" : "InstallTerrainPlayer", "Stage the source frame and exact registered Sonic factory after terrain/adapters",
                 module::installTerrainPlayer));
         return List.copyOf(steps);
     }

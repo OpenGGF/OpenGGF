@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.game.*;
 import com.openggf.game.mode.GameplayFrameController;
+import com.openggf.game.internal.NativeDynamicObjectPass;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -13,6 +14,11 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.save.SaveSnapshotProvider;
 import com.openggf.game.soniccd.level.SonicCdLevel;
+import com.openggf.game.soniccd.level.CdR11aAssets;
+import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
+import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
+import com.openggf.game.soniccd.objects.CdRingGlobals;
+import com.openggf.game.soniccd.player.CdPlayerBody;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerEngineRules;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
@@ -20,20 +26,26 @@ import com.openggf.level.Level;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.playable.SecondaryAbility;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * Real stock CD module retaining its default STATIC R11A terrain admission and
- * a separately named terrain-only development PLAYER entry. Neither admits native
- * title/new-game, placements/rings/HUD/audio driver, saves, export or editor entry.
+ * separately named terrain-only and USA opening-object development PLAYER entries.
+ * The opening entry executes the bounded Ring/Mosqui owners, not a retail title
+ * ingress or full route. Native title/new-game/HUD/audio driver, saves, export and
+ * editor entry remain unavailable.
  * The full native metadata catalogue is not a load-capability list. GameLoop
  * remains the sole mode writer.
  */
 public final class SonicCdGameModule implements GameModule {
     private static final String SHARED_REWIND_KEY = "soniccd-terrain-player-shared";
     private static final String RESTORE_CALLBACK_KEY = "soniccd-terrain-player-projection";
+    private static final String OPENING_SHARED_REWIND_KEY = "soniccd-opening-player-shared";
     private final boolean playerAdmission;
+    private final boolean openingObjectsAdmission;
     private final SonicCdZoneRegistry zones = new SonicCdZoneRegistry();
     private final PhysicsProvider rules;
     private final SonicCdStaticAudioProfile audio = new SonicCdStaticAudioProfile();
@@ -46,6 +58,8 @@ public final class SonicCdGameModule implements GameModule {
     private GameplayModeContext playerMode;
     private CdPlayerFrameRuntime playerFrame;
     private CdPlayableSonic playerActor;
+    private CdOpeningObjectRuntime openingObjects;
+    private CdR11aAssets authenticatedOpeningAssets;
     private boolean constructingPlayer;
 
     // This stable module adapter owns shared state only. Actor Body/history/display,
@@ -65,31 +79,69 @@ public final class SonicCdGameModule implements GameModule {
         }
     };
 
-    /** The stock/default entry retains its STATIC/HOLD/no-actor contract. */
-    public SonicCdGameModule() { this(false); }
+    // One shared opening payload. Body/history/display remain in actor Extra;
+    // camera/scroll remain in their existing adapters. No duplicate player capture.
+    private record OpeningSharedState(CdPlayerFrameRuntime.SharedState frame,
+                                      CdOpeningObjectRuntime.Snapshot objects) { }
+    private final RewindSnapshottable<OpeningSharedState> sharedOpeningAdapter = new RewindSnapshottable<>() {
+        @Override public String key() { return OPENING_SHARED_REWIND_KEY; }
+        @Override public OpeningSharedState capture() {
+            requireTerrainPlayerReady();
+            requireOpeningClosedCut();
+            playerActor.requireCompletedNativeFrame();
+            return new OpeningSharedState(playerFrame.captureShared(), openingObjects.captureClosedCut());
+        }
+        @Override public void restore(OpeningSharedState snapshot) {
+            requireTerrainPlayerReady();
+            requireOpeningClosedCut();
+            playerActor.requireCompletedNativeFrame();
+            playerFrame.captureShared(); // Pure pending-input/entitlement guard before runtime preflight.
+            Objects.requireNonNull(snapshot, "opening shared capture");
+            // Both preflights are pure and run BEFORE either partition changes.
+            playerFrame.validateSharedRestore(snapshot.frame());
+            openingObjects.validateRestore(snapshot.objects());
+            try {
+                playerFrame.restoreShared(snapshot.frame());
+                openingObjects.restore(snapshot.objects());
+            } catch (RuntimeException | Error failure) {
+                closePlayerCycleAfterFailure(failure);
+                throw failure;
+            }
+        }
+    };
 
-    private SonicCdGameModule(boolean playerAdmission) {
+    /** The stock/default entry retains its STATIC/HOLD/no-actor contract. */
+    public SonicCdGameModule() { this(false, false); }
+
+    private SonicCdGameModule(boolean playerAdmission, boolean openingObjectsAdmission) {
         this.playerAdmission = playerAdmission;
+        this.openingObjectsAdmission = openingObjectsAdmission;
         rules = playerAdmission ? new CdPlayerEngineRules() : new SonicCdStaticRules();
         playerPresentation = playerAdmission ? new SonicCdPlayerPresentation(this) : null;
         playerProfile = playerAdmission ? new SonicCdPlayerInitProfile(this, profile) : null;
         characters = playerAdmission ? PlayableCharacterRegistry.empty().register(CharacterKey.SONIC,
-                new CharacterDefinition(CharacterKey.SONIC, "Sonic (CD terrain development)",
+                new CharacterDefinition(CharacterKey.SONIC, openingObjectsAdmission
+                        ? "Sonic (CD opening objects development)" : "Sonic (CD terrain development)",
                         this::constructTerrainPlayer, null, PlayerCharacter.SONIC_ALONE, SecondaryAbility.NONE, false,
                         code -> { throw SonicCd.unsupported("generic playable-art loading; CD owns its complete resident bank"); }))
                 : PlayableCharacterRegistry.empty();
     }
 
     /** Explicit private development entry; does not change the stock registry or menu. */
-    public static SonicCdGameModule terrainOnlyDevelopmentPlayer() { return new SonicCdGameModule(true); }
+    public static SonicCdGameModule terrainOnlyDevelopmentPlayer() { return new SonicCdGameModule(true, false); }
+
+    /** Private USA R11A DEV ingress; stock registry/configuration/menu remain unchanged. */
+    public static SonicCdGameModule openingObjectsDevelopmentPlayer() { return new SonicCdGameModule(true, true); }
 
     @Override public String getIdentifier() {
-        return playerAdmission ? "Sonic CD (development terrain-only R11A PLAYER)" : "Sonic CD (development STATIC R11A)";
+        return openingObjectsAdmission ? "Sonic CD (development USA R11A opening objects PLAYER)"
+                : playerAdmission ? "Sonic CD (development terrain-only R11A PLAYER)" : "Sonic CD (development STATIC R11A)";
     }
     @Override public GameId getGameId() { return GameId.SCD; }
 
     @Override public Game createGame(GameDataSource dataSource) {
         CdGameDataSource candidate = SonicCd.requireSource(dataSource);
+        authenticateOpeningSource(candidate); // Actual retained media before replacing source/presentation state.
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD module is pinned to another authenticated source; open a new module/world");
         }
@@ -104,6 +156,14 @@ public final class SonicCdGameModule implements GameModule {
     }
 
     boolean terrainPlayerAdmission() { return playerAdmission; }
+    boolean openingObjectsAdmission() { return openingObjectsAdmission; }
+
+    private void authenticateOpeningSource(CdGameDataSource candidate) {
+        if (!openingObjectsAdmission || authenticatedOpeningAssets == candidate.assets()) return;
+        try { candidate.assets().openingObjects(); } // USA + actual MMD hash/tables/art, not a declared region alone.
+        catch (IOException failure) { throw new UncheckedIOException("Cannot authenticate CD opening assets", failure); }
+        authenticatedOpeningAssets = candidate.assets();
+    }
 
     /** Load admission; the presentation can call this before each row's input/service too. */
     void validateTerrainPlayerRequest() {
@@ -153,7 +213,15 @@ public final class SonicCdGameModule implements GameModule {
                 || centreY != (playerFrame.state().motion().centreY16_16() >> 16)) {
             throw new IllegalStateException("CD factory is available only for its staged cold player");
         }
-        return new CdPlayableSonic(code, playerFrame, GameServices.graphics());
+        if (!openingObjectsAdmission) return new CdPlayableSonic(code, playerFrame, GameServices.graphics());
+        var runtime = Objects.requireNonNull(openingObjects, "staged opening pass");
+        return new CdPlayableSonic(code, playerFrame, GameServices.graphics(), new CdPlayableSonic.ObjectPass() {
+            @Override public CdPlayerFrameRuntime.BodyPublication runBody(int levelFrames) {
+                return runtime.runPlayerBody(levelFrames);
+            }
+            @Override public void enqueuePlayer(CdPlayerBody.DisplayEligibility cut) { runtime.enqueuePlayer(cut); }
+            @Override public void close() { runtime.close(); }
+        });
     }
 
     /** Runs only after the composed terrain/reset/adapter stages have finished. */
@@ -168,7 +236,24 @@ public final class SonicCdGameModule implements GameModule {
         }
         playerMode = mode;
         try {
-            playerFrame = CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
+            playerFrame = openingObjectsAdmission
+                    ? CdPlayerFrameRuntime.externalTouchRequiredDevelopment(candidate.assets())
+                    : CdPlayerFrameRuntime.terrainOnlyDevelopment(candidate.assets());
+            if (openingObjectsAdmission) {
+                var banks = playerPresentation.reserveOpeningPictureBank();
+                var camera = mode.getCamera();
+                try {
+                    // Explicit DEVELOPMENT startup policy, never title/new-game proof.
+                    // Reserved owners 1..31 absent, goodFuture=0, object art preloaded.
+                    openingObjects = CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                            candidate.assets(), playerFrame, new CdRingGlobals(0, 3, 0, 0, 0, 0, 0, 0),
+                            new byte[CdObjectDrawQueue.SAT_BYTE_SIZE], banks,
+                            new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF),
+                            playerFrame::applyObjectPrimaryAngle);
+                } catch (IOException failure) {
+                    throw new UncheckedIOException("Cannot stage authenticated CD opening objects", failure);
+                }
+            }
             var definition = mode.getWorldSession().getPlayableCharacterRegistry().find(CharacterKey.SONIC).orElseThrow();
             var centre = candidate.assets().loadPlan().initialCentre();
             constructingPlayer = true;
@@ -180,7 +265,7 @@ public final class SonicCdGameModule implements GameModule {
                 constructingPlayer = false;
             }
             mode.getSpriteManager().addSprite(playerActor);
-            playerPresentation.bindFrame(playerFrame, playerActor);
+            playerPresentation.bindFrame(playerFrame, playerActor, openingObjects);
             mode.registerLevelAdapters(mode.getLevelManager());
             mode.registerGameModuleRewindAdapters();
             var rewind = Objects.requireNonNull(mode.getRewindRegistry(), "rewind registry");
@@ -204,7 +289,8 @@ public final class SonicCdGameModule implements GameModule {
                 || playerFrame.assets() != requireRuntimeSource().assets()
                 || mode.getSpriteManager().getAllSprites().size() != 1
                 || mode.getSpriteManager().getSprite("sonic") != playerActor
-                || mode.getCamera().getFocusedSprite() != playerActor) {
+                || mode.getCamera().getFocusedSprite() != playerActor
+                || (openingObjectsAdmission && (openingObjects == null || openingObjects.closed()))) {
             throw new IllegalStateException("CD terrain-player admission is incomplete or its fixed roster changed");
         }
     }
@@ -212,15 +298,33 @@ public final class SonicCdGameModule implements GameModule {
     CdPlayerFrameRuntime requirePlayerFrame() { requireTerrainPlayerReady(); return playerFrame; }
     CdPlayableSonic requirePlayerActor() { requireTerrainPlayerReady(); return playerActor; }
 
+    private void requireOpeningClosedCut() {
+        // Runtime mid-cycle capture is terminal. Reject diagnostics/rewind here
+        // before calling that destructive predicate; do not pretend to complete a tail.
+        if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+            throw new IllegalStateException("Opening rewind requires a completed native loop");
+        }
+    }
+
+    /** Close the source siblings after an advanced failure; never fabricate rollback or a retry cut. */
+    void closePlayerCycleAfterFailure(Throwable failure) {
+        try { if (openingObjects != null) openingObjects.close(); }
+        catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+        try { if (playerFrame != null) playerFrame.close(); }
+        catch (RuntimeException | Error cleanup) { if (cleanup != failure) failure.addSuppressed(cleanup); }
+    }
+
     /** Also called by the player controller's close(): session teardown does not run the profile. */
     void closeTerrainPlayer() {
         if (!playerAdmission) return;
         var oldFrame = playerFrame;
+        var oldObjects = openingObjects;
         var oldActor = playerActor;
         var oldMode = playerMode;
         constructingPlayer = false;
         try {
-            if (oldFrame != null) oldFrame.close();
+            try { if (oldObjects != null) oldObjects.close(); }
+            finally { if (oldFrame != null) oldFrame.close(); }
         } finally {
             try {
                 playerPresentation.unbind();
@@ -237,6 +341,7 @@ public final class SonicCdGameModule implements GameModule {
                         }
                     }
                 } finally {
+                    openingObjects = null;
                     playerFrame = null;
                     playerActor = null;
                     playerMode = null;
@@ -252,6 +357,7 @@ public final class SonicCdGameModule implements GameModule {
         if (source != null && !source.identity().equals(candidate.identity())) {
             throw new IllegalArgumentException("CD runtime source differs from this module's authenticated binding");
         }
+        authenticateOpeningSource(candidate);
         return candidate;
     }
 
@@ -309,9 +415,16 @@ public final class SonicCdGameModule implements GameModule {
     @Override public GameplayFrameController gameplayFrameController() { return playerAdmission ? playerPresentation : presentation; }
     @Override public PlayableCharacterRegistry getPlayableCharacterRegistry() { return characters; }
     @Override public List<RewindSnapshottable<?>> rewindAdapters() {
-        return playerAdmission ? List.of(sharedPlayerAdapter) : List.of();
+        return openingObjectsAdmission ? List.of(sharedOpeningAdapter)
+                : playerAdmission ? List.of(sharedPlayerAdapter) : List.of();
     }
     @Override public <T> T getGameService(Class<T> type) {
+        if (openingObjectsAdmission) {
+            // Even a failed owner remains selected until teardown: returning null here
+            // would silently fall back to normal gameplay after a terminal failure.
+            return openingObjects != null && (type == NativeDynamicObjectPass.class || type == PlcLifecycleService.class)
+                    ? type.cast(openingObjects) : null;
+        }
         return playerAdmission && type == PlcLifecycleService.class && playerFrame != null ? type.cast(playerFrame) : null;
     }
     @Override public boolean suppressesLevelSelect() { return true; }

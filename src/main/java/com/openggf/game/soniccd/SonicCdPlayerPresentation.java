@@ -17,10 +17,15 @@ import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.soniccd.level.CdR11aAssets;
 import com.openggf.game.soniccd.level.CdR11aTerrain;
 import com.openggf.game.soniccd.level.SonicCdLevel;
+import com.openggf.game.soniccd.objects.CdObjectDrawQueue;
+import com.openggf.game.soniccd.objects.CdOpeningObjectRuntime;
 import com.openggf.game.soniccd.player.CdPlayableSonic;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.scroll.CdR11aForegroundScroll;
+import com.openggf.graphics.PatternAtlas;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.LevelManager;
+import com.openggf.level.render.SpritePresentationRenderer;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.managers.SpriteManagerInternalAccess;
@@ -29,8 +34,10 @@ import java.util.Arrays;
 import java.util.Objects;
 
 /**
- * Normal controlled-frame and camera adapters for the private terrain-only entry.
- * Static background, no native objects/rings/HUD/music, and no retail-route claim.
+ * Controlled-frame/camera adapters for the separately named private player entries.
+ * Opening objects share one native pass and immutable picture; terrain-only retains
+ * its existing player draw. Both keep a static background, no HUD/native music and
+ * no retail-route claim. Mixed plane/sprite priority remains a known presentation gap.
  * Source service is provided by the existing PLC boundary, never by draw/callback.
  */
 final class SonicCdPlayerPresentation implements GameplayFrameController, ControlledVBlankOnlyOwner,
@@ -40,6 +47,13 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private CdR11aAssets assets;
     private CdPlayerFrameRuntime frame;
     private CdPlayableSonic actor;
+    private CdOpeningObjectRuntime openingObjects;
+    // This module exclusively reserves OBJECTS. Normal terrain reset replaces the
+    // atlas; retained-level reset keeps this reservation and removes just our 108
+    // picture patterns. Never clear other producers' ranges or infer ownership
+    // from a range with matching coordinates. Rewind cannot move to another atlas.
+    private PatternAtlas openingAtlas;
+    private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70;
     private CdR11aForegroundScroll.State scrollState;
     private Object scrollCaptureOwner = new Object();
     private PlcLifecyclePhase heldPhase;
@@ -55,15 +69,34 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
         heldPhase = null;
     }
 
-    void bindFrame(CdPlayerFrameRuntime frame, CdPlayableSonic actor) {
+    CdOpeningObjectRuntime.LogicalBanks reserveOpeningPictureBank() {
+        if (!module.openingObjectsAdmission()) throw new IllegalStateException("Not the opening picture owner");
+        var atlas = Objects.requireNonNull(GameServices.graphics().getPatternAtlas(), "loaded terrain atlas");
+        if (atlas != openingAtlas) {
+            atlas.registerRange(PatternAtlasRange.OBJECTS); // Reject ANY competing OBJECTS producer.
+            openingAtlas = atlas;
+        }
+        int base = PatternAtlasRange.OBJECTS.base();
+        return new CdOpeningObjectRuntime.LogicalBanks(base, base + 24, base + 38);
+    }
+
+    private void requireOpeningAtlas() {
+        if (openingAtlas == null || GameServices.graphics().getPatternAtlas() != openingAtlas) {
+            throw new IllegalStateException("CD opening picture cannot rebind across an atlas reset; reload its world");
+        }
+    }
+
+    void bindFrame(CdPlayerFrameRuntime frame, CdPlayableSonic actor, CdOpeningObjectRuntime openingObjects) {
         Objects.requireNonNull(frame); Objects.requireNonNull(actor);
-        if (frame.assets() != assets || actor.nativeState() != frame.state()) {
+        if (frame.assets() != assets || actor.nativeState() != frame.state()
+                || module.openingObjectsAdmission() != (openingObjects != null)) {
             throw new IllegalArgumentException("CD actor/frame/scroll must bind the same source owner");
         }
         var camera = GameServices.camera();
         requireViewport(camera);
         this.frame = frame;
         this.actor = actor;
+        this.openingObjects = openingObjects;
         requireBound();
         camera.setFocusedSprite(actor); // This resets camera words; project only AFTER this call.
         camera.setFrozen(true); // Only CameraDrivenScrollHandler advances the native foreground.
@@ -72,26 +105,44 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     }
 
     void unbind() {
-        if (frame != null) frame.clearPendingInput();
-        frame = null; actor = null; assets = null; scrollState = null; heldPhase = null;
-        horizontalOffset = 0;
+        try {
+            if (frame != null) frame.clearPendingInput();
+            if (openingAtlas != null && GameServices.graphics().getPatternAtlas() == openingAtlas) {
+                for (int i = 0; i < OPENING_PICTURE_PATTERNS; i++) {
+                    openingAtlas.removeEntry(PatternAtlasRange.OBJECTS.base() + i);
+                }
+            }
+        } finally {
+            frame = null; actor = null; openingObjects = null; assets = null; scrollState = null; heldPhase = null;
+            horizontalOffset = 0;
+        }
     }
 
     void afterRestore() {
-        requireBound();
-        actor.requireCompletedNativeFrame();
-        if (GameServices.camera().getFocusedSprite() != actor) {
-            frame.close();
-            throw new IllegalStateException("CD restore requires its retained main actor");
+        try {
+            requireBound();
+            actor.requireCompletedNativeFrame();
+            if (GameServices.camera().getFocusedSprite() != actor) {
+                throw new IllegalStateException("CD restore requires its retained main actor");
+            }
+            if (openingObjects != null && openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                throw new IllegalStateException("CD restore projection requires a completed opening cut");
+            }
+            projectCamera(GameServices.camera());
+            actor.rebindAfterRestore(); // Full24 residency, no input/body/animation/cue.
+            // The restored immutable opening picture uploads its own frozen pixels
+            // on the next normal draw; it is never reconverted from the current CPU SAT.
+            heldPhase = null;
+        } catch (RuntimeException | Error failure) {
+            module.closePlayerCycleAfterFailure(failure);
+            throw failure;
         }
-        projectCamera(GameServices.camera());
-        actor.rebindAfterRestore(); // Full24 residency, no input/body/animation/cue.
-        heldPhase = null;
     }
 
     private void requireBound() {
         module.validateTerrainPlayerRequest();
-        if (frame == null || actor == null || assets == null || scrollState == null || frame.closed()) {
+        if (frame == null || actor == null || assets == null || scrollState == null || frame.closed()
+                || (module.openingObjectsAdmission() && (openingObjects == null || openingObjects.closed()))) {
             throw new IllegalStateException("CD terrain-player admission is incomplete or closed");
         }
         if (module.requireRuntimeSource().assets() != assets
@@ -111,6 +162,7 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             throw new UnsupportedOperationException("CD terrain input/slot admission does not support policy decorators");
         }
         requireViewport(GameServices.camera());
+        if (openingObjects != null) requireOpeningAtlas();
     }
 
     private static void requireViewport(Camera camera) {
@@ -130,6 +182,17 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
             throw new UnsupportedOperationException("CD terrain entry does not support host debug movement");
         }
         int held = nativeHeldByte(input, SpriteManagerInternalAccess.inputSuppressed(GameServices.sprites()));
+        if (openingObjects != null) {
+            // Gate before the runtime's deliberately terminal mid-cycle predicates.
+            if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                var failure = new IllegalStateException("Opening input requires the completed previous loop");
+                module.closePlayerCycleAfterFailure(failure);
+                throw failure;
+            }
+            var camera = GameServices.camera();
+            openingObjects.setPreScrollForeground(new CdObjectDrawQueue.CameraWords(
+                    camera.getX() & 0xFFFF, camera.getY() & 0xFFFF));
+        }
         var selection = frame.prepareInput(held);
         heldPhase = selection.nextPaused() ? selection.phase() : null;
         return selection.nextPaused() ? GameplayFrameDisposition.HOLD : GameplayFrameDisposition.ADVANCE_NATIVE_INPUT;
@@ -144,15 +207,26 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
 
     @Override public PlcLifecyclePhase heldVBlankPhase() { return heldPhase; }
     @Override public void afterTick(CourseControl course, boolean advanced) {
-        requireBound();
-        actor.requireCompletedNativeFrame();
-        if (advanced == frame.paused() || (advanced && frame.environment().globals().levelFrames()
-                != (GameServices.level().getFrameCounter() & 0xFFFF))) {
-            frame.close();
-            throw new IllegalStateException("CD represented frame did not complete its selected native body/hold");
+        try {
+            requireBound();
+            actor.requireCompletedNativeFrame();
+            if (advanced == frame.paused() || (advanced && frame.environment().globals().levelFrames()
+                    != (GameServices.level().getFrameCounter() & 0xFFFF))) {
+                throw new IllegalStateException("CD represented frame did not complete its selected native body/hold");
+            }
+            if (openingObjects != null) {
+                if (advanced) openingObjects.finishOrdinaryTail(); // Exactly once, after camera/SAT build.
+                else if (openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+                    throw new IllegalStateException("Held opening service did not retain its completed cut");
+                }
+                // Last-loop sound ledger is retained across holds; never replay it here.
+            }
+            frame.clearPendingInput();
+            heldPhase = null;
+        } catch (RuntimeException | Error failure) {
+            module.closePlayerCycleAfterFailure(failure);
+            throw failure;
         }
-        frame.clearPendingInput();
-        heldPhase = null;
     }
 
     @Override public boolean drawScene() { return true; }
@@ -160,10 +234,23 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     @Override public void drawOverlay() {
         requireBound();
         actor.requireCompletedNativeFrame();
+        if (openingObjects != null && openingObjects.phase() != CdOpeningObjectRuntime.Phase.CLOSED_CUT) {
+            throw new IllegalStateException("Opening draw requires its completed loop, never a partial SAT");
+        }
         var level = GameServices.level();
         GameServices.parallax().update(0, 0, GameServices.camera(), level.getFrameCounter());
         level.drawWithRenderOptions(GameServices.sprites(),
-                new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false));
+                openingObjects == null
+                        ? new LevelManager.LevelRenderOptions(true, false, false, false, false, false, false)
+                        : LevelManager.LevelRenderOptions.tilesOnly());
+        if (openingObjects != null) {
+            var camera = GameServices.camera();
+            // Screen-relative immutable SAT picture; renderer adds camera back for
+            // the world-coordinate graphics API. Preserve native SAT order. Plane
+            // priority composition remains bounded, not full VDP parity.
+            SpritePresentationRenderer.draw(GameServices.graphics(), openingObjects.displayedFrame(),
+                    camera.getX(), camera.getY(), layer -> true);
+        }
         GameServices.graphics().flush();
     }
 
@@ -196,12 +283,12 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private record ScrollCapture(Object owner, CdR11aForegroundScroll.State state) { }
     private final class Scroll implements ZoneScrollHandler, CameraDrivenScrollHandler {
         @Override public boolean advanceCameraForFrame(Camera camera, int actId) {
-            requireBound();
-            if (actId != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
-            var m = frame.state().motion(); var shared = frame.environment().movement();
-            var actorInput = new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
-                    m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl());
             try {
+                requireBound();
+                if (actId != 0) throw new UnsupportedOperationException("Only R11A foreground is admitted");
+                var m = frame.state().motion(); var shared = frame.environment().movement();
+                var actorInput = new CdR11aForegroundScroll.Actor(m.centreX16_16() >>> 16,
+                        m.centreY16_16() >>> 16, m.flags(), m.groundVelocity(), m.animation(), m.playerControl());
                 var next = CdR11aForegroundScroll.step(scrollState, new CdR11aForegroundScroll.Input(
                         actorInput, shared.bounds(), assets.loadPlan().bounds().top(),
                         frame.environment().globals().cameraXCentre(), shared.globals().cameraYCentre(),
@@ -209,10 +296,16 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
                 frame.applyScrollFeedback(next.bounds(), next.cameraYCentre());
                 scrollState = next.state();
                 projectCamera(camera);
-                actor.finishAfterCamera();
+                if (openingObjects == null) actor.finishAfterCamera();
+                else {
+                    var foreground = new CdObjectDrawQueue.CameraWords(camera.getX() & 0xFFFF, camera.getY() & 0xFFFF);
+                    var staticBackground = new CdObjectDrawQueue.CameraWords(0, 0);
+                    openingObjects.finishAfterCamera(new CdObjectDrawQueue.DrawCameras(foreground, staticBackground, staticBackground));
+                    actor.finishSharedAfterCamera(); // Project bit7 only; no second private SAT.
+                }
                 return true;
             } catch (RuntimeException | Error failure) {
-                frame.close(); // Body has already completed; no false whole-frame rollback/retry.
+                module.closePlayerCycleAfterFailure(failure); // Body completed; no rollback/retry.
                 throw failure;
             }
         }

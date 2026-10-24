@@ -2480,3 +2480,65 @@ establish a composed World pickup or native gameplay parity.
 ```bash
 python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerFrameRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestCdOpeningObjectRuntime' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
 ```
+
+
+### Actual opening World and first Ring, 24 October 2026
+
+The separately named openingObjectsDevelopmentPlayer / bootSonicCdOpeningObjects
+entry authenticates USA R11A before retiring an existing World. It assembles one
+native Sonic and the shared Ring/Mosqui pass through normal input, PLC, level
+frame, live dynamic slots, camera and ordinary tail owners. Default STATIC and
+regional terrain-only entries retain their capabilities. Advanced camera,
+afterTick and restore failures now close terrain-only admission more strictly
+as well. The one exclusive OBJECTS atlas range supplies108 picture patterns;
+the separate player resident bank retains24. No generic object/ring manager,
+private player drawing or alternate sound playback substitutes for the pass.
+
+Parent11800 compiled and ran69 cases, zero errors/skips:68 passed, including all13
+new actual-World lifecycle invocations and maintained module4/static6/terrain24/
+presentation10/API11. The sole failure was the original88-row input proposal,
+which stopped at centreX214.75 before RingX240. Its observations were inspected;
+only the ordinary input tail changed from2neutral to16Right, making102 available
+rows. No movement, touch, object, camera or production expression changed to
+reach the Ring.
+
+Parent63645 then passed the single real-EGL route case, zero failures/errors/
+skips. Actual USA media and surfaceless EGL/no ambient displays were required;
+Java25 and selected properties were verified in XML. Ring pickup occurred at
+call92 with FM_RING; call93 published the completed pickup SAT and now-serviced
+player art. All91 rows after the two-call checkpoint reproduced complete actor,
+shared state/art, pool/saved bank/cursors, Ring globals/sounds, CPU SAT/provenance,
+displayed pixels, camera/scroll and resident bank through both full and course
+restore. Restored and final framebuffer pixels matched exactly. Rejected boot
+preserved the old World; fresh boot retired it and cleared CPU/display/Rings.
+Mosqui dispatched throughout, including when outside the viewport. Audio stayed
+NullAudioBackend. Actual PNGs, input log and observations live outside the repo.
+
+Opus's independent World/bridge review found no P1 and one P2 in the stated
+presentation limits, now recorded here and in the external R3 handoff:
+**terrain is drawn at the current loop's camera, sprites come from the previous
+loop; there is no synchronized native plane/scroll or pixel-parity claim.**
+During camera motion this offsets sprites relative to terrain by one camera
+delta. Native VInt_Level latches scroll/SAT/level drawing together
+(Level/Main.asm:690,826-827,840-844); the development terrain path does not yet.
+Engine-to-engine replay equality cannot establish native pixel parity. Mixed
+plane/sprite priority remains a second explicit gap. Neither input nor actor
+positions are adjusted to conceal these gaps.
+
+Other reviewed limits remain explicit: BG/BG3 cameras are fixed0, external engine
+stage failures close at the next admission gate, generic-manager preconditions
+are checked before the first represented frame, and mid-cycle restore is not an
+admitted cut. HUD, enemy/hazard response, native title ingress, driver audio,
+live PLC residency, time travel, other stages and complete-game parity remain
+open. The first Ring is an intermediate milestone toward the full USA game.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestSonicCdOpeningWorldEgl' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true "-Dsoniccd.opening.output=$SCD_NEW_EXTERNAL_CAPTURE" test -B
+```
+
+The optional capture hook requires a new directory under Downloads/Sonic-CD,
+preserves earlier captures and records only post-step observations. It never
+supplies native state to gameplay. A dedicated R3 external revision preserves
+the tested six-file bytes, failed and successful input history, review response,
+commands and remaining publication limits. No merge, push or public launch is
+performed by this checkpoint.

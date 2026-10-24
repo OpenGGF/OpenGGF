@@ -650,6 +650,54 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
     }
 
+    /**
+     * Separate private USA R11A opening-object development ingress. Explicit empty
+     * CPU/display, Ring globals and preloaded art are staged by the module; this
+     * is not a title/new-game proof. Ordinary GameLoop owns input and stepping.
+     * Unknown native branches terminate admission instead of extending the route.
+     */
+    public GameLoop bootSonicCdOpeningObjects(com.openggf.game.soniccd.CdGameDataSource source) throws IOException {
+        java.util.Objects.requireNonNull(source, "source");
+        var config = engineServices.configuration();
+        String sidekick = config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE);
+        if (closed || bootToTitle || moduleDecoratorConfigured
+                || logicalWidth != 320 || logicalHeight != 224 || gameplayWidth != 320 || gameplayHeight != 224
+                || !"sonic".equals(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE))
+                || (sidekick != null && !sidekick.isBlank())
+                || config.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
+            throw new IllegalArgumentException("CD USA opening objects PLAYER requires an open 320x224 Sonic-only boot, no title, donor or decorator");
+        }
+        // The actual retained source verifies USA R11A tables/art BEFORE the
+        // existing world is retired. JP/EU stay available to terrain-only boot.
+        source.assets().openingObjects();
+        retireBootSession();
+        EngineContext services = engineServices;
+        services.roms().setRom(null);
+        com.openggf.graphics.color.DisplayColorProfileController.applySavedSettings(
+                services.configuration(), services.graphics());
+        SessionManager.armNextGameplayAdmissionPolicy(HardwareReadinessAdmissionPolicy.LIVE);
+        var root = com.openggf.game.soniccd.SonicCdGameModule.openingObjectsDevelopmentPlayer();
+        try {
+            GameplayModeContext mode = openResolvedSessionForBoot(services, root,
+                    ModuleResolutionService.LaunchPolicy.DETERMINISTIC, source);
+            if (mode.getWorldSession().resolvedGameModule() != root) {
+                throw new IllegalStateException("CD USA opening objects PLAYER does not admit resolved module decorators");
+            }
+            GameLoop loop = attachLevelLoop(mode);
+            GameModuleRegistry.setCurrent(root);
+            // Required on every boot, including AUDIO_ENABLED=false and reused JVMs.
+            installAudioBackend();
+            TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+            mode.getLevelManager().loadLevel(0, com.openggf.game.LevelLoadMode.FULL,
+                    com.openggf.game.soniccd.SonicCdPlayerInitProfile.openingObjectsContext());
+            return loop;
+        } catch (IOException | RuntimeException | Error failure) {
+            try { retireBootSession(); }
+            catch (RuntimeException | Error cleanupFailure) { failure.addSuppressed(cleanupFailure); }
+            throw failure;
+        }
+    }
+
     /** Common session/loop attachment for cartridge gameplay and prepared static terrain. */
     private GameLoop attachLevelLoop(GameplayModeContext mode) {
         GameplaySessionFactory.attachManagers(mode, engineServices, createGameplayCamera(engineServices));
