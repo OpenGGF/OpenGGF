@@ -12,6 +12,7 @@ import com.openggf.game.soniccd.player.CdPlayerCharge;
 import com.openggf.game.soniccd.player.CdPlayerFrameRuntime;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
+import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.resources.CdPlayerArtRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -583,6 +584,98 @@ class TestCdPlayerFrameRuntime {
         assertEquals(CdPlayerObjectTouch.Kind.NONE, frameTouchResult(result).kind());
     }
 
+    // Pure U1 response through the real Frame/Body path. Written before the composition; UNRUN.
+    // Source pin 1ecc5f3a: Sonic/Main.asm:340-351, PP Player Object Collision.asm:130-298, HUD and Points/Main.asm:157-180.
+
+    @Test void frameJumpKillCommitsTheAdoptedActorOnceAndUnwrapsContactRequestsAtTheTouchPosition() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0x2B); var selected = pool.state(32);
+        var context = frameResponseTouch(pool, 5, 4990);
+        service(f, 0x10); // CheckJump: roll bit, oAnim 2 and yv -$680 before Player_TouchEnemy.
+        var p = f.runBody(2, Optional.of(context));
+        assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP),
+                new CdPlayerFrameRuntime.ContactSubCpuCommand(CdPlayerTouchResponse.SubCpuCommand.SCMD_YESSFX),
+                new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_DESTROY)), p.sounds());
+        var response = frameResponse(p);
+        assertEquals(List.of(new CdPlayerTouchResponse.AddPoints(10, true),
+                new CdPlayerTouchResponse.SubCpu(CdPlayerTouchResponse.SubCpuCommand.SCMD_YESSFX),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_DESTROY)), response.calls());
+        assertEquals(List.of(selected.moveByte(CdObjectState.ByteField.FLAGS, 0x80)
+                .moveWord(CdObjectState.WordField.EXPLOSION_POINTS_FRAME, 0).moveByte(CdObjectState.ByteField.ID, 0x18)
+                .moveByte(CdObjectState.ByteField.ROUTINE, 0).moveByte(CdObjectState.ByteField.SUBTYPE, 1)),
+                response.changedSlots());
+        assertEquals(new CdPlayerTouchResponse.WorldGlobals(5, 4, 1, 5000, 10000, 1), response.world());
+        assertEquals(response.actor().motion(), f.state().motion());
+        assertEquals(-0x580, f.state().motion().yVelocity()); // .BounceDown: -$680 + $100.
+        assertEquals(2, f.environment().movement().globals().scoreChain());
+        assertSame(p.result().state(), f.state()); assertSame(p.result().environment(), f.environment());
+        assertSame(selected, pool.state(32)); assertEquals(2, pool.state(32).routine());
+    }
+
+    @Test void frameRestoreReplaysIdenticalPureImagesAndSoundsWithoutCapturingTheCallCut() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0x2B); var context = frameResponseTouch(pool, 5, 0);
+        var beforeActor = f.captureActor(); var beforeShared = f.captureShared();
+        service(f, 0x10); var first = f.runBody(2, Optional.of(context));
+        var afterActor = f.captureActor(); var afterShared = f.captureShared();
+        f.restoreActor(beforeActor); f.restoreShared(beforeShared);
+        service(f, 0x10); var replay = f.runBody(2, Optional.of(context));
+        assertEquals(first, replay); assertEquals(frameResponse(first), frameResponse(replay));
+        assertEquals(afterActor, f.captureActor()); assertSharedValues(afterShared, f.captureShared());
+        for (var type : List.of(CdPlayerFrameRuntime.ActorState.class, CdPlayerFrameRuntime.SharedState.class)) {
+            for (var component : type.getRecordComponents()) {
+                String name = component.getGenericType().getTypeName();
+                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "Snapshot",
+                        "CdPlayerTouchResponse")) {
+                    assertFalse(name.contains(forbidden), type.getSimpleName() + "." + component.getName() + " " + name);
+                }
+            }
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"5,4,HURT_ROUTINE", "0,6,DEAD_ROUTINE"})
+    void frameCommitsAHazardHurtOrKillOnceAndTheNextBodyCallStillStopsAtItsUnownedRoutine(int rings, int routine,
+            CdPlayerBody.UnsupportedBoundary next) throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0xAB);
+        service(f, 0x10);
+        var p = f.runBody(2, Optional.of(frameResponseTouch(pool, rings, 0)));
+        var s = f.state(); var response = frameResponse(p);
+        assertEquals(routine, s.motion().routine());
+        assertEquals(0x076B0000, s.motion().centreY16_16()); // CheckJump's +5, then ResetOnFloor's SUBQ.W #5.
+        if (rings != 0) {
+            assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP),
+                    new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)), p.sounds());
+            assertEquals(List.of(pool.state(33).moveByte(CdObjectState.ByteField.ID, 0x11)
+                    .moveWord(CdObjectState.WordField.X, 64).moveWord(CdObjectState.WordField.Y, 0x770)),
+                    response.changedSlots()); // The ring takes the pre-reset oY word.
+            assertEquals(0x200, s.motion().xVelocity()); // Equal X: CMP.W/BCS falls through to NEG.W (:258-261).
+            assertEquals(0x78, s.timers().hurt());
+        } else {
+            assertEquals(List.of(new CdPlayerFrameRuntime.MovementSound(CdPlayerMovement.Sound.FM_JUMP),
+                    new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP),
+                    new CdPlayerFrameRuntime.ContactFmSound(CdPlayerTouchResponse.FmSound.FM_HURT)), p.sounds());
+            assertEquals(0x07, s.motion().stick()); assertEquals(0x6B, s.rotationDistance());
+            assertEquals(0x8780, s.header().tile()); assertEquals(0, s.header().priority());
+            assertEquals(0x8780, f.display().orElseThrow().tile()); assertEquals(0, f.display().orElseThrow().priority());
+            assertEquals(2, displayCut(p).priority(), "The Display cut precedes the touch");
+        }
+        service(f, 0); var state = f.state(); var environment = f.environment();
+        assertEquals(next, assertThrows(CdPlayerBody.UnsupportedBody.class, () -> f.runBody(3)).boundary());
+        assertSame(state, f.state()); assertSame(environment, f.environment());
+    }
+
+    @Test void frameResponseBoundaryInsideBodyCommitsNoStateEnvironmentDisplayOrSoundsAndConsumesTheSlot() throws IOException {
+        var f = externalTouchRuntime(); var pool = frameTouchPool(f, 0x2B);
+        Env e = new Env(f); e.scoreChain = 3; e.install(f); // Odd clamped chain: odd-address EnemyPoints word read (:166).
+        service(f, 0x10);
+        var state = f.state(); var environment = f.environment(); var display = f.display();
+        var context = frameResponseTouch(pool, 5, 0);
+        assertEquals(CdPlayerTouchResponse.UnsupportedBoundary.ODD_ENEMY_POINTS_ADDRESS,
+                assertThrows(CdPlayerTouchResponse.UnsupportedResponse.class,
+                        () -> f.runBody(2, Optional.of(context))).boundary());
+        assertSame(state, f.state()); assertSame(environment, f.environment()); assertEquals(display, f.display());
+        assertThrows(IllegalStateException.class, () -> f.runBody(2, Optional.of(context)));
+        assertFalse(f.closed());
+    }
+
     private static CdPlayerFrameRuntime externalTouchRuntime() throws IOException {
         var f = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(new Fixture().assets());
         f.bindArtPublication((dma, complete) -> { });
@@ -608,6 +701,23 @@ class TestCdPlayerFrameRuntime {
         return publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResult.class::isInstance)
                 .map(CdPlayerBody.ObjectTouchResult.class::cast).map(CdPlayerBody.ObjectTouchResult::result)
                 .findFirst().orElseThrow();
+    }
+    /** Runtime-shaped ephemeral owner: one response, contact (timeWarp, shield, combineRing) and world bytes. */
+    private static CdPlayerBody.TouchContext frameResponseTouch(CdObjectPool pool, int rings, int score) {
+        var scanner = new CdPlayerObjectTouch(java.util.Collections.nCopies(63, new CdR11aObjectAssets.TouchSize(16, 16)));
+        // EnemyPoints dc.w 10,20,50,100 (PP Player Object Collision.asm:200-204): constructed literal only.
+        var response = new CdPlayerTouchResponse(CdAssetBytes.copyOf(new byte[]{0, 10, 0, 20, 0, 50, 0, 100}));
+        return new CdPlayerBody.TouchContext(scanner, pool.capture(), new CdPlayerBody.ResponseContext(response,
+                new CdPlayerBody.ContactGlobals(0, 0, 1), new CdPlayerTouchResponse.WorldGlobals(rings, 3, 0, score, 5000, 0x80)));
+    }
+    private static CdPlayerTouchResponse.Result frameResponse(CdPlayerFrameRuntime.BodyPublication publication) {
+        var responses = publication.result().effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                .map(CdPlayerBody.ObjectTouchResponse.class::cast).toList();
+        assertEquals(1, responses.size()); return responses.getFirst().result();
+    }
+    private static CdPlayerBody.DisplayEligibility displayCut(CdPlayerFrameRuntime.BodyPublication publication) {
+        return publication.result().effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                .map(CdPlayerBody.DisplayEligibility.class::cast).findFirst().orElseThrow();
     }
 
     @Test void objectFloorScratchUpdatesOnlyTheExistingSharedByteAndRestoresWithoutActorWrites() throws IOException {
@@ -723,19 +833,20 @@ class TestCdPlayerFrameRuntime {
     }
     private static final class Env {
         final CdPlayerBody.Environment base;
-        int bored, warp, logicalHeld, logicalTap, locked, invincible, zoneAct;
+        int bored, warp, logicalHeld, logicalTap, locked, invincible, zoneAct, scoreChain;
         CdPlayerBody.DynamicSlots slots;
         Env(CdPlayerFrameRuntime f) {
             base = f.environment(); bored = base.movement().globals().boredTimer(); warp = base.globals().timeWarpTimer();
             logicalHeld = base.controls().logicalHeld(); logicalTap = base.controls().logicalTap(); locked = base.controls().controlLocked();
             invincible = base.globals().invincible(); slots = base.dynamicSlots(); zoneAct = base.movement().gates().zoneAct();
+            scoreChain = base.movement().globals().scoreChain();
         }
         void install(CdPlayerFrameRuntime f) {
             var s = f.captureShared(); var m = base.movement(); var g = m.globals(); var c = base.controls(); var b = base.globals(); var gates = m.gates();
             var environment = new CdPlayerBody.Environment(new CdPlayerMovement.Environment(m.physics(), m.bounds(),
                     new CdPlayerMovement.Gates(zoneAct, gates.timeZone(), gates.miniSonic(), gates.waterSlide(), gates.windTunnel(), gates.speedShoes(), gates.timeWarpDirection()),
                     new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(), bored,
-                            g.scoreChain(), g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())),
+                            scoreChain, g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())),
                     new CdPlayerBody.Controls(c.rawHeld(), c.rawTap(), logicalHeld, logicalTap, locked),
                     new CdPlayerBody.Globals(b.levelFrames(), b.cameraXCentre(), b.timeAttackMode(), b.debugMode(), b.debugCheat(), warp, invincible, b.bossMusic()), slots);
             f.restoreShared(new CdPlayerFrameRuntime.SharedState(s.owner(), environment, s.artState(), s.paused(), s.vIntClock()));

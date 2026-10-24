@@ -111,13 +111,45 @@ public final class CdPlayerBody {
     public enum DynamicSlots { EMPTY_DEVELOPMENT_96, UNIMPLEMENTED }
 
     /**
+     * Runtime-owned native bytes read or written by the selected enemy/hazard handler:
+     * timeWarp ($FF1521), shield ($FF151E) and combineRing ($FF156F). Ephemeral call-cut
+     * input only: never part of State, Environment or a Frame capture.
+     */
+    public record ContactGlobals(int timeWarp, int shield, int combineRing) {
+        public ContactGlobals { byteValue(timeWarp); byteValue(shield); byteValue(combineRing); }
+    }
+
+    /**
+     * The Runtime's single source-bound response owner plus its contact and world globals at this
+     * call cut. Ephemeral like TouchContext; the Runtime alone commits contact/world/slot results.
+     */
+    public record ResponseContext(CdPlayerTouchResponse response, ContactGlobals contact,
+                                  CdPlayerTouchResponse.WorldGlobals world) {
+        public ResponseContext {
+            Objects.requireNonNull(response); Objects.requireNonNull(contact); Objects.requireNonNull(world);
+        }
+    }
+
+    /**
      * Ephemeral declared pure input, NOT a world/source ownership certificate.
      * The external world binding/preflight owns the actual scanner table and
      * pool identity. Body neither retains this input nor owns a pool capture;
      * Environment/State and frame/actor captures must never contain it.
+     * An empty response means no ENEMY/HAZARD owner: those selections still stop
+     * at UnsupportedTouchHandler. It is never a zero-filled global fallback.
      */
-    public record TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot) {
-        public TouchContext { Objects.requireNonNull(scanner); Objects.requireNonNull(snapshot); }
+    public record TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot,
+                               Optional<ResponseContext> response) {
+        public TouchContext {
+            Objects.requireNonNull(scanner); Objects.requireNonNull(snapshot); Objects.requireNonNull(response);
+        }
+        /** Scanner and capture only; no response owner. */
+        public TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot) {
+            this(scanner, snapshot, Optional.empty());
+        }
+        public TouchContext(CdPlayerObjectTouch scanner, CdObjectPool.Snapshot snapshot, ResponseContext response) {
+            this(scanner, snapshot, Optional.of(response));
+        }
     }
     public record Environment(CdPlayerMovement.Environment movement, Controls controls,
                               Globals globals, DynamicSlots dynamicSlots) {
@@ -144,7 +176,7 @@ public final class CdPlayerBody {
     public enum Sound { SCMD_R1AMUS, FM_9C }
     public sealed interface Effect permits ActorWrite, GlobalWrite, ChargeEffect, ModeEffect,
             CallReturned, DisplayEligibility, PositionHistoryWrite, AnimationPublication,
-            ObjectTouchResult, TouchScanCompleted, SoundRequest { }
+            ObjectTouchResult, ObjectTouchResponse, TouchScanCompleted, SoundRequest { }
     public record ActorWrite(ActorField field, int value) implements Effect {
         public ActorWrite { Objects.requireNonNull(field); }
     }
@@ -188,6 +220,20 @@ public final class CdPlayerBody {
      */
     public record ObjectTouchResult(CdPlayerObjectTouch.Result result) implements Effect {
         public ObjectTouchResult { Objects.requireNonNull(result); }
+    }
+    /**
+     * The complete pure selected ENEMY/HAZARD response. Its final actor, invincible and scoreChain
+     * values are already adopted ONCE into this Body result. The Runtime commits only changedSlots
+     * (compare-and-set against the same call-cut snapshot), world and contact, and only after the
+     * WHOLE Body succeeds. Calls are ordered observations, never write-replay instructions.
+     */
+    public record ObjectTouchResponse(CdPlayerTouchResponse.Result result) implements Effect {
+        public ObjectTouchResponse { Objects.requireNonNull(result); }
+        /** Final Runtime-owned contact bytes after the handler. */
+        public ContactGlobals contact() {
+            var p = result.player();
+            return new ContactGlobals(p.timeWarp(), p.shield(), p.combineRing());
+        }
     }
     public record TouchScanCompleted(int slotsVisited) implements Effect { }
     public record SoundRequest(Sound sound) implements Effect {
@@ -234,7 +280,10 @@ public final class CdPlayerBody {
         public CdPlayerMovement.Continuation continuation() { return continuation; }
     }
 
-    /** Selected native handler is not owned here; no staged Body result escapes. */
+    /**
+     * Selected native handler without an owner here (MONITOR/SPECIAL, or ENEMY/HAZARD without a
+     * ResponseContext); no staged Body result escapes.
+     */
     public static final class UnsupportedTouchHandler extends UnsupportedOperationException {
         private final CdPlayerObjectTouch.Kind kind;
         private final CdObjectState selectedSlot;
@@ -271,7 +320,7 @@ public final class CdPlayerBody {
 
     /**
      * Explicit per-call touch input overrides only DynamicSlots fallback.
-     * Neither scanner nor snapshot is sampled unless Main reaches its actual
+     * Neither scanner, snapshot nor response owner is sampled unless Main reaches its actual
      * post-Animate, pre-SpecialChunks call with both native touch gates open.
      */
     public Result step(State state, Environment environment, Optional<TouchContext> touchContext) {
@@ -359,14 +408,44 @@ public final class CdPlayerBody {
         var selected = input.scanner().scan(new CdPlayerObjectTouch.PlayerCut(c.x(), c.y(),
                 c.motion.yRadius(), c.animation.mapFrame(), c.hurt), input.snapshot());
         if (selected instanceof CdPlayerObjectTouch.HandlerBoundary handler) {
-            throw new UnsupportedTouchHandler(handler);
+            var kind = handler.kind();
+            if (input.response().isEmpty()
+                    || (kind != CdPlayerObjectTouch.Kind.ENEMY && kind != CdPlayerObjectTouch.Kind.HAZARD)) {
+                throw new UnsupportedTouchHandler(handler);
+            }
+            respond(c, handler, input.response().orElseThrow(), input.snapshot());
+        } else {
+            c.effects.add(new ObjectTouchResult(selected));
         }
-        c.effects.add(new ObjectTouchResult(selected));
         // The scanner's first overlap returns in the immutable 32..127 physical
         // sequence. Its selected identity gives actual visits without a rescan.
         int visits = selected.selectedSlot().map(slot -> slot.identity().wholeIndex()
                 - CdObjectPool.FIRST_WHOLE_INDEX + 1).orElse(CdObjectPool.DYNAMIC_COUNT);
         c.effects.add(new TouchScanCompleted(visits));
+    }
+
+    /**
+     * Player_TouchEnemy/Player_TouchHazard (PP Player Object Collision.asm:130-298) through the pure
+     * owner at this exact cut: post-Animate motion, post-Display hurt word and byte39, with the same
+     * selection and snapshot. Final actor, invincible and scoreChain values are adopted once here,
+     * before SpecialChunks reads them (Main:347-350). Slot/world/contact results stay in the effect.
+     */
+    private static void respond(Cursor c, CdPlayerObjectTouch.HandlerBoundary selected, ResponseContext owner,
+                                CdObjectPool.Snapshot snapshot) {
+        var movement = c.env.movement(); var contact = owner.contact();
+        var actor = new CdPlayerTouchResponse.Actor(c.motion, c.header.tile(), c.header.priority(), c.hurt,
+                c.rotationDistance);
+        var player = new CdPlayerTouchResponse.PlayerGlobals(contact.timeWarp(), c.invincible, contact.shield(),
+                contact.combineRing(), c.debugCheat, c.debugMode, movement.globals().scoreChain(), movement.gates().miniSonic());
+        var result = owner.response().respond(selected, actor, player, owner.world(), snapshot);
+        var adopted = result.actor();
+        c.motion = adopted.motion();
+        c.header = new Header(c.header.slotId(), c.header.mappingAddress(), adopted.tile(), adopted.priority(),
+                c.header.width());
+        c.hurt = adopted.hurt(); c.rotationDistance = adopted.rotationDistance();
+        c.invincible = result.player().invincible();
+        c.setScoreChain(result.player().scoreChain());
+        c.effects.add(new ObjectTouchResponse(result));
     }
 
     /** ObjSonic_ExtCamera (231-279), incoming ground word and unsigned CMP/BCC including wrapped NEG.W. */
@@ -525,6 +604,12 @@ public final class CdPlayerBody {
             var e = env.movement();
             setMovementEnvironment(new CdPlayerMovement.Environment(new CdPlayerMovement.Physics(0x600, 12, 0x80), e.bounds(), e.gates(), e.globals()));
             global(GlobalField.TOP_SPEED, 0x600); global(GlobalField.ACCELERATION, 12); global(GlobalField.DECELERATION, 0x80);
+        }
+        void setScoreChain(int value) {
+            var e = env.movement(); var g = e.globals();
+            setMovementEnvironment(new CdPlayerMovement.Environment(e.physics(), e.bounds(), e.gates(),
+                    new CdPlayerMovement.Globals(g.lookMode(), g.cameraYCentre(), g.primaryAngle(), g.secondaryAngle(),
+                            g.boredTimer(), value, g.debugAngle(), g.debugAngleShift(), g.debugQuadrant(), g.debugFloorDistance())));
         }
         void setSpeedShoes(int value) {
             var e = env.movement(); var g = e.gates();

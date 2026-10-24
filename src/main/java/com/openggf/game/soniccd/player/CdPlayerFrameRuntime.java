@@ -100,7 +100,7 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
 
     /** Symbolic IDs retain their original typed owner and source ordering, with no playback. */
-    public sealed interface Sound permits BodySound, ChargeSound, MovementSound { }
+    public sealed interface Sound permits BodySound, ChargeSound, MovementSound, ContactFmSound, ContactSubCpuCommand { }
     public record BodySound(CdPlayerBody.Sound sound) implements Sound {
         public BodySound { Objects.requireNonNull(sound); }
     }
@@ -109,6 +109,14 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
     }
     public record MovementSound(CdPlayerMovement.Sound sound) implements Sound {
         public MovementSound { Objects.requireNonNull(sound); }
+    }
+    /** A selected enemy/hazard response's PlayFMSound request, at its call position. */
+    public record ContactFmSound(CdPlayerTouchResponse.FmSound sound) implements Sound {
+        public ContactFmSound { Objects.requireNonNull(sound); }
+    }
+    /** AddPoints' 1-up SubCPUCmd request (HUD and Points/Main.asm:176-177), at its call position. */
+    public record ContactSubCpuCommand(CdPlayerTouchResponse.SubCpuCommand command) implements Sound {
+        public ContactSubCpuCommand { Objects.requireNonNull(command); }
     }
     /** Final values already committed once; ordered effects are observations, not write-replay instructions. */
     public record BodyPublication(CdPlayerBody.Result result, List<Sound> sounds) {
@@ -320,7 +328,11 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
         return runBody(levelFrames, Optional.empty());
     }
 
-    /** Ephemeral declared pure input; never retained in shared/actor state or a capture. */
+    /**
+     * Ephemeral declared pure input; never retained in shared/actor state or a capture. A
+     * ResponseContext's response, contact and world values are equally ephemeral: the Runtime
+     * commits the published response's slots, world and contact only after this call returns.
+     */
     public BodyPublication runBody(int levelFrames, Optional<CdPlayerBody.TouchContext> touchContext) {
         requireBodyEntitlement();
         bodyEntitled = false;
@@ -532,11 +544,18 @@ public final class CdPlayerFrameRuntime implements PlcLifecycleService, AutoClos
             else if (effect instanceof CdPlayerBody.ModeEffect mode) {
                 if (mode.effect() instanceof CdPlayerMovement.SoundRequest sound) sounds.add(new MovementSound(sound.sound()));
                 else if (mode.effect() instanceof CdPlayerMovement.ChargeEffect charge) collectChargeSound(charge.effect(), sounds);
-            }
+            } else if (effect instanceof CdPlayerBody.ObjectTouchResponse touch) collectContactSounds(touch.result(), sounds);
         }
         return List.copyOf(sounds);
     }
     private static void collectChargeSound(CdPlayerCharge.Effect effect, List<Sound> sounds) {
         if (effect instanceof CdPlayerCharge.SoundRequest sound) sounds.add(new ChargeSound(sound.sound()));
+    }
+    /** Only PlayFMSound/SubCPUCmd requests, in call order; FindObjSlot, AddPoints and ResetOnFloor are metadata. */
+    private static void collectContactSounds(CdPlayerTouchResponse.Result result, List<Sound> sounds) {
+        for (var call : result.calls()) {
+            if (call instanceof CdPlayerTouchResponse.PlayFm fm) sounds.add(new ContactFmSound(fm.sound()));
+            else if (call instanceof CdPlayerTouchResponse.SubCpu command) sounds.add(new ContactSubCpuCommand(command.command()));
+        }
     }
 }

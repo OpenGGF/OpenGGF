@@ -2926,3 +2926,36 @@ the bounded mapping resolver can stop at pointer0 where native would read
 unowned memory. Preserve this shipped dirty-slot behavior as an explicit
 coverage boundary; do not hide it with an ID/visibility or active-list filter.
 Contact production, world score, hurt/death and complete USA remain separate.
+
+
+### Body and Frame contact staging, 24 October 2026
+
+Body now accepts an explicit ephemeral response context alongside the same
+scanner/call-cut snapshot. The legacy two-argument context has no response owner;
+items/no-overlap stay unchanged and handlers still reject without one. Enemy/
+hazard response uses post-Display hurt and actual byte39, cursor invincibility,
+scoreChain/debug/mini values, and declared Runtime-owned contact/world values.
+Final actor/tile/priority/hurt/byte39/invincible/chain are adopted once before
+SpecialChunks. One immutable response effect carries the final slot/world/contact
+values; there is no pool write or duplicated global owner in Body/Frame captures.
+Frame extracts typed FM/subCPU requests in call order before committing the whole
+Body result. Display's queue cut remains before touch; final pose uses later state.
+
+Root43304 passed264cases/0failures/errors/skips at13:51:10BST:100Body,93Frame,
+28Runtime,12actor,4object-pass,15World,1actualEGL and11API. All8XML confirm
+Java25.0.5.0.2, supplied media and explicit EGL. Queue467s/execution1m40.
+All27newinvocations ran. Independent Opus review found noP1/P2 or wrong
+assertion, and confirmed unchanged captured partitions and same-snapshot input.
+It records weak assertions rather than treating them as proof of retention.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerBody,TestCdPlayerFrameRuntime,TestCdOpeningObjectRuntime,TestCdPlayableSonic,TestCdPlayableSonicObjectPass,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+```
+
+Runtime still must consume ObjectTouchResponse, prevalidate every changed slot,
+commit world/contact globals once and capture them. Until U5, routine>=6 must
+close before the death-camera/scroll branch; then the actor's final priority
+projection cannot mislabel that death frame's earlier queue bucket. The native
+three-slot FM drop policy and blocking subCPU timing remain unimplemented.
+TerrainPlayerLoad/Boot are additional maintained consumers for the next combined
+integration check. This commit alone admits no complete contact gameplay.

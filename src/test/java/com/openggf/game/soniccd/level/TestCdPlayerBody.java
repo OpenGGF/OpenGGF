@@ -7,6 +7,7 @@ import com.openggf.game.soniccd.player.CdPlayerCharge;
 import com.openggf.game.soniccd.player.CdPlayerMotionState;
 import com.openggf.game.soniccd.player.CdPlayerMovement;
 import com.openggf.game.soniccd.player.CdPlayerObjectTouch;
+import com.openggf.game.soniccd.player.CdPlayerTouchResponse;
 import com.openggf.game.soniccd.objects.CdObjectPool;
 import com.openggf.game.soniccd.objects.CdObjectState;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -678,6 +680,242 @@ class TestCdPlayerBody {
         assertThrows(NullPointerException.class, () -> new CdPlayerBody.TouchContext(scanner, null));
     }
 
+    // Selected ENEMY/HAZARD response through the real Body call path. Written before the composition; UNRUN.
+    // Source pin 1ecc5f3a: Sonic/Main.asm:340-351 call cut, PP Player Object Collision.asm:130-298.
+
+    @Test void jumpRollKillAdoptsTheSourceResponseBeforeSpecialChunksAndPublishesOneTypedResult() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.rotationDistance = 0xA5;
+        f.rawHeld = f.rawTap = 0x10; // CheckJump sets the roll bit and oAnim 2 before Player_TouchEnemy (:130-136).
+        CdObjectPool pool = new CdObjectPool(); var enemy = touchSlot(pool, 33, 0x2B, 64, 81);
+        Contact contact = new Contact(); contact.score = 4900;
+        var context = responseTouch(pool, contact); var before = pool.capture().slots();
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        var effect = responseEffect(r); var response = effect.result();
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_ENEMY, response.exit());
+        // Old chain 9 clamps to index 6 (100 points, frame 6); the new chain 11 stays below $20 (:155-173).
+        assertEquals(List.of(enemy.moveByte(CdObjectState.ByteField.FLAGS, 0x80)
+                .moveWord(CdObjectState.WordField.EXPLOSION_POINTS_FRAME, 6).moveByte(CdObjectState.ByteField.ID, 0x18)
+                .moveByte(CdObjectState.ByteField.ROUTINE, 0).moveByte(CdObjectState.ByteField.SUBTYPE, 1)),
+                response.changedSlots());
+        assertEquals(List.of(new CdPlayerTouchResponse.AddPoints(100, true),
+                new CdPlayerTouchResponse.SubCpu(CdPlayerTouchResponse.SubCpuCommand.SCMD_YESSFX),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_DESTROY)), response.calls());
+        assertEquals(new CdPlayerTouchResponse.WorldGlobals(5, 4, 1, 5000, 10000, 1), response.world());
+        assertEquals(new CdPlayerBody.ContactGlobals(0, 0, 1), effect.contact());
+        assertEquals(response.actor().motion(), r.state().motion()); // SpecialChunks' bit-6 clear finds it clear.
+        assertEquals(-0x580, r.state().motion().yVelocity()); // CheckJump's -$680, then .BounceDown +$100.
+        assertEquals(6, r.state().motion().flags()); assertEquals(2, r.state().motion().animation());
+        assertEquals(11, r.environment().movement().globals().scoreChain());
+        assertEquals(0xA5, r.state().rotationDistance());
+        assertEquals(a.state().header(), r.state().header()); assertEquals(a.state().timers(), r.state().timers());
+        assertTrue(indexCall(r, CdPlayerBody.NativeCall.ANIMATE) < indexOf(r, CdPlayerBody.ObjectTouchResponse.class));
+        assertTrue(indexOf(r, CdPlayerBody.ObjectTouchResponse.class) < indexOf(r, CdPlayerBody.TouchScanCompleted.class));
+        assertTrue(indexOf(r, CdPlayerBody.TouchScanCompleted.class) < indexCall(r, CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        assertEquals(List.of(new CdPlayerBody.TouchScanCompleted(2)), touchVisits(r));
+        assertFalse(r.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResult.class::isInstance));
+        assertTrue(bodySounds(r).isEmpty(), "Contact requests stay inside the pure Result for the Frame");
+        assertEquals(before, pool.capture().slots()); assertSame(enemy, pool.state(33));
+        assertEquals(r, f.owner().step(a.state(), f.environment(), Optional.of(context)));
+    }
+
+    @ParameterizedTest @CsvSource({"0,HURT,120", "1,HURT,120", "2,NO_HURT,1", "120,NO_HURT,119"})
+    void hazardReadsThePostDisplayHurtWordSoDisplayDecrementsBeforeTheImmunityTest(int entry,
+            CdPlayerTouchResponse.Exit exit, int finalHurt) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.hurt = entry;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 76);
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, new Contact())));
+        assertEquals(exit, response(r).exit()); assertEquals(finalHurt, r.state().timers().hurt());
+        if (exit == CdPlayerTouchResponse.Exit.NO_HURT) {
+            var control = f.owner().step(a.state(), f.environment(),
+                    Optional.of(responseTouch(new CdObjectPool(), new Contact())));
+            assertEquals(control.state(), r.state()); assertEquals(control.environment(), r.environment());
+            assertTrue(response(r).calls().isEmpty()); assertTrue(response(r).changedSlots().isEmpty());
+        } else {
+            assertEquals(4, r.state().motion().routine());
+        }
+    }
+
+    @Test void timeWarpDisplayGateKeepsAOneFrameHurtWordSoTheHazardIsStillNoHurt() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.hurt = 1; f.timeWarpTimer = 210;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 76);
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, new Contact())));
+        assertEquals(CdPlayerTouchResponse.Exit.NO_HURT, response(r).exit());
+        assertEquals(1, r.state().timers().hurt()); assertFalse(r.display().orElseThrow().queued());
+    }
+
+    @ParameterizedTest @CsvSource({"90,89,true", "91,90,false"})
+    void responseOwnerLeavesTheItemPathAndItsPostDisplayGateUnchanged(int before, int after, boolean changed) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.hurt = before;
+        CdObjectPool pool = new CdObjectPool(); var first = touchSlot(pool, 32, 0x47, 64, 76);
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, new Contact())));
+        assertEquals(after, r.state().timers().hurt());
+        assertSame(first, objectTouch(r).selectedSlot().orElseThrow());
+        assertEquals(changed, objectTouch(r).changedSlot().isPresent());
+        assertFalse(r.effects().stream().anyMatch(CdPlayerBody.ObjectTouchResponse.class::isInstance));
+        var old = f.owner().step(a.state(), f.environment(), Optional.of(touchContext(pool)));
+        assertEquals(old.state(), r.state()); assertEquals(old.environment(), r.environment());
+        assertEquals(old.display(), r.display()); assertEquals(touchVisits(old), touchVisits(r));
+    }
+
+    @ParameterizedTest @CsvSource({"72,0,-512", "56,0,512", "72,1,-512"})
+    void rollingJumpHazardHitTakesTheRingAtThePreResetYThenUnrollsAndKnocksBack(int hazardX, int shield, int xVelocity) {
+        Fixture f = new Fixture(); Actor a = new Actor(); f.rawHeld = f.rawTap = 0x10;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, hazardX, 81);
+        Contact contact = new Contact(); contact.shield = shield;
+        var context = responseTouch(pool, contact);
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        var effect = responseEffect(r); var response = effect.result(); var m = r.state().motion();
+        assertEquals(CdPlayerTouchResponse.Exit.HURT, response.exit());
+        assertEquals(response.actor().motion(), m);
+        assertEquals(4, m.routine()); assertEquals(2, m.flags()); assertEquals(9, m.xRadius()); assertEquals(19, m.yRadius());
+        assertEquals(76 << 16, m.centreY16_16()); // CheckJump's +5, then ResetOnFloor's SUBQ.W #5.
+        assertEquals(-0x400, m.yVelocity()); assertEquals(xVelocity, m.xVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(0x1A, m.animation()); assertEquals(0, m.playerJump()); assertEquals(0, m.charge());
+        assertEquals(0x78, r.state().timers().hurt()); assertEquals(0, r.environment().movement().globals().scoreChain());
+        if (shield == 0) {
+            var ring = context.snapshot().slots().getFirst().moveByte(CdObjectState.ByteField.ID, 0x11)
+                    .moveWord(CdObjectState.WordField.X, 64).moveWord(CdObjectState.WordField.Y, 81);
+            assertEquals(List.of(ring), response.changedSlots()); // HurtPlayer:236-238 precede .SetHurt's reset.
+            assertEquals(List.of(new CdPlayerTouchResponse.FindObjSlot(OptionalInt.of(32)),
+                    new CdPlayerTouchResponse.ResetOnFloor(),
+                    new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)), response.calls());
+            assertEquals(new CdPlayerBody.ContactGlobals(0, 0, 0), effect.contact());
+        } else {
+            assertTrue(response.changedSlots().isEmpty());
+            assertEquals(List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                    new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP)), response.calls());
+            assertEquals(new CdPlayerBody.ContactGlobals(0, 0, 1), effect.contact()); // BCLR #0 keeps combineRing.
+        }
+        assertEquals(5, response.world().rings());
+        assertTrue(bodySounds(r).isEmpty());
+    }
+
+    @Test void zeroRingRollingKillWritesTheStickWordIntoByte39AndOnlyThePublishedPoseSeesTheNewTileAndPriority() {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.rotationDistance = 0xA5; f.rawHeld = f.rawTap = 0x10;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 81);
+        Contact contact = new Contact(); contact.rings = 0;
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, contact)));
+        var response = response(r);
+        assertEquals(CdPlayerTouchResponse.Exit.KILL_PLAYER, response.exit());
+        assertEquals(List.of(new CdPlayerTouchResponse.ResetOnFloor(),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_CHARGESTOP),
+                new CdPlayerTouchResponse.PlayFm(CdPlayerTouchResponse.FmSound.FM_HURT)), response.calls());
+        assertTrue(response.changedSlots().isEmpty());
+        var m = r.state().motion();
+        assertEquals(6, m.routine()); assertEquals(2, m.flags()); assertEquals(76 << 16, m.centreY16_16());
+        assertEquals(-0x700, m.yVelocity()); assertEquals(0, m.xVelocity()); assertEquals(0, m.groundVelocity());
+        assertEquals(0x18, m.animation()); assertEquals(0, m.stick());
+        assertEquals(0x4C, r.state().rotationDistance()); // MOVE.W oY,oPlayerStick (:289): $38 = $00, $39 = $4C.
+        assertEquals(new CdPlayerBody.Header(1, f.mapAddress(), 0x8780, 0, 24), r.state().header());
+        assertEquals(0, r.state().timers().hurt()); assertEquals(0, r.environment().globals().invincible());
+        var cut = r.effects().stream().filter(CdPlayerBody.DisplayEligibility.class::isInstance)
+                .map(CdPlayerBody.DisplayEligibility.class::cast).findFirst().orElseThrow();
+        assertEquals(new CdPlayerBody.DisplayEligibility(true, 64, 81, 14, 4, 24, 2), cut); // Display ran before the touch.
+        assertEquals(new CdPlayerBody.DisplayPublication(true, f.mapAddress(), 0x8780, 0, 24, 7, 4, 64 << 16, 76 << 16),
+                r.display().orElseThrow());
+        assertTrue(bodySounds(r).isEmpty());
+    }
+
+    @ParameterizedTest @CsvSource({"120,0", "0,1"})
+    void noHurtAndDebugKillReturnsLeaveByte39AndTheWholeActorExactlyAsTheNoTouchControl(int hurt, int debugMode) {
+        Fixture f = new Fixture(); Actor a = new Actor(); a.hurt = hurt; a.rotationDistance = 0xA5;
+        f.debugMode = debugMode; // ObjSonic tests only the high byte (Sonic/Main.asm:69); KillPlayer:280 tests the word.
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 76);
+        Contact contact = new Contact(); contact.rings = debugMode == 0 ? 5 : 0;
+        var r = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(pool, contact)));
+        var control = f.owner().step(a.state(), f.environment(), Optional.of(responseTouch(new CdObjectPool(), contact)));
+        assertEquals(debugMode == 0 ? CdPlayerTouchResponse.Exit.NO_HURT
+                : CdPlayerTouchResponse.Exit.KILL_PLAYER_DEBUG_NO_WRITE, response(r).exit());
+        assertEquals(control.state(), r.state()); assertEquals(control.environment(), r.environment());
+        assertEquals(control.display(), r.display()); assertEquals(0xA5, r.state().rotationDistance());
+        assertTrue(response(r).calls().isEmpty()); assertTrue(response(r).changedSlots().isEmpty());
+        assertEquals(new CdPlayerBody.ContactGlobals(0, 0, 1), responseEffect(r).contact());
+    }
+
+    @ParameterizedTest @CsvSource({"70,MONITOR,true", "199,SPECIAL,true", "43,ENEMY,false", "171,HAZARD,false"})
+    void unownedHandlersStillStopAtTheTypedBoundaryWithOrWithoutAResponseOwner(int type, CdPlayerObjectTouch.Kind kind,
+                                                                              boolean owner) {
+        Fixture f = new Fixture(); Actor a = new Actor();
+        CdObjectPool pool = new CdObjectPool(); var selected = touchSlot(pool, 33, type, 72, 76); var snapshot = pool.capture();
+        var context = owner ? responseTouch(pool, new Contact()) : touchContext(pool);
+        var failure = assertThrows(CdPlayerBody.UnsupportedTouchHandler.class,
+                () -> f.owner().step(a.state(), f.environment(), Optional.of(context)));
+        assertEquals(kind, failure.kind()); assertSame(selected, failure.selectedSlot());
+        assertEquals(snapshot.slots(), pool.capture().slots());
+    }
+
+    @Test void skippedTouchGatesNeverSampleTheScannerSnapshotOrResponseOwner() {
+        Fixture f = new Fixture(); CdObjectPool pool = new CdObjectPool();
+        touchSlot(pool, 32, 0x40, 64, 76); touchSlot(pool, 33, 0x2B, 64, 76); // A sampled scan rejects selector 0 first.
+        var context = responseTouch(pool, new Contact());
+        assertThrows(IllegalArgumentException.class,
+                () -> f.owner().step(new Actor().state(), f.environment(), Optional.of(context)));
+        Actor a = new Actor(); a.ctrl = 0x80;
+        var negative = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        assertTrue(touchVisits(negative).isEmpty());
+        assertFalse(negative.effects().stream().anyMatch(e -> e instanceof CdPlayerBody.ObjectTouchResponse
+                || e instanceof CdPlayerBody.ObjectTouchResult));
+        assertTrue(calls(negative).contains(CdPlayerBody.NativeCall.SPECIAL_CHUNKS));
+        a.ctrl = 0; a.header = new CdPlayerBody.Header(0, 0, 0, 0, 0);
+        assertTrue(f.owner().step(a.state(), f.environment(), Optional.of(context)).effects().isEmpty());
+        a.header = new CdPlayerBody.Header(1, 0, 0, 0, 0); a.routine = 0;
+        var init = f.owner().step(a.state(), f.environment(), Optional.of(context));
+        assertEquals(CdPlayerBody.Boundary.INIT_RETURN, init.boundary()); assertTrue(touchVisits(init).isEmpty());
+    }
+
+    @Test void hurtThenSpecialChunksTunnelFailurePublishesNoResponseResultOrSoundsAndLeavesInputsReusable() {
+        Fixture f = new Fixture(); Actor a = new Actor(); f.special[3] = 2;
+        CdObjectPool pool = new CdObjectPool(); touchSlot(pool, 33, 0xAB, 72, 76);
+        var context = responseTouch(pool, new Contact()); var snapshot = pool.capture();
+        var state = a.state(); var env = f.environment(); var failingOwner = f.owner();
+        List<CdPlayerBody.Result> publications = new ArrayList<>();
+        var failure = assertThrows(CdPlayerBody.UnsupportedBody.class,
+                () -> publications.add(failingOwner.step(state, env, Optional.of(context))));
+        // HurtPlayer's BSET #1 meets the tunnel chunk's air-bit owner boundary in the same Main (:340-351).
+        assertEquals(CdPlayerBody.UnsupportedBoundary.ROLL_TUNNEL_OWNER, failure.boundary());
+        assertTrue(publications.isEmpty()); assertEquals(snapshot.slots(), pool.capture().slots());
+        assertEquals(2, state.motion().routine()); assertEquals(0, state.timers().hurt());
+        assertEquals(0, state.history().index()); assertEquals(0, state.animation().mapFrame());
+        var grounded = failingOwner.step(state, env, Optional.of(responseTouch(new CdObjectPool(), new Contact())));
+        assertEquals(4, grounded.state().motion().flags() & 4, "Without the hurt the same chunk is the StartRoll owner");
+        f.special[3] = 0x7F; var safe = f.owner();
+        var r = safe.step(state, env, Optional.of(context));
+        assertEquals(CdPlayerTouchResponse.Exit.HURT, response(r).exit());
+        assertEquals(r, safe.step(state, env, Optional.of(context)));
+    }
+
+    @Test void responseContextIsAnExplicitEphemeralOwnerAndTheTwoArgumentContextHasNone() {
+        CdObjectPool pool = new CdObjectPool(); var scanner = touchScanner(); var snapshot = pool.capture();
+        var owner = new Contact().context();
+        assertEquals(Optional.empty(), new CdPlayerBody.TouchContext(scanner, snapshot).response());
+        var withOwner = new CdPlayerBody.TouchContext(scanner, snapshot, owner);
+        assertEquals(Optional.of(owner), withOwner.response());
+        assertEquals(withOwner, new CdPlayerBody.TouchContext(scanner, snapshot, Optional.of(owner)));
+        assertThrows(NullPointerException.class,
+                () -> new CdPlayerBody.TouchContext(scanner, snapshot, (CdPlayerBody.ResponseContext) null));
+        assertThrows(NullPointerException.class,
+                () -> new CdPlayerBody.TouchContext(scanner, snapshot, (Optional<CdPlayerBody.ResponseContext>) null));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.ResponseContext(null, owner.contact(), owner.world()));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.ResponseContext(owner.response(), null, owner.world()));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.ResponseContext(owner.response(), owner.contact(), null));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.ContactGlobals(256, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.ContactGlobals(0, 256, 0));
+        assertThrows(IllegalArgumentException.class, () -> new CdPlayerBody.ContactGlobals(0, 0, -1));
+        assertThrows(NullPointerException.class, () -> new CdPlayerBody.ObjectTouchResponse(null));
+    }
+
+    @Test void bodyStateEnvironmentAndResultDeclareNoContactContextOrPoolCapture() {
+        for (var type : List.of(CdPlayerBody.State.class, CdPlayerBody.Environment.class, CdPlayerBody.Result.class)) {
+            for (var component : type.getRecordComponents()) {
+                String name = component.getGenericType().getTypeName();
+                for (String forbidden : List.of("TouchContext", "ResponseContext", "ContactGlobals", "Snapshot",
+                        "CdPlayerTouchResponse")) {
+                    assertFalse(name.contains(forbidden), type.getSimpleName() + "." + component.getName() + " " + name);
+                }
+            }
+        }
+    }
+
     private static CdPlayerObjectTouch.Result objectTouch(CdPlayerBody.Result r) {
         var touches = r.effects().stream().filter(CdPlayerBody.ObjectTouchResult.class::isInstance)
                 .map(CdPlayerBody.ObjectTouchResult.class::cast).toList();
@@ -703,6 +941,28 @@ class TestCdPlayerBody {
     }
     private static CdPlayerBody.TouchContext touchContext(CdObjectPool pool) {
         return new CdPlayerBody.TouchContext(touchScanner(), pool.capture());
+    }
+    private static CdPlayerBody.TouchContext responseTouch(CdObjectPool pool, Contact contact) {
+        return new CdPlayerBody.TouchContext(touchScanner(), pool.capture(), contact.context());
+    }
+    private static CdPlayerBody.ObjectTouchResponse responseEffect(CdPlayerBody.Result r) {
+        var responses = r.effects().stream().filter(CdPlayerBody.ObjectTouchResponse.class::isInstance)
+                .map(CdPlayerBody.ObjectTouchResponse.class::cast).toList();
+        assertEquals(1, responses.size()); return responses.getFirst();
+    }
+    private static CdPlayerTouchResponse.Result response(CdPlayerBody.Result r) { return responseEffect(r).result(); }
+
+    /** EnemyPoints dc.w 10,20,50,100 (PP Player Object Collision.asm:200-204); constructed literal, never a runtime fallback. */
+    private static final byte[] ENEMY_POINTS = {0, 10, 0, 20, 0, 50, 0, 100};
+
+    /** Runtime-owned contact/world bytes at the call cut; declared per test, never Body state. */
+    static final class Contact {
+        int timeWarp, shield, combineRing = 1, rings = 5, lives = 3, hudLives, score, next = 5000, hudScore = 0x80;
+        CdPlayerBody.ResponseContext context() {
+            return new CdPlayerBody.ResponseContext(new CdPlayerTouchResponse(CdAssetBytes.copyOf(ENEMY_POINTS)),
+                    new CdPlayerBody.ContactGlobals(timeWarp, shield, combineRing),
+                    new CdPlayerTouchResponse.WorldGlobals(rings, lives, hudLives, score, next, hudScore));
+        }
     }
     /** Actual 63 ObjColSizes pairs, Player Object Collision.asm:398-461; constructed format input only. */
     private static CdPlayerObjectTouch touchScanner() {
