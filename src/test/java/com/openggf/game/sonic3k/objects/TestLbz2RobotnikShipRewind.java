@@ -19,6 +19,8 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -196,6 +198,96 @@ class TestLbz2RobotnikShipRewind {
         assertEquals(2, restoredSecond.spawnedChildrenForTest().size());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void exhaustedRideSlotsKeepRejectedChildrenOutsideSnapshot(int freeSlots) {
+        Harness h = new Harness();
+        var ship = h.ship(0x443F);
+        ObjectRefId shipId = h.id(ship);
+        h.manager.reserveAllButNFreeSlots(freeSlots);
+        h.manager.lifecycle.clear();
+
+        h.startRide(ship);
+
+        List<Lifecycle> attempts = List.copyOf(h.manager.lifecycle);
+        assertEquals(List.of("GradualCameraMaxXChild", "ExhaustFlameChild"), attempts.stream()
+                .map(event -> event.object().getClass().getSimpleName()).toList());
+        for (int index = 0; index < attempts.size(); index++) {
+            var child = (AbstractObjectInstance) attempts.get(index).object();
+            assertEquals(index >= freeSlots, child.isDestroyed());
+            assertEquals(index < freeSlots, h.manager.getActiveObjects().contains(child));
+            assertEquals(index < freeSlots,
+                    h.manager.captureIdentityContext().requireIdentityTable().idFor(child) != null);
+            if (index < freeSlots) {
+                assertTrue(child.getSlotIndex() > ship.getSlotIndex());
+            } else {
+                assertEquals(-1, child.getSlotIndex());
+            }
+        }
+        CompositeSnapshot snapshot = assertDoesNotThrow(h.registry::capture);
+        assertEquals(freeSlots, ship.spawnedChildrenForTest().size());
+        List<ObjectRefId> expectedChildren = ship.spawnedChildrenForTest().stream().map(h::id).toList();
+        h.manager.lifecycle.clear();
+        ship.update(2, null);
+        assertTrue(h.manager.lifecycle.isEmpty(), "failed presentation allocation must not retry");
+        List<ChildState> expected = h.states();
+
+        h.registry.restore(snapshot);
+
+        var restoredShip = (Lbz2RobotnikShipInstance) h.byId(shipId);
+        assertNotSame(ship, restoredShip);
+        assertEquals(expectedChildren, restoredShip.spawnedChildrenForTest().stream().map(h::id).toList());
+        h.manager.lifecycle.clear();
+        restoredShip.update(2, null);
+        assertTrue(h.manager.lifecycle.isEmpty(), "restore must not retry a failed presentation allocation");
+        assertEquals(expected, h.states());
+        assertDoesNotThrow(h.registry::capture);
+    }
+
+    @Test
+    void exhaustedBossSlotKeepsRejectedBossOutsideSnapshot() {
+        Harness h = new Harness();
+        var ship = h.ship(0x443F);
+        ObjectRefId shipId = h.id(ship);
+        h.manager.reserveAllButNFreeSlots(0);
+        h.manager.lifecycle.clear();
+
+        ship.forceOffscreenForTest();
+        ship.update(2, null);
+
+        List<Lifecycle> attempts = List.copyOf(h.manager.lifecycle);
+        assertEquals(List.of("LbzFinalBoss1Instance", "SongFadeTransitionInstance",
+                "RobotnikHeadChild", "TopAttachmentChild", "TurretSegmentChild",
+                "TurretSegmentChild", "TurretSegmentChild", "OrbitingPodChild"), attempts.stream()
+                .map(event -> event.object().getClass().getSimpleName()).toList());
+        for (Lifecycle attempt : attempts) {
+            var child = (AbstractObjectInstance) attempt.object();
+            assertTrue(child.isDestroyed());
+            assertEquals(-1, child.getSlotIndex());
+            assertFalse(h.manager.getActiveObjects().contains(child));
+            assertNull(h.manager.captureIdentityContext().requireIdentityTable().idFor(child));
+        }
+        assertTrue(ship.isDestroyed());
+        CompositeSnapshot snapshot = assertDoesNotThrow(h.registry::capture);
+        assertTrue(ship.spawnedChildrenForTest().isEmpty());
+        h.manager.lifecycle.clear();
+        ship.update(3, null);
+        assertTrue(h.manager.lifecycle.isEmpty(), "failed boss allocation must not retry");
+        List<ChildState> expected = h.states();
+
+        h.registry.restore(snapshot);
+
+        var restoredShip = (Lbz2RobotnikShipInstance) h.byId(shipId);
+        assertNotSame(ship, restoredShip);
+        assertTrue(restoredShip.isDestroyed());
+        assertTrue(restoredShip.spawnedChildrenForTest().isEmpty());
+        h.manager.lifecycle.clear();
+        restoredShip.update(3, null);
+        assertTrue(h.manager.lifecycle.isEmpty(), "restore must not retry a failed boss allocation");
+        assertEquals(expected, h.states());
+        assertDoesNotThrow(h.registry::capture);
+    }
+
     private record Lifecycle(String action, ObjectInstance object, int slot) { }
     private record ChildState(String type, ObjectRefId id, int slot) { }
     private record Outcome(List<ChildState> allocated, List<String> lifecycle, int cameraMaxX) { }
@@ -224,6 +316,24 @@ class TestLbz2RobotnikShipRewind {
         public void addDynamicObjectNextFrame(ObjectInstance object) {
             lifecycle.add(new Lifecycle("add-next", object, slot(object)));
             super.addDynamicObjectNextFrame(object);
+        }
+
+        @Override
+        public void addDynamicObjectAfterSlot(ObjectInstance object, int parentSlot) {
+            lifecycle.add(new Lifecycle("add-after", object, slot(object)));
+            super.addDynamicObjectAfterSlot(object, parentSlot);
+        }
+
+        @Override
+        public void addDynamicObjectAfterCurrent(ObjectInstance object) {
+            lifecycle.add(new Lifecycle("add-after-current", object, slot(object)));
+            super.addDynamicObjectAfterCurrent(object);
+        }
+
+        @Override
+        public void addDynamicObjectAfterCurrentNextFrame(ObjectInstance object) {
+            lifecycle.add(new Lifecycle("add-after-current-next", object, slot(object)));
+            super.addDynamicObjectAfterCurrentNextFrame(object);
         }
     }
 
@@ -254,6 +364,11 @@ class TestLbz2RobotnikShipRewind {
 
         Lbz2RobotnikShipInstance startRide() {
             var ship = ship(0x443F);
+            startRide(ship);
+            return ship;
+        }
+
+        void startRide(Lbz2RobotnikShipInstance ship) {
             var player = new TestablePlayableSprite("sonic", (short) 0x443F, (short) 0x640);
             ship.onTouchResponse(player,
                     new TouchResponseResult(0x0A, 0x10, 8, TouchCategory.SPECIAL), 0);
@@ -261,7 +376,6 @@ class TestLbz2RobotnikShipRewind {
             ship.setRideRightForTest(0x100);
             ship.update(1, player);
             assertFalse(player.isObjectControlled());
-            return ship;
         }
 
         Outcome release(Lbz2RobotnikShipInstance ship,

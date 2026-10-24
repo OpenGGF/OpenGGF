@@ -382,10 +382,14 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
             exhaustSpawned = true;
             GradualCameraMaxXChild cameraChild = spawnChild(() -> new GradualCameraMaxXChild(this));
             cameraChild.setServices(services());
-            spawnedChildren.add(cameraChild);
+            if (!cameraChild.isDestroyed()) {
+                spawnedChildren.add(cameraChild);
+            }
             ExhaustFlameChild flame = spawnChild(() -> new ExhaustFlameChild(this));
             flame.setServices(services());
-            spawnedChildren.add(flame);
+            if (!flame.isDestroyed()) {
+                spawnedChildren.add(flame);
+            }
         }
     }
 
@@ -536,7 +540,9 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
         if (services().objectManager() != null) {
             boss.initializeOnAllocationBeforeParentRelease();
         }
-        spawnedChildren.add(boss);
+        if (!boss.isDestroyed()) {
+            spawnedChildren.add(boss);
+        }
     }
 
     /**
