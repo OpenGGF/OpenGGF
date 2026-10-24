@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 181 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 167 records | <=150 records | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -77,6 +77,7 @@ continues those cuts rather than treating the inventory as untouched.
 | Menu and AniPLC composition / `game.menu`, S2 animation assembly | Cross-game 14 → 10 members; framework roots 1 → 0 records | Menu cadence/prime controls, post-install graphics rebinding, ROM animator adapter, strict frozen guards | Completed; affected checks and strict frozen rules passed |
 | Canonical sprite geometry / `graphics`, legacy `level.render` ingress | Remove `SpriteSatEntry`'s 20 reverse records and replay callbacks; retain and explicitly relocate the pinned submission conversion | Complete field/geometry controls, SAT order/mask/ghost/replay checks, identical public API pins and audited member delta | Completed; low-level records 187 → 181; API and actual SAT pixel checks passed |
 | Master-title preview / `GameModule` preview capabilities | Shared concrete-game 9 → 0 records | S1/S2/S3K pixel/token fingerprints, detached ROM views, card-owned selection, source and strict frozen guards | Completed; focused behavior/API checks and strict frozen rules passed; see the [preview plan](plans/2026-10-23-title-preview-providers.md) |
+| Title-card sprite rendering / `game.titlecard` | Remove the helper's 14 low-level reverse dependencies | Exact tile submissions, asymmetric flipped-art pixels and manager draw order at 320/424 pixels, unchanged API pins and strict frozen rules | Completed; low-level records 181 → 167; focused behavior/API checks and strict frozen rules passed |
 | Background renderer lifetime / level rendering composition | Evaluate the five `GraphicsManager` → `BackgroundRenderer` records | Ground construction, initialization, per-level cleanup and API compatibility before choosing a cut | Queued investigation; no promised removal yet |
 
 The combined guard profile has one independently reproduced pre-existing
@@ -220,7 +221,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 181
+- `low_level_layers_do_not_depend_on_runtime_layers`: 167
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -240,6 +241,16 @@ The retained compatibility dependency is explicit: `GraphicsManager` accepts
 SAT storage and replay use the graphics value and its single expansion owner.
 This is a reviewed identity relocation, not a prune-only update or complete
 isolation of graphics from runtime packages.
+
+2026-10-24: `TitleCardSpriteRenderer` moves intact from `graphics` to
+`game.titlecard`, beside the mapping value it consumes. All three managers keep
+their existing calls and draw order. The move removes exactly 14 low-level
+records from `40afa018-d450-4b84-8cb9-d539d75d8062`, reducing 181 to 167 without
+replacement allowances or a forwarding class. Column-major title-card tile
+submission remains separate from the graphics-owned sprite expansion contract.
+The public static entry point keeps its parameter and return types.
+The helper has no `@ModApi` marker or curated root, and no recursive candidate
+signature names it. The release descriptor has no published API baselines.
 
 The installed-owner rewind change removed 10 framework-root records, leaving
 one. Injecting execution-time graphics selection into `ScriptFramesApplyStrategy`
@@ -341,10 +352,16 @@ Rule: `object packages should not access global GameServices except approved bri
 
 Allowed bridge classes are excluded directly in the ArchUnit rule:
 
-- `AbstractObjectInstance`
-- `DefaultObjectServices`
-- `BootstrapObjectServices`
-- classes whose simple name ends with `ObjectRegistry`
+- `com.openggf.level.objects.AbstractObjectInstance`
+- `com.openggf.level.objects.DefaultObjectServices`
+- `com.openggf.level.objects.BootstrapObjectServices`
+- `com.openggf.level.objects.AbstractObjectRegistry`
+- `com.openggf.game.sonic1.objects.Sonic1ObjectRegistry`
+- `com.openggf.game.sonic2.objects.Sonic2ObjectRegistry`
+- `com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry`
+
+These are exact fully qualified class exclusions. Other registry names do not
+inherit an exception.
 
 Frozen violations:
 
@@ -361,13 +378,15 @@ Target direction:
 
 Rule: `shared level and game layers should not depend on game-specific packages`
 
-Frozen violations 1–9 are in `MasterTitleRomPreview`, which composes the
-cross-game master-title previews through concrete Sonic 1, Sonic 2, and Sonic
-3&K title-screen mappings. The five former `DefaultPowerUpSpawner` entries
+No committed records remain under UUID
+`e0b8ef04-86e9-4001-b35e-c5de3ef4d940`. The title-preview provider migration on
+2026-10-23 removed all nine `MasterTitleRomPreview` mapping dependencies. Per-game
+providers now own the concrete Sonic 1, Sonic 2, and Sonic 3&K preview decoding
+and composition. The five former `DefaultPowerUpSpawner` entries
 (Sonic 1 splash and S3K shield/insta-shield construction) were removed on
 2026-08-28 when that creation moved behind `GameModule.getShieldFactory()`,
-`getInstaShieldFactory()`, and `getWaterSplashFactory()`. The frozen set is now
-9 entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
+`getInstaShieldFactory()`, and `getWaterSplashFactory()`. The rule description's
+historical `frozen baseline: 9` remains part of its unchanged store key.
 
 Target direction:
 
