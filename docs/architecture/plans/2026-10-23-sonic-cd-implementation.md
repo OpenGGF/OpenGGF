@@ -1585,3 +1585,58 @@ has been claimed yet. Do not mutate the tested tree while that runner is alive.
 Task `sonic-cd-r11a-player-bringup-20261024-r1` is read-only on concrete native
 player/collision prerequisites and writes external research only, independently
 of parent validation. No further design council or second game runner is planned.
+
+### Broad run limits and focused corrections, 24 October 2026
+
+Run `20261023T231338Z-666ba6f3` tested clean commit `5998f6290`, tree
+fingerprint `29413264d95825f801f675c0cd780be3d639e64852da1b0869423a3bbb8908c4`,
+against base `56beba899`. The unchanged 3,654-class smoke selection hit its
+90-minute execution budget during ordinary batch 67/74; queue waits were
+excluded. Preparation passed in 26.45s and recorded ordinary execution was
+5,373.74s. The retained result is **incomplete**, with 36,152 tests, five
+failures, zero errors and 110 skips. Guards were not reached. No full-suite or
+completed-smoke pass is claimed. The tail was executing
+`TestMhzKnucklesColdRouteCapture` when the invocation budget stopped the process.
+
+Four failures are the new optional-media tests in
+`TestSonicCdStockPreparation`: three `requestedVariantRejectsAnotherRegion`
+invocations and `forcedContentRecordRejectsAnotherDiscEvenWhenStageProgramIsIdentical`.
+Their media assumption ran inside `assertThrows(IOException.class, ...)`,
+which incorrectly caught an absent-fixture abort as a failed assertion. The
+fixture lookup now occurs before the exception assertion. Focused validation
+must exercise this class both without the property (explicit media skips)
+and with actual supplied media (all cases execute).
+
+The fifth failure is
+`TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels`,
+the line-53 `GLFW must initialize for pixel verification` assertion in the
+display-free environment. The exact method on detached baseline `56beba899`
+also fails at that assertion, one test with zero skips/errors. Current session
+`67038` reproduced the exact test identity, exception, message and source line;
+Java `25.0.5.0.2`, the absolute S3K ROM property and surfaceless-EGL property
+matched baseline. It waited zero; Maven took 27.293s. This is an existing
+display-free GLFW limitation. No graphics helper or desktop environment was
+changed. The clean detached baseline was removed after inspecting its generated
+resource links; the original ROM/config/reference targets were untouched.
+
+All 110 skip reasons were inspected: optional diagnostics/benchmarks/captures,
+GLFW/OpenAL availability, opt-in CD media/native fixtures and source-dependent
+route omissions. None reports a missing required cartridge ROM. Regional CD
+and native-device checks have their separately recorded focused runs; their
+omission from this broad command is explicit. Consumed runner diagnostics are
+acknowledged after inspection. Remaining ordinary/guard coverage and affected
+checks for subsequent source changes remain open, not a cached passing result.
+
+The corrected optional-media class passed in session `89754` without the
+property: nine tests, zero failures/errors, seven explicit media skips (the
+two ROM-free cases passed), 12s waiting and 29.309s Maven execution. Session
+`81396` then passed all nine with supplied regional media and zero skips,
+165s waiting and 34.310s Maven execution:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSonicCdStockPreparation' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 python3 ${OPENGGF_MAIN}/tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestSonicCdStockPreparation' -Dsoniccd.media.root=${SCD_MEDIA_ROOT} test -B
+```
+
+All individual skip identities were inspected. These checks resolve the four
+new fixture-test failures; they do not fill the timed-out ordinary/guard coverage.

@@ -76,16 +76,18 @@ class TestSonicCdStockPreparation {
     @ParameterizedTest(name = "{0}: requested software variant cannot override disc bytes")
     @EnumSource(CdReleaseVariant.class)
     void requestedVariantRejectsAnotherRegion(CdReleaseVariant variant) throws Exception {
+        Path cue = suppliedCue(variant);
         var wrong = variant == CdReleaseVariant.USA ? CdReleaseVariant.JAPAN : CdReleaseVariant.USA;
         var request = new CdStockLaunch.Request(CdStageKey.parse("R11A"), Optional.of(wrong), Optional.empty());
-        assertThrows(IOException.class, () -> CdStockLaunch.prepare(suppliedCue(variant), request));
+        assertThrows(IOException.class, () -> CdStockLaunch.prepare(cue, request));
     }
 
     @Test void forcedContentRecordRejectsAnotherDiscEvenWhenStageProgramIsIdentical() throws Exception {
+        Path cue = suppliedCue(CdReleaseVariant.JAPAN);
         // JP/EU R11A MMD bytes match, but their complete disc identities do not.
         var request = new CdStockLaunch.Request(CdStageKey.parse("R11A"), Optional.empty(),
                 Optional.of(CdRetailReleases.EUROPE.key()));
-        assertThrows(IOException.class, () -> CdStockLaunch.prepare(suppliedCue(CdReleaseVariant.JAPAN), request));
+        assertThrows(IOException.class, () -> CdStockLaunch.prepare(cue, request));
     }
 
     private static Path suppliedCue(CdReleaseVariant variant) throws IOException {
