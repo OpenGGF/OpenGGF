@@ -282,6 +282,27 @@ public class GraphicsManager {
 		commands.add(command);
 	}
 
+	/** Real-owner preflight; ordinary flush cannot reach an enclosing capture's private queue. */
+	void requireUncapturedCommandScope() {
+		if (commandCaptureTarget != null || spritePresentationBuilder != null || isSpriteSatCollectionActive()) {
+			throw new IllegalStateException("Resource scope inside graphics capture or sprite preparation");
+		}
+	}
+
+	/**
+	 * Close the preceding normal pattern batch and drain its actual ordinary FIFO before resource replacement.
+	 * Rejection leaves prior work untouched. Transfer ownership before execution so the existing capture
+	 * executor releases every tail on failure without retrying failed work through the ordinary queue.
+	 */
+	void drainBeforeBackgroundScope(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+		requireUncapturedCommandScope();
+		flushPatternBatch();
+		executeCapturedCommands(() -> {
+			commandCaptureTarget.addAll(commands);
+			commands.clear();
+		}, cameraX, cameraY, cameraWidth, cameraHeight);
+	}
+
 	/**
 	 * Owns one immediate capture, restoring any enclosing target even when cleanup fails.
 	 * Nested captures drain immediately; the enclosing capture's commands drain afterward.

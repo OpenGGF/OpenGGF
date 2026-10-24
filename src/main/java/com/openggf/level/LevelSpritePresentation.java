@@ -117,6 +117,77 @@ public final class LevelSpritePresentation {
         frame.renderer.withScroll(frame.scroll, () -> frame.requireCurrent(level), draw);
     }
 
+    /**
+     * Internal terrain scope over an exact physical 64x32 RGBA background image (8192 bytes).
+     * A null selection privately copies the current completed-load view; it creates/publishes no ScrollFrame
+     * and never updates native scroll, deformation, sprites or clocks. A nonnull selection keeps its existing
+     * owner-aware lifetime. The input is detached before old commands drain and before the callback runs.
+     *
+     * Requires the owning rendering thread, an attached completed production load, a static 512px
+     * background, no feature provider and no full-width/persistent runtime owner. The callback only draws
+     * terrain/normal patterns: no owner, art, palette, cache-policy or native-state changes. Enclosing
+     * scroll/cinematic/preparation/graphics-capture scopes reject before cache/upload mutation.
+     * Scroll/mode/guards restore on failure; the installed image remains a derived retained cache.
+     * Callers retain their closed/per-visit gates. Calls during a load, and same-instance graphics
+     * cleanup/reinitialization without a world/renderer/load reset, are unsupported lifecycles.
+     */
+    public static void withScrollAndBackground(LevelManager level, ScrollFrame selectedScroll,
+                                               byte[] descriptors64x32, Runnable draw) {
+        java.util.Objects.requireNonNull(draw, "draw");
+        if (descriptors64x32 == null || descriptors64x32.length != 64 * 32 * 4) {
+            throw new IllegalArgumentException("Background scope requires an exact 64x32 RGBA image");
+        }
+        java.util.Objects.requireNonNull(level, "level");
+        if (selectedScroll != null) validateScroll(level, selectedScroll);
+        var validateOwner = backgroundScopeOwner(level);
+        Runnable validate = () -> {
+            validateOwner.run();
+            if (selectedScroll != null) selectedScroll.requireCurrent(level);
+        };
+        level.spritePresentationRenderer().withScrollAndBackground(
+                selectedScroll == null ? null : selectedScroll.scroll, validate, descriptors64x32.clone(), draw);
+    }
+
+    /** Retain actual owners for one call without manufacturing a public captured frame or epoch. */
+    private static Runnable backgroundScopeOwner(LevelManager owner) {
+        var renderer = owner.spritePresentationRenderer();
+        var world = owner.getWorldSession();
+        var source = world == null ? null : world.getDataSource();
+        var module = owner.gameModule;
+        var level = owner.level;
+        var camera = owner.camera;
+        var parallax = owner.parallaxManager;
+        var graphics = owner.graphicsManager;
+        var tilemap = owner.tilemapManager;
+        long generation = owner.getCompletedProductionLoadGeneration();
+        if (renderer == null || world == null || source == null || module == null
+                || world.getGameModule() != module || level == null || world.getCurrentLevel() != level
+                || camera == null || parallax == null || graphics == null || tilemap == null || generation <= 0) {
+            throw new IllegalStateException("Background scope requires an attached completed production load");
+        }
+        renderer.requireScrollIdle();
+        SpritePresentation.requireUncapturedCommandScope(graphics);
+        var atlas = graphics.getPatternAtlas();
+        boolean initialized = graphics.isGlInitialized(), headless = graphics.isHeadlessMode();
+        int width = camera.getWidth(), height = camera.getHeight();
+        if (atlas == null || (!initialized && !headless) || width <= 0 || height <= 0) {
+            throw new IllegalStateException("Background scope requires initialized graphics and viewport");
+        }
+        var lifetime = renderer.spriteTables.scrollLifetime;
+        return () -> {
+            if (owner.spritePresentationRenderer() != renderer || owner.getWorldSession() != world
+                    || world.getDataSource() != source || owner.gameModule != module || world.getGameModule() != module
+                    || owner.level != level || world.getCurrentLevel() != level || owner.camera != camera
+                    || owner.parallaxManager != parallax || owner.graphicsManager != graphics || owner.tilemapManager != tilemap
+                    || graphics.getPatternAtlas() != atlas || graphics.isGlInitialized() != initialized
+                    || graphics.isHeadlessMode() != headless || camera.getWidth() != width || camera.getHeight() != height
+                    || renderer.spriteTables.scrollLifetime != lifetime
+                    || owner.getCompletedProductionLoadGeneration() != generation) {
+                throw new IllegalStateException("Background scope no longer belongs to the retained renderer lifetime");
+            }
+        };
+    }
+
     /** Immutable displayed SAT, read by captured presentation consumers independently of GPU drawing. */
     public static SpritePresentation.Frame published(LevelManager level) {
         var renderer = level == null ? null : level.spritePresentationRenderer();

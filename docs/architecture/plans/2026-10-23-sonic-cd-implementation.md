@@ -4184,3 +4184,60 @@ unchanged client snapshots. Native section PLC residency, diagonal Springs,
 mixed plane/sprite priority, natural Spring launches, remaining USA gameplay
 and Japan/Europe parity remain outside these bounded checks. Work stays private
 and local with no destination integration, push, PR or complete-game claim.
+
+### Retained background resource scope — 25 October 2026
+
+An internal LevelSpritePresentation.withScrollAndBackground scope now accepts
+one optional immutable ScrollFrame and an exact8192-byte physical64x32 RGBA
+image. Null privately observes the current completed-load view without creating
+or publishing a public frame. Actual attached World/source/module/Level,
+renderer/load lifetime, camera/parallax, viewport, graphics/atlas and cache
+identities are retained and revalidated. Renderer scopes, native preparation
+and arbitrary enclosing graphics captures reject before cache mutation.
+A fixed static512px/no-feature/no-full-width-or-persistent-owner contract is
+enforced; it is not a native-owner override or a game-name branch.
+
+The existing GraphicsManager owns the true ordinary FIFO barrier: close prior
+normal patterns, transfer queued work to existing capture ownership, clear the
+old list, and drain on the old view/image with failure-safe tail release.
+Its new helpers are package-private; public forwarding stays on the existing
+unmarked SpritePresentation. The marked ModApi type gains no public/protected
+signature. After old work drains, cache bookkeeping settles before retained
+installation/upload; captured callback patterns/commands drain while selected.
+Scroll/mode/guard restore on all exits. Derived cache need not roll back after
+upload failure. No field, manager, epoch or default-path behavior is added;
+old capture/validate/withScroll/cinematic/S3K/generic code and capture executor
+remain byte-identical. Source-only independent review found no productionP1/P2.
+
+Tests were frozen before R2 production; Root99167 tests-only test-compile
+failed on intentionally absent APIs, compilationRED only/no JUnit. Root85534
+then ran96/0failures/3errors/0skips: a new persistent content42 upload stub
+also rejected recovery's old-image settlement, and Root omitted the explicit
+S3K property needed by two cinematic rows. Review independently confirmed the
+sole testP2. Test-onlyRootR3 clears the mocked endpoint fault before image43;
+all original failure/restoration/recovery assertions remain. Production is
+unchanged. Root89645 reran complete96/0/0/0 with actual verified S3K property,
+Java25.0.5.0.2/surfaceless and no ambient display, normal7GiB/8core,
+43squeue/33.654sMaven, exit00:11:31BST. All nine selected XMLs/ROM/backend
+properties and skips were inspected. The original96 run remains red.
+
+Exact selectors: TestLevelScrollCapture7, TestLevelScrollDrawScope27,
+TestCapturedCommandCleanup10, TestLevelSpritePresentation7,
+TestPooledRenderCommandDiscard5, TestRenderContext21,
+TestLevelSpritePresentationLifecycle6, TestStageplayCinematicCameraRendering2,
+TestModApiSignatureSurface11. Command used queued -Dmse=off, explicit
+-Dopenggf.headless.gl=surfaceless-egl and -Ds3k.rom.path to the supplied image.
+Focused scope/lifecycle/cleanup/API and actual S3K cinematic coverage bounds
+this optional internal component: no existing production caller uses it yet,
+and existing paths are source-preserved. Actual CD cold/terrain native-plane
+cache integration, residency,256px wrap and EGL pixels remain next; the
+mocked/CPU scope tests do not prove those. No broad/full-suite pass follows.
+
+Owning render-thread convention and current completed-load admission remain;
+no closed-World or same-instance cleanup/reinitialization detector is invented.
+Caller must not enter during a load or mutate source/art/palette/cache owners
+inside the callback. Native pattern residency and CD terminal/per-visit gates
+belong to its client. Oracle limits retained from review include early-clone
+mutation coverage, resolver-emitted command coverage, and actual ordinary
+LevelManager/GPU cache integration. No repeat review or unrelated graphics
+change was used to turn the run green. Work is private/local, not delivered.

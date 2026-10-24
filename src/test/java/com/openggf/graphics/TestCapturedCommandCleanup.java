@@ -9,6 +9,73 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** CPU commands exercise real capture ownership; no GL commands or native buffers are used. */
 class TestCapturedCommandCleanup {
+    @Test void backgroundQueuePreflightRejectsCaptureWithoutDrainingEitherOwner() {
+        var graphics = new GraphicsManager();
+        graphics.initHeadless();
+        var order = new ArrayList<String>();
+        graphics.registerCommand(new Command("ordinary", null, null, order));
+        graphics.executeCapturedCommands(() -> {
+            graphics.registerCommand(new Command("outer-before", null, null, order));
+            assertThrows(IllegalStateException.class, graphics::requireUncapturedCommandScope);
+            assertThrows(IllegalStateException.class, () -> graphics.drainBeforeBackgroundScope(0, 0, 320, 224));
+            assertTrue(order.isEmpty());
+            graphics.registerCommand(new Command("outer-after", null, null, order));
+        }, 0, 0, 320, 224);
+        assertEquals(List.of("outer-before", "outer-after"), order);
+        graphics.requireUncapturedCommandScope();
+        graphics.drainBeforeBackgroundScope(0, 0, 320, 224);
+        assertEquals(List.of("outer-before", "outer-after", "ordinary"), order);
+    }
+
+    @Test void backgroundQueuePreflightRejectsCpuPreparationAndPreservesPriorWork() {
+        var graphics = new GraphicsManager();
+        graphics.initHeadless();
+        var prior = new Command("prior", null, null, null);
+        graphics.registerCommand(prior);
+        SpritePresentation.prepare(graphics, 0, 0, () -> {
+            assertThrows(IllegalStateException.class, graphics::requireUncapturedCommandScope);
+            assertThrows(IllegalStateException.class, () -> graphics.drainBeforeBackgroundScope(0, 0, 320, 224));
+            assertEquals(0, prior.discards);
+        }, value -> null);
+        graphics.drainBeforeBackgroundScope(0, 0, 320, 224);
+        assertEquals(1, prior.discards);
+        graphics.requireUncapturedCommandScope();
+    }
+
+    @Test void backgroundDrainOwnsAllPriorDiscardsOnceEvenWhenTwoReleasesThrow() {
+        var graphics = new GraphicsManager();
+        graphics.initHeadless();
+        var order = new ArrayList<String>();
+        var primary = new IllegalStateException("prior discard");
+        var secondary = new IllegalArgumentException("prior tail discard");
+        var first = new Command("first", null, primary, order);
+        var second = new Command("second", null, secondary, order);
+        var tail = new Command("tail", null, null, order);
+        graphics.registerCommand(first); graphics.registerCommand(second); graphics.registerCommand(tail);
+        assertSame(primary, assertThrows(IllegalStateException.class, () -> graphics.drainBeforeBackgroundScope(0, 0, 320, 224)));
+        assertArrayEquals(new Throwable[] {secondary}, primary.getSuppressed());
+        assertEquals(List.of("first", "second", "tail"), order);
+        assertEquals(1, first.discards); assertEquals(1, second.discards); assertEquals(1, tail.discards);
+        assertOrdinaryAndNextCaptureWork(graphics);
+        assertEquals(1, first.discards); assertEquals(1, second.discards); assertEquals(1, tail.discards);
+    }
+
+    @Test void backgroundDrainExecutionFailureAndFrameCleanupDoNotRetainOldQueue() {
+        var cleanup = new AssertionError("background drain frame cleanup");
+        var graphics = new FrameCleanupGraphics(cleanup);
+        graphics.setGlInitialized(true); // CPU commands only; this is not GPU validation
+        var primary = new IllegalStateException("prior execution");
+        var failed = new Command("failed", primary, null, null);
+        var tail = new Command("tail", null, null, null);
+        graphics.registerCommand(failed); graphics.registerCommand(tail);
+        assertSame(primary, assertThrows(IllegalStateException.class, () -> graphics.drainBeforeBackgroundScope(0, 0, 320, 224)));
+        assertArrayEquals(new Throwable[] {cleanup}, primary.getSuppressed());
+        assertEquals(1, failed.executions); assertEquals(0, tail.executions);
+        assertEquals(1, failed.discards); assertEquals(1, tail.discards); assertEquals(1, graphics.frameCleanups);
+        assertOrdinaryAndNextCaptureWork(graphics);
+        assertEquals(1, failed.executions); assertEquals(1, failed.discards); assertEquals(1, tail.discards);
+    }
+
     @Test void failedHeadlessDiscardsVisitEveryTailOnceAndRestoreOrdinaryQueue() {
         var graphics = new GraphicsManager();
         graphics.initHeadless();

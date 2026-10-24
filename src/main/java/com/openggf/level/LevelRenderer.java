@@ -994,6 +994,91 @@ public final class LevelRenderer {
         }
     }
 
+    /** The physical-background client must not compete with a native cache/window owner. */
+    private void requireFixedBackgroundSource(LevelScrollPresentation selected) {
+        var registry = GameServices.zoneRuntimeRegistryOrNull();
+        var runtime = registry == null ? null : registry.current();
+        if (lm.zoneFeatureProvider != null || lm.parallaxManager.getBgPeriodWidth() != 512
+                || lm.parallaxManager.getBgTilemapUpdateMode()
+                    != com.openggf.level.scroll.BgTilemapUpdateMode.STATIC_WINDOW
+                || (runtime != null && (runtime.requiresFullWidthBgTilemap() || runtime.usesPersistentBackgroundVdpPlane()))
+                || (selected != null && (selected.registers().backgroundPeriod() != 512
+                    || selected.registers().reversePlanes()))) {
+            throw new IllegalStateException("Physical background requires an unowned static 512px cache");
+        }
+    }
+
+    /** Separate admission preserves the older scroll-only and generic no-scope contracts. */
+    void withScrollAndBackground(LevelScrollPresentation selected, Runnable validate, byte[] descriptors, Runnable draw) {
+        requireScrollIdle();
+        var graphics = lm.graphicsManager;
+        SpritePresentation.requireUncapturedCommandScope(graphics);
+        validate.run();
+        requireFixedBackgroundSource(selected);
+        var savedScroll = currentScrollPresentation;
+        var savedMode = LevelScrollPresentation.copyRenderMode(currentAdvancedRenderFrameState);
+        var tilemap = lm.tilemapManager;
+        scrollOperation = true;
+        try {
+            if (selected == null) {
+                // Private completed-load observation, not a public capture/publication or native update.
+                resolveAdvancedRenderFrameState(lm.frameCounter);
+                selected = LevelScrollPresentation.capture(lm, currentAdvancedRenderFrameState);
+                currentAdvancedRenderFrameState = savedMode;
+            }
+            validate.run();
+            requireFixedBackgroundSource(selected);
+            // Old view and physical image remain installed throughout the actual FIFO barrier.
+            SpritePresentation.drainBeforeBackgroundScope(graphics,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), lm.camera.getWidth(), lm.camera.getHeight());
+            validate.run();
+            requireFixedBackgroundSource(selected);
+            scopedScroll = selected;
+            currentScrollPresentation = selected;
+            currentAdvancedRenderFrameState = selected.renderMode();
+
+            // Reconcile private mode/revision/full-width/wrap bookkeeping BEFORE retained installation.
+            // Under the enforced static source contract, later normal ensure preserves the clean image.
+            tilemap.setBgTilemapBaseX(0);
+            tilemap.setCurrentBgPeriodWidth(512);
+            tilemap.setBgLoopBandBaseY(-1);
+            tilemap.ensureBackgroundTilemapData(lm::getBlockAtPosition, null, lm.currentZone,
+                    lm.parallaxManager, lm.verticalWrapEnabled);
+            validate.run();
+            requireFixedBackgroundSource(selected);
+            tilemap.restoreRetainedBackgroundTilemapData(descriptors);
+            tilemap.uploadBackgroundTilemap();
+            validate.run();
+            var view = selected;
+            graphics.executeCapturedCommands(() -> {
+                Throwable failure = null;
+                try {
+                    draw.run();
+                    validate.run();
+                    requireFixedBackgroundSource(view);
+                } catch (RuntimeException | Error primary) {
+                    failure = primary;
+                    throw primary;
+                } finally {
+                    try { graphics.flushPatternBatch(); }
+                    catch (RuntimeException | Error cleanup) {
+                        if (failure == null) throw cleanup;
+                        if (cleanup != failure) failure.addSuppressed(cleanup);
+                    }
+                }
+                validate.run();
+                requireFixedBackgroundSource(view);
+            }, lm.camera.getXWithShake(), lm.camera.getYWithShake(), lm.camera.getWidth(), lm.camera.getHeight());
+            validate.run();
+            requireFixedBackgroundSource(view);
+        } finally {
+            scopedScroll = null;
+            currentScrollPresentation = savedScroll;
+            currentAdvancedRenderFrameState = savedMode;
+            scrollOperation = false;
+        }
+    }
+
     /** One draw's {@link LevelHudUnderlay}; cleared once painted. */
     Runnable hudUnderlay;
 

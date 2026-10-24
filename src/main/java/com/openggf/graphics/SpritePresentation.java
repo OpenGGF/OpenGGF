@@ -241,6 +241,26 @@ public final class SpritePresentation {
         return graphics.spritePresentationBuilder != null;
     }
 
+    /**
+     * Internal resource-scope preflight on the actual graphics owner, with no queue/cache mutation.
+     * Enclosing command captures and sprite preparation cannot supply an ordinary FIFO barrier.
+     * Call on the owning rendering thread; this bridge introduces no thread or graphics epoch detector.
+     */
+    public static void requireUncapturedCommandScope(GraphicsManager graphics) {
+        java.util.Objects.requireNonNull(graphics, "graphics").requireUncapturedCommandScope();
+    }
+
+    /**
+     * Internal Plane-B replacement barrier: close normal patterns and drain prior work before replacing
+     * shared descriptors. Uses the retained owner's camera/viewport and existing captured-command cleanup.
+     * The actual owner rechecks capture/preparation admission before touching either queue.
+     */
+    public static void drainBeforeBackgroundScope(GraphicsManager graphics,
+                                                  int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+        java.util.Objects.requireNonNull(graphics, "graphics")
+                .drainBeforeBackgroundScope(cameraX, cameraY, cameraWidth, cameraHeight);
+    }
+
     public static Subject subject(GraphicsManager graphics) { return graphics.spritePresentationSubject; }
 
     /** Records source coordinates before SAT clipping; preparation rebases them with the native tiles. */
