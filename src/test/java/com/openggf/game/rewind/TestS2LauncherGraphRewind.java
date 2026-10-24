@@ -7,7 +7,21 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.LauncherBallObjectInstance;
 import com.openggf.game.sonic2.objects.LauncherSpringObjectInstance;
 import com.openggf.game.sonic2.objects.OOZLauncherObjectInstance;
+import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.tests.OwnedMocks;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -32,6 +46,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class TestS2LauncherGraphRewind {
     private static final ObjectSpawn LAUNCHER_BALL_SPAWN =
@@ -44,12 +63,140 @@ class TestS2LauncherGraphRewind {
     @BeforeEach
     void initHeadless() {
         GraphicsManager.getInstance().initHeadless();
+        AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @AfterEach
     void tearDown() {
         GraphicsManager.getInstance().resetState();
         LauncherBallObjectInstance.clearActiveCaptures();
+        OOZLauncherObjectInstance.clearActiveLaunchers();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,false", "0,true", "1,false", "1,true"})
+    void producedFragmentsRestoreTheirDrawForBothOrientations(int subtype, boolean captureAfterMovement) {
+        try (OwnedMocks mocks = new OwnedMocks()) {
+            String key = subtype == 0 ? Sonic2ObjectArtKeys.OOZ_LAUNCHER_VERT
+                    : Sonic2ObjectArtKeys.OOZ_LAUNCHER_HORIZ;
+            var decoy = new SpriteMappingPiece(9, -15, 1, 2, 0x55, false, true, 1);
+            var piece = new SpriteMappingPiece(-11, 6, 3, 2, 0x132, true, false, 3, true);
+            var empty = new SpriteMappingFrame(List.of());
+            var fragments = new SpriteMappingFrame(List.of(decoy, piece));
+            var sheet = new ObjectSpriteSheet(new Pattern[0],
+                    subtype == 0 ? List.of(empty, fragments) : List.of(empty, empty, empty, fragments), 0, 0);
+            ObjectRenderManager art = mocks.mock(ObjectRenderManager.class);
+            PatternSpriteRenderer renderer = mocks.mock(PatternSpriteRenderer.class);
+            when(art.getSheet(key)).thenReturn(sheet);
+            when(art.getRenderer(key)).thenReturn(renderer);
+            when(renderer.isReady()).thenReturn(true);
+            TestablePlayableSprite player = player("sonic");
+            ObjectManager manager = Harness.create(player, List.of(), art).objectManager();
+            var parent = manager.createDynamicObject(() -> new OOZLauncherObjectInstance(
+                    new ObjectSpawn(0x1140, 0x380, Sonic2ObjectIds.OOZ_LAUNCHER, subtype, 0, false, 0), "launcher"));
+            player.setRolling(true);
+            player.setAnimationId(Sonic2AnimationIds.ROLL);
+            parent.update(0, player);
+            parent.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+            var source = only(manager, OOZLauncherObjectInstance.LauncherFragmentInstance.class);
+            assertEquals(3, manager.getActiveObjects().size());
+            int parentSlot = parent.getSlotIndex();
+            int childSlot = source.getSlotIndex();
+            assertEquals(parentSlot + 2, childSlot, "the invisible launcher allocates before mapping piece one");
+            ObjectRefId parentId = objectId(manager, parent);
+            ObjectRefId childId = objectId(manager, source);
+            parent.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(decoy), 0x113C, 0x37C, false, false);
+            if (captureAfterMovement) source.update(1, player);
+            int x = captureAfterMovement ? 0x113E : 0x1140;
+            int y = captureAfterMovement ? 0x37C : 0x380;
+            source.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), x, y, false, false);
+            RewindRegistry registry = registryFor(manager);
+            CompositeSnapshot snapshot = registry.capture();
+            clearInvocations(renderer);
+            source.update(2, player);
+            source.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), x - 2, captureAfterMovement ? 0x378 : 0x37C, false, false);
+            manager.removeDynamicObject(source);
+            clearInvocations(renderer);
+
+            PatternSpriteRenderer currentRenderer = mocks.mock(PatternSpriteRenderer.class);
+            when(currentRenderer.isReady()).thenReturn(true);
+            when(art.getRenderer(key)).thenReturn(currentRenderer);
+            registry.restore(snapshot);
+
+            var restored = only(manager, OOZLauncherObjectInstance.LauncherFragmentInstance.class);
+            assertNotSame(source, restored);
+            assertEquals(childId, objectId(manager, restored));
+            assertEquals(childSlot, restored.getSlotIndex());
+            assertEquals(3, manager.getActiveObjects().size());
+            var restoredParent = manager.getActiveObjects().stream()
+                    .filter(object -> parentId.equals(objectId(manager, object))).findFirst().orElseThrow();
+            assertNotSame(parent, restoredParent);
+            assertEquals(parentSlot, ((OOZLauncherObjectInstance) restoredParent).getSlotIndex());
+            restoredParent.appendRenderCommands(List.of());
+            verify(currentRenderer).drawPieces(List.of(decoy), 0x113C, 0x37C, false, false);
+            restored.appendRenderCommands(List.of());
+            verify(currentRenderer).drawPieces(List.of(piece), x, y, false, false);
+            clearInvocations(currentRenderer);
+            restored.update(2, player);
+            restored.appendRenderCommands(List.of());
+            verify(currentRenderer).drawPieces(List.of(piece), x - 2, captureAfterMovement ? 0x378 : 0x37C, false, false);
+        }
+    }
+
+    @Test
+    void fragmentRestoresTheLatchedOffscreenRetirement() {
+        try (OwnedMocks mocks = new OwnedMocks()) {
+            String key = "custom.launcher.fragment.art";
+            var piece = new SpriteMappingPiece(5, -9, 2, 1, 0x77, false, true, 1, true);
+            ObjectRenderManager art = mocks.mock(ObjectRenderManager.class);
+            PatternSpriteRenderer renderer = mocks.mock(PatternSpriteRenderer.class);
+            when(art.getRenderer(key)).thenReturn(renderer);
+            when(renderer.isReady()).thenReturn(true);
+            TestablePlayableSprite player = player("sonic");
+            ObjectManager manager = Harness.create(player, List.of(), art).objectManager();
+            var source = manager.createDynamicObject(() -> new OOZLauncherObjectInstance.LauncherFragmentInstance(
+                    0x1000, 0x380, -0x400, -0x110, piece, key));
+            AbstractObjectInstance.updateCameraBounds(0x1000, 0x300, 0x1140, 0x3E0, 0);
+            for (int frame = 1; frame <= 5; frame++) {
+                source.update(frame, player);
+                source.refreshPostCameraRenderState();
+                assertFalse(source.isDestroyed());
+            }
+            RewindRegistry registry = registryFor(manager);
+            CompositeSnapshot snapshot = registry.capture();
+            source.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0xFEC, 0x37B, false, false);
+            source.update(6, player);
+            assertTrue(source.isDestroyed(), "offscreen state retires on the following movement step");
+            manager.removeDynamicObject(source);
+            clearInvocations(renderer);
+
+            registry.restore(snapshot);
+
+            var restored = only(manager, OOZLauncherObjectInstance.LauncherFragmentInstance.class);
+            restored.appendRenderCommands(List.of());
+            verify(renderer).drawPieces(List.of(piece), 0xFEC, 0x37B, false, false);
+            clearInvocations(renderer);
+            restored.update(6, player);
+            assertTrue(restored.isDestroyed());
+            assertEquals(source.getX(), restored.getX());
+            assertEquals(source.getY(), restored.getY());
+            restored.appendRenderCommands(List.of());
+            verifyNoInteractions(renderer);
+        }
+    }
+
+    @Test
+    void pieceConstructorRequiresExplicitArtProvenance() {
+        var piece = new SpriteMappingPiece(0, 0, 1, 1, 1, false, false, 0);
+        assertThrows(NullPointerException.class, () -> new OOZLauncherObjectInstance.LauncherFragmentInstance(
+                0, 0, 0, 0, piece, (String) null));
+        assertTrue(GenericRewindEligibility.usesCompactDefaultSubclassCapture(
+                OOZLauncherObjectInstance.LauncherFragmentInstance.class));
     }
 
     @Test
@@ -406,9 +553,14 @@ class TestS2LauncherGraphRewind {
         }
 
         static Harness create(AbstractPlayableSprite main, List<? extends PlayableEntity> sidekicks) {
+            return create(main, sidekicks, null);
+        }
+
+        static Harness create(AbstractPlayableSprite main, List<? extends PlayableEntity> sidekicks,
+                              ObjectRenderManager art) {
             TestCamera camera = new TestCamera();
             camera.setFocusedSprite(main);
-            MutableServices services = new MutableServices(camera, List.copyOf(sidekicks));
+            MutableServices services = new MutableServices(camera, List.copyOf(sidekicks), art);
             ObjectManager objectManager = new ObjectManager(
                     List.of(),
                     null,
@@ -419,6 +571,8 @@ class TestS2LauncherGraphRewind {
                     camera,
                     services);
             services.objectManager = objectManager;
+            services.withPlayerQuery(new ObjectPlayerQuery(
+                    camera::getFocusedSprite, () -> services.sidekicks));
             objectManager.reset(camera.getX());
             objectManager.setRewindInPlaceRestoreEnabledForTest(false);
             return new Harness(objectManager, camera, services);
@@ -437,15 +591,18 @@ class TestS2LauncherGraphRewind {
     private static final class MutableServices extends StubObjectServices {
         private ObjectManager objectManager;
         private final Camera camera;
+        private final ObjectRenderManager art;
         private List<? extends PlayableEntity> sidekicks;
 
-        private MutableServices(Camera camera, List<? extends PlayableEntity> sidekicks) {
+        private MutableServices(Camera camera, List<? extends PlayableEntity> sidekicks, ObjectRenderManager art) {
             this.camera = camera;
+            this.art = art;
             this.sidekicks = sidekicks;
         }
 
         @Override public ObjectManager objectManager() { return objectManager; }
         @Override public Camera camera() { return camera; }
+        @Override public ObjectRenderManager renderManager() { return art; }
         @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
         @Override public List<PlayableEntity> sidekicks() { return List.copyOf(sidekicks); }
     }
