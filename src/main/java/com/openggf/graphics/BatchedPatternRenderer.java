@@ -11,8 +11,6 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import org.lwjgl.system.MemoryUtil;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameServices;
-import com.openggf.level.PatternDesc;
 
 import java.nio.FloatBuffer;
 import java.util.ArrayDeque;
@@ -46,7 +44,6 @@ public class BatchedPatternRenderer {
     private static final int FLOATS_PER_PATTERN_VERTS = 6 * 2;
     // 6 vertices per pattern (2 triangles), 2 floats (u,v) per vertex
     private static final int FLOATS_PER_PATTERN_TEXCOORDS = 6 * 2;
-    private static BatchedPatternRenderer instance;
     private final GraphicsManager graphicsManager;
 
     // Pre-allocated buffers - reused each frame
@@ -64,21 +61,6 @@ public class BatchedPatternRenderer {
     // Track whether a shadow batch is active (uses different shader and blend mode)
     private boolean shadowBatchActive = false;
     private int shadowAtlasIndex;
-
-    public static synchronized BatchedPatternRenderer getInstance() {
-        if (instance == null) {
-            instance = new BatchedPatternRenderer();
-        }
-        return instance;
-    }
-
-    public static synchronized BatchedPatternRenderer getInstanceIfInitialized() {
-        return instance;
-    }
-
-    public BatchedPatternRenderer() {
-        this(GameServices.graphics(), GameServices.configuration());
-    }
 
     public BatchedPatternRenderer(GraphicsManager graphicsManager, SonicConfigurationService configService) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
@@ -165,16 +147,18 @@ public class BatchedPatternRenderer {
         texCoordData[texOffset + 11] = v1;
     }
 
-    /**
-     * Add a pattern to the current batch.
-     *
-     * @return true if the pattern was added, false if batch is full or not active
-     */
-    public boolean addPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc, int x, int y) {
+    /** Checks admission before the caller samples cached tile attributes. */
+    boolean admitPattern(PatternAtlas.Entry entry) {
         if (!batchActive || patternCount >= MAX_PATTERNS_PER_BATCH) {
             return false;
         }
+        // The old append dereferenced the entry before reading descriptor flags.
+        Objects.requireNonNull(entry, "entry");
+        return true;
+    }
 
+    /** Appends exactly once after admission; do not revalidate manager or batch state here. */
+    void appendAdmittedPattern(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip, int x, int y) {
         // Convert Y to screen coordinates (flip Y axis)
         // Genesis Y refers to the TOP of the pattern, so we subtract the pattern height
         // (8)
@@ -194,12 +178,12 @@ public class BatchedPatternRenderer {
         float u1 = entry.u1();
         float v0 = entry.v0();
         float v1 = entry.v1();
-        if (desc.getHFlip()) {
+        if (hFlip) {
             float tmp = u0;
             u0 = u1;
             u1 = tmp;
         }
-        if (!desc.getVFlip()) {
+        if (!vFlip) {
             float tmp = v0;
             v0 = v1;
             v1 = tmp;
@@ -217,8 +201,6 @@ public class BatchedPatternRenderer {
         paletteCoordData[paletteOffset + 4] = paletteIndex;
         paletteCoordData[paletteOffset + 5] = paletteIndex;
         patternCount++;
-
-        return true;
     }
 
     /**
@@ -231,19 +213,15 @@ public class BatchedPatternRenderer {
      *
      * @param entry            Atlas entry for the pattern
      * @param paletteIndex     The palette line to use
-     * @param desc             The pattern descriptor (handles H/V flip)
+     * @param hFlip            Cached horizontal flip
+     * @param vFlip            Cached vertical flip
      * @param x                Screen X position
      * @param y                Screen Y position (of the strip, not the full tile)
      * @param stripIndex       Which 2-scanline strip to render (0-3, where 0 is top
      *                         of tile)
-     * @return true if the pattern was added, false if batch is full or not active
      */
-    public boolean addStripPattern(PatternAtlas.Entry entry, int paletteIndex, PatternDesc desc,
+    void appendAdmittedStripPattern(PatternAtlas.Entry entry, int paletteIndex, boolean hFlip, boolean vFlip,
             int x, int y, int stripIndex) {
-        if (!batchActive || patternCount >= MAX_PATTERNS_PER_BATCH) {
-            return false;
-        }
-
         // Convert Y to screen coordinates (flip Y axis)
         // Genesis Y=0 is top of screen, OpenGL Y=0 is bottom
         // For a 2-pixel strip at Genesis Y, the OpenGL bottom should be:
@@ -285,7 +263,7 @@ public class BatchedPatternRenderer {
 
         // Handle flips by adjusting texture coordinates
         float u0, u1, v0, v1;
-        if (desc.getHFlip()) {
+        if (hFlip) {
             u0 = entry.u1();
             u1 = entry.u0();
         } else {
@@ -298,7 +276,7 @@ public class BatchedPatternRenderer {
         // Bottom of quad gets stripBottom, top gets stripTop
         // VFlip=true: don't flip, so row 0 is at bottom of quad
         // Bottom of quad gets stripTop, top gets stripBottom
-        if (desc.getVFlip()) {
+        if (vFlip) {
             v0 = stripTop; // Bottom of quad
             v1 = stripBottom; // Top of quad
         } else {
@@ -318,8 +296,6 @@ public class BatchedPatternRenderer {
         paletteCoordData[paletteOffset + 4] = paletteIndex;
         paletteCoordData[paletteOffset + 5] = paletteIndex;
         patternCount++;
-
-        return true;
     }
 
     /**
@@ -396,12 +372,12 @@ public class BatchedPatternRenderer {
      * Add a pattern to the current shadow batch.
      * Uses the same buffer management as normal batches.
      */
-    public boolean addShadowPattern(PatternAtlas.Entry entry, PatternDesc desc, int x, int y) {
-        if (!shadowBatchActive || patternCount >= MAX_PATTERNS_PER_BATCH
-                || entry.atlasIndex() != shadowAtlasIndex) {
-            return false;
-        }
+    boolean admitShadowPattern(PatternAtlas.Entry entry) {
+        return shadowBatchActive && patternCount < MAX_PATTERNS_PER_BATCH
+                && entry.atlasIndex() == shadowAtlasIndex;
+    }
 
+    void appendAdmittedShadowPattern(PatternAtlas.Entry entry, boolean hFlip, boolean vFlip, int x, int y) {
         // Convert Y to screen coordinates (flip Y axis)
         // Display height resolved once per batch in beginShadowBatch() (FBO-aware)
         int screenY = batchDisplayHeight - y - 8;
@@ -417,12 +393,12 @@ public class BatchedPatternRenderer {
         float u1 = entry.u1();
         float v0 = entry.v0();
         float v1 = entry.v1();
-        if (desc.getHFlip()) {
+        if (hFlip) {
             float tmp = u0;
             u0 = u1;
             u1 = tmp;
         }
-        if (!desc.getVFlip()) {
+        if (!vFlip) {
             float tmp = v0;
             v0 = v1;
             v1 = tmp;
@@ -433,8 +409,6 @@ public class BatchedPatternRenderer {
         writeQuad(vertOffset, texOffset, x0, y0, x1, y1, u0, v0, u1, v1);
 
         patternCount++;
-
-        return true;
     }
 
     /**

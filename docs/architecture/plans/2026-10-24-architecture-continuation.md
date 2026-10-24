@@ -2170,3 +2170,569 @@ both definitions, exact pin/frozen-store comparisons, protected-file checks and
 Git diff/policy checks. The completed Maven, canonical Javadoc, behavior and
 fresh guard runs above are reused; none was repeated for this newline/prose-only
 correction. No push, integration, delegation or worktree cleanup is included.
+
+## Ordinary sidekick palette texture capacity
+
+This bounded worker starts at `591c679b39c61f162a839cde6baaedd387135bc4` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5`, branch
+`bugfix/ai-palette-texture-capacity-owner-20261024`. It does not compose the
+separate donated-team `53ff4fa89` or donor-color rewind `ce52bf334` changes.
+The public static RenderContext registry owns shared row addresses and logical
+reclamation; this investigation does not migrate it. Frozen-count reduction is
+expected to be zero. Parent-owned API/S3K/combined guards and delivery remain
+separate from this worker's focused rendering evidence.
+
+The source-derived concern is now reproduced. The first version of
+`TestPaletteTextureCapacity` ran two ROM-free methods against unchanged production
+source. A production sprite-priority draw checked literal normal and underwater
+colors on eight rows. Six ordinary sidekicks grew the texture to 28 rows;
+clearing them and rebuilding one reduced the logical count to eight. All colors
+matched before reclamation. Afterwards normal row zero expected `EE2222` but
+rendered `22EE22`; the underwater assertions still passed. A second method kept
+two independent GraphicsManager hosts in one EGL context: the first retained
+an eight-row normal texture while the second grew the registry/texture to 28.
+The first host's normal row one expected `22EE22` but rendered `EE2222`;
+underwater assertions passed after its published-basis refresh. These are actual
+framebuffer pixels, not shader-coordinate calculations or screenshot hashes.
+
+Commands below use the plan's existing `MAIN_CHECKOUT` convention for the
+already-resolved absolute main-checkout path requested by the coordinator.
+The resource-policy hook rejects user-home prefixes in committed prose; the
+executions used the current absolute wrapper, with selectors/flags unchanged.
+
+Exact first red command (Java 25; Lua 5.4; no ROM needed):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestPaletteTextureCapacity' test -B
+```
+
+Session `81980` completed with two failures, zero errors/skips. Exact identities:
+`reclaimedSidekickBanksKeepNormalAndUnderwaterRowsAtTheirLiteralColors` and
+`independentHostsKeepTheirOwnRowsWhenTheSharedRegistryGrowsAndShrinks`, both in
+`com.openggf.graphics.TestPaletteTextureCapacity`. Admission took eight seconds;
+Maven execution reported 1:19. XML identities/assertions were inspected and the
+consumed reports deleted. The fixture uses the existing display-free EGL owner,
+is Linux-gated, and fails on EGL initialization failure without desktop fallback.
+
+Two caller-complete owner shapes were compared:
+
+- **Physical capacity belongs to the sampled texture.** Built-in GLSL can obtain
+  each bound sampler's height with `textureSize`, independently for normal and
+  underwater rows. This naturally covers distinct hosts, standalone textures,
+  deferred commands and a shared registry that changes without an upload to
+  every host. No CPU query, texture resize, new global or palette representation
+  is needed; the existing normalized sampling/filter/clamp semantics remain.
+- **Synchronize physical size with the logical count.** Resizing the normal
+  texture on both growth and shrink at upload time would fix the single-host
+  upload case but fails the independently retained host case. A complete version
+  needs reconciliation at every draw boundary and for both textures, copying
+  displayed bytes rather than admitting pending palette/fade writers. It adds
+  texture mutation/readback, cache invalidation and GL-state obligations to all
+  consumers. The independent-host pixel failure rejects upload-only resizing;
+  draw-time synchronized resizing is unnecessarily invasive for this defect.
+
+The selected shape is per-sampler physical capacity. The shared logical count
+and sidekick reclamation semantics remain unchanged, with no process high-water.
+Normal and underwater textures may keep different physical heights; each lookup
+must use its own denominator. The complete built-in consumer family comprises
+hedgehog, water, scalar/instanced priority, tilemap and both slot shaders. Palette
+composition, fade/profile conversion, publication and cache/lifetime owners
+remain responsible for the same bytes and upload timing.
+
+The expanded red selection used the same command, base production source and
+class, adding ten parameter identities in this order: `DIRECT`, `BATCHED`,
+`INSTANCED`, `WATER`, `INSTANCED_WATER`, `PRIORITY`, `INSTANCED_PRIORITY`,
+`TILEMAP`, `CNZ_SLOTS`, `S3K_SLOTS`. Session `81291` ran 11 cases with 11
+failures, zero errors/skips, after 59 seconds admission and 27.681 seconds Maven
+execution. Two were fixture errors before reclamation: the legacy batcher reads
+the background-water binding flag at execution, and a packed tile descriptor
+with alpha zero is intentionally discarded. Executing each binding separately
+and marking the descriptor valid corrected only the fixture. Session `49116`
+then ran the identical selection against unchanged production: all ten paths
+matched their normal/underwater literal colors before reclamation and failed
+afterwards with normal row zero `EE2222` → `22EE22`. The independent-host method
+failed at its original registry-growth assertion. All 11 cases failed, zero
+errors/skips; admission was 17 seconds and Maven execution 26.842 seconds.
+The XML parameter identities `[1]` through `[10]`, complete failure messages and
+zero skips were inspected; both expanded-run report sets were consumed/deleted.
+
+Implementation changes only the seven GLSL palette samplers. `textureSize` is
+available in their existing GLSL 4.10 contract. Java upload, cache, reset, palette
+bank and GL-state code is unchanged. The public ShaderProgram count setter and
+host writes remain available for supplied/custom shader programs; built-in
+lookups no longer use that logical count as physical storage size. Both normal
+and underwater slots can receive a standalone texture. All row addressing keeps
+the existing normalized filtering/clamping, transparency, water split and color
+processing. This is owner correctness with zero allowance removals, not a type
+or API migration.
+
+`python3 tools/testing/run_categories.py --base 591c679b39c61f162a839cde6baaedd387135bc4`
+was inspected after the shader edit. The unclassified GLSL resource paths select
+all 3,741 smoke classes and guards. This worker instead uses the bounded focused
+selection below: every changed built-in shader is drawn with literal expected
+pixels, and its surrounding publication/composition/reset consumers are checked.
+No Java, build, selector, physics, API pin or runtime color-composition policy
+changes. Parent-owned combined API/S3K/guards and integration remain outstanding;
+neither broad smoke nor release-only full-suite coverage is claimed here.
+
+Exact focused green-candidate command:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestPaletteTextureCapacity,TestUnderwaterPaletteUpload,TestPaletteUploadLatch,TestAppearancePalettes,TestScopedPaletteGraphicsAccess,TestRenderContext,TestSpritePresentation,TestPaletteFadePresentation,TestScopedPalettePresentationRewind' \
+  '-Dsonic1.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=/mnt/LinuxData/T3/worktrees/OpenGGF/t3-30ea53a5/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  test -B
+```
+
+These are existing root ROMs, read in place: S1 CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383`,
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553`,
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Hashes were verified for this run.
+No ROM copy, rename or new link was used. Rendering is Linux EGL evidence;
+macOS/Windows drivers, arbitrary custom shader behavior, native slot face art
+and full gameplay routes are outside these checks.
+
+The focused command completed green in session `82376`: 98 distinct cases,
+zero failures/errors/skips across nine XML reports. Admission took 161 seconds;
+Maven execution took 26.361 seconds. Tested source is base `591c679b3` plus this
+seven-shader correction and the final test fixture; subsequent edits are prose
+only. All XML case identities were inspected for duplicates and skipped/error
+nodes before consuming the reports.
+
+| Executed class | Cases |
+| --- | ---: |
+| TestAppearancePalettes | 5 |
+| TestPaletteFadePresentation | 5 |
+| TestPaletteTextureCapacity | 11 |
+| TestPaletteUploadLatch | 6 |
+| TestRenderContext | 29 |
+| TestScopedPaletteGraphicsAccess | 3 |
+| TestSpritePresentation | 14 |
+| TestUnderwaterPaletteUpload | 22 |
+| TestScopedPalettePresentationRewind | 3 |
+
+The exact eleven formerly red capacity identities now pass, including all ten
+ordered parameters above and the independent-host method. They check the same
+literal normal/underwater colors before reclamation, after fewer banks are
+rebuilt, and after palette texture deletion/recreation. Slots additionally check
+blend/depth, active texture and program restoration. The independent-host case
+now reaches both hosts' post-reclamation assertions. No height high-water or
+changed logical count was used to make those pixels pass.
+
+Additional executed pixel identities include
+`underwaterDonorTextureAndRenderedAppearanceKeepFadeAndProfileOrder` parameters
+`[1]`–`[6]` in TestUnderwaterPaletteUpload (literal colors for raw/analog,
+full/limited and black/white fades), and all three
+TestScopedPalettePresentationRewind methods:
+`capturedNativeRowsSurviveTablesRestoreAndBankChangesAfterDeferredSubmission`,
+`priorityWaterKeepsScopedRomRowsAndPublishedHostRowsAcrossDeferredRelocation`,
+`lateScopedReallocationKeepsPriorityWaterBindingsForLaterDrySprites`. The
+remaining executed classes cover logical row reuse/growth, publication latches,
+appearance composition, upload cache invalidation and resource resets. This is
+bounded component/consumer evidence, not a full-suite, route or all-platform pass.
+No queued/running worker request remains. All consumed Surefire diagnostics are
+deleted; no pass cache, archive or receipt is retained. Frozen baseline and API
+pins are unchanged. Hooks and final staged whitespace/policy checks are part of
+the local commit; integration, push and checkout cleanup remain parent-owned.
+
+### Bounded PatternRenderCommand scalar ingress (2026-10-24)
+
+This worker is grounded at `591c679b39c61f162a839cde6baaedd387135bc4` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-add1a2e8`, on local branch
+`bugfix/ai-pattern-command-scalar-boundary-20261024`. Its production scope is
+`PatternRenderCommand` and four `GraphicsManager` callers plus one private
+adapter. Parent aggregate counts, guides, changelog, API pins, interfaces and
+combined delivery obligations are outside this cut.
+
+The command is neither `@ModApi`, a curated/pinned type nor an internal terminal.
+The pinned, unsealed `GLCommandable` interface does not support every concrete
+implementation. All supported typed `GraphicsManager` ingress and `PatternDesc`
+remain intact. The three internal typed command factories and private typed
+initializer are deleted, including the unused no-manager factory's ambient
+`GameServices.graphics()` lookup. The maintained direct-factory tests migrate to
+the scalar stages or actual manager ingress; all existing test method identities
+remain.
+
+The selected shape deliberately preserves observable initialization boundaries:
+
+1. Package-private `obtain(Entry,int,GraphicsManager)` polls the pool, validates
+   the manager, resets presentation fields, and copies texture/entry state.
+2. The manager adapter calls `capturePalette(desc.getPaletteIndex())`. That stage
+   stores the full cached palette integer, samples presentation replay, then calls
+   the existing virtual underwater getter.
+3. Only after that getter returns does the adapter read cached H flip, V flip
+   and priority and call `finish(boolean,boolean,boolean,float,float,float,float)`.
+   Finish captures mask and ghost state, copies X/width/height, leases the command,
+   then resolves display height and computes float Y in the original order.
+
+A null descriptor or underwater failure still consumes the acquired pool entry
+without registering it or acquiring a lease. Later fields retain their previous
+recycled values on that failure. A display-height failure occurs after leasing
+and geometry writes, so the retained command can be discarded. Deferred palette
+replay still runs at execution and recycles on an exception. These are observed
+controls, including winning exception identity, rather than inferred cleanup
+improvements.
+
+One-shot eager scalar reads were rejected. A temporary negative control moved
+flip/priority reads before replay/underwater sampling in the original initializer.
+Both discriminating tests went red: the successful callback's descriptor mutation
+was lost (`true` expected, `false` observed), and an underwater throw left a newly
+written flip instead of recycled state (`false` expected, `true` observed). The
+negative control is not retained. Whole commands are also not replaced with
+`obtainRows(0,8)`: the whole-SAT control at `Integer.MIN_VALUE` proves the original
+float conversion/subtraction differs from row-path integer overflow.
+
+Byte comparisons against the grounding commit retain `obtainRows` and its UV
+resolver, the command's entire replay/execution/presentation-merging/recycling/
+teardown tail, `prepareReplayDesc`, `PatternDesc`, and `SpritePresentation`.
+Batch admission, retries, flushing and SAT preparation are unchanged. Preparation
+controls observe the actual shared descriptor identity, raw palette bits three
+with cached palette seven, synchronous mutation, decoder-returned overrides and
+decoder exceptions before tile append. All four SAT scratch dependencies remain.
+
+The exact reviewed frozen resource is
+`src/test/resources/archunit/frozen/40afa018-d450-4b84-8cb9-d539d75d8062`.
+For the following identity accounting, `PRC` is
+`com.openggf.graphics.PatternRenderCommand`, `GM` is
+`com.openggf.graphics.GraphicsManager`, `PD` is `com.openggf.level.PatternDesc`,
+and `Entry` is `com.openggf.graphics.PatternAtlas$Entry`:
+
+| Removed owner/member | Exact dependency records | Count |
+| --- | --- | ---: |
+| `PRC.obtain(Entry,int,PD,int,int)` | PD parameter; call to `com.openggf.game.GameServices.graphics()` | 2 |
+| `PRC.obtain(Entry,int,PD,int,int,GM)` | PD parameter | 1 |
+| `PRC.obtain(Entry,int,PD,float,float,float,float,GM)` | PD parameter | 1 |
+| `PRC.init(Entry,int,PD,float,float,float,float,GM)` | PD parameter; calls to `PD.getPaletteIndex()`, `PD.getHFlip()`, `PD.getVFlip()`, `PD.getPriority()` | 5 |
+
+The five replacement identities belong solely to private
+`GM.obtainPatternCommand(Entry,int,PD,float,float,float,float)`: its PD parameter
+and those same four cached getters. No other allowance is added or renamed.
+The measured audit is **147 - 9 + 5 = 143**, with every other 138 record retained
+byte-for-byte and in its original relative order. In particular, the constructor
+call to `PD.<init>()`, `GM.reusableReplayDesc` field type, and
+`GM.prepareReplayDesc(SpriteSatEntry,int,boolean,boolean,int)` calls to
+`PD.set(int)` and `PD.setPaletteIndex(int)` remain. No automatic refreeze or
+store-update flag was used. After removing incidental file-order noise, the
+committed store's identity set was compared with the resource actually tested;
+they are identical.
+
+All Maven invocations used the existing absolute main-checkout wrapper from the
+worker cwd, Java 25 and Lua 5.4, with desktop display variables and injected JVM
+option variables unset. The leased `-v` probe reported Java `25.0.5.0.2` after
+184 seconds of admission waiting. The ROM files below already existed; their
+CRC32/SHA-1 matched the repository's REV01 S1/S2 and locked-on S3&K identities.
+No links or copies were created. The following spells out the common command
+flags and the actual selections (the final tests are ROM-free rendering and
+architecture controls, not ROM-route certification):
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+pattern_check() {
+  env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+    JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+    python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+    -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+    "-Dsonic1.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog (W) (REV01) [!].gen" \
+    "-Dsonic2.rom.path=$MAIN_CHECKOUT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+    "-Ds3k.rom.path=$MAIN_CHECKOUT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+    "-Dtest=$1" test -B
+}
+PATTERN_FOCUSED='TestGraphicsManagerReinit,TestPooledRenderCommandDiscard,TestRenderProjection,TestGraphicsManagerPatternAtlasPageOrdering,TestGraphicsManagerSpriteSatReplay,TestSpriteSatReplayPixels,TestSpritePreparationSnapshots,TestSatReplayBatching,TestPresentationPatternBatching'
+# Original production, added characterization tests:
+pattern_check "$PATTERN_FOCUSED"
+# Corrected test fixtures, production still unchanged:
+pattern_check 'TestGraphicsManagerPatternAtlasPageOrdering,TestRenderProjection'
+# Temporary eager-read negative control only:
+pattern_check 'TestGraphicsManagerPatternAtlasPageOrdering#underwaterSamplingSeesAcquiredPrefixAndPaletteBeforeMutatingLaterAttributes+nullDescriptorAndUnderwaterThrowConsumePoolWithoutFinishingOrRegistering'
+# Final staged implementation:
+pattern_check "$PATTERN_FOCUSED,TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers"
+```
+
+The first run completed 96 cases, with 13 fixture errors and zero skips: the
+page-ordering reflection helper incorrectly sought renderer fields on the manager
+class (12 setup errors), and the projection fixture used an ungoverned virtual
+ID (one error). Fixing those fixtures and rerunning just their two classes passed
+16/16, zero skips; production remained unchanged. The initial run independently
+passed both actual EGL pixel methods and all 49 preparation snapshot cases.
+The temporary eager-read run completed two cases, both expected assertion
+failures, zero errors/skips. Their exact identities are the two method names in
+the negative command above. That run's source was replaced by the staged design.
+
+The final command passed **123 cases, zero failures/errors/skips**, completed at
+`2026-10-24T06:47:15+01:00`. XML established 96 renderer cases in the nine selected
+classes (12, 2, 6, 8, 8, 4, 5, 49, 2 in class-name order) plus 27 ArchUnit rules.
+The ArchUnit engine expanded the requested single-field selector; it did not
+execute only one rule. Its XML includes the low-level frozen rule, package
+cycles, singleton boundaries, game naming and shared/per-game dependency rules.
+This is not the combined guards profile or the parent's API/S3K selection.
+Reported admission waits for the four test commands were 0, 60, 49 and 48 seconds;
+Maven execution times were about 83, 25, 81 and 92 seconds respectively. These
+intervals are not a measured total delivery duration.
+
+The final Java/source diff SHA-256 (`git diff --binary -- src/main src/test/java`
+against the grounding commit) is
+`22785b4034b55283f08db8ea53a9ad67e85b7568332988abc498fb9f2cf3a5ce`.
+The sorted low-level identity-set SHA-256 is
+`ab8156d3600b26b2991ad2d3fe0ec2bfdfd43b7cc218235f7e78cc3ab2ec4396`.
+Source stayed stable during compilation and execution. Pixel controls clear and
+read the actual EGL target, exercise all flip/priority combinations, cached
+palette seven, explicit atlas IDs, fractional scaling, strip UVs, direct and
+instanced SAT clipping and native masks. CPU controls retain framebuffer-height
+switching, physical page order, full-pool prefix/throw state, deferred replay
+exceptions, the existing 600-drop identities and repeated manager reinitialization.
+No full route, cross-platform GL, exhaustive float-space, performance or complete
+smoke/guard/API certification is claimed.
+
+Every run's XML identities, failures and skips were inspected and the consumed
+Surefire diagnostics removed. No category run or live Maven request remains.
+Hooks are installed; this worker stops at its local review commit. Combined
+guards/API/S3K validation, aggregate documentation reconciliation, integration,
+push and worktree cleanup remain parent-owned; this worker neither pushes nor
+removes its branch/worktree.
+
+### Sonic 1 moving-block and badnik fixture slice
+
+This test-only slice starts at `591c679b39c61f162a839cde6baaedd387135bc4` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-5744aa69`, local branch
+`bugfix/ai-s1-badnik-test-fixtures-20261024`. It removes only these three ambient
+setup allowance keys; the scanner and all other allowances remain unchanged:
+
+```text
+src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
+src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
+src/test/java/com/openggf/game/sonic1/objects/badniks/TestSonic1CaterkillerBodyChaining.java#setUp
+```
+
+Direct construction and the existing named module fixture were compared against
+each subject's dependencies. Moving block already injects its object services
+and real solid-execution registry, but `TestPlayableSprite` inherits engine
+services from `AbstractSprite` and resolves its physics profile and collision
+rules from the current module in `AbstractPlayableSprite`. Its two real-player
+checkpoint/carry cases therefore use
+`TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_1)`, retaining the
+real object manager and S1 oscillator reset. Teardown clears the session,
+bootstrap module, oscillation table and static camera bounds.
+
+Buzz Bomber's existing synthetic flying/static objects exercise the real object
+manager's placement and persistence boundary, without player/module state.
+Caterkiller's body-state cases likewise need no session; its head-destruction
+case still uses the real manager's VBlank counter and production S1 destruction
+path, including replacement-explosion slot inheritance. Both classes now create
+an independent default configuration and real camera, inject `StubObjectServices`,
+and use the explicit eight-argument manager constructor. This avoids both the
+no-argument camera's `GameServices.configuration()` lookup and the convenience
+manager constructor's ambient service selection. Caterkiller's five unused
+`GameServices.level()` lookups are removed. Both classes reset static camera
+bounds, including vertical wrapping, before and after each case. A named fixture
+for these two classes would add session/module ownership their subjects do not
+consume; a mocked manager would remove the boundary being tested.
+
+Source comparison preserved all 11 existing test identities, all 39 assertion
+statements verbatim, and the test-body tokens/timing after accounting for the
+exact fixture substitutions. No production code, helper framework, new tests,
+expected behavior or other guard key changed. No other-game dependency required
+retaining one of the three allowances. The parent's separate Geyser/Gargoyle
+removals are absent from this base and are not restored or edited here; this
+slice's composition delta is exactly three keys.
+
+The queued version probe reported Java 25.0.5.0.2. The following focused command
+passed **19 distinct cases in four XML reports**, with zero failures, errors or
+skips: moving block 2, Buzz Bomber 3, Caterkiller 6, exact lifecycle guard 8.
+Admission took seven seconds; Maven reported 92 seconds including compilation.
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=TestSonic1MovingBlockObjectInstance,TestBuzzBomberLifecycle,TestSonic1CaterkillerBodyChaining,TestSingletonLifecycleGuard' \
+  test -B
+```
+
+The Java sources stayed unchanged from queue submission through completion.
+Every XML class/method identity was matched to its source; all eight consumed
+XML/text reports were removed, and diagnostics/trace-report directories were
+empty. These checks require neither ROMs nor GL and establish only the existing
+object/manager cases and exact guard, not native Buzz Bomber flight, full-route
+coverage, API/S3K checks or the combined guards run. Combined validation,
+integration and push remain parent-owned; this slice stops at a local commit.
+
+### Renderer scalar ingress (bounded ninth-cut implementation, 2026-10-24)
+
+Worker branch `bugfix/ai-renderer-scalar-ingress-20261024` in
+`/mnt/LinuxData/T3/worktrees/OpenGGF/t3-b0bf14b1` fast-forward merged the requested
+accepted eighth code `3e0811d71113a7c03a3a3b75a15acd848d1bb242` from its automatic
+`e9d8087aca13f8868c783a4fe001b39aa7015ca7` checkout before work. The main workspace,
+submodules and unrelated links were not changed. This worker owns a local commit
+only; guide/changelog composition, integration, push and worktree cleanup belong
+to the parent.
+
+Both GPU renderers are outside the recursive creator API. The five existing
+public typed GraphicsManager declarations and their pins remain unchanged.
+Descriptor interpretation now belongs to five private GraphicsManager adapters.
+Each adapter retains the original renderer receiver for that attempt, admits
+first, reads cached flags, then appends once. Palette sampling remains at all ten
+original call sites: ordinary three, strip four, shadow two and full SAT one.
+Renderers consume the atlas entry and primitives, with no new per-tile allocation,
+descriptor duplication, erasure, callback wrapper or public facade.
+
+Instanced admission preserves inactive/capacity/page checks followed by the
+priority-shader, water-shader, underwater, ghost-active, colour and alpha getter
+sequence and its short circuits. Append does not repeat admission; its conditional
+mask getter remains after cached flags, and priority true still writes zero.
+Batched admission preserves entry-null precedence after active/capacity rejection;
+its manager state remains captured at endBatch. Shadow reads neither palette nor
+priority. Whole, strip, shadow and dedicated SAT flush/retry/fallback/cancel tails
+stay independent, including retained batched-strip palettes and resampled
+instanced retry palettes. Integer/float geometry order, strip pixel centres and
+unclamped indices, and cached display heights are retained.
+
+The unused no-argument constructors and Batched singleton field/accessors are
+removed together. Explicit constructor bodies are byte-for-byte unchanged:
+manager-null before config-null, height before arrays, and instanced debug after
+arrays. No ambient lookup was moved to another helper. There was no stale exact
+singleton allowance to remove; the graphics source-scan inventory remains intact.
+
+Exact frozen delta in `40afa018-d450-4b84-8cb9-d539d75d8062`:
+
+- Remove Batched `addPattern(Entry,int,PatternDesc,int,int)`,
+  `addStripPattern(Entry,int,PatternDesc,int,int,int)` and
+  `addShadowPattern(Entry,PatternDesc,int,int)`: each descriptor parameter plus
+  getHFlip/getVFlip, nine records.
+- Remove Instanced `addPattern(Entry,int,PatternDesc,int,int)` and
+  `addStripPattern(Entry,int,PatternDesc,int,int,int)`: each descriptor parameter
+  plus getHFlip/getVFlip/getPriority, eight records.
+- Remove both no-argument constructors' GameServices.graphics/configuration calls,
+  four records.
+- Add GraphicsManager `tryAddBatchedPattern`, `tryAddBatchedStrip` and
+  `tryAddBatchedShadow` with the corresponding former Batched signatures: each
+  descriptor parameter plus getHFlip/getVFlip, nine replacement records. Add
+  `tryAddInstancedPattern` and `tryAddInstancedStrip` with the corresponding former
+  Instanced signatures: each descriptor parameter plus
+  getHFlip/getVFlip/getPriority, eight replacement records. `Entry` above denotes
+  `com.openggf.graphics.PatternAtlas$Entry`, and `PatternDesc` denotes
+  `com.openggf.level.PatternDesc`.
+
+Thus 143 - 21 + 17 = 139. The other 122 records retain exact bytes and order,
+SHA-256 `534e90402270023d23adf6e2e86d887f9677fa9d71e1d1aaa3042bcaf6677864`.
+Historical rule keys and read-only freeze settings are unchanged. Rows method
+bodies, staged PatternRenderCommand, replay descriptor decoder and its four
+identities, PreparedPiece, background, RenderContext, shader capacity, API version,
+signature pins and terminal policy are unchanged. Only obsolete method links in
+renderer/SAT comments were repaired around those closed bodies.
+
+Before production edits, 12 new CPU characterization cases and all three EGL
+pixel cases passed: 15 tests, zero failures/errors/skips. Two initial test oracles
+were corrected before this pass: atlas coordinates include the existing
+0.01-pixel inset, and SAT entry resets the global mask to 0xF. No production
+behavior was changed to satisfy those assertions. Pixel checks clear and read the
+owned target, assert actual legacy/instanced/shadow command types, and use literal
+quadrant, two-row strip and half-intensity shadow expectations. CPU checks cover
+cached/raw disagreement, palette seven and unrestricted palette arguments,
+conditional/throwing getters, rejected admission, untouched arrays/counts/queues,
+4096/4097 capacity, old/new palette sampling, fresh rejection, shadow throw,
+physical page order (existing 0 -> 1 -> 0 fixtures), SAT scratch mutation and
+interrupted replay.
+
+An initial scalar candidate passed 111 cases across eleven focused classes.
+Deliberate negative controls then made whole-tile flag reads eager and strip
+append revalidate admission: three selected tests produced exactly two failures
+(mask sequence changed and admission duplicated) and one null-descriptor error,
+with no skips. The mutations were restored. Self-review found that re-reading the
+manager's renderer field after a callback could change the receiver. A thirteenth
+CPU test reproduced that scalar-candidate bug as a null append receiver; retaining
+one receiver per attempt fixes the Java dispatch boundary without retaining it
+across retries. The initial 111-case pass does not certify that final adjustment.
+
+Final source passed **112 distinct cases in eleven XML reports**, zero failures,
+errors or skips, including all thirteen CPU ingress cases and all three actual EGL
+cases. Maven reported 76 seconds including compilation, separately from queue
+waiting. This final run supersedes the earlier 111-case candidate. The fresh
+strict API/ArchUnit/accounting run completed as described below. No broad smoke or full suite is submitted by
+this worker. The change-based plan selected 2,932 smoke classes; bounded focused
+coverage is used under the explicit task instruction. Actual-environment category
+preflight passed Java/Lua/PowerShell prerequisites without executing tests.
+
+All Maven invocations use the current absolute queue wrapper from the intended
+worktree, with Java 25, Lua 5.4 and no DISPLAY, WAYLAND_DISPLAY, JAVA_TOOL_OPTIONS
+or JDK_JAVA_OPTIONS. EGL remains explicitly selected; these synthetic component
+checks need no ROM paths. The parent's eighth smoke covers its earlier source and
+does not cover this cut. The worker's inherited architecture allowance prose is
+147; the parent's separate accounting edits are 143. Parent-owned prose must be
+composed to 139 before claiming a green combined documentation/accounting gate.
+
+
+Reproduction commands (from this worktree):
+
+```bash
+MAIN_CHECKOUT=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 3e0811d71113a7c03a3a3b75a15acd848d1bb242 --preflight
+
+FOCUSED='TestPatternRendererIngress,TestGraphicsManagerPatternAtlasPageOrdering,TestPooledRenderCommandDiscard,TestPresentationPatternBatching,TestRenderProjection,TestSatReplayBatching,TestShadowBatchAtlasPages,TestGraphicsManagerReinit,TestGraphicsManagerSpriteSatReplay,TestSpritePreparationSnapshots,TestSpriteSatReplayPixels'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$FOCUSED" test -B
+
+GUARDS='TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestArchUnitRules,TestArchitecturalSourceGuard,TestArchitecturalReviewGuard,TestProductionSingletonClosureGuard,TestSingletonLifecycleGuard'
+env -u DISPLAY -u WAYLAND_DISPLAY -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "$MAIN_CHECKOUT/tools/testing/maven_queue.py" \
+  -Dmse=off -Pguards -Dopenggf.headless.gl=surfaceless-egl "-Dtest=$GUARDS" test -B
+```
+
+The pre-production characterization selector was
+`TestPatternRendererIngress,TestSpriteSatReplayPixels`. The deliberate negative
+selector was `TestPatternRendererIngress#admissionCallbacksPrecedeCachedReadsAndAppendDoesNotRevalidate+everyInstancedRejectionShortCircuitsNullDescriptorAndLaterGetters+lowPriorityAloneSamplesTheAlreadyMappedGlobalMaskAfterAdmission`.
+The additional receiver red control selected
+`TestPatternRendererIngress#admissionKeepsTheOriginalReceiverWhenManagerCallbackReplacesItsField`.
+All use the same queued environment above, without broad profiles.
+
+The final Java/source diff SHA-256 (`git diff --binary` from the pinned base,
+restricted to `src/main` and `src/test/java`) is
+`49c755a02747c5efd75a8cdefe62fd8f990fb4b01e916fadc5bda4691ec7ef64`.
+The sorted 139-record identity-set SHA-256 (source locations removed) is
+`5329f1c982fe20f7345514ee1b5ac68c912936fd1ac46ee278c4a3bdcc939e30`.
+No source changed between final focused submission and completion. Documentation
+accounting composition remains parent-owned; these hashes identify this worker's
+code and reviewed store, not the parent's running smoke.
+
+
+The fresh `-Pguards` selection completed **199 distinct cases in eight XML
+reports: 198 passed, one failure, zero errors/skips**. Maven reported 41 seconds
+including preparation, separately from queue waiting. Passing reports were API
+signature 11, API pin policy 4, API release policy 15, all ArchUnit rules 33,
+architectural source guard 77, production singleton closure 42, and singleton
+lifecycle 8. Eight of nine architectural review cases passed, including the
+read-only freeze and grouped-record accounting controls. The sole failure is
+`TestArchitecturalReviewGuard.archUnitPublishedBaselineCountsMatchFrozenStore`:
+actual source store 139 versus inherited documentation 147. Other documented
+rule counts match. The base already carried store 143 beside prose 147; that is
+static baseline evidence, not a separately executed baseline guard result.
+The parent's independent prose is at 143 and must be composed to 139. This worker
+leaves that parent-owned artifact unchanged and does not claim a green combined
+accounting gate; parent composition and a mirror recheck are required before
+integration. No new API permission, signature pin, terminal or frozen-rule setting
+was needed.
+
+The final source fingerprint stayed unchanged through focused and guard execution.
+All XML class/method identities, failures and skips were inspected. Consumed test
+reports, temporary mutation snapshots and task-owned diagnostic logs were removed;
+no category run or live worker Maven handle remains. Hooks are installed. The
+worker stops at its local commit, without push, integration, branch deletion or
+worktree removal. Coverage is bounded component/renderer behavior on Linux EGL;
+no broad smoke, full suite, cross-platform GL, native gameplay/trace parity,
+performance or exhaustive arithmetic claim is made.

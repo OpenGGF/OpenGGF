@@ -33,7 +33,7 @@ baseline-update commit and pick the next target rather than weakening the rule.
 
 | Rule | Committed allowance and unit | Target in that unit | Trigger |
 |------|------------------------------|---------------------|---------|
-| `low_level_layers_do_not_depend_on_runtime_layers` | 147 records | Hold at 147 until the projected 143-record cut is verified | Move pooled GPU commands to scalars; retain supported typed ingress and the four SAT callback-adapter records |
+| `low_level_layers_do_not_depend_on_runtime_layers` | 136 records | Hold at 136 pending composed verification | GPU commands/backends consume scalars; decoded art providers own their complete contracts; retain typed GM ingress and the four SAT callback-adapter records |
 | `shared_layers_do_not_depend_on_game_specific_packages` | 0 records | Hold at 0 records | Master-title ROM preview decoding/composition now belongs to game-owned providers (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 10 member dependencies in 2 grouped slice records | Hold at 10 explicit host-donation members | Menu animation now has a shared owner; remove donation members only through a separate host/donor contract migration |
 
@@ -151,11 +151,11 @@ Shared event composition owners retain their explicit whole-file exclusions.
 Invocation-shaped singleton/fallback patterns also recognize method references
 as distinct operations, so an approved direct call cannot authorize one.
 
-The ambient singleton-setup inventory now contains 95 methods across 94 files,
+The ambient singleton-setup inventory now contains 72 methods across 71 files,
 down from 102/100 after direct manager construction and named module fixtures
-replaced seven methods in six test classes. The four FadeManager unit cases
+replaced thirty methods in twenty-nine test classes. The four FadeManager unit cases
 construct their own manager and need no gameplay fixture. Gargoyle render checks
-inject their render service and graphics owner; Geyser checks name the S1 fixture.
+inject their render service and graphics owner; S1/S2 object and MGZ2 event checks name their module fixtures. Engine/session and frontend checks use the engine-only boundary when no gameplay world is required.
 These count setup obligations, not demonstrated leaks. Removing four unused GameLoop imports first tightened
 stale accounting. The later registry metadata and bonus-stage capability migration
 removes the remaining root coupling; both concrete-reference caps are now zero.
@@ -271,7 +271,7 @@ keys; they are not the accounting source. These counts do not evaluate the live
 production dependency graph. Update the matching documentation when committed
 records intentionally change.
 
-- `low_level_layers_do_not_depend_on_runtime_layers`: 147
+- `low_level_layers_do_not_depend_on_runtime_layers`: 136
 - `shared_layers_do_not_depend_on_game_specific_packages`: 0
 - `per_game_packages_do_not_cross_depend`: 2
 - `runtime_owned_framework_packages_do_not_access_global_service_roots`: 0
@@ -334,7 +334,7 @@ are unchanged.
 `package_slices_are_free_of_cycles`: 0 committed cycle records after the
 explicit dependency-pair ignores below. This does not prove the full dependency
 graph is acyclic; the rule description still names one historical core-runtime cluster.
-`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 154 allowed
+`core_runtime_cycle_cluster_does_not_gain_top_level_edges`: 153 allowed
 source/target top-level package pairs inside or adjacent to that cluster.
 `TestArchitecturalReviewGuard` checks this permission count against the executable
 set. The live dependency census on 2026-10-23 found seven unused permissions:
@@ -343,7 +343,7 @@ set. The live dependency census on 2026-10-23 found seven unused permissions:
 These were pruned from 159 to 152; editor art import adds the narrowly owned
 `editor -> tools` pair (also used by Stageplay screenplay import/export, owned by
 `editor_host_data_dependencies_use_only_explicit_owners`), and Stageplay world presentation
-adds `stageplay -> util`, giving the merged tree 154 permissions. The three matching obsolete
+adds `stageplay -> util`, giving that historical merged tree 154 permissions. The art-provider contract migration removes the sole `data -> sprites` permission and its matching cycle ignore; the prepared composition now has 153 permissions. The three matching obsolete
 cycle ignores (`debug -> data`, `timer -> camera`, `util -> tools`) were removed too. The runtime-edge guard now rejects both
 unapproved edges and stale permissions; the documentation check verifies the
 published allowance count.
@@ -601,13 +601,17 @@ sharing also respects native versus derived water policy. The existing gameplay
 palette owner captures donor RGB values and bank lifetime tokens, restores current
 cells without replacing aliases, and uploads restored colors immediately. These
 close demonstrated palette defects without moving the registry or reducing its
-typed allowances. Separate shader-capacity work has component evidence and review
-but awaits composition; this delivery does not claim it fixed.
+typed allowances. The sampler-height correction is composed locally alongside the
+scalar GPU boundary; combined validation remains pending.
 
-The next bounded allowance cut gives PatternRenderCommand a scalar GPU boundary
-while keeping GraphicsManager's typed ingress and the SAT decoder adapter.
-Its reviewed projection is nine removals plus five explicit adapter identities,
-147 → 143. That component now has focused results and source-review acceptance;
-this delivery still contains 147 records and does not claim its composed gates. The
+The prepared composition contains 136 low-level records: the pooled command
+boundary removes nine identities and adds five (147 → 143), both GPU backend
+boundaries remove twenty-one and add seventeen (143 → 139), and the complete
+art-provider contracts remove three (139 → 136). GraphicsManager retains its typed
+creator ingress and the SAT callback adapter. Moving the two art-provider names
+to `sprites.art` intentionally changes the unpublished 0.7 candidate; compiled
+mods must rebuild as documented in the compatibility guide. The release descriptor
+remains unchanged. Component checks and independent review are complete; the
+composed behavior/API/strict guards remain pending. The
 [continuation plan](plans/2026-10-24-architecture-continuation.md) records the
 qualified boundaries, exact replacement accounting and required behavior gates.

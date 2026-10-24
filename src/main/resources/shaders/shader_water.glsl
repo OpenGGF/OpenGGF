@@ -110,11 +110,13 @@ void main()
 
         // Standard palette lookup
         float paletteX = (index + 0.5) / 16.0;
-        float paletteY = (paletteLine + 0.5) / TotalPaletteLines;
+        // Normal storage may retain spare rows while underwater composition shrinks.
+        float paletteY = (paletteLine + 0.5) / float(textureSize(Palette, 0).y);
+        float underwaterPaletteY = (paletteLine + 0.5) / float(textureSize(UnderwaterPalette, 0).y);
 
         if (pixelYFromTop >= waterlineY) {
              // Use underwater palette
-             color = texture(UnderwaterPalette, vec2(paletteX, paletteY));
+             color = texture(UnderwaterPalette, vec2(paletteX, underwaterPaletteY));
         } else {
              // Use normal palette
              color = texture(Palette, vec2(paletteX, paletteY));
