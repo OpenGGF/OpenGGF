@@ -6859,3 +6859,92 @@ incompleteness and prior guard epochs are unchanged. No aggregate-green,
 full-suite, route completion or newness claim follows. The local leaf stays held
 from Root ancestry reception; Main/provider activation/paired MHZ, remote,
 PR/CI actions and new ancestry reception remain closed.
+
+
+### 2026-10-24 — Special-stage failure fixture reaches its intended boundary
+
+This isolated successor starts from local B9 leaf
+`7c9edd6219f6d611b9f8a7e8a2a96eb7bffd0075`. Only imports and
+`TestSpecialStageHardwareTimingLifecycle.initializationFailureSuppressesStrictCloseAndLeavesNextContextLive`
+change. Previously its setup had neither a declared ROM prerequisite nor an
+assertion that the mocked special-stage entry was reached. An earlier ROM/audio
+setup failure could therefore follow the same abort path. Source inspection
+establishes that weakness, not what any old unbound warning actually did.
+
+The method now declares `@RequiresRom(SONIC_2)`, using the existing extension's
+borrowed cached ROM rather than opening or closing another reader. A local
+append-only logger handler observes handled throwables, without changing logger
+levels or parent handlers. It is removed and closed in a narrow finally.
+The method verifies the mocked `doEnterSpecialStage` invocation and requires
+exactly one handled throwable, the same original `primary` instance. Every
+existing suppression, configuration-restore, active-session, LIVE-policy,
+rewind-key, fallback and next-context assertion remains. The fatal method's
+`assertSame(primary, thrown)`, other two methods, helper traces/settings and
+original cleanup are byte-exact. Removing these additions reconstructs the
+entire previous file. No production, annotation extension, helper, input,
+policy, API pin, baseline or cap changed.
+
+One normal queued request selected the complete four-method owning class:
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=com.openggf.TestSpecialStageHardwareTimingLifecycle' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test -B
+```
+
+Placeholders refer to the original main-workspace wrapper and stock-ROM
+directory. The earlier verified CRC/SHA identities were reused only after all
+three files' device/inode/size/mtime/ctime matched; no duplicate rehash, copy or
+alias was needed. Java25/no-device/surfaceless settings and the same reviewed
+environment were retained. There was no new preflight/version probe,
+standalone build, profile/resource override, retry, API/guard/broad request or
+B9-case repeat. Maven production classes were up to date; normal lifecycle
+recompiled4762 test sources.
+
+Actual: **four distinct cases, four PASS, zero failures/errors/skips**.
+The ordinary failure method ran first (0.635s) and authenticated the intended
+mocked failure. Timing-enabled rewind/close ran second (0.012s), fatal exact
+Error identity third (0.025s), and the no-timing LIVE control fourth (0.007s).
+Suite0.700s; rounded queue45s, Maven30.152s and supervised wall75.820s are
+separate measures, not CPU estimates. All69 properties were read and compared
+with the prior invocation:66 values matched; only selector and expected
+Surefire temporary launch paths differed. Both identical classpaths retained
+79 nonempty owned/dependency entries plus implicit owned cwd, with every entry
+revalidated. The complete two recursive streams (8707 bytes), text report and
+179-line/19,894-byte console were read. Java25.0.5.0.2/class-major69, explicit
+backend, actual cwd and all three original ROM properties matched.
+
+One SEVERE block belongs to the declared ordinary negative: the actual
+`primary special-stage initialization failure` is recorded from mocked
+`GameLoop.doEnterSpecialStage` line2604 through `enterSpecialStageTrace:739`,
+`finishSpecialStageLaunch:599` and the owning test line174. The new reachability
+and exact-object assertions pass, as do every original abort/next-context
+oracle. It is not classified from its message or JUnit status alone. The fatal
+Error remains asserted by exact identity. FAST/NONE warnings (XML4/console5)
+and18 compiler deprecations are separate. No unexpected caught fault, B9 parse/
+load emission, fresh dump or infrastructure failure appeared in this cohort.
+
+Tested index tree: `1218d898b8bce1a6f3c9d8375a5b8bdd388b4bf0`.
+Full tracked input frame: `9bd48f578c36da326fbdc22e4596ca070bfb01c6d731a7217d26afab63f43421`,
+15,167 paths /957,202,212 bytes, exact through terminal readback. Fixture SHA-256:
+`4dd078e42cca6978ec37bfc5defa98f20b69c9cba1199c37e2fee97d98ad9f51`.
+The two prior B9 source blobs and current wrapper closure remain exact. Only
+this subsequent factual Plan append changes tested-tree prose. Three consumed
+diagnostics (52,642 bytes) and two jar-byte-verified native extractions
+(1,018,272 bytes) were removed under the supported metadata lock. Useful
+source/classes, unknown outputs and every lock file remain; no raw log/XML
+archive or pass cache was created. Registry evidence retains compact causal
+frames, source oracles and hashes rather than the full framework stack.
+
+This qualifies the intended mocked initialization-failure/cleanup boundary and
+the unchanged class controls. It neither runs a real special stage through the
+mocked entry nor proves native timing/waveforms, old B9 provenance, cross-game
+source-pair installation, route closure or aggregate PR-green. Prior B9 one-case
+and earlier category/guard epochs retain their own attribution. This local
+stack includes B9 once by ancestry and stays held from Root receipt. Main,
+provider activation and paired MHZ windows, remote, PR/CI and new Root ancestry
+actions remain closed.

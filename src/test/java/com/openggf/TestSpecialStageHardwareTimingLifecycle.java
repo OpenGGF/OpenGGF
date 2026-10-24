@@ -27,6 +27,8 @@ import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.tests.RomTestUtils;
@@ -37,6 +39,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -120,6 +126,7 @@ class TestSpecialStageHardwareTimingLifecycle {
     }
 
     @Test
+    @RequiresRom(SonicGame.SONIC_2)
     void initializationFailureSuppressesStrictCloseAndLeavesNextContextLive(
             @TempDir Path dir) throws Exception {
         writeTrace(dir, true, true);
@@ -146,7 +153,38 @@ class TestSpecialStageHardwareTimingLifecycle {
                 anyBoolean(),
                 any(SpecialStageStartupPolicy.class));
 
-        session.finishSpecialStageLaunch(loop);
+        List<Throwable> launchFailures = new ArrayList<>();
+        Logger launchLogger = Logger.getLogger(TraceSessionLauncher.class.getName());
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                if (record.getThrown() != null) {
+                    launchFailures.add(record.getThrown());
+                }
+            }
+
+            @Override
+            public void flush() { }
+
+            @Override
+            public void close() { }
+        };
+        launchLogger.addHandler(handler);
+        try {
+            session.finishSpecialStageLaunch(loop);
+        } finally {
+            launchLogger.removeHandler(handler);
+            handler.close();
+        }
+
+        verify(loop).doEnterSpecialStage(
+                any(SpecialStageProvider.class),
+                anyInt(),
+                anyBoolean(),
+                any(SpecialStageStartupPolicy.class));
+        assertEquals(1, launchFailures.size());
+        assertSame(primary, launchFailures.getFirst(),
+                "the handled failure must be the intended special-stage entry failure");
 
         assertEquals(0, primary.getSuppressed().length,
                 "incomplete launch abort must not perform strict edge verification");
