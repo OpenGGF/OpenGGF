@@ -1,9 +1,13 @@
 package com.openggf.mods.code;
 
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomGame;
 import com.openggf.game.GameServices;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.host.SceneRomLibrary;
 import com.openggf.mods.scene.host.SceneServices;
+import com.openggf.tests.RomCatalogueFixture;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -11,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
@@ -25,10 +30,25 @@ import static org.mockito.Mockito.*;
 class TestStarpostArtFailures {
     @TempDir Path work;
     private SharedLevel level;
-    @AfterEach void closeLevel() { if (level != null) level.dispose(); }
+    private RomCatalogueFixture romCatalogue;
+    @AfterEach void closeLevel() throws Exception {
+        try {
+            if (level != null) level.dispose();
+        } finally {
+            if (romCatalogue != null) romCatalogue.close();
+        }
+    }
+
+    private void bindSonic1Catalogue() throws Exception {
+        var sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        assertNotNull(sonic1, "Sonic 1 is required for the Starpost patch");
+        romCatalogue = RomCatalogueFixture.bind(SonicConfigurationService.getInstance(),
+                GameServices.rom(), Map.of(RomGame.S1, sonic1.toPath()));
+    }
 
     @Test void expectedPreparationFailureRetriesAndProperHostCloseRetiresArt() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindSonic1Catalogue();
         try (var harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), work.resolve("build"))) {
             var module = harness.apply(GameServices.module());
             try (var real = new SceneRomLibrary(module, GameServices.rom().getRom(), GameServices.rom())) {
@@ -68,6 +88,7 @@ class TestStarpostArtFailures {
 
     @Test void missingOptionalRomHasInspectableStatusAndNoCreatorFault() throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindSonic1Catalogue();
         try (var harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), work.resolve("build"))) {
             var module = harness.apply(GameServices.module());
             var library = mock(SceneRomLibrary.class);
@@ -84,6 +105,7 @@ class TestStarpostArtFailures {
     @org.junit.jupiter.params.provider.MethodSource("providerFaults")
     void preparationProgrammingFaultReachesVerifiedOwnerBoundary(RuntimeException injectedFailure) throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        bindSonic1Catalogue();
         try (var harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), work.resolve("build"))) {
             var module = harness.apply(GameServices.module());
             try (var real = new SceneRomLibrary(module, GameServices.rom().getRom(), GameServices.rom())) {

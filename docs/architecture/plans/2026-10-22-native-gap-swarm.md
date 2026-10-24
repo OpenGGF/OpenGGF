@@ -4393,3 +4393,140 @@ so no unchanged guard/broad repeat is submitted. The conditional second request
 is unused and closed. Consumed own reports/log/message are removed, compiled
 outputs and useful unmerged source retained; no push, Main, CI or passive gate
 change is opened by this local correction.
+
+## PR223 explicit catalogue fixture discrimination — 2026-10-24
+
+PR lane receives evidence-only6607 and qualified Slot-fixture6759 once by
+ancestry, with no repeated Slot check. The complete f340 smoke remains
+41023 ordinary/121F/68E/108skips and fresh733guards/0F0E0S. This cohort
+does not reclassify its failures or restore a whole-run pass.
+
+Root accepts exactly eight test files plus this Plan, and at most two queued
+focused requests. No production/runtime, config-file, ROM, POM, API, policy,
+global test hook or example harness change is admitted. Main, new broad runs,
+manual CI, native captures and historical passive gates stay closed. Source
+work is complete before04:35Z; review04:45Z, cleanup05:20Z and the original
+05:37Z expiry remain bounded, with no automatic retry or extension.
+
+The explicit RomCatalogueFixture takes the actual configuration and manager
+plus declared per-game paths. All paths are copied, normalized and checked as
+readable regular files, and selected session overlays are refused before writes.
+It snapshots the original resolved Object values, including blank/null, writes
+only in-memory base keys, and reloads that manager's catalogue. Reapply after
+known fixture resets retains the first snapshot; close restores those selected
+values once while leaving new overlays intact. Neither operation opens/closes
+borrowed ROMs or saves config. This restores effective values, not private map
+key-presence metadata. Ten ROM-free controls use temporary non-ROM files and
+a mocked manager; unreadable-file rejection is present but has no dedicated
+portable permission control. Independent static helper review reports NMF;
+that is not compilation or runtime proof.
+
+Suspension binds S2 after reset so recording's clearSessionOverrides cannot
+erase the base key. The one LRZ encounter fixture binds only its actual S1/S2
+donor before opening it; no donor stays unbound. Starpost bridge binds S1 before
+patch application and reapplies after both explicit module resets. Town retains
+its complete romObjectArt plan before direct materialization. Art-failure
+fixtures keep the absent mocked library, tick120 retry and programming-fault
+controls unchanged; patch admission and scene-art failure are distinct owners.
+Three Islands opts into S1 only for the three required checks; its default
+optional path remains byte-identical. Added readiness checks require the actual
+GHZ/Star Light field and Marble shrine, retaining every pixel/cycle/music/PCM
+and persistence assertion. All six callers close bindings in teardown finally.
+
+The original observed scene failure identities are: StarpostArtFailures
+missingOptionalRomHasInspectableStatusAndNoCreatorFault (null startup factory
+before its intended assertion); ThreeIslandsScene water reflection at129,
+configured-S1 mysteries at361, and Continue song at254 (want/playing s3k:1,
+live false). Availability is a prerequisite hypothesis, not blanket proof of
+all97 Starpost failures or all three island failures.
+
+Request A, unchanged full methods/configurations:
+```text
+com.openggf.tests.TestRomCatalogueFixture
+com.openggf.TestGameLoopSuspension
+com.openggf.game.sonic3k.objects.TestLrzEndBossEncounterHeadless#realMineFightCapsuleAndResultsPublishTheHiddenPalaceTransition
+```
+Request B, exact discriminators:
+```text
+com.openggf.TestModSceneActBridge#controlledNativeTownRoundTripHoldsFadesWithoutReenteringController
+com.openggf.mods.code.TestStarpostTownAct#doorwayRaisesSingleHandBackThroughControllerInput
+com.openggf.mods.code.TestStarpostArtFailures
+com.openggf.mods.code.TestThreeIslandsScene#greenHillWaterUsesNativeReflectionPixelsAndSixTickPaletteCycle+greenHillMysteriesUseRealInteractionsAndPersistThroughContinue+continueStartsStarLightImmediatelyAndIndoorContinueSelectsMarble
+```
+A expects ten helper controls, all seven Suspension methods and the complete
+25-configuration encounter method. B retains one bridge, one Town, four
+art-failure invocations and the three island checks. Both use the current
+absolute queue wrapper with normal admission, Java25/Lua54/EGL/null audio and
+original absolute ROM properties; no duplicate environment preflight. Exact
+argv/source framing is held in the task's existing ownership record. New
+reached runtime failures stop the repair loop for attribution, without
+retiming, weaker expectations, propagation or an automatic third request.
+
+### Actual two-request terminal results and open audio boundary
+
+The frozen source is6759 plus the exact eight test files, framed as sorted
+tracked path NUL complete bytes NUL over src/main, src/test, POM, .mvn and
+tools/testing:11518paths/840573499bytes, SHA256
+`31d9ee39f2806e0ad4c3634eab20884505f07a628e1e64b94a7f240284e0c876`.
+Pre-test staged binary diff including this Plan's then-current text hashes to
+`04d3d14025bbef087a220fd209e9ad74f0a60a5f90c14df1ac49ae01fe0bb0cd`.
+All eight tested Java pins and the complete executable/source frame match after
+both requests and immediately before commit. This factual Plan append is the
+only post-result edit. Source-only author inverses preserve every original
+assertion; independent helper/API review and Root's six-caller review found
+no concrete source blocker, without claiming executable verification themselves.
+
+A51735 completes exit0:42distinct/3XML/0F0E0skips. All ten helper controls,
+all seven Suspension methods and all25 encounter indices1..25 execute. This
+includes the ten formerly ROM-blocked donor configurations and the recording
+restart previously stopped by absent s2.gen. Reported queue37s is separate
+from Maven1:07; LRZ suite36.680s, Suspension1.267s and helper0.067s overlap
+no other owned test request. This is the complete selected sample, not all45
+LRZ donor-opening failures or any maintained full route qualification.
+
+A's recursive streams reveal a separate newly reached boundary despite its
+JUnit pass: escapeHeldDuringAnActiveRecordingKeepsTheFullReturn emits82 caught
+closed-ROM loader failures, SFX0xA0..0xF0 and DAC. First retained stack:
+Rom.readByte285 (null fileChannel), Sonic2SmpsLoader.loadSfxInternal307 /
+cacheAllSfx163 / constructor34, Sonic2AudioProfile.createSmpsLoader130,
+AudioManager.setAudioProfile928, GameplayTeamBootstrapContext.restartRecording136.
+Root source inspection confirms close/reopen precedes setAudioProfile136 then
+setRom137, with the candidate loader using previous.rom(). This supports an
+ordering concern; baseline/newness and final audio correctness remain OPEN.
+No audio source, success assertion, oracle or recording policy is changed here.
+Other A limits are FAST/NONE, deterministic unmeasured KOS timing and an
+EggPrisonAnimal render-context warning; no native timing/scene certificate.
+
+After Root explicitly permits unchanged reserved B, B26664 completes exit0:
+9distinct/4XML/0F0E0skips, queue0s separately, Maven37.117s. Actual identities:
+
+- TestModSceneActBridge#controlledNativeTownRoundTripHoldsFadesWithoutReenteringController
+- TestStarpostTownAct#doorwayRaisesSingleHandBackThroughControllerInput
+- TestStarpostArtFailures#expectedPreparationFailureRetriesAndProperHostCloseRetiresArt
+- TestStarpostArtFailures#missingOptionalRomHasInspectableStatusAndNoCreatorFault
+- TestStarpostArtFailures#preparationProgrammingFaultReachesVerifiedOwnerBoundary(RuntimeException)[1]
+- TestStarpostArtFailures#preparationProgrammingFaultReachesVerifiedOwnerBoundary(RuntimeException)[2]
+- TestThreeIslandsScene#greenHillWaterUsesNativeReflectionPixelsAndSixTickPaletteCycle
+- TestThreeIslandsScene#greenHillMysteriesUseRealInteractionsAndPersistThroughContinue
+- TestThreeIslandsScene#continueStartsStarLightImmediatelyAndIndoorContinueSelectsMarble
+
+The original pixel/cycle, song/playerActive/PCM-variance, persistence, owner-fault
+and optional-library assertions pass, including new concrete destination
+readiness. B reports no closed-ROM, SFX or DAC loader fault. Its only diagnostic
+families are FAST/NONE and the two deliberately injected art programming faults
+(fixture preparation bug and retired owner), retained by their negative controls.
+A and B remain separately attributed invocations, not a new whole-suite pass or
+blanket causality for97 Starpost cases, three island cases or other donor families.
+
+Every actual identity, F/E/skip, XML property set, recursive stream/text and
+post-source pin is read: Java25.0.5.0.2, owned cwd/classpath, explicit EGL and
+original absolute three-ROM paths. No dump, image or recording artifact is
+retained. Original stock SHA1 identities were reverified; no ROM alias, copy,
+rename or config file is created. Owned diagnostics are consumed and removed;
+compiled outputs and useful source stay. The two-request budget is exhausted;
+no retry, extra check, propagation, PR/Main push or broad/manual CI runs.
+Root permits only this factual append and a normal-hook local leaf, then
+receives it once by ancestry. Recording-audio source investigation remains
+separate. Complete f340189failure/108skip and733guard-pass evidence stays
+unchanged; this sample does not certify audio, campaigns, native parity or
+PR223 as green. Original05:37Z expiry is not revived or extended.
