@@ -141,6 +141,45 @@ public final class CdObjectPresentation {
     }
 
     /**
+     * Explicit cold DEV preload of the five frontier spans and the three PLC1 contact sources.
+     * The separate bank supplies explosions ($680, 70 tiles), points ($6C6, 5) and flowers
+     * ($6D7, 39); the checkpoint gap stays unbound. This does not execute PLC residency.
+     * Flower's palette/priority changes belong to its final SAT word, not to these pixels.
+     */
+    public static PatternSource usaR11aContactDevPreloadedArt(CdPlayerArtRuntime.State nowServicedPlayer,
+                                                              CdR11aObjectAssets objects,
+                                                              CdR11aObjectAssets.FrontierArtBank frontier,
+                                                              CdR11aObjectAssets.ContactArtBank contact,
+                                                              int playerLogicalBase, int ringLogicalBase,
+                                                              int mosquiLogicalBase, int plantLogicalBase,
+                                                              int rampLogicalBase, int explosionLogicalBase,
+                                                              int pointsLogicalBase, int flowerLogicalBase) {
+        Objects.requireNonNull(nowServicedPlayer, "now-serviced player art");
+        Objects.requireNonNull(objects, "authenticated opening object assets");
+        Objects.requireNonNull(frontier, "the owner's decoded frontier art bank");
+        Objects.requireNonNull(contact, "the owner's decoded contact art bank");
+        if (objects.identity().variant() != CdReleaseVariant.USA) {
+            throw new UnsupportedOperationException("DEV preloaded object art is reviewed only for USA R11A");
+        }
+        var ring = objects.initialArtBank().binding(CdR11aAsset.ART_RINGS);
+        var mosqui = objects.initialArtBank().binding(CdR11aAsset.ART_MOSQUI);
+        var plant = frontier.binding(CdR11aAsset.ART_3D_PLANT);
+        var ramp = frontier.binding(CdR11aAsset.ART_3D_RAMP_BOOST);
+        var explosion = contact.binding(CdR11aAsset.ART_EXPLOSIONS);
+        var points = contact.binding(CdR11aAsset.ART_POINTS);
+        var flower = contact.binding(CdR11aAsset.ART_FLOWER);
+        return declaredPixelBank(List.of(
+                new PixelSpan(CdPlayerArtRuntime.VRAM_BYTE_ADDRESS / 32, playerLogicalBase, nowServicedPlayer.residentBank()),
+                new PixelSpan(ring.firstTileId(), ringLogicalBase, ring.bytes()),
+                new PixelSpan(mosqui.firstTileId(), mosquiLogicalBase, mosqui.bytes()),
+                new PixelSpan(plant.firstTileId(), plantLogicalBase, plant.bytes()),
+                new PixelSpan(ramp.firstTileId(), rampLogicalBase, ramp.bytes()),
+                new PixelSpan(explosion.firstTileId(), explosionLogicalBase, explosion.bytes()),
+                new PixelSpan(points.firstTileId(), pointsLogicalBase, points.bytes()),
+                new PixelSpan(flower.firstTileId(), flowerLogicalBase, flower.bytes())));
+    }
+
+    /**
      * Active SAT prefix only. Reverse complete native entry order for painter overlap; no ID,
      * player/object, bucket, priority, position or provenance sort. One 4x4 native piece expands
      * to sixteen tiles here AFTER queue capacity was decided. No second cull or admission pass.

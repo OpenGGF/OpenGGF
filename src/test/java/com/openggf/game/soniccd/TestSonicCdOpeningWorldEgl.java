@@ -145,14 +145,18 @@ class TestSonicCdOpeningWorldEgl {
                 var pickupCompletedScroll = LevelSpritePresentation.captureScroll(GameServices.level());
                 step(loop, neutral); prefix.add(neutral); expectedRows.add(capture(module));
                 var expectedPicture = com.openggf.game.soniccd.resources.CdObjectPresentation.convert(pickupCpu,
-                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
+                        com.openggf.game.soniccd.resources.CdObjectPresentation.usaR11aContactDevPreloadedArt(
                                 module.requirePlayerFrame().artState(), source.assets().openingObjects(),
                                 source.assets().openingObjects().frontierArtBank(),
+                                source.assets().openingObjects().contactArtBank(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base(),
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 24,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 38,
                                 com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 108,
-                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 136));
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 136,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 199,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 269,
+                                com.openggf.graphics.PatternAtlasRange.OBJECTS.base() + 274));
                 assertEquals(expectedPicture, runtime.displayedFrame(), "Next V-int uses the pickup CPU table and now-serviced art");
                 int playerBase = com.openggf.graphics.PatternAtlasRange.OBJECTS.base();
                 assertTrue(runtime.displayedFrame().patternVersions().keySet().stream()

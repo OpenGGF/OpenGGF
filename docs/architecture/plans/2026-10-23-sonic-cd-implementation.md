@@ -2889,3 +2889,40 @@ blocks on hardware; this pure ordered request has no measured service cost.
 Body/Frame staging, world score/contact globals, live aftermath dispatch,
 routine4 recovery, lost rings11 and same-frame death-camera freeze remain
 separate required units. Nothing in this commit admits contact into gameplay.
+
+
+### Live contact-aftermath dispatch and picture banks, 24 October 2026
+
+The existing physical object pass now dispatches Explosion18, Points1C and
+Flower1F through the same pool/queue as the earlier objects. Points allocation
+retains same-pass later-slot and next-pass earlier-slot behavior. The deleted
+Points draw is queued without testing ID, then skipped by ID at SAT drain.
+Flower's final scratch-angle request is applied once before the next slot;
+no intervening animation/draw code reads that global. Its subtype2 low-priority
+Init path still ends at the later06D7 overwrite. Immutable source tables join
+at23F088/20AC64/235EF4, and the eight-span cold DEV picture covers313patterns.
+The old three/five-span policies and the checkpoint-art gap remain strict.
+Presenter reset/retirement and actual EGL expectations use the same313extent.
+
+Root33585 passed315cases/0failures/errors/skips over12classes at13:39:06BST,
+including28Runtime,7mappings,11picture,56pureU3,88Frame,15World,1actualEGL,
+3regionalassets and11API (plus95Movement in the concurrent helper unit).
+All12XML verify Java25.0.5.0.2, supplied media and explicit EGL. Queue247s,
+execution1m34. Root43304 subsequently passed264affected Body/Frame/Runtime/
+actor/World/EGL/API cases,0skips. These overlapping selections are not summed.
+Independent Opus source review found noP1/P2 or wrong assertion in this unit.
+The Flower terrain fixture was independently derived from the pinned layout,
+not fitted: the probe finds two nonsolid blocks, distance31/angle0, and moves
+720to722 inside the actual70B camera.
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --normal -Dmse=off '-Dtest=TestCdPlayerMovement,TestCdOpeningObjectRuntime,TestCdObjectMappings,TestCdObjectPresentation,TestCdExplosion,TestCdPoints,TestCdFlower,TestCdPlayerFrameRuntime,TestSonicCdOpeningWorldLoad,TestSonicCdOpeningWorldEgl,TestCdR11aObjectRetailAssets,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" -Dopenggf.headless.gl=surfaceless-egl -Dsoniccd.opening.egl=true test -B
+```
+
+The new slots are constructed transaction/device inputs, not a normal gameplay
+route to a kill. The existing real EGL route still proves the first Ring only.
+If a later allocation reuses a previously deleted/queued slot before its Init,
+the bounded mapping resolver can stop at pointer0 where native would read
+unowned memory. Preserve this shipped dirty-slot behavior as an explicit
+coverage boundary; do not hide it with an ID/visibility or active-list filter.
+Contact production, world score, hurt/death and complete USA remain separate.

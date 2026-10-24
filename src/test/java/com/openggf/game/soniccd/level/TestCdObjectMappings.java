@@ -214,6 +214,51 @@ class TestCdObjectMappings {
                 state, objects, frontier, 10000, 11000, 12000, 12070, 12097), "booster base inside the plant span");
         assertThrows(NullPointerException.class, () -> CdObjectPresentation.usaR11aFrontierDevPreloadedArt(
                 state, objects, null, 10000, 11000, 12000, 12070, 12098));
+        // Contact pointers come from the actual Init operands; all counted bodies retain source bytes.
+        for (var table : List.of(CdR11aObjectAssets.Table.EXPLOSION_MAPPINGS,
+                CdR11aObjectAssets.Table.POINTS_MAPPINGS, CdR11aObjectAssets.Table.FLOWER_MAPPINGS)) {
+            var visual = switch (table) {
+                case EXPLOSION_MAPPINGS -> objects.explosion();
+                case POINTS_MAPPINGS -> objects.points();
+                default -> objects.flower();
+            };
+            int pointer = objects.view(table).range().nativeAddress();
+            assertEquals(switch (table) {
+                case EXPLOSION_MAPPINGS -> 0x23F088;
+                case POINTS_MAPPINGS -> 0x20AC64;
+                default -> 0x235EF4;
+            }, pointer);
+            for (int frame = 0; frame < visual.mappingFrames().size(); frame++) {
+                var expected = visual.mappingFrames().get(frame).pieces().stream()
+                        .map(p -> new CdObjectDrawQueue.RawPiece(p.y(), p.sizeByte(), p.rawTileWord(), p.x())).toList();
+                assertEquals(expected, resolver.resolve(pointer, false, frame).pieces());
+            }
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer, false, visual.mappingFrames().size()));
+            assertThrows(UnsupportedOperationException.class, () -> resolver.resolve(pointer | 0xFF000000, false, 0));
+        }
+        var contact = objects.contactArtBank();
+        var contactPixels = CdObjectPresentation.usaR11aContactDevPreloadedArt(state, objects, frontier, contact,
+                10000, 11000, 12000, 12070, 12098, 12161, 12231, 12236);
+        for (var binding : contact.bindings()) {
+            int logical = switch (binding.source()) {
+                case ART_EXPLOSIONS -> 12161;
+                case ART_POINTS -> 12231;
+                default -> 12236;
+            };
+            for (int tile = 0; tile < binding.tileCount(); tile++) {
+                var actual = contactPixels.resolve(binding.firstTileId() + tile);
+                assertEquals(logical + tile, actual.logicalPatternId());
+                assertEquals(CdObjectPresentation.patternVersion(binding.bytes().slice(tile * 32, 32)), actual.version());
+            }
+        }
+        for (int gap = 0x6CB; gap < 0x6D7; gap++) {
+            int unbound = gap;
+            assertThrows(UnsupportedOperationException.class, () -> contactPixels.resolve(unbound));
+        }
+        assertThrows(UnsupportedOperationException.class, () -> full.resolve(0x680), "the old frontier policy stays strict");
+        assertThrows(UnsupportedOperationException.class, () -> contactPixels.resolve(0x388), "Animal art remains absent");
+        assertThrows(IllegalArgumentException.class, () -> CdObjectPresentation.usaR11aContactDevPreloadedArt(
+                state, objects, frontier, contact, 10000, 11000, 12000, 12070, 12098, 12160, 12231, 12236));
     }
 
     private static CdObjectMappings declared(int start, byte[] bytes, int root, int frames) {

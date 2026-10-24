@@ -120,6 +120,9 @@ public final class CdObjectMappings implements CdDrawMappings {
         // the consumed frame views; the counted resolve reads only each count byte and its pieces.
         addObject(tables, objects, CdR11aObjectAssets.Table.PLANT_MAPPINGS, objects.plant());
         addObject(tables, objects, CdR11aObjectAssets.Table.RAMP_BOOSTER_MAPPINGS, objects.rampBooster());
+        addObject(tables, objects, CdR11aObjectAssets.Table.EXPLOSION_MAPPINGS, objects.explosion());
+        addObject(tables, objects, CdR11aObjectAssets.Table.POINTS_MAPPINGS, objects.points());
+        addObject(tables, objects, CdR11aObjectAssets.Table.FLOWER_MAPPINGS, objects.flower());
         return new CdObjectMappings(tables, List.of());
     }
 

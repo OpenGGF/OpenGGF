@@ -50,11 +50,11 @@ final class SonicCdPlayerPresentation implements GameplayFrameController, Contro
     private CdPlayableSonic actor;
     private CdOpeningObjectRuntime openingObjects;
     // This module exclusively reserves OBJECTS. Normal terrain reset replaces the
-    // atlas; retained-level reset keeps this reservation and removes just our 199
+    // atlas; retained-level reset keeps this reservation and removes just our 313
     // picture patterns. Never clear other producers' ranges or infer ownership
     // from a range with matching coordinates. Rewind cannot move to another atlas.
     private PatternAtlas openingAtlas;
-    private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70 + 28 + 63;
+    private static final int OPENING_PICTURE_PATTERNS = 24 + 14 + 70 + 28 + 63 + 70 + 5 + 39;
     private CdR11aForegroundScroll.State scrollState;
     private Object scrollCaptureOwner = new Object();
     // CPU scroll prepared by the completed loop; V-int selects the previous one

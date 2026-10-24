@@ -32,10 +32,10 @@ import static com.openggf.game.soniccd.objects.CdObjectState.WordField.*;
  *
  * <p>Explicit DEV policy: USA R11A Present, goodFuture=0, projDestroyed=0, absent
  * reserved owners 1..31, initially zero CPU SAT/empty picture, and preloaded actual
- * Ring/Mosqui/3D-plant/3D-ramp-booster art (the inert Animal path draws nothing).
+ * Ring/Mosqui/3D-plant/3D-ramp-booster/explosion/points/flower art (the inert Animal path draws nothing).
  * The initial Ring globals are caller-declared ingress, never an entry proof.
  * Live dynamic IDs $10 Ring, $3D Mosqui, $24 Animal, $2C 3D plant and $2A 3D ramp
- * are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
+ * and aftermath IDs $18/$1C/$1F are owned; every other ID (including $12 FloatBlock) fails at its live dispatch.
  * This does not execute native title/HUD/PLC/section-art/audio/plane publication.
  * The loader, not declarations or this composition, authenticates asset bytes.</p>
  *
@@ -54,15 +54,19 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
 
     /**
      * Stable bases in ONE root-governed atlas range exclusive to this picture.
-     * Root reserves/binds its five disjoint subdivisions; this value neither
+     * Root reserves/binds its eight disjoint subdivisions; this value neither
      * claims graphics ownership nor recommends the arbitrary IDs used by tests.
      * The three-argument form derives the sequential frontier spans the production
      * module uses: plant = mosqui + 70 and ramp = plant + 28, so the whole picture is
-     * 24 + 14 + 70 + 28 + 63 = 199 patterns after the player base.
+     * The contact spans append 70 + 5 + 39 tiles, for 313 patterns in all.
      */
-    public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp) {
+    public record LogicalBanks(int player, int ring, int mosqui, int plant, int ramp,
+                               int explosion, int points, int flower) {
         public LogicalBanks(int player, int ring, int mosqui) {
             this(player, ring, mosqui, mosqui + 70, mosqui + 70 + 28);
+        }
+        public LogicalBanks(int player, int ring, int mosqui, int plant, int ramp) {
+            this(player, ring, mosqui, plant, ramp, ramp + 63, ramp + 63 + 70, ramp + 63 + 70 + 5);
         }
     }
 
@@ -148,10 +152,14 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
     private final CdAnimal animal;
     private final Cd3dPlant plant;
     private final Cd3dRamp ramp;
+    private final CdExplosion explosion;
+    private final CdPoints points;
+    private final CdFlower flower;
     private final CdObjectDrawQueue queue;
     private final LogicalBanks banks;
     private final PrimaryAngleWrite primaryAngleWrite;
     private final CdR11aObjectAssets.FrontierArtBank frontierArt;
+    private final CdR11aObjectAssets.ContactArtBank contactArt;
     private CdRingGlobals ringGlobals;
     private DevGlobals devGlobals = new DevGlobals(0, 0);
     private List<SoundRequest> sounds = List.of();
@@ -200,24 +208,28 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
         var objects = assets.openingObjects();
         // The frontier art decodes once here (plant/booster pixels); an IO failure stops before construction.
         var frontier = objects.frontierArtBank();
+        var contact = objects.contactArtBank();
         var placement = CdObjectPlacementRuntime.fromAssets(assets);
         var mappings = CdObjectMappings.fromOpeningAssets(assets, objects);
         // Validate physical/logical bank extents and overlaps now, even for an empty picture.
-        CdObjectPresentation.usaR11aFrontierDevPreloadedArt(frame.artState(), objects, frontier,
-                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp());
+        CdObjectPresentation.usaR11aContactDevPreloadedArt(frame.artState(), objects, frontier, contact,
+                banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                banks.explosion(), banks.points(), banks.flower());
         return new CdOpeningObjectRuntime(assets, frame, initialGlobals, initial, banks,
-                preScrollForeground, primaryAngleWrite, objects, frontier, placement, mappings);
+                preScrollForeground, primaryAngleWrite, objects, frontier, contact, placement, mappings);
     }
 
     private CdOpeningObjectRuntime(CdR11aAssets assets, CdPlayerFrameRuntime frame, CdRingGlobals initialGlobals,
                                    byte[] initial, LogicalBanks banks, CameraWords camera,
                                    PrimaryAngleWrite primaryAngleWrite, CdR11aObjectAssets objects,
                                    CdR11aObjectAssets.FrontierArtBank frontier,
+                                   CdR11aObjectAssets.ContactArtBank contact,
                                    CdObjectPlacementRuntime placement, CdObjectMappings mappings) {
         this.assets = assets;
         this.frame = frame;
         this.objects = objects;
         this.frontierArt = frontier;
+        this.contactArt = contact;
         this.placement = placement;
         this.banks = banks;
         this.primaryAngleWrite = primaryAngleWrite;
@@ -239,6 +251,12 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
         ramp = new Cd3dRamp(placement, Cd3dRamp.Assets.fromObjectAssets(objects),
                 (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        explosion = new CdExplosion(placement, CdExplosion.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        points = new CdPoints(placement, CdPoints.Assets.fromObjectAssets(objects),
+                (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
+        flower = new CdFlower(placement, CdFlower.Assets.fromObjectAssets(objects),
+                new CdPlayerTerrain(assets.terrain()), (pool, slot) -> drawDynamic(pool, slot.wholeIndex()));
     }
 
     public Phase phase() { return phase; }
@@ -274,8 +292,9 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
             if (servicePhase != PlcLifecyclePhase.LAG) {
                 // VInt_Level:827 SAT DMA then :829-834 art. At the completed boundary,
                 // convert PREVIOUS CPU SAT using NOW-serviced immutable resident pixels.
-                var pixels = CdObjectPresentation.usaR11aFrontierDevPreloadedArt(frame.artState(), objects,
-                        frontierArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp());
+                var pixels = CdObjectPresentation.usaR11aContactDevPreloadedArt(frame.artState(), objects,
+                        frontierArt, contactArt, banks.player(), banks.ring(), banks.mosqui(), banks.plant(), banks.ramp(),
+                        banks.explosion(), banks.points(), banks.flower());
                 var nextDisplay = CdObjectPresentation.convert(queue.cpuSat(), pixels);
                 checkActive(Phase.SERVICING);
                 displayed = nextDisplay;
@@ -399,6 +418,21 @@ public final class CdOpeningObjectRuntime implements NativeDynamicObjectPass, Pl
                             appendSound(new MosquiFm(request.sound()));
                         }
                         // CallReturned/Despawn describe already applied work; never replay them.
+                    }
+                } else if (id == CdExplosion.OBJECT_ID) {
+                    explosion.run(whole); // Writes and first-free Points allocation already committed in source order.
+                } else if (id == CdPoints.OBJECT_ID) {
+                    points.run(whole); // The unconditional DrawObject cut also follows a full delete.
+                } else if (id == CdFlower.OBJECT_ID) {
+                    var result = flower.run(whole);
+                    for (var effect : result.effects()) {
+                        if (effect instanceof CdFlower.GlobalWrite write) {
+                            if (write.field() != CdFlower.GlobalField.PRIMARY_ANGLE) {
+                                throw new UnsupportedOperationException("Unowned Flower shared global " + write.field());
+                            }
+                            primaryAngleWrite.write(write.value());
+                            checkActive(Phase.DYNAMIC_SLOTS);
+                        }
                     }
                 } else if (id == CdAnimal.OBJECT_ID) {
                     // Present/projector-intact path: CheckAnimalPrescence pops into CheckObjDespawn; no draw.

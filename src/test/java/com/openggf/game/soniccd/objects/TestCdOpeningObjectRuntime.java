@@ -825,6 +825,107 @@ class TestCdOpeningObjectRuntime {
         }
     }
 
+    @Test void convertedExplosionAllocatesLaterPointsInTheSamePassAndPublishesBothArtBanks() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveByte(ID, 0x18).moveByte(SUBTYPE, 1)
+                    .moveWord(X, 120).moveWord(Y, 0x760).moveWord(EXPLOSION_POINTS_FRAME, 4));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2);
+            f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(2, f.slot(32).routine());
+            assertEquals(0x1C, f.slot(33).id());
+            assertEquals(2, f.slot(33).routine(), "later allocation executes at its live physical visit");
+            assertEquals(23, f.slot(33).unsignedByte(POINTS_TIMER));
+            assertEquals(0x82, f.slot(33).subtype());
+            assertEquals(0x75E, f.slot(33).centreY());
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertTrue(cpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 32));
+            assertTrue(cpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 33));
+            var frameCut = f.frame.captureActor(); var shared = f.frame.captureShared();
+            var objectCut = f.runtime.captureClosedCut();
+            f.service(0);
+            var shown = f.runtime.displayedFrame();
+            assertTrue(shown.patternVersions().keySet().stream().anyMatch(id -> id >= BANKS.explosion() && id < BANKS.explosion() + 70));
+            assertTrue(shown.patternVersions().keySet().stream().anyMatch(id -> id >= BANKS.points() && id < BANKS.points() + 5));
+            f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var nextCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            var slots = pool.capture().slots();
+            f.frame.validateActorRestore(frameCut); f.frame.validateSharedRestore(shared); f.runtime.validateRestore(objectCut);
+            f.frame.restoreActor(frameCut); f.frame.restoreShared(shared); f.runtime.restore(objectCut);
+            f.service(0);
+            assertEquals(shown, f.runtime.displayedFrame());
+            f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            var replayCpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertArrayEquals(nextCpu.bytes(), replayCpu.bytes());
+            assertEquals(nextCpu.provenance(), replayCpu.provenance());
+            assertEquals(slots, pool.capture().slots());
+        }
+    }
+
+    @Test void pointsAllocatedBeforeTheExplosionWaitForTheNextPhysicalPass() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(40).moveByte(ID, 0x18).moveByte(SUBTYPE, 1).moveWord(X, 120).moveWord(Y, 0x760));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(0x1C, f.slot(32).id()); assertEquals(0, f.slot(32).routine());
+            assertEquals(0, f.slot(32).unsignedByte(POINTS_TIMER)); assertEquals(0x760, f.slot(32).centreY());
+            var cpu = f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+            assertFalse(cpu.provenance().stream().anyMatch(p -> p.slotRef().wholeIndex() == 32));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(3); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(2, f.slot(32).routine()); assertEquals(23, f.slot(32).unsignedByte(POINTS_TIMER));
+            assertEquals(0x75E, f.slot(32).centreY());
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail();
+        }
+    }
+
+    @Test void deletedPointsDrawCutIsQueuedButTheZeroIdIsSkippedAtSatDrain() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent();
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveByte(ID, 0x1C).moveByte(SUBTYPE, 0x80)
+                    .moveByte(ROUTINE, 2).moveByte(POINTS_TIMER, 1));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertArrayEquals(new byte[64], f.slot(32).copyBytes());
+            assertEquals(0, f.runtime.finishAfterCamera(POST).spriteCount());
+            f.runtime.finishOrdinaryTail();
+            assertFalse(f.runtime.closed(), "no missing-mapping resolution of the deleted slot");
+        }
+    }
+
+    @Test void flowerScratchAngleIsAppliedOnceBeforeTheNextDispatchAndItsArtPublishesLater() throws Exception {
+        try (var f = new Fixture()) {
+            f.firstCycle(); f.makePlayerAbsent(); f.angleWrites.clear();
+            f.onAngle = f.frame::applyObjectPrimaryAngle;
+            f.frame.applyObjectPrimaryAngle(0x55);
+            var pool = f.runtime.placement().pool(); pool.clearDynamicSlots();
+            pool.write(pool.state(32).moveByte(ID, 0x1F).moveByte(SUBTYPE, 1).moveByte(SUBTYPE2, 1)
+                    .moveWord(X, 64).moveWord(Y, 0x720));
+            f.service(0); f.runtime.spawnBeforeReservedSlots(); f.body(2); f.runtime.runDynamicSlotsAfterReservedSlots();
+            assertEquals(List.of(0), f.angleWrites, "empty floor probe clears only its scratch angle");
+            assertEquals(0, f.frame.environment().movement().globals().primaryAngle());
+            assertEquals(0x722, f.slot(32).centreY());
+            assertEquals(0x06D7, f.slot(32).word(TILE), "NoFlags overwrites the low-priority init tile");
+            f.runtime.finishAfterCamera(POST); f.runtime.finishOrdinaryTail(); f.service(0);
+            assertTrue(f.runtime.displayedFrame().patternVersions().keySet().stream()
+                    .anyMatch(id -> id >= BANKS.flower() && id < BANKS.flower() + 39));
+        }
+    }
+
+    @Test void contactBanksAppendAfterAllFrontierSpansAndRejectOverlapBeforeFirstService() throws Exception {
+        var banks = new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138);
+        assertEquals(299, banks.explosion()); assertEquals(369, banks.points()); assertEquals(374, banks.flower());
+        var assets = load();
+        try (var frame = CdPlayerFrameRuntime.externalTouchRequiredDevelopment(assets)) {
+            assertThrows(IllegalArgumentException.class, () -> CdOpeningObjectRuntime.usaR11aOpeningDevEmptySatPreloadedArt(
+                    assets, frame, INITIAL, new byte[640],
+                    new CdOpeningObjectRuntime.LogicalBanks(100, 124, 138, 208, 236, 298, 369, 374), PRE, value -> { }));
+            assertFalse(frame.closed());
+            assertEquals(0, frame.captureShared().vIntClock().deltaSinceAdmittedCut());
+        }
+    }
+
     private static final class Fixture implements AutoCloseable {
         final CdR11aAssets assets;
         final CdPlayerFrameRuntime frame;
