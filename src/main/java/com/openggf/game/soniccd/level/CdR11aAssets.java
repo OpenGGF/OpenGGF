@@ -5,6 +5,8 @@ import com.openggf.game.soniccd.CdReleaseVariant;
 import com.openggf.game.soniccd.CdStageKey;
 import com.openggf.game.soniccd.media.CdMmdImage;
 
+import java.io.IOException;
+
 /** Detached immutable R11A assets. A loaded data set is not a playable module or an execution certificate. */
 public final class CdR11aAssets {
     public record Identity(CdReleaseVariant variant, CdStageKey stage, CdNativeFile file, CdMmdImage.Domain domain,
@@ -50,6 +52,14 @@ public final class CdR11aAssets {
     public CdSonicVisualAssets sonic() { return sonic; }
     public CdR11aPlayerAssets player() { return player; }
     public CdShieldArt shield() { return shield; }
+
+    /**
+     * Explicit optional USA-only Ring/Mosqui data consumer. Re-verifies the actual retained MMD before decoding.
+     * Does not change regional terrain loading, execute objects/PLCs, or preload a runtime art bank.
+     */
+    public CdR11aObjectAssets openingObjects() throws IOException {
+        return CdR11aObjectAssets.load(profile, identity, image, loadPlan);
+    }
     public NemesisRead blocksDecode() { return blocks; }
     public NemesisRead levelTilesDecode() { return tiles; }
 

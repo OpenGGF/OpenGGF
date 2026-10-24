@@ -2056,3 +2056,58 @@ The earlier timed-out broad invocation remains incomplete. These finite checks
 do not establish whole-act, complete USA game, native audiovisual, instruction-
 phase, physical timing or complete hardware-device parity. All source remains
 on the local private branch; no develop merge, push or public announcement.
+
+## Optional opening-object data and animator, 24 October 2026
+
+This component unit is prepared on a separate local object worktree based on
+`9598c663c`. The primary terrain-player checkout remains frozen for its running
+smoke selection. No target directory was copied or shared. New components are
+not yet admitted to the game loop and do not replace the default STATIC entry
+or the explicit three-region terrain-only player entry.
+
+`CdR11aAssets.openingObjects()` is optional and USA-only. It re-verifies the
+actual retained immutable MMD before reading nine new native tables or decoding
+Ring/Mosqui art. Ordinary regional loading and its constructor remain unchanged.
+Raw five-byte mappings, signed pointers/aliases, script tables, touch sizes,
+tile selectors and descriptive source/PLC art associations remain bounded and
+immutable. Decoded art is not a live PLC transfer or residency certificate.
+All runtime bytes still come from the authenticated user-supplied disc.
+
+`CdObjectAnimation` ports the separate object animator, with byte timers,
+selected signed-relative reads, map/flip publication and the exact shared
+FD/FC/FB/FA comparison value. FF/FE selected bytes go directly to frame
+publication without recursive command dispatch. Ring sparkle's routine change
+does not delete or dispatch the object; those remain caller responsibilities.
+Slot bytes must be carried into the animator, since Ring Init does not clear
+its animation fields and native Null clears only the ID.
+
+Astra's six-file asset review and Opus's two-file animator review found no
+P1/P2 issue. Both frozen source mirrors remain unchanged externally. Their
+source/data checks are distinct from the following parent Java executions:
+
+| Parent command | Observed execution | Scope |
+| --- | --- | --- |
+| 82893 | 59 tests, zero failures/errors/skips; Java 25.0.5.0.2; queue 0s, Maven 1m36s | New visual/assets/retail consumers 18, animator 27, existing regional asset consumers 3, API 11; actual configured USA/Japan/Europe media |
+| 45862 | 2 tests, zero failures/errors/skips; queue 18s, Maven 28.037s | Strengthened all-256 distinct directory targets and exact `id == scriptCount` rejection; production unchanged |
+
+The second run adds one case and strengthens an existing case; these are not
+61 distinct cases or a single suite. Other animator expectations passed in the
+first run and were unchanged. The header/citation cleanup adds no executable
+production change. All six initial XML identities and the two-case result were
+inspected, including Java/media properties and zero skips.
+
+Commands ran from the separate object worktree, with display variables unset,
+Lua 5.4 and the current main queue wrapper. Each worktree owns its own target:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectAnimation,TestCdObjectVisualAssets,TestCdR11aObjectAssets,TestCdR11aObjectRetailAssets,TestCdR11aRetailAssets,TestModApiSignatureSurface' "-Dsoniccd.media.root=$SCD_MEDIA_ROOT" test -B
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestCdObjectAnimation#all256AnimationIdsCanSelectTheirOwnWordIncludingTheLastOne+scriptDirectoryEndIsNotAnotherEntryEvenWhenItsBytesWouldSelectAValidScript' test -B
+```
+
+Focused validation is proportionate here: the only existing runtime edit is an
+explicit optional data-consumer method. No normal load, shared algorithm,
+render/timing loop, mutable world owner or API signature pin is changed. New
+slot/placement candidates are a separate uncommitted component under review,
+not part of this data/animation checkpoint. Their successful compilation cannot
+be used as evidence of object execution, touch, live Ring/Mosqui presentation,
+shared sprite queues, PLC lifetime, whole-act or complete-game parity.
