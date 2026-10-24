@@ -1,12 +1,10 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.TestEnvironment;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,11 +28,7 @@ public class TestSpriteManagerRender {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
-        GameModuleRegistry.reset();
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
     }
 
     @AfterEach

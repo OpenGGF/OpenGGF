@@ -25,10 +25,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/TestCrossGameFeatureProviderRefactor.java#setUp
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpClass
-            src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
-            src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java#resetCamera
-            src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
-            src/test/java/com/openggf/game/TestSpindashGating.java#setUp
             src/test/java/com/openggf/game/rewind/TestLiveRewindManagerAudioCleanup.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
@@ -42,14 +38,8 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
-            src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerFadeRebinding.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerSpriteSatReplay.java#setUp
-            src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
-            src/test/java/com/openggf/level/TestLevelManagerSlotBackgroundCopy.java#setUp
-            src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
-            src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
-            src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
             src/test/java/com/openggf/physics/TestGroundSensor.java#setUp
             src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
@@ -57,9 +47,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
             src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
-            src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp
             src/test/java/com/openggf/tests/TestRingManager.java#setUp
-            src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
             src/test/java/com/openggf/tests/TestS3kIczFreezerObject.java#setUp
             src/test/java/com/openggf/tests/TestS3kMgzPulleyAndMantis.java#setUp

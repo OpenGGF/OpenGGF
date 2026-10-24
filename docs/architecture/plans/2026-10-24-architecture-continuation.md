@@ -2330,3 +2330,137 @@ ROM/trace/pixel validation, arbitrary incoming-module matrix, production change
 or shared-helper change is included. The branch remains local for later parent
 composition, with both earlier branches preserved. Integration, push and branch/
 worktree removal remain outside this slice.
+
+
+### World-consumer fixture continuation
+
+This separate later-composition slice starts at accepted direct-family commit
+`57a9fd85f6f76f39c83d0dcc1d2b44b3253ac54b` (tree
+`123e6a2faeb0649fa0bda8628358175b32dcee2a`) on new local branch
+`bugfix/ai-world-consumer-fixtures-20261024` in the same isolated worktree.
+The three earlier task branches remain preserved, including the two files
+retained byte-identically in the direct-family commit. Initial state was clean
+with no owned Maven jobs. Parent composition/review/integration and the frozen
+parent candidate remain outside this slice. Only the twelve setups/imports,
+their exact allowance lines and this appendix change; no production, shared
+fixture, guard scanner, test body or assertion changes are made.
+
+Consumer grounding selects existing full-world boundaries, not a module from a
+class name. Seven setups use `resetAll()` and its ordinary S2 world: post-load
+assembly, S3K title bootstrap, slot background copy, both object-manager rewind
+families, OilSurfaceManager and the S1 monitor class. Post-load assembly owns
+local S1/S2/S3K profile subjects but snapshots the session camera. Slot background
+copy constructs local LevelManagers from session-owned camera/sprites/parallax/
+collision/water/game-state services and the current world. Its setup now calls
+`resetAll()` then assigns `SessionManager.getCurrentGameplayMode()`; the getter
+returns the established context and introduces no bootstrap wrapper. Rewind
+families retain default-service real managers, explicit construction scopes,
+synthetic objects/tables, camera access and generic eligibility cleanup.
+
+TitleScreenBootstrap retains a world because `Sonic3kTitleScreenManager.reset()`
+cancels session fade as well as stopping engine PCM. Its separate loader case
+still explicitly sets ROM null before the missing-ROM assertion; this negative
+control is not a reason to remove the world or select an S3K runtime. Likewise,
+S1 monitor constructs local S1 objects within the original ordinary S2 runtime;
+selecting an S1 module based on its name would change the dummy player's physics
+and rules. The prior direct-family retention of Oil and monitor established real
+world dependencies, not permanent allowance ownership. Their full-world fixture
+now supplies the native session camera for oil death and session game state for
+monitor landing/item-bonus reset, with every original consumer unchanged. The
+engine-only alternative remains rejected by the evidence recorded above; no
+replacement sprite runtime or injected game-state owner is introduced.
+
+S3kCharacterSpeeds explicitly selects the S3K enum fixture. SpindashGating,
+PlaneSwitcherStateIsolation and SpriteManagerRender explicitly select the S2
+enum fixture; the render subject's default nonwrapping camera and list-recording
+sprite draws require no GPU context. Spindash's parameter-provider modules,
+body-level clear/open operations and module-switch cases remain byte-identical,
+as does CharacterSpeeds' body-level S2 comparison. All prior module teardown
+operations and their order remain intact. No class has a shared BeforeAll ROM,
+loaded-level or preference fixture to retain across these per-test setups.
+
+LegalDisclaimerHandoff keeps its S2 bootstrap write, then passes
+`GameModuleRegistry.getCurrent()` directly to the existing module fixture.
+Java evaluates that argument before fixture teardown, preserving a live world's
+authoritative module (or S2 bootstrap when no world exists), as in the earlier
+Tornado slice. Clearing the world first or hardcoding the S2 enum here was
+rejected because it would discard that original precedence. Its input, GameLoop
+and disclaimer subjects are still constructed after the world is established;
+its clear-then-S2 restoration is unchanged. Camera resets/bounds, configuration
+use, constructor scopes, tick loops and all teardown bodies remain unchanged.
+
+All twelve exact allowance removals are:
+
+```text
+src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
+src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java#resetCamera
+src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
+src/test/java/com/openggf/game/TestSpindashGating.java#setUp
+src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
+src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
+src/test/java/com/openggf/level/TestLevelManagerSlotBackgroundCopy.java#setUp
+src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
+src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
+src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
+src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp
+src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
+```
+
+No key in this slice requires retention. The three separately closed eighth-wave
+S1 keys remain untouched on this branch; no branch inventory total is treated as
+a composed parent count. Mechanical full-class comparison after setup/import
+normalization preserves 109 methods (108 ordinary plus one two-case parameterized
+method: 110 expected invocations), with normalized SHA-256
+`2eec6b5685e1d792a8e50acec490422497ff91c4ad1bb694c90ef47835b51e37`.
+The fixed submitted source fingerprint, SHA-256 of
+`git diff --binary 57a9fd85 -- src/main src/test pom.xml`, is
+`62d332e6a4cdf883722ceb4557ce7f573b86720890af77f5428480623cec0856`.
+These baseline identity/count comparisons use the pinned source; an independent
+baseline runtime run is not claimed.
+
+
+Fixed validation commands, from this isolated worktree using the current
+absolute main-workspace queue wrapper (`OPENGGF_MAIN_WORKSPACE` denotes that
+checkout), Java 25 and Lua 5.4:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=com.openggf.game.TestLegalDisclaimerHandoff,com.openggf.game.TestPostLoadAssemblyBehavior,com.openggf.game.TestS3kCharacterSpeeds,com.openggf.game.TestSpindashGating,com.openggf.game.sonic3k.titlescreen.TestSonic3kTitleScreenBootstrap,com.openggf.graphics.TestSpriteManagerRender,com.openggf.level.TestLevelManagerSlotBackgroundCopy,com.openggf.level.objects.TestObjectManagerRewindDynamicClassification,com.openggf.level.objects.TestObjectManagerRewindSnapshot,com.openggf.level.objects.TestPlaneSwitcherStateIsolation,com.openggf.tests.TestOilSurfaceManager,com.openggf.tests.TestSonic1MonitorObjectInstance' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+
+The fixed twelve-class run passed all 110 invocations with zero failures, errors
+or skips: LegalDisclaimer 4, post-load assembly 20, S3K speeds 14, Spindash 4,
+title bootstrap 2, sprite rendering 4, slot background copy 7, rewind dynamic
+classification 17, rewind snapshot 14, plane switcher 6, Oil 11 and S1 monitor 7.
+Fresh XML matches every source method, both Spindash parameter identities and
+only the requested fully qualified monitor class. Java was 25.0.5.0.2 and Lua
+5.4.9. Queue wait was 53 seconds; Maven execution was 29.328 seconds. All 24
+inspected XML/text reports were consumed before the separate guard request.
+The source fingerprint remained fixed throughout admission and execution.
+No real ROM or graphics context is reached by these selected paths, so no ROM
+properties or EGL flag were required; display variables were unset. The title
+loader's explicit missing-ROM assertion ran and passed rather than skipping.
+
+
+The separate exact singleton guard passed all eight source identities with zero
+failures, errors or skips. Queue wait was 31 seconds; Maven execution was 28.796
+seconds. The fresh XML selector/version/identities were inspected and both
+reports consumed. Queue and execution intervals are reported per command, not
+summed into delivery elapsed time; other work time is unmeasured and no
+user-response wait occurred. The tested source fingerprint remained unchanged.
+
+This slice closes the twelve listed keys and retains none. Its evidence is
+bounded to those 110 focused invocations and the eight exact guard cases. No
+broad/full suite, unchanged previous-family run, ROM route, trace replay, pixel
+certification or arbitrary incoming-world/module matrix was run. Earlier
+commits remain untouched; this slice stops at a clean local review-ready commit
+for later parent composition. Integration, push and branch/worktree removal
+remain the parent's responsibility.
