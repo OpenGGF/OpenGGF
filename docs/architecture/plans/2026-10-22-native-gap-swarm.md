@@ -6636,3 +6636,119 @@ route parity, unexplained warning attribution, unavailable graphics/reference
 coverage and applicable final delivery gates remain open. Main, provider
 activation and the paired MHZ observation window remain closed. No push, PR
 body/draft change or manual CI dispatch is part of this local composition.
+
+### 2026-10-24 — acquired ICZ/Mega release hooks and corrected manager fixture
+
+The completed 2a9 fresh guard's sole failure named ICZ Teleporter and MegaChopper.
+The combined sources had real native acquisition writers without an owned
+`releasePlayersForVisualDirection` override. Both object bodies were already
+identical to aa1/f340; incoming 591 supplied the detecting guard. This is a
+receiving contract gap, not permission to waive the guard or reinstate a deleted
+field. `onUnload` is not a substitute because directed suspension/retirement
+must preserve the native object's phase and world state.
+
+Exactly two runtime files and three existing owning test files were authored
+against pinned 2a9, then ported as the exact five-path patch onto clean 24109.
+Removing helpers, hook bodies and metadata wrappers reproduces both frozen
+production files byte-for-byte. The native setters, input history, object
+phases, motion, allocation/fault ordering and native unload bodies remain.
+ICZ records the actual P1 only after successful beam allocation, relinquishes
+metadata at its existing native clear, and releases that acquired identity
+without consulting a later focus/main player. MegaChopper records lock and
+forced-mask channels separately, only at their actual native writes. Visual
+release uses a neutral forced mask and unlocks only acquired channels; a resumed
+mask write cannot claim a lock it did not reacquire. Existing generic identity
+capture handles the final `PlayerControlOwners` helpers; no manual codec, API
+pin, capacity, policy exclusion or baseline row was added.
+
+Twelve added owning methods cover acquisition/refusal, selectors, identity
+changes, idempotence, native progress/unload, manager direction/removal/clear,
+channel reacquisition and fresh-instance rewind/replay. ICZ uses registered
+world restoration; MegaChopper's rewind controls use per-object snapshots with
+registered player identities. Both old test bodies and original assertions
+were preserved. Source review found no material issue, but the actual combined
+run exposed a fixture construction error that static review had missed.
+
+Original efaf O29, session 76024, ran once on HEAD
+`24109a65bd7404636fd9bf67f6591607b2d4752c`, staged tree
+`2ad12c4e9286b43777ad212b4306949bcd08b4f8`, input frame
+`d7675f7b5385c0a6b4a8d51efa4711d795f14cbeca9ccccf76cf0ec150d618a6`
+(13,178 paths / 856,521,792 bytes). All 29 families were represented:
+305 distinct cases, 303 passes, zero failures, two errors, zero skips. Both
+errors were in `TestStageplayNativeStateRelease`: the ICZ and Mega manager
+methods failed in `NativeFixture` before acquisition assertions. Constructing
+`WorldSession` as a `thenReturn` argument invoked `module.getIdentifier()` while
+`services.worldSession()` stubbing was unfinished. G9 was held and unsubmitted.
+The full identities, properties, recursive streams, console/stacks and source
+post-checks were read; 59 owned raw outputs were consumed. Queue was 594s;
+Maven reported 01:53; supervised wall was 708.94s. The 303 passes retain this
+source attribution and are not relabeled as a corrected 305-case result.
+
+The only correction constructs `worldSession` before starting `when`, then
+returns it from the stub: +2/-1, 45 bytes in that one fixture. Its whole-file
+inverse exactly reconstructs SHA `fff74a462d452f3505237153bf96475f9521c568c1564482de5822270b975560`.
+Every other index/source input is unchanged from the failed epoch. The corrected
+fixture SHA is `19b6b285851245f3342b10b7a16fd35947b8ba2086a6dc249ad6af7a5c93e93f`.
+
+Fresh bd56 validation used staged tree
+`7770bcbff5f61182ebda3e562502871d0cd7b90f` and input frame
+`e5838b118cc84e25697629ecade3e0b3387c2c0cb053254d83c94c237e253af3`
+(13,178 paths / 856,521,837 bytes). The original whole owning-class request,
+session 93018, passed all five actual identities, including both real manager
+loops, with zero failures/errors/skips. Queue was 234s, Maven 30.544s and
+supervised wall 265.54s. It qualifies that five-case class, not a fictional
+305-case rerun. Only after complete acceptable readback did the sole validator
+submit fresh selected guards, session 97209.
+
+The guard request selected ArchitecturalSource, ArchUnit, ObjectPhysics,
+CapturedPolicyCompactReachability, ExactRewindPolicy, RewindCoverage,
+RewindFieldDisposition, NativeHolderRelease and AudioPresentationArchitecture.
+All nine actual families / 207 distinct cases passed with zero failures,
+errors or skips. Counts were 77/33/32/9/14/1/1/2/38 respectively. Queue was 51s,
+Maven 01:11 and supervised wall 123.78s. This is selected G9 qualification,
+not a 774-guard rerun or union-green claim. The central codec audit printed
+257 fields; that diagnostic is not a JUnit case count. FieldDisposition's two
+existing LBZ keys remained exactly baseline-aware, and the 510 object-physics
+caller/count rows remained byte-identical to the pre-existing diagnostic and
+matched the committed baseline. No resnapshot occurred.
+
+Both fresh commands used the current absolute Main queue wrapper through the
+portable `$OPENGGF_QUEUE_WRAPPER` notation, own validation cwd, `--normal`,
+`-Dmse=off`, `-Dopenggf.headless.gl=surfaceless-egl`, destinationBranch=develop,
+the original three absolute stock ROM properties and `test -B`; G alone added
+`-Pguards`. O used the whole `com.openggf.level.objects.TestStageplayNativeStateRelease`.
+The portable exact selectors are recorded below; the executed absolute argv are
+retained in the existing external ownership registry. Java 25.0.5.0.2, major69, EGL, owned classpaths and
+source/tool pins matched. Full readback covered every identity, 70 O properties,
+630 G properties, all streams/text/consoles, generated diagnostics and source
+post-checks. Twenty-three exact owned raw files were consumed after readback;
+useful classes/source/index and the unchanged pre-existing lifecycle diagnostic
+were preserved. No retry, narrowed repair lane, standalone build, preflight,
+version probe, broad/category/manual CI or native observation was added.
+
+The fresh source fulfills the existing Stageplay acquired-player release contract.
+The earlier category 41 route failures/97 skips, original 774-guard failure,
+old f340 failures/skips and unclassified lost B9 warning remain their own epochs.
+No native art/audio/hardware/timing or aggregate PR-green claim follows.
+Main, provider activation, paired MHZ observations and new ancestry reception
+remain closed. The separately qualified offscreen fixture leaf is retained
+locally until its reception is separately coordinated. Local normal hooks and
+an exact applicable ci-pr/resource policy remain delivery gates, not JVM tests.
+
+The two executed selectors are reproducible with the following portable commands
+(the same original stock images and reviewed environment apply):
+
+```bash
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  '-Dtest=com.openggf.level.objects.TestStageplayNativeStateRelease' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+python3 "$OPENGGF_QUEUE_WRAPPER" --normal -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl -DmodApi.destinationBranch=develop \
+  '-Dtest=com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestArchUnitRules,com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.rewind.schema.TestCapturedPolicyCompactReachabilityGuard,com.openggf.game.rewind.schema.TestExactRewindPolicyGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard,com.openggf.game.rewind.schema.TestRewindFieldDispositionGuard,com.openggf.level.objects.TestNativeHolderReleaseGuard,com.openggf.audio.TestAudioPresentationArchitectureGuard' -Pguards \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_DIR/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_DIR/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```

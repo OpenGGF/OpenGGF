@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -35,6 +36,7 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
     private int playerBaseY;
     private TeleporterBeamObjectInstance beam;
     private final S3kGradualSwing swing = new S3kGradualSwing();
+    private final PlayerControlOwners objectControlOwners = new PlayerControlOwners();
 
     public IczTeleporterInstance(ObjectSpawn spawn) {
         super(spawn, "ICZTeleporter");
@@ -60,7 +62,7 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
                 palette.applyTargetPatch(PALETTE_OWNER, 1, 8, new byte[] {0x0E, (byte) 0xA2});
                 palette.applyTargetPatch(PALETTE_OWNER, 1, 10, new byte[] {0x0E, (byte) 0x80});
             }
-            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(objectControlOwners.acquire(player));
             player.setObjectMappingFrameControl(false); // Whole object_control byte = 1, including bit 1 clear.
             player.setAnimationId(Sonic3kAnimationIds.ROLL);
             PlayableSpriteInternalAccess.writeNativeRollingStatus(player, true);
@@ -70,7 +72,7 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
             int offset = swing.step(0x20000, 0x800);
             NativePositionOps.writeYPosPreserveSubpixel(player, (playerBaseY + offset) & 0xFFFF);
             if (swing.rising()) return;
-            ObjectControlState.none().applyTo(player);
+            ObjectControlState.none().applyTo(objectControlOwners.relinquish(player));
             player.setObjectMappingFrameControl(false);
             player.setAnimationId(0);
             released = true;
@@ -84,6 +86,14 @@ public final class IczTeleporterInstance extends AbstractObjectInstance
                     services().currentLevel(), services().graphicsManager());
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
+    }
+
+    @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : objectControlOwners.players()) {
+            ObjectControlState.none().applyTo(player);
+        }
+        objectControlOwners.clear();
     }
 
     @Override public void onBeamFinished() { beam = null; }

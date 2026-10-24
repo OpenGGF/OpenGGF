@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.PlayerControlOwners;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -88,6 +89,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int lastDirectionBits;
     /** ROM {@code $38(a0)} bit 2: this capture owns {@code Ctrl_1_locked}. */
     private boolean mainControlsLocked;
+    private final PlayerControlOwners controlLockOwners = new PlayerControlOwners();
+    private final PlayerControlOwners forcedInputOwners = new PlayerControlOwners();
 
     private static TouchResponseProfile continuousStandardEnemyProfile() {
         TouchResponseProfile standard = TouchResponseProfile.standardEnemy();
@@ -228,6 +231,18 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public void releasePlayersForVisualDirection() {
+        for (var player : forcedInputOwners.players()) {
+            player.setForcedInputMask(0);
+        }
+        for (var player : controlLockOwners.players()) {
+            player.setControlLocked(false);
+        }
+        forcedInputOwners.clear();
+        controlLockOwners.clear();
+    }
+
+    @Override
     public void onUnload() {
         // A carried chopper stays in range; an engine-side unload must not leave
         // the captured player locked after this object no longer exists.
@@ -291,7 +306,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             // This object's previous pass wrote the masked Ctrl_1_logical word
             // through the forced-input mask; drop it so the checks below read
             // this frame's Ctrl_1 rather than last frame's logical bits.
-            capturedPlayer.setForcedInputMask(0);
+            forcedInputOwners.relinquish(capturedPlayer).setForcedInputMask(0);
         }
         if (capturedPlayer.isDebugMode()
                 || capturedPlayer.getDead()
@@ -393,7 +408,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             // capture (2) or a same-pass P1+P2 touch (3, which still selects
             // Player_1) leaves the controls alone (sonic3k.asm:184436-184440).
             player.clearLogicalInputState();
-            player.setControlLocked(true);
+            controlLockOwners.acquire(player).setControlLocked(true);
             mainControlsLocked = true;
         }
         childDx = clampSignedByte(currentX - player.getCentreX());
@@ -424,7 +439,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             leftRight |= AbstractPlayableSprite.INPUT_RIGHT;
         }
         player.clearLogicalInputState();
-        player.setForcedInputMask(leftRight);
+        (leftRight != 0 ? forcedInputOwners.acquire(player) : forcedInputOwners.relinquish(player))
+                .setForcedInputMask(leftRight);
     }
 
     private void releaseMainControls() {
@@ -435,8 +451,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
         // (sonic3k.asm:184398-184401).
         mainControlsLocked = false;
         if (capturedPlayer != null) {
-            capturedPlayer.setForcedInputMask(0);
-            capturedPlayer.setControlLocked(false);
+            forcedInputOwners.relinquish(capturedPlayer).setForcedInputMask(0);
+            controlLockOwners.relinquish(capturedPlayer).setControlLocked(false);
         }
     }
 

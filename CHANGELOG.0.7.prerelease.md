@@ -103,6 +103,8 @@ Unreleased. The earlier development themes remain in
   direct scene changes across locations, acts and games with cuts, fades and wipes.
   Authored music control holds off automatic level playlists through deferred entry
   and shot changes in playback/export; ROM cue gain is checked during authoring.
+  ICZ's arrival teleporter and MegaChopper release only their acquired player
+  controls for direction, preserving native state and rewind identities.
   Free objects, including released animals outside the main view, retain native
   appearances when switched to Puppet/Pose within their cast activation windows.
   Puppet mode follows destinations and urgency through native acceleration, terrain

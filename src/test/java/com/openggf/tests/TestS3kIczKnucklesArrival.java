@@ -400,6 +400,161 @@ class TestS3kIczKnucklesArrival {
         assertFalse(art.getSheet(Sonic3kObjectArtKeys.ICZ_PLATFORMS_INTRO).getFrame(0x1A).pieces().isEmpty());
     }
 
+    @Test
+    void visualReleaseUsesAcquiredP1AfterMainAndFocusChangeWithoutAdvancingArrival() throws Exception {
+        GameServices.configuration().setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = boot();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        var source = pad();
+        var original = fixture.sprite();
+        var p2 = GameServices.sprites().getRegisteredSidekicks().getFirst();
+        var replacement = new TestablePlayableSprite("knuckles", (short) 0x3700, (short) 0x680);
+        GameServices.sprites().addSprite(replacement);
+        fixture.camera().setFocusedSprite(p2);
+        assertSame(replacement, GameServices.sprites().getMainPlayable());
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(replacement);
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(p2);
+        var nativeBefore = arrivalNativeScalars(source);
+        var beam = source.beamForTest();
+        var beamBefore = arrivalNativeScalars(beam);
+        var playerBefore = arrivalPlayerProgress(original);
+        byte[] targetBefore = GameServices.paletteOwnershipRegistry().targetSegaData(1, 0, 16);
+        byte[] normalBefore = normalPaletteLine();
+
+        source.releasePlayersForVisualDirection();
+
+        assertFalse(original.isObjectControlled());
+        assertFalse(original.isObjectControlAllowsCpu());
+        assertFalse(original.isObjectControlSuppressesMovement());
+        assertTrue(replacement.isObjectControlled());
+        assertTrue(p2.isObjectControlled());
+        assertEquals(nativeBefore, arrivalNativeScalars(source));
+        assertSame(beam, source.beamForTest());
+        assertEquals(beamBefore, arrivalNativeScalars(beam));
+        assertEquals(playerBefore, arrivalPlayerProgress(original));
+        assertArrayEquals(targetBefore, GameServices.paletteOwnershipRegistry().targetSegaData(1, 0, 16));
+        assertArrayEquals(normalBefore, normalPaletteLine());
+        // A subsequent owner on the original P1 must survive an idempotent release.
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(original);
+        source.releasePlayersForVisualDirection();
+        assertTrue(original.isObjectControlled());
+        assertEquals(nativeBefore, arrivalNativeScalars(source));
+    }
+
+    @Test
+    void neverAcquiredAndRefusedBeamDoNotReleaseSomebodyElsesObjectControl() {
+        var fixture = boot();
+        var objects = GameServices.level().getObjectManager();
+        var source = objects.createDynamicObject(() -> new IczTeleporterInstance(spawn()));
+        assertNotNull(source);
+        var player = fixture.sprite();
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+        source.releasePlayersForVisualDirection();
+        assertTrue(player.isObjectControlled());
+        var fillers = new ArrayList<IczTeleporterInstance>();
+        while (true) {
+            var filler = objects.createDynamicObject(() -> new IczTeleporterInstance(spawn()));
+            if (filler == null) break;
+            fillers.add(filler);
+        }
+        source.update(0, player);
+        assertFalse(source.initialized());
+        assertNull(source.beamForTest());
+        source.releasePlayersForVisualDirection();
+        assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        objects.removeDynamicObject(fillers.getLast());
+        source.update(0, player);
+        assertTrue(source.initialized(), "the genuine retry reaches the acquisition writer");
+        assertNotNull(source.beamForTest());
+        assertTrue(player.isObjectControlAllowsCpu());
+        source.releasePlayersForVisualDirection();
+        assertFalse(player.isObjectControlled());
+    }
+
+    @Test
+    void nativeSwingClearRelinquishesVisualOwnership() {
+        var fixture = boot();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        var source = pad();
+        for (int dispatch = 0; dispatch < 64 && !source.released(); dispatch++) {
+            source.update(dispatch, fixture.sprite());
+        }
+        assertTrue(source.released());
+        assertFalse(fixture.sprite().isObjectControlled());
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(fixture.sprite());
+        source.releasePlayersForVisualDirection();
+        assertTrue(fixture.sprite().isObjectControlled(), "native clear removed this owner's metadata");
+        assertTrue(source.released());
+    }
+
+    @Test
+    void freshRegisteredIdentityRestoreBeforeDuringAndAfterVisualOwnershipReplaysTwice() {
+        var fixture = boot();
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+        var original = pad();
+        assertTrue(original.initialized());
+        assertNotNull(original.beamForTest());
+        var acquired = registry.capture();
+        original.releasePlayersForVisualDirection();
+        assertFalse(fixture.sprite().isObjectControlled());
+        var released = registry.capture();
+
+        for (int replay = 0; replay < 2; replay++) {
+            registry.restore(before);
+            assertWorld(before, registry.capture(), "pre-acquisition restore " + replay);
+            assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+            var forward = pad();
+            assertNotSame(original, forward, "native ScreenInit creates a fresh registered owner");
+            assertTrue(fixture.sprite().isObjectControlled());
+            assertWorld(acquired, registry.capture(), "native acquisition replay " + replay);
+
+            // Retire the actual registered graph, then let the production rewind
+            // reconstructor create fresh instances and resolve their player identities.
+            com.openggf.level.objects.ObjectDirectionAccess.forManager(
+                    GameServices.level().getObjectManager()).removeDynamic(forward);
+            registry.restore(acquired);
+            var restored = pad();
+            assertNotSame(forward, restored);
+            assertWorld(acquired, registry.capture(), "fresh acquired restore " + replay);
+            restored.releasePlayersForVisualDirection();
+            assertFalse(fixture.sprite().isObjectControlled());
+            assertWorld(released, registry.capture(), "visual release replay " + replay);
+
+            registry.restore(released);
+            assertWorld(released, registry.capture(), "post-release restore " + replay);
+            com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(fixture.sprite());
+            pad().releasePlayersForVisualDirection();
+            assertTrue(fixture.sprite().isObjectControlled(), "released snapshot contains no stale owner");
+        }
+    }
+
+    private static java.util.Map<String, Object> arrivalNativeScalars(Object target) throws Exception {
+        var state = new java.util.LinkedHashMap<String, Object>();
+        for (Class<?> type = target.getClass(); type != Object.class; type = type.getSuperclass()) {
+            for (var field : type.getDeclaredFields()) {
+                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+                field.setAccessible(true);
+                if (field.getType().isPrimitive() || field.getType().isEnum()) {
+                    state.put(type.getSimpleName() + "." + field.getName(), field.get(target));
+                } else if (field.get(target) instanceof com.openggf.game.rewind.RewindStateful<?> holder) {
+                    state.put(type.getSimpleName() + "." + field.getName(), holder.captureRewindStateValue());
+                }
+            }
+        }
+        return state;
+    }
+
+    private static java.util.List<Object> arrivalPlayerProgress(com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        return java.util.List.of(player.getCentreX(), player.getCentreY(), player.getXSubpixelRaw(),
+                player.getYSubpixelRaw(), player.getXSpeed(), player.getYSpeed(), player.getGSpeed(),
+                player.getAnimationId(), player.getMappingFrame(), player.isObjectMappingFrameControl(),
+                player.getRolling(), player.getXRadius(), player.getYRadius());
+    }
+
     private static ObjectSpawn spawn() { return new ObjectSpawn(0, 0, 0, 0, 0, false, 0); }
     private static void updateAtCamera(HeadlessTestFixture fixture, int x, int y) {
         fixture.camera().setX((short) x);
