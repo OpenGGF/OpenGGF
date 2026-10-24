@@ -6983,3 +6983,203 @@ pending and failure partial effects are covered. Receiver-before-arguments
 rebind evaluation, selected-wrapper retention and exact wrapper lock regions
 still require preservation review alongside these tests. No emulator-parity,
 ROM-backed, smoke, full-suite or performance result is implied by this gate.
+
+
+### Audio capture-lifetime extraction: preservation and fixture qualification
+
+The unchanged-production gate above was committed locally as
+`b1b5358e479f3268ed7ff5746cd56047aa285d86` (tree
+`dee013758762a9d92b18b10d8aa1d232caff8b0a`). Implementation then moved all
+seven responsibility fields into one final per-manager private concrete
+`CaptureLeases`, including its nested stable-handle implementation. All manager
+factories initialize that owner through normal instance initialization. No
+reset or producer replacement replaces it. Compatibility methods delegate
+without pre-evaluating collaborators; construction, close and general teardown
+remain in AudioManager. Lifecycle sites announce all four existing rebuild
+boundaries and publication; the owner makes admission, detach-acceptance,
+reconciliation, carry and retirement decisions and executes their effects.
+
+The five public capture/rate methods remain synchronized. Moved live close,
+rebuild marking, rebind and retirement explicitly synchronize on
+`AudioManager.this`; wrapper drain/total/clock retain that monitor. Metadata stays
+unlocked. Reconciliation clears offline admission before calling the separately
+synchronized live-retirement method, with no new enclosing lock. Destroy,
+launch-backend replacement, producer realization and close retain their original
+method-wide synchronization boundaries. Reconciliation takes no producer
+argument: the current field is read in the original finally, including the
+characterized null-read failure. The sample-rate guard remains outside rebind's
+try, diagnostic rethrow precedes retirement, and totals accrue only after a
+successful attachment using the selected wrapper and unchanged Java
+receiver-before-arguments expression.
+
+A temporary source comparison stripped comments/whitespace and the newly
+explicit enclosing-manager monitor wrapper: all five moved compatibility bodies
+and all four moved manager-monitor helper bodies matched their originals
+(the virtual rate call was explicitly qualified with `AudioManager.this`). All
+**116** root public/protected declaration lines matched exactly. This is source
+preservation evidence, separate from runtime tests and compiled API inventory.
+The only migrated reflection is `TestTraceCaptureUnifiedAudio.attachedLease()`:
+it now reads the offline handle through the private owner; its original tests and
+assertions remain unchanged. No root capture predicate or mirrored state remains.
+
+The first extraction focused request (handle `63353`, exit 1) completed all
+**114** identities, with 113 passing, zero skips and one fixture error:
+`AudioManagerCaptureModeTest.offlineValidationUsesVirtualManagerSampleRateDispatch`
+threw `IllegalArgumentException` reporting dispatched 44100 versus actual 48000.
+Queue wait was 38s; Maven execution 1:34. Its input SHA-256 was
+`42b98b567fcf65dbb8d9645f56212bf18a4a36a822ad5672ce7606b6e3bc324c`.
+All XML identities/properties and the failure stack were inspected and consumed.
+The failed probe used `spy(AudioManager.createSilent())`, which shallow-copies a
+constructed manager and therefore retains an instance-bound owner's original
+manager. This is a fixture-copy artifact, not authority to redirect production
+ownership or bypass the owner's virtual call.
+
+The fixture now constructs the spy itself with `spy(AudioManager.class)`, so
+normal initialization binds its owner to the actual intercepted instance. The
+44.1 kHz virtual-validation and real 800-frame packet assertions are unchanged.
+A matched check restored only the original AudioManager source blob
+`a6c82855fc765eb5a1448fa209b7e6172568e4f7` in this owned tree and ran the gate's
+exact environment/wrapper command with selector
+`-Dtest=AudioManagerCaptureModeTest#offlineValidationUsesVirtualManagerSampleRateDispatch`.
+It passed **1/1**, zero failures/errors/skips, Java `25.0.5.0.2`, EGL
+`surfaceless-egl`; handle `49153` exit 0, queue wait 18s, Maven execution 1:27.
+The tested input SHA-256 was
+`8fe33bfe7037cec0f19d097858c3cea1caa95ee785bca91484b8879795052e10`.
+Its XML/text reports were consumed. The extraction source was then restored;
+only this task's compiled AudioManager classes were removed before recompilation
+to avoid stale nested-class inventory from that matched-source control. The
+temporary extraction-source copy was deleted. No production behavior was rescued
+and no characterization assertion was weakened.
+
+
+### Audio extraction focused qualification
+
+Final tested build-input SHA-256 (same before and after the completed focused run):
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+AudioManager production blob:
+`899549538e1f9d96a45a4fd8b4649dc76807ece6`; producer blob remains
+`9826716a97c1fbb781e41a668f1016ce1d4362e8`. Tested state is the baseline
+commit plus the eight-file extraction diff; the final commit records these same
+build inputs. Documentation edits do not enter this build-input hash.
+
+From this owned tree, with the existing main checkout in `MAIN_CHECKOUT`:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=AudioManagerCaptureModeTest,AudioManagerLiveCaptureTest,TestLiveCaptureSurvivesBackendSwap,TestTraceCaptureUnifiedAudio,TestAudioManagerRuntimeInstallation,TestUnifiedAudioPresentationIntegration,TraceCaptureSessionTest,DrainPcmAudioTapTest,LiveCaptureControllerTest,TestHeadlessAudioOwnership,TestModApiSignatureSurface' test
+```
+
+The corrected request `88089` completed exit 0: **114 unique tests**, zero
+failures/errors/skips, queue wait 13s and Maven execution 1:26. This rerun was
+required by the fixture correction and restored extraction source, not review
+ceremony. Eleven XML reports had exact requested identities and selector,
+Java `25.0.5.0.2`, EGL `surfaceless-egl`; no ROM property was required.
+All 22 XML/text reports were consumed after inspection.
+
+| Class | Executed |
+| --- | ---: |
+| `AudioManagerCaptureModeTest` | 21 |
+| `AudioManagerLiveCaptureTest` | 13 |
+| `TestLiveCaptureSurvivesBackendSwap` | 7 |
+| `TestTraceCaptureUnifiedAudio` | 8 |
+| `TestAudioManagerRuntimeInstallation` | 7 |
+| `TestUnifiedAudioPresentationIntegration` | 10 |
+| `TraceCaptureSessionTest` | 7 |
+| `DrainPcmAudioTapTest` | 3 |
+| `LiveCaptureControllerTest` | 25 |
+| `TestHeadlessAudioOwnership` | 2 |
+| `TestModApiSignatureSurface` | 11 |
+
+The eleven compiled API controls include exact current signature pin,
+recursive annotation/classpath inventory and engine-internal terminals. Their
+passing result is compiled verification, not an inferred consequence of private
+nesting. Signature/terminal pins, producer source and frozen stores remain
+byte-identical to accepted composition. No automatic repinning was performed.
+The source-derived, uninducible rebind-catch gaps described above remain explicit.
+
+
+### Audio extraction native packet and no-device qualification
+
+The three existing main-root ROMs were read without copying or linking them.
+Their CRC32/SHA-1 identities matched the repository contract: S1 `AFE05EEE` /
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S2 `7B905383` /
+`8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`; S3K `63522553` /
+`CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${MAIN_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${MAIN_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  '-Dtest=TestSonic1UnifiedAudioPresentationRomIntegration#sonic1TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic2UnifiedAudioPresentationRomIntegration#sonic2TitleGameplayRingAndSpecialStageProduceFinalPcm,TestSonic3kUnifiedAudioPresentationRomIntegration#sonic3kTitleGameplayRingAndSpecialStageProduceFinalPcm,TestHeadlessGameBootAudioIdentity' test
+```
+
+Request `73075` completed exit 0: **6/6**, zero failures/errors/skips. Queue
+wait was 48s; Maven execution 29.749s. The three exact `ProduceFinalPcm`
+identities above executed once each. The other three identities were
+`TestHeadlessGameBootAudioIdentity.audioDisabledBootRetiresAnAlreadyInstalledBackend`,
+`replacingTheBackendWithTheSameImplementationDoesNotMatchOrReinstallItsOwner`,
+and `nativeBootOwnsItsAudioAndPublishesOnePacketAtTheOrdinaryOuterBoundary`.
+All four XML reports contained Java `25.0.5.0.2`, EGL `surfaceless-egl`, the exact
+selector and all three existing absolute ROM properties. Reports were inspected,
+then all eight XML/text files consumed. Build-input SHA-256 remained
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+These controls establish bounded engine final-packet audibility/independent
+leases and no-device ownership, not emulator parity, arbitrary route coverage or
+a ROM/trace campaign.
+
+
+### Audio extraction fresh guard qualification and handoff boundary
+
+A separate fresh guard JVM was launched from the same unchanged build inputs:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${MAIN_CHECKOUT}/tools/testing/maven_queue.py" \
+  -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards \
+  '-Dtest=TestAudioPresentationBoundary,TestAudioPresentationArchitectureGuard,TestAudioBackendBypassGuard,TestArchUnitRules,TestArchitecturalReviewGuard,TestSingletonLifecycleGuard' test
+```
+
+Request `47992` completed exit 0: **91 unique tests**, zero
+failures/errors/skips. Queue wait was 9s; Maven execution 45.756s. All six
+XML reports had exact requested identities/selector, Java `25.0.5.0.2` and EGL
+`surfaceless-egl`; all twelve XML/text files were consumed. Counts:
+`TestAudioPresentationBoundary` 1, `TestAudioPresentationArchitectureGuard` 38,
+`TestAudioBackendBypassGuard` 1, `TestArchUnitRules` 34,
+`TestArchitecturalReviewGuard` 9, `TestSingletonLifecycleGuard` 8. This includes
+the compiled nested-producer boundary, frozen low-level dependencies, singleton
+lifecycle ratchet and published frozen-record accounting. Frozen stores and
+signature/terminal pins remain byte-identical to `0396a4581`; **delta zero**,
+with store updating disabled. No allowance, API, annotation or terminal change
+was made. Post-guard source SHA-256 remains
+`0490561a961e4be9a9254a164813beaf2cff3a093be5e4e91061a275f5ab38f6`.
+
+All task-owned requests are terminal: `72837`, `91063`, `49153`, `88089`,
+`73075`, `47992` exit 0; `63353` exit 1 is the fully attributed, corrected
+spy-copy fixture failure above. No task validation remains queued/running.
+Diagnostic directories were checked empty after consumption. No category run,
+pass receipt, report archive, extra helper/API, guard-policy change, broader
+suite, measurement, subdelegation, push, integration or worktree removal was
+performed. The only production change is AudioManager; exactly the eight
+reviewed files differ from accepted composition. The parent's frozen smoke jobs
+remain separate and untouched.
+
+The extracted candidate preserves the characterized pending-rebind/destroy and
+accepted-close/throwing-teardown partial states. Ordinary/diagnostic failures
+inside rebind's attachment catch remain the explicitly reported fixture gap;
+source/body comparison preserves their branch and propagation order. All
+required bounded focused/native/guard selections are green, with the limits
+above. Parent retains fresh independent code review, combined change-based smoke,
+integration and delivery; this child retains its clean local branch/worktree for
+that handoff. Commit hooks and commit-range policy are the final local checks;
+no unchanged runtime selection will be repeated solely for review.

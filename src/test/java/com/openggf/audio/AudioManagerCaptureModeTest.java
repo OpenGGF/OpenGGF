@@ -636,7 +636,9 @@ class AudioManagerCaptureModeTest {
     void offlineValidationUsesVirtualManagerSampleRateDispatch() {
         // Only the virtual rate read is intercepted; admission and packets use
         // a real isolated manager and its real no-device producer.
-        AudioManager isolated = spy(AudioManager.createSilent());
+        // Construct the spy itself: copying a previously constructed manager
+        // also copies instance-bound owners that still enclose the original.
+        AudioManager isolated = spy(AudioManager.class);
         try {
             SonicConfigurationService.getInstance().resetToDefaults();
             isolated.setBackend(new RecordingAudioBackend());

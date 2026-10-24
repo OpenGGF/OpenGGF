@@ -640,7 +640,9 @@ Unreleased. The earlier development themes remain in
   desktop sound-test composition lives with the developer tools. SMPS backends
   keep their explicitly supplied restore-request destination for their usable
   lifetime, including later source construction after engine-root reconfiguration;
-  SoundTest windows retain their configured destination for WAV export. Native SMPS
+  SoundTest windows retain their configured destination for WAV export. Capture
+  admission, rebuild continuity and retirement share one manager-owned lifetime
+  boundary, preserving live recordings across presentation replacements. Native SMPS
   loaders retain their own ROM references while the shared cache and hexadecimal
   dispatch base stays ROM-free. Rewinding a
   partially collapsed Sonic 1 false floor preserves the remaining break sequence

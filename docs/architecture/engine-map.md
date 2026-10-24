@@ -505,6 +505,18 @@ manager restoration records `RESTORE` intent and an accepted timeline command;
 presentation-owned natural restoration retains its separate deferred publication
 path. Legacy singleton configuration binding remains a distinct contract.
 
+Each `AudioManager` retains one private `CaptureLeases` owner across producer
+generations. It owns offline/live admission, accepted release, rebuild carry,
+retirement and the stable live-recording handle. Compatibility methods retain
+their manager monitor; lifecycle and handle operations retain their existing
+explicit manager lock regions and unlocked metadata access. Producer-close
+reconciliation reads the currently published producer after callbacks. Offline
+leases retire with accepted producer close, while a marked live recording carries
+its fractional phase and cumulative total into a replacement. A failed rebuild's
+pending carry can survive later teardown; extraction preserves that partial state.
+The presentation producer still owns attachment mechanics, capture clocks, pending
+PCM and delivery. This lifetime bookkeeping is outside gameplay rewind state.
+
 **Accuracy expectation:** implement features identically to hardware. The FM core is the
 Nuked-OPN2 port (`audio.synth.nuked`, pinned by `tools/audio/nuked-opn2/PIN.md`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it (write pacing,
