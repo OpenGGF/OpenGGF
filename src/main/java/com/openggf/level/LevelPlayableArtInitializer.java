@@ -215,7 +215,7 @@ final class LevelPlayableArtInitializer {
             LOGGER.log(SEVERE, "Failed to materialize playable sprite art before publication.", e);
             return;
         }
-        RenderContext.uploadDonorPalettes(graphicsManager);
+        uploadTeamPalettes(playable);
     }
 
     private boolean usesDonation(AbstractPlayableSprite playable) {
@@ -268,6 +268,23 @@ final class LevelPlayableArtInitializer {
         }
         initializeMainPlayableLegacy(playable, artProvider, crossGame);
         initializeSidekicksLegacy(artProvider, crossGame);
+        uploadTeamPalettes(playable);
+    }
+
+    private void uploadTeamPalettes(AbstractPlayableSprite main) {
+        if (main.characterKey().isBuiltin() && usesDonation(main)) {
+            RenderContext context = crossGameFeatures.getDonorRenderContext();
+            if (context != null) {
+                // Standalone art requests select their requested character. Team
+                // initialization owns the completed binding: secondary loads must
+                // not leave the main renderer (or its auxiliaries) on that row.
+                String character = main.characterKey().persisted();
+                Palette palette = crossGameFeatures.loadCharacterPalette(character);
+                if (palette != null) context.setPalette(0, palette);
+                context.setUnderwaterPalette(0,
+                        crossGameFeatures.loadUnderwaterCharacterPalette(character));
+            }
+        }
         RenderContext.uploadDonorPalettes(graphicsManager);
     }
 
@@ -422,6 +439,10 @@ final class LevelPlayableArtInitializer {
             RenderContext sidekickPaletteCtx = createSidekickPaletteContextLegacy(
                     artProvider, mainArtProvider, sidekickCharName, mainCharName);
             if (sidekickPaletteCtx != null) {
+                if (usesDonation(sidekick)) {
+                    sidekickPaletteCtx.setUnderwaterPalette(0,
+                            crossGame.loadUnderwaterCharacterPalette(sidekickCharName));
+                }
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
@@ -495,6 +516,10 @@ final class LevelPlayableArtInitializer {
                     sidekickCharName, mainCharName, sidekickPalette, mainPalette,
                     mainCharacterContext, sourceArt.paletteIndex());
             if (sidekickPaletteCtx != null) {
+                if (sidekick.characterKey().isBuiltin() && usesDonation(sidekick)) {
+                    sidekickPaletteCtx.setUnderwaterPalette(sourceArt.paletteIndex(),
+                            crossGame.loadUnderwaterCharacterPalette(sidekickCharName));
+                }
                 sidekickRenderer.setRenderContext(sidekickPaletteCtx);
             } else if (usesDonation(sidekick)) {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());

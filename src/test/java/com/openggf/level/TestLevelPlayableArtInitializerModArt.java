@@ -14,6 +14,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SecondaryAbility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
@@ -26,6 +28,60 @@ import static org.mockito.Mockito.withSettings;
 
 class TestLevelPlayableArtInitializerModArt {
     @AfterEach void resetContexts() { RenderContext.reset(); }
+
+    @ParameterizedTest(name = "prepared team: {0}")
+    @ValueSource(booleans = {false, true})
+    void donatedTeamPublishesMainNormalAndEachCharactersNativeWater(boolean prepared) throws Exception {
+        CharacterKey extraKey = CharacterKey.mod("owner", "extra");
+        PlayableCharacterRegistry registry = prepared
+                ? PlayableCharacterRegistry.empty().register(extraKey, definition(extraKey, code -> art(4)))
+                : PlayableCharacterRegistry.empty();
+        AbstractPlayableSprite knuckles = sprite(CharacterKey.KNUCKLES, "knuckles_p2");
+        List<AbstractPlayableSprite> sidekicks = prepared
+                ? List.of(knuckles, sprite(extraKey, extraKey.persisted())) : List.of(knuckles);
+        Fixture fixture = fixture(registry, CharacterKey.SONIC, sidekicks);
+        CrossGameFeatureProvider donor = mock(CrossGameFeatureProvider.class);
+        GraphicsManager graphics = mock(GraphicsManager.class);
+        RenderContext shared = RenderContext.getOrCreateDonor(GameId.S3K);
+        Palette sonic = new Palette();
+        sonic.colors[2].b = (byte) 255;
+        Palette knux = new Palette();
+        knux.colors[2].r = (byte) 255;
+        Palette sonicWater = new Palette();
+        sonicWater.colors[2].g = (byte) 73;
+        Palette knuxWater = new Palette();
+        knuxWater.colors[2].r = (byte) 146;
+        when(donor.getDonorRenderContext()).thenReturn(shared);
+        when(donor.loadCharacterPalette("sonic")).thenReturn(sonic);
+        when(donor.loadCharacterPalette("knuckles")).thenReturn(knux);
+        when(donor.loadUnderwaterCharacterPalette("sonic")).thenReturn(sonicWater);
+        when(donor.loadUnderwaterCharacterPalette("knuckles")).thenReturn(knuxWater);
+        when(donor.loadPlayerSpriteArt(anyString())).thenAnswer(invocation -> {
+            boolean isKnuckles = invocation.<String>getArgument(0).startsWith("knuckles");
+            // Reproduce the provider's existing standalone refresh contract.
+            shared.setPalette(0, isKnuckles ? knux : sonic);
+            shared.setUnderwaterPalette(0, isKnuckles ? knuxWater : sonicWater);
+            return art(8);
+        });
+        try (var active = mockStatic(CrossGameFeatureProvider.class)) {
+            active.when(CrossGameFeatureProvider::isActive).thenReturn(true);
+            new LevelPlayableArtInitializer(fixture.level(), fixture.sprites(), graphics,
+                    fixture.config(), donor).initialize();
+        }
+        RenderContext mainContext = capturedRenderer(fixture.main()).getRenderContext();
+        RenderContext sideContext = capturedRenderer(knuckles).getRenderContext();
+        org.junit.jupiter.api.Assertions.assertSame(shared, mainContext);
+        org.junit.jupiter.api.Assertions.assertNotSame(mainContext, sideContext);
+        org.junit.jupiter.api.Assertions.assertAll(
+                () -> assertEquals(255, mainContext.getPalette(0).blue(2) & 255),
+                () -> assertEquals(255, sideContext.getPalette(0).red(2) & 255),
+                () -> org.junit.jupiter.api.Assertions.assertNotNull(mainContext.getUnderwaterPalette(0)),
+                () -> org.junit.jupiter.api.Assertions.assertNotNull(sideContext.getUnderwaterPalette(0)));
+        assertEquals(73, mainContext.getUnderwaterPalette(0).green(2) & 255);
+        assertEquals(146, sideContext.getUnderwaterPalette(0).red(2) & 255);
+        verify(graphics).cachePaletteTexture(sonic, shared.getEffectivePaletteLine(0));
+        verify(graphics).cachePaletteTexture(knux, sideContext.getEffectivePaletteLine(0));
+    }
 
     @Test
     void supplierFailureLeavesExistingRendererAndPaletteContextsUntouched() throws Exception {
