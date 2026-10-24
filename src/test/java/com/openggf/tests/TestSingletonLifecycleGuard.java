@@ -30,28 +30,23 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
             src/test/java/com/openggf/game/TestSpindashGating.java#setUp
             src/test/java/com/openggf/game/rewind/TestLiveRewindManagerAudioCleanup.java#setUp
-            src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
             src/test/java/com/openggf/game/sonic1/TestSonic1LivesHudDonation.java#setUp
             src/test/java/com/openggf/game/sonic1/TestSonic1PatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1MovingBlockObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/badniks/TestBuzzBomberLifecycle.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/badniks/TestSonic1CaterkillerBodyChaining.java#setUp
-            src/test/java/com/openggf/game/sonic1/objects/bosses/TestSonic1FzBossEscapeHitCue.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestS3kCnzVisualCapture.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/TestSonic3kLevelEventRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPatternAnimatorRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/TestSonic3kPlcArtRewindSnapshot.java#setUp
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAiz2BossEndSequenceObjects.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestMGZSwingingPlatformObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/specialstage/TestS3kSpecialStageResultsVisual.java#setUpClass
             src/test/java/com/openggf/game/sonic3k/titlescreen/TestSonic3kTitleScreenBootstrap.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerFadeRebinding.java#setUp
             src/test/java/com/openggf/graphics/TestGraphicsManagerSpriteSatReplay.java#setUp
             src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
             src/test/java/com/openggf/level/TestLevelManagerSlotBackgroundCopy.java#setUp
-            src/test/java/com/openggf/level/objects/TestObjectManagerCounterBasedDynamicUnload.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
             src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
@@ -62,15 +57,12 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
             src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
-            src/test/java/com/openggf/tests/TestMonitorIconTiming.java#setUp
             src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp
             src/test/java/com/openggf/tests/TestRingManager.java#setUp
             src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
-            src/test/java/com/openggf/tests/TestSonic3kLightningShieldObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
             src/test/java/com/openggf/tests/TestS3kIczFreezerObject.java#setUp
             src/test/java/com/openggf/tests/TestS3kMgzPulleyAndMantis.java#setUp
-            src/test/java/com/openggf/tests/TestS3kMgzTwistingLoopObject.java#setUp
             src/test/java/com/openggf/trace/replay/TraceReplaySessionBootstrapConfigTest.java#setUp
             """);
     private static final Set<String> SCANNER_UTILITY_FILES = Set.of(

@@ -2187,3 +2187,146 @@ This is bounded fixture/guard evidence, not broad smoke, full-suite, arbitrary
 incoming-module permutations, ROM route or pixel certification. No previous
 family was rerun. This branch remains local for a later parent composition;
 integration, push and branch/worktree removal are outside this slice.
+
+
+### Direct-subject and engine-only fixture family continuation
+
+This later-composition slice starts from accepted module-family commit
+`9a4f7113807abc2b33879d7906ec74e446703c2f` (tree
+`4a4195752b47a458d29193010a062c6c463092f4`) on new local branch
+`bugfix/ai-direct-fixture-family-20261024` in the same isolated worktree.
+The engine-only branch remains at `279a4c858`, and the module-family branch at
+`9a4f711`; no parent/frozen-candidate branch is changed. Initial state was clean
+with no owned Maven jobs. Scope is eight changed tests, their exact allowance
+removals and this appendix. OilSurfaceManager and the S1 monitor class are
+retained unchanged. Production, shared helpers, guard scanning and all other
+allowances remain unchanged.
+
+Constructor-time grounding precedes the fixture choice. FZ's constructor and
+`initializeBossState()` initialize local state without consulting services; its
+two escape-hit consumers already inject `TestObjectServices` before attacking or
+invoking the flight update. They now receive the owned real camera. MGZ swinging
+platform construction computes local chain positions; its real managers already
+receive explicit cameras/services. The counter-unload family likewise owns the
+real eight-argument `ObjectManager`, including its construction scopes and
+synthetic water/level services. These three classes now construct real cameras
+from standalone configuration reset to defaults and clear the ambient session.
+Only `GameServices.camera()` receivers in FZ and counter-unload consumers change
+to the owned camera field; manager constructors, camera values/bounds, execution
+slots, update counts and assertions remain intact. An unloaded LevelManager's
+`getRomZoneId()` returns -1, so MGZ's registry retains the same legacy S3KL
+selection with no world; no S3K world is inferred from its class name.
+
+The other five migrations use the reviewed `resetEngineOnly()` because
+`AbstractSprite` captures `EngineServices.current().configuration()` during
+construction: rewind reference codecs, AIZ vine logic, monitor-icon timing,
+lightning-shield tests and MGZ twisting-loop tests. Their tested
+paths need no session-owned manager. Late injection was checked explicitly:
+`ShieldObjectInstance` captures its renderer during construction, but these
+lightning-shield tests intentionally construct without a context or loaded art;
+`getRenderManager()` already returns null before the existing later service
+injection. Adding a renderer-bearing construction context would change that
+negative control and was rejected. Monitor constructors initialize local icon
+state; existing post-construction service injection and manager-owned scopes
+remain in place. All helper bodies, explicit module/rule selection, camera-bound
+updates and teardown cadence are preserved. Twisting-loop setup still starts by
+clearing the session and retains its explicit 1024-by-1024 camera bounds.
+
+Retained key:
+`src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp`.
+The real local oil manager is not the only consumer: the existing
+`suffocatesAfterSubmersionCountdownExpires` test calls `applyOilSuffocateDeath()`
+through the sprite, then `applyDeath()` freezes `currentCamera()` for the main
+player. That camera is session-owned. Engine-only reset would remove a required
+native owner, and injecting a replacement sprite runtime or broadening this
+batch to a module/world fixture would change the grounded shape. Both test and
+allowance remain byte-identical; no removal is claimed.
+
+The S1 monitor key is also retained unchanged:
+`src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp`.
+The initial engine-only attempt ran all 92 invocations but produced two errors:
+`monitorTopContactStillLandsWhenPlayerWasBouncedUpward` and
+`adjacentMonitorLandsJumpLatchedPlayerAfterSameFrameMonitorBreakBounce`. Both
+solid-contact paths land the real sprite through `setAir(false)`, which calls
+`currentGameState().resetItemBonus()`. An active session is required despite the
+explicit local object manager and camera mocks. The attempted setup and allowance
+removal were reverted exactly to the pinned base; injecting a different game
+state would change the consumer authority. No assertion or body was repaired to
+fit the proposed fixture. That rejected run had 0 failures, 2 errors and 0 skips;
+queue wait was 62 seconds and Maven execution 31.004 seconds. XML matched all ten
+class/method sets, including all four parameter rows. Its source-diff SHA-256 was
+`e144767f30b231a64c56f6fd033cf1f364e58c0ed6d03d478abef1cf5495402e`;
+the inspected 20 XML/text reports were consumed before the corrected run.
+
+Exactly these eight keys are removed (the separate eighth-wave S1 keys are
+untouched; no integrated parent inventory total is inferred):
+
+```text
+src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
+src/test/java/com/openggf/game/sonic1/objects/bosses/TestSonic1FzBossEscapeHitCue.java#setUp
+src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
+src/test/java/com/openggf/game/sonic3k/objects/TestMGZSwingingPlatformObjectInstance.java#setUp
+src/test/java/com/openggf/level/objects/TestObjectManagerCounterBasedDynamicUnload.java#setUp
+src/test/java/com/openggf/tests/TestMonitorIconTiming.java#setUp
+src/test/java/com/openggf/tests/TestSonic3kLightningShieldObjectInstance.java#setUp
+src/test/java/com/openggf/tests/TestS3kMgzTwistingLoopObject.java#setUp
+```
+
+Mechanical comparison against the base preserves all 89 source test methods
+(88 ordinary plus one four-row parameterized method: 92 expected invocations),
+including the two retained classes' 18 unchanged methods. Apart from setup/imports,
+the new camera fields and justified camera receiver replacement, class contents
+are identical, including assertions, timing, helper and teardown bodies.
+The normalized ten-class SHA-256 is
+`d191332845c6046c2856f8938a4ef9514fbfbf9327f00e90cdc29db25a7e41b2`.
+The fixed submitted source fingerprint, SHA-256 of
+`git diff --binary 9a4f711 -- src/main src/test pom.xml`, is
+`cd8cd8b8a283f9643e5ed93d45069e000f4112975d1c79f4ac6dc62af81a2b5a`.
+Baseline runtime results are not independently measured; identity and count
+comparisons here refer to the pinned source, with runtime results below.
+
+
+The corrected fixed ten-class selection passed all 92 invocations with zero
+failures, errors or skips: reference codecs 9, FZ cue 2, vine logic 7, MGZ
+swinging platform 5, counter-unload 15, monitor icon timing 2, retained Oil 11,
+retained S1 monitor 7, lightning shield 3 and twisting loop 31. XML identities
+match every source method; the twisting-loop parameterized method has all four
+rows, and the fully qualified S1 monitor selector excludes the separate
+`game.sonic1.objects` class with the same simple name. Java was 25.0.5.0.2 and
+Lua 5.4.9. This corrected run waited 0 seconds and Maven executed for 28.909
+seconds. The ten fresh XML and ten text reports were inspected and consumed;
+the submitted source fingerprint remained fixed through execution. No real ROM
+or graphics context is reached by this selection, so no ROM property or EGL flag
+was needed; desktop display variables were unset.
+
+Exact focused command, from this isolated worktree using the current absolute
+main-workspace queue wrapper (`OPENGGF_MAIN_WORKSPACE` denotes that checkout):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off \
+  '-Dtest=com.openggf.game.rewind.schema.TestRewindPlayerReferenceCodecs,com.openggf.game.sonic1.objects.bosses.TestSonic1FzBossEscapeHitCue,com.openggf.game.sonic3k.objects.TestAizVineHandleLogic,com.openggf.game.sonic3k.objects.TestMGZSwingingPlatformObjectInstance,com.openggf.level.objects.TestObjectManagerCounterBasedDynamicUnload,com.openggf.tests.TestMonitorIconTiming,com.openggf.tests.TestOilSurfaceManager,com.openggf.tests.TestSonic1MonitorObjectInstance,com.openggf.tests.TestSonic3kLightningShieldObjectInstance,com.openggf.tests.TestS3kMgzTwistingLoopObject' test -B
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  python3 "${OPENGGF_MAIN_WORKSPACE}/tools/testing/maven_queue.py" \
+  --lean -Dmse=off '-Dtest=TestSingletonLifecycleGuard' test -B
+```
+
+
+The separate exact singleton guard passed all eight source identities, with zero
+failures, errors or skips. Its queue wait was 282 seconds; Maven execution was
+28.096 seconds. The exact selector, Java version and every identity were checked
+in fresh XML, then both guard reports were consumed. These per-command queue and
+execution intervals are not summed into delivery elapsed time. No user-response
+wait occurred; other work time is unmeasured.
+
+The final slice closes eight requested keys and explicitly retains two; it makes
+no claim about the composed parent's inventory. Only bounded fixture and exact
+guard coverage was run, including one rejected fixture attempt and one corrected
+run with the same ten selectors. No broad/full suite, previous-family rerun,
+ROM/trace/pixel validation, arbitrary incoming-module matrix, production change
+or shared-helper change is included. The branch remains local for later parent
+composition, with both earlier branches preserved. Integration, push and branch/
+worktree removal remain outside this slice.

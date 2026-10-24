@@ -3,8 +3,6 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
@@ -32,8 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindPlayerReferenceCodecs {
     @BeforeEach
     void setUpRuntime() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetEngineOnly();
     }
 
     @AfterEach
