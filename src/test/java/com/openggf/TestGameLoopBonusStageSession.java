@@ -59,7 +59,7 @@ class TestGameLoopBonusStageSession {
         when(sprites.getSprite(anyString())).thenReturn(player);
         when(sprites.getAllSprites()).thenReturn(List.of(player));
         write(loop, "levelManager", levels); write(loop, "spriteManager", sprites);
-        write(loop, "camera", mock(Camera.class)); write(loop, "fadeManager", fade); write(loop, "titleCardProvider", title);
+        write(loop, "camera", mock(Camera.class)); write(loop, "fadeManager", fade); com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         provider = mock(BonusStageProvider.class);
         when(provider.hasBonusStages()).thenReturn(true);
         when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
@@ -74,7 +74,7 @@ class TestGameLoopBonusStageSession {
         doAnswer(c -> { callback.set(c.getArgument(0)); return null; }).when(fade).startFadeToBlack(any());
         return callback;
     }
-    private void release() throws Exception { call(loop, "exitTitleCard", new Class<?>[0]); }
+    private void release() throws Exception { TitleCardLifecycleTestAccess.release(loop); }
 
     @Test void admissionShortCircuitsBeforeCaptureOrPresentation() throws Exception {
         mode(GameMode.BONUS_STAGE); enter(loop, BonusStageType.GUMBALL);
@@ -299,7 +299,7 @@ class TestGameLoopBonusStageSession {
         verify(provider, never()).onFrameUpdate(); verify(levels, never()).loadZoneAndAct(anyInt(), anyInt());
         suspension.unpark(previous);
         // Reinstall the deliberately mocked live managers after real binding refresh.
-        write(loop, "levelManager", levels); write(loop, "spriteManager", sprites); write(loop, "fadeManager", fade); write(loop, "titleCardProvider", title);
+        write(loop, "levelManager", levels); write(loop, "spriteManager", sprites); write(loop, "fadeManager", fade); com.openggf.TitleCardLifecycleTestAccess.provider(loop, title);
         if (phase.equals("exit")) { assertTrue(pending(loop)); callback.get().run(); verify(provider).onExit(); }
         else { completeDeferred(loop); completeDeferred(loop); verify(provider, times(1)).onDeferredSetupComplete(); }
     }

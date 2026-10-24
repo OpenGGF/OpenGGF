@@ -665,11 +665,7 @@ class TestS3kInitialObjectSetupLifecycle {
         loop.setGameplayMode(TestEnvironment.activeGameplayMode());
         installReleasingTitleProvider(loop);
         setField(loop, "currentGameMode", GameMode.TITLE_CARD);
-        @SuppressWarnings({"unchecked", "rawtypes"})
-        Object target = Enum.valueOf(
-                (Class<? extends Enum>) Class.forName("com.openggf.PostTitleCardDestination"),
-                destination);
-        setField(loop, "postTitleCardDestination", target);
+        com.openggf.TitleCardLifecycleTestAccess.bonusDestination(loop, destination.equals("BONUS_STAGE"));
         return loop;
     }
 
@@ -678,8 +674,7 @@ class TestS3kInitialObjectSetupLifecycle {
                 .latchBeforeFadeUpdate();
         setField(loop, "activePlcLifecycleFrame", frame);
         try {
-            return (boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false);
+            return com.openggf.TitleCardLifecycleTestAccess.update(loop);
         } finally {
             setField(loop, "activePlcLifecycleFrame", null);
             frame.finish();
@@ -697,7 +692,7 @@ class TestS3kInitialObjectSetupLifecycle {
         TitleCardProvider provider = mock(TitleCardProvider.class);
         when(provider.shouldReleaseControl()).thenReturn(true);
         when(provider.shouldCompleteFreshLevelTransitionBoundary()).thenReturn(true);
-        setField(loop, "titleCardProvider", provider);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, provider);
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

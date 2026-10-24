@@ -612,8 +612,10 @@ Unreleased. The earlier development themes remain in
   donation while consuming the same patterns, palette and mapping contract.
   One loop-lifetime special-stage lifecycle now owns entry presentation, retained
   provider identity, captured results and return completion through the existing
-  virtual controller seams; shared rewind admission and title release keep their
-  original owners.
+  virtual controller seams. Shared rewind admission stays in the game loop; a
+  loop-lifetime title owner keeps its lazy provider binding, presentation, locks
+  and complete release sequence together through the existing entry and rendering
+  seams, preserving input timing and native destination assembly.
   Architecture ratchets measure the dispatcher bodies behind profiling wrappers,
   reject stale rewind and dependency allowances, and identify raw lifecycle calls
   by caller rather than a shared total. Shared menu animation and execution-time

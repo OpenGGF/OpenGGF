@@ -43,7 +43,13 @@ current mode/provider and a results callback. `GameLoopSpecialStageLifecycle`
 owns special entry, retained provider identity, captured results, exit latches
 and special-return completion for the loop lifetime. Its private root Host reads
 typed cached slots and preserves virtual provider/results-entry dispatch;
-boundary admission, scoped pacing input and shared title release stay in GameLoop.
+boundary admission and scoped pacing input stay in GameLoop.
+`GameLoopTitleCardLifecycle` owns the lazy title binding, destination, persistent
+release result and complete presentation/release sequence. Its typed live Host
+preserves virtual entry/control/player/mode seams and narrow shared release effects;
+Root captures update arguments only after lazy acquisition. Binding refresh,
+parking and teardown retain title state; module reset clears only its cache
+after Continue reset. Engine keeps its public virtual title-provider getter calls.
 Binding refresh, parking and provider reset retain this owner and its state.
 `GameLoopEndingSession` owns the ending provider, shared ending/standalone
 transition gate, phase execution, credits-demo loading and ending-only cleanup.

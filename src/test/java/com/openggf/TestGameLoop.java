@@ -1545,7 +1545,7 @@ public class TestGameLoop {
                 com.openggf.game.internal.FreshLevelTitleBoundaryPublication.class));
         when(((com.openggf.game.internal.FreshLevelTitleBoundaryPublication) title)
                 .hasImmediateFreshLevelPalette()).thenReturn(true);
-        setPrivateField(gameLoop, "titleCardProvider", title);
+        com.openggf.TitleCardLifecycleTestAccess.provider(gameLoop, title);
         invokePrivateMethod(gameLoop, "startResultsReturnFadeIn");
         verify(fade).clearOverlayForImmediatePaletteLoad();
         verify(fade, never()).startFadeFromBlack(any());
@@ -1561,11 +1561,18 @@ public class TestGameLoop {
         var sprites = mock(com.openggf.sprites.managers.SpriteManager.class);
         var frame = mock(com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class);
         Runnable exit = mock(Runnable.class);
-        boolean released = GameLoopTitleCardLifecycle.update(
+        var host = mock(GameLoopTitleCardLifecycle.Host.class);
+        when(host.currentMode()).thenReturn(GameMode.TITLE_CARD);
+        when(host.level()).thenReturn(level);
+        when(host.module()).thenReturn(mock(GameModule.class));
+        doAnswer(c -> { exit.run(); return null; }).when(host).notifyModeChanged(any());
+        var lifecycle = new GameLoopTitleCardLifecycle(host);
+        boolean released = lifecycle.update(
                 true, titleCard, frame, TestEnvironment.activeGameplayMode(), level, sprites,
-                mock(com.openggf.camera.Camera.class), mockInputHandler, () -> {},
-                PostTitleCardDestination.LEVEL, exit, result -> assertEquals(LevelFrameResult.SETUP_ONLY, result),
+                mock(com.openggf.camera.Camera.class), mockInputHandler,
+                PostTitleCardDestination.LEVEL,
                 () -> {}, () -> {}, phase -> {}, (name, step) -> step.run());
+        assertEquals(LevelFrameResult.SETUP_ONLY, lifecycle.releaseResult());
         assertTrue(released, "loc_64DC enters LevelLoop while the title pieces remain visible");
         InOrder order = inOrder(titleCard, exit);
         order.verify(titleCard).completeFreshLevelRuntimeArtHandoff();
@@ -1577,11 +1584,10 @@ public class TestGameLoop {
         BonusStageProvider provider = mock(BonusStageProvider.class);
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.TITLE_CARD);
-        setPrivateField(gameLoop, "postTitleCardDestination",
-                Enum.valueOf(PostTitleCardDestination.class, "BONUS_STAGE"));
+        TitleCardLifecycleTestAccess.destination(gameLoop, PostTitleCardDestination.BONUS_STAGE);
         BonusStageSessionTestAccess.deferred(gameLoop, provider);
 
-        invokePrivateMethod(gameLoop, "exitTitleCard");
+        TitleCardLifecycleTestAccess.release(gameLoop);
 
         verify(provider).onDeferredSetupComplete();
         assertNull(BonusStageSessionTestAccess.deferred(gameLoop), "Deferred provider should be cleared after setup");
@@ -1893,7 +1899,7 @@ public class TestGameLoop {
         setPrivateField(gameLoop, "spriteManager", spriteManager);
         setPrivateField(gameLoop, "camera", mock(com.openggf.camera.Camera.class));
         setPrivateField(gameLoop, "fadeManager", fade);
-        setPrivateField(gameLoop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(gameLoop, titleCard);
         return titleCard;
     }
 

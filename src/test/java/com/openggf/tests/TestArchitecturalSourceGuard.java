@@ -42,6 +42,128 @@ class TestArchitecturalSourceGuard {
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
 
+    private static final String TITLE_CARD_LIFECYCLE_PATH = "com/openggf/GameLoopTitleCardLifecycle.java";
+    private static final String TITLE_CARD_HOST_CONTRACT = """
+        LevelManager level(); SpriteManager sprites(); Camera camera(); InputHandler input();
+        GameModule module(); GameMode currentMode(); boolean endOfLevelActive();
+        String mainCharacterCode(); AbstractPlayableSprite mainPlayable();
+        void lockTitleControls(boolean locked); void restorePendingShield(AbstractPlayableSprite playable);
+        GameMode changeMode(GameMode mode); GameMode changeModeWithoutRewindBoundary(GameMode mode);
+        void markBonusEntryBoundary(); boolean returningFromSpecialStage(); void completeTitleReturn();
+        void applyDeferredBonusStageSetup(); void syncPlaybackInput(); void admitDestination();
+        void recordLevelRelease(); void notifyModeChanged(GameMode oldMode);
+        """;
+    private static final List<String> TITLE_CARD_FIELDS = List.of(
+            "private TitleCardProvider titleCardProvider;",
+            "private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;",
+            "private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;");
+    private static final Set<String> TITLE_CARD_METHODS = Set.of("provider", "cachedProvider", "clearProviderCache",
+            "destination", "releaseResult", "enterTitleCard", "startPendingInLevelTitleCard",
+            "applyTitleCardControlLock", "runInputNeutralTitleCardPlayerPrelude", "update", "exitTitleCard",
+            "enterBonusTitleCardAfterLevelLoadBoundary");
+    private static final Map<String, String> TITLE_CARD_ROOT_DELEGATES = Map.of(
+            "enterTitleCard", "titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);",
+            "startPendingInLevelTitleCard", "titleCardLifecycle.startPendingInLevelTitleCard();",
+            "applyTitleCardControlLock", "titleCardLifecycle.applyTitleCardControlLock(locked);",
+            "enterBonusTitleCardAfterLevelLoadBoundary", "return titleCardLifecycle.enterBonusTitleCardAfterLevelLoadBoundary();",
+            "getTitleCardProviderLazy", "return titleCardLifecycle.provider();");
+
+    @Test
+    void titleLifecycleOwnsPresentationBindingAndSharedReleaseWithNarrowLiveHost() throws IOException {
+        assertNoViolations("Title ownership boundary failed", titleOwnershipViolations(
+                Files.readString(SRC_MAIN.resolve(GAME_LOOP_PATH)), Files.readString(SRC_MAIN.resolve(TITLE_CARD_LIFECYCLE_PATH))));
+        String root = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(GAME_LOOP_PATH)));
+        int update = root.indexOf("private boolean updateTitleCardMode(");
+        int acquire = root.indexOf("getTitleCardProviderLazy()", update);
+        int snapshots = root.indexOf("activePlcLifecycleFrame,", update);
+        assertTrue(update >= 0 && acquire > update && snapshots > acquire,
+                "lazy acquisition must finish before the update's later argument snapshots");
+        assertEquals(3, countMatches(Pattern.compile("titleCardLifecycle\\.cachedProvider\\(\\)"), root),
+                "the policy/pacing observations stay cold");
+        int reset = root.indexOf("public void resetModuleScopedProviders()");
+        assertTrue(root.indexOf("continueScreen.reset();", reset) < root.indexOf("titleCardLifecycle.clearProviderCache();", reset));
+    }
+
+    @Test
+    void titleOwnershipSamplesAllowCompatibilityDelegatesAndTypeReferencesButRejectRetainedDecisions() {
+        String root = "class GameLoop {\n private final GameLoopTitleCardLifecycle titleCardLifecycle = null;\n"
+                + "public void enterTitleCard(int zoneIndex, int actIndex) {\n titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);\n }\n }";
+        String owner = "final class GameLoopTitleCardLifecycle { private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName()); "
+                + "private final Host host; " + String.join(" ", TITLE_CARD_FIELDS)
+                + " GameLoopTitleCardLifecycle(Host host) { this.host = host; } interface Host { " + TITLE_CARD_HOST_CONTRACT + " } "
+                + TITLE_CARD_METHODS.stream().sorted().map(name -> "void " + name + "() {}")
+                        .collect(java.util.stream.Collectors.joining(" ")) + " }";
+        assertTrue(titleOwnershipViolations(root, owner).isEmpty(), "a virtual delegate and GameLoop.class are legitimate");
+        for (String field : TITLE_CARD_FIELDS) {
+            assertFalse(titleOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { " + field), owner).isEmpty(), field);
+            assertFalse(titleOwnershipViolations(root, owner.replace(field, "")).isEmpty(), field);
+        }
+        for (String decision : List.of("if (currentGameMode != GameMode.LEVEL) return; ", "applyPendingBonusStageShieldRestore(null); ")) {
+            assertFalse(titleOwnershipViolations(root.replace("titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);",
+                    decision + "titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);"), owner).isEmpty(), decision);
+        }
+        for (String retained : List.of("private TitleCardProvider mirror;", "private PostTitleCardDestination destination;",
+                "private LevelFrameResult titleResult;", "private void exitTitleCard() {}",
+                "private void runInputNeutralTitleCardPlayerPrelude() {}")) {
+            assertFalse(titleOwnershipViolations(root.replace("class GameLoop {", "class GameLoop { " + retained), owner).isEmpty(), retained);
+        }
+        for (String forbidden : List.of("private GameLoop loop;", "private EngineContext context;", "private boolean pending;",
+                "void call() { GameLoop.this.step(); }", "Object lookup(Class key) { return null; }",
+                "void call() { GameServices.module(); }")) {
+            assertFalse(titleOwnershipViolations(root, owner.replace("final class GameLoopTitleCardLifecycle {",
+                    "final class GameLoopTitleCardLifecycle { " + forbidden)).isEmpty(), forbidden);
+        }
+        for (String wide : List.of("void runWholeFrame(Runnable frame);", "GameLoop root();", "GameplayModeContext context();",
+                "boolean releaseTitleIntoLevel();")) {
+            assertFalse(titleOwnershipViolations(root, owner.replace("void notifyModeChanged(GameMode oldMode);", wide)).isEmpty(), wide);
+        }
+        assertFalse(titleOwnershipViolations(root, owner.replace("this.host = host;", "this.host = host; host.module();")).isEmpty());
+        assertFalse(titleOwnershipViolations(root, owner.replace("void exitTitleCard() {}", "")).isEmpty());
+    }
+
+    private static List<String> titleOwnershipViolations(String root, String owner) {
+        List<String> violations = new ArrayList<>();
+        String rootCode = stripCommentsAndStrings(root), ownerCode = stripCommentsAndStrings(owner);
+        if (!Pattern.compile("private\\s+final\\s+GameLoopTitleCardLifecycle\\s+titleCardLifecycle\\b").matcher(rootCode).find())
+            violations.add("one loop-lifetime title owner");
+        if (Pattern.compile("private\\s+(?:final\\s+)?(?:TitleCardProvider|PostTitleCardDestination)\\s+\\w+\\s*[;=]"
+                + "|private\\s+(?:final\\s+)?LevelFrameResult\\s+\\w+\\s*[;=]").matcher(rootCode).find())
+            violations.add("root retains title state or mirror");
+        for (String field : TITLE_CARD_FIELDS) {
+            if (!ownerCode.replaceAll("\\s+", "").contains(field.replaceAll("\\s+", ""))) violations.add("missing state: " + field);
+        }
+        long fields = Pattern.compile("private\\s+(?:(?:static|final)\\s+)*[\\w.<>]+\\s+\\w+\\s*[;=]").matcher(ownerCode).results().count();
+        if (fields != 5) violations.add("exactly three retained values plus immutable Host/logger dependencies");
+        if (!Pattern.compile("(?<!public )final\\s+class\\s+GameLoopTitleCardLifecycle").matcher(ownerCode).find()
+                || Pattern.compile("public\\s+final\\s+class\\s+GameLoopTitleCardLifecycle").matcher(ownerCode).find())
+            violations.add("package-private owner");
+        if (Pattern.compile("\\b(?:GameLoop|EngineContext)\\s+\\w+\\s*[;,)=]|GameLoop\\.this|GameServices\\s*\\.|\\bObject\\s+\\w+\\s*\\(").matcher(ownerCode).find())
+            violations.add("root/context backreference or erased/global locator");
+        var rootSource = SourceFile.fromText(root);
+        for (MethodSpan method : rootSource.methods()) {
+            if (!method.identity().startsWith("GameLoop#")) continue;
+            if (Set.of("exitTitleCard", "runInputNeutralTitleCardPlayerPrelude").contains(method.name()))
+                violations.add("private root choreography: " + method.name());
+            String delegate = TITLE_CARD_ROOT_DELEGATES.get(method.name());
+            if (delegate != null) {
+                String text = stripCommentsAndStrings(String.join("\n", rootSource.lines().subList(method.startLine()-1, method.endLine())));
+                text = text.substring(text.indexOf('{')+1, text.lastIndexOf('}')).replaceAll("\\s+", "");
+                if (!text.equals(delegate.replaceAll("\\s+", ""))) violations.add("root decision/effect in " + method.name());
+            }
+        }
+        Set<String> methods = SourceFile.fromText(owner).methods().stream()
+                .filter(method -> method.identity().startsWith("GameLoopTitleCardLifecycle#"))
+                .map(MethodSpan::name).collect(java.util.stream.Collectors.toSet());
+        if (!methods.containsAll(TITLE_CARD_METHODS)) violations.add("complete title choreography belongs to owner");
+        Matcher host = Pattern.compile("interface\\s+Host\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!host.find() || !host.group(1).replaceAll("\\s+", "").equals(TITLE_CARD_HOST_CONTRACT.replaceAll("\\s+", "")))
+            violations.add("narrow typed Host, no delegated title decisions or whole-frame/load callbacks");
+        Matcher constructor = Pattern.compile("GameLoopTitleCardLifecycle\\(Host host\\)\\s*\\{([^}]*)}").matcher(ownerCode);
+        if (!constructor.find() || !constructor.group(1).replaceAll("\\s+", "").equals("this.host=host;"))
+            violations.add("construction only retains Host");
+        return violations;
+    }
+
     private static final String SPECIAL_STAGE_LIFECYCLE_PATH = "com/openggf/GameLoopSpecialStageLifecycle.java";
     private static final String SPECIAL_STAGE_HOST_CONTRACT = """
         LevelManager level(); SpriteManager sprites(); Camera camera(); FadeManager fade();
@@ -445,7 +567,8 @@ class TestArchitecturalSourceGuard {
             ENDING_SESSION_PATH, 320,
             BONUS_SESSION_PATH, 357,
             SPECIAL_STAGE_LIFECYCLE_PATH, 571,
-            GAME_LOOP_PATH, 2443
+            TITLE_CARD_LIFECYCLE_PATH, 253,
+            GAME_LOOP_PATH, 2367
     );
     private static final List<String> ENGINE_LARGE_METHOD_OWNERS = List.of("Engine#displayFrame()", "Engine#init()");
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -474,6 +597,10 @@ class TestArchitecturalSourceGuard {
             new MethodBudget(ENGINE_PATH, "displayFrame", 229),
             // 2026-07-07: stepInternal 213 -> 235 in the develop->next merge (develop's
             // bonus-stage rewind capture/engage hooks stack onto next's time-attack hooks).
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "update", 131),
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "enterTitleCard", 47),
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "exitTitleCard", 65),
+            new MethodBudget(TITLE_CARD_LIFECYCLE_PATH, "runInputNeutralTitleCardPlayerPrelude", 19),
             new MethodBudget(GAME_LOOP_PATH, "stepInternal", 58),
             new MethodBudget(GAME_LOOP_PATH, "stepInternalBody", 276),
             new MethodBudget(BONUS_SESSION_PATH, "doExitBonusStage", 111),

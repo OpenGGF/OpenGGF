@@ -195,7 +195,7 @@ class TestGameLoopFreezeContractWiring {
         doNothing().when(loop).enterTitleCard(anyInt(), anyInt());
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(titleCard.isOverlayActive()).thenReturn(true);
-        setField(loop, "titleCardProvider", titleCard);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, titleCard);
         PlaybackDebugManager playback = GameServices.playbackDebug();
         playback.startSession(oneFrameMovie(), 0);
         playback.setFrameObserver(new PlaybackDebugManager.PlaybackFrameObserver() {

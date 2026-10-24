@@ -76,7 +76,7 @@ class TestGameLoopHardwareTimingBoundaries {
             events.add("TITLE_CARD_SCAN");
             return null;
         }).when(provider).update();
-        setField(loop, "titleCardProvider", provider);
+        com.openggf.TitleCardLifecycleTestAccess.provider(loop, provider);
         loop.changeGameModeWithoutRewindBoundary(GameMode.TITLE_CARD);
 
         loop.step();

@@ -199,9 +199,6 @@ public class GameLoop {
         specialStageLifecycle.setObservationPacing(pacing);
     }
 
-    // Title card provider - lazily initialized when GameModule is available
-    private TitleCardProvider titleCardProvider;
-
     private InputHandler inputHandler;
     private final GameLoopEditorController editorMode = new GameLoopEditorController();
     private Runnable applicationExitHandler = () -> {};
@@ -225,8 +222,7 @@ public class GameLoop {
 
     private boolean specialStageRewindBoundaryThisFrame;
 
-    private PostTitleCardDestination postTitleCardDestination = PostTitleCardDestination.LEVEL;
-    private LevelFrameResult titleReleaseResult = LevelFrameResult.GAMEPLAY_FRAME;
+    private final GameLoopTitleCardLifecycle titleCardLifecycle;
     private final LevelIterationAdmissionController levelIterationAdmission;
 
     private final GameLoopSpecialStageLifecycle specialStageLifecycle;
@@ -299,6 +295,7 @@ public class GameLoop {
                 specialStageLifecycle::enterResultsScreenWithDebugRings);
         this.bonusSession = new GameLoopBonusStageSession(new BonusHost(), audioManager);
         this.endingSession = new GameLoopEndingSession(new EndingHost(), audioManager);
+        this.titleCardLifecycle = new GameLoopTitleCardLifecycle(new TitleCardHost());
         this.masterTitleExitCoordinator = new MasterTitleExitCoordinator(
                 () -> masterTitleLaunchCoordinator,
                 () -> currentGameMode == GameMode.MASTER_TITLE_SCREEN, this::hasReadyGameplayRuntime,
@@ -394,7 +391,7 @@ public class GameLoop {
 
     public void resetModuleScopedProviders() {
         continueScreen.reset();
-        titleCardProvider = null;
+        titleCardLifecycle.clearProviderCache();
     }
 
     public void setInputHandler(InputHandler inputHandler) {
@@ -567,10 +564,7 @@ public class GameLoop {
      * @return the title card provider
      */
     private TitleCardProvider getTitleCardProviderLazy() {
-        if (titleCardProvider == null) {
-            titleCardProvider = GameServices.module().getTitleCardProvider();
-        }
-        return titleCardProvider;
+        return titleCardLifecycle.provider();
     }
 
     public InputHandler getInputHandler() {
@@ -674,9 +668,7 @@ public class GameLoop {
     }
 
     GameMode enterBonusTitleCardAfterLevelLoadBoundary() {
-        markBonusEntryNonRewindableBoundary();
-        postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
-        return changeGameModeWithoutRewindBoundary(GameMode.TITLE_CARD);
+        return titleCardLifecycle.enterBonusTitleCardAfterLevelLoadBoundary();
     }
 
     /**
@@ -796,7 +788,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardProvider);
+        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardLifecycle.cachedProvider());
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),
                 inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
@@ -812,7 +804,7 @@ public class GameLoop {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
                 }, specialStagePacingInput, gameplayAudioRateOwned);
-        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardProvider, inputHandler, engineServices,
+        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardLifecycle.cachedProvider(), inputHandler, engineServices,
                 liveRewindManager::isRewindingOrReleasing, this::canUseGameplayPacing,
                 () -> resolveFadeManager().isActive());
     }
@@ -832,7 +824,7 @@ public class GameLoop {
     private boolean canUseGameplayPacingOutsideRewind() {
         return GameLoopPacingActivity.allows(currentGameMode,
                 currentGameMode == GameMode.SPECIAL_STAGE ? getActiveSpecialStageProvider() : null,
-                bonusSession.provider(), titleCardProvider, camera, levelManager, specialStageRewindBoundaryThisFrame)
+                bonusSession.provider(), titleCardLifecycle.cachedProvider(), camera, levelManager, specialStageRewindBoundaryThisFrame)
                 && !isPaused() && !isNonRewindableTransitionPending()
                 && !ExternalFrameOrInputOwnership.active(engineServices)
                 && (inputHandler == null || !inputHandler.hasLogicalOverride())
@@ -935,7 +927,7 @@ public class GameLoop {
     }
 
     /**
-     * Set when {@link #exitTitleCard()} releases into {@link GameMode#LEVEL}
+     * Set when {@link GameLoopTitleCardLifecycle#exitTitleCard()} releases into {@link GameMode#LEVEL}
      * during the current iteration, and cleared at the top of every iteration.
      * Read only by {@link #runGapRowContinuesSourceLevelMainLoop()}.
      */
@@ -1439,7 +1431,7 @@ public class GameLoop {
         syncPlaybackInputBridge();
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
-                () -> titleReleaseResult, levelManager, gameplayMode,
+                titleCardLifecycle::releaseResult, levelManager, gameplayMode,
                 !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
@@ -1493,11 +1485,10 @@ public class GameLoop {
      *         {@code false} if the card is still in its locked phase
      */
     private boolean updateTitleCardMode(boolean doFrameStep) {
-        return GameLoopTitleCardLifecycle.update(
+        return titleCardLifecycle.update(
                 doFrameStep, getTitleCardProviderLazy(), activePlcLifecycleFrame,
                 gameplayMode, levelManager, spriteManager, camera, inputHandler,
-                this::runInputNeutralTitleCardPlayerPrelude, postTitleCardDestination,
-                this::exitTitleCard, result -> titleReleaseResult = result,
+                titleCardLifecycle.destination(),
                 this::beginGameplayAudioFrameForTick,
                 () -> advanceGameplayAudioFrameForTick(doFrameStep),
                 phase -> GameLoopPlcLifecycle.prepare(activePlcLifecycleFrame, phase),
@@ -1978,26 +1969,6 @@ public class GameLoop {
         return run != null ? run.getRunPolicy() : GameplayRunPolicy.stock();
     }
 
-    private void runInputNeutralTitleCardPlayerPrelude() {
-        java.util.List<AbstractPlayableSprite> playables = spriteManager.getAllSprites().stream()
-                .filter(AbstractPlayableSprite.class::isInstance)
-                .map(AbstractPlayableSprite.class::cast)
-                .toList();
-        int[] forcedInputMasks = new int[playables.size()];
-        for (int i = 0; i < playables.size(); i++) {
-            AbstractPlayableSprite playable = playables.get(i);
-            forcedInputMasks[i] = playable.getForcedInputMask();
-            playable.clearForcedInputMask();
-        }
-        try {
-            spriteManager.update(inputHandler);
-        } finally {
-            for (int i = 0; i < playables.size(); i++) {
-                playables.get(i).setForcedInputMask(forcedInputMasks[i]);
-            }
-        }
-    }
-
     /**
      * BONUS_STAGE per-frame update: overlay tick, provider-declared bootstrap, the
      * shared level frame step (with the bonus-stage high-priority enforcement
@@ -2371,59 +2342,11 @@ public class GameLoop {
      * @param actIndex  Act index (0-2)
      */
     public void enterTitleCard(int zoneIndex, int actIndex) {
-        if (currentGameMode != GameMode.LEVEL) {
-            return;
-        }
-
-        boolean freshBoundary = levelManager.hasPendingFreshLevelTransitionBoundary();
-        GameMode oldMode = changeGameModeForBoundary(GameMode.TITLE_CARD);
-
-        // Freeze the player during title card - full state reset
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (!freshBoundary && sprite instanceof AbstractPlayableSprite playable) {
-            // Freeze all movement
-            playable.setXSpeed((short) 0);
-            playable.setYSpeed((short) 0);
-            playable.setGSpeed((short) 0);
-            playable.setAir(false);
-            // Clear death/hurt state to prevent dying during title card
-            playable.setDead(false);
-            playable.setHurt(false);
-            playable.setDeathCountdown(0);
-            playable.setInvulnerableFrames(0);
-            playable.setRolling(false);
-        }
-        applyTitleCardControlLock(true);
-
-        // Initialize the title card manager
-        if (getTitleCardProviderLazy() != null) {
-            if (freshBoundary) {
-                getTitleCardProviderLazy().initializeFreshLevelTransition(zoneIndex, actIndex);
-            } else {
-                getTitleCardProviderLazy().initialize(zoneIndex, actIndex);
-            }
-        }
-
-        // ScreenInit can already own the camera through Scroll_lock (SSZ1_ScreenInit
-        // sets $F49 before Obj_57C1E positions the player). A forced player snap would
-        // override that scripted origin and clamp it against the arrival's $BC0 bound.
-        if (!freshBoundary && !camera.getFrozen()) {
-            camera.updatePosition(true);
-        }
-
-        // Notify listener of mode change
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
-
-        LOGGER.info("Entered Title Card for zone " + zoneIndex + " act " + actIndex);
+        titleCardLifecycle.enterTitleCard(zoneIndex, actIndex);
     }
 
     void startPendingInLevelTitleCard() {
-        InLevelTitleCardCoordinator.startIfRequested(
-                levelManager, getTitleCardProviderLazy(),
-                GameServices.gameState().isEndOfLevelActive(), this::applyTitleCardControlLock);
+        titleCardLifecycle.startPendingInLevelTitleCard();
     }
 
     /**
@@ -2447,89 +2370,7 @@ public class GameLoop {
      * while the title card is on screen.
      */
     void applyTitleCardControlLock(boolean locked) {
-        if (spriteManager == null) {
-            return;
-        }
-        for (var sprite : spriteManager.getAllSprites()) {
-            if (sprite instanceof AbstractPlayableSprite playable) {
-                playable.setControlLocked(locked);
-            }
-        }
-    }
-
-    /**
-     * Exits the title card and returns to level mode.
-     * Note: We do NOT reset the title card manager here because the overlay
-     * (TEXT_WAIT and TEXT_EXIT phases) still needs to run. The title card
-     * will reset itself when it reaches COMPLETE state, or when a new
-     * title card is initialized.
-     */
-    private void exitTitleCard() {
-        if (currentGameMode != GameMode.TITLE_CARD) {
-            return;
-        }
-
-        GameMode oldMode = currentGameMode;
-        applyTitleCardControlLock(false);
-
-        if (postTitleCardDestination == PostTitleCardDestination.BONUS_STAGE) {
-            // Transitioning to bonus stage after "BONUS STAGE" title card
-            postTitleCardDestination = PostTitleCardDestination.LEVEL;
-            changeGameModeForBoundary(GameMode.BONUS_STAGE);
-
-            // Apply deferred bonus stage setup
-            bonusSession.applyDeferredBonusStageSetup();
-
-            // Re-arm the playback forced-input bridge now that the mode is
-            // BONUS_STAGE. This exit runs mid-step and falls through to
-            // BONUS_STAGE gameplay processing in the SAME loop.step(): that
-            // fall-through frame IS the interior's first gameplay tick. The
-            // step-top syncPlaybackInputBridge already ran while the mode was
-            // still TITLE_CARD, which PlaybackDebugManager.isDriving() does not
-            // drive (only LEVEL/BONUS_STAGE), so the player's first interior tick
-            // would otherwise run with a stale/neutral forced mask -- dropping the
-            // recorded frame-0 controller input the ROM's first bonus frame reads
-            // (e.g. the gumball's frame-0 left press that produces the single
-            // grounded ground-move before the player falls into the machine).
-            // Re-syncing here, after control is released and the mode is
-            // BONUS_STAGE, applies the current forced-input mask so the
-            // fall-through tick reads the recorded input. Bonus-entry only; LEVEL
-            // title-card exits are unaffected.
-            syncPlaybackInputBridge();
-
-            LOGGER.info("Exited bonus title card, entering BONUS_STAGE mode");
-        } else if (specialStageLifecycle.returningFromSpecialStage()) {
-            specialStageLifecycle.completeTitleReturn();
-        } else {
-            changeGameModeForBoundary(GameMode.LEVEL);
-            applyPendingBonusStageShieldRestore(resolveMainPlayableSprite());
-
-            // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
-            LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
-            if (!levelManager.hasPendingFreshLevelTransitionBoundary() && levelEvents != null) {
-                levelEvents.applyZonePlayerStateAfterTitleCard();
-            }
-            LOGGER.info("Exited Title Card, starting level");
-        }
-
-        // A title-card release falls through into the destination gameplay in
-        // this same loop.step(). The step-top bridge sync ran while the mode was
-        // still TITLE_CARD (which is intentionally not driven), so refresh the
-        // forced input now for LEVEL as well as for BONUS_STAGE above. Otherwise
-        // a death/restart consumes one stale pre-reload input on the first native
-        // Level_MainLoop frame before a trace comparator can observe it.
-        if (currentGameMode == GameMode.LEVEL) {
-            TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode);
-            syncPlaybackInputBridge();
-        }
-
-        if (currentGameMode == GameMode.LEVEL) {
-            titleCardReleasedIntoLevelThisIteration = true;
-        }
-
-        if (gameModeChangeListener != null) {
-            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-        }
+        titleCardLifecycle.applyTitleCardControlLock(locked);
     }
 
     // ==================== Master Title Screen Methods ====================
@@ -3467,6 +3308,33 @@ public class GameLoop {
         return GameLoopSpecialStageLifecycle.shouldPlaySpecialStageEntrySfx(transitionSfxAlreadyPlayed);
     }
 
+    /** Typed live slots keep capture-time and callback-time title observations distinct. */
+    private final class TitleCardHost implements GameLoopTitleCardLifecycle.Host {
+        @Override public LevelManager level() { return levelManager; }
+        @Override public SpriteManager sprites() { return spriteManager; }
+        @Override public Camera camera() { return camera; }
+        @Override public InputHandler input() { return inputHandler; }
+        @Override public GameModule module() { return GameServices.module(); }
+        @Override public GameMode currentMode() { return currentGameMode; }
+        @Override public boolean endOfLevelActive() { return GameServices.gameState().isEndOfLevelActive(); }
+        @Override public String mainCharacterCode() { return resolveMainCharacterCode(); }
+        @Override public AbstractPlayableSprite mainPlayable() { return resolveMainPlayableSprite(); }
+        @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
+        @Override public void restorePendingShield(AbstractPlayableSprite playable) { applyPendingBonusStageShieldRestore(playable); }
+        @Override public GameMode changeMode(GameMode mode) { return changeGameModeForBoundary(mode); }
+        @Override public GameMode changeModeWithoutRewindBoundary(GameMode mode) { return GameLoop.this.changeGameModeWithoutRewindBoundary(mode); }
+        @Override public void markBonusEntryBoundary() { markBonusEntryNonRewindableBoundary(); }
+        @Override public boolean returningFromSpecialStage() { return specialStageLifecycle.returningFromSpecialStage(); }
+        @Override public void completeTitleReturn() { specialStageLifecycle.completeTitleReturn(); }
+        @Override public void applyDeferredBonusStageSetup() { bonusSession.applyDeferredBonusStageSetup(); }
+        @Override public void syncPlaybackInput() { syncPlaybackInputBridge(); }
+        @Override public void admitDestination() { TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(currentGameMode); }
+        @Override public void recordLevelRelease() { titleCardReleasedIntoLevelThisIteration = true; }
+        @Override public void notifyModeChanged(GameMode oldMode) {
+            if (gameModeChangeListener != null) gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+        }
+    }
+
     /** Typed live slots preserve capture versus callback-time reads across rebinding. */
     private final class SpecialStageHost implements GameLoopSpecialStageLifecycle.Host {
         @Override public LevelManager level() { return levelManager; }
@@ -3524,7 +3392,7 @@ public class GameLoop {
         @Override public TitleCardProvider titleCard() { return getTitleCardProviderLazy(); }
         @Override public GameMode enterBonusTitleCardAfterLevelLoadBoundary() { return GameLoop.this.enterBonusTitleCardAfterLevelLoadBoundary(); }
         @Override public GameMode changeMode(GameMode mode) { return changeGameModeForBoundary(mode); }
-        @Override public void titleDestination(PostTitleCardDestination destination) { postTitleCardDestination = destination; }
+        @Override public void titleDestination(PostTitleCardDestination destination) { titleCardLifecycle.destination(destination); }
         @Override public void lockTitleControls(boolean locked) { applyTitleCardControlLock(locked); }
         @Override public void notifyModeChanged(GameMode oldMode) {
             if (gameModeChangeListener != null) gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
